@@ -5348,6 +5348,19 @@ class NodaliaMediaPlayer extends HTMLElement {
     return state.attributes.media_title || state.attributes.friendly_name || player.entity;
   }
 
+  _getTvContentTitle(player, state) {
+    if (player.title) {
+      return player.title;
+    }
+
+    return (
+      state?.attributes?.media_title ||
+      state?.attributes?.media_series_title ||
+      state?.attributes?.media_channel ||
+      ""
+    );
+  }
+
   _getPlayerSubtitle(player, state) {
     if (player.subtitle) {
       return player.subtitle;
@@ -5677,7 +5690,6 @@ class NodaliaMediaPlayer extends HTMLElement {
     const seen = new Set();
     const titleKey = normalizeTextKey(title);
     const subtitleKey = normalizeTextKey(subtitle);
-    const currentSource = this._getPlayerSourceLabel(state);
 
     const addChip = (label, tone = "default") => {
       const text = String(label || "").trim();
@@ -5693,8 +5705,6 @@ class NodaliaMediaPlayer extends HTMLElement {
       seen.add(key);
       chips.push({ label: text, tone });
     };
-
-    addChip(currentSource, "source");
 
     if (progress) {
       addChip(`${formatDuration(progress.position)} / ${formatDuration(progress.duration)}`, "time");
@@ -6566,20 +6576,27 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     const artwork = this._getPlayerArtwork(player, state);
-    const title = this._getPlayerTitle(player, state);
-    const subtitle = this._getPlayerSubtitle(player, state);
+    const deviceType = this._getPlayerDeviceType(player, state);
+    const isTvPlayer = deviceType === "tv";
+    const playerLabel = this._getPlayerLabel(player, state);
+    const sourceLabel = this._getPlayerSourceLabel(state);
+    const title = isTvPlayer
+      ? this._getTvContentTitle(player, state)
+      : this._getPlayerTitle(player, state);
+    const subtitle = isTvPlayer
+      ? ""
+      : this._getPlayerSubtitle(player, state);
     const subtitleMarkup = subtitle && normalizeTextKey(subtitle) !== normalizeTextKey(title)
       ? `<div class="media-player__subtitle">${escapeHtml(subtitle)}</div>`
       : "";
     const progress = this._getPlayerProgress(state);
-    const deviceType = this._getPlayerDeviceType(player, state);
-    const isTvPlayer = deviceType === "tv";
     const sourceOptions = isTvPlayer ? this._getPlayerSourceOptions(player, state) : [];
     const chips = isTvPlayer
       ? this._getTvPlayerChips(player, state, progress, title, subtitle, sourceOptions)
       : this._getPlayerChips(player, state, progress, title, subtitle);
-    const playerLabel = this._getPlayerLabel(player, state);
-    const showPrimaryTitle = !isTvPlayer || !playerLabel || normalizeTextKey(title) !== normalizeTextKey(playerLabel);
+    const showPrimaryTitle = !isTvPlayer
+      ? !playerLabel || normalizeTextKey(title) !== normalizeTextKey(playerLabel)
+      : Boolean(title) && normalizeTextKey(title) !== normalizeTextKey(playerLabel);
     const showTopChip = !!playerLabel && (isTvPlayer || normalizeTextKey(playerLabel) !== normalizeTextKey(title));
     const statusLabel = this._getPlayerStateLabel(state.state);
     const showStateLabel = this._config.show_state === true;
@@ -6765,8 +6782,10 @@ class NodaliaMediaPlayer extends HTMLElement {
         ${tvBrowseMarkup}
       </div>
     `;
-    const tvSubtitleMarkup = isTvPlayer && subtitleMarkup && normalizeTextKey(subtitle) !== normalizeTextKey(statusLabel)
-      ? `<div class="media-player__subtitle media-player__subtitle--tv">${escapeHtml(subtitle)}</div>`
+    const tvSourceMarkup = isTvPlayer && sourceLabel
+      && normalizeTextKey(sourceLabel) !== normalizeTextKey(playerLabel)
+      && normalizeTextKey(sourceLabel) !== normalizeTextKey(title)
+      ? `<div class="media-player__subtitle media-player__subtitle--tv">${escapeHtml(sourceLabel)}</div>`
       : "";
     const dotsMarkup = players.length > 1
       ? `
@@ -6886,7 +6905,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                     >
                       ${
                         artwork
-                          ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(playerLabel)}" />`
+                          ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
                           : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                       }
                     </button>
@@ -6895,7 +6914,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                     <div class="media-player__artwork media-player__artwork--idle">
                       ${
                         artwork
-                          ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(playerLabel)}" />`
+                          ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
                           : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                       }
                     </div>
@@ -6952,7 +6971,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                   >
                     ${
                       artwork
-                        ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title)}" />`
+                        ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
                         : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                     }
                   </button>
@@ -6961,7 +6980,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                   <div class="media-player__artwork">
                     ${
                       artwork
-                        ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title)}" />`
+                        ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
                         : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                     }
                   </div>
@@ -6969,16 +6988,16 @@ class NodaliaMediaPlayer extends HTMLElement {
             }
             <div class="media-player__hero-copy">
               <div class="media-player__hero-top">
+                ${isTvPlayer ? infoRailMarkup : ""}
                 <div class="media-player__meta">
                   ${showPrimaryTitle ? `<div class="media-player__title">${escapeHtml(title)}</div>` : ""}
-                  ${isTvPlayer ? "" : subtitleMarkup}
+                  ${isTvPlayer ? tvSourceMarkup : subtitleMarkup}
                 </div>
-                ${infoRailMarkup}
+                ${isTvPlayer ? "" : infoRailMarkup}
               </div>
             </div>
           </div>
           <div class="media-player__center-stack">
-            ${tvSubtitleMarkup}
             ${dotsMarkup ? `<div class="media-player__switcher">${dotsMarkup}</div>` : ""}
             <div class="media-player__transport-row">
               ${
@@ -7515,6 +7534,11 @@ class NodaliaMediaPlayer extends HTMLElement {
           grid-template-columns: 72px minmax(0, 1fr);
         }
 
+        .media-player-card--tv .media-player__hero-copy {
+          align-content: start;
+          gap: 8px;
+        }
+
         .media-player-card--tv .media-player__artwork {
           border-radius: 20px;
           height: 72px;
@@ -7524,34 +7548,45 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player-card--tv .media-player__hero-top {
           gap: 6px;
           grid-template-columns: minmax(0, 1fr);
+          justify-items: end;
         }
 
         .media-player-card--tv .media-player__info-rail {
-          align-items: start;
+          align-items: end;
           gap: 4px;
-          justify-items: start;
-          max-width: none;
+          justify-items: end;
+          justify-self: end;
+          max-width: min(100%, 100%);
+          width: fit-content;
+        }
+
+        .media-player-card--tv .media-player__meta {
+          justify-items: end;
+          text-align: right;
+          width: 100%;
         }
 
         .media-player-card--tv .media-player__chip--top,
         .media-player-card--tv .media-player__chip--status {
-          justify-content: flex-start;
-          text-align: left;
+          justify-content: flex-end;
+          text-align: right;
         }
 
         .media-player-card--tv .media-player__title {
           font-size: calc(${playerStyles.title_size} - 1px);
+          text-align: right;
         }
 
         .media-player-card--tv .media-player__subtitle--tv,
         .media-player-card--tv .media-player__chips-wrap {
-          justify-self: stretch;
+          justify-self: end;
           max-width: 100%;
+          text-align: right;
         }
 
         .media-player-card--tv .media-player__chips,
         .media-player-card--tv .media-player__footer {
-          justify-content: flex-start;
+          justify-content: flex-end;
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__idle-main {
@@ -7628,7 +7663,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           }
 
           .media-player-card--tv .media-player__subtitle--tv {
-            text-align: left;
+            text-align: right;
           }
         }
 
