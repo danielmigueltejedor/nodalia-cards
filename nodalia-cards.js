@@ -12231,25 +12231,6 @@ class NodaliaVacuumCard extends HTMLElement {
     }
 
     const activeModeDescriptor = availableModeDescriptors.find(mode => mode.kind === this._activeModePanel) || null;
-    const primaryControl = controls.find(control => control.primary) || null;
-    const secondaryControls = controls.filter(control => !control.primary);
-    const actionButtons = [
-      ...secondaryControls.map(control => ({
-        type: "control",
-        ...control,
-      })),
-      ...availableModeDescriptors.map(mode => ({
-        type: "mode",
-        ...mode,
-      })),
-    ];
-
-    if (primaryControl) {
-      actionButtons.splice(Math.floor(actionButtons.length / 2), 0, {
-        type: "control",
-        ...primaryControl,
-      });
-    }
 
     const currentModeValue = fanSpeed || mopMode?.current || suctionMode?.current || "";
     if (config.show_fan_speed_chip !== false && currentModeValue) {
@@ -12449,9 +12430,9 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card__control--primary {
-          height: calc(${styles.control.size} + 8px);
-          min-width: calc(${styles.control.size} + 8px);
-          width: calc(${styles.control.size} + 8px);
+          height: ${styles.control.size};
+          min-width: ${styles.control.size};
+          width: ${styles.control.size};
         }
 
         .vacuum-card__control ha-icon {
@@ -12555,36 +12536,33 @@ class NodaliaVacuumCard extends HTMLElement {
           </div>
 
           ${
-            actionButtons.length
+            controls.length || availableModeDescriptors.length
               ? `
                 <div class="vacuum-card__controls">
-                  ${actionButtons
-                    .map(button => {
-                      if (button.type === "mode") {
-                        return `
-                          <button
-                            class="vacuum-card__control vacuum-card__mode-toggle ${activeModeDescriptor?.kind === button.kind ? "vacuum-card__mode-toggle--active vacuum-card__control--active" : ""}"
-                            type="button"
-                            data-vacuum-action="toggle-mode-panel"
-                            data-mode-kind="${escapeHtml(button.kind)}"
-                            aria-label="${escapeHtml(button.label)}"
-                          >
-                            <ha-icon icon="${button.kind === "mop" ? "mdi:waves" : "mdi:fan"}"></ha-icon>
-                          </button>
-                        `;
-                      }
-
-                      return `
+                  ${controls
+                    .map(control => `
                         <button
-                          class="vacuum-card__control ${button.primary ? "vacuum-card__control--primary" : ""} ${button.active ? "vacuum-card__control--active" : ""}"
+                          class="vacuum-card__control ${control.primary ? "vacuum-card__control--primary" : ""} ${control.active ? "vacuum-card__control--active" : ""}"
                           type="button"
-                          data-vacuum-action="${escapeHtml(button.action)}"
-                          aria-label="${escapeHtml(button.label)}"
+                          data-vacuum-action="${escapeHtml(control.action)}"
+                          aria-label="${escapeHtml(control.label)}"
                         >
-                          <ha-icon icon="${escapeHtml(button.icon)}"></ha-icon>
+                          <ha-icon icon="${escapeHtml(control.icon)}"></ha-icon>
                         </button>
-                      `;
-                    })
+                      `)
+                    .join("")}
+                  ${availableModeDescriptors
+                    .map(mode => `
+                      <button
+                        class="vacuum-card__control vacuum-card__mode-toggle ${activeModeDescriptor?.kind === mode.kind ? "vacuum-card__mode-toggle--active vacuum-card__control--active" : ""}"
+                        type="button"
+                        data-vacuum-action="toggle-mode-panel"
+                        data-mode-kind="${escapeHtml(mode.kind)}"
+                        aria-label="${escapeHtml(mode.label)}"
+                      >
+                        <ha-icon icon="${mode.kind === "mop" ? "mdi:waves" : "mdi:fan"}"></ha-icon>
+                      </button>
+                    `)
                     .join("")}
                 </div>
               `
