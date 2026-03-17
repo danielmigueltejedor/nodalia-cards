@@ -85,6 +85,7 @@ const DEFAULT_CONFIG = {
   fan_presets: [],
   state_entity: "",
   battery_entity: "",
+  room_mapping_entity: "",
   suction_select_entity: "",
   mop_select_entity: "",
   haptics: {
@@ -338,6 +339,8 @@ class NodaliaVacuumCard extends HTMLElement {
     this._cardWidth = 0;
     this._isCompactLayout = false;
     this._activeModePanel = null;
+    this._roomPanelOpen = false;
+    this._selectedCleaningAreas = [];
     this._lastNonSmartModeSelection = {
       suction: "",
       mop: "",
@@ -502,6 +505,45 @@ class NodaliaVacuumCard extends HTMLElement {
   _getAuxiliaryBatteryState() {
     const entityId = this._config?.battery_entity || this._guessRelatedBatteryEntity();
     return entityId ? this._hass?.states?.[entityId] || null : null;
+  }
+
+  _guessRelatedRoomMappingEntity() {
+    if (!this._hass?.states || !this._config?.entity) {
+      return "";
+    }
+
+    const objectId = String(this._config.entity).split(".")[1] || "";
+    if (!objectId) {
+      return "";
+    }
+
+    const candidates = Object.keys(this._hass.states)
+      .filter(entityId => entityId.startsWith("sensor."))
+      .filter(entityId => entityId.includes(objectId))
+      .filter(entityId => ["room_mapping", "rooms", "segments", "habitaciones"].some(pattern => entityId.includes(pattern)))
+      .sort((left, right) => left.localeCompare(right, "es"));
+
+    return candidates[0] || "";
+  }
+
+  _getRoomMappingSourceState() {
+    const explicitEntityId = this._config?.room_mapping_entity;
+    if (explicitEntityId && this._hass?.states?.[explicitEntityId]) {
+      return this._hass.states[explicitEntityId];
+    }
+
+    const auxiliaryState = this._getAuxiliaryState();
+    if (Array.isArray(auxiliaryState?.attributes?.room_mapping) || Array.isArray(auxiliaryState?.attributes?.rooms)) {
+      return auxiliaryState;
+    }
+
+    const state = this._getState();
+    if (Array.isArray(state?.attributes?.room_mapping) || Array.isArray(state?.attributes?.rooms)) {
+      return state;
+    }
+
+    const guessedEntityId = this._guessRelatedRoomMappingEntity();
+    return guessedEntityId ? this._hass?.states?.[guessedEntityId] || null : null;
   }
 
   _getReportedStateValue(state) {
@@ -693,6 +735,79 @@ class NodaliaVacuumCard extends HTMLElement {
     }
 
     return "#61c97a";
+  }
+
+  _getRoomMappings(state) {
+    const mappingSource = this._getRoomMappingSourceState();
+    const rawRooms = mappingSource?.attributes?.room_mapping || mappingSource?.attributes?.rooms || state?.attributes?.room_mapping || state?.attributes?.rooms || [];
+
+    if (!Array.isArray(rawRooms)) {
+      return [];
+    }
+
+    const seen = new Set();
+    return rawRooms
+      .map(room => {
+        if (!room || typeof room !== "object") {
+          return null;
+        }
+
+        const cleaningAreaId = room.cleaning_area_id ? String(room.cleaning_area_id) : "";
+        const fallbackId = room.id !== undefined && room.id !== null ? String(room.id) : "";
+        const uniqueId = cleaningAreaId || fallbackId;
+        if (!uniqueId || seen.has(uniqueId)) {
+          return null;
+        }
+
+        seen.add(uniqueId);
+        return {
+          cleaningAreaId: uniqueId,
+          id: fallbackId,
+          name: room.name ? String(room.name) : uniqueId,
+        };
+      })
+      .filter(Boolean);
+  }
+
+  _sanitizeSelectedCleaningAreas(roomMappings) {
+    const validIds = new Set(roomMappings.map(room => room.cleaningAreaId));
+    this._selectedCleaningAreas = this._selectedCleaningAreas.filter(areaId => validIds.has(areaId));
+  }
+
+  _toggleCleaningAreaSelection(areaId) {
+    if (!areaId) {
+      return;
+    }
+
+    if (this._selectedCleaningAreas.includes(areaId)) {
+      this._selectedCleaningAreas = this._selectedCleaningAreas.filter(value => value !== areaId);
+      return;
+    }
+
+    this._selectedCleaningAreas = [...this._selectedCleaningAreas, areaId];
+  }
+
+  _canSelectRooms(state, roomMappings = this._getRoomMappings(state)) {
+    return this._isDocked(state) && roomMappings.length > 0;
+  }
+
+  _runAreaCleaning(roomMappings) {
+    if (!roomMappings.length) {
+      return false;
+    }
+
+    const selectedIds = this._selectedCleaningAreas.length
+      ? this._selectedCleaningAreas
+      : roomMappings.map(room => room.cleaningAreaId);
+
+    if (!selectedIds.length) {
+      return false;
+    }
+
+    this._callService("clean_area", {
+      cleaning_area_id: selectedIds,
+    });
+    return true;
   }
 
   _getCurrentFanSpeed(state) {
@@ -1092,6 +1207,12 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _runPrimaryAction(state) {
+    const roomMappings = this._getRoomMappings(state);
+    if (this._roomPanelOpen && this._canSelectRooms(state, roomMappings) && this._runAreaCleaning(roomMappings)) {
+      this._roomPanelOpen = false;
+      return;
+    }
+
     if (this._shouldUsePausePrimary(state)) {
       this._callService("pause");
       return;
@@ -1117,6 +1238,7 @@ class NodaliaVacuumCard extends HTMLElement {
   _getControls(state) {
     const controls = [];
     const usePausePrimary = this._shouldUsePausePrimary(state);
+    const roomMappings = this._getRoomMappings(state);
 
     controls.push({
       action: usePausePrimary ? "pause" : "start",
@@ -1149,6 +1271,15 @@ class NodaliaVacuumCard extends HTMLElement {
         icon: "mdi:crosshairs-gps",
         label: "Buscar",
         active: false,
+      });
+    }
+
+    if (this._canSelectRooms(state, roomMappings)) {
+      controls.push({
+        action: "toggle-room-panel",
+        icon: "mdi:floor-plan",
+        label: "Habitaciones",
+        active: this._roomPanelOpen,
       });
     }
 
@@ -1201,10 +1332,22 @@ class NodaliaVacuumCard extends HTMLElement {
         break;
       case "toggle-mode-panel": {
         const modeKind = button.dataset.modeKind || "";
+        this._roomPanelOpen = false;
         this._activeModePanel = this._activeModePanel === modeKind ? null : modeKind;
         this._render();
         break;
       }
+      case "toggle-room-panel":
+        this._activeModePanel = null;
+        this._roomPanelOpen = !this._roomPanelOpen;
+        this._render();
+        break;
+      case "toggle-room":
+        if (button.dataset.cleaningAreaId) {
+          this._toggleCleaningAreaSelection(button.dataset.cleaningAreaId);
+        }
+        this._render();
+        break;
       case "fan":
         if (button.dataset.value) {
           this._rememberNonSmartModeSelection(button.dataset.modeKind || "suction", button.dataset.value);
@@ -1291,6 +1434,7 @@ class NodaliaVacuumCard extends HTMLElement {
     const accentColor = this._getAccentColor(state);
     const controls = this._getControls(state);
     const isTintedState = this._shouldTintCard(state);
+    const roomMappings = this._getRoomMappings(state);
     const chips = [];
     const batteryChipColor = this._getBatteryColor(batteryLevel);
     const batteryChipMarkup = config.show_battery_chip !== false && batteryLevel !== null
@@ -1319,6 +1463,10 @@ class NodaliaVacuumCard extends HTMLElement {
     if (this._activeModePanel && !availableModeDescriptors.some(mode => mode.kind === this._activeModePanel)) {
       this._activeModePanel = null;
     }
+    if (this._roomPanelOpen && !this._canSelectRooms(state, roomMappings)) {
+      this._roomPanelOpen = false;
+    }
+    this._sanitizeSelectedCleaningAreas(roomMappings);
 
     const activeModeDescriptor = availableModeDescriptors.find(mode => mode.kind === this._activeModePanel) || null;
 
@@ -1552,6 +1700,15 @@ class NodaliaVacuumCard extends HTMLElement {
           min-width: 0;
         }
 
+        .vacuum-card__room-panel {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: center;
+          margin-top: -2px;
+          min-width: 0;
+        }
+
         .vacuum-card__mode-toggle {
           color: var(--secondary-text-color);
         }
@@ -1669,6 +1826,27 @@ class NodaliaVacuumCard extends HTMLElement {
                         aria-label="${escapeHtml(mode.label)}"
                       >
                         <ha-icon icon="${mode.kind === "mop" ? "mdi:waves" : "mdi:fan"}"></ha-icon>
+                      </button>
+                    `)
+                    .join("")}
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            this._roomPanelOpen && roomMappings.length
+              ? `
+                <div class="vacuum-card__room-panel">
+                  ${roomMappings
+                    .map(room => `
+                      <button
+                        class="vacuum-card__preset ${this._selectedCleaningAreas.includes(room.cleaningAreaId) ? "vacuum-card__preset--active" : ""}"
+                        type="button"
+                        data-vacuum-action="toggle-room"
+                        data-cleaning-area-id="${escapeHtml(room.cleaningAreaId)}"
+                      >
+                        ${escapeHtml(room.name)}
                       </button>
                     `)
                     .join("")}
@@ -2110,6 +2288,9 @@ class NodaliaVacuumCardEditor extends HTMLElement {
             ${this._renderTextField("Sensor bateria", "battery_entity", config.battery_entity, {
               placeholder: "sensor.roborock_qrevo_s_battery",
             })}
+            ${this._renderTextField("Sensor habitaciones", "room_mapping_entity", config.room_mapping_entity, {
+              placeholder: "sensor.roborock_qrevo_s_room_mapping",
+            })}
             ${this._renderTextField("Select aspirado", "suction_select_entity", config.suction_select_entity, {
               placeholder: "select.robot_salon_suction",
             })}
@@ -2215,7 +2396,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
       });
 
     this.shadowRoot
-      .querySelectorAll('input[data-field="state_entity"], input[data-field="battery_entity"]')
+      .querySelectorAll('input[data-field="state_entity"], input[data-field="battery_entity"], input[data-field="room_mapping_entity"]')
       .forEach(input => {
         input.setAttribute("list", "vacuum-card-sensor-entities");
       });
