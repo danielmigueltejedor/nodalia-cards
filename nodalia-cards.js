@@ -11551,17 +11551,100 @@ class NodaliaVacuumCard extends HTMLElement {
     }
 
     const auxiliaryState = this._getAuxiliaryState();
-    if (Array.isArray(auxiliaryState?.attributes?.room_mapping) || Array.isArray(auxiliaryState?.attributes?.rooms)) {
+    if (
+      auxiliaryState &&
+      (
+        auxiliaryState.attributes?.room_mapping !== undefined ||
+        auxiliaryState.attributes?.rooms !== undefined ||
+        String(auxiliaryState.state || "").includes("cleaning_area_id:")
+      )
+    ) {
       return auxiliaryState;
     }
 
     const state = this._getState();
-    if (Array.isArray(state?.attributes?.room_mapping) || Array.isArray(state?.attributes?.rooms)) {
+    if (
+      state &&
+      (
+        state.attributes?.room_mapping !== undefined ||
+        state.attributes?.rooms !== undefined ||
+        String(state.state || "").includes("cleaning_area_id:")
+      )
+    ) {
       return state;
     }
 
     const guessedEntityId = this._guessRelatedRoomMappingEntity();
     return guessedEntityId ? this._hass?.states?.[guessedEntityId] || null : null;
+  }
+
+  _extractRoomsFromString(rawValue) {
+    const text = String(rawValue || "").trim();
+    if (!text) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(text);
+      return this._normalizeRoomCollection(parsed);
+    } catch (_error) {
+      // Fall through to YAML-like parsing.
+    }
+
+    const roomBlocks = text
+      .split(/\n(?=-\s*id:|\s*-\s*id:)/g)
+      .map(block => block.trim())
+      .filter(Boolean);
+
+    const rooms = roomBlocks
+      .map(block => {
+        const idMatch = block.match(/(?:^|\n)\s*-?\s*id:\s*([^\n]+)/i);
+        const nameMatch = block.match(/(?:^|\n)\s*name:\s*([^\n]+)/i);
+        const cleaningAreaMatch = block.match(/(?:^|\n)\s*cleaning_area_id:\s*([^\n]+)/i);
+
+        const id = idMatch ? idMatch[1].trim() : "";
+        const name = nameMatch ? nameMatch[1].trim() : "";
+        const cleaningAreaId = cleaningAreaMatch ? cleaningAreaMatch[1].trim() : "";
+
+        if (!id && !name && !cleaningAreaId) {
+          return null;
+        }
+
+        return {
+          id,
+          name,
+          cleaning_area_id: cleaningAreaId,
+        };
+      })
+      .filter(Boolean);
+
+    return this._normalizeRoomCollection(rooms);
+  }
+
+  _normalizeRoomCollection(rawValue) {
+    let collection = rawValue;
+
+    if (typeof collection === "string") {
+      return this._extractRoomsFromString(collection);
+    }
+
+    if (Array.isArray(collection)) {
+      return collection;
+    }
+
+    if (collection && typeof collection === "object") {
+      if (Array.isArray(collection.room_mapping)) {
+        return collection.room_mapping;
+      }
+
+      if (Array.isArray(collection.rooms)) {
+        return collection.rooms;
+      }
+
+      return Object.values(collection);
+    }
+
+    return [];
   }
 
   _getReportedStateValue(state) {
@@ -11757,7 +11840,15 @@ class NodaliaVacuumCard extends HTMLElement {
 
   _getRoomMappings(state) {
     const mappingSource = this._getRoomMappingSourceState();
-    const rawRooms = mappingSource?.attributes?.room_mapping || mappingSource?.attributes?.rooms || state?.attributes?.room_mapping || state?.attributes?.rooms || [];
+    const rawRooms = [
+      mappingSource?.attributes?.room_mapping,
+      mappingSource?.attributes?.rooms,
+      mappingSource?.state,
+      state?.attributes?.room_mapping,
+      state?.attributes?.rooms,
+    ]
+      .map(value => this._normalizeRoomCollection(value))
+      .find(value => Array.isArray(value) && value.length) || [];
 
     if (!Array.isArray(rawRooms)) {
       return [];
@@ -12259,7 +12350,7 @@ class NodaliaVacuumCard extends HTMLElement {
     const roomMappings = this._getRoomMappings(state);
 
     controls.push({
-      action: usePausePrimary ? "pause" : "start",
+      action: "primary",
       icon: usePausePrimary ? "mdi:pause" : "mdi:play",
       label: usePausePrimary ? "Pausar" : "Iniciar",
       active: usePausePrimary,
@@ -12545,6 +12636,8 @@ class NodaliaVacuumCard extends HTMLElement {
           gap: ${styles.card.gap};
           grid-template-columns: auto minmax(0, 1fr) auto;
           min-width: 0;
+          padding-right: ${batteryChipMarkup ? "88px" : "0"};
+          position: relative;
         }
 
         .vacuum-card--compact .vacuum-card__header {
@@ -12605,6 +12698,9 @@ class NodaliaVacuumCard extends HTMLElement {
           display: flex;
           justify-content: flex-end;
           min-width: 0;
+          position: absolute;
+          right: 0;
+          top: 0;
         }
 
         .vacuum-card__title {
@@ -12790,11 +12886,13 @@ class NodaliaVacuumCard extends HTMLElement {
           .vacuum-card__header {
             gap: 10px;
             grid-template-columns: auto minmax(0, 1fr) auto;
+            padding-right: ${batteryChipMarkup ? "82px" : "0"};
           }
 
           .vacuum-card__header-meta {
-            grid-column: auto;
             justify-content: flex-end;
+            right: 0;
+            top: 0;
           }
 
           .vacuum-card__chip--battery {
