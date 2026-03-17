@@ -7512,7 +7512,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__tv-stack {
           display: grid;
-          gap: 10px;
+          gap: 8px;
           justify-items: center;
           width: min(100%, 340px);
         }
@@ -7532,8 +7532,12 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--tv .media-player__content {
-          gap: 8px;
-          padding-bottom: 6px;
+          gap: 6px;
+          padding-bottom: 4px;
+        }
+
+        .media-player-card--tv:not(.media-player-card--idle) {
+          min-height: 0;
         }
 
         .media-player-card--tv .media-player__hero {
@@ -7543,7 +7547,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player-card--tv .media-player__hero-copy {
           align-content: start;
-          gap: 8px;
+          gap: 6px;
           min-width: 0;
           overflow: hidden;
         }
@@ -7564,7 +7568,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--tv .media-player__hero-top {
-          gap: 6px;
+          gap: 4px;
           grid-template-columns: minmax(0, 1fr);
           justify-items: end;
         }
@@ -7622,6 +7626,10 @@ class NodaliaMediaPlayer extends HTMLElement {
           text-overflow: ellipsis;
           white-space: nowrap;
           width: 100%;
+        }
+
+        .media-player-card--tv:not(.media-player-card--idle) .media-player__center-stack {
+          gap: 6px;
         }
 
         .media-player-card--tv .media-player__chips,
