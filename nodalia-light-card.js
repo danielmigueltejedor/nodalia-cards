@@ -470,16 +470,6 @@ class NodaliaLightCard extends HTMLElement {
     });
   }
 
-  _openMoreInfo() {
-    if (!this._config?.entity) {
-      return;
-    }
-
-    fireEvent(this, "hass-more-info", {
-      entityId: this._config.entity,
-    });
-  }
-
   _commitBrightness(percent) {
     if (!Number.isFinite(percent)) {
       return;
@@ -567,9 +557,6 @@ class NodaliaLightCard extends HTMLElement {
     switch (actionButton.dataset.lightAction) {
       case "toggle":
         this._toggleLight();
-        break;
-      case "more-info":
-        this._openMoreInfo();
         break;
       case "brightness": {
         const value = Number(actionButton.dataset.value);
@@ -669,16 +656,19 @@ class NodaliaLightCard extends HTMLElement {
     const quickBrightness = Array.isArray(config.quick_brightness) ? config.quick_brightness : [];
     const temperaturePresets = this._getTemperaturePresets(state);
     const chips = [];
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
+    const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
+    const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
 
     if (config.show_state !== false) {
       chips.push(`<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`);
     }
 
-    if (config.show_brightness !== false && supportsBrightness) {
+    if (isOn && config.show_brightness !== false && supportsBrightness) {
       chips.push(`<span class="light-card__chip">${escapeHtml(`${brightnessPercent}% de brillo`)}</span>`);
     }
 
-    if (config.show_temperature_controls !== false && supportsColorTemperature) {
+    if (isOn && config.show_temperature_controls !== false && supportsColorTemperature) {
       chips.push(`<span class="light-card__chip">${escapeHtml(`${currentKelvin}K`)}</span>`);
     }
 
@@ -694,18 +684,21 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         ha-card.light-card {
-          background: ${styles.card.background};
-          border: ${styles.card.border};
+          background: ${isOn ? onCardBackground : styles.card.background};
+          border: ${isOn ? `1px solid ${onCardBorder}` : styles.card.border};
           border-radius: ${styles.card.border_radius};
-          box-shadow: ${styles.card.box_shadow};
+          box-shadow: ${isOn ? `${styles.card.box_shadow}, ${onCardShadow}` : styles.card.box_shadow};
           isolation: isolate;
           overflow: hidden;
           padding: ${styles.card.padding};
           position: relative;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
 
         .light-card::before {
-          background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+          background: ${isOn
+            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, rgba(255, 255, 255, 0.06)), rgba(255, 255, 255, 0))`
+            : "linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0))"};
           content: "";
           inset: 0;
           pointer-events: none;
@@ -724,12 +717,11 @@ class NodaliaLightCard extends HTMLElement {
           align-items: center;
           display: grid;
           gap: 12px;
-          grid-template-columns: ${styles.icon.size} minmax(0, 1fr) ${styles.control.size};
+          grid-template-columns: ${styles.icon.size} minmax(0, 1fr);
           min-width: 0;
         }
 
         .light-card__icon,
-        .light-card__power,
         .light-card__brightness-preset,
         .light-card__temperature-preset,
         .light-card__color-preset {
@@ -746,9 +738,12 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         .light-card__icon {
-          background: rgba(255, 255, 255, 0.06);
+          background: ${isOn
+            ? `color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.08))`
+            : "rgba(255, 255, 255, 0.06)"};
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 24px rgba(0, 0, 0, 0.16);
           color: ${isOn ? styles.icon.on_color : styles.icon.off_color};
+          cursor: pointer;
           height: ${styles.icon.size};
           width: ${styles.icon.size};
         }
@@ -763,8 +758,7 @@ class NodaliaLightCard extends HTMLElement {
           z-index: 0;
         }
 
-        .light-card__icon ha-icon,
-        .light-card__power ha-icon {
+        .light-card__icon ha-icon {
           align-items: center;
           display: inline-flex;
           height: 24px;
@@ -827,17 +821,6 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__chip--state {
           color: var(--primary-text-color);
-        }
-
-        .light-card__power {
-          background: ${isOn ? styles.control.accent_background : "rgba(255, 255, 255, 0.05)"};
-          color: ${isOn ? styles.control.accent_color : "var(--primary-text-color)"};
-          height: ${styles.control.size};
-          width: ${styles.control.size};
-        }
-
-        .light-card__power ha-icon {
-          font-size: 20px;
         }
 
         .light-card__section {
@@ -954,7 +937,7 @@ class NodaliaLightCard extends HTMLElement {
 
         @media (max-width: 420px) {
           .light-card__hero {
-            grid-template-columns: 54px minmax(0, 1fr) ${styles.control.size};
+            grid-template-columns: 54px minmax(0, 1fr);
           }
 
           .light-card__icon {
@@ -969,8 +952,8 @@ class NodaliaLightCard extends HTMLElement {
             <button
               type="button"
               class="light-card__icon"
-              data-light-action="more-info"
-              aria-label="Abrir mas informacion"
+              data-light-action="toggle"
+              aria-label="Encender o apagar"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
             </button>
@@ -979,18 +962,10 @@ class NodaliaLightCard extends HTMLElement {
               <div class="light-card__subtitle">${escapeHtml(stateLabel)}</div>
               ${chips.length ? `<div class="light-card__chips">${chips.join("")}</div>` : ""}
             </div>
-            <button
-              type="button"
-              class="light-card__power"
-              data-light-action="toggle"
-              aria-label="Encender o apagar"
-            >
-              <ha-icon icon="${escapeHtml(isOn ? "mdi:power" : "mdi:lightbulb-outline")}"></ha-icon>
-            </button>
           </div>
 
           ${
-            config.show_brightness !== false && supportsBrightness
+            isOn && config.show_brightness !== false && supportsBrightness
               ? `
                 <div class="light-card__section">
                   <div class="light-card__section-header">
@@ -1016,7 +991,7 @@ class NodaliaLightCard extends HTMLElement {
           }
 
           ${
-            config.show_quick_brightness !== false && supportsBrightness && quickBrightness.length
+            isOn && config.show_quick_brightness !== false && supportsBrightness && quickBrightness.length
               ? `
                 <div class="light-card__actions">
                   ${quickBrightness
@@ -1037,7 +1012,7 @@ class NodaliaLightCard extends HTMLElement {
           }
 
           ${
-            config.show_temperature_controls !== false && supportsColorTemperature
+            isOn && config.show_temperature_controls !== false && supportsColorTemperature
               ? `
                 <div class="light-card__section">
                   <div class="light-card__section-header">
@@ -1064,7 +1039,7 @@ class NodaliaLightCard extends HTMLElement {
           }
 
           ${
-            config.show_color_controls !== false && supportsColor
+            isOn && config.show_color_controls !== false && supportsColor
               ? `
                 <div class="light-card__section">
                   <div class="light-card__section-header">
