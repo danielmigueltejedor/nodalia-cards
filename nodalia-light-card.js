@@ -749,23 +749,13 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__icon {
           background: ${isOn
-            ? `color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.08))`
+            ? `color-mix(in srgb, ${accentColor} 24%, rgba(255, 255, 255, 0.08))`
             : "rgba(255, 255, 255, 0.06)"};
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 24px rgba(0, 0, 0, 0.16);
           color: ${isOn ? styles.icon.on_color : styles.icon.off_color};
           cursor: pointer;
           height: ${styles.icon.size};
           width: ${styles.icon.size};
-        }
-
-        .light-card__icon::after {
-          background: ${accentColor};
-          border-radius: inherit;
-          content: "";
-          inset: 9px;
-          opacity: ${isOn ? "0.2" : "0.08"};
-          position: absolute;
-          z-index: 0;
         }
 
         .light-card__icon ha-icon {
@@ -851,8 +841,8 @@ class NodaliaLightCard extends HTMLElement {
           border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
           display: grid;
-          min-height: 44px;
-          padding: 0 14px;
+          min-height: 56px;
+          padding: 0 16px;
         }
 
         .light-card__slider {
@@ -867,8 +857,11 @@ class NodaliaLightCard extends HTMLElement {
               rgba(255, 255, 255, 0.08) 100%
             );
           border-radius: 999px;
-          height: 6px;
+          cursor: pointer;
+          display: block;
+          height: 16px;
           outline: none;
+          touch-action: pan-x;
           width: 100%;
         }
 
@@ -878,20 +871,20 @@ class NodaliaLightCard extends HTMLElement {
           background: var(--primary-text-color);
           border: 0;
           border-radius: 50%;
-          box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12);
+          box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12);
           cursor: pointer;
-          height: 18px;
-          width: 18px;
+          height: 28px;
+          width: 28px;
         }
 
         .light-card__slider::-moz-range-thumb {
           background: var(--primary-text-color);
           border: 0;
           border-radius: 50%;
-          box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12);
+          box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12);
           cursor: pointer;
-          height: 18px;
-          width: 18px;
+          height: 28px;
+          width: 28px;
         }
 
         .light-card__slider::-moz-range-track {
