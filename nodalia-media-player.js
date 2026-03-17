@@ -2551,8 +2551,8 @@ class NodaliaMediaPlayer extends HTMLElement {
             linear-gradient(
               90deg,
               ${playerStyles.progress_color} 0%,
-              ${playerStyles.progress_color} calc(var(--media-volume, ${currentVolumePercent}) * 1%),
-              rgba(255, 255, 255, 0.08) calc(var(--media-volume, ${currentVolumePercent}) * 1%),
+              ${playerStyles.progress_color} calc(var(--media-volume, 0) * 1%),
+              rgba(255, 255, 255, 0.08) calc(var(--media-volume, 0) * 1%),
               rgba(255, 255, 255, 0.08) 100%
             );
           border-radius: 999px;
