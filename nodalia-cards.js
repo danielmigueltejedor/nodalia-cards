@@ -12118,31 +12118,8 @@ class NodaliaVacuumCard extends HTMLElement {
           min-width: 0;
         }
 
-        .vacuum-card__mode-toggles {
-          display: grid;
-          gap: 10px;
-          grid-template-columns: repeat(${Math.max(availableModeDescriptors.length, 1)}, minmax(0, 1fr));
-        }
-
         .vacuum-card__mode-toggle {
-          -webkit-tap-highlight-color: transparent;
-          align-items: center;
-          appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
           color: var(--secondary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          font: inherit;
-          font-size: ${styles.chip_font_size};
-          font-weight: 700;
-          gap: 8px;
-          height: ${styles.control.size};
-          justify-content: center;
-          padding: 0 14px;
-          width: 100%;
         }
 
         .vacuum-card__mode-toggle--active {
@@ -12223,7 +12200,7 @@ class NodaliaVacuumCard extends HTMLElement {
           </div>
 
           ${
-            controls.length
+            controls.length || availableModeDescriptors.length
               ? `
                 <div class="vacuum-card__controls">
                   ${controls
@@ -12238,25 +12215,16 @@ class NodaliaVacuumCard extends HTMLElement {
                       </button>
                     `)
                     .join("")}
-                </div>
-              `
-              : ""
-          }
-
-          ${
-            availableModeDescriptors.length
-              ? `
-                <div class="vacuum-card__mode-toggles">
                   ${availableModeDescriptors
                     .map(mode => `
                       <button
-                        class="vacuum-card__mode-toggle ${activeModeDescriptor?.kind === mode.kind ? "vacuum-card__mode-toggle--active" : ""}"
+                        class="vacuum-card__control vacuum-card__mode-toggle ${activeModeDescriptor?.kind === mode.kind ? "vacuum-card__mode-toggle--active vacuum-card__control--active" : ""}"
                         type="button"
                         data-vacuum-action="toggle-mode-panel"
                         data-mode-kind="${escapeHtml(mode.kind)}"
+                        aria-label="${escapeHtml(mode.label)}"
                       >
                         <ha-icon icon="${mode.kind === "mop" ? "mdi:spray-bottle" : "mdi:fan"}"></ha-icon>
-                        <span>${escapeHtml(mode.label)}</span>
                       </button>
                     `)
                     .join("")}
