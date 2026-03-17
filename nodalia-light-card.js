@@ -10,7 +10,7 @@ const HAPTIC_PATTERNS = {
   warning: [20, 50, 12],
   failure: [12, 40, 12, 40, 18],
 };
-const COMPACT_LAYOUT_THRESHOLD = 250;
+const COMPACT_LAYOUT_THRESHOLD = 210;
 const COLOR_PRESETS = [
   { color: "#ffd166", hs: [42, 60], label: "Calida" },
   { color: "#fff1c1", hs: [48, 18], label: "Suave" },
@@ -25,6 +25,7 @@ const DEFAULT_CONFIG = {
   name: "",
   icon: "",
   show_state: false,
+  compact_layout_mode: "auto",
   show_brightness: true,
   show_slider_mode_buttons: true,
   show_quick_brightness: true,
@@ -299,7 +300,7 @@ class NodaliaLightCard extends HTMLElement {
       }
 
       const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
-      const nextCompact = nextWidth > 0 && nextWidth < COMPACT_LAYOUT_THRESHOLD;
+      const nextCompact = this._shouldUseCompactLayout(nextWidth);
 
       if (nextWidth === this._cardWidth && nextCompact === this._isCompactLayout) {
         return;
@@ -327,6 +328,9 @@ class NodaliaLightCard extends HTMLElement {
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
+    this._isCompactLayout = this._shouldUseCompactLayout(
+      Math.round(this._cardWidth || this.clientWidth || 0),
+    );
     this._render();
   }
 
@@ -337,6 +341,30 @@ class NodaliaLightCard extends HTMLElement {
 
   getCardSize() {
     return 3;
+  }
+
+  _getConfiguredGridColumns() {
+    const numericColumns = Number(this._config?.grid_options?.columns);
+    return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
+  }
+
+  _shouldUseCompactLayout(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
+    const mode = this._config?.compact_layout_mode || "auto";
+
+    if (mode === "always") {
+      return true;
+    }
+
+    if (mode === "never") {
+      return false;
+    }
+
+    const gridColumns = this._getConfiguredGridColumns();
+    if (gridColumns !== null) {
+      return gridColumns < 4;
+    }
+
+    return width > 0 && width < COMPACT_LAYOUT_THRESHOLD;
   }
 
   _triggerHaptic(style = this._config?.haptics?.style) {
@@ -1849,6 +1877,16 @@ class NodaliaLightCardEditor extends HTMLElement {
             <div class="editor-section__hint">Que bloques quieres mostrar dentro de la tarjeta.</div>
           </div>
           <div class="editor-grid">
+            ${this._renderSelectField(
+              "Layout estrecho",
+              "compact_layout_mode",
+              config.compact_layout_mode || "auto",
+              [
+                { value: "auto", label: "Automatico (<4 columnas)" },
+                { value: "always", label: "Centrado siempre" },
+                { value: "never", label: "Nunca centrar" },
+              ],
+            )}
             ${this._renderCheckboxField("Mostrar estado en burbuja", "show_state", config.show_state === true)}
             ${this._renderCheckboxField("Mostrar brillo", "show_brightness", config.show_brightness !== false)}
             ${this._renderCheckboxField("Botones de modo junto al slider", "show_slider_mode_buttons", config.show_slider_mode_buttons !== false)}
