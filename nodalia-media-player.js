@@ -3061,7 +3061,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--tv .media-player__tv-source-panel {
-          justify-content: stretch;
+          justify-content: center;
           max-height: 190px;
           overflow: auto;
           padding-right: 2px;
@@ -3069,7 +3069,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player-card--tv .media-player__source-buttons {
           gap: 6px;
-          justify-content: flex-start;
+          justify-content: center;
         }
 
         .media-player-card--tv .media-player__source-button {

@@ -30,11 +30,10 @@ const MOP_MODE_PATTERNS = [
   "water",
   "scrub",
   "wet",
-  "smart",
-  "custom",
   "off",
   "deep",
   "soak",
+  "rinse",
 ];
 const MODE_LABELS = {
   quiet: "Silencioso",
@@ -51,6 +50,7 @@ const MODE_LABELS = {
   smart: "Inteligente",
   smartmode: "Inteligente",
   smart_mode: "Inteligente",
+  intelligent: "Inteligente",
   custom: "Personalizado",
   custommode: "Personalizado",
   custom_mode: "Personalizado",
@@ -597,12 +597,9 @@ class NodaliaVacuumCard extends HTMLElement {
       return null;
     }
 
-    const groupedOptions = rawPresets.filter(option => this._categorizeModeOption(option) === kind);
-    const options = groupedOptions.length
-      ? groupedOptions
-      : kind === "suction" && !rawPresets.some(option => this._categorizeModeOption(option) === "mop")
-        ? rawPresets
-        : [];
+    const options = kind === "mop"
+      ? rawPresets.filter(option => this._categorizeModeOption(option) === "mop")
+      : rawPresets.filter(option => this._categorizeModeOption(option) !== "mop");
 
     if (!options.length) {
       return null;
@@ -1097,6 +1094,7 @@ class NodaliaVacuumCard extends HTMLElement {
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
+          justify-content: center;
           min-width: 0;
         }
 
@@ -1206,7 +1204,7 @@ class NodaliaVacuumCard extends HTMLElement {
                         data-mode-kind="${escapeHtml(mode.kind)}"
                         aria-label="${escapeHtml(mode.label)}"
                       >
-                        <ha-icon icon="${mode.kind === "mop" ? "mdi:spray-bottle" : "mdi:fan"}"></ha-icon>
+                        <ha-icon icon="${mode.kind === "mop" ? "mdi:waves" : "mdi:fan"}"></ha-icon>
                       </button>
                     `)
                     .join("")}
