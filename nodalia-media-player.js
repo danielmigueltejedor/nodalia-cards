@@ -1605,6 +1605,16 @@ class NodaliaMediaPlayer extends HTMLElement {
       return;
     }
 
+    const mediaArtwork = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.classList?.contains("media-player__artwork"));
+
+    if (mediaArtwork) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
     const mediaDotButton = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.mediaIndex !== undefined);
@@ -2097,6 +2107,14 @@ class NodaliaMediaPlayer extends HTMLElement {
         ${tvVolumeSliderMarkup}
       </div>
     `;
+    const idleTvOffMarkup = `
+      <div class="media-player__idle-tv-off-bar">
+        ${infoRailMarkup}
+        <div class="media-player__idle-actions media-player__idle-actions--tv media-player__idle-actions--tv-off">
+          ${tvPowerMarkup}
+        </div>
+      </div>
+    `;
 
     if (isIdleLayout) {
       return `
@@ -2138,10 +2156,16 @@ class NodaliaMediaPlayer extends HTMLElement {
                     </div>
                   `
               }
-              <div class="media-player__idle-main ${isTvPlayer && isTvOff ? "media-player__idle-main--tv-off" : ""}">
-                ${infoRailMarkup}
-                ${isTvPlayer ? idleTvControlsMarkup : idleControlsMarkup}
-              </div>
+              ${
+                isTvPlayer && isTvOff
+                  ? idleTvOffMarkup
+                  : `
+                    <div class="media-player__idle-main ${isTvPlayer && isTvOff ? "media-player__idle-main--tv-off" : ""}">
+                      ${infoRailMarkup}
+                      ${isTvPlayer ? idleTvControlsMarkup : idleControlsMarkup}
+                    </div>
+                  `
+              }
             </div>
             ${isTvPlayer ? tvSourcePanelMarkup : ""}
             ${dotsMarkup ? `<div class="media-player__switcher media-player__switcher--idle">${dotsMarkup}</div>` : ""}
@@ -2486,9 +2510,11 @@ class NodaliaMediaPlayer extends HTMLElement {
           min-width: 0;
         }
 
-        .media-player__idle-main--tv-off {
+        .media-player__idle-tv-off-bar {
           align-items: center;
+          display: grid;
           grid-template-columns: minmax(0, 1fr) auto;
+          min-width: 0;
         }
 
         .media-player__hero-copy {
@@ -2653,6 +2679,11 @@ class NodaliaMediaPlayer extends HTMLElement {
           width: 100%;
         }
 
+        .media-player__idle-actions--tv-off {
+          justify-content: flex-end;
+          width: auto;
+        }
+
         .media-player__idle-tv-stack {
           display: grid;
           gap: 8px;
@@ -2787,6 +2818,11 @@ class NodaliaMediaPlayer extends HTMLElement {
           align-items: center;
           gap: 10px;
           grid-template-columns: minmax(0, 1fr) auto;
+        }
+
+        .media-player-card--tv.media-player-card--idle .media-player__idle-tv-off-bar .media-player__info-rail {
+          justify-self: start;
+          width: 100%;
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__idle-hero {
