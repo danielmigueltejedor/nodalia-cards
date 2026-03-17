@@ -1825,6 +1825,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       : this._getPlayerChips(player, state, progress, title, subtitle);
     const playerLabel = this._getPlayerLabel(player, state);
     const showPrimaryTitle = !isTvPlayer || !playerLabel || normalizeTextKey(title) !== normalizeTextKey(playerLabel);
+    const showTopChip = !!playerLabel && (isTvPlayer || normalizeTextKey(playerLabel) !== normalizeTextKey(title));
     const statusLabel = this._getPlayerStateLabel(state.state);
     const showStateLabel = this._config.show_state === true;
     const browsePath = this._getPlayerBrowsePath(player, state);
@@ -2014,7 +2015,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       `
       : "";
     const tvControlsMarkup = `
-      <div class="media-player__tv-actions">
+      <div class="media-player__tv-actions ${isTvOff ? "media-player__tv-actions--off" : ""}">
         ${tvPowerMarkup}
         ${tvPlayPauseMarkup}
         ${tvVolumeToggleMarkup}
@@ -2061,7 +2062,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       `
       : "";
     const infoRailItems = [
-      playerLabel && normalizeTextKey(playerLabel) !== normalizeTextKey(title)
+      showTopChip
         ? `
           <span class="media-player__chip media-player__chip--device media-player__chip--top">
             ${escapeHtml(playerLabel)}
@@ -2130,7 +2131,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                     : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                 }
               </div>
-              <div class="media-player__idle-main">
+              <div class="media-player__idle-main ${isTvPlayer && isTvOff ? "media-player__idle-main--tv-off" : ""}">
                 ${infoRailMarkup}
                 ${isTvPlayer ? idleTvControlsMarkup : idleControlsMarkup}
               </div>
@@ -2458,6 +2459,11 @@ class NodaliaMediaPlayer extends HTMLElement {
           min-width: 0;
         }
 
+        .media-player__idle-main--tv-off {
+          align-items: center;
+          grid-template-columns: minmax(0, 1fr) auto;
+        }
+
         .media-player__hero-copy {
           display: grid;
           gap: 6px;
@@ -2672,6 +2678,11 @@ class NodaliaMediaPlayer extends HTMLElement {
           width: 100%;
         }
 
+        .media-player__tv-actions--off {
+          justify-content: flex-end;
+          width: auto;
+        }
+
         .media-player-card--tv .media-player__content {
           gap: 8px;
           padding-bottom: 6px;
@@ -2725,6 +2736,12 @@ class NodaliaMediaPlayer extends HTMLElement {
           align-items: start;
           gap: 8px;
           grid-template-columns: minmax(0, 1fr);
+        }
+
+        .media-player-card--tv.media-player-card--idle .media-player__idle-main--tv-off {
+          align-items: center;
+          gap: 10px;
+          grid-template-columns: minmax(0, 1fr) auto;
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__idle-hero {
