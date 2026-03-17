@@ -675,7 +675,7 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     if (isOn && config.show_brightness !== false && supportsBrightness) {
-      chips.push(`<span class="light-card__chip">${escapeHtml(`${brightnessPercent}% de brillo`)}</span>`);
+      chips.push(`<span class="light-card__chip">${escapeHtml(`${brightnessPercent}%`)}</span>`);
     }
 
     if (isOn && config.show_temperature_controls !== false && supportsColorTemperature) {
