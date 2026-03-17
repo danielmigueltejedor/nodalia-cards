@@ -197,13 +197,13 @@ function escapeSelectorValue(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
-function fireEvent(node, type, detail = {}, options = {}) {
-  const event = new Event(type, {
-    bubbles: options.bubbles ?? true,
-    cancelable: options.cancelable ?? false,
-    composed: options.composed ?? true,
+function fireEvent(node, type, detail, options) {
+  const event = new CustomEvent(type, {
+    bubbles: options?.bubbles ?? true,
+    cancelable: Boolean(options?.cancelable),
+    composed: options?.composed ?? true,
+    detail,
   });
-  event.detail = detail;
   node.dispatchEvent(event);
   return event;
 }
