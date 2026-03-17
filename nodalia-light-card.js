@@ -969,10 +969,6 @@ class NodaliaLightCard extends HTMLElement {
             isOn && config.show_brightness !== false && supportsBrightness
               ? `
                 <div class="light-card__section">
-                  <div class="light-card__section-header">
-                    <span>Brillo</span>
-                    <span class="light-card__section-value" data-role="brightness-value">${escapeHtml(`${brightnessPercent}%`)}</span>
-                  </div>
                   <div class="light-card__slider-wrap">
                     <input
                       type="range"
