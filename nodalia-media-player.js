@@ -106,6 +106,7 @@ const DEFAULT_CONFIG = {
       padding: "14px",
       min_height: "160px",
       artwork_size: "72px",
+      tv_artwork_size: "64px",
       control_size: "34px",
       title_size: "15px",
       subtitle_size: "12px",
@@ -2338,7 +2339,7 @@ class NodaliaMediaPlayer extends HTMLElement {
             <div class="media-player__hero-copy">
               <div class="media-player__hero-top">
                 ${isTvPlayer ? infoRailMarkup : ""}
-                <div class="media-player__meta">
+                <div class="media-player__meta ${isTvPlayer ? "media-player__meta--tv" : ""}">
                   ${showPrimaryTitle ? `<div class="media-player__title">${escapeHtml(title)}</div>` : ""}
                   ${isTvPlayer ? tvSourceMarkup : subtitleMarkup}
                 </div>
@@ -2445,6 +2446,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     const config = this._config;
     const playerStyles = config.styles.player;
     const browserStyles = config.styles.browser;
+    const tvArtworkSize = playerStyles.tv_artwork_size || playerStyles.artwork_size;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -2879,19 +2881,30 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--tv .media-player__hero {
-          gap: 10px;
-          grid-template-columns: 72px minmax(0, 1fr);
+          gap: 14px;
+          grid-template-columns: ${tvArtworkSize} minmax(0, 1fr);
         }
 
         .media-player-card--tv .media-player__hero-copy {
           align-content: start;
           gap: 8px;
+          min-width: 0;
+          overflow: hidden;
         }
 
         .media-player-card--tv .media-player__artwork {
           border-radius: 20px;
-          height: 72px;
-          width: 72px;
+          height: ${tvArtworkSize};
+          width: ${tvArtworkSize};
+        }
+
+        .media-player-card--tv .media-player__artwork ha-icon {
+          --mdc-icon-size: calc(${tvArtworkSize} * 0.5);
+        }
+
+        .media-player-card--tv.media-player-card--idle .media-player__artwork--idle {
+          height: ${tvArtworkSize};
+          width: ${tvArtworkSize};
         }
 
         .media-player-card--tv .media-player__hero-top {
@@ -2910,9 +2923,17 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--tv .media-player__meta {
+          max-width: 100%;
+          min-width: 0;
+          overflow: hidden;
+          padding-left: 10px;
           justify-items: end;
           text-align: right;
           width: 100%;
+        }
+
+        .media-player-card--tv .media-player__meta--tv {
+          justify-self: end;
         }
 
         .media-player-card--tv .media-player__chip--top,
@@ -2922,8 +2943,13 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--tv .media-player__title {
+          display: block;
           font-size: calc(${playerStyles.title_size} - 1px);
+          max-width: 100%;
+          overflow: hidden;
           text-align: right;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .media-player-card--tv .media-player__subtitle--tv,
@@ -2931,6 +2957,15 @@ class NodaliaMediaPlayer extends HTMLElement {
           justify-self: end;
           max-width: 100%;
           text-align: right;
+        }
+
+        .media-player-card--tv .media-player__subtitle--tv {
+          display: block;
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          width: 100%;
         }
 
         .media-player-card--tv .media-player__chips,
@@ -2951,8 +2986,20 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__idle-tv-off-bar .media-player__info-rail {
-          justify-self: start;
-          width: 100%;
+          justify-self: end;
+          width: fit-content;
+        }
+
+        .media-player-card--tv.media-player-card--idle .media-player__idle-tv-off-bar {
+          align-items: end;
+          gap: 8px;
+          grid-template-columns: minmax(0, 1fr);
+          justify-items: end;
+        }
+
+        .media-player-card--tv.media-player-card--idle .media-player__idle-actions--tv-off {
+          justify-content: flex-end;
+          width: fit-content;
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__idle-hero {
@@ -2995,12 +3042,13 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         @media (max-width: 520px) {
           .media-player-card--tv .media-player__hero {
-            grid-template-columns: 64px minmax(0, 1fr);
+            gap: 12px;
+            grid-template-columns: min(${tvArtworkSize}, 64px) minmax(0, 1fr);
           }
 
           .media-player-card--tv .media-player__artwork {
-            height: 64px;
-            width: 64px;
+            height: min(${tvArtworkSize}, 64px);
+            width: min(${tvArtworkSize}, 64px);
           }
 
           .media-player-card--tv .media-player__tv-stack {
@@ -4202,6 +4250,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             ${this._renderTextField("Padding", "styles.player.padding", config.styles.player.padding)}
             ${this._renderTextField("Altura minima", "styles.player.min_height", config.styles.player.min_height)}
             ${this._renderTextField("Tamano portada", "styles.player.artwork_size", config.styles.player.artwork_size)}
+            ${this._renderTextField("Tamano portada TV", "styles.player.tv_artwork_size", config.styles.player.tv_artwork_size)}
             ${this._renderTextField("Tamano botones", "styles.player.control_size", config.styles.player.control_size)}
             ${this._renderTextField("Tamano titulo", "styles.player.title_size", config.styles.player.title_size)}
             ${this._renderTextField("Tamano subtitulo", "styles.player.subtitle_size", config.styles.player.subtitle_size)}
