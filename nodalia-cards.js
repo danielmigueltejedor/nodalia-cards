@@ -11029,6 +11029,56 @@ const HAPTIC_PATTERNS = {
   failure: [12, 40, 12, 40, 18],
 };
 const COMPACT_LAYOUT_THRESHOLD = 190;
+const SUCTION_MODE_PATTERNS = [
+  "quiet",
+  "silent",
+  "balanced",
+  "standard",
+  "normal",
+  "turbo",
+  "max",
+  "strong",
+  "gentle",
+  "suction",
+  "vacuum",
+  "carpet",
+];
+const MOP_MODE_PATTERNS = [
+  "mop",
+  "water",
+  "scrub",
+  "wet",
+  "smart",
+  "custom",
+  "off",
+  "deep",
+  "soak",
+];
+const MODE_LABELS = {
+  quiet: "Silencioso",
+  silent: "Silencioso",
+  balanced: "Equilibrado",
+  standard: "Estandar",
+  normal: "Normal",
+  turbo: "Turbo",
+  max: "Max",
+  maxplus: "Max+",
+  max_plus: "Max+",
+  gentle: "Suave",
+  strong: "Fuerte",
+  smart: "Inteligente",
+  smartmode: "Inteligente",
+  smart_mode: "Inteligente",
+  custom: "Personalizado",
+  custommode: "Personalizado",
+  custom_mode: "Personalizado",
+  off: "Sin fregado",
+  low: "Baja",
+  medium: "Media",
+  high: "Alta",
+  intense: "Intenso",
+  deep: "Profundo",
+};
 
 const DEFAULT_CONFIG = {
   entity: "",
@@ -11038,11 +11088,14 @@ const DEFAULT_CONFIG = {
   show_state_chip: true,
   show_battery_chip: true,
   show_fan_speed_chip: true,
+  show_mode_controls: true,
   show_fan_presets: true,
   show_return_to_base: true,
   show_stop: true,
   show_locate: true,
   fan_presets: [],
+  suction_select_entity: "",
+  mop_select_entity: "",
   haptics: {
     enabled: false,
     style: "selection",
@@ -11231,6 +11284,35 @@ function fireEvent(node, type, detail, options) {
   return event;
 }
 
+function normalizeTextKey(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function humanizeModeLabel(value, kind = "generic") {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+
+  const key = normalizeTextKey(raw);
+  if (key === "off" && kind === "suction") {
+    return "Off";
+  }
+
+  if (MODE_LABELS[key]) {
+    return MODE_LABELS[key];
+  }
+
+  return raw
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, match => match.toUpperCase());
+}
+
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
 
@@ -11261,6 +11343,7 @@ class NodaliaVacuumCard extends HTMLElement {
     this._hass = null;
     this._cardWidth = 0;
     this._isCompactLayout = false;
+    this._activeModePanel = null;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -11443,6 +11526,57 @@ class NodaliaVacuumCard extends HTMLElement {
     return current ? String(current) : "";
   }
 
+  _getSelectOptions(entityId) {
+    const selectState = entityId ? this._hass?.states?.[entityId] : null;
+    const options = Array.isArray(selectState?.attributes?.options)
+      ? selectState.attributes.options.map(item => String(item || "").trim()).filter(Boolean)
+      : [];
+
+    return {
+      entityId,
+      options,
+      state: selectState,
+      value: selectState?.state ? String(selectState.state) : "",
+    };
+  }
+
+  _guessRelatedSelectEntity(kind) {
+    if (!this._hass?.states || !this._config?.entity) {
+      return "";
+    }
+
+    const objectId = String(this._config.entity).split(".")[1] || "";
+    if (!objectId) {
+      return "";
+    }
+
+    const patterns = kind === "mop"
+      ? ["mop", "water", "water_level", "water_volume", "scrub"]
+      : ["fan_speed", "fan_power", "suction", "cleaning_mode"];
+
+    const candidates = Object.keys(this._hass.states)
+      .filter(entityId => entityId.startsWith("select."))
+      .filter(entityId => entityId.includes(objectId))
+      .filter(entityId => patterns.some(pattern => entityId.includes(pattern)))
+      .sort((left, right) => left.localeCompare(right, "es"));
+
+    return candidates[0] || "";
+  }
+
+  _categorizeModeOption(value) {
+    const key = normalizeTextKey(value);
+
+    if (MOP_MODE_PATTERNS.some(pattern => key.includes(pattern))) {
+      return "mop";
+    }
+
+    if (SUCTION_MODE_PATTERNS.some(pattern => key.includes(pattern))) {
+      return "suction";
+    }
+
+    return "unknown";
+  }
+
   _getFanPresets(state) {
     const configuredPresets = Array.isArray(this._config?.fan_presets) ? this._config.fan_presets : [];
     if (configuredPresets.length) {
@@ -11456,6 +11590,50 @@ class NodaliaVacuumCard extends HTMLElement {
     }
 
     return [];
+  }
+
+  _getModeDescriptor(kind, state) {
+    const explicitEntity = kind === "mop"
+      ? this._config?.mop_select_entity
+      : this._config?.suction_select_entity;
+    const selectEntity = explicitEntity || this._guessRelatedSelectEntity(kind);
+    const selectDescriptor = this._getSelectOptions(selectEntity);
+
+    if (selectDescriptor.entityId && selectDescriptor.options.length) {
+      return {
+        current: selectDescriptor.value,
+        kind,
+        label: kind === "mop" ? "Fregado" : "Aspirado",
+        options: selectDescriptor.options,
+        service: "select",
+        target: selectDescriptor.entityId,
+      };
+    }
+
+    const rawPresets = this._getFanPresets(state);
+    if (!rawPresets.length) {
+      return null;
+    }
+
+    const groupedOptions = rawPresets.filter(option => this._categorizeModeOption(option) === kind);
+    const options = groupedOptions.length
+      ? groupedOptions
+      : kind === "suction" && !rawPresets.some(option => this._categorizeModeOption(option) === "mop")
+        ? rawPresets
+        : [];
+
+    if (!options.length) {
+      return null;
+    }
+
+    return {
+      current: this._getCurrentFanSpeed(state),
+      kind,
+      label: kind === "mop" ? "Fregado" : "Aspirado",
+      options,
+      service: "fan",
+      target: this._config?.entity,
+    };
   }
 
   _isCleaning(state) {
@@ -11524,12 +11702,13 @@ class NodaliaVacuumCard extends HTMLElement {
       icon: this._isCleaning(state) ? "mdi:pause" : "mdi:play",
       label: this._isCleaning(state) ? "Pausar" : "Iniciar",
       active: true,
+      primary: true,
     });
 
-    if (this._config?.show_return_to_base !== false && !this._isDocked(state) && state?.state !== "unavailable") {
+    if (this._config?.show_return_to_base !== false && state?.state !== "unavailable") {
       controls.push({
         action: "return_to_base",
-        icon: "mdi:home-map-marker",
+        icon: "mdi:home-import-outline",
         label: "Base",
         active: this._isReturning(state),
       });
@@ -11547,7 +11726,7 @@ class NodaliaVacuumCard extends HTMLElement {
     if (this._config?.show_locate !== false && state?.state !== "unavailable") {
       controls.push({
         action: "locate",
-        icon: "mdi:radar",
+        icon: "mdi:crosshairs-gps",
         label: "Buscar",
         active: false,
       });
@@ -11599,12 +11778,30 @@ class NodaliaVacuumCard extends HTMLElement {
       case "locate":
         this._callService("locate");
         break;
+      case "toggle-mode-panel": {
+        const modeKind = button.dataset.modeKind || "";
+        this._activeModePanel = this._activeModePanel === modeKind ? null : modeKind;
+        this._render();
+        break;
+      }
       case "fan":
         if (button.dataset.value) {
           this._callService("set_fan_speed", {
             fan_speed: button.dataset.value,
           });
         }
+        this._activeModePanel = null;
+        this._render();
+        break;
+      case "select":
+        if (button.dataset.targetEntity && button.dataset.value) {
+          this._hass.callService("select", "select_option", {
+            entity_id: button.dataset.targetEntity,
+            option: button.dataset.value,
+          });
+        }
+        this._activeModePanel = null;
+        this._render();
         break;
       default:
         break;
@@ -11668,7 +11865,9 @@ class NodaliaVacuumCard extends HTMLElement {
     const stateLabel = this._getStateLabel(state);
     const batteryLevel = this._getBatteryLevel(state);
     const fanSpeed = this._getCurrentFanSpeed(state);
-    const fanPresets = config.show_fan_presets !== false ? this._getFanPresets(state) : [];
+    const modeControlsEnabled = config.show_mode_controls !== false && config.show_fan_presets !== false;
+    const suctionMode = modeControlsEnabled ? this._getModeDescriptor("suction", state) : null;
+    const mopMode = modeControlsEnabled ? this._getModeDescriptor("mop", state) : null;
     const isCompactLayout = this._isCompactLayout;
     const accentColor = this._getAccentColor(state);
     const controls = this._getControls(state);
@@ -11681,7 +11880,7 @@ class NodaliaVacuumCard extends HTMLElement {
       ? `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`
       : styles.card.border;
     const cardShadow = isActive
-      ? `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`
+      ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`
       : styles.card.box_shadow;
 
     if (config.show_state_chip !== false) {
@@ -11692,8 +11891,16 @@ class NodaliaVacuumCard extends HTMLElement {
       chips.push(`<span class="vacuum-card__chip">${batteryLevel}%</span>`);
     }
 
-    if (config.show_fan_speed_chip !== false && fanSpeed) {
-      chips.push(`<span class="vacuum-card__chip">${escapeHtml(fanSpeed)}</span>`);
+    const availableModeDescriptors = [suctionMode, mopMode].filter(Boolean);
+    if (this._activeModePanel && !availableModeDescriptors.some(mode => mode.kind === this._activeModePanel)) {
+      this._activeModePanel = null;
+    }
+
+    const activeModeDescriptor = availableModeDescriptors.find(mode => mode.kind === this._activeModePanel) || null;
+    const currentModeValue = fanSpeed || mopMode?.current || suctionMode?.current || "";
+    if (config.show_fan_speed_chip !== false && currentModeValue) {
+      const modeKind = this._categorizeModeOption(currentModeValue) === "mop" ? "mop" : "suction";
+      chips.push(`<span class="vacuum-card__chip">${escapeHtml(humanizeModeLabel(currentModeValue, modeKind))}</span>`);
     }
 
     const showCopyBlock = !isCompactLayout || chips.length > 0;
@@ -11720,6 +11927,18 @@ class NodaliaVacuumCard extends HTMLElement {
           overflow: hidden;
           padding: ${styles.card.padding};
           position: relative;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        ha-card::before {
+          background: ${isActive
+            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, rgba(255, 255, 255, 0.06)), rgba(255, 255, 255, 0))`
+            : "linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0))"};
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
         }
 
         .vacuum-card {
@@ -11727,6 +11946,8 @@ class NodaliaVacuumCard extends HTMLElement {
           display: grid;
           gap: ${styles.card.gap};
           min-width: 0;
+          position: relative;
+          z-index: 1;
         }
 
         .vacuum-card__header {
@@ -11755,9 +11976,12 @@ class NodaliaVacuumCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: color-mix(in srgb, ${accentColor} 16%, ${styles.icon.background});
+          background: ${isActive
+            ? `color-mix(in srgb, ${accentColor} 24%, rgba(255, 255, 255, 0.08))`
+            : "rgba(255, 255, 255, 0.06)"};
           border: 1px solid color-mix(in srgb, ${accentColor} 22%, rgba(255, 255, 255, 0.08));
           border-radius: 999px;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 24px rgba(0, 0, 0, 0.16);
           color: ${isActive ? accentColor : styles.icon.color};
           cursor: pointer;
           display: inline-flex;
@@ -11812,6 +12036,7 @@ class NodaliaVacuumCard extends HTMLElement {
           background: rgba(255, 255, 255, 0.05);
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 999px;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
           color: var(--secondary-text-color);
           display: inline-flex;
           font-size: ${styles.chip_font_size};
@@ -11830,35 +12055,49 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card__controls {
-          display: grid;
+          display: flex;
+          flex-wrap: wrap;
           gap: 10px;
-          grid-template-columns: repeat(${Math.max(controls.length, 1)}, minmax(0, 1fr));
+          justify-content: center;
+        }
+
+        .vacuum-card--compact .vacuum-card__controls {
+          justify-content: center;
         }
 
         .vacuum-card__control {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.04);
+          background: rgba(255, 255, 255, 0.05);
           border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 24px rgba(0, 0, 0, 0.16);
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
+          flex: 0 0 auto;
           height: ${styles.control.size};
           justify-content: center;
           line-height: 0;
+          min-width: ${styles.control.size};
           margin: 0;
           outline: none;
           padding: 0;
           position: relative;
-          width: 100%;
+          width: ${styles.control.size};
         }
 
         .vacuum-card__control--active {
           background: color-mix(in srgb, ${accentColor} 18%, ${styles.control.accent_background});
           border-color: color-mix(in srgb, ${accentColor} 48%, rgba(255, 255, 255, 0.12));
           color: ${styles.control.accent_color};
+        }
+
+        .vacuum-card__control--primary {
+          height: calc(${styles.control.size} + 8px);
+          min-width: calc(${styles.control.size} + 8px);
+          width: calc(${styles.control.size} + 8px);
         }
 
         .vacuum-card__control ha-icon {
@@ -11879,13 +12118,51 @@ class NodaliaVacuumCard extends HTMLElement {
           min-width: 0;
         }
 
+        .vacuum-card__mode-toggles {
+          display: grid;
+          gap: 10px;
+          grid-template-columns: repeat(${Math.max(availableModeDescriptors.length, 1)}, minmax(0, 1fr));
+        }
+
+        .vacuum-card__mode-toggle {
+          -webkit-tap-highlight-color: transparent;
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          color: var(--secondary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: ${styles.chip_font_size};
+          font-weight: 700;
+          gap: 8px;
+          height: ${styles.control.size};
+          justify-content: center;
+          padding: 0 14px;
+          width: 100%;
+        }
+
+        .vacuum-card__mode-toggle--active {
+          background: color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.04));
+          border-color: color-mix(in srgb, ${accentColor} 42%, rgba(255, 255, 255, 0.12));
+          color: var(--primary-text-color);
+        }
+
+        .vacuum-card__mode-toggle ha-icon {
+          --mdc-icon-size: calc(${styles.control.size} * 0.42);
+        }
+
         .vacuum-card__preset {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.04);
+          background: rgba(255, 255, 255, 0.05);
           border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
           color: var(--secondary-text-color);
           cursor: pointer;
           display: inline-flex;
@@ -11907,13 +12184,17 @@ class NodaliaVacuumCard extends HTMLElement {
           color: var(--primary-text-color);
         }
 
+        .vacuum-card__presets--panel {
+          margin-top: -2px;
+        }
+
         .vacuum-card--compact .vacuum-card__presets {
           justify-content: center;
         }
 
         @media (max-width: 480px) {
           .vacuum-card__controls {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
           }
         }
       </style>
@@ -11948,7 +12229,7 @@ class NodaliaVacuumCard extends HTMLElement {
                   ${controls
                     .map(control => `
                       <button
-                        class="vacuum-card__control ${control.active ? "vacuum-card__control--active" : ""}"
+                        class="vacuum-card__control ${control.primary ? "vacuum-card__control--primary" : ""} ${control.active ? "vacuum-card__control--active" : ""}"
                         type="button"
                         data-vacuum-action="${escapeHtml(control.action)}"
                         aria-label="${escapeHtml(control.label)}"
@@ -11963,18 +12244,41 @@ class NodaliaVacuumCard extends HTMLElement {
           }
 
           ${
-            fanPresets.length > 1
+            availableModeDescriptors.length
               ? `
-                <div class="vacuum-card__presets">
-                  ${fanPresets
-                    .map(preset => `
+                <div class="vacuum-card__mode-toggles">
+                  ${availableModeDescriptors
+                    .map(mode => `
                       <button
-                        class="vacuum-card__preset ${preset === fanSpeed ? "vacuum-card__preset--active" : ""}"
+                        class="vacuum-card__mode-toggle ${activeModeDescriptor?.kind === mode.kind ? "vacuum-card__mode-toggle--active" : ""}"
                         type="button"
-                        data-vacuum-action="fan"
-                        data-value="${escapeHtml(preset)}"
+                        data-vacuum-action="toggle-mode-panel"
+                        data-mode-kind="${escapeHtml(mode.kind)}"
                       >
-                        ${escapeHtml(preset)}
+                        <ha-icon icon="${mode.kind === "mop" ? "mdi:spray-bottle" : "mdi:fan"}"></ha-icon>
+                        <span>${escapeHtml(mode.label)}</span>
+                      </button>
+                    `)
+                    .join("")}
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            activeModeDescriptor
+              ? `
+                <div class="vacuum-card__presets vacuum-card__presets--panel">
+                  ${activeModeDescriptor.options
+                    .map(option => `
+                      <button
+                        class="vacuum-card__preset ${normalizeTextKey(option) === normalizeTextKey(activeModeDescriptor.current) ? "vacuum-card__preset--active" : ""}"
+                        type="button"
+                        data-vacuum-action="${activeModeDescriptor.service === "select" ? "select" : "fan"}"
+                        ${activeModeDescriptor.service === "select" ? `data-target-entity="${escapeHtml(activeModeDescriptor.target)}"` : ""}
+                        data-value="${escapeHtml(option)}"
+                      >
+                        ${escapeHtml(humanizeModeLabel(option, activeModeDescriptor.kind))}
                       </button>
                     `)
                     .join("")}
@@ -12226,14 +12530,20 @@ class NodaliaVacuumCardEditor extends HTMLElement {
     const entityIds = Object.keys(this._hass?.states || {})
       .filter(entityId => entityId.startsWith("vacuum."))
       .sort((left, right) => left.localeCompare(right, "es"));
+    const selectEntityIds = Object.keys(this._hass?.states || {})
+      .filter(entityId => entityId.startsWith("select."))
+      .sort((left, right) => left.localeCompare(right, "es"));
 
-    if (!entityIds.length) {
+    if (!entityIds.length && !selectEntityIds.length) {
       return "";
     }
 
     return `
       <datalist id="vacuum-card-entities">
         ${entityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
+      </datalist>
+      <datalist id="vacuum-card-select-entities">
+        ${selectEntityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
       </datalist>
     `;
   }
@@ -12371,6 +12681,12 @@ class NodaliaVacuumCardEditor extends HTMLElement {
                 placeholder: "Quiet, Balanced, Turbo, Max",
               },
             )}
+            ${this._renderTextField("Select aspirado", "suction_select_entity", config.suction_select_entity, {
+              placeholder: "select.robot_salon_suction",
+            })}
+            ${this._renderTextField("Select fregado", "mop_select_entity", config.mop_select_entity, {
+              placeholder: "select.robot_salon_mop_mode",
+            })}
           </div>
         </section>
 
@@ -12393,6 +12709,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
             ${this._renderCheckboxField("Chip de estado", "show_state_chip", config.show_state_chip !== false)}
             ${this._renderCheckboxField("Chip de bateria", "show_battery_chip", config.show_battery_chip !== false)}
             ${this._renderCheckboxField("Chip de potencia", "show_fan_speed_chip", config.show_fan_speed_chip !== false)}
+            ${this._renderCheckboxField("Controles de modo", "show_mode_controls", config.show_mode_controls !== false)}
             ${this._renderCheckboxField("Presets de potencia", "show_fan_presets", config.show_fan_presets !== false)}
             ${this._renderCheckboxField("Boton volver a base", "show_return_to_base", config.show_return_to_base !== false)}
             ${this._renderCheckboxField("Boton parar", "show_stop", config.show_stop !== false)}
@@ -12458,6 +12775,12 @@ class NodaliaVacuumCardEditor extends HTMLElement {
       .querySelectorAll('input[data-field="entity"]')
       .forEach(input => {
         input.setAttribute("list", "vacuum-card-entities");
+      });
+
+    this.shadowRoot
+      .querySelectorAll('input[data-field="suction_select_entity"], input[data-field="mop_select_entity"]')
+      .forEach(input => {
+        input.setAttribute("list", "vacuum-card-select-entities");
       });
   }
 }
