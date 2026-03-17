@@ -11053,6 +11053,11 @@ const MOP_MODE_PATTERNS = [
   "soak",
   "rinse",
 ];
+const SHARED_SMART_MODE_PATTERNS = [
+  "smart",
+  "intelligent",
+  "inteligente",
+];
 const MODE_LABELS = {
   quiet: "Silencioso",
   silent: "Silencioso",
@@ -11344,6 +11349,10 @@ class NodaliaVacuumCard extends HTMLElement {
     this._cardWidth = 0;
     this._isCompactLayout = false;
     this._activeModePanel = null;
+    this._lastNonSmartModeSelection = {
+      suction: "",
+      mop: "",
+    };
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -11577,6 +11586,11 @@ class NodaliaVacuumCard extends HTMLElement {
     return "unknown";
   }
 
+  _isSharedSmartMode(value) {
+    const key = normalizeTextKey(value);
+    return SHARED_SMART_MODE_PATTERNS.some(pattern => key.includes(pattern));
+  }
+
   _getFanPresets(state) {
     const configuredPresets = Array.isArray(this._config?.fan_presets) ? this._config.fan_presets : [];
     if (configuredPresets.length) {
@@ -11615,9 +11629,16 @@ class NodaliaVacuumCard extends HTMLElement {
       return null;
     }
 
-    const options = kind === "mop"
-      ? rawPresets.filter(option => this._categorizeModeOption(option) === "mop")
-      : rawPresets.filter(option => this._categorizeModeOption(option) !== "mop");
+    const options = rawPresets.filter(option => {
+      const optionKind = this._categorizeModeOption(option);
+      const isSharedSmartMode = this._isSharedSmartMode(option);
+
+      if (kind === "mop") {
+        return optionKind === "mop" || isSharedSmartMode;
+      }
+
+      return optionKind !== "mop" || isSharedSmartMode;
+    });
 
     if (!options.length) {
       return null;
@@ -11680,6 +11701,128 @@ class NodaliaVacuumCard extends HTMLElement {
       entity_id: this._config.entity,
       ...data,
     });
+  }
+
+  _findMatchingModeOption(options, value) {
+    const expectedKey = normalizeTextKey(value);
+    if (!expectedKey || !Array.isArray(options)) {
+      return "";
+    }
+
+    return options.find(option => normalizeTextKey(option) === expectedKey) || "";
+  }
+
+  _findSharedSmartOption(options) {
+    return Array.isArray(options)
+      ? options.find(option => this._isSharedSmartMode(option)) || ""
+      : "";
+  }
+
+  _getModeFallbackCandidates(kind) {
+    return kind === "mop"
+      ? ["off", "low", "medium", "high", "deep", "standard", "normal", "custom"]
+      : ["balanced", "standard", "normal", "quiet", "silent", "gentle", "turbo", "max", "strong", "custom"];
+  }
+
+  _getModeFallbackOption(kind, descriptor) {
+    if (!descriptor?.options?.length) {
+      return "";
+    }
+
+    const remembered = this._findMatchingModeOption(
+      descriptor.options,
+      this._lastNonSmartModeSelection[kind],
+    );
+    if (remembered && !this._isSharedSmartMode(remembered)) {
+      return remembered;
+    }
+
+    const normalizedOptions = descriptor.options.map(option => ({
+      key: normalizeTextKey(option),
+      value: option,
+    }));
+
+    for (const candidate of this._getModeFallbackCandidates(kind)) {
+      const exactMatch = normalizedOptions.find(option => option.key === candidate);
+      if (exactMatch && !this._isSharedSmartMode(exactMatch.value)) {
+        return exactMatch.value;
+      }
+    }
+
+    const firstNonSmart = descriptor.options.find(option => !this._isSharedSmartMode(option));
+    return firstNonSmart || "";
+  }
+
+  _rememberNonSmartModeSelection(kind, value) {
+    if (!kind || !value || this._isSharedSmartMode(value)) {
+      return;
+    }
+
+    this._lastNonSmartModeSelection[kind] = value;
+  }
+
+  _syncRememberedModeSelections(state) {
+    ["suction", "mop"].forEach(kind => {
+      const descriptor = this._getModeDescriptor(kind, state);
+      if (descriptor?.current && !this._isSharedSmartMode(descriptor.current)) {
+        this._rememberNonSmartModeSelection(kind, descriptor.current);
+      }
+    });
+  }
+
+  _applyLinkedSmartModeSelection(kind, value, state) {
+    const descriptor = this._getModeDescriptor(kind, state);
+    const otherKind = kind === "mop" ? "suction" : "mop";
+    const otherDescriptor = this._getModeDescriptor(otherKind, state);
+
+    if (descriptor?.service === "select" && descriptor.target && value) {
+      this._hass.callService("select", "select_option", {
+        entity_id: descriptor.target,
+        option: value,
+      });
+    } else if (descriptor?.service === "fan" && value) {
+      this._callService("set_fan_speed", {
+        fan_speed: value,
+      });
+      return;
+    }
+
+    if (!descriptor || !otherDescriptor || otherDescriptor.service !== "select" || !otherDescriptor.target) {
+      return;
+    }
+
+    if (otherDescriptor.target === descriptor.target) {
+      return;
+    }
+
+    if (this._isSharedSmartMode(value)) {
+      const sharedSmartOption = this._findSharedSmartOption(otherDescriptor.options);
+      if (
+        sharedSmartOption &&
+        normalizeTextKey(sharedSmartOption) !== normalizeTextKey(otherDescriptor.current)
+      ) {
+        this._hass.callService("select", "select_option", {
+          entity_id: otherDescriptor.target,
+          option: sharedSmartOption,
+        });
+      }
+      return;
+    }
+
+    if (!this._isSharedSmartMode(otherDescriptor.current)) {
+      return;
+    }
+
+    const fallbackOption = this._getModeFallbackOption(otherKind, otherDescriptor);
+    if (
+      fallbackOption &&
+      normalizeTextKey(fallbackOption) !== normalizeTextKey(otherDescriptor.current)
+    ) {
+      this._hass.callService("select", "select_option", {
+        entity_id: otherDescriptor.target,
+        option: fallbackOption,
+      });
+    }
   }
 
   _runPrimaryAction(state) {
@@ -11755,6 +11898,7 @@ class NodaliaVacuumCard extends HTMLElement {
     this._triggerHaptic();
 
     const state = this._getState();
+    this._syncRememberedModeSelections(state);
 
     switch (button.dataset.vacuumAction) {
       case "primary":
@@ -11783,6 +11927,7 @@ class NodaliaVacuumCard extends HTMLElement {
       }
       case "fan":
         if (button.dataset.value) {
+          this._rememberNonSmartModeSelection(button.dataset.modeKind || "suction", button.dataset.value);
           this._callService("set_fan_speed", {
             fan_speed: button.dataset.value,
           });
@@ -11792,10 +11937,8 @@ class NodaliaVacuumCard extends HTMLElement {
         break;
       case "select":
         if (button.dataset.targetEntity && button.dataset.value) {
-          this._hass.callService("select", "select_option", {
-            entity_id: button.dataset.targetEntity,
-            option: button.dataset.value,
-          });
+          this._rememberNonSmartModeSelection(button.dataset.modeKind || "", button.dataset.value);
+          this._applyLinkedSmartModeSelection(button.dataset.modeKind || "", button.dataset.value, state);
         }
         this._activeModePanel = null;
         this._render();
@@ -12242,6 +12385,7 @@ class NodaliaVacuumCard extends HTMLElement {
                         type="button"
                         data-vacuum-action="${activeModeDescriptor.service === "select" ? "select" : "fan"}"
                         ${activeModeDescriptor.service === "select" ? `data-target-entity="${escapeHtml(activeModeDescriptor.target)}"` : ""}
+                        data-mode-kind="${escapeHtml(activeModeDescriptor.kind)}"
                         data-value="${escapeHtml(option)}"
                       >
                         ${escapeHtml(humanizeModeLabel(option, activeModeDescriptor.kind))}
