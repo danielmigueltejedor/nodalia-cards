@@ -6602,19 +6602,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         </button>
       `
       : "";
-    const tvSourceToggleMarkup = sourceOptions.length && !isTvOff
-      ? `
-        <button
-          type="button"
-          class="media-player__control ${this._tvSourcePickerEntity === player.entity ? "media-player__control--active" : ""}"
-          data-media-control="toggle-source-panel"
-          data-entity="${escapeHtml(player.entity)}"
-          aria-label="Cambiar fuente"
-        >
-          <ha-icon icon="mdi:video-input-hdmi"></ha-icon>
-        </button>
-      `
-      : "";
+    const artworkIsSourceToggle = isTvPlayer && sourceOptions.length && !isTvOff;
     const tvBrowseMarkup = browseAvailable && !isTvOff
       ? `
         <button
@@ -6675,7 +6663,6 @@ class NodaliaMediaPlayer extends HTMLElement {
         ${tvPowerMarkup}
         ${tvPlayPauseMarkup}
         ${tvVolumeToggleMarkup}
-        ${tvSourceToggleMarkup}
         ${tvBrowseMarkup}
       </div>
     `;
@@ -6780,13 +6767,33 @@ class NodaliaMediaPlayer extends HTMLElement {
           }
           <div class="media-player__content media-player__content--idle">
             <div class="media-player__idle-hero">
-              <div class="media-player__artwork media-player__artwork--idle">
-                ${
-                  artwork
-                    ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(playerLabel)}" />`
-                    : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
-                }
-              </div>
+              ${
+                artworkIsSourceToggle
+                  ? `
+                    <button
+                      type="button"
+                      class="media-player__artwork media-player__artwork--idle media-player__artwork--interactive ${this._tvSourcePickerEntity === player.entity ? "media-player__artwork--active" : ""}"
+                      data-media-control="toggle-source-panel"
+                      data-entity="${escapeHtml(player.entity)}"
+                      aria-label="Cambiar fuente"
+                    >
+                      ${
+                        artwork
+                          ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(playerLabel)}" />`
+                          : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
+                      }
+                    </button>
+                  `
+                  : `
+                    <div class="media-player__artwork media-player__artwork--idle">
+                      ${
+                        artwork
+                          ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(playerLabel)}" />`
+                          : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
+                      }
+                    </div>
+                  `
+              }
               <div class="media-player__idle-main ${isTvPlayer && isTvOff ? "media-player__idle-main--tv-off" : ""}">
                 ${infoRailMarkup}
                 ${isTvPlayer ? idleTvControlsMarkup : idleControlsMarkup}
@@ -6820,13 +6827,33 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
         <div class="media-player__content">
           <div class="media-player__hero">
-            <div class="media-player__artwork">
-              ${
-                artwork
-                  ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title)}" />`
-                  : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
-              }
-            </div>
+            ${
+              artworkIsSourceToggle
+                ? `
+                  <button
+                    type="button"
+                    class="media-player__artwork media-player__artwork--interactive ${this._tvSourcePickerEntity === player.entity ? "media-player__artwork--active" : ""}"
+                    data-media-control="toggle-source-panel"
+                    data-entity="${escapeHtml(player.entity)}"
+                    aria-label="Cambiar fuente"
+                  >
+                    ${
+                      artwork
+                        ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title)}" />`
+                        : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
+                    }
+                  </button>
+                `
+                : `
+                  <div class="media-player__artwork">
+                    ${
+                      artwork
+                        ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title)}" />`
+                        : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
+                    }
+                  </div>
+                `
+            }
             <div class="media-player__hero-copy">
               <div class="media-player__hero-top">
                 <div class="media-player__meta">
@@ -7155,15 +7182,20 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__artwork {
           align-items: center;
+          appearance: none;
           background: rgba(255, 255, 255, 0.08);
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 22px;
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 24px rgba(0, 0, 0, 0.18);
+          color: inherit;
+          cursor: default;
           display: flex;
           height: ${playerStyles.artwork_size};
           justify-content: center;
           overflow: hidden;
+          padding: 0;
           position: relative;
+          text-decoration: none;
           width: ${playerStyles.artwork_size};
         }
 
@@ -7192,6 +7224,19 @@ class NodaliaMediaPlayer extends HTMLElement {
           top: 50%;
           transform: translate(-50%, -50%);
           width: auto;
+        }
+
+        .media-player__artwork--interactive {
+          cursor: pointer;
+        }
+
+        .media-player__artwork--active {
+          background: rgba(var(--rgb-primary-color), 0.14);
+          border-color: rgba(var(--rgb-primary-color), 0.2);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 10px 24px rgba(0, 0, 0, 0.18),
+            0 0 0 1px rgba(var(--rgb-primary-color), 0.1);
         }
 
         .media-player__meta {
