@@ -12038,7 +12038,7 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _runPrimaryAction(state) {
-    if (this._isCleaning(state)) {
+    if (this._shouldUsePausePrimary(state)) {
       this._callService("pause");
       return;
     }
@@ -12046,14 +12046,29 @@ class NodaliaVacuumCard extends HTMLElement {
     this._callService("start");
   }
 
+  _shouldUsePausePrimary(state) {
+    const reportedStateKey = this._getReportedStateKey(state);
+
+    if (!reportedStateKey || ["unknown", "unavailable", "error"].includes(reportedStateKey)) {
+      return false;
+    }
+
+    if (this._isDocked(state) || this._isPaused(state)) {
+      return false;
+    }
+
+    return true;
+  }
+
   _getControls(state) {
     const controls = [];
+    const usePausePrimary = this._shouldUsePausePrimary(state);
 
     controls.push({
-      action: this._isCleaning(state) ? "pause" : "start",
-      icon: this._isCleaning(state) ? "mdi:pause" : "mdi:play",
-      label: this._isCleaning(state) ? "Pausar" : "Iniciar",
-      active: true,
+      action: usePausePrimary ? "pause" : "start",
+      icon: usePausePrimary ? "mdi:pause" : "mdi:play",
+      label: usePausePrimary ? "Pausar" : "Iniciar",
+      active: usePausePrimary,
     });
 
     if (this._config?.show_return_to_base !== false && state?.state !== "unavailable") {
