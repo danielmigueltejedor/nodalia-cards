@@ -5051,6 +5051,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._draftVolumeTimers = new Map();
     this._volumeStepFallback = new Set();
     this._tvSourcePickerEntity = null;
+    this._tvVolumePickerEntity = null;
     this._onResize = () => {
       this._render();
     };
@@ -5733,6 +5734,8 @@ class NodaliaMediaPlayer extends HTMLElement {
     switch (control) {
       case "power-toggle": {
         const currentState = String(options.state || this._hass?.states?.[entityId]?.state || "");
+        this._tvSourcePickerEntity = null;
+        this._tvVolumePickerEntity = null;
         const service = currentState === "off" ? "turn_on" : "turn_off";
         this._hass.callService("media_player", service, { entity_id: entityId });
         break;
@@ -5782,12 +5785,19 @@ class NodaliaMediaPlayer extends HTMLElement {
           });
           if (this._tvSourcePickerEntity === entityId) {
             this._tvSourcePickerEntity = null;
+            this._tvVolumePickerEntity = null;
             this._render();
           }
         }
         break;
       case "toggle-source-panel":
+        this._tvVolumePickerEntity = null;
         this._tvSourcePickerEntity = this._tvSourcePickerEntity === entityId ? null : entityId;
+        this._render();
+        break;
+      case "toggle-volume-panel":
+        this._tvSourcePickerEntity = null;
+        this._tvVolumePickerEntity = this._tvVolumePickerEntity === entityId ? null : entityId;
         this._render();
         break;
       case "browse-media":
@@ -6578,11 +6588,24 @@ class NodaliaMediaPlayer extends HTMLElement {
       </button>
     `
       : "";
-    const tvSourceToggleMarkup = sourceOptions.length
+    const tvVolumeToggleMarkup = volumeSupported && !isTvOff
       ? `
         <button
           type="button"
-          class="media-player__control"
+          class="media-player__control ${this._tvVolumePickerEntity === player.entity ? "media-player__control--active" : ""}"
+          data-media-control="toggle-volume-panel"
+          data-entity="${escapeHtml(player.entity)}"
+          aria-label="Mostrar volumen"
+        >
+          <ha-icon icon="mdi:volume-high"></ha-icon>
+        </button>
+      `
+      : "";
+    const tvSourceToggleMarkup = sourceOptions.length && !isTvOff
+      ? `
+        <button
+          type="button"
+          class="media-player__control ${this._tvSourcePickerEntity === player.entity ? "media-player__control--active" : ""}"
           data-media-control="toggle-source-panel"
           data-entity="${escapeHtml(player.entity)}"
           aria-label="Cambiar fuente"
@@ -6591,7 +6614,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         </button>
       `
       : "";
-    const tvBrowseMarkup = browseAvailable
+    const tvBrowseMarkup = browseAvailable && !isTvOff
       ? `
         <button
           type="button"
@@ -6625,10 +6648,10 @@ class NodaliaMediaPlayer extends HTMLElement {
         </div>
       `
       : "";
-    const tvSourcePanelMarkup = sourceButtonsMarkup && this._tvSourcePickerEntity === player.entity
+    const tvSourcePanelMarkup = sourceButtonsMarkup && !isTvOff && this._tvSourcePickerEntity === player.entity
       ? `<div class="media-player__tv-source-panel">${sourceButtonsMarkup}</div>`
       : "";
-    const tvVolumeSliderMarkup = volumeSupported && !isTvOff
+    const tvVolumeSliderMarkup = volumeSupported && !isTvOff && this._tvVolumePickerEntity === player.entity
       ? `
         <div class="media-player__tv-volume-wrap">
           <input
@@ -6650,6 +6673,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       <div class="media-player__tv-actions">
         ${tvPowerMarkup}
         ${tvPlayPauseMarkup}
+        ${tvVolumeToggleMarkup}
         ${tvSourceToggleMarkup}
         ${tvBrowseMarkup}
       </div>
@@ -7628,6 +7652,12 @@ class NodaliaMediaPlayer extends HTMLElement {
           color: ${playerStyles.accent_color};
           height: calc(${playerStyles.control_size} + 4px);
           width: calc(${playerStyles.control_size} + 4px);
+        }
+
+        .media-player__control--active {
+          background: rgba(var(--rgb-primary-color), 0.14);
+          border-color: rgba(var(--rgb-primary-color), 0.2);
+          color: ${playerStyles.accent_color};
         }
 
         .media-player__volume-button {
