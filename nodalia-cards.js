@@ -7091,15 +7091,15 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__hero-copy {
           display: grid;
-          gap: 8px;
+          gap: 6px;
           min-width: 0;
         }
 
         .media-player__hero-top {
           align-items: start;
           display: grid;
-          gap: 10px;
-          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 8px;
+          grid-template-columns: minmax(0, 1fr);
           min-width: 0;
         }
 
@@ -7107,10 +7107,12 @@ class NodaliaMediaPlayer extends HTMLElement {
           align-items: end;
           display: grid;
           gap: 6px;
+          justify-self: end;
           justify-items: end;
-          max-width: clamp(118px, 34vw, 210px);
+          max-width: min(100%, clamp(132px, 36vw, 220px));
           min-width: 0;
           pointer-events: none;
+          width: fit-content;
         }
 
         .media-player__info-rail--idle {
@@ -7530,7 +7532,8 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__chip--top {
           justify-content: flex-end;
-          max-width: 100%;
+          margin-left: auto;
+          max-width: min(100%, 220px);
           text-align: right;
         }
 
