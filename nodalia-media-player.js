@@ -391,11 +391,13 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._mediaBrowserRequestToken = 0;
     this._activePlayerIndex = 0;
     this._mediaTicker = null;
+    this._lastRenderSignature = "";
     this._draftVolume = new Map();
     this._draftVolumeTimers = new Map();
     this._volumeStepFallback = new Set();
     this._tvSourcePickerEntity = null;
     this._tvVolumePickerEntity = null;
+    this._tvPanelScrollPositions = new Map();
     this._onResize = () => {
       this._render();
     };
@@ -432,16 +434,72 @@ class NodaliaMediaPlayer extends HTMLElement {
 
   setConfig(config) {
     this._config = normalizeConfig(config);
+    this._lastRenderSignature = "";
     this._render();
   }
 
   set hass(hass) {
+    const previousHass = this._hass;
     this._hass = hass;
+
+    const nextSignature = this._getRenderSignature(hass);
+    if (previousHass && nextSignature === this._lastRenderSignature) {
+      return;
+    }
+
+    this._lastRenderSignature = nextSignature;
     this._render();
   }
 
   getCardSize() {
     return 3;
+  }
+
+  _getTrackedEntities() {
+    const configuredPlayers = Array.isArray(this._config?.players)
+      ? this._config.players.map(player => player?.entity).filter(Boolean)
+      : [];
+
+    if (configuredPlayers.length) {
+      return [...new Set(configuredPlayers)];
+    }
+
+    return this._config?.entity ? [this._config.entity] : [];
+  }
+
+  _getRenderSignature(hass = this._hass) {
+    const states = hass?.states || {};
+    const entities = this._getTrackedEntities();
+
+    return entities
+      .map(entityId => {
+        const state = states[entityId];
+        if (!state) {
+          return `${entityId}::missing`;
+        }
+
+        const attrs = state.attributes || {};
+        return [
+          entityId,
+          state.state || "",
+          attrs.friendly_name || "",
+          attrs.entity_picture || "",
+          attrs.media_title || "",
+          attrs.media_artist || "",
+          attrs.media_series_title || "",
+          attrs.media_album_name || "",
+          attrs.app_name || "",
+          attrs.source || "",
+          attrs.media_channel || "",
+          attrs.volume_level ?? "",
+          attrs.media_duration ?? "",
+          attrs.media_position ?? "",
+          attrs.media_position_updated_at || "",
+          attrs.supported_features ?? "",
+          Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
+        ].join("::");
+      })
+      .join("||");
   }
 
   _isInEditMode() {
@@ -1513,6 +1571,37 @@ class NodaliaMediaPlayer extends HTMLElement {
     list.scrollTop = savedScrollTop;
   }
 
+  _captureTvPanelScrollState() {
+    if (!this.shadowRoot || !this._tvSourcePickerEntity) {
+      return;
+    }
+
+    const panel = this.shadowRoot.querySelector(".media-player__tv-source-panel");
+    if (!(panel instanceof HTMLElement)) {
+      return;
+    }
+
+    this._tvPanelScrollPositions.set(this._tvSourcePickerEntity, panel.scrollTop);
+  }
+
+  _restoreTvPanelScrollState() {
+    if (!this.shadowRoot || !this._tvSourcePickerEntity) {
+      return;
+    }
+
+    const panel = this.shadowRoot.querySelector(".media-player__tv-source-panel");
+    if (!(panel instanceof HTMLElement)) {
+      return;
+    }
+
+    const savedScrollTop = this._tvPanelScrollPositions.get(this._tvSourcePickerEntity);
+    if (typeof savedScrollTop !== "number") {
+      return;
+    }
+
+    panel.scrollTop = savedScrollTop;
+  }
+
   _getMediaBrowserIcon(item) {
     const musicAssistantDirectoryIcon =
       item?.media_class === "directory" ? this._getMusicAssistantDirectoryIcon(item) : "";
@@ -2302,6 +2391,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     this._captureMediaBrowserScrollState();
+    this._captureTvPanelScrollState();
 
     if (!this._config) {
       this.shadowRoot.innerHTML = "";
@@ -3373,6 +3463,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     `;
 
     this._restoreMediaBrowserScrollState();
+    this._restoreTvPanelScrollState();
   }
 }
 

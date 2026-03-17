@@ -10,6 +10,7 @@ const HAPTIC_PATTERNS = {
   warning: [20, 50, 12],
   failure: [12, 40, 12, 40, 18],
 };
+const COMPACT_LAYOUT_THRESHOLD = 250;
 const COLOR_PRESETS = [
   { color: "#ffd166", hs: [42, 60], label: "Calida" },
   { color: "#fff1c1", hs: [48, 18], label: "Suave" },
@@ -289,12 +290,39 @@ class NodaliaLightCard extends HTMLElement {
     this._draftTemperature = new Map();
     this._draftHue = new Map();
     this._activeControlMode = "brightness";
+    this._cardWidth = 0;
+    this._isCompactLayout = false;
+    this._resizeObserver = new ResizeObserver(entries => {
+      const entry = entries[0];
+      if (!entry) {
+        return;
+      }
+
+      const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
+      const nextCompact = nextWidth > 0 && nextWidth < COMPACT_LAYOUT_THRESHOLD;
+
+      if (nextWidth === this._cardWidth && nextCompact === this._isCompactLayout) {
+        return;
+      }
+
+      this._cardWidth = nextWidth;
+      this._isCompactLayout = nextCompact;
+      this._render();
+    });
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowChange);
+  }
+
+  connectedCallback() {
+    this._resizeObserver?.observe(this);
+  }
+
+  disconnectedCallback() {
+    this._resizeObserver?.disconnect();
   }
 
   setConfig(config) {
@@ -863,6 +891,7 @@ class NodaliaLightCard extends HTMLElement {
     const title = this._getLightName(state);
     const icon = this._getLightIcon(state);
     const stateLabel = this._getStateLabel(state);
+    const isCompactLayout = this._isCompactLayout;
     const quickBrightness = Array.isArray(config.quick_brightness) ? config.quick_brightness : [];
     const temperaturePresets = this._getTemperaturePresets(state);
     const availableControlModes = isOn ? this._getAvailableControlModes(state) : [];
@@ -948,6 +977,12 @@ class NodaliaLightCard extends HTMLElement {
           min-width: 0;
         }
 
+        .light-card--compact .light-card__hero {
+          gap: 10px;
+          grid-template-columns: 1fr;
+          justify-items: center;
+        }
+
         .light-card__icon,
         .light-card__brightness-preset,
         .light-card__temperature-preset,
@@ -999,6 +1034,12 @@ class NodaliaLightCard extends HTMLElement {
           min-width: 0;
         }
 
+        .light-card--compact .light-card__copy {
+          justify-items: center;
+          text-align: center;
+          width: 100%;
+        }
+
         .light-card__title {
           color: var(--primary-text-color);
           font-size: ${styles.title_size};
@@ -1012,6 +1053,10 @@ class NodaliaLightCard extends HTMLElement {
           display: flex;
           flex-wrap: wrap;
           gap: 6px;
+        }
+
+        .light-card--compact .light-card__chips {
+          justify-content: center;
         }
 
         .light-card__chip {
@@ -1221,7 +1266,7 @@ class NodaliaLightCard extends HTMLElement {
           }
         }
       </style>
-      <ha-card class="light-card ${isOn ? "is-on" : "is-off"}" style="--accent-color:${escapeHtml(accentColor)};">
+      <ha-card class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""}" style="--accent-color:${escapeHtml(accentColor)};">
         <div class="light-card__content">
           <div class="light-card__hero">
             <button
@@ -1233,7 +1278,7 @@ class NodaliaLightCard extends HTMLElement {
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
             </button>
             <div class="light-card__copy">
-              <div class="light-card__title">${escapeHtml(title)}</div>
+              ${isCompactLayout ? "" : `<div class="light-card__title">${escapeHtml(title)}</div>`}
               ${chips.length ? `<div class="light-card__chips">${chips.join("")}</div>` : ""}
             </div>
           </div>
