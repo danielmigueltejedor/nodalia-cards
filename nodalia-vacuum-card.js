@@ -83,6 +83,7 @@ const DEFAULT_CONFIG = {
   show_stop: true,
   show_locate: true,
   fan_presets: [],
+  state_entity: "",
   suction_select_entity: "",
   mop_select_entity: "",
   haptics: {
@@ -454,6 +455,39 @@ class NodaliaVacuumCard extends HTMLElement {
     return this._hass.states[this._config.entity] || null;
   }
 
+  _guessRelatedStateEntity() {
+    if (!this._hass?.states || !this._config?.entity) {
+      return "";
+    }
+
+    const objectId = String(this._config.entity).split(".")[1] || "";
+    if (!objectId) {
+      return "";
+    }
+
+    const candidates = Object.keys(this._hass.states)
+      .filter(entityId => entityId.startsWith("sensor."))
+      .filter(entityId => entityId.includes(objectId))
+      .filter(entityId => ["estado", "status", "state"].some(pattern => entityId.includes(pattern)))
+      .sort((left, right) => left.localeCompare(right, "es"));
+
+    return candidates[0] || "";
+  }
+
+  _getAuxiliaryState() {
+    const entityId = this._config?.state_entity || this._guessRelatedStateEntity();
+    return entityId ? this._hass?.states?.[entityId] || null : null;
+  }
+
+  _getReportedStateValue(state) {
+    const auxiliaryState = this._getAuxiliaryState();
+    if (auxiliaryState?.state && !["unknown", "unavailable"].includes(String(auxiliaryState.state).toLowerCase())) {
+      return String(auxiliaryState.state);
+    }
+
+    return state?.state ? String(state.state) : "";
+  }
+
   _getVacuumName(state) {
     if (this._config?.name) {
       return this._config.name;
@@ -502,31 +536,60 @@ class NodaliaVacuumCard extends HTMLElement {
       return "Autovaciando";
     }
 
-    switch (state?.state) {
+    switch (normalizeTextKey(this._getReportedStateValue(state))) {
       case "cleaning":
+      case "vacuuming":
+      case "limpiando":
         return "Limpiando";
       case "paused":
+      case "pause":
+      case "pausado":
         return "Pausado";
       case "returning":
+      case "return_to_base":
+      case "volviendo":
         return "Volviendo";
       case "docked":
+      case "charging":
+      case "charging_completed":
+      case "en_base":
+      case "base":
         return "En base";
       case "idle":
+      case "standby":
+      case "en_espera":
         return "En espera";
       case "error":
+      case "fallo":
         return "Error";
       case "unavailable":
         return "No disponible";
       case "unknown":
         return "Desconocido";
       default:
-        return state?.state ? String(state.state) : "Sin estado";
+        return this._getReportedStateValue(state) || "Sin estado";
     }
   }
 
   _getActivityTextBlob(state) {
     const attributes = state?.attributes || {};
+    const auxiliaryState = this._getAuxiliaryState();
+    const auxiliaryAttributes = auxiliaryState?.attributes || {};
     return [
+      auxiliaryState?.state,
+      auxiliaryAttributes.status,
+      auxiliaryAttributes.state,
+      auxiliaryAttributes.activity,
+      auxiliaryAttributes.phase,
+      auxiliaryAttributes.job,
+      auxiliaryAttributes.job_state,
+      auxiliaryAttributes.task_status,
+      auxiliaryAttributes.current_task,
+      auxiliaryAttributes.vacuum_state,
+      auxiliaryAttributes.robot_status,
+      auxiliaryAttributes.cleaning_state,
+      auxiliaryAttributes.cleaning_progress,
+      auxiliaryAttributes.operation,
       state?.state,
       attributes.status,
       attributes.state,
@@ -682,7 +745,12 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _isCleaning(state) {
-    return ["cleaning", "spot_cleaning"].includes(state?.state);
+    return this._matchesActivity(state, [
+      "cleaning",
+      "spot_cleaning",
+      "vacuuming",
+      "limpiando",
+    ]);
   }
 
   _isWashingMops(state) {
@@ -734,15 +802,29 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _isPaused(state) {
-    return state?.state === "paused";
+    return this._matchesActivity(state, [
+      "paused",
+      "pause",
+      "pausado",
+    ]);
   }
 
   _isReturning(state) {
-    return state?.state === "returning";
+    return this._matchesActivity(state, [
+      "returning",
+      "return_to_base",
+      "volviendo",
+    ]);
   }
 
   _isDocked(state) {
-    return state?.state === "docked";
+    return this._matchesActivity(state, [
+      "docked",
+      "charging",
+      "charging_completed",
+      "en_base",
+      "base",
+    ]);
   }
 
   _isActive(state) {
@@ -1565,7 +1647,11 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
   _getEntityOptionsSignature(hass = this._hass) {
     return Object.keys(hass?.states || {})
-      .filter(entityId => entityId.startsWith("vacuum."))
+      .filter(entityId =>
+        entityId.startsWith("vacuum.") ||
+        entityId.startsWith("select.") ||
+        entityId.startsWith("sensor."),
+      )
       .sort((left, right) => left.localeCompare(right, "es"))
       .join("|");
   }
@@ -1760,8 +1846,11 @@ class NodaliaVacuumCardEditor extends HTMLElement {
     const selectEntityIds = Object.keys(this._hass?.states || {})
       .filter(entityId => entityId.startsWith("select."))
       .sort((left, right) => left.localeCompare(right, "es"));
+    const sensorEntityIds = Object.keys(this._hass?.states || {})
+      .filter(entityId => entityId.startsWith("sensor."))
+      .sort((left, right) => left.localeCompare(right, "es"));
 
-    if (!entityIds.length && !selectEntityIds.length) {
+    if (!entityIds.length && !selectEntityIds.length && !sensorEntityIds.length) {
       return "";
     }
 
@@ -1771,6 +1860,9 @@ class NodaliaVacuumCardEditor extends HTMLElement {
       </datalist>
       <datalist id="vacuum-card-select-entities">
         ${selectEntityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
+      </datalist>
+      <datalist id="vacuum-card-sensor-entities">
+        ${sensorEntityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
       </datalist>
     `;
   }
@@ -1908,6 +2000,9 @@ class NodaliaVacuumCardEditor extends HTMLElement {
                 placeholder: "Quiet, Balanced, Turbo, Max",
               },
             )}
+            ${this._renderTextField("Sensor estado", "state_entity", config.state_entity, {
+              placeholder: "sensor.roborock_qrevo_s_estado",
+            })}
             ${this._renderTextField("Select aspirado", "suction_select_entity", config.suction_select_entity, {
               placeholder: "select.robot_salon_suction",
             })}
@@ -2011,6 +2106,12 @@ class NodaliaVacuumCardEditor extends HTMLElement {
       .querySelectorAll('input[data-field="suction_select_entity"], input[data-field="mop_select_entity"]')
       .forEach(input => {
         input.setAttribute("list", "vacuum-card-select-entities");
+      });
+
+    this.shadowRoot
+      .querySelectorAll('input[data-field="state_entity"]')
+      .forEach(input => {
+        input.setAttribute("list", "vacuum-card-sensor-entities");
       });
   }
 }
