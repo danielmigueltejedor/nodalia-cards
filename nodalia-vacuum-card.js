@@ -84,6 +84,7 @@ const DEFAULT_CONFIG = {
   show_locate: true,
   fan_presets: [],
   state_entity: "",
+  battery_entity: "",
   suction_select_entity: "",
   mop_select_entity: "",
   haptics: {
@@ -479,6 +480,30 @@ class NodaliaVacuumCard extends HTMLElement {
     return entityId ? this._hass?.states?.[entityId] || null : null;
   }
 
+  _guessRelatedBatteryEntity() {
+    if (!this._hass?.states || !this._config?.entity) {
+      return "";
+    }
+
+    const objectId = String(this._config.entity).split(".")[1] || "";
+    if (!objectId) {
+      return "";
+    }
+
+    const candidates = Object.keys(this._hass.states)
+      .filter(entityId => entityId.startsWith("sensor."))
+      .filter(entityId => entityId.includes(objectId))
+      .filter(entityId => ["battery", "bateria"].some(pattern => entityId.includes(pattern)))
+      .sort((left, right) => left.localeCompare(right, "es"));
+
+    return candidates[0] || "";
+  }
+
+  _getAuxiliaryBatteryState() {
+    const entityId = this._config?.battery_entity || this._guessRelatedBatteryEntity();
+    return entityId ? this._hass?.states?.[entityId] || null : null;
+  }
+
   _getReportedStateValue(state) {
     const auxiliaryState = this._getAuxiliaryState();
     if (auxiliaryState?.state && !["unknown", "unavailable"].includes(String(auxiliaryState.state).toLowerCase())) {
@@ -551,8 +576,9 @@ class NodaliaVacuumCard extends HTMLElement {
         return "Pausado";
       case "returning":
       case "return_to_base":
+      case "returning_home":
       case "volviendo":
-        return "Volviendo";
+        return "Volviendo a la base";
       case "docked":
       case "charging":
       case "charging_completed":
@@ -620,8 +646,53 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _getBatteryLevel(state) {
-    const value = Number(state?.attributes?.battery_level);
-    return Number.isFinite(value) ? clamp(Math.round(value), 0, 100) : null;
+    const directValue = Number(state?.attributes?.battery_level);
+    if (Number.isFinite(directValue)) {
+      return clamp(Math.round(directValue), 0, 100);
+    }
+
+    const auxiliaryState = this._getAuxiliaryState();
+    const auxiliaryBatteryLevel = Number(
+      auxiliaryState?.attributes?.battery_level ??
+      auxiliaryState?.attributes?.battery ??
+      auxiliaryState?.attributes?.battery_remaining,
+    );
+    if (Number.isFinite(auxiliaryBatteryLevel)) {
+      return clamp(Math.round(auxiliaryBatteryLevel), 0, 100);
+    }
+
+    const batterySensorState = this._getAuxiliaryBatteryState();
+    const batterySensorValue = Number(
+      batterySensorState?.state ??
+      batterySensorState?.attributes?.battery_level ??
+      batterySensorState?.attributes?.battery ??
+      batterySensorState?.attributes?.battery_remaining,
+    );
+    if (Number.isFinite(batterySensorValue)) {
+      return clamp(Math.round(batterySensorValue), 0, 100);
+    }
+
+    return null;
+  }
+
+  _getBatteryColor(level) {
+    if (!Number.isFinite(level)) {
+      return "var(--secondary-text-color)";
+    }
+
+    if (level <= 15) {
+      return "var(--error-color, #ff6b6b)";
+    }
+
+    if (level <= 35) {
+      return "#f59e0b";
+    }
+
+    if (level <= 60) {
+      return "#f1c24c";
+    }
+
+    return "#61c97a";
   }
 
   _getCurrentFanSpeed(state) {
@@ -817,6 +888,7 @@ class NodaliaVacuumCard extends HTMLElement {
     return this._matchesActivity(state, [
       "returning",
       "return_to_base",
+      "returning_home",
       "volviendo",
     ]);
   }
@@ -1212,7 +1284,6 @@ class NodaliaVacuumCard extends HTMLElement {
     const icon = this._getVacuumIcon(state);
     const stateLabel = this._getStateLabel(state);
     const batteryLevel = this._getBatteryLevel(state);
-    const fanSpeed = this._getCurrentFanSpeed(state);
     const modeControlsEnabled = config.show_mode_controls !== false && config.show_fan_presets !== false;
     const suctionMode = modeControlsEnabled ? this._getModeDescriptor("suction", state) : null;
     const mopMode = modeControlsEnabled ? this._getModeDescriptor("mop", state) : null;
@@ -1221,6 +1292,15 @@ class NodaliaVacuumCard extends HTMLElement {
     const controls = this._getControls(state);
     const isTintedState = this._shouldTintCard(state);
     const chips = [];
+    const batteryChipColor = this._getBatteryColor(batteryLevel);
+    const batteryChipMarkup = config.show_battery_chip !== false && batteryLevel !== null
+      ? `
+        <span class="vacuum-card__chip vacuum-card__chip--battery">
+          <ha-icon icon="mdi:battery"></ha-icon>
+          <span>${batteryLevel}%</span>
+        </span>
+      `
+      : "";
     const cardBackground = isTintedState
       ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`
       : styles.card.background;
@@ -1235,22 +1315,12 @@ class NodaliaVacuumCard extends HTMLElement {
       chips.push(`<span class="vacuum-card__chip vacuum-card__chip--state">${escapeHtml(stateLabel)}</span>`);
     }
 
-    if (config.show_battery_chip !== false && batteryLevel !== null) {
-      chips.push(`<span class="vacuum-card__chip">${batteryLevel}%</span>`);
-    }
-
     const availableModeDescriptors = [suctionMode, mopMode].filter(Boolean);
     if (this._activeModePanel && !availableModeDescriptors.some(mode => mode.kind === this._activeModePanel)) {
       this._activeModePanel = null;
     }
 
     const activeModeDescriptor = availableModeDescriptors.find(mode => mode.kind === this._activeModePanel) || null;
-
-    const currentModeValue = fanSpeed || mopMode?.current || suctionMode?.current || "";
-    if (config.show_fan_speed_chip !== false && currentModeValue) {
-      const modeKind = this._categorizeModeOption(currentModeValue) === "mop" ? "mop" : "suction";
-      chips.push(`<span class="vacuum-card__chip">${escapeHtml(humanizeModeLabel(currentModeValue, modeKind))}</span>`);
-    }
 
     const showCopyBlock = !isCompactLayout || chips.length > 0;
     const iconButtonLabel = this._isCleaning(state) ? "Pausar limpieza" : "Iniciar limpieza";
@@ -1300,21 +1370,20 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card__header {
-          align-items: center;
+          align-items: start;
           display: grid;
           gap: ${styles.card.gap};
-          grid-template-columns: auto minmax(0, 1fr);
+          grid-template-columns: auto minmax(0, 1fr) auto;
           min-width: 0;
         }
 
         .vacuum-card--compact .vacuum-card__header {
-          grid-template-columns: 1fr;
-          justify-items: center;
+          grid-template-columns: auto minmax(0, 1fr) auto;
           text-align: center;
         }
 
         .vacuum-card--compact .vacuum-card__copy {
-          justify-items: center;
+          justify-items: ${batteryChipMarkup ? "start" : "center"};
         }
 
         .vacuum-card--compact .vacuum-card__chips {
@@ -1361,6 +1430,13 @@ class NodaliaVacuumCard extends HTMLElement {
           min-width: 0;
         }
 
+        .vacuum-card__header-meta {
+          align-items: flex-start;
+          display: flex;
+          justify-content: flex-end;
+          min-width: 0;
+        }
+
         .vacuum-card__title {
           font-size: ${styles.title_size};
           font-weight: 700;
@@ -1401,6 +1477,20 @@ class NodaliaVacuumCard extends HTMLElement {
 
         .vacuum-card__chip--state {
           color: var(--primary-text-color);
+        }
+
+        .vacuum-card__chip--battery {
+          background: color-mix(in srgb, ${batteryChipColor} 16%, rgba(255, 255, 255, 0.04));
+          border-color: color-mix(in srgb, ${batteryChipColor} 38%, rgba(255, 255, 255, 0.08));
+          color: ${batteryChipColor};
+          gap: 6px;
+        }
+
+        .vacuum-card__chip--battery ha-icon {
+          --mdc-icon-size: 13px;
+          display: inline-flex;
+          height: 13px;
+          width: 13px;
         }
 
         .vacuum-card__controls {
@@ -1517,6 +1607,15 @@ class NodaliaVacuumCard extends HTMLElement {
           .vacuum-card__controls {
             gap: 8px;
           }
+
+          .vacuum-card__header {
+            grid-template-columns: auto minmax(0, 1fr);
+          }
+
+          .vacuum-card__header-meta {
+            grid-column: 1 / -1;
+            justify-content: center;
+          }
         }
       </style>
 
@@ -1541,6 +1640,7 @@ class NodaliaVacuumCard extends HTMLElement {
                 `
                 : ""
             }
+            ${batteryChipMarkup ? `<div class="vacuum-card__header-meta">${batteryChipMarkup}</div>` : ""}
           </div>
 
           ${
@@ -2007,6 +2107,9 @@ class NodaliaVacuumCardEditor extends HTMLElement {
             ${this._renderTextField("Sensor estado", "state_entity", config.state_entity, {
               placeholder: "sensor.roborock_qrevo_s_estado",
             })}
+            ${this._renderTextField("Sensor bateria", "battery_entity", config.battery_entity, {
+              placeholder: "sensor.roborock_qrevo_s_battery",
+            })}
             ${this._renderTextField("Select aspirado", "suction_select_entity", config.suction_select_entity, {
               placeholder: "select.robot_salon_suction",
             })}
@@ -2034,7 +2137,6 @@ class NodaliaVacuumCardEditor extends HTMLElement {
             )}
             ${this._renderCheckboxField("Chip de estado", "show_state_chip", config.show_state_chip !== false)}
             ${this._renderCheckboxField("Chip de bateria", "show_battery_chip", config.show_battery_chip !== false)}
-            ${this._renderCheckboxField("Chip de potencia", "show_fan_speed_chip", config.show_fan_speed_chip !== false)}
             ${this._renderCheckboxField("Controles de modo", "show_mode_controls", config.show_mode_controls !== false)}
             ${this._renderCheckboxField("Presets de potencia", "show_fan_presets", config.show_fan_presets !== false)}
             ${this._renderCheckboxField("Boton volver a base", "show_return_to_base", config.show_return_to_base !== false)}
@@ -2113,7 +2215,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
       });
 
     this.shadowRoot
-      .querySelectorAll('input[data-field="state_entity"]')
+      .querySelectorAll('input[data-field="state_entity"], input[data-field="battery_entity"]')
       .forEach(input => {
         input.setAttribute("list", "vacuum-card-sensor-entities");
       });
