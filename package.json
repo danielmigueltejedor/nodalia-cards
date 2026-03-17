@@ -8,6 +8,7 @@
     "nodalia-cards.js",
     "nodalia-navigation-bar.js",
     "nodalia-media-player.js",
+    "nodalia-light-card.js",
     "README.md",
     "hacs.json",
     "examples"

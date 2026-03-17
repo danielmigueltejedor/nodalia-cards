@@ -6,6 +6,7 @@ Ahora mismo incluye:
 
 - `custom:nodalia-navigation-bar`
 - `custom:nodalia-media-player`
+- `custom:nodalia-light-card`
 
 ## Instalacion
 
@@ -22,6 +23,7 @@ Ese recurso carga automaticamente:
 
 - `nodalia-navigation-bar.js`
 - `nodalia-media-player.js`
+- `nodalia-light-card.js`
 
 ### Opcion 2: recursos individuales
 
@@ -31,6 +33,8 @@ Si prefieres cargarlas por separado:
 - url: /local/nodalia-navigation-bar.js
   type: module
 - url: /local/nodalia-media-player.js
+  type: module
+- url: /local/nodalia-light-card.js
   type: module
 ```
 
@@ -61,11 +65,20 @@ players:
     label: Spotify
 ```
 
+### Nodalia Light Card
+
+```yaml
+type: custom:nodalia-light-card
+entity: light.salon
+name: Salon
+```
+
 ## Estructura
 
 - `nodalia-cards.js`: entrypoint comun
 - `nodalia-navigation-bar.js`: barra de navegacion
 - `nodalia-media-player.js`: reproductor multimedia
+- `nodalia-light-card.js`: tarjeta de iluminacion
 
 ## Siguiente paso recomendado
 

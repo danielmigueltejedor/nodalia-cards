@@ -1,0 +1,1574 @@
+const CARD_TAG = "nodalia-light-card";
+const EDITOR_TAG = "nodalia-light-card-editor";
+const CARD_VERSION = "0.1.0";
+const HAPTIC_PATTERNS = {
+  selection: 8,
+  light: 10,
+  medium: 16,
+  heavy: 24,
+  success: [10, 40, 10],
+  warning: [20, 50, 12],
+  failure: [12, 40, 12, 40, 18],
+};
+const COLOR_PRESETS = [
+  { color: "#ffd166", hs: [42, 60], label: "Calida" },
+  { color: "#fff1c1", hs: [48, 18], label: "Suave" },
+  { color: "#ff7f50", hs: [16, 72], label: "Atardecer" },
+  { color: "#ff4d6d", hs: [348, 70], label: "Rosa" },
+  { color: "#4dabf7", hs: [210, 70], label: "Azul" },
+  { color: "#38d9a9", hs: [160, 68], label: "Menta" },
+];
+
+const DEFAULT_CONFIG = {
+  entity: "",
+  name: "",
+  icon: "",
+  show_state: true,
+  show_brightness: true,
+  show_quick_brightness: true,
+  show_color_controls: true,
+  show_temperature_controls: true,
+  quick_brightness: [10, 35, 65, 100],
+  haptics: {
+    enabled: false,
+    style: "selection",
+    fallback_vibrate: false,
+  },
+  styles: {
+    card: {
+      background: "var(--ha-card-background)",
+      border: "1px solid var(--divider-color)",
+      border_radius: "28px",
+      box_shadow: "var(--ha-card-box-shadow)",
+      padding: "14px",
+      gap: "12px",
+    },
+    icon: {
+      size: "62px",
+      background: "rgba(255, 255, 255, 0.06)",
+      color: "var(--primary-text-color)",
+      on_color: "var(--warning-color, #f6b73c)",
+      off_color: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))",
+    },
+    control: {
+      size: "40px",
+      accent_color: "var(--primary-text-color)",
+      accent_background: "rgba(var(--rgb-primary-color), 0.18)",
+    },
+    title_size: "15px",
+    subtitle_size: "12px",
+    slider_color: "var(--primary-color)",
+  },
+};
+
+const STUB_CONFIG = {
+  entity: "light.salon",
+  name: "Salon",
+};
+
+function isObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function deepClone(value) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return JSON.parse(JSON.stringify(value));
+}
+
+function mergeConfig(base, override) {
+  if (Array.isArray(base)) {
+    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
+  }
+
+  if (!isObject(base)) {
+    return override === undefined ? base : override;
+  }
+
+  const result = {};
+  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
+
+  keys.forEach(key => {
+    const baseValue = base[key];
+    const overrideValue = override ? override[key] : undefined;
+
+    if (overrideValue === undefined) {
+      result[key] = deepClone(baseValue);
+      return;
+    }
+
+    if (Array.isArray(overrideValue)) {
+      result[key] = deepClone(overrideValue);
+      return;
+    }
+
+    if (isObject(baseValue) && isObject(overrideValue)) {
+      result[key] = mergeConfig(baseValue, overrideValue);
+      return;
+    }
+
+    result[key] = overrideValue;
+  });
+
+  return result;
+}
+
+function compactConfig(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map(item => compactConfig(item))
+      .filter(item => item !== undefined);
+  }
+
+  if (isObject(value)) {
+    const compacted = {};
+
+    Object.entries(value).forEach(([key, item]) => {
+      const cleaned = compactConfig(item);
+      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
+
+      if (cleaned !== undefined && !isEmptyObject) {
+        compacted[key] = cleaned;
+      }
+    });
+
+    return compacted;
+  }
+
+  if (value === "" || value === null || value === undefined) {
+    return undefined;
+  }
+
+  return value;
+}
+
+function setByPath(target, path, value) {
+  const parts = path.split(".");
+  let cursor = target;
+
+  for (let index = 0; index < parts.length - 1; index += 1) {
+    const key = parts[index];
+    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
+      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
+    }
+    cursor = cursor[key];
+  }
+
+  cursor[parts[parts.length - 1]] = value;
+}
+
+function deleteByPath(target, path) {
+  const parts = path.split(".");
+  let cursor = target;
+
+  for (let index = 0; index < parts.length - 1; index += 1) {
+    const key = parts[index];
+    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
+      return;
+    }
+    cursor = cursor[key];
+  }
+
+  delete cursor[parts[parts.length - 1]];
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function arrayFromCsv(value) {
+  return String(value || "")
+    .split(",")
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function escapeSelectorValue(value) {
+  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
+function fireEvent(node, type, detail = {}, options = {}) {
+  const event = new Event(type, {
+    bubbles: options.bubbles ?? true,
+    cancelable: options.cancelable ?? false,
+    composed: options.composed ?? true,
+  });
+  event.detail = detail;
+  node.dispatchEvent(event);
+  return event;
+}
+
+function miredToKelvin(value) {
+  return value > 0 ? Math.round(1000000 / value) : 0;
+}
+
+function kelvinToMired(value) {
+  return value > 0 ? Math.round(1000000 / value) : 0;
+}
+
+function normalizeConfig(rawConfig) {
+  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+
+  if (!Array.isArray(config.quick_brightness) || !config.quick_brightness.length) {
+    config.quick_brightness = deepClone(DEFAULT_CONFIG.quick_brightness);
+  }
+
+  config.quick_brightness = config.quick_brightness
+    .map(value => Number(value))
+    .filter(value => Number.isFinite(value))
+    .map(value => clamp(Math.round(value), 1, 100));
+
+  if (!config.quick_brightness.length) {
+    config.quick_brightness = deepClone(DEFAULT_CONFIG.quick_brightness);
+  }
+
+  return config;
+}
+
+class NodaliaLightCard extends HTMLElement {
+  static async getConfigElement() {
+    return document.createElement(EDITOR_TAG);
+  }
+
+  static getStubConfig() {
+    return deepClone(STUB_CONFIG);
+  }
+
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._config = null;
+    this._hass = null;
+    this._draftBrightness = new Map();
+    this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowChange = this._onShadowChange.bind(this);
+    this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this.shadowRoot.addEventListener("input", this._onShadowInput);
+    this.shadowRoot.addEventListener("change", this._onShadowChange);
+  }
+
+  setConfig(config) {
+    this._config = normalizeConfig(config || {});
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this._render();
+  }
+
+  getCardSize() {
+    return 3;
+  }
+
+  _triggerHaptic(style = this._config?.haptics?.style) {
+    if (!this._config?.haptics?.enabled) {
+      return;
+    }
+
+    fireEvent(this, "haptic", style ? { hapticType: style } : {});
+
+    if (this._config.haptics.fallback_vibrate && typeof navigator?.vibrate === "function") {
+      const pattern = HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection;
+      navigator.vibrate(pattern);
+    }
+  }
+
+  _getState() {
+    if (!this._config?.entity || !this._hass?.states) {
+      return null;
+    }
+
+    return this._hass.states[this._config.entity] || null;
+  }
+
+  _supportsBrightness(state) {
+    if (typeof state?.attributes?.brightness === "number") {
+      return true;
+    }
+
+    const supportedColorModes = Array.isArray(state?.attributes?.supported_color_modes)
+      ? state.attributes.supported_color_modes
+      : [];
+
+    return supportedColorModes.some(mode =>
+      ["brightness", "color_temp", "hs", "rgb", "rgbw", "rgbww", "xy", "white"].includes(mode),
+    );
+  }
+
+  _supportsColor(state) {
+    const supportedColorModes = Array.isArray(state?.attributes?.supported_color_modes)
+      ? state.attributes.supported_color_modes
+      : [];
+
+    return supportedColorModes.some(mode =>
+      ["hs", "rgb", "rgbw", "rgbww", "xy"].includes(mode),
+    );
+  }
+
+  _supportsColorTemperature(state) {
+    const supportedColorModes = Array.isArray(state?.attributes?.supported_color_modes)
+      ? state.attributes.supported_color_modes
+      : [];
+
+    return (
+      supportedColorModes.includes("color_temp") ||
+      typeof state?.attributes?.color_temp_kelvin === "number" ||
+      typeof state?.attributes?.color_temp === "number"
+    );
+  }
+
+  _getBrightnessPercent(state) {
+    const entityId = this._config?.entity;
+    if (entityId && this._draftBrightness.has(entityId)) {
+      return this._draftBrightness.get(entityId);
+    }
+
+    if (typeof state?.attributes?.brightness === "number") {
+      return clamp(Math.round((state.attributes.brightness / 255) * 100), 1, 100);
+    }
+
+    return state?.state === "on" ? 100 : 50;
+  }
+
+  _getTemperatureRange(state) {
+    const minKelvin = Number(state?.attributes?.min_color_temp_kelvin);
+    const maxKelvin = Number(state?.attributes?.max_color_temp_kelvin);
+
+    if (Number.isFinite(minKelvin) && Number.isFinite(maxKelvin) && minKelvin > 0 && maxKelvin > 0) {
+      return {
+        min: Math.min(minKelvin, maxKelvin),
+        max: Math.max(minKelvin, maxKelvin),
+      };
+    }
+
+    const minMireds = Number(state?.attributes?.min_mireds);
+    const maxMireds = Number(state?.attributes?.max_mireds);
+
+    if (Number.isFinite(minMireds) && Number.isFinite(maxMireds) && minMireds > 0 && maxMireds > 0) {
+      const min = miredToKelvin(Math.max(minMireds, maxMireds));
+      const max = miredToKelvin(Math.min(minMireds, maxMireds));
+      return {
+        min: Math.min(min, max),
+        max: Math.max(min, max),
+      };
+    }
+
+    return {
+      min: 2200,
+      max: 6500,
+    };
+  }
+
+  _getCurrentKelvin(state) {
+    if (typeof state?.attributes?.color_temp_kelvin === "number") {
+      return Math.round(state.attributes.color_temp_kelvin);
+    }
+
+    if (typeof state?.attributes?.color_temp === "number") {
+      return miredToKelvin(state.attributes.color_temp);
+    }
+
+    const range = this._getTemperatureRange(state);
+    return Math.round((range.min + range.max) / 2);
+  }
+
+  _getTemperaturePresets(state) {
+    const range = this._getTemperatureRange(state);
+    const middle = Math.round((range.min + range.max) / 2);
+
+    return [
+      { label: "Calida", kelvin: range.min },
+      { label: "Neutra", kelvin: middle },
+      { label: "Fria", kelvin: range.max },
+    ];
+  }
+
+  _getStateLabel(state) {
+    switch (state?.state) {
+      case "on":
+        return "Encendida";
+      case "off":
+        return "Apagada";
+      case "unavailable":
+        return "No disponible";
+      case "unknown":
+        return "Desconocida";
+      default:
+        return state?.state ? String(state.state) : "Sin estado";
+    }
+  }
+
+  _getLightName(state) {
+    if (this._config?.name) {
+      return this._config.name;
+    }
+
+    if (state?.attributes?.friendly_name) {
+      return state.attributes.friendly_name;
+    }
+
+    return this._config?.entity || "Luz";
+  }
+
+  _getLightIcon(state) {
+    return this._config?.icon || state?.attributes?.icon || "mdi:lightbulb";
+  }
+
+  _getAccentColor(state) {
+    const rgbColor = Array.isArray(state?.attributes?.rgb_color) ? state.attributes.rgb_color : null;
+    if (state?.state === "on" && rgbColor?.length === 3) {
+      return `rgb(${rgbColor[0]}, ${rgbColor[1]}, ${rgbColor[2]})`;
+    }
+
+    if (state?.state === "on") {
+      const kelvin = this._getCurrentKelvin(state);
+      if (kelvin >= 5200) {
+        return "#8fd3ff";
+      }
+
+      if (kelvin <= 3000) {
+        return "#f4b55f";
+      }
+
+      return "#ffd166";
+    }
+
+    return this._config?.styles?.icon?.off_color || "var(--state-inactive-color, rgba(255, 255, 255, 0.45))";
+  }
+
+  _setLightState(data = {}) {
+    if (!this._hass || !this._config?.entity) {
+      return;
+    }
+
+    this._hass.callService("light", "turn_on", {
+      entity_id: this._config.entity,
+      ...data,
+    });
+  }
+
+  _toggleLight() {
+    if (!this._hass || !this._config?.entity) {
+      return;
+    }
+
+    this._hass.callService("light", "toggle", {
+      entity_id: this._config.entity,
+    });
+  }
+
+  _openMoreInfo() {
+    if (!this._config?.entity) {
+      return;
+    }
+
+    fireEvent(this, "hass-more-info", {
+      entityId: this._config.entity,
+    });
+  }
+
+  _commitBrightness(percent) {
+    if (!Number.isFinite(percent)) {
+      return;
+    }
+
+    this._setLightState({
+      brightness_pct: clamp(Math.round(percent), 1, 100),
+    });
+  }
+
+  _commitColorPreset(hs) {
+    this._setLightState({
+      hs_color: hs,
+    });
+  }
+
+  _commitTemperaturePreset(kelvin) {
+    const numericKelvin = Math.round(Number(kelvin));
+    if (!Number.isFinite(numericKelvin) || numericKelvin <= 0) {
+      return;
+    }
+
+    this._setLightState({
+      color_temp_kelvin: numericKelvin,
+      color_temp: kelvinToMired(numericKelvin),
+    });
+  }
+
+  _updateBrightnessPreview(value) {
+    const slider = this.shadowRoot?.querySelector(".light-card__slider");
+    const valueNode = this.shadowRoot?.querySelector("[data-role='brightness-value']");
+    const nextValue = clamp(Math.round(Number(value)), 1, 100);
+
+    if (slider instanceof HTMLInputElement) {
+      slider.style.setProperty("--brightness", String(nextValue));
+    }
+
+    if (valueNode instanceof HTMLElement) {
+      valueNode.textContent = `${nextValue}%`;
+    }
+  }
+
+  _onShadowInput(event) {
+    const slider = event
+      .composedPath()
+      .find(node => node instanceof HTMLInputElement && node.dataset?.lightControl === "brightness");
+
+    if (!slider) {
+      return;
+    }
+
+    const nextValue = clamp(Math.round(Number(slider.value)), 1, 100);
+    this._draftBrightness.set(this._config.entity, nextValue);
+    this._updateBrightnessPreview(nextValue);
+  }
+
+  _onShadowChange(event) {
+    const slider = event
+      .composedPath()
+      .find(node => node instanceof HTMLInputElement && node.dataset?.lightControl === "brightness");
+
+    if (!slider) {
+      return;
+    }
+
+    const nextValue = clamp(Math.round(Number(slider.value)), 1, 100);
+    this._draftBrightness.set(this._config.entity, nextValue);
+    this._triggerHaptic("selection");
+    this._commitBrightness(nextValue);
+  }
+
+  _onShadowClick(event) {
+    const actionButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.lightAction);
+
+    if (!actionButton) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this._triggerHaptic();
+
+    switch (actionButton.dataset.lightAction) {
+      case "toggle":
+        this._toggleLight();
+        break;
+      case "more-info":
+        this._openMoreInfo();
+        break;
+      case "brightness": {
+        const value = Number(actionButton.dataset.value);
+        this._draftBrightness.set(this._config.entity, clamp(Math.round(value), 1, 100));
+        this._commitBrightness(value);
+        this._render();
+        break;
+      }
+      case "color": {
+        const hs = String(actionButton.dataset.hs || "")
+          .split(",")
+          .map(value => Number(value));
+        if (hs.length === 2 && hs.every(value => Number.isFinite(value))) {
+          this._commitColorPreset(hs);
+        }
+        break;
+      }
+      case "temperature":
+        this._commitTemperaturePreset(Number(actionButton.dataset.kelvin));
+        break;
+      default:
+        break;
+    }
+  }
+
+  _renderEmptyState() {
+    return `
+      <ha-card class="light-card light-card--empty">
+        <div class="light-card__empty-title">Nodalia Light Card</div>
+        <div class="light-card__empty-text">Configura \`entity\` con una entidad \`light.*\` para mostrar la tarjeta.</div>
+      </ha-card>
+    `;
+  }
+
+  _render() {
+    if (!this.shadowRoot) {
+      return;
+    }
+
+    if (!this._config) {
+      this.shadowRoot.innerHTML = "";
+      return;
+    }
+
+    const state = this._getState();
+    const config = this._config;
+    const styles = config.styles;
+
+    if (!state) {
+      this.shadowRoot.innerHTML = `
+        <style>
+          :host {
+            display: block;
+          }
+
+          * {
+            box-sizing: border-box;
+          }
+
+          .light-card--empty {
+            background: ${styles.card.background};
+            border: ${styles.card.border};
+            border-radius: ${styles.card.border_radius};
+            box-shadow: ${styles.card.box_shadow};
+            display: grid;
+            gap: 6px;
+            padding: ${styles.card.padding};
+          }
+
+          .light-card__empty-title {
+            color: var(--primary-text-color);
+            font-size: 15px;
+            font-weight: 700;
+          }
+
+          .light-card__empty-text {
+            color: var(--secondary-text-color);
+            font-size: 13px;
+            line-height: 1.5;
+          }
+        </style>
+        ${this._renderEmptyState()}
+      `;
+      return;
+    }
+
+    const isOn = state.state === "on";
+    const supportsBrightness = this._supportsBrightness(state);
+    const supportsColor = this._supportsColor(state);
+    const supportsColorTemperature = this._supportsColorTemperature(state);
+    const brightnessPercent = this._getBrightnessPercent(state);
+    const currentKelvin = this._getCurrentKelvin(state);
+    const accentColor = this._getAccentColor(state);
+    const title = this._getLightName(state);
+    const icon = this._getLightIcon(state);
+    const stateLabel = this._getStateLabel(state);
+    const quickBrightness = Array.isArray(config.quick_brightness) ? config.quick_brightness : [];
+    const temperaturePresets = this._getTemperaturePresets(state);
+    const chips = [];
+
+    if (config.show_state !== false) {
+      chips.push(`<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`);
+    }
+
+    if (config.show_brightness !== false && supportsBrightness) {
+      chips.push(`<span class="light-card__chip">${escapeHtml(`${brightnessPercent}% de brillo`)}</span>`);
+    }
+
+    if (config.show_temperature_controls !== false && supportsColorTemperature) {
+      chips.push(`<span class="light-card__chip">${escapeHtml(`${currentKelvin}K`)}</span>`);
+    }
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+          width: 100%;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        ha-card.light-card {
+          background: ${styles.card.background};
+          border: ${styles.card.border};
+          border-radius: ${styles.card.border_radius};
+          box-shadow: ${styles.card.box_shadow};
+          isolation: isolate;
+          overflow: hidden;
+          padding: ${styles.card.padding};
+          position: relative;
+        }
+
+        .light-card::before {
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .light-card__content {
+          display: grid;
+          gap: ${styles.card.gap};
+          position: relative;
+          z-index: 1;
+        }
+
+        .light-card__hero {
+          align-items: center;
+          display: grid;
+          gap: 12px;
+          grid-template-columns: ${styles.icon.size} minmax(0, 1fr) ${styles.control.size};
+          min-width: 0;
+        }
+
+        .light-card__icon,
+        .light-card__power,
+        .light-card__brightness-preset,
+        .light-card__temperature-preset,
+        .light-card__color-preset {
+          align-items: center;
+          appearance: none;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          justify-content: center;
+          line-height: 0;
+          padding: 0;
+          position: relative;
+        }
+
+        .light-card__icon {
+          background: rgba(255, 255, 255, 0.06);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 24px rgba(0, 0, 0, 0.16);
+          color: ${isOn ? styles.icon.on_color : styles.icon.off_color};
+          height: ${styles.icon.size};
+          width: ${styles.icon.size};
+        }
+
+        .light-card__icon::after {
+          background: ${accentColor};
+          border-radius: inherit;
+          content: "";
+          inset: 9px;
+          opacity: ${isOn ? "0.2" : "0.08"};
+          position: absolute;
+          z-index: 0;
+        }
+
+        .light-card__icon ha-icon,
+        .light-card__power ha-icon {
+          align-items: center;
+          display: inline-flex;
+          height: 24px;
+          justify-content: center;
+          left: 50%;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: 24px;
+          z-index: 1;
+        }
+
+        .light-card__icon ha-icon {
+          color: ${isOn ? styles.icon.color : styles.icon.off_color};
+          font-size: 28px;
+        }
+
+        .light-card__copy {
+          display: grid;
+          gap: 5px;
+          min-width: 0;
+        }
+
+        .light-card__title {
+          color: var(--primary-text-color);
+          font-size: ${styles.title_size};
+          font-weight: 700;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .light-card__subtitle {
+          color: var(--secondary-text-color);
+          font-size: ${styles.subtitle_size};
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .light-card__chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+
+        .light-card__chip {
+          align-items: center;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 999px;
+          color: var(--secondary-text-color);
+          display: inline-flex;
+          font-size: 11px;
+          font-weight: 600;
+          line-height: 1;
+          min-height: 24px;
+          padding: 0 9px;
+        }
+
+        .light-card__chip--state {
+          color: var(--primary-text-color);
+        }
+
+        .light-card__power {
+          background: ${isOn ? styles.control.accent_background : "rgba(255, 255, 255, 0.05)"};
+          color: ${isOn ? styles.control.accent_color : "var(--primary-text-color)"};
+          height: ${styles.control.size};
+          width: ${styles.control.size};
+        }
+
+        .light-card__power ha-icon {
+          font-size: 20px;
+        }
+
+        .light-card__section {
+          display: grid;
+          gap: 8px;
+        }
+
+        .light-card__section-header {
+          align-items: center;
+          color: var(--secondary-text-color);
+          display: flex;
+          font-size: 12px;
+          font-weight: 600;
+          justify-content: space-between;
+          min-width: 0;
+        }
+
+        .light-card__section-value {
+          color: var(--primary-text-color);
+          font-variant-numeric: tabular-nums;
+        }
+
+        .light-card__slider-wrap {
+          align-items: center;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 999px;
+          display: grid;
+          min-height: 44px;
+          padding: 0 14px;
+        }
+
+        .light-card__slider {
+          -webkit-appearance: none;
+          appearance: none;
+          background:
+            linear-gradient(
+              90deg,
+              ${styles.slider_color} 0%,
+              ${styles.slider_color} calc(var(--brightness, ${brightnessPercent}) * 1%),
+              rgba(255, 255, 255, 0.08) calc(var(--brightness, ${brightnessPercent}) * 1%),
+              rgba(255, 255, 255, 0.08) 100%
+            );
+          border-radius: 999px;
+          height: 6px;
+          outline: none;
+          width: 100%;
+        }
+
+        .light-card__slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          background: var(--primary-text-color);
+          border: 0;
+          border-radius: 50%;
+          box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12);
+          cursor: pointer;
+          height: 18px;
+          width: 18px;
+        }
+
+        .light-card__slider::-moz-range-thumb {
+          background: var(--primary-text-color);
+          border: 0;
+          border-radius: 50%;
+          box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12);
+          cursor: pointer;
+          height: 18px;
+          width: 18px;
+        }
+
+        .light-card__slider::-moz-range-track {
+          background: transparent;
+          border: 0;
+        }
+
+        .light-card__actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .light-card__brightness-preset,
+        .light-card__temperature-preset {
+          background: rgba(255, 255, 255, 0.05);
+          color: var(--primary-text-color);
+          font: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          height: 34px;
+          min-width: 46px;
+          padding: 0 12px;
+        }
+
+        .light-card__brightness-preset.is-active,
+        .light-card__temperature-preset.is-active {
+          background: ${styles.control.accent_background};
+          color: ${styles.control.accent_color};
+        }
+
+        .light-card__color-preset {
+          background: rgba(255, 255, 255, 0.05);
+          height: 32px;
+          width: 32px;
+        }
+
+        .light-card__color-preset::after {
+          background: var(--swatch-color);
+          border-radius: inherit;
+          content: "";
+          inset: 5px;
+          position: absolute;
+        }
+
+        @media (max-width: 420px) {
+          .light-card__hero {
+            grid-template-columns: 54px minmax(0, 1fr) ${styles.control.size};
+          }
+
+          .light-card__icon {
+            height: 54px;
+            width: 54px;
+          }
+        }
+      </style>
+      <ha-card class="light-card ${isOn ? "is-on" : "is-off"}" style="--accent-color:${escapeHtml(accentColor)};">
+        <div class="light-card__content">
+          <div class="light-card__hero">
+            <button
+              type="button"
+              class="light-card__icon"
+              data-light-action="more-info"
+              aria-label="Abrir mas informacion"
+            >
+              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+            </button>
+            <div class="light-card__copy">
+              <div class="light-card__title">${escapeHtml(title)}</div>
+              <div class="light-card__subtitle">${escapeHtml(stateLabel)}</div>
+              ${chips.length ? `<div class="light-card__chips">${chips.join("")}</div>` : ""}
+            </div>
+            <button
+              type="button"
+              class="light-card__power"
+              data-light-action="toggle"
+              aria-label="Encender o apagar"
+            >
+              <ha-icon icon="${escapeHtml(isOn ? "mdi:power" : "mdi:lightbulb-outline")}"></ha-icon>
+            </button>
+          </div>
+
+          ${
+            config.show_brightness !== false && supportsBrightness
+              ? `
+                <div class="light-card__section">
+                  <div class="light-card__section-header">
+                    <span>Brillo</span>
+                    <span class="light-card__section-value" data-role="brightness-value">${escapeHtml(`${brightnessPercent}%`)}</span>
+                  </div>
+                  <div class="light-card__slider-wrap">
+                    <input
+                      type="range"
+                      class="light-card__slider"
+                      data-light-control="brightness"
+                      min="1"
+                      max="100"
+                      step="1"
+                      value="${brightnessPercent}"
+                      style="--brightness:${brightnessPercent};"
+                      aria-label="Brillo"
+                    />
+                  </div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            config.show_quick_brightness !== false && supportsBrightness && quickBrightness.length
+              ? `
+                <div class="light-card__actions">
+                  ${quickBrightness
+                    .map(value => `
+                      <button
+                        type="button"
+                        class="light-card__brightness-preset ${value === brightnessPercent ? "is-active" : ""}"
+                        data-light-action="brightness"
+                        data-value="${value}"
+                      >
+                        ${escapeHtml(`${value}%`)}
+                      </button>
+                    `)
+                    .join("")}
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            config.show_temperature_controls !== false && supportsColorTemperature
+              ? `
+                <div class="light-card__section">
+                  <div class="light-card__section-header">
+                    <span>Temperatura</span>
+                    <span class="light-card__section-value">${escapeHtml(`${currentKelvin}K`)}</span>
+                  </div>
+                  <div class="light-card__actions">
+                    ${temperaturePresets
+                      .map(item => `
+                        <button
+                          type="button"
+                          class="light-card__temperature-preset ${Math.abs(item.kelvin - currentKelvin) <= 250 ? "is-active" : ""}"
+                          data-light-action="temperature"
+                          data-kelvin="${item.kelvin}"
+                        >
+                          ${escapeHtml(item.label)}
+                        </button>
+                      `)
+                      .join("")}
+                  </div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            config.show_color_controls !== false && supportsColor
+              ? `
+                <div class="light-card__section">
+                  <div class="light-card__section-header">
+                    <span>Color</span>
+                    <span class="light-card__section-value">Presets</span>
+                  </div>
+                  <div class="light-card__actions">
+                    ${COLOR_PRESETS
+                      .map(item => `
+                        <button
+                          type="button"
+                          class="light-card__color-preset"
+                          style="--swatch-color:${escapeHtml(item.color)};"
+                          data-light-action="color"
+                          data-hs="${escapeHtml(item.hs.join(","))}"
+                          aria-label="${escapeHtml(item.label)}"
+                          title="${escapeHtml(item.label)}"
+                        ></button>
+                      `)
+                      .join("")}
+                  </div>
+                </div>
+              `
+              : ""
+          }
+        </div>
+      </ha-card>
+    `;
+  }
+}
+
+if (!customElements.get(CARD_TAG)) {
+  customElements.define(CARD_TAG, NodaliaLightCard);
+}
+
+class NodaliaLightCardEditor extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._config = normalizeConfig(STUB_CONFIG);
+    this._hass = null;
+    this._entityOptionsSignature = "";
+    this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowClick = this._onShadowClick.bind(this);
+    this.shadowRoot.addEventListener("input", this._onShadowInput);
+    this.shadowRoot.addEventListener("change", this._onShadowInput);
+    this.shadowRoot.addEventListener("click", this._onShadowClick);
+  }
+
+  set hass(hass) {
+    const nextSignature = this._getEntityOptionsSignature(hass);
+    const shouldRender =
+      !this._hass ||
+      nextSignature !== this._entityOptionsSignature ||
+      !this.shadowRoot?.innerHTML;
+
+    this._hass = hass;
+    this._entityOptionsSignature = nextSignature;
+
+    if (!shouldRender) {
+      return;
+    }
+
+    const focusState = this._captureFocusState();
+    this._render();
+    this._restoreFocusState(focusState);
+  }
+
+  setConfig(config) {
+    const focusState = this._captureFocusState();
+    this._config = normalizeConfig(config || {});
+    this._render();
+    this._restoreFocusState(focusState);
+  }
+
+  _getEntityOptionsSignature(hass = this._hass) {
+    return Object.keys(hass?.states || {})
+      .filter(entityId => entityId.startsWith("light."))
+      .sort((left, right) => left.localeCompare(right, "es"))
+      .join("|");
+  }
+
+  _captureFocusState() {
+    const activeElement = this.shadowRoot?.activeElement;
+
+    if (
+      !(
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement instanceof HTMLSelectElement
+      )
+    ) {
+      return null;
+    }
+
+    const dataset = activeElement.dataset || {};
+    const selector = dataset.field
+      ? `[data-field="${escapeSelectorValue(dataset.field)}"]`
+      : null;
+
+    if (!selector) {
+      return null;
+    }
+
+    const supportsSelection =
+      typeof activeElement.selectionStart === "number" &&
+      typeof activeElement.selectionEnd === "number";
+
+    return {
+      selector,
+      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
+      selectionStart: supportsSelection ? activeElement.selectionStart : null,
+      type: activeElement.type,
+    };
+  }
+
+  _restoreFocusState(focusState) {
+    if (!focusState?.selector || !this.shadowRoot) {
+      return;
+    }
+
+    const target = this.shadowRoot.querySelector(focusState.selector);
+    if (
+      !(
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      )
+    ) {
+      return;
+    }
+
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_error) {
+      target.focus();
+    }
+
+    const canRestoreSelection =
+      focusState.type !== "checkbox" &&
+      typeof focusState.selectionStart === "number" &&
+      typeof focusState.selectionEnd === "number" &&
+      typeof target.setSelectionRange === "function";
+
+    if (!canRestoreSelection) {
+      return;
+    }
+
+    try {
+      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+    } catch (_error) {
+      // Ignore unsupported inputs.
+    }
+  }
+
+  _emitConfig() {
+    const focusState = this._captureFocusState();
+    const nextConfig = deepClone(this._config);
+    this._config = normalizeConfig(compactConfig(nextConfig));
+    this._render();
+    this._restoreFocusState(focusState);
+    fireEvent(this, "config-changed", {
+      config: compactConfig(nextConfig),
+    });
+  }
+
+  _setEditorConfig() {
+    this._config = normalizeConfig(compactConfig(this._config));
+  }
+
+  _setFieldValue(path, value) {
+    if (value === undefined || value === null || value === "") {
+      deleteByPath(this._config, path);
+      return;
+    }
+
+    setByPath(this._config, path, value);
+  }
+
+  _readFieldValue(input) {
+    const valueType = input.dataset.valueType || "string";
+
+    switch (valueType) {
+      case "boolean":
+        return Boolean(input.checked);
+      case "csv": {
+        const values = arrayFromCsv(input.value)
+          .map(value => Number(value))
+          .filter(value => Number.isFinite(value))
+          .map(value => clamp(Math.round(value), 1, 100));
+        return values.length ? values : undefined;
+      }
+      default:
+        return input.value;
+    }
+  }
+
+  _onShadowInput(event) {
+    const input = event
+      .composedPath()
+      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+
+    if (!input?.dataset?.field) {
+      return;
+    }
+
+    event.stopPropagation();
+
+    const nextValue = this._readFieldValue(input);
+    this._setFieldValue(input.dataset.field, nextValue);
+    this._setEditorConfig();
+
+    if (event.type === "change") {
+      this._emitConfig();
+    }
+  }
+
+  _onShadowClick() {}
+
+  _renderTextField(label, field, value, options = {}) {
+    const inputType = options.type || "text";
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const valueType = options.valueType || "string";
+    const inputValue = value === undefined || value === null ? "" : String(value);
+
+    return `
+      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <input
+          type="${escapeHtml(inputType)}"
+          data-field="${escapeHtml(field)}"
+          data-value-type="${escapeHtml(valueType)}"
+          value="${escapeHtml(inputValue)}"
+          ${placeholder}
+        />
+      </label>
+    `;
+  }
+
+  _renderCheckboxField(label, field, checked) {
+    return `
+      <label class="editor-toggle">
+        <input
+          type="checkbox"
+          data-field="${escapeHtml(field)}"
+          data-value-type="boolean"
+          ${checked ? "checked" : ""}
+        />
+        <span>${escapeHtml(label)}</span>
+      </label>
+    `;
+  }
+
+  _renderSelectField(label, field, value, options) {
+    return `
+      <label class="editor-field">
+        <span>${escapeHtml(label)}</span>
+        <select data-field="${escapeHtml(field)}">
+          ${options
+            .map(option => `
+              <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
+                ${escapeHtml(option.label)}
+              </option>
+            `)
+            .join("")}
+        </select>
+      </label>
+    `;
+  }
+
+  _getEntityOptionsMarkup() {
+    const entityIds = Object.keys(this._hass?.states || {})
+      .filter(entityId => entityId.startsWith("light."))
+      .sort((left, right) => left.localeCompare(right, "es"));
+
+    if (!entityIds.length) {
+      return "";
+    }
+
+    return `
+      <datalist id="light-card-entities">
+        ${entityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
+      </datalist>
+    `;
+  }
+
+  _render() {
+    if (!this.shadowRoot) {
+      return;
+    }
+
+    const config = this._config || normalizeConfig({});
+    const hapticStyle = config.haptics?.style || "selection";
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        .editor {
+          color: var(--primary-text-color);
+          display: grid;
+          gap: 16px;
+        }
+
+        .editor-section {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 18px;
+          display: grid;
+          gap: 14px;
+          padding: 16px;
+        }
+
+        .editor-section__header {
+          display: grid;
+          gap: 4px;
+        }
+
+        .editor-section__title {
+          font-size: 15px;
+          font-weight: 700;
+        }
+
+        .editor-section__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .editor-grid {
+          display: grid;
+          gap: 12px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .editor-field,
+        .editor-toggle {
+          display: grid;
+          gap: 6px;
+          min-width: 0;
+        }
+
+        .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+        .editor-field > span,
+        .editor-toggle > span {
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .editor-field input,
+        .editor-field select {
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          color: var(--primary-text-color);
+          font: inherit;
+          min-height: 40px;
+          padding: 10px 12px;
+          width: 100%;
+        }
+
+        .editor-toggle {
+          align-items: center;
+          grid-template-columns: auto 1fr;
+          padding-top: 20px;
+        }
+
+        .editor-toggle input {
+          accent-color: var(--primary-color);
+          height: 18px;
+          margin: 0;
+          width: 18px;
+        }
+
+        @media (max-width: 640px) {
+          .editor-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .editor-toggle {
+            padding-top: 0;
+          }
+        }
+      </style>
+      <div class="editor">
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">General</div>
+            <div class="editor-section__hint">Entidad principal y textos visibles de la tarjeta.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderTextField("Entidad", "entity", config.entity, {
+              placeholder: "light.salon",
+            })}
+            ${this._renderTextField("Nombre", "name", config.name, {
+              placeholder: "Salon",
+            })}
+            ${this._renderTextField("Icono", "icon", config.icon, {
+              placeholder: "mdi:lightbulb",
+            })}
+            ${this._renderTextField(
+              "Presets de brillo",
+              "quick_brightness",
+              Array.isArray(config.quick_brightness) ? config.quick_brightness.join(", ") : "",
+              {
+                valueType: "csv",
+                placeholder: "10, 35, 65, 100",
+              },
+            )}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Visibilidad</div>
+            <div class="editor-section__hint">Que bloques quieres mostrar dentro de la tarjeta.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderCheckboxField("Mostrar estado", "show_state", config.show_state !== false)}
+            ${this._renderCheckboxField("Mostrar brillo", "show_brightness", config.show_brightness !== false)}
+            ${this._renderCheckboxField("Presets de brillo", "show_quick_brightness", config.show_quick_brightness !== false)}
+            ${this._renderCheckboxField("Controles de color", "show_color_controls", config.show_color_controls !== false)}
+            ${this._renderCheckboxField("Controles de temperatura", "show_temperature_controls", config.show_temperature_controls !== false)}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Haptics</div>
+            <div class="editor-section__hint">Respuesta haptica opcional para los controles.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderSelectField(
+              "Estilo",
+              "haptics.style",
+              hapticStyle,
+              [
+                { value: "selection", label: "Selection" },
+                { value: "light", label: "Light" },
+                { value: "medium", label: "Medium" },
+                { value: "heavy", label: "Heavy" },
+                { value: "success", label: "Success" },
+                { value: "warning", label: "Warning" },
+                { value: "failure", label: "Failure" },
+              ],
+            )}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Estilos</div>
+            <div class="editor-section__hint">Ajustes visuales basicos del look Nodalia.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
+            ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
+            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
+            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
+            ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
+            ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
+            ${this._renderTextField("Tamano icono", "styles.icon.size", config.styles.icon.size)}
+            ${this._renderTextField("Color icono encendida", "styles.icon.on_color", config.styles.icon.on_color)}
+            ${this._renderTextField("Color icono apagada", "styles.icon.off_color", config.styles.icon.off_color)}
+            ${this._renderTextField("Tamano boton", "styles.control.size", config.styles.control.size)}
+            ${this._renderTextField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background)}
+            ${this._renderTextField("Color acento", "styles.control.accent_color", config.styles.control.accent_color)}
+            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
+            ${this._renderTextField("Tamano subtitulo", "styles.subtitle_size", config.styles.subtitle_size)}
+            ${this._renderTextField("Color slider", "styles.slider_color", config.styles.slider_color)}
+          </div>
+        </section>
+        ${this._getEntityOptionsMarkup()}
+      </div>
+    `;
+
+    this.shadowRoot
+      .querySelectorAll('input[data-field="entity"]')
+      .forEach(input => {
+        input.setAttribute("list", "light-card-entities");
+      });
+  }
+}
+
+if (!customElements.get(EDITOR_TAG)) {
+  customElements.define(EDITOR_TAG, NodaliaLightCardEditor);
+}
+
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: CARD_TAG,
+  name: "Nodalia Light Card",
+  description: "Tarjeta de luz con estilo Nodalia, presets y editor visual.",
+  preview: true,
+});
