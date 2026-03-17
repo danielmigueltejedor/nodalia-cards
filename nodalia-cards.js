@@ -8097,12 +8097,23 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
-    fireEvent(this, "haptic", style ? { hapticType: style } : {});
+    const hapticStyle = String(style || "selection");
 
-    if (this._config.haptics.fallback_vibrate && typeof navigator?.vibrate === "function") {
-      const pattern = HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection;
-      navigator.vibrate(pattern);
+    try {
+      fireEvent(this, "haptic", hapticStyle);
+    } catch (_error) {
+      // Ignore event dispatch issues and try vibration fallback below.
     }
+
+    if (
+      !this._config.haptics.fallback_vibrate ||
+      typeof navigator === "undefined" ||
+      typeof navigator.vibrate !== "function"
+    ) {
+      return;
+    }
+
+    navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
   }
 
   _getState() {
