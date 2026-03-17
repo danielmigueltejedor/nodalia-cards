@@ -297,6 +297,25 @@ function clamp(value, minimum, maximum) {
   return Math.min(Math.max(value, minimum), maximum);
 }
 
+function getRangeValueFromClientX(slider, clientX) {
+  const rect = slider.getBoundingClientRect();
+  if (!rect.width) {
+    return Number(slider.value || 0);
+  }
+
+  const min = Number(slider.min || 0);
+  const max = Number(slider.max || 100);
+  const step = slider.step === "any" ? 0 : Number(slider.step || 1);
+  const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
+  let nextValue = min + ((max - min) * ratio);
+
+  if (Number.isFinite(step) && step > 0) {
+    nextValue = min + (Math.round((nextValue - min) / step) * step);
+  }
+
+  return clamp(nextValue, min, max);
+}
+
 function formatDuration(totalSeconds) {
   const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
   const hours = Math.floor(safeSeconds / 3600);
