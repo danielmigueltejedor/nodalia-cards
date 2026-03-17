@@ -56,7 +56,13 @@ const DEFAULT_CONFIG = {
       accent_color: "var(--primary-text-color)",
       accent_background: "rgba(var(--rgb-primary-color), 0.18)",
     },
+    chip_height: "24px",
+    chip_font_size: "11px",
+    chip_padding: "0 9px",
     title_size: "14px",
+    slider_wrap_height: "56px",
+    slider_height: "16px",
+    slider_thumb_size: "28px",
     slider_color: "var(--primary-color)",
   },
 };
@@ -878,12 +884,20 @@ class NodaliaLightCard extends HTMLElement {
       chips.push(`<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`);
     }
 
-    if (isOn && config.show_brightness !== false && supportsBrightness) {
-      chips.push(`<span class="light-card__chip">${escapeHtml(`${brightnessPercent}%`)}</span>`);
-    }
+    if (isOn) {
+      let activeValueChip = null;
 
-    if (isOn && config.show_temperature_controls !== false && supportsColorTemperature) {
-      chips.push(`<span class="light-card__chip">${escapeHtml(`${currentKelvin}K`)}</span>`);
+      if (activeControlMode === "temperature" && config.show_temperature_controls !== false && supportsColorTemperature) {
+        activeValueChip = `${currentKelvin}K`;
+      } else if (activeControlMode === "color" && config.show_color_controls !== false && supportsColor) {
+        activeValueChip = `${currentHue}°`;
+      } else if (config.show_brightness !== false && supportsBrightness) {
+        activeValueChip = `${brightnessPercent}%`;
+      }
+
+      if (activeValueChip) {
+        chips.push(`<span class="light-card__chip">${escapeHtml(activeValueChip)}</span>`);
+      }
     }
 
     this.shadowRoot.innerHTML = `
@@ -1008,11 +1022,11 @@ class NodaliaLightCard extends HTMLElement {
           border-radius: 999px;
           color: var(--secondary-text-color);
           display: inline-flex;
-          font-size: 11px;
+          font-size: ${styles.chip_font_size};
           font-weight: 600;
           line-height: 1;
-          min-height: 24px;
-          padding: 0 9px;
+          min-height: ${styles.chip_height};
+          padding: ${styles.chip_padding};
         }
 
         .light-card__chip--state {
@@ -1045,7 +1059,7 @@ class NodaliaLightCard extends HTMLElement {
           border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
           display: grid;
-          min-height: 56px;
+          min-height: ${styles.slider_wrap_height};
           padding: 0 16px;
         }
 
@@ -1092,7 +1106,7 @@ class NodaliaLightCard extends HTMLElement {
           border-radius: 999px;
           cursor: pointer;
           display: block;
-          height: 16px;
+          height: ${styles.slider_height};
           outline: none;
           touch-action: pan-x;
           width: 100%;
@@ -1138,20 +1152,20 @@ class NodaliaLightCard extends HTMLElement {
           background: var(--primary-text-color);
           border: 0;
           border-radius: 50%;
-          box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12);
+          box-shadow: 0 0 0 calc(${styles.slider_thumb_size} * 0.22) rgba(255, 255, 255, 0.12);
           cursor: pointer;
-          height: 28px;
-          width: 28px;
+          height: ${styles.slider_thumb_size};
+          width: ${styles.slider_thumb_size};
         }
 
         .light-card__slider::-moz-range-thumb {
           background: var(--primary-text-color);
           border: 0;
           border-radius: 50%;
-          box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12);
+          box-shadow: 0 0 0 calc(${styles.slider_thumb_size} * 0.22) rgba(255, 255, 255, 0.12);
           cursor: pointer;
-          height: 28px;
-          width: 28px;
+          height: ${styles.slider_thumb_size};
+          width: ${styles.slider_thumb_size};
         }
 
         .light-card__slider::-moz-range-track {
@@ -1843,7 +1857,13 @@ class NodaliaLightCardEditor extends HTMLElement {
             ${this._renderTextField("Tamano boton", "styles.control.size", config.styles.control.size)}
             ${this._renderTextField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background)}
             ${this._renderTextField("Color acento", "styles.control.accent_color", config.styles.control.accent_color)}
+            ${this._renderTextField("Alto burbuja info", "styles.chip_height", config.styles.chip_height)}
+            ${this._renderTextField("Texto burbuja info", "styles.chip_font_size", config.styles.chip_font_size)}
+            ${this._renderTextField("Padding burbuja info", "styles.chip_padding", config.styles.chip_padding)}
             ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
+            ${this._renderTextField("Alto contenedor slider", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
+            ${this._renderTextField("Grosor slider", "styles.slider_height", config.styles.slider_height)}
+            ${this._renderTextField("Tamano thumb slider", "styles.slider_thumb_size", config.styles.slider_thumb_size)}
             ${this._renderTextField("Color slider", "styles.slider_color", config.styles.slider_color)}
           </div>
         </section>
