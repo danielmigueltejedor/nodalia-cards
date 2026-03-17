@@ -659,7 +659,7 @@ class NodaliaLightCard extends HTMLElement {
     const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
 
-    if (config.show_state !== false) {
+    if (config.show_state === true) {
       chips.push(`<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`);
     }
 
