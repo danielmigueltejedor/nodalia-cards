@@ -724,8 +724,34 @@ class NodaliaMediaPlayer extends HTMLElement {
     );
   }
 
+  _shouldShowTvArtwork(player, state) {
+    const deviceType = this._getPlayerDeviceType(player, state);
+    if (deviceType !== "tv") {
+      return true;
+    }
+
+    const plexSignals = [
+      state?.attributes?.source,
+      state?.attributes?.app_name,
+      state?.attributes?.media_channel,
+      state?.attributes?.media_content_type,
+    ]
+      .filter(Boolean)
+      .map(value => normalizeTextKey(value));
+
+    return plexSignals.some(value => value.includes("plex"));
+  }
+
   _getPlayerArtwork(player, state) {
-    return player.image || state.attributes.entity_picture || null;
+    if (player.image) {
+      return player.image;
+    }
+
+    if (!this._shouldShowTvArtwork(player, state)) {
+      return null;
+    }
+
+    return state.attributes.entity_picture || null;
   }
 
   _getPlayerStateLabel(stateValue) {
