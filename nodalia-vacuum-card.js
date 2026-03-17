@@ -1247,7 +1247,11 @@ class NodaliaVacuumCard extends HTMLElement {
       active: usePausePrimary,
     });
 
-    if (this._config?.show_return_to_base !== false && state?.state !== "unavailable") {
+    if (
+      this._config?.show_return_to_base !== false &&
+      state?.state !== "unavailable" &&
+      !this._isDocked(state)
+    ) {
       controls.push({
         action: "return_to_base",
         icon: "mdi:home-import-outline",
@@ -1766,12 +1770,26 @@ class NodaliaVacuumCard extends HTMLElement {
           }
 
           .vacuum-card__header {
-            grid-template-columns: auto minmax(0, 1fr);
+            gap: 10px;
+            grid-template-columns: auto minmax(0, 1fr) auto;
           }
 
           .vacuum-card__header-meta {
-            grid-column: 1 / -1;
-            justify-content: center;
+            grid-column: auto;
+            justify-content: flex-end;
+          }
+
+          .vacuum-card__chip--battery {
+            font-size: max(10px, calc(${styles.chip_font_size} - 1px));
+            gap: 5px;
+            height: max(22px, calc(${styles.chip_height} - 2px));
+            padding: 0 8px;
+          }
+
+          .vacuum-card__chip--battery ha-icon {
+            --mdc-icon-size: 12px;
+            height: 12px;
+            width: 12px;
           }
         }
       </style>
