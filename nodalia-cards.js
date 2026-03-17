@@ -5190,6 +5190,70 @@ class NodaliaMediaPlayer extends HTMLElement {
     return player.label || player.name || state.attributes.friendly_name || player.entity;
   }
 
+  _isAppleTvPlayer(player, state) {
+    const candidates = [
+      player?.entity,
+      player?.label,
+      player?.name,
+      player?.title,
+      state?.attributes?.friendly_name,
+      state?.attributes?.app_name,
+      state?.attributes?.source,
+      state?.attributes?.device_class,
+    ];
+
+    return candidates.some(candidate => normalizeTextKey(candidate).includes("apple tv"));
+  }
+
+  _getPlayerDeviceType(player, state) {
+    if (player?.device_type === "music" || player?.device_type === "tv") {
+      return player.device_type;
+    }
+
+    const deviceClass = normalizeTextKey(state?.attributes?.device_class);
+    if (["tv", "receiver", "set_top_box"].includes(deviceClass)) {
+      return "tv";
+    }
+
+    const haystack = normalizeTextKey([
+      player?.entity,
+      player?.label,
+      player?.name,
+      player?.title,
+      player?.icon,
+      state?.attributes?.friendly_name,
+      state?.attributes?.app_name,
+      state?.attributes?.source,
+      state?.attributes?.media_content_type,
+    ].filter(Boolean).join(" "));
+
+    if (
+      this._isAppleTvPlayer(player, state) ||
+      haystack.includes("google tv") ||
+      haystack.includes("android tv") ||
+      haystack.includes("chromecast") ||
+      haystack.includes("television") ||
+      haystack.includes("televisor") ||
+      /\btv\b/.test(haystack)
+    ) {
+      return "tv";
+    }
+
+    return "music";
+  }
+
+  _getPlayerFallbackIcon(player, state, deviceType) {
+    if (player?.icon) {
+      return player.icon;
+    }
+
+    if (deviceType === "tv") {
+      return this._isAppleTvPlayer(player, state) ? "mdi:apple" : "mdi:television";
+    }
+
+    return "mdi:music";
+  }
+
   _getPlayerTitle(player, state) {
     if (player.title) {
       return player.title;
@@ -5278,6 +5342,36 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     return sourceLabel;
+  }
+
+  _getPlayerSourceOptions(player, state) {
+    if (player?.show_source_controls === false) {
+      return [];
+    }
+
+    const sources = Array.isArray(state?.attributes?.source_list)
+      ? state.attributes.source_list.filter(source => String(source || "").trim())
+      : [];
+
+    if (!sources.length) {
+      return [];
+    }
+
+    const currentSource = String(state?.attributes?.source || "").trim();
+    const orderedSources = [];
+
+    if (currentSource && sources.includes(currentSource)) {
+      orderedSources.push(currentSource);
+    }
+
+    sources.forEach(source => {
+      if (!orderedSources.includes(source)) {
+        orderedSources.push(source);
+      }
+    });
+
+    const maxSources = clamp(Number(player?.max_sources || 4), 1, 8);
+    return orderedSources.slice(0, maxSources);
   }
 
   _hasActiveMediaContent(state) {
@@ -5373,6 +5467,39 @@ class NodaliaMediaPlayer extends HTMLElement {
     return chips.slice(0, 4);
   }
 
+  _getTvPlayerChips(player, state, progress, title, subtitle, sourceOptions = []) {
+    const chips = [];
+    const seen = new Set();
+    const titleKey = normalizeTextKey(title);
+    const subtitleKey = normalizeTextKey(subtitle);
+    const currentSource = this._getPlayerSourceLabel(state);
+
+    const addChip = (label, tone = "default") => {
+      const text = String(label || "").trim();
+      if (!text) {
+        return;
+      }
+
+      const key = normalizeTextKey(text);
+      if (!key || key === titleKey || key === subtitleKey || seen.has(key)) {
+        return;
+      }
+
+      seen.add(key);
+      chips.push({ label: text, tone });
+    };
+
+    if (!sourceOptions.length) {
+      addChip(currentSource, "source");
+    }
+
+    if (progress) {
+      addChip(`${formatDuration(progress.position)} / ${formatDuration(progress.duration)}`, "time");
+    }
+
+    return chips.slice(0, 3);
+  }
+
   _syncTicker(players) {
     if (this._mediaBrowserState) {
       if (this._mediaTicker) {
@@ -5460,8 +5587,17 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     switch (control) {
+      case "power-toggle": {
+        const currentState = String(options.state || this._hass?.states?.[entityId]?.state || "");
+        const service = currentState === "off" ? "turn_on" : "turn_off";
+        this._hass.callService("media_player", service, { entity_id: entityId });
+        break;
+      }
       case "play":
         this._hass.callService("media_player", "media_play", { entity_id: entityId });
+        break;
+      case "stop":
+        this._hass.callService("media_player", "media_stop", { entity_id: entityId });
         break;
       case "previous":
         this._hass.callService("media_player", "media_previous_track", { entity_id: entityId });
@@ -5480,6 +5616,9 @@ class NodaliaMediaPlayer extends HTMLElement {
         });
         break;
       }
+      case "volume-down-step":
+        this._hass.callService("media_player", "volume_down", { entity_id: entityId });
+        break;
       case "volume-up": {
         const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
         this._hass.callService("media_player", "volume_set", {
@@ -5488,6 +5627,17 @@ class NodaliaMediaPlayer extends HTMLElement {
         });
         break;
       }
+      case "volume-up-step":
+        this._hass.callService("media_player", "volume_up", { entity_id: entityId });
+        break;
+      case "select-source":
+        if (options.source) {
+          this._hass.callService("media_player", "select_source", {
+            entity_id: entityId,
+            source: options.source,
+          });
+        }
+        break;
       case "browse-media":
         this._openMediaBrowser(entityId, options.path || "");
         break;
@@ -5883,6 +6033,8 @@ class NodaliaMediaPlayer extends HTMLElement {
       this._triggerHaptic();
       this._handleMediaControl(mediaControlButton.dataset.mediaControl, mediaControlButton.dataset.entity, {
         path: mediaControlButton.dataset.mediaPath,
+        source: mediaControlButton.dataset.mediaSource,
+        state: mediaControlButton.dataset.mediaState,
         volume: Number(mediaControlButton.dataset.mediaVolume),
       });
       return;
@@ -6100,7 +6252,12 @@ class NodaliaMediaPlayer extends HTMLElement {
       ? `<div class="media-player__subtitle">${escapeHtml(subtitle)}</div>`
       : "";
     const progress = this._getPlayerProgress(state);
-    const chips = this._getPlayerChips(player, state, progress, title, subtitle);
+    const deviceType = this._getPlayerDeviceType(player, state);
+    const isTvPlayer = deviceType === "tv";
+    const sourceOptions = isTvPlayer ? this._getPlayerSourceOptions(player, state) : [];
+    const chips = isTvPlayer
+      ? this._getTvPlayerChips(player, state, progress, title, subtitle, sourceOptions)
+      : this._getPlayerChips(player, state, progress, title, subtitle);
     const playerLabel = this._getPlayerLabel(player, state);
     const statusLabel = this._getPlayerStateLabel(state.state);
     const browsePath = this._getPlayerBrowsePath(player, state);
@@ -6137,7 +6294,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         </button>
       `
       : "";
-    const browseMarkup = browsePath
+    const browseMarkup = browsePath && !isTvPlayer
       ? `
         <div class="media-player__transport-addon">
           <button
@@ -6153,7 +6310,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         </div>
       `
       : "";
-    const browseIdleMarkup = browsePath
+    const browseIdleMarkup = browsePath && !isTvPlayer
       ? `
         <button
           type="button"
@@ -6166,6 +6323,96 @@ class NodaliaMediaPlayer extends HTMLElement {
           <ha-icon icon="mdi:music-box-multiple-outline"></ha-icon>
         </button>
       `
+      : "";
+    const tvPowerMarkup = `
+      <button
+        type="button"
+        class="media-player__control ${state.state === "off" ? "media-player__control--primary" : ""}"
+        data-media-control="power-toggle"
+        data-entity="${escapeHtml(player.entity)}"
+        data-media-state="${escapeHtml(state.state)}"
+        aria-label="${escapeHtml(state.state === "off" ? "Encender" : "Apagar")}"
+      >
+        <ha-icon icon="mdi:power"></ha-icon>
+      </button>
+    `;
+    const tvVolumeDownMarkup = `
+      <button
+        type="button"
+        class="media-player__control"
+        data-media-control="volume-down-step"
+        data-entity="${escapeHtml(player.entity)}"
+        aria-label="Bajar volumen"
+      >
+        <ha-icon icon="mdi:volume-minus"></ha-icon>
+      </button>
+    `;
+    const tvVolumeUpMarkup = `
+      <button
+        type="button"
+        class="media-player__control"
+        data-media-control="volume-up-step"
+        data-entity="${escapeHtml(player.entity)}"
+        aria-label="Subir volumen"
+      >
+        <ha-icon icon="mdi:volume-plus"></ha-icon>
+      </button>
+    `;
+    const tvPlayPauseMarkup = `
+      <button
+        type="button"
+        class="media-player__control ${state.state === "playing" ? "media-player__control--primary" : ""}"
+        data-media-control="play-pause"
+        data-entity="${escapeHtml(player.entity)}"
+        aria-label="Play o pausa"
+      >
+        <ha-icon icon="${escapeHtml(state.state === "playing" ? "mdi:pause" : "mdi:play")}"></ha-icon>
+      </button>
+    `;
+    const tvStopMarkup = state.state !== "off" && state.state !== "idle" && state.state !== "standby"
+      ? `
+        <button
+          type="button"
+          class="media-player__control"
+          data-media-control="stop"
+          data-entity="${escapeHtml(player.entity)}"
+          aria-label="Detener"
+        >
+          <ha-icon icon="mdi:stop"></ha-icon>
+        </button>
+      `
+      : "";
+    const sourceButtonsMarkup = sourceOptions.length
+      ? `
+        <div class="media-player__source-buttons" aria-label="Fuentes">
+          ${sourceOptions
+            .map(source => `
+              <button
+                type="button"
+                class="media-player__source-button ${normalizeTextKey(source) === normalizeTextKey(state.attributes.source) ? "active" : ""}"
+                data-media-control="select-source"
+                data-entity="${escapeHtml(player.entity)}"
+                data-media-source="${escapeHtml(source)}"
+                aria-label="Cambiar a ${escapeHtml(source)}"
+              >
+                ${escapeHtml(source)}
+              </button>
+            `)
+            .join("")}
+        </div>
+      `
+      : "";
+    const tvControlsMarkup = `
+      <div class="media-player__tv-actions">
+        ${tvPowerMarkup}
+        ${tvPlayPauseMarkup}
+        ${tvStopMarkup}
+        ${tvVolumeDownMarkup}
+        ${tvVolumeUpMarkup}
+      </div>
+    `;
+    const tvSubtitleMarkup = isTvPlayer && subtitleMarkup
+      ? `<div class="media-player__subtitle media-player__subtitle--tv">${escapeHtml(subtitle)}</div>`
       : "";
     const dotsMarkup = players.length > 1
       ? `
@@ -6234,6 +6481,11 @@ class NodaliaMediaPlayer extends HTMLElement {
         ${browseIdleMarkup}
       </div>
     `;
+    const idleTvControlsMarkup = `
+      <div class="media-player__idle-actions media-player__idle-actions--tv">
+        ${tvControlsMarkup}
+      </div>
+    `;
 
     if (isIdleLayout) {
       return `
@@ -6252,14 +6504,15 @@ class NodaliaMediaPlayer extends HTMLElement {
                 ${
                   artwork
                     ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(playerLabel)}" />`
-                    : `<ha-icon icon="${escapeHtml(player.icon || "mdi:music")}"></ha-icon>`
+                    : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                 }
               </div>
               <div class="media-player__idle-main">
                 ${infoRailMarkup}
-                ${idleControlsMarkup}
+                ${isTvPlayer ? idleTvControlsMarkup : idleControlsMarkup}
               </div>
             </div>
+            ${isTvPlayer && sourceButtonsMarkup ? `<div class="media-player__tv-footer">${sourceButtonsMarkup}</div>` : ""}
             ${dotsMarkup ? `<div class="media-player__switcher media-player__switcher--idle">${dotsMarkup}</div>` : ""}
           </div>
         </div>
@@ -6291,62 +6544,74 @@ class NodaliaMediaPlayer extends HTMLElement {
               ${
                 artwork
                   ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title)}" />`
-                  : `<ha-icon icon="${escapeHtml(player.icon || "mdi:music")}"></ha-icon>`
+                  : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
               }
             </div>
             <div class="media-player__hero-copy">
               <div class="media-player__hero-top">
                 <div class="media-player__meta">
                   <div class="media-player__title">${escapeHtml(title)}</div>
-                  ${subtitleMarkup}
+                  ${isTvPlayer ? "" : subtitleMarkup}
                 </div>
                 ${infoRailMarkup}
               </div>
             </div>
           </div>
           <div class="media-player__center-stack">
+            ${tvSubtitleMarkup}
             ${dotsMarkup ? `<div class="media-player__switcher">${dotsMarkup}</div>` : ""}
             <div class="media-player__transport-row">
-              <div class="media-player__transport-shell">
-                <div class="media-player__transport-cluster">
-                  ${volumeDownMarkup}
-                  <div class="media-player__transport">
-                    <button
-                      type="button"
-                      class="media-player__control"
-                      data-media-control="previous"
-                      data-entity="${escapeHtml(player.entity)}"
-                      aria-label="Anterior"
-                    >
-                      <ha-icon icon="mdi:skip-previous"></ha-icon>
-                    </button>
-                    <button
-                      type="button"
-                      class="media-player__control media-player__control--primary"
-                      data-media-control="play-pause"
-                      data-entity="${escapeHtml(player.entity)}"
-                      aria-label="Play o pausa"
-                    >
-                      <ha-icon icon="${escapeHtml(state.state === "playing" ? "mdi:pause" : "mdi:play")}"></ha-icon>
-                    </button>
-                    <button
-                      type="button"
-                      class="media-player__control"
-                      data-media-control="next"
-                      data-entity="${escapeHtml(player.entity)}"
-                      aria-label="Siguiente"
-                    >
-                      <ha-icon icon="mdi:skip-next"></ha-icon>
-                    </button>
-                  </div>
-                  ${volumeUpMarkup}
-                </div>
-                ${browseMarkup}
-              </div>
+              ${
+                isTvPlayer
+                  ? `
+                    <div class="media-player__tv-shell">
+                      ${tvControlsMarkup}
+                    </div>
+                  `
+                  : `
+                    <div class="media-player__transport-shell">
+                      <div class="media-player__transport-cluster">
+                        ${volumeDownMarkup}
+                        <div class="media-player__transport">
+                          <button
+                            type="button"
+                            class="media-player__control"
+                            data-media-control="previous"
+                            data-entity="${escapeHtml(player.entity)}"
+                            aria-label="Anterior"
+                          >
+                            <ha-icon icon="mdi:skip-previous"></ha-icon>
+                          </button>
+                          <button
+                            type="button"
+                            class="media-player__control media-player__control--primary"
+                            data-media-control="play-pause"
+                            data-entity="${escapeHtml(player.entity)}"
+                            aria-label="Play o pausa"
+                          >
+                            <ha-icon icon="${escapeHtml(state.state === "playing" ? "mdi:pause" : "mdi:play")}"></ha-icon>
+                          </button>
+                          <button
+                            type="button"
+                            class="media-player__control"
+                            data-media-control="next"
+                            data-entity="${escapeHtml(player.entity)}"
+                            aria-label="Siguiente"
+                          >
+                            <ha-icon icon="mdi:skip-next"></ha-icon>
+                          </button>
+                        </div>
+                        ${volumeUpMarkup}
+                      </div>
+                      ${browseMarkup}
+                    </div>
+                  `
+              }
             </div>
           </div>
           <div class="media-player__footer">
             ${chipsMarkup}
+            ${isTvPlayer ? sourceButtonsMarkup : ""}
           </div>
         </div>
       </div>
@@ -6642,6 +6907,12 @@ class NodaliaMediaPlayer extends HTMLElement {
           font-size: ${playerStyles.subtitle_size};
         }
 
+        .media-player__subtitle--tv {
+          max-width: min(100%, 420px);
+          text-align: center;
+          width: 100%;
+        }
+
         .media-player__center-stack {
           display: grid;
           gap: 10px;
@@ -6675,6 +6946,11 @@ class NodaliaMediaPlayer extends HTMLElement {
           gap: 6px;
           justify-content: flex-end;
           min-width: 0;
+        }
+
+        .media-player__idle-actions--tv {
+          justify-content: flex-start;
+          width: 100%;
         }
 
         .media-player__transport-shell {
@@ -6718,12 +6994,32 @@ class NodaliaMediaPlayer extends HTMLElement {
           padding: 5px;
         }
 
+        .media-player__tv-shell {
+          display: flex;
+          justify-content: center;
+          width: 100%;
+        }
+
+        .media-player__tv-actions {
+          align-items: center;
+          display: inline-flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: center;
+        }
+
         .media-player__footer {
           align-items: center;
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
           justify-content: center;
+        }
+
+        .media-player__tv-footer {
+          display: flex;
+          justify-content: flex-start;
+          width: 100%;
         }
 
         .media-player__chips {
@@ -6790,6 +7086,42 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__chip--time {
           font-variant-numeric: tabular-nums;
+        }
+
+        .media-player__source-buttons {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: center;
+          width: 100%;
+        }
+
+        .media-player__source-button {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 999px;
+          color: var(--secondary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: ${playerStyles.subtitle_size};
+          font-weight: 600;
+          justify-content: center;
+          line-height: 1;
+          max-width: 100%;
+          min-height: 30px;
+          overflow: hidden;
+          padding: 0 12px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .media-player__source-button.active {
+          background: ${playerStyles.accent_background};
+          border-color: rgba(var(--rgb-primary-color), 0.22);
+          color: ${playerStyles.accent_color};
         }
 
         .media-player__control,
@@ -7065,6 +7397,11 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         @media (max-width: 520px) {
           .media-player__footer {
+            justify-content: center;
+          }
+
+          .media-player__idle-actions--tv,
+          .media-player__tv-footer {
             justify-content: center;
           }
         }
@@ -7435,6 +7772,16 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           ${this._renderTextField("Icono", `players.${index}.icon`, player.icon, {
             placeholder: "mdi:speaker",
           })}
+          ${this._renderSelectField(
+            "Tipo",
+            `players.${index}.device_type`,
+            player.device_type,
+            [
+              { value: undefined, label: "Automatico" },
+              { value: "music", label: "Musica" },
+              { value: "tv", label: "TV / Apple TV" },
+            ],
+          )}
           ${this._renderTextField("Imagen", `players.${index}.image`, player.image, {
             placeholder: "/local/cover.png",
           })}
@@ -7456,6 +7803,11 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             placeholder: "playing, paused",
             valueType: "csv",
             fullWidth: true,
+          })}
+          ${this._renderCheckboxField("Mostrar fuentes/apps", `players.${index}.show_source_controls`, player.show_source_controls !== false)}
+          ${this._renderTextField("Max fuentes", `players.${index}.max_sources`, player.max_sources, {
+            type: "number",
+            valueType: "number",
           })}
         </div>
       </div>
