@@ -6616,7 +6616,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     const volumeSupported = this._supportsVolumeControl(state);
     const playerStyles = this._config.styles.player;
     const hasAlbumBackground = this._config.album_cover_background !== false && Boolean(artwork);
-    const useActiveTint = this._isPlayerActive(state) && !hasAlbumBackground;
+    const useActiveTint = isTvPlayer && this._isPlayerActive(state) && !hasAlbumBackground;
     const playerCardClasses = [
       "media-player-card",
       isIdleLayout ? "media-player-card--idle" : "",
@@ -7538,6 +7538,12 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player-card--tv:not(.media-player-card--idle) {
           min-height: 0;
+          padding: 12px 14px 8px;
+        }
+
+        .media-player-card--tv:not(.media-player-card--idle) .media-player__content {
+          gap: 4px;
+          padding-bottom: 0;
         }
 
         .media-player-card--tv .media-player__hero {
@@ -7630,6 +7636,10 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player-card--tv:not(.media-player-card--idle) .media-player__center-stack {
           gap: 6px;
+        }
+
+        .media-player-card--tv:not(.media-player-card--idle) .media-player__tv-stack {
+          gap: 5px;
         }
 
         .media-player-card--tv .media-player__chips,
