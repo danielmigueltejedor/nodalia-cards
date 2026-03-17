@@ -78,6 +78,7 @@ const DEFAULT_CONFIG = {
   entity: "",
   players: [],
   show: true,
+  show_state: false,
   album_cover_background: true,
   haptics: {
     enabled: false,
@@ -105,9 +106,12 @@ const DEFAULT_CONFIG = {
       padding: "14px",
       min_height: "160px",
       artwork_size: "72px",
-      control_size: "38px",
+      control_size: "34px",
       title_size: "15px",
       subtitle_size: "12px",
+      slider_wrap_height: "48px",
+      slider_height: "14px",
+      slider_thumb_size: "24px",
       progress_color: "var(--primary-color)",
       progress_background: "rgba(var(--rgb-primary-color), 0.14)",
       overlay_color: "rgba(0, 0, 0, 0.32)",
@@ -316,6 +320,9 @@ function normalizeConfig(rawConfig) {
   if (mediaConfig) {
     if (mediaConfig.show !== undefined) {
       config.show = mediaConfig.show;
+    }
+    if (mediaConfig.show_state !== undefined) {
+      config.show_state = mediaConfig.show_state;
     }
     if (mediaConfig.album_cover_background !== undefined) {
       config.album_cover_background = mediaConfig.album_cover_background;
@@ -631,12 +638,16 @@ class NodaliaMediaPlayer extends HTMLElement {
       return player.subtitle;
     }
 
+    const fallbackState = this._config?.show_state === true
+      ? this._getPlayerStateLabel(state.state)
+      : "";
+
     return (
       state.attributes.media_artist ||
       state.attributes.media_series_title ||
       state.attributes.media_album_name ||
       state.attributes.app_name ||
-      this._getPlayerStateLabel(state.state)
+      fallbackState
     );
   }
 
@@ -665,6 +676,11 @@ class NodaliaMediaPlayer extends HTMLElement {
       default:
         return stateValue || "Desconocido";
     }
+  }
+
+  _isPlayerActive(state) {
+    const stateKey = normalizeTextKey(state?.state);
+    return !!stateKey && !["off", "standby", "unavailable", "unknown"].includes(stateKey);
   }
 
   _getPlayerProgress(state) {
@@ -1799,6 +1815,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       : this._getPlayerChips(player, state, progress, title, subtitle);
     const playerLabel = this._getPlayerLabel(player, state);
     const statusLabel = this._getPlayerStateLabel(state.state);
+    const showStateLabel = this._config.show_state === true;
     const browsePath = this._getPlayerBrowsePath(player, state);
     const browseAvailable = isTvPlayer
       ? Boolean(player?.browse_path || player?.media_browser_path)
@@ -1808,6 +1825,17 @@ class NodaliaMediaPlayer extends HTMLElement {
     const currentVolumePercent = this._getPlayerVolumePercent(player.entity, state);
     const volumeSupported = this._supportsVolumeControl(state);
     const playerStyles = this._config.styles.player;
+    const hasAlbumBackground = this._config.album_cover_background !== false && Boolean(artwork);
+    const useActiveTint = this._isPlayerActive(state) && !hasAlbumBackground;
+    const playerCardClasses = [
+      "media-player-card",
+      isIdleLayout ? "media-player-card--idle" : "",
+      isTvPlayer ? "media-player-card--tv" : "",
+      hasAlbumBackground ? "has-album-background" : "",
+      useActiveTint ? "media-player-card--active" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
 
     const volumeDownMarkup = volumeSupported
       ? `
@@ -2007,22 +2035,31 @@ class NodaliaMediaPlayer extends HTMLElement {
         </div>
       `
       : "";
-    const infoRailMarkup = `
-      <div class="media-player__info-rail ${isIdleLayout ? "media-player__info-rail--idle" : ""}">
-        ${
-          playerLabel && normalizeTextKey(playerLabel) !== normalizeTextKey(title)
-            ? `
-              <span class="media-player__chip media-player__chip--device media-player__chip--top">
-                ${escapeHtml(playerLabel)}
-              </span>
-            `
-            : ""
-        }
-        <span class="media-player__chip media-player__chip--${escapeHtml(state.state || "default")} media-player__chip--status">
-          ${escapeHtml(statusLabel)}
-        </span>
-      </div>
-    `;
+    const infoRailItems = [
+      playerLabel && normalizeTextKey(playerLabel) !== normalizeTextKey(title)
+        ? `
+          <span class="media-player__chip media-player__chip--device media-player__chip--top">
+            ${escapeHtml(playerLabel)}
+          </span>
+        `
+        : "",
+      showStateLabel
+        ? `
+          <span class="media-player__chip media-player__chip--${escapeHtml(state.state || "default")} media-player__chip--status">
+            ${escapeHtml(statusLabel)}
+          </span>
+        `
+        : "",
+    ]
+      .filter(Boolean)
+      .join("");
+    const infoRailMarkup = infoRailItems
+      ? `
+        <div class="media-player__info-rail ${isIdleLayout ? "media-player__info-rail--idle" : ""}">
+          ${infoRailItems}
+        </div>
+      `
+      : "";
     const idleControlsMarkup = `
       <div class="media-player__idle-actions">
         ${volumeDownMarkup}
@@ -2051,11 +2088,11 @@ class NodaliaMediaPlayer extends HTMLElement {
     if (isIdleLayout) {
       return `
         <div
-          class="media-player-card media-player-card--idle ${isTvPlayer ? "media-player-card--tv" : ""} ${this._config.album_cover_background && artwork ? "has-album-background" : ""}"
+          class="${playerCardClasses}"
           data-media-card-index="${this._activePlayerIndex}"
         >
           ${
-            this._config.album_cover_background && artwork
+            hasAlbumBackground
               ? `<div class="media-player__album-bg" style="background-image:url('${escapeHtml(artwork)}');"></div>`
               : ""
           }
@@ -2082,11 +2119,11 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     return `
       <div
-        class="media-player-card ${isTvPlayer ? "media-player-card--tv" : ""} ${this._config.album_cover_background && artwork ? "has-album-background" : ""}"
+        class="${playerCardClasses}"
         data-media-card-index="${this._activePlayerIndex}"
       >
         ${
-          this._config.album_cover_background && artwork
+          hasAlbumBackground
             ? `<div class="media-player__album-bg" style="background-image:url('${escapeHtml(artwork)}');"></div>`
             : ""
         }
@@ -2270,6 +2307,17 @@ class NodaliaMediaPlayer extends HTMLElement {
           overflow: hidden;
           padding: ${playerStyles.padding};
           position: relative;
+        }
+
+        .media-player-card--active {
+          background:
+            linear-gradient(180deg, rgba(42, 88, 180, 0.22), rgba(18, 34, 74, 0.28)),
+            ${playerStyles.background};
+          border-color: rgba(109, 163, 255, 0.24);
+          box-shadow:
+            ${playerStyles.box_shadow},
+            0 0 0 1px rgba(109, 163, 255, 0.08),
+            0 18px 38px rgba(16, 34, 82, 0.18);
         }
 
         .empty-card {
@@ -2657,13 +2705,13 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--tv .media-player__control {
-          height: 44px;
-          width: 44px;
+          height: calc(${playerStyles.control_size} + 6px);
+          width: calc(${playerStyles.control_size} + 6px);
         }
 
         .media-player-card--tv .media-player__control--primary {
-          height: 48px;
-          width: 48px;
+          height: calc(${playerStyles.control_size} + 10px);
+          width: calc(${playerStyles.control_size} + 10px);
         }
 
         .media-player-card--tv .media-player__tv-source-panel {
@@ -2685,25 +2733,9 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--tv .media-player__tv-volume-wrap {
-          min-height: 48px;
+          min-height: ${playerStyles.slider_wrap_height};
           padding: 0 14px;
           width: 100%;
-        }
-
-        .media-player-card--tv .media-player__volume-slider {
-          height: 14px;
-        }
-
-        .media-player-card--tv .media-player__volume-slider::-webkit-slider-thumb {
-          box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.12);
-          height: 24px;
-          width: 24px;
-        }
-
-        .media-player-card--tv .media-player__volume-slider::-moz-range-thumb {
-          box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.12);
-          height: 24px;
-          width: 24px;
         }
 
         @media (max-width: 520px) {
@@ -2770,7 +2802,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
           display: grid;
-          min-height: 52px;
+          min-height: ${playerStyles.slider_wrap_height};
           padding: 0 16px;
           width: min(100%, 320px);
         }
@@ -2789,7 +2821,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           border-radius: 999px;
           cursor: pointer;
           display: block;
-          height: 16px;
+          height: ${playerStyles.slider_height};
           outline: none;
           touch-action: pan-x;
           width: 100%;
@@ -2801,20 +2833,20 @@ class NodaliaMediaPlayer extends HTMLElement {
           background: var(--primary-text-color);
           border: 0;
           border-radius: 50%;
-          box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12);
+          box-shadow: 0 0 0 calc(${playerStyles.slider_thumb_size} * 0.25) rgba(255, 255, 255, 0.12);
           cursor: pointer;
-          height: 28px;
-          width: 28px;
+          height: ${playerStyles.slider_thumb_size};
+          width: ${playerStyles.slider_thumb_size};
         }
 
         .media-player__volume-slider::-moz-range-thumb {
           background: var(--primary-text-color);
           border: 0;
           border-radius: 50%;
-          box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12);
+          box-shadow: 0 0 0 calc(${playerStyles.slider_thumb_size} * 0.25) rgba(255, 255, 255, 0.12);
           cursor: pointer;
-          height: 28px;
-          width: 28px;
+          height: ${playerStyles.slider_thumb_size};
+          width: ${playerStyles.slider_thumb_size};
         }
 
         .media-player__volume-slider::-moz-range-track {
@@ -2948,29 +2980,29 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__control ha-icon {
           align-items: center;
           display: inline-flex;
-          font-size: 20px;
-          height: 20px;
+          font-size: calc(${playerStyles.control_size} * 0.56);
+          height: calc(${playerStyles.control_size} * 0.56);
           justify-content: center;
           left: 50%;
           line-height: 1;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: 20px;
+          width: calc(${playerStyles.control_size} * 0.56);
         }
 
         .media-player__volume-button ha-icon {
           align-items: center;
           display: inline-flex;
-          font-size: 18px;
-          height: 18px;
+          font-size: calc(${playerStyles.control_size} * 0.48);
+          height: calc(${playerStyles.control_size} * 0.48);
           justify-content: center;
           left: 50%;
           line-height: 1;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: 18px;
+          width: calc(${playerStyles.control_size} * 0.48);
         }
 
         .media-player__dots {
@@ -3814,6 +3846,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
               ],
               "tristate",
             )}
+            ${this._renderCheckboxField("Mostrar estado textual", "show_state", config.show_state === true)}
             ${this._renderCheckboxField("Fondo con caratula", "album_cover_background", config.album_cover_background !== false)}
             ${this._renderCheckboxField("Mostrar en escritorio", "layout.show_desktop", config.layout.show_desktop === true)}
           </div>
@@ -3906,9 +3939,12 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             ${this._renderTextField("Padding", "styles.player.padding", config.styles.player.padding)}
             ${this._renderTextField("Altura minima", "styles.player.min_height", config.styles.player.min_height)}
             ${this._renderTextField("Tamano portada", "styles.player.artwork_size", config.styles.player.artwork_size)}
-            ${this._renderTextField("Tamano controles", "styles.player.control_size", config.styles.player.control_size)}
+            ${this._renderTextField("Tamano botones", "styles.player.control_size", config.styles.player.control_size)}
             ${this._renderTextField("Tamano titulo", "styles.player.title_size", config.styles.player.title_size)}
             ${this._renderTextField("Tamano subtitulo", "styles.player.subtitle_size", config.styles.player.subtitle_size)}
+            ${this._renderTextField("Alto base slider", "styles.player.slider_wrap_height", config.styles.player.slider_wrap_height)}
+            ${this._renderTextField("Grosor slider", "styles.player.slider_height", config.styles.player.slider_height)}
+            ${this._renderTextField("Tamano thumb slider", "styles.player.slider_thumb_size", config.styles.player.slider_thumb_size)}
             ${this._renderTextField("Color progreso", "styles.player.progress_color", config.styles.player.progress_color)}
             ${this._renderTextField("Fondo progreso", "styles.player.progress_background", config.styles.player.progress_background)}
             ${this._renderTextField("Overlay portada", "styles.player.overlay_color", config.styles.player.overlay_color)}
