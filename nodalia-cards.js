@@ -11506,6 +11506,10 @@ class NodaliaVacuumCard extends HTMLElement {
     return state?.state ? String(state.state) : "";
   }
 
+  _getReportedStateKey(state) {
+    return normalizeTextKey(this._getReportedStateValue(state));
+  }
+
   _getVacuumName(state) {
     if (this._config?.name) {
       return this._config.name;
@@ -11856,6 +11860,20 @@ class NodaliaVacuumCard extends HTMLElement {
     );
   }
 
+  _shouldTintCard(state) {
+    const reportedStateKey = this._getReportedStateKey(state);
+
+    if (!reportedStateKey || ["unknown", "unavailable"].includes(reportedStateKey)) {
+      return false;
+    }
+
+    if (this._isDocked(state)) {
+      return false;
+    }
+
+    return true;
+  }
+
   _getAccentColor(state) {
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
 
@@ -12036,7 +12054,6 @@ class NodaliaVacuumCard extends HTMLElement {
       icon: this._isCleaning(state) ? "mdi:pause" : "mdi:play",
       label: this._isCleaning(state) ? "Pausar" : "Iniciar",
       active: true,
-      primary: true,
     });
 
     if (this._config?.show_return_to_base !== false && state?.state !== "unavailable") {
@@ -12205,15 +12222,15 @@ class NodaliaVacuumCard extends HTMLElement {
     const isCompactLayout = this._isCompactLayout;
     const accentColor = this._getAccentColor(state);
     const controls = this._getControls(state);
-    const isActive = this._isActive(state);
+    const isTintedState = this._shouldTintCard(state);
     const chips = [];
-    const cardBackground = isActive
+    const cardBackground = isTintedState
       ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`
       : styles.card.background;
-    const cardBorder = isActive
+    const cardBorder = isTintedState
       ? `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`
       : styles.card.border;
-    const cardShadow = isActive
+    const cardShadow = isTintedState
       ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`
       : styles.card.box_shadow;
 
@@ -12266,7 +12283,7 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         ha-card::before {
-          background: ${isActive
+          background: ${isTintedState
             ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, rgba(255, 255, 255, 0.06)), rgba(255, 255, 255, 0))`
             : "linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0))"};
           content: "";
@@ -12311,13 +12328,13 @@ class NodaliaVacuumCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: ${isActive
+          background: ${isTintedState
             ? `color-mix(in srgb, ${accentColor} 24%, rgba(255, 255, 255, 0.08))`
             : "rgba(255, 255, 255, 0.06)"};
           border: 1px solid color-mix(in srgb, ${accentColor} 22%, rgba(255, 255, 255, 0.08));
           border-radius: 999px;
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 24px rgba(0, 0, 0, 0.16);
-          color: ${isActive ? accentColor : styles.icon.color};
+          color: ${isTintedState ? accentColor : styles.icon.color};
           cursor: pointer;
           display: inline-flex;
           height: ${styles.icon.size};
@@ -12429,12 +12446,6 @@ class NodaliaVacuumCard extends HTMLElement {
           color: ${styles.control.accent_color};
         }
 
-        .vacuum-card__control--primary {
-          height: ${styles.control.size};
-          min-width: ${styles.control.size};
-          width: ${styles.control.size};
-        }
-
         .vacuum-card__control ha-icon {
           --mdc-icon-size: calc(${styles.control.size} * 0.46);
           display: inline-flex;
@@ -12541,8 +12552,8 @@ class NodaliaVacuumCard extends HTMLElement {
                 <div class="vacuum-card__controls">
                   ${controls
                     .map(control => `
-                        <button
-                          class="vacuum-card__control ${control.primary ? "vacuum-card__control--primary" : ""} ${control.active ? "vacuum-card__control--active" : ""}"
+                      <button
+                          class="vacuum-card__control ${control.active ? "vacuum-card__control--active" : ""}"
                           type="button"
                           data-vacuum-action="${escapeHtml(control.action)}"
                           aria-label="${escapeHtml(control.label)}"
