@@ -23,7 +23,7 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
-  show_state: true,
+  show_state: false,
   show_brightness: true,
   show_quick_brightness: true,
   show_color_controls: true,
@@ -56,7 +56,6 @@ const DEFAULT_CONFIG = {
       accent_background: "rgba(var(--rgb-primary-color), 0.18)",
     },
     title_size: "15px",
-    subtitle_size: "12px",
     slider_color: "var(--primary-color)",
   },
 };
@@ -778,7 +777,7 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__copy {
           display: grid;
-          gap: 5px;
+          gap: 4px;
           min-width: 0;
         }
 
@@ -786,14 +785,6 @@ class NodaliaLightCard extends HTMLElement {
           color: var(--primary-text-color);
           font-size: ${styles.title_size};
           font-weight: 700;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .light-card__subtitle {
-          color: var(--secondary-text-color);
-          font-size: ${styles.subtitle_size};
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -959,7 +950,6 @@ class NodaliaLightCard extends HTMLElement {
             </button>
             <div class="light-card__copy">
               <div class="light-card__title">${escapeHtml(title)}</div>
-              <div class="light-card__subtitle">${escapeHtml(stateLabel)}</div>
               ${chips.length ? `<div class="light-card__chips">${chips.join("")}</div>` : ""}
             </div>
           </div>
@@ -1468,7 +1458,7 @@ class NodaliaLightCardEditor extends HTMLElement {
             <div class="editor-section__hint">Que bloques quieres mostrar dentro de la tarjeta.</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Mostrar estado", "show_state", config.show_state !== false)}
+            ${this._renderCheckboxField("Mostrar estado en burbuja", "show_state", config.show_state === true)}
             ${this._renderCheckboxField("Mostrar brillo", "show_brightness", config.show_brightness !== false)}
             ${this._renderCheckboxField("Presets de brillo", "show_quick_brightness", config.show_quick_brightness !== false)}
             ${this._renderCheckboxField("Controles de color", "show_color_controls", config.show_color_controls !== false)}
@@ -1520,7 +1510,6 @@ class NodaliaLightCardEditor extends HTMLElement {
             ${this._renderTextField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background)}
             ${this._renderTextField("Color acento", "styles.control.accent_color", config.styles.control.accent_color)}
             ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-            ${this._renderTextField("Tamano subtitulo", "styles.subtitle_size", config.styles.subtitle_size)}
             ${this._renderTextField("Color slider", "styles.slider_color", config.styles.slider_color)}
           </div>
         </section>
