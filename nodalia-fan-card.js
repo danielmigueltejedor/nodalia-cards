@@ -573,6 +573,17 @@ class NodaliaFanCard extends HTMLElement {
       .find(node => node instanceof HTMLElement && node.dataset?.fanAction);
 
     if (!actionButton) {
+      const state = this._getState();
+      const card = event
+        .composedPath()
+        .find(node => node instanceof HTMLElement && node.tagName === "HA-CARD");
+
+      if (card && !this._isOn(state)) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._triggerHaptic();
+        this._toggleFan(state);
+      }
       return;
     }
 
@@ -673,6 +684,7 @@ class NodaliaFanCard extends HTMLElement {
     const currentPresetMode = this._getCurrentPresetMode(state);
     const translatedPresetMode = currentPresetMode ? translatePresetLabel(currentPresetMode) : "";
     const isCompactLayout = this._isCompactLayout;
+    const hasSecondaryControls = isOn && (supportsOscillation || presetModes.length);
     const chips = [];
     const showCopyBlock = !isCompactLayout || config.show_state === true || (isOn && ((config.show_percentage_chip !== false && supportsPercentage) || (config.show_mode_chip !== false && translatedPresetMode)));
 
@@ -722,6 +734,10 @@ class NodaliaFanCard extends HTMLElement {
           padding: ${styles.card.padding};
           position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        .fan-card.is-off {
+          cursor: pointer;
         }
 
         ha-card::before {
@@ -1040,44 +1056,42 @@ class NodaliaFanCard extends HTMLElement {
               : ""}
           </div>
 
-          <div class="fan-card__controls">
-            <button
-              type="button"
-              class="fan-card__control ${isOn ? "fan-card__control--active" : ""}"
-              data-fan-action="toggle"
-              aria-label="${isOn ? "Apagar" : "Encender"}"
-            >
-              <ha-icon icon="mdi:power"></ha-icon>
-            </button>
-            ${
-              isOn && supportsOscillation
-                ? `
-                  <button
-                    type="button"
-                    class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}"
-                    data-fan-action="oscillate"
-                    aria-label="${this._isOscillating(state) ? "Desactivar oscilacion" : "Activar oscilacion"}"
-                  >
-                    <ha-icon icon="mdi:rotate-360"></ha-icon>
-                  </button>
-                `
-                : ""
-            }
-            ${
-              isOn && presetModes.length
-                ? `
-                  <button
-                    type="button"
-                    class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
-                    data-fan-action="toggle-preset-panel"
-                    aria-label="Mostrar modos"
-                  >
-                    <ha-icon icon="mdi:tune-variant"></ha-icon>
-                  </button>
-                `
-                : ""
-            }
-          </div>
+          ${
+            hasSecondaryControls
+              ? `
+                <div class="fan-card__controls">
+                  ${
+                    supportsOscillation
+                      ? `
+                        <button
+                          type="button"
+                          class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}"
+                          data-fan-action="oscillate"
+                          aria-label="${this._isOscillating(state) ? "Desactivar oscilacion" : "Activar oscilacion"}"
+                        >
+                          <ha-icon icon="mdi:rotate-360"></ha-icon>
+                        </button>
+                      `
+                      : ""
+                  }
+                  ${
+                    presetModes.length
+                      ? `
+                        <button
+                          type="button"
+                          class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
+                          data-fan-action="toggle-preset-panel"
+                          aria-label="Mostrar modos"
+                        >
+                          <ha-icon icon="mdi:tune-variant"></ha-icon>
+                        </button>
+                      `
+                      : ""
+                  }
+                </div>
+              `
+              : ""
+          }
 
           ${
             isOn && supportsPercentage

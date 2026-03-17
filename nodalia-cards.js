@@ -9344,6 +9344,15 @@ class NodaliaLightCard extends HTMLElement {
     return 3;
   }
 
+  getGridOptions() {
+    return {
+      columns: 4,
+      rows: 3,
+      min_columns: 2,
+      min_rows: 2,
+    };
+  }
+
   _getConfiguredGridColumns() {
     const numericColumns = Number(this._config?.grid_options?.columns);
     return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
@@ -9359,6 +9368,26 @@ class NodaliaLightCard extends HTMLElement {
       COMPACT_LAYOUT_THRESHOLD,
       Math.round(iconSize + (cardPadding * 2) + cardGap + 24),
     );
+  }
+
+  _getMiniLayoutThreshold() {
+    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    const iconSize = parseSizeToPixels(styles?.icon?.size, 58);
+    const cardPadding = parseSizeToPixels(styles?.card?.padding, 14);
+
+    return Math.max(
+      116,
+      Math.round(iconSize + (cardPadding * 2) + 12),
+    );
+  }
+
+  _shouldUseMiniLayout(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
+    const gridColumns = this._getConfiguredGridColumns();
+    if (gridColumns !== null) {
+      return gridColumns <= 2;
+    }
+
+    return width > 0 && width < this._getMiniLayoutThreshold();
   }
 
   _shouldUseCompactLayout(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
@@ -9822,6 +9851,17 @@ class NodaliaLightCard extends HTMLElement {
       .find(node => node instanceof HTMLElement && node.dataset?.lightAction);
 
     if (!actionButton) {
+      const state = this._getState();
+      const card = event
+        .composedPath()
+        .find(node => node instanceof HTMLElement && node.tagName === "HA-CARD");
+
+      if (card && !this._isOn(state)) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._triggerHaptic();
+        this._toggleLight();
+      }
       return;
     }
 
@@ -9933,6 +9973,7 @@ class NodaliaLightCard extends HTMLElement {
     const icon = this._getLightIcon(state);
     const stateLabel = this._getStateLabel(state);
     const isCompactLayout = this._isCompactLayout;
+    const isMiniLayout = this._shouldUseMiniLayout();
     const quickBrightness = Array.isArray(config.quick_brightness) ? config.quick_brightness : [];
     const temperaturePresets = this._getTemperaturePresets(state);
     const availableControlModes = isOn ? this._getAvailableControlModes(state) : [];
@@ -9949,11 +9990,11 @@ class NodaliaLightCard extends HTMLElement {
     const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
 
-    if (config.show_state === true) {
+    if (!isMiniLayout && config.show_state === true) {
       chips.push(`<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`);
     }
 
-    if (isOn) {
+    if (isOn && !isMiniLayout) {
       let activeValueChip = null;
 
       if (activeControlMode === "temperature" && config.show_temperature_controls !== false && supportsColorTemperature) {
@@ -9969,7 +10010,7 @@ class NodaliaLightCard extends HTMLElement {
       }
     }
 
-    const showCopyBlock = !isCompactLayout || chips.length > 0;
+    const showCopyBlock = !isMiniLayout && (!isCompactLayout || chips.length > 0);
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -9995,9 +10036,20 @@ class NodaliaLightCard extends HTMLElement {
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
 
+        .light-card.is-off {
+          cursor: pointer;
+        }
+
         .light-card--compact.is-off {
           align-items: center;
           display: flex;
+          min-height: 100%;
+        }
+
+        .light-card--mini {
+          align-items: center;
+          display: flex;
+          justify-content: center;
           min-height: 100%;
         }
 
@@ -10019,6 +10071,13 @@ class NodaliaLightCard extends HTMLElement {
           z-index: 1;
         }
 
+        .light-card--mini .light-card__content {
+          align-content: center;
+          justify-items: center;
+          min-height: 100%;
+          width: 100%;
+        }
+
         .light-card--compact.is-off .light-card__content {
           align-content: center;
           min-height: 100%;
@@ -10031,6 +10090,12 @@ class NodaliaLightCard extends HTMLElement {
           gap: 12px;
           grid-template-columns: ${styles.icon.size} minmax(0, 1fr);
           min-width: 0;
+        }
+
+        .light-card--mini .light-card__hero {
+          gap: 0;
+          grid-template-columns: 1fr;
+          justify-items: center;
         }
 
         .light-card--compact .light-card__hero {
@@ -10072,6 +10137,11 @@ class NodaliaLightCard extends HTMLElement {
           cursor: pointer;
           height: ${styles.icon.size};
           width: ${styles.icon.size};
+        }
+
+        .light-card--mini .light-card__icon {
+          height: min(${styles.icon.size}, calc(100vw - 48px));
+          width: min(${styles.icon.size}, calc(100vw - 48px));
         }
 
         .light-card__icon ha-icon {
@@ -10330,7 +10400,7 @@ class NodaliaLightCard extends HTMLElement {
           }
         }
       </style>
-      <ha-card class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""} ${showCopyBlock ? "light-card--with-copy" : ""}" style="--accent-color:${escapeHtml(accentColor)};">
+      <ha-card class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""} ${isMiniLayout ? "light-card--mini" : ""} ${showCopyBlock ? "light-card--with-copy" : ""}" style="--accent-color:${escapeHtml(accentColor)};">
         <div class="light-card__content">
           <div class="light-card__hero">
             <button
@@ -10352,7 +10422,7 @@ class NodaliaLightCard extends HTMLElement {
           </div>
 
           ${
-            isOn && availableControlModes.length > 0
+            isOn && !isMiniLayout && availableControlModes.length > 0
               ? `
                 <div class="light-card__section">
                   <div class="light-card__slider-row">
@@ -10431,6 +10501,7 @@ class NodaliaLightCard extends HTMLElement {
 
           ${
             isOn &&
+            !isMiniLayout &&
             activeControlMode === "brightness" &&
             config.show_quick_brightness !== false &&
             supportsBrightness &&
@@ -10456,6 +10527,7 @@ class NodaliaLightCard extends HTMLElement {
 
           ${
             isOn &&
+            !isMiniLayout &&
             !useSliderModeButtons &&
             config.show_temperature_controls !== false &&
             supportsColorTemperature
@@ -10486,6 +10558,7 @@ class NodaliaLightCard extends HTMLElement {
 
           ${
             isOn &&
+            !isMiniLayout &&
             !useSliderModeButtons &&
             config.show_color_controls !== false &&
             supportsColor
@@ -11591,6 +11664,17 @@ class NodaliaFanCard extends HTMLElement {
       .find(node => node instanceof HTMLElement && node.dataset?.fanAction);
 
     if (!actionButton) {
+      const state = this._getState();
+      const card = event
+        .composedPath()
+        .find(node => node instanceof HTMLElement && node.tagName === "HA-CARD");
+
+      if (card && !this._isOn(state)) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._triggerHaptic();
+        this._toggleFan(state);
+      }
       return;
     }
 
@@ -11691,6 +11775,7 @@ class NodaliaFanCard extends HTMLElement {
     const currentPresetMode = this._getCurrentPresetMode(state);
     const translatedPresetMode = currentPresetMode ? translatePresetLabel(currentPresetMode) : "";
     const isCompactLayout = this._isCompactLayout;
+    const hasSecondaryControls = isOn && (supportsOscillation || presetModes.length);
     const chips = [];
     const showCopyBlock = !isCompactLayout || config.show_state === true || (isOn && ((config.show_percentage_chip !== false && supportsPercentage) || (config.show_mode_chip !== false && translatedPresetMode)));
 
@@ -11740,6 +11825,10 @@ class NodaliaFanCard extends HTMLElement {
           padding: ${styles.card.padding};
           position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        .fan-card.is-off {
+          cursor: pointer;
         }
 
         ha-card::before {
@@ -12058,44 +12147,42 @@ class NodaliaFanCard extends HTMLElement {
               : ""}
           </div>
 
-          <div class="fan-card__controls">
-            <button
-              type="button"
-              class="fan-card__control ${isOn ? "fan-card__control--active" : ""}"
-              data-fan-action="toggle"
-              aria-label="${isOn ? "Apagar" : "Encender"}"
-            >
-              <ha-icon icon="mdi:power"></ha-icon>
-            </button>
-            ${
-              isOn && supportsOscillation
-                ? `
-                  <button
-                    type="button"
-                    class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}"
-                    data-fan-action="oscillate"
-                    aria-label="${this._isOscillating(state) ? "Desactivar oscilacion" : "Activar oscilacion"}"
-                  >
-                    <ha-icon icon="mdi:rotate-360"></ha-icon>
-                  </button>
-                `
-                : ""
-            }
-            ${
-              isOn && presetModes.length
-                ? `
-                  <button
-                    type="button"
-                    class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
-                    data-fan-action="toggle-preset-panel"
-                    aria-label="Mostrar modos"
-                  >
-                    <ha-icon icon="mdi:tune-variant"></ha-icon>
-                  </button>
-                `
-                : ""
-            }
-          </div>
+          ${
+            hasSecondaryControls
+              ? `
+                <div class="fan-card__controls">
+                  ${
+                    supportsOscillation
+                      ? `
+                        <button
+                          type="button"
+                          class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}"
+                          data-fan-action="oscillate"
+                          aria-label="${this._isOscillating(state) ? "Desactivar oscilacion" : "Activar oscilacion"}"
+                        >
+                          <ha-icon icon="mdi:rotate-360"></ha-icon>
+                        </button>
+                      `
+                      : ""
+                  }
+                  ${
+                    presetModes.length
+                      ? `
+                        <button
+                          type="button"
+                          class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
+                          data-fan-action="toggle-preset-panel"
+                          aria-label="Mostrar modos"
+                        >
+                          <ha-icon icon="mdi:tune-variant"></ha-icon>
+                        </button>
+                      `
+                      : ""
+                  }
+                </div>
+              `
+              : ""
+          }
 
           ${
             isOn && supportsPercentage
