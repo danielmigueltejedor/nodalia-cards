@@ -1814,6 +1814,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       ? this._getTvPlayerChips(player, state, progress, title, subtitle, sourceOptions)
       : this._getPlayerChips(player, state, progress, title, subtitle);
     const playerLabel = this._getPlayerLabel(player, state);
+    const showPrimaryTitle = !isTvPlayer || !playerLabel || normalizeTextKey(title) !== normalizeTextKey(playerLabel);
     const statusLabel = this._getPlayerStateLabel(state.state);
     const showStateLabel = this._config.show_state === true;
     const browsePath = this._getPlayerBrowsePath(player, state);
@@ -2148,7 +2149,7 @@ class NodaliaMediaPlayer extends HTMLElement {
             <div class="media-player__hero-copy">
               <div class="media-player__hero-top">
                 <div class="media-player__meta">
-                  <div class="media-player__title">${escapeHtml(title)}</div>
+                  ${showPrimaryTitle ? `<div class="media-player__title">${escapeHtml(title)}</div>` : ""}
                   ${isTvPlayer ? "" : subtitleMarkup}
                 </div>
                 ${infoRailMarkup}
@@ -2640,10 +2641,10 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__tv-actions {
           align-items: center;
-          display: grid;
+          display: flex;
+          flex-wrap: wrap;
           gap: 8px;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          justify-items: center;
+          justify-content: center;
           width: 100%;
         }
 
@@ -2712,8 +2713,8 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--tv .media-player__control--primary {
-          height: calc(${playerStyles.control_size} + 10px);
-          width: calc(${playerStyles.control_size} + 10px);
+          height: calc(${playerStyles.control_size} + 6px);
+          width: calc(${playerStyles.control_size} + 6px);
         }
 
         .media-player-card--tv .media-player__tv-source-panel {
@@ -2755,7 +2756,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           }
 
           .media-player-card--tv .media-player__tv-actions {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            justify-content: center;
           }
 
           .media-player-card--tv .media-player__subtitle--tv {
