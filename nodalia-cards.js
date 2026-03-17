@@ -7864,7 +7864,7 @@ const DEFAULT_CONFIG = {
       gap: "12px",
     },
     icon: {
-      size: "62px",
+      size: "58px",
       background: "rgba(255, 255, 255, 0.06)",
       color: "var(--primary-text-color)",
       on_color: "var(--warning-color, #f6b73c)",
@@ -7875,7 +7875,7 @@ const DEFAULT_CONFIG = {
       accent_color: "var(--primary-text-color)",
       accent_background: "rgba(var(--rgb-primary-color), 0.18)",
     },
-    title_size: "15px",
+    title_size: "14px",
     slider_color: "var(--primary-color)",
   },
 };
@@ -8581,19 +8581,19 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__icon ha-icon {
           align-items: center;
           display: inline-flex;
-          height: 24px;
+          height: 22px;
           justify-content: center;
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: 24px;
+          width: 22px;
           z-index: 1;
         }
 
         .light-card__icon ha-icon {
           color: ${isOn ? styles.icon.color : styles.icon.off_color};
-          font-size: 28px;
+          font-size: 26px;
         }
 
         .light-card__copy {
@@ -8752,12 +8752,12 @@ class NodaliaLightCard extends HTMLElement {
 
         @media (max-width: 420px) {
           .light-card__hero {
-            grid-template-columns: 54px minmax(0, 1fr);
+            grid-template-columns: 50px minmax(0, 1fr);
           }
 
           .light-card__icon {
-            height: 54px;
-            width: 54px;
+            height: 50px;
+            width: 50px;
           }
         }
       </style>
@@ -9323,7 +9323,7 @@ class NodaliaLightCardEditor extends HTMLElement {
             ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
             ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
             ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamano icono", "styles.icon.size", config.styles.icon.size)}
+            ${this._renderTextField("Tamano boton principal", "styles.icon.size", config.styles.icon.size)}
             ${this._renderTextField("Color icono encendida", "styles.icon.on_color", config.styles.icon.on_color)}
             ${this._renderTextField("Color icono apagada", "styles.icon.off_color", config.styles.icon.off_color)}
             ${this._renderTextField("Tamano boton", "styles.control.size", config.styles.control.size)}
