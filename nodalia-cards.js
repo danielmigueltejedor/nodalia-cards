@@ -11077,6 +11077,8 @@ const MODE_LABELS = {
   custom: "Personalizado",
   custommode: "Personalizado",
   custom_mode: "Personalizado",
+  custom_water_flow: "Caudal de agua personalizado",
+  custom_watter_flow: "Caudal de agua personalizado",
   off: "Sin fregado",
   low: "Baja",
   medium: "Media",
@@ -11119,7 +11121,10 @@ const DEFAULT_CONFIG = {
       size: "58px",
       background: "rgba(255, 255, 255, 0.06)",
       color: "var(--primary-text-color)",
-      active_color: "var(--info-color, #6ec7ff)",
+      active_color: "#61c97a",
+      washing_color: "#5aa7ff",
+      drying_color: "#f1c24c",
+      emptying_color: "#9b6b4a",
       returning_color: "#f6b73c",
       error_color: "var(--error-color, #ff6b6b)",
       docked_color: "var(--state-inactive-color, rgba(255, 255, 255, 0.55))",
@@ -11503,6 +11508,18 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _getStateLabel(state) {
+    if (this._isWashingMops(state)) {
+      return "Lavando mopas";
+    }
+
+    if (this._isDryingMops(state)) {
+      return "Secando";
+    }
+
+    if (this._isAutoEmptying(state)) {
+      return "Autovaciando";
+    }
+
     switch (state?.state) {
       case "cleaning":
         return "Limpiando";
@@ -11523,6 +11540,34 @@ class NodaliaVacuumCard extends HTMLElement {
       default:
         return state?.state ? String(state.state) : "Sin estado";
     }
+  }
+
+  _getActivityTextBlob(state) {
+    const attributes = state?.attributes || {};
+    return [
+      state?.state,
+      attributes.status,
+      attributes.state,
+      attributes.activity,
+      attributes.phase,
+      attributes.job,
+      attributes.job_state,
+      attributes.task_status,
+      attributes.current_task,
+      attributes.vacuum_state,
+      attributes.robot_status,
+      attributes.cleaning_state,
+      attributes.cleaning_progress,
+      attributes.operation,
+    ]
+      .filter(Boolean)
+      .map(value => normalizeTextKey(value))
+      .join(" ");
+  }
+
+  _matchesActivity(state, keywords) {
+    const activityBlob = this._getActivityTextBlob(state);
+    return keywords.some(keyword => activityBlob.includes(normalizeTextKey(keyword)));
   }
 
   _getBatteryLevel(state) {
@@ -11658,6 +11703,54 @@ class NodaliaVacuumCard extends HTMLElement {
     return ["cleaning", "spot_cleaning"].includes(state?.state);
   }
 
+  _isWashingMops(state) {
+    return this._matchesActivity(state, [
+      "washing",
+      "wash_mop",
+      "washmop",
+      "mop_wash",
+      "mopwash",
+      "washing_mop",
+      "clean_mop",
+      "mop_clean",
+      "lavando_mopas",
+      "lavando_mopa",
+      "lavado_mopa",
+      "washing_pads",
+      "rinse_mop",
+    ]);
+  }
+
+  _isDryingMops(state) {
+    return this._matchesActivity(state, [
+      "drying",
+      "dry_mop",
+      "mop_dry",
+      "drying_mop",
+      "drying_the_mop",
+      "air_dry",
+      "secando",
+      "secado_mopa",
+      "secando_mopas",
+    ]);
+  }
+
+  _isAutoEmptying(state) {
+    return this._matchesActivity(state, [
+      "emptying",
+      "self_emptying",
+      "selfemptying",
+      "auto_empty",
+      "autoempty",
+      "dust_empty",
+      "collecting_dust",
+      "dock_empty",
+      "autovaciando",
+      "auto_vaciado",
+      "vaciando",
+    ]);
+  }
+
   _isPaused(state) {
     return state?.state === "paused";
   }
@@ -11671,7 +11764,14 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _isActive(state) {
-    return this._isCleaning(state) || this._isPaused(state) || this._isReturning(state);
+    return (
+      this._isCleaning(state) ||
+      this._isPaused(state) ||
+      this._isReturning(state) ||
+      this._isWashingMops(state) ||
+      this._isDryingMops(state) ||
+      this._isAutoEmptying(state)
+    );
   }
 
   _getAccentColor(state) {
@@ -11679,6 +11779,18 @@ class NodaliaVacuumCard extends HTMLElement {
 
     if (state?.state === "error") {
       return styles.icon.error_color;
+    }
+
+    if (this._isWashingMops(state)) {
+      return styles.icon.washing_color || "#5aa7ff";
+    }
+
+    if (this._isDryingMops(state)) {
+      return styles.icon.drying_color || "#f1c24c";
+    }
+
+    if (this._isAutoEmptying(state)) {
+      return styles.icon.emptying_color || "#9b6b4a";
     }
 
     if (this._isReturning(state)) {
@@ -12037,6 +12149,26 @@ class NodaliaVacuumCard extends HTMLElement {
     }
 
     const activeModeDescriptor = availableModeDescriptors.find(mode => mode.kind === this._activeModePanel) || null;
+    const primaryControl = controls.find(control => control.primary) || null;
+    const secondaryControls = controls.filter(control => !control.primary);
+    const actionButtons = [
+      ...secondaryControls.map(control => ({
+        type: "control",
+        ...control,
+      })),
+      ...availableModeDescriptors.map(mode => ({
+        type: "mode",
+        ...mode,
+      })),
+    ];
+
+    if (primaryControl) {
+      actionButtons.splice(Math.floor(actionButtons.length / 2), 0, {
+        type: "control",
+        ...primaryControl,
+      });
+    }
+
     const currentModeValue = fanSpeed || mopMode?.current || suctionMode?.current || "";
     if (config.show_fan_speed_chip !== false && currentModeValue) {
       const modeKind = this._categorizeModeOption(currentModeValue) === "mop" ? "mop" : "suction";
@@ -12341,33 +12473,36 @@ class NodaliaVacuumCard extends HTMLElement {
           </div>
 
           ${
-            controls.length || availableModeDescriptors.length
+            actionButtons.length
               ? `
                 <div class="vacuum-card__controls">
-                  ${controls
-                    .map(control => `
-                      <button
-                        class="vacuum-card__control ${control.primary ? "vacuum-card__control--primary" : ""} ${control.active ? "vacuum-card__control--active" : ""}"
-                        type="button"
-                        data-vacuum-action="${escapeHtml(control.action)}"
-                        aria-label="${escapeHtml(control.label)}"
-                      >
-                        <ha-icon icon="${escapeHtml(control.icon)}"></ha-icon>
-                      </button>
-                    `)
-                    .join("")}
-                  ${availableModeDescriptors
-                    .map(mode => `
-                      <button
-                        class="vacuum-card__control vacuum-card__mode-toggle ${activeModeDescriptor?.kind === mode.kind ? "vacuum-card__mode-toggle--active vacuum-card__control--active" : ""}"
-                        type="button"
-                        data-vacuum-action="toggle-mode-panel"
-                        data-mode-kind="${escapeHtml(mode.kind)}"
-                        aria-label="${escapeHtml(mode.label)}"
-                      >
-                        <ha-icon icon="${mode.kind === "mop" ? "mdi:waves" : "mdi:fan"}"></ha-icon>
-                      </button>
-                    `)
+                  ${actionButtons
+                    .map(button => {
+                      if (button.type === "mode") {
+                        return `
+                          <button
+                            class="vacuum-card__control vacuum-card__mode-toggle ${activeModeDescriptor?.kind === button.kind ? "vacuum-card__mode-toggle--active vacuum-card__control--active" : ""}"
+                            type="button"
+                            data-vacuum-action="toggle-mode-panel"
+                            data-mode-kind="${escapeHtml(button.kind)}"
+                            aria-label="${escapeHtml(button.label)}"
+                          >
+                            <ha-icon icon="${button.kind === "mop" ? "mdi:waves" : "mdi:fan"}"></ha-icon>
+                          </button>
+                        `;
+                      }
+
+                      return `
+                        <button
+                          class="vacuum-card__control ${button.primary ? "vacuum-card__control--primary" : ""} ${button.active ? "vacuum-card__control--active" : ""}"
+                          type="button"
+                          data-vacuum-action="${escapeHtml(button.action)}"
+                          aria-label="${escapeHtml(button.label)}"
+                        >
+                          <ha-icon icon="${escapeHtml(button.icon)}"></ha-icon>
+                        </button>
+                      `;
+                    })
                     .join("")}
                 </div>
               `
@@ -12866,6 +13001,9 @@ class NodaliaVacuumCardEditor extends HTMLElement {
             ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
             ${this._renderTextField("Tamano burbuja principal", "styles.icon.size", config.styles.icon.size)}
             ${this._renderTextField("Color activa", "styles.icon.active_color", config.styles.icon.active_color)}
+            ${this._renderTextField("Color lavado mopas", "styles.icon.washing_color", config.styles.icon.washing_color)}
+            ${this._renderTextField("Color secado", "styles.icon.drying_color", config.styles.icon.drying_color)}
+            ${this._renderTextField("Color autovaciado", "styles.icon.emptying_color", config.styles.icon.emptying_color)}
             ${this._renderTextField("Color volviendo", "styles.icon.returning_color", config.styles.icon.returning_color)}
             ${this._renderTextField("Color error", "styles.icon.error_color", config.styles.icon.error_color)}
             ${this._renderTextField("Tamano botones", "styles.control.size", config.styles.control.size)}
