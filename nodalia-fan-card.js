@@ -215,6 +215,25 @@ function normalizeTextKey(value) {
     .replace(/^_+|_+$/g, "");
 }
 
+function getRangeValueFromClientX(slider, clientX) {
+  const rect = slider.getBoundingClientRect();
+  if (!rect.width) {
+    return Number(slider.value || 0);
+  }
+
+  const min = Number(slider.min || 0);
+  const max = Number(slider.max || 100);
+  const step = slider.step === "any" ? 0 : Number(slider.step || 1);
+  const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
+  let nextValue = min + ((max - min) * ratio);
+
+  if (Number.isFinite(step) && step > 0) {
+    nextValue = min + (Math.round((nextValue - min) / step) * step);
+  }
+
+  return clamp(nextValue, min, max);
+}
+
 function translatePresetLabel(value) {
   const normalized = normalizeTextKey(value);
 
@@ -278,6 +297,8 @@ class NodaliaFanCard extends HTMLElement {
     this._presetPanelOpen = false;
     this._cardWidth = 0;
     this._isCompactLayout = false;
+    this._activeSliderDrag = null;
+    this._skipNextSliderChange = null;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -298,17 +319,27 @@ class NodaliaFanCard extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
+    this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowChange);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
   }
 
   connectedCallback() {
     this._resizeObserver?.observe(this);
+    window.addEventListener("pointermove", this._onWindowPointerMove, { passive: false });
+    window.addEventListener("pointerup", this._onWindowPointerUp, { passive: false });
+    window.addEventListener("pointercancel", this._onWindowPointerUp, { passive: false });
   }
 
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
+    window.removeEventListener("pointermove", this._onWindowPointerMove);
+    window.removeEventListener("pointerup", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onWindowPointerUp);
   }
 
   setConfig(config) {
@@ -538,6 +569,84 @@ class NodaliaFanCard extends HTMLElement {
     }
   }
 
+  _applySliderValue(slider, value, options = {}) {
+    const commit = options.commit === true;
+    const nextValue = clamp(Math.round(Number(value)), 0, 100);
+
+    this._draftPercentage.set(this._config.entity, nextValue);
+    this._updatePercentagePreview(nextValue);
+
+    if (commit) {
+      this._triggerHaptic("selection");
+      this._commitPercentage(nextValue);
+    }
+  }
+
+  _onShadowPointerDown(event) {
+    const slider = event
+      .composedPath()
+      .find(node =>
+        node instanceof HTMLInputElement &&
+        node.type === "range" &&
+        node.dataset?.fanControl,
+      );
+
+    if (!slider || (typeof event.button === "number" && event.button !== 0)) {
+      return;
+    }
+
+    this._activeSliderDrag = {
+      pointerId: event.pointerId,
+      slider,
+    };
+
+    try {
+      slider.setPointerCapture(event.pointerId);
+    } catch (_error) {
+      // Ignore unsupported pointer capture.
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const nextValue = getRangeValueFromClientX(slider, event.clientX);
+    slider.value = String(nextValue);
+    this._applySliderValue(slider, nextValue, { commit: false });
+  }
+
+  _onWindowPointerMove(event) {
+    const drag = this._activeSliderDrag;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
+    drag.slider.value = String(nextValue);
+    this._applySliderValue(drag.slider, nextValue, { commit: false });
+  }
+
+  _onWindowPointerUp(event) {
+    const drag = this._activeSliderDrag;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
+    drag.slider.value = String(nextValue);
+    this._skipNextSliderChange = drag.slider;
+    this._applySliderValue(drag.slider, nextValue, { commit: true });
+
+    try {
+      drag.slider.releasePointerCapture(event.pointerId);
+    } catch (_error) {
+      // Ignore unsupported pointer capture.
+    }
+
+    this._activeSliderDrag = null;
+  }
+
   _onShadowInput(event) {
     const slider = event
       .composedPath()
@@ -547,9 +656,7 @@ class NodaliaFanCard extends HTMLElement {
       return;
     }
 
-    const nextValue = clamp(Math.round(Number(slider.value)), 0, 100);
-    this._draftPercentage.set(this._config.entity, nextValue);
-    this._updatePercentagePreview(nextValue);
+    this._applySliderValue(slider, slider.value, { commit: false });
   }
 
   _onShadowChange(event) {
@@ -561,10 +668,12 @@ class NodaliaFanCard extends HTMLElement {
       return;
     }
 
-    const nextValue = clamp(Math.round(Number(slider.value)), 0, 100);
-    this._draftPercentage.set(this._config.entity, nextValue);
-    this._triggerHaptic("selection");
-    this._commitPercentage(nextValue);
+    if (this._skipNextSliderChange === slider) {
+      this._skipNextSliderChange = null;
+      return;
+    }
+
+    this._applySliderValue(slider, slider.value, { commit: true });
   }
 
   _onShadowClick(event) {
