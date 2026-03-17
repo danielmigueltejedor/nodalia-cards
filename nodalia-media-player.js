@@ -1934,14 +1934,19 @@ class NodaliaMediaPlayer extends HTMLElement {
       ? `<div class="media-player__subtitle">${escapeHtml(subtitle)}</div>`
       : "";
     const progress = this._getPlayerProgress(state);
+    const hasActiveMediaContent = this._hasActiveMediaContent(state);
     const sourceOptions = isTvPlayer ? this._getPlayerSourceOptions(player, state) : [];
     const chips = isTvPlayer
       ? this._getTvPlayerChips(player, state, progress, title, subtitle, sourceOptions)
       : this._getPlayerChips(player, state, progress, title, subtitle);
     const showPrimaryTitle = !isTvPlayer
-      ? !playerLabel || normalizeTextKey(title) !== normalizeTextKey(playerLabel)
+      ? hasActiveMediaContent && (!playerLabel || normalizeTextKey(title) !== normalizeTextKey(playerLabel))
       : Boolean(title) && normalizeTextKey(title) !== normalizeTextKey(playerLabel);
-    const showTopChip = !!playerLabel && (isTvPlayer || normalizeTextKey(playerLabel) !== normalizeTextKey(title));
+    const showTopChip = !!playerLabel && (
+      isTvPlayer ||
+      !hasActiveMediaContent ||
+      normalizeTextKey(playerLabel) !== normalizeTextKey(title)
+    );
     const statusLabel = this._getPlayerStateLabel(state.state);
     const showStateLabel = this._config.show_state === true;
     const browsePath = this._getPlayerBrowsePath(player, state);

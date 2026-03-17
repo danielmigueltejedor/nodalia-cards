@@ -6590,14 +6590,19 @@ class NodaliaMediaPlayer extends HTMLElement {
       ? `<div class="media-player__subtitle">${escapeHtml(subtitle)}</div>`
       : "";
     const progress = this._getPlayerProgress(state);
+    const hasActiveMediaContent = this._hasActiveMediaContent(state);
     const sourceOptions = isTvPlayer ? this._getPlayerSourceOptions(player, state) : [];
     const chips = isTvPlayer
       ? this._getTvPlayerChips(player, state, progress, title, subtitle, sourceOptions)
       : this._getPlayerChips(player, state, progress, title, subtitle);
     const showPrimaryTitle = !isTvPlayer
-      ? !playerLabel || normalizeTextKey(title) !== normalizeTextKey(playerLabel)
+      ? hasActiveMediaContent && (!playerLabel || normalizeTextKey(title) !== normalizeTextKey(playerLabel))
       : Boolean(title) && normalizeTextKey(title) !== normalizeTextKey(playerLabel);
-    const showTopChip = !!playerLabel && (isTvPlayer || normalizeTextKey(playerLabel) !== normalizeTextKey(title));
+    const showTopChip = !!playerLabel && (
+      isTvPlayer ||
+      !hasActiveMediaContent ||
+      normalizeTextKey(playerLabel) !== normalizeTextKey(title)
+    );
     const statusLabel = this._getPlayerStateLabel(state.state);
     const showStateLabel = this._config.show_state === true;
     const browsePath = this._getPlayerBrowsePath(player, state);
@@ -8908,7 +8913,7 @@ const HAPTIC_PATTERNS = {
   warning: [20, 50, 12],
   failure: [12, 40, 12, 40, 18],
 };
-const COMPACT_LAYOUT_THRESHOLD = 210;
+const COMPACT_LAYOUT_THRESHOLD = 150;
 const COLOR_PRESETS = [
   { color: "#ffd166", hs: [42, 60], label: "Calida" },
   { color: "#fff1c1", hs: [48, 18], label: "Suave" },
@@ -9084,6 +9089,11 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
+function parseSizeToPixels(value, fallback = 0) {
+  const numeric = Number.parseFloat(String(value ?? ""));
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
 function rgbToHs(rgb) {
   if (!Array.isArray(rgb) || rgb.length !== 3) {
     return null;
@@ -9246,6 +9256,18 @@ class NodaliaLightCard extends HTMLElement {
     return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
   }
 
+  _getCompactLayoutThreshold() {
+    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    const iconSize = parseSizeToPixels(styles?.icon?.size, 58);
+    const cardPadding = parseSizeToPixels(styles?.card?.padding, 14);
+    const cardGap = parseSizeToPixels(styles?.card?.gap, 12);
+
+    return Math.max(
+      COMPACT_LAYOUT_THRESHOLD,
+      Math.round(iconSize + (cardPadding * 2) + cardGap + 24),
+    );
+  }
+
   _shouldUseCompactLayout(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
     const mode = this._config?.compact_layout_mode || "auto";
 
@@ -9262,7 +9284,7 @@ class NodaliaLightCard extends HTMLElement {
       return gridColumns < 4;
     }
 
-    return width > 0 && width < COMPACT_LAYOUT_THRESHOLD;
+    return width > 0 && width < this._getCompactLayoutThreshold();
   }
 
   _triggerHaptic(style = this._config?.haptics?.style) {
@@ -9854,6 +9876,8 @@ class NodaliaLightCard extends HTMLElement {
       }
     }
 
+    const showCopyBlock = !isCompactLayout || chips.length > 0;
+
     this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -9870,11 +9894,18 @@ class NodaliaLightCard extends HTMLElement {
           border: ${isOn ? `1px solid ${onCardBorder}` : styles.card.border};
           border-radius: ${styles.card.border_radius};
           box-shadow: ${isOn ? `${styles.card.box_shadow}, ${onCardShadow}` : styles.card.box_shadow};
+          display: block;
           isolation: isolate;
           overflow: hidden;
           padding: ${styles.card.padding};
           position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        .light-card--compact.is-off {
+          align-items: center;
+          display: flex;
+          min-height: 100%;
         }
 
         .light-card::before {
@@ -9895,6 +9926,12 @@ class NodaliaLightCard extends HTMLElement {
           z-index: 1;
         }
 
+        .light-card--compact.is-off .light-card__content {
+          align-content: center;
+          min-height: 100%;
+          width: 100%;
+        }
+
         .light-card__hero {
           align-items: center;
           display: grid;
@@ -9907,6 +9944,14 @@ class NodaliaLightCard extends HTMLElement {
           gap: 10px;
           grid-template-columns: 1fr;
           justify-items: center;
+        }
+
+        .light-card--compact.is-off .light-card__hero {
+          align-content: center;
+        }
+
+        .light-card--compact.is-off:not(.light-card--with-copy) .light-card__hero {
+          gap: 0;
         }
 
         .light-card__icon,
@@ -10192,7 +10237,7 @@ class NodaliaLightCard extends HTMLElement {
           }
         }
       </style>
-      <ha-card class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""}" style="--accent-color:${escapeHtml(accentColor)};">
+      <ha-card class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""} ${showCopyBlock ? "light-card--with-copy" : ""}" style="--accent-color:${escapeHtml(accentColor)};">
         <div class="light-card__content">
           <div class="light-card__hero">
             <button
@@ -10203,10 +10248,14 @@ class NodaliaLightCard extends HTMLElement {
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
             </button>
-            <div class="light-card__copy">
-              ${isCompactLayout ? "" : `<div class="light-card__title">${escapeHtml(title)}</div>`}
-              ${chips.length ? `<div class="light-card__chips">${chips.join("")}</div>` : ""}
-            </div>
+            ${showCopyBlock
+              ? `
+                <div class="light-card__copy">
+                  ${isCompactLayout ? "" : `<div class="light-card__title">${escapeHtml(title)}</div>`}
+                  ${chips.length ? `<div class="light-card__chips">${chips.join("")}</div>` : ""}
+                </div>
+              `
+              : ""}
           </div>
 
           ${
