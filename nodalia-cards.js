@@ -8415,7 +8415,6 @@ class NodaliaLightCard extends HTMLElement {
 
     this._setLightState({
       color_temp_kelvin: numericKelvin,
-      color_temp: kelvinToMired(numericKelvin),
     });
   }
 
