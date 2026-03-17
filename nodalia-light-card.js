@@ -25,6 +25,7 @@ const DEFAULT_CONFIG = {
   icon: "",
   show_state: false,
   show_brightness: true,
+  show_slider_mode_buttons: true,
   show_quick_brightness: true,
   show_color_controls: true,
   show_temperature_controls: true,
@@ -177,6 +178,35 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
+function rgbToHs(rgb) {
+  if (!Array.isArray(rgb) || rgb.length !== 3) {
+    return null;
+  }
+
+  const [rawRed, rawGreen, rawBlue] = rgb.map(value => clamp(Number(value) / 255, 0, 1));
+  const max = Math.max(rawRed, rawGreen, rawBlue);
+  const min = Math.min(rawRed, rawGreen, rawBlue);
+  const delta = max - min;
+
+  let hue = 0;
+  if (delta !== 0) {
+    if (max === rawRed) {
+      hue = ((rawGreen - rawBlue) / delta) % 6;
+    } else if (max === rawGreen) {
+      hue = (rawBlue - rawRed) / delta + 2;
+    } else {
+      hue = (rawRed - rawGreen) / delta + 4;
+    }
+    hue *= 60;
+    if (hue < 0) {
+      hue += 360;
+    }
+  }
+
+  const saturation = max === 0 ? 0 : (delta / max) * 100;
+  return [Math.round(hue), Math.round(saturation)];
+}
+
 function arrayFromCsv(value) {
   return String(value || "")
     .split(",")
@@ -250,6 +280,9 @@ class NodaliaLightCard extends HTMLElement {
     this._config = null;
     this._hass = null;
     this._draftBrightness = new Map();
+    this._draftTemperature = new Map();
+    this._draftHue = new Map();
+    this._activeControlMode = "brightness";
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
@@ -383,6 +416,11 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _getCurrentKelvin(state) {
+    const entityId = this._config?.entity;
+    if (entityId && this._draftTemperature.has(entityId)) {
+      return this._draftTemperature.get(entityId);
+    }
+
     if (typeof state?.attributes?.color_temp_kelvin === "number") {
       return Math.round(state.attributes.color_temp_kelvin);
     }
@@ -393,6 +431,41 @@ class NodaliaLightCard extends HTMLElement {
 
     const range = this._getTemperatureRange(state);
     return Math.round((range.min + range.max) / 2);
+  }
+
+  _getCurrentHue(state) {
+    const entityId = this._config?.entity;
+    if (entityId && this._draftHue.has(entityId)) {
+      return this._draftHue.get(entityId);
+    }
+
+    const hsColor = Array.isArray(state?.attributes?.hs_color) ? state.attributes.hs_color : null;
+    if (hsColor?.length === 2 && hsColor.every(value => Number.isFinite(Number(value)))) {
+      return clamp(Math.round(Number(hsColor[0])), 0, 360);
+    }
+
+    const rgbColor = Array.isArray(state?.attributes?.rgb_color) ? state.attributes.rgb_color : null;
+    const derivedHs = rgbToHs(rgbColor);
+    if (derivedHs) {
+      return clamp(derivedHs[0], 0, 360);
+    }
+
+    return 42;
+  }
+
+  _getCurrentSaturation(state) {
+    const hsColor = Array.isArray(state?.attributes?.hs_color) ? state.attributes.hs_color : null;
+    if (hsColor?.length === 2 && hsColor.every(value => Number.isFinite(Number(value)))) {
+      return clamp(Math.round(Number(hsColor[1])), 0, 100);
+    }
+
+    const rgbColor = Array.isArray(state?.attributes?.rgb_color) ? state.attributes.rgb_color : null;
+    const derivedHs = rgbToHs(rgbColor);
+    if (derivedHs) {
+      return clamp(derivedHs[1], 0, 100);
+    }
+
+    return 75;
   }
 
   _getTemperaturePresets(state) {
@@ -496,6 +569,18 @@ class NodaliaLightCard extends HTMLElement {
     });
   }
 
+  _commitColorHue(hue, state) {
+    const numericHue = clamp(Math.round(Number(hue)), 0, 360);
+    if (!Number.isFinite(numericHue)) {
+      return;
+    }
+
+    const saturation = Math.max(this._getCurrentSaturation(state), 50);
+    this._setLightState({
+      hs_color: [numericHue, saturation],
+    });
+  }
+
   _commitTemperaturePreset(kelvin) {
     const numericKelvin = Math.round(Number(kelvin));
     if (!Number.isFinite(numericKelvin) || numericKelvin <= 0) {
@@ -509,46 +594,152 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _updateBrightnessPreview(value) {
-    const slider = this.shadowRoot?.querySelector(".light-card__slider");
-    const valueNode = this.shadowRoot?.querySelector("[data-role='brightness-value']");
+    const slider = this.shadowRoot?.querySelector('.light-card__slider[data-light-control="brightness"]');
     const nextValue = clamp(Math.round(Number(value)), 1, 100);
 
     if (slider instanceof HTMLInputElement) {
       slider.style.setProperty("--brightness", String(nextValue));
     }
+  }
 
-    if (valueNode instanceof HTMLElement) {
-      valueNode.textContent = `${nextValue}%`;
+  _updateTemperaturePreview(value, state) {
+    const slider = this.shadowRoot?.querySelector('.light-card__slider[data-light-control="temperature"]');
+    const range = this._getTemperatureRange(state);
+    const boundedValue = clamp(Math.round(Number(value)), range.min, range.max);
+    const percent = range.max === range.min
+      ? 0
+      : ((boundedValue - range.min) / (range.max - range.min)) * 100;
+
+    if (slider instanceof HTMLInputElement) {
+      slider.style.setProperty("--temperature-progress", String(clamp(percent, 0, 100)));
+    }
+  }
+
+  _updateColorPreview(value) {
+    const slider = this.shadowRoot?.querySelector('.light-card__slider[data-light-control="color"]');
+    const nextValue = clamp(Math.round(Number(value)), 0, 360);
+    const percent = (nextValue / 360) * 100;
+
+    if (slider instanceof HTMLInputElement) {
+      slider.style.setProperty("--color-progress", String(clamp(percent, 0, 100)));
+    }
+  }
+
+  _getAvailableControlModes(state) {
+    const modes = [];
+
+    if (this._config?.show_brightness !== false && this._supportsBrightness(state)) {
+      modes.push("brightness");
+    }
+
+    if (this._config?.show_temperature_controls !== false && this._supportsColorTemperature(state)) {
+      modes.push("temperature");
+    }
+
+    if (this._config?.show_color_controls !== false && this._supportsColor(state)) {
+      modes.push("color");
+    }
+
+    return modes;
+  }
+
+  _getActiveControlMode(state) {
+    const availableModes = this._getAvailableControlModes(state);
+    if (!availableModes.length) {
+      return null;
+    }
+
+    if (availableModes.includes(this._activeControlMode)) {
+      return this._activeControlMode;
+    }
+
+    this._activeControlMode = availableModes[0];
+    return this._activeControlMode;
+  }
+
+  _getControlModeIcon(mode) {
+    switch (mode) {
+      case "temperature":
+        return "mdi:thermometer";
+      case "color":
+        return "mdi:palette";
+      case "brightness":
+      default:
+        return "mdi:brightness-6";
     }
   }
 
   _onShadowInput(event) {
     const slider = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement && node.dataset?.lightControl === "brightness");
+      .find(node => node instanceof HTMLInputElement && node.dataset?.lightControl);
 
     if (!slider) {
       return;
     }
 
-    const nextValue = clamp(Math.round(Number(slider.value)), 1, 100);
-    this._draftBrightness.set(this._config.entity, nextValue);
-    this._updateBrightnessPreview(nextValue);
+    switch (slider.dataset.lightControl) {
+      case "brightness": {
+        const nextValue = clamp(Math.round(Number(slider.value)), 1, 100);
+        this._draftBrightness.set(this._config.entity, nextValue);
+        this._updateBrightnessPreview(nextValue);
+        break;
+      }
+      case "temperature": {
+        const state = this._getState();
+        const range = this._getTemperatureRange(state);
+        const nextValue = clamp(Math.round(Number(slider.value)), range.min, range.max);
+        this._draftTemperature.set(this._config.entity, nextValue);
+        this._updateTemperaturePreview(nextValue, state);
+        break;
+      }
+      case "color": {
+        const nextValue = clamp(Math.round(Number(slider.value)), 0, 360);
+        this._draftHue.set(this._config.entity, nextValue);
+        this._updateColorPreview(nextValue);
+        break;
+      }
+      default:
+        break;
+    }
   }
 
   _onShadowChange(event) {
     const slider = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement && node.dataset?.lightControl === "brightness");
+      .find(node => node instanceof HTMLInputElement && node.dataset?.lightControl);
 
     if (!slider) {
       return;
     }
 
-    const nextValue = clamp(Math.round(Number(slider.value)), 1, 100);
-    this._draftBrightness.set(this._config.entity, nextValue);
     this._triggerHaptic("selection");
-    this._commitBrightness(nextValue);
+
+    switch (slider.dataset.lightControl) {
+      case "brightness": {
+        const nextValue = clamp(Math.round(Number(slider.value)), 1, 100);
+        this._draftBrightness.set(this._config.entity, nextValue);
+        this._commitBrightness(nextValue);
+        break;
+      }
+      case "temperature": {
+        const state = this._getState();
+        const range = this._getTemperatureRange(state);
+        const nextValue = clamp(Math.round(Number(slider.value)), range.min, range.max);
+        this._draftTemperature.set(this._config.entity, nextValue);
+        this._commitTemperaturePreset(nextValue);
+        break;
+      }
+      case "color": {
+        const state = this._getState();
+        const nextValue = clamp(Math.round(Number(slider.value)), 0, 360);
+        this._draftHue.set(this._config.entity, nextValue);
+        this._commitColorHue(nextValue, state);
+        break;
+      }
+      default:
+        break;
+    }
   }
 
   _onShadowClick(event) {
@@ -567,6 +758,10 @@ class NodaliaLightCard extends HTMLElement {
     switch (actionButton.dataset.lightAction) {
       case "toggle":
         this._toggleLight();
+        break;
+      case "mode":
+        this._activeControlMode = actionButton.dataset.mode || "brightness";
+        this._render();
         break;
       case "brightness": {
         const value = Number(actionButton.dataset.value);
@@ -665,6 +860,15 @@ class NodaliaLightCard extends HTMLElement {
     const stateLabel = this._getStateLabel(state);
     const quickBrightness = Array.isArray(config.quick_brightness) ? config.quick_brightness : [];
     const temperaturePresets = this._getTemperaturePresets(state);
+    const availableControlModes = isOn ? this._getAvailableControlModes(state) : [];
+    const useSliderModeButtons = config.show_slider_mode_buttons !== false && availableControlModes.length > 1;
+    const activeControlMode = isOn ? this._getActiveControlMode(state) : "brightness";
+    const currentHue = this._getCurrentHue(state);
+    const temperatureRange = this._getTemperatureRange(state);
+    const temperatureProgress = temperatureRange.max === temperatureRange.min
+      ? 0
+      : ((currentKelvin - temperatureRange.min) / (temperatureRange.max - temperatureRange.min)) * 100;
+    const colorProgress = (currentHue / 360) * 100;
     const chips = [];
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
@@ -845,9 +1049,56 @@ class NodaliaLightCard extends HTMLElement {
           padding: 0 16px;
         }
 
+        .light-card__slider-row {
+          align-items: center;
+          display: grid;
+          gap: 10px;
+          grid-template-columns: minmax(0, 1fr) auto;
+        }
+
+        .light-card__mode-actions {
+          display: flex;
+          gap: 8px;
+        }
+
+        .light-card__mode-button {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          height: ${styles.control.size};
+          justify-content: center;
+          line-height: 0;
+          min-width: ${styles.control.size};
+          padding: 0;
+          position: relative;
+          width: ${styles.control.size};
+        }
+
+        .light-card__mode-button ha-icon {
+          --mdc-icon-size: 20px;
+          align-items: center;
+          display: inline-flex;
+          justify-content: center;
+        }
+
         .light-card__slider {
           -webkit-appearance: none;
           appearance: none;
+          border-radius: 999px;
+          cursor: pointer;
+          display: block;
+          height: 16px;
+          outline: none;
+          touch-action: pan-x;
+          width: 100%;
+        }
+
+        .light-card__slider[data-light-control="brightness"] {
           background:
             linear-gradient(
               90deg,
@@ -856,13 +1107,29 @@ class NodaliaLightCard extends HTMLElement {
               rgba(255, 255, 255, 0.08) calc(var(--brightness, ${brightnessPercent}) * 1%),
               rgba(255, 255, 255, 0.08) 100%
             );
-          border-radius: 999px;
-          cursor: pointer;
-          display: block;
-          height: 16px;
-          outline: none;
-          touch-action: pan-x;
-          width: 100%;
+        }
+
+        .light-card__slider[data-light-control="temperature"] {
+          background: linear-gradient(
+            90deg,
+            #f4b55f 0%,
+            #ffd166 32%,
+            #fff1c1 56%,
+            #8fd3ff 100%
+          );
+        }
+
+        .light-card__slider[data-light-control="color"] {
+          background: linear-gradient(
+            90deg,
+            #ff4d6d 0%,
+            #ff9f1c 17%,
+            #ffe66d 33%,
+            #4cd964 50%,
+            #4dabf7 67%,
+            #845ef7 83%,
+            #ff4d6d 100%
+          );
         }
 
         .light-card__slider::-webkit-slider-thumb {
@@ -959,21 +1226,77 @@ class NodaliaLightCard extends HTMLElement {
           </div>
 
           ${
-            isOn && config.show_brightness !== false && supportsBrightness
+            isOn && availableControlModes.length > 0
               ? `
                 <div class="light-card__section">
-                  <div class="light-card__slider-wrap">
-                    <input
-                      type="range"
-                      class="light-card__slider"
-                      data-light-control="brightness"
-                      min="1"
-                      max="100"
-                      step="1"
-                      value="${brightnessPercent}"
-                      style="--brightness:${brightnessPercent};"
-                      aria-label="Brillo"
-                    />
+                  <div class="light-card__slider-row">
+                    <div class="light-card__slider-wrap">
+                      ${
+                        activeControlMode === "temperature"
+                          ? `
+                            <input
+                              type="range"
+                              class="light-card__slider"
+                              data-light-control="temperature"
+                              min="${temperatureRange.min}"
+                              max="${temperatureRange.max}"
+                              step="50"
+                              value="${currentKelvin}"
+                              style="--temperature-progress:${clamp(temperatureProgress, 0, 100)};"
+                              aria-label="Temperatura"
+                            />
+                          `
+                          : activeControlMode === "color"
+                            ? `
+                              <input
+                                type="range"
+                                class="light-card__slider"
+                                data-light-control="color"
+                                min="0"
+                                max="360"
+                                step="1"
+                                value="${currentHue}"
+                                style="--color-progress:${clamp(colorProgress, 0, 100)};"
+                                aria-label="Color"
+                              />
+                            `
+                            : `
+                              <input
+                                type="range"
+                                class="light-card__slider"
+                                data-light-control="brightness"
+                                min="1"
+                                max="100"
+                                step="1"
+                                value="${brightnessPercent}"
+                                style="--brightness:${brightnessPercent};"
+                                aria-label="Brillo"
+                              />
+                            `
+                      }
+                    </div>
+                    ${
+                      useSliderModeButtons
+                        ? `
+                          <div class="light-card__mode-actions">
+                            ${availableControlModes
+                              .filter(mode => mode !== activeControlMode)
+                              .map(mode => `
+                                <button
+                                  type="button"
+                                  class="light-card__mode-button"
+                                  data-light-action="mode"
+                                  data-mode="${mode}"
+                                  aria-label="${mode === "brightness" ? "Mostrar brillo" : mode === "temperature" ? "Mostrar temperatura" : "Mostrar color"}"
+                                >
+                                  <ha-icon icon="${this._getControlModeIcon(mode)}"></ha-icon>
+                                </button>
+                              `)
+                              .join("")}
+                          </div>
+                        `
+                        : ""
+                    }
                   </div>
                 </div>
               `
@@ -981,7 +1304,11 @@ class NodaliaLightCard extends HTMLElement {
           }
 
           ${
-            isOn && config.show_quick_brightness !== false && supportsBrightness && quickBrightness.length
+            isOn &&
+            activeControlMode === "brightness" &&
+            config.show_quick_brightness !== false &&
+            supportsBrightness &&
+            quickBrightness.length
               ? `
                 <div class="light-card__actions">
                   ${quickBrightness
@@ -1002,7 +1329,10 @@ class NodaliaLightCard extends HTMLElement {
           }
 
           ${
-            isOn && config.show_temperature_controls !== false && supportsColorTemperature
+            isOn &&
+            !useSliderModeButtons &&
+            config.show_temperature_controls !== false &&
+            supportsColorTemperature
               ? `
                 <div class="light-card__section">
                   <div class="light-card__section-header">
@@ -1029,7 +1359,10 @@ class NodaliaLightCard extends HTMLElement {
           }
 
           ${
-            isOn && config.show_color_controls !== false && supportsColor
+            isOn &&
+            !useSliderModeButtons &&
+            config.show_color_controls !== false &&
+            supportsColor
               ? `
                 <div class="light-card__section">
                   <div class="light-card__section-header">
@@ -1460,6 +1793,7 @@ class NodaliaLightCardEditor extends HTMLElement {
           <div class="editor-grid">
             ${this._renderCheckboxField("Mostrar estado en burbuja", "show_state", config.show_state === true)}
             ${this._renderCheckboxField("Mostrar brillo", "show_brightness", config.show_brightness !== false)}
+            ${this._renderCheckboxField("Botones de modo junto al slider", "show_slider_mode_buttons", config.show_slider_mode_buttons !== false)}
             ${this._renderCheckboxField("Presets de brillo", "show_quick_brightness", config.show_quick_brightness !== false)}
             ${this._renderCheckboxField("Controles de color", "show_color_controls", config.show_color_controls !== false)}
             ${this._renderCheckboxField("Controles de temperatura", "show_temperature_controls", config.show_temperature_controls !== false)}
