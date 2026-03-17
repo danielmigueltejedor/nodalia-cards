@@ -9,6 +9,7 @@
     "nodalia-navigation-bar.js",
     "nodalia-media-player.js",
     "nodalia-light-card.js",
+    "nodalia-vacuum-card.js",
     "README.md",
     "hacs.json",
     "examples"

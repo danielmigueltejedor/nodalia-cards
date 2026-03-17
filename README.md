@@ -7,6 +7,7 @@ Ahora mismo incluye:
 - `custom:nodalia-navigation-bar`
 - `custom:nodalia-media-player`
 - `custom:nodalia-light-card`
+- `custom:nodalia-vacuum-card`
 
 ## Instalacion
 
@@ -24,6 +25,7 @@ Ese recurso carga automaticamente:
 - `nodalia-navigation-bar.js`
 - `nodalia-media-player.js`
 - `nodalia-light-card.js`
+- `nodalia-vacuum-card.js`
 
 ### Opcion 2: recursos individuales
 
@@ -35,6 +37,8 @@ Si prefieres cargarlas por separado:
 - url: /local/nodalia-media-player.js
   type: module
 - url: /local/nodalia-light-card.js
+  type: module
+- url: /local/nodalia-vacuum-card.js
   type: module
 ```
 
@@ -73,12 +77,21 @@ entity: light.salon
 name: Salon
 ```
 
+### Nodalia Vacuum Card
+
+```yaml
+type: custom:nodalia-vacuum-card
+entity: vacuum.salon
+name: Robot salon
+```
+
 ## Estructura
 
 - `nodalia-cards.js`: entrypoint comun
 - `nodalia-navigation-bar.js`: barra de navegacion
 - `nodalia-media-player.js`: reproductor multimedia
 - `nodalia-light-card.js`: tarjeta de iluminacion
+- `nodalia-vacuum-card.js`: tarjeta de aspirador
 
 ## Siguiente paso recomendado
 
