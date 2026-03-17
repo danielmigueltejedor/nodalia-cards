@@ -1,0 +1,4 @@
+type: custom:nodalia-media-player
+players:
+  - entity: media_player.spotify
+    label: Spotify

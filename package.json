@@ -1,0 +1,22 @@
+{
+  "name": "nodalia-cards",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Suite de tarjetas personalizadas de Home Assistant para Nodalia.",
+  "files": [
+    "nodalia-cards.js",
+    "nodalia-navigation-bar.js",
+    "nodalia-media-player.js",
+    "README.md",
+    "hacs.json",
+    "examples"
+  ],
+  "keywords": [
+    "home-assistant",
+    "lovelace",
+    "custom-card",
+    "nodalia"
+  ],
+  "license": "MIT"
+}
