@@ -385,6 +385,8 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._activePlayerIndex = 0;
     this._mediaTicker = null;
     this._draftVolume = new Map();
+    this._draftVolumeTimers = new Map();
+    this._volumeStepFallback = new Set();
     this._tvSourcePickerEntity = null;
     this._onResize = () => {
       this._render();
@@ -416,6 +418,8 @@ class NodaliaMediaPlayer extends HTMLElement {
       window.clearInterval(this._mediaTicker);
       this._mediaTicker = null;
     }
+    this._draftVolumeTimers.forEach(timerId => window.clearTimeout(timerId));
+    this._draftVolumeTimers.clear();
   }
 
   setConfig(config) {
@@ -642,6 +646,8 @@ class NodaliaMediaPlayer extends HTMLElement {
 
   _getPlayerStateLabel(stateValue) {
     switch (stateValue) {
+      case "on":
+        return "Encendido";
       case "playing":
         return "Reproduciendo";
       case "paused":
@@ -730,7 +736,8 @@ class NodaliaMediaPlayer extends HTMLElement {
       }
     });
 
-    const maxSources = clamp(Number(player?.max_sources || 4), 1, 8);
+    const fallbackMaxSources = this._getPlayerDeviceType(player, state) === "tv" ? sources.length : 4;
+    const maxSources = clamp(Number(player?.max_sources || fallbackMaxSources), 1, 32);
     return orderedSources.slice(0, maxSources);
   }
 
@@ -826,15 +833,81 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
   }
 
+  _scheduleDraftVolumeClear(entityId, delay = 1400) {
+    const existingTimer = this._draftVolumeTimers.get(entityId);
+    if (existingTimer) {
+      window.clearTimeout(existingTimer);
+    }
+
+    const timerId = window.setTimeout(() => {
+      this._draftVolume.delete(entityId);
+      this._draftVolumeTimers.delete(entityId);
+      this._render();
+    }, delay);
+
+    this._draftVolumeTimers.set(entityId, timerId);
+  }
+
+  async _stepPlayerVolumeToTarget(entityId, targetPercent) {
+    if (!this._hass || !entityId) {
+      return;
+    }
+
+    const state = this._hass.states?.[entityId];
+    const currentPercent = clamp(Math.round(Number(state?.attributes?.volume_level || 0) * 100), 0, 100);
+    const delta = targetPercent - currentPercent;
+
+    if (Math.abs(delta) < 3) {
+      this._scheduleDraftVolumeClear(entityId, 800);
+      return;
+    }
+
+    const service = delta > 0 ? "volume_up" : "volume_down";
+    const stepCount = clamp(Math.round(Math.abs(delta) / 6), 1, 12);
+
+    for (let index = 0; index < stepCount; index += 1) {
+      try {
+        await this._hass.callService("media_player", service, { entity_id: entityId });
+      } catch (_error) {
+        break;
+      }
+
+      await new Promise(resolve => window.setTimeout(resolve, 90));
+    }
+
+    this._scheduleDraftVolumeClear(entityId, 1800);
+  }
+
   _commitPlayerVolume(entityId, value) {
     if (!this._hass || !entityId) {
       return;
     }
 
     const nextValue = clamp(Math.round(Number(value)), 0, 100);
-    this._hass.callService("media_player", "volume_set", {
-      entity_id: entityId,
-      volume_level: clamp(nextValue / 100, 0, 1),
+    const state = this._hass.states?.[entityId];
+    const player = this._findPlayerConfig(entityId) || { entity: entityId };
+    const isTvPlayer = this._getPlayerDeviceType(player, state) === "tv";
+
+    this._scheduleDraftVolumeClear(entityId);
+
+    if (isTvPlayer) {
+      this._volumeStepFallback.add(entityId);
+      void this._stepPlayerVolumeToTarget(entityId, nextValue);
+      return;
+    }
+
+    Promise.resolve(
+      this._hass.callService("media_player", "volume_set", {
+        entity_id: entityId,
+        volume_level: clamp(nextValue / 100, 0, 1),
+      }),
+    ).catch(() => {
+      if (!isTvPlayer) {
+        return;
+      }
+
+      this._volumeStepFallback.add(entityId);
+      void this._stepPlayerVolumeToTarget(entityId, nextValue);
     });
   }
 
@@ -1185,15 +1258,18 @@ class NodaliaMediaPlayer extends HTMLElement {
       return;
     }
 
+    const playerConfig = this._findPlayerConfig(entityId) || { entity: entityId };
+    const playerState = this._hass?.states?.[entityId];
+    const isMusicAssistant = this._isMusicAssistantPlayer(playerConfig, playerState);
+    const isTvPlayer = this._getPlayerDeviceType(playerConfig, playerState) === "tv";
     const token = this._mediaBrowserRequestToken + 1;
     this._mediaBrowserRequestToken = token;
     this._mediaBrowserState = {
       entityId,
       fallbackPath,
-      isMusicAssistant: this._isMusicAssistantPlayer(
-        this._findPlayerConfig(entityId) || { entity: entityId },
-        this._hass?.states?.[entityId],
-      ),
+      browserLabel: isMusicAssistant ? "Music Assistant" : this._getPlayerLabel(playerConfig, playerState),
+      isMusicAssistant,
+      isTvPlayer,
       loading: true,
       error: "",
       stack: [],
@@ -1232,7 +1308,9 @@ class NodaliaMediaPlayer extends HTMLElement {
       this._mediaBrowserState = {
         ...this._mediaBrowserState,
         loading: false,
-        error: "No se pudieron cargar los medios.",
+        error: this._mediaBrowserState?.isTvPlayer
+          ? "Este dispositivo no expone medios compatibles."
+          : "No se pudieron cargar los medios.",
         stack: [],
       };
       this._render();
@@ -1451,8 +1529,16 @@ class NodaliaMediaPlayer extends HTMLElement {
     );
   }
 
+  _shouldFilterTvBrowserItems() {
+    return Boolean(
+      this._mediaBrowserState?.isTvPlayer &&
+      Array.isArray(this._mediaBrowserState?.stack) &&
+      this._mediaBrowserState.stack.length <= 1,
+    );
+  }
+
   _shouldHideMediaBrowserItem(item) {
-    if (!this._shouldFilterMusicAssistantBrowserItems() || !item) {
+    if ((!this._shouldFilterMusicAssistantBrowserItems() && !this._shouldFilterTvBrowserItems()) || !item) {
       return false;
     }
 
@@ -1668,7 +1754,7 @@ class NodaliaMediaPlayer extends HTMLElement {
             <ha-icon icon="mdi:chevron-left"></ha-icon>
           </button>
           <div class="media-browser__header-copy">
-            <div class="media-browser__eyebrow">Music Assistant</div>
+            <div class="media-browser__eyebrow">${escapeHtml(this._mediaBrowserState?.browserLabel || "Media Browser")}</div>
             <div class="media-browser__title">${escapeHtml(this._getMediaBrowserDisplayTitle(currentNode?.title || "Medios"))}</div>
           </div>
           <button
@@ -1714,7 +1800,9 @@ class NodaliaMediaPlayer extends HTMLElement {
     const playerLabel = this._getPlayerLabel(player, state);
     const statusLabel = this._getPlayerStateLabel(state.state);
     const browsePath = this._getPlayerBrowsePath(player, state);
-    const browseAvailable = this._supportsMediaBrowser(player, state) || Boolean(browsePath);
+    const browseAvailable = isTvPlayer
+      ? Boolean(player?.browse_path || player?.media_browser_path)
+      : this._supportsMediaBrowser(player, state) || Boolean(browsePath);
     const isIdleLayout = this._shouldUseIdleLayout(player, state);
     const volumeLevel = Number(state.attributes.volume_level ?? 0);
     const currentVolumePercent = this._getPlayerVolumePercent(player.entity, state);
@@ -1922,7 +2010,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     const infoRailMarkup = `
       <div class="media-player__info-rail ${isIdleLayout ? "media-player__info-rail--idle" : ""}">
         ${
-          playerLabel
+          playerLabel && normalizeTextKey(playerLabel) !== normalizeTextKey(title)
             ? `
               <span class="media-player__chip media-player__chip--device media-player__chip--top">
                 ${escapeHtml(playerLabel)}
@@ -1963,7 +2051,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     if (isIdleLayout) {
       return `
         <div
-          class="media-player-card media-player-card--idle ${this._config.album_cover_background && artwork ? "has-album-background" : ""}"
+          class="media-player-card media-player-card--idle ${isTvPlayer ? "media-player-card--tv" : ""} ${this._config.album_cover_background && artwork ? "has-album-background" : ""}"
           data-media-card-index="${this._activePlayerIndex}"
         >
           ${
@@ -1994,7 +2082,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     return `
       <div
-        class="media-player-card ${this._config.album_cover_background && artwork ? "has-album-background" : ""}"
+        class="media-player-card ${isTvPlayer ? "media-player-card--tv" : ""} ${this._config.album_cover_background && artwork ? "has-album-background" : ""}"
         data-media-card-index="${this._activePlayerIndex}"
       >
         ${
@@ -2338,6 +2426,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           height: ${playerStyles.artwork_size};
           justify-content: center;
           overflow: hidden;
+          position: relative;
           width: ${playerStyles.artwork_size};
         }
 
@@ -2347,16 +2436,25 @@ class NodaliaMediaPlayer extends HTMLElement {
           width: 56px;
         }
 
-        .media-player__artwork img,
-        .media-player__artwork ha-icon {
+        .media-player__artwork img {
           height: 100%;
           object-fit: cover;
           width: 100%;
         }
 
         .media-player__artwork ha-icon {
-          font-size: calc(${playerStyles.artwork_size} * 0.52);
-          padding: 14px;
+          --mdc-icon-size: calc(${playerStyles.artwork_size} * 0.5);
+          align-items: center;
+          color: var(--primary-text-color);
+          display: inline-flex;
+          height: auto;
+          justify-content: center;
+          left: 50%;
+          line-height: 1;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: auto;
         }
 
         .media-player__meta {
@@ -2487,15 +2585,148 @@ class NodaliaMediaPlayer extends HTMLElement {
           display: grid;
           gap: 10px;
           justify-items: center;
-          width: min(100%, 360px);
+          width: min(100%, 340px);
         }
 
         .media-player__tv-actions {
           align-items: center;
-          display: inline-flex;
-          flex-wrap: wrap;
+          display: grid;
           gap: 8px;
-          justify-content: center;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          justify-items: center;
+          width: 100%;
+        }
+
+        .media-player-card--tv .media-player__content {
+          gap: 8px;
+          padding-bottom: 6px;
+        }
+
+        .media-player-card--tv .media-player__hero {
+          gap: 10px;
+          grid-template-columns: 72px minmax(0, 1fr);
+        }
+
+        .media-player-card--tv .media-player__artwork {
+          border-radius: 20px;
+          height: 72px;
+          width: 72px;
+        }
+
+        .media-player-card--tv .media-player__hero-top {
+          gap: 6px;
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .media-player-card--tv .media-player__info-rail {
+          align-items: start;
+          gap: 4px;
+          justify-items: start;
+          max-width: none;
+        }
+
+        .media-player-card--tv .media-player__chip--top,
+        .media-player-card--tv .media-player__chip--status {
+          justify-content: flex-start;
+          text-align: left;
+        }
+
+        .media-player-card--tv .media-player__title {
+          font-size: calc(${playerStyles.title_size} - 1px);
+        }
+
+        .media-player-card--tv .media-player__subtitle--tv,
+        .media-player-card--tv .media-player__chips-wrap {
+          justify-self: stretch;
+          max-width: 100%;
+        }
+
+        .media-player-card--tv .media-player__chips,
+        .media-player-card--tv .media-player__footer {
+          justify-content: flex-start;
+        }
+
+        .media-player-card--tv.media-player-card--idle .media-player__idle-main {
+          align-items: start;
+          gap: 8px;
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .media-player-card--tv.media-player-card--idle .media-player__idle-hero {
+          align-items: start;
+        }
+
+        .media-player-card--tv .media-player__control {
+          height: 44px;
+          width: 44px;
+        }
+
+        .media-player-card--tv .media-player__control--primary {
+          height: 48px;
+          width: 48px;
+        }
+
+        .media-player-card--tv .media-player__tv-source-panel {
+          justify-content: stretch;
+          max-height: 190px;
+          overflow: auto;
+          padding-right: 2px;
+        }
+
+        .media-player-card--tv .media-player__source-buttons {
+          gap: 6px;
+          justify-content: flex-start;
+        }
+
+        .media-player-card--tv .media-player__source-button {
+          max-width: 100%;
+          min-height: 32px;
+          padding: 0 10px;
+        }
+
+        .media-player-card--tv .media-player__tv-volume-wrap {
+          min-height: 48px;
+          padding: 0 14px;
+          width: 100%;
+        }
+
+        .media-player-card--tv .media-player__volume-slider {
+          height: 14px;
+        }
+
+        .media-player-card--tv .media-player__volume-slider::-webkit-slider-thumb {
+          box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.12);
+          height: 24px;
+          width: 24px;
+        }
+
+        .media-player-card--tv .media-player__volume-slider::-moz-range-thumb {
+          box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.12);
+          height: 24px;
+          width: 24px;
+        }
+
+        @media (max-width: 520px) {
+          .media-player-card--tv .media-player__hero {
+            grid-template-columns: 64px minmax(0, 1fr);
+          }
+
+          .media-player-card--tv .media-player__artwork {
+            height: 64px;
+            width: 64px;
+          }
+
+          .media-player-card--tv .media-player__tv-stack {
+            width: 100%;
+          }
+
+          .media-player-card--tv .media-player__tv-actions {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .media-player-card--tv .media-player__subtitle--tv {
+            text-align: left;
+          }
         }
 
         .media-player__tv-source-panel {
