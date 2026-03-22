@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "0.1.0";
+const CARD_VERSION = "0.5.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -341,45 +341,17 @@ class NodaliaLightCard extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
-    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
-    this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
-    this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
-    this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
-    this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
-    this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
-    this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
-    this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
-    this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowChange);
-    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
-    this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
-    this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
   }
 
   connectedCallback() {
     this._resizeObserver?.observe(this);
-    window.addEventListener("pointermove", this._onWindowPointerMove, { passive: false });
-    window.addEventListener("pointerup", this._onWindowPointerUp, { passive: false });
-    window.addEventListener("pointercancel", this._onWindowPointerUp, { passive: false });
-    window.addEventListener("mousemove", this._onWindowMouseMove, { passive: false });
-    window.addEventListener("mouseup", this._onWindowMouseUp, { passive: false });
-    window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-    window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-    window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
   }
 
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
-    window.removeEventListener("pointermove", this._onWindowPointerMove);
-    window.removeEventListener("pointerup", this._onWindowPointerUp);
-    window.removeEventListener("pointercancel", this._onWindowPointerUp);
-    window.removeEventListener("mousemove", this._onWindowMouseMove);
-    window.removeEventListener("mouseup", this._onWindowMouseUp);
-    window.removeEventListener("touchmove", this._onWindowTouchMove);
-    window.removeEventListener("touchend", this._onWindowTouchEnd);
-    window.removeEventListener("touchcancel", this._onWindowTouchEnd);
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
@@ -540,7 +512,7 @@ class NodaliaLightCard extends HTMLElement {
   _getBrightnessPercent(state) {
     const entityId = this._config?.entity;
     if (entityId && this._draftBrightness.has(entityId)) {
-      return this._draftBrightness.get(entityId);
+      return clamp(Number(this._draftBrightness.get(entityId)), 1, 100);
     }
 
     if (typeof state?.attributes?.brightness === "number") {
@@ -794,7 +766,7 @@ class NodaliaLightCard extends HTMLElement {
 
   _updateBrightnessPreview(value) {
     const slider = this.shadowRoot?.querySelector('.light-card__slider[data-light-control="brightness"]');
-    const nextValue = clamp(Math.round(Number(value)), 1, 100);
+    const nextValue = clamp(Number(value), 1, 100);
 
     if (slider instanceof HTMLInputElement) {
       slider.style.setProperty("--brightness", String(nextValue));
@@ -804,7 +776,7 @@ class NodaliaLightCard extends HTMLElement {
   _updateTemperaturePreview(value, state) {
     const slider = this.shadowRoot?.querySelector('.light-card__slider[data-light-control="temperature"]');
     const domain = this._getTemperatureControlDomain(state);
-    const boundedValue = clamp(Math.round(Number(value)), domain.min, domain.max);
+    const boundedValue = clamp(Number(value), domain.min, domain.max);
     const percent = domain.max === domain.min
       ? 0
       : ((boundedValue - domain.min) / (domain.max - domain.min)) * 100;
@@ -829,7 +801,7 @@ class NodaliaLightCard extends HTMLElement {
 
     switch (slider.dataset.lightControl) {
       case "brightness": {
-        const nextValue = clamp(Math.round(Number(value)), 1, 100);
+        const nextValue = clamp(Number(value), 1, 100);
         this._draftBrightness.set(this._config.entity, nextValue);
         this._updateBrightnessPreview(nextValue);
         if (commit) {
@@ -841,7 +813,7 @@ class NodaliaLightCard extends HTMLElement {
       case "temperature": {
         const state = this._getState();
         const domain = this._getTemperatureControlDomain(state);
-        const nextValue = clamp(Math.round(Number(value)), domain.min, domain.max);
+        const nextValue = clamp(Number(value), domain.min, domain.max);
         const nextKelvin = this._temperatureSliderValueToKelvin(nextValue, state);
         this._draftTemperature.set(this._config.entity, nextKelvin);
         this._updateTemperaturePreview(nextValue, state);
@@ -884,25 +856,9 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _queueSliderDragUpdate(slider, clientX) {
-    this._pendingDragUpdate = { slider, clientX };
-
-    if (this._dragFrame) {
-      return;
-    }
-
-    this._dragFrame = window.requestAnimationFrame(() => {
-      this._dragFrame = 0;
-      const pending = this._pendingDragUpdate;
-      this._pendingDragUpdate = null;
-
-      if (!pending) {
-        return;
-      }
-
-      const nextValue = getRangeValueFromClientX(pending.slider, pending.clientX);
-      pending.slider.value = String(nextValue);
-      this._applySliderValue(pending.slider, nextValue, { commit: false });
-    });
+    const nextValue = getRangeValueFromClientX(slider, clientX);
+    slider.value = String(nextValue);
+    this._applySliderValue(slider, nextValue, { commit: false });
   }
 
   _startSliderDrag(slider, clientX, event = null, pointerId = null) {
@@ -1115,10 +1071,7 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
-    if (this._activeSliderDrag?.slider === slider) {
-      return;
-    }
-
+    event.stopPropagation();
     this._applySliderValue(slider, slider.value, { commit: false });
   }
 
@@ -1131,6 +1084,7 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
+    event.stopPropagation();
     if (this._skipNextSliderChange === slider) {
       this._skipNextSliderChange = null;
       return;
@@ -1294,7 +1248,7 @@ class NodaliaLightCard extends HTMLElement {
       } else if (activeControlMode === "color" && config.show_color_controls !== false && supportsColor) {
         activeValueChip = `${currentHue}°`;
       } else if (config.show_brightness !== false && supportsBrightness) {
-        activeValueChip = `${brightnessPercent}%`;
+        activeValueChip = `${Math.round(brightnessPercent)}%`;
       }
 
       if (activeValueChip) {
@@ -1738,7 +1692,7 @@ class NodaliaLightCard extends HTMLElement {
                               data-light-control="temperature"
                               min="${temperatureControlDomain.min}"
                               max="${temperatureControlDomain.max}"
-                              step="${temperatureControlDomain.step}"
+                              step="any"
                               value="${currentTemperatureSliderValue}"
                               style="--temperature-progress:${clamp(temperatureProgress, 0, 100)};"
                               aria-label="Temperatura"
@@ -1752,7 +1706,7 @@ class NodaliaLightCard extends HTMLElement {
                                 data-light-control="color"
                                 min="0"
                                 max="360"
-                                step="1"
+                                step="any"
                                 value="${currentHue}"
                                 style="--color-progress:${clamp(colorProgress, 0, 100)};"
                                 aria-label="Color"
@@ -1765,7 +1719,7 @@ class NodaliaLightCard extends HTMLElement {
                                 data-light-control="brightness"
                                 min="1"
                                 max="100"
-                                step="1"
+                                step="any"
                                 value="${brightnessPercent}"
                                 style="--brightness:${brightnessPercent};"
                                 aria-label="Brillo"

@@ -8,6 +8,7 @@ Ahora mismo incluye:
 - `custom:nodalia-media-player`
 - `custom:nodalia-light-card`
 - `custom:nodalia-fan-card`
+- `custom:nodalia-humidifier-card`
 - `custom:nodalia-vacuum-card`
 
 ## Instalacion
@@ -27,6 +28,7 @@ Ese recurso carga automaticamente:
 - `nodalia-media-player.js`
 - `nodalia-light-card.js`
 - `nodalia-fan-card.js`
+- `nodalia-humidifier-card.js`
 - `nodalia-vacuum-card.js`
 
 ### Opcion 2: recursos individuales
@@ -41,6 +43,8 @@ Si prefieres cargarlas por separado:
 - url: /local/nodalia-light-card.js
   type: module
 - url: /local/nodalia-fan-card.js
+  type: module
+- url: /local/nodalia-humidifier-card.js
   type: module
 - url: /local/nodalia-vacuum-card.js
   type: module
@@ -97,6 +101,14 @@ entity: fan.salon
 name: Salon
 ```
 
+### Nodalia Humidifier Card
+
+```yaml
+type: custom:nodalia-humidifier-card
+entity: humidifier.deshumidificador
+name: Deshumidificador
+```
+
 ## Estructura
 
 - `nodalia-cards.js`: entrypoint comun
@@ -104,6 +116,7 @@ name: Salon
 - `nodalia-media-player.js`: reproductor multimedia
 - `nodalia-light-card.js`: tarjeta de iluminacion
 - `nodalia-fan-card.js`: tarjeta de ventilador
+- `nodalia-humidifier-card.js`: tarjeta de humidificador o deshumidificador
 - `nodalia-vacuum-card.js`: tarjeta de aspirador
 
 ## Siguiente paso recomendado

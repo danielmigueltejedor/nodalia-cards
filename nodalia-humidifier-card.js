@@ -1,5 +1,5 @@
-const CARD_TAG = "nodalia-fan-card";
-const EDITOR_TAG = "nodalia-fan-card-editor";
+const CARD_TAG = "nodalia-humidifier-card";
+const EDITOR_TAG = "nodalia-humidifier-card-editor";
 const CARD_VERSION = "0.5.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -16,12 +16,15 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  mode_entity: "",
+  fan_mode_entity: "",
   show_state: false,
-  show_percentage_chip: true,
+  show_target_humidity_chip: true,
   show_mode_chip: true,
+  show_fan_mode_chip: true,
   show_slider: true,
-  show_oscillation: true,
-  show_preset_modes: true,
+  show_mode_button: true,
+  show_fan_mode_button: true,
   compact_layout_mode: "auto",
   haptics: {
     enabled: false,
@@ -47,7 +50,7 @@ const DEFAULT_CONFIG = {
     control: {
       size: "40px",
       accent_color: "var(--primary-text-color)",
-      accent_background: "rgba(113, 192, 255, 0.2)",
+      accent_background: "rgba(113, 192, 255, 0.18)",
     },
     chip_height: "24px",
     chip_font_size: "11px",
@@ -61,8 +64,8 @@ const DEFAULT_CONFIG = {
 };
 
 const STUB_CONFIG = {
-  entity: "fan.salon",
-  name: "Salon",
+  entity: "humidifier.deshumidificador",
+  name: "Deshumidificador",
 };
 
 function isObject(value) {
@@ -215,26 +218,7 @@ function normalizeTextKey(value) {
     .replace(/^_+|_+$/g, "");
 }
 
-function getRangeValueFromClientX(slider, clientX) {
-  const rect = slider.getBoundingClientRect();
-  if (!rect.width) {
-    return Number(slider.value || 0);
-  }
-
-  const min = Number(slider.min || 0);
-  const max = Number(slider.max || 100);
-  const step = slider.step === "any" ? 0 : Number(slider.step || 1);
-  const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
-  let nextValue = min + ((max - min) * ratio);
-
-  if (Number.isFinite(step) && step > 0) {
-    nextValue = min + (Math.round((nextValue - min) / step) * step);
-  }
-
-  return clamp(nextValue, min, max);
-}
-
-function translatePresetLabel(value) {
+function translateModeLabel(value) {
   const normalized = normalizeTextKey(value);
 
   switch (normalized) {
@@ -247,16 +231,11 @@ function translatePresetLabel(value) {
     case "sleep":
     case "night":
       return "Noche";
-    case "breeze":
-    case "natural":
-    case "nature":
-      return "Brisa";
     case "eco":
       return "Eco";
-    case "turbo":
-      return "Turbo";
-    case "boost":
-      return "Boost";
+    case "quiet":
+    case "silent":
+      return "Silencioso";
     case "low":
       return "Baja";
     case "medium":
@@ -264,22 +243,31 @@ function translatePresetLabel(value) {
       return "Media";
     case "high":
       return "Alta";
-    case "quiet":
-    case "silent":
-      return "Silencioso";
+    case "boost":
+      return "Boost";
+    case "turbo":
+      return "Turbo";
     case "normal":
     case "balanced":
       return "Normal";
+    case "dry":
+    case "drying":
+      return "Secado";
+    case "continuous":
+      return "Continuo";
+    case "clothes_dry":
+    case "laundry":
+      return "Ropa";
     default:
       return String(value ?? "");
-    }
+  }
 }
 
 function normalizeConfig(rawConfig) {
   return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
 }
 
-class NodaliaFanCard extends HTMLElement {
+class NodaliaHumidifierCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -293,14 +281,11 @@ class NodaliaFanCard extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = null;
     this._hass = null;
-    this._draftPercentage = new Map();
-    this._presetPanelOpen = false;
+    this._draftHumidity = new Map();
+    this._modePanelOpen = false;
+    this._fanModePanelOpen = false;
     this._cardWidth = 0;
     this._isCompactLayout = false;
-    this._activeSliderDrag = null;
-    this._skipNextSliderChange = null;
-    this._dragFrame = 0;
-    this._pendingDragUpdate = null;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -332,11 +317,6 @@ class NodaliaFanCard extends HTMLElement {
 
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
-    if (this._dragFrame) {
-      window.cancelAnimationFrame(this._dragFrame);
-      this._dragFrame = 0;
-    }
-    this._pendingDragUpdate = null;
   }
 
   setConfig(config) {
@@ -392,111 +372,150 @@ class NodaliaFanCard extends HTMLElement {
     return width > 0 && width < this._getCompactLayoutThreshold();
   }
 
-  _triggerHaptic(style = this._config?.haptics?.style) {
-    if (!this._config?.haptics?.enabled) {
-      return;
-    }
-
-    this.dispatchEvent(new CustomEvent("haptic", {
-      bubbles: true,
-      composed: true,
-      detail: style || "selection",
-    }));
-
-    if (!this._config?.haptics?.fallback_vibrate || !navigator?.vibrate) {
-      return;
-    }
-
-    const vibration = HAPTIC_PATTERNS[style || "selection"];
-    if (vibration) {
-      navigator.vibrate(vibration);
-    }
-  }
-
   _getState() {
-    return this._hass?.states?.[this._config?.entity] || null;
+    return this._config?.entity ? this._hass?.states?.[this._config.entity] || null : null;
   }
 
-  _isOn(state = this._getState()) {
-    const stateValue = String(state?.state || "").toLowerCase();
-    return Boolean(state) && !["off", "unavailable", "unknown"].includes(stateValue);
+  _getExternalEntityState(entityId) {
+    return entityId ? this._hass?.states?.[entityId] || null : null;
   }
 
-  _getFanName(state) {
-    if (this._config?.name) {
-      return this._config.name;
+  _isOn(state) {
+    return String(state?.state || "") === "on";
+  }
+
+  _supportsTargetHumidity(state) {
+    return (
+      Number.isFinite(Number(state?.attributes?.humidity)) ||
+      Number.isFinite(Number(state?.attributes?.target_humidity)) ||
+      (
+        Number.isFinite(Number(state?.attributes?.min_humidity)) &&
+        Number.isFinite(Number(state?.attributes?.max_humidity))
+      )
+    );
+  }
+
+  _getHumidityRange(state) {
+    const min = Number(state?.attributes?.min_humidity);
+    const max = Number(state?.attributes?.max_humidity);
+
+    if (Number.isFinite(min) && Number.isFinite(max) && min < max) {
+      return {
+        min,
+        max,
+      };
     }
 
-    if (state?.attributes?.friendly_name) {
-      return state.attributes.friendly_name;
-    }
-
-    return this._config?.entity || "Fan";
+    return {
+      min: 30,
+      max: 80,
+    };
   }
 
-  _getFanIcon(state) {
+  _getTargetHumidity(state) {
+    const entityId = this._config?.entity;
+    if (entityId && this._draftHumidity.has(entityId)) {
+      return clamp(Number(this._draftHumidity.get(entityId)), this._getHumidityRange(state).min, this._getHumidityRange(state).max);
+    }
+
+    const rawHumidity = Number(state?.attributes?.humidity);
+    if (Number.isFinite(rawHumidity)) {
+      const range = this._getHumidityRange(state);
+      return clamp(rawHumidity, range.min, range.max);
+    }
+
+    const rawTargetHumidity = Number(state?.attributes?.target_humidity);
+    if (Number.isFinite(rawTargetHumidity)) {
+      const range = this._getHumidityRange(state);
+      return clamp(rawTargetHumidity, range.min, range.max);
+    }
+
+    const range = this._getHumidityRange(state);
+    return clamp(Math.round((range.min + range.max) / 2), range.min, range.max);
+  }
+
+  _getHumidifierName(state) {
+    return this._config?.name
+      || state?.attributes?.friendly_name
+      || this._config?.entity
+      || "Humidificador";
+  }
+
+  _getHumidifierIcon(state) {
     if (this._config?.icon) {
       return this._config.icon;
     }
 
-    if (state?.attributes?.icon) {
-      return state.attributes.icon;
+    const deviceClass = normalizeTextKey(state?.attributes?.device_class);
+    if (deviceClass === "dehumidifier") {
+      return "mdi:air-humidifier-off";
     }
 
-    return "mdi:fan";
+    return String(state?.attributes?.icon || "mdi:air-humidifier");
   }
 
   _getStateLabel(state) {
-    const stateValue = normalizeTextKey(state?.state);
+    const normalized = normalizeTextKey(state?.state);
 
-    switch (stateValue) {
-      case "off":
-        return "Apagado";
+    switch (normalized) {
       case "on":
         return "Encendido";
-      case "unavailable":
-        return "No disponible";
-      case "unknown":
-        return "Desconocido";
+      case "off":
+        return "Apagado";
+      case "humidifying":
+        return "Humidificando";
+      case "dehumidifying":
+        return "Deshumidificando";
+      case "drying":
+        return "Secando";
+      case "idle":
+        return "En espera";
       default:
-        return state?.state ? String(state.state) : "Sin estado";
+        return state?.state ? String(state.state) : "";
     }
   }
 
-  _supportsPercentage(state) {
-    return Number.isFinite(Number(state?.attributes?.percentage)) || Number.isFinite(Number(state?.attributes?.percentage_step));
-  }
+  _getModeOptions(state) {
+    const modeEntity = this._getExternalEntityState(this._config?.mode_entity);
 
-  _getPercentage(state) {
-    const draft = this._draftPercentage.get(this._config?.entity);
-    if (Number.isFinite(draft)) {
-      return clamp(Number(draft), 0, 100);
+    if (Array.isArray(modeEntity?.attributes?.options)) {
+      return modeEntity.attributes.options.map(item => String(item || "").trim()).filter(Boolean);
     }
 
-    const rawPercentage = Number(state?.attributes?.percentage);
-    if (Number.isFinite(rawPercentage)) {
-      return clamp(Math.round(rawPercentage), 0, 100);
+    if (Array.isArray(state?.attributes?.available_modes)) {
+      return state.attributes.available_modes.map(item => String(item || "").trim()).filter(Boolean);
     }
 
-    return this._isOn(state) ? 100 : 0;
+    return [];
   }
 
-  _supportsOscillation(state) {
-    return typeof state?.attributes?.oscillating === "boolean";
+  _getCurrentMode(state) {
+    const modeEntity = this._getExternalEntityState(this._config?.mode_entity);
+    if (modeEntity?.state && !["unknown", "unavailable"].includes(modeEntity.state)) {
+      return String(modeEntity.state);
+    }
+
+    if (state?.attributes?.mode) {
+      return String(state.attributes.mode);
+    }
+
+    return "";
   }
 
-  _isOscillating(state) {
-    return state?.attributes?.oscillating === true;
-  }
-
-  _getPresetModes(state) {
-    return Array.isArray(state?.attributes?.preset_modes)
-      ? state.attributes.preset_modes.map(item => String(item || "").trim()).filter(Boolean)
+  _getFanModeOptions() {
+    const fanModeEntity = this._getExternalEntityState(this._config?.fan_mode_entity);
+    return Array.isArray(fanModeEntity?.attributes?.options)
+      ? fanModeEntity.attributes.options.map(item => String(item || "").trim()).filter(Boolean)
       : [];
   }
 
-  _getCurrentPresetMode(state) {
-    return state?.attributes?.preset_mode ? String(state.attributes.preset_mode) : "";
+  _getCurrentFanMode() {
+    const fanModeEntity = this._getExternalEntityState(this._config?.fan_mode_entity);
+    if (fanModeEntity?.state && !["unknown", "unavailable"].includes(fanModeEntity.state)) {
+      return String(fanModeEntity.state);
+    }
+
+    return "";
   }
 
   _getAccentColor(state) {
@@ -506,262 +525,133 @@ class NodaliaFanCard extends HTMLElement {
       : styles?.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color;
   }
 
-  _setFanState(service, data = {}) {
+  _setHumidifierService(service, data = {}) {
     if (!this._hass || !this._config?.entity) {
       return;
     }
 
-    this._hass.callService("fan", service, {
+    this._hass.callService("humidifier", service, {
       entity_id: this._config.entity,
       ...data,
     });
   }
 
-  _toggleFan(state) {
-    if (this._isOn(state)) {
-      this._setFanState("turn_off");
+  _callOptionService(entityId, option) {
+    if (!this._hass || !entityId || !option) {
       return;
     }
 
-    this._setFanState("turn_on");
+    const [domain] = entityId.split(".");
+    if (domain === "select") {
+      this._hass.callService("select", "select_option", {
+        entity_id: entityId,
+        option,
+      });
+      return;
+    }
+
+    if (domain === "input_select") {
+      this._hass.callService("input_select", "select_option", {
+        entity_id: entityId,
+        option,
+      });
+    }
   }
 
-  _commitPercentage(percent) {
-    const nextValue = clamp(Math.round(Number(percent)), 0, 100);
+  _toggleHumidifier(state) {
+    if (this._isOn(state)) {
+      this._setHumidifierService("turn_off");
+      return;
+    }
+
+    this._setHumidifierService("turn_on");
+  }
+
+  _commitHumidity(value) {
+    const state = this._getState();
+    const range = this._getHumidityRange(state);
+    const nextValue = clamp(Math.round(Number(value)), range.min, range.max);
     if (!Number.isFinite(nextValue)) {
       return;
     }
 
-    this._setFanState("set_percentage", {
-      percentage: nextValue,
+    this._setHumidifierService("set_humidity", {
+      humidity: nextValue,
     });
   }
 
-  _toggleOscillation(state) {
-    if (!this._supportsOscillation(state)) {
-      return;
-    }
-
-    this._setFanState("oscillate", {
-      oscillating: !this._isOscillating(state),
-    });
-  }
-
-  _commitPresetMode(mode) {
+  _commitMode(mode) {
     if (!mode) {
       return;
     }
 
-    this._setFanState("set_preset_mode", {
-      preset_mode: mode,
+    if (this._config?.mode_entity) {
+      this._callOptionService(this._config.mode_entity, mode);
+      return;
+    }
+
+    this._setHumidifierService("set_mode", {
+      mode,
     });
   }
 
-  _updatePercentagePreview(value) {
-    const slider = this.shadowRoot?.querySelector('.fan-card__slider[data-fan-control="percentage"]');
-    const nextValue = clamp(Number(value), 0, 100);
+  _commitFanMode(mode) {
+    if (!mode || !this._config?.fan_mode_entity) {
+      return;
+    }
+
+    this._callOptionService(this._config.fan_mode_entity, mode);
+  }
+
+  _triggerHaptic(styleOverride = null) {
+    const haptics = this._config?.haptics || {};
+    if (haptics.enabled !== true) {
+      return;
+    }
+
+    const style = styleOverride || haptics.style || "selection";
+    fireEvent(this, "haptic", style, {
+      bubbles: true,
+      cancelable: false,
+      composed: true,
+    });
+
+    if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
+      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+    }
+  }
+
+  _updateHumidityPreview(value) {
+    const slider = this.shadowRoot?.querySelector('.humidifier-card__slider[data-humidifier-control="humidity"]');
+    const state = this._getState();
+    const range = this._getHumidityRange(state);
+    const nextValue = clamp(Number(value), range.min, range.max);
+    const progress = ((nextValue - range.min) / Math.max(range.max - range.min, 1)) * 100;
 
     if (slider instanceof HTMLInputElement) {
-      slider.style.setProperty("--percentage", String(nextValue));
+      slider.style.setProperty("--humidity", String(clamp(progress, 0, 100)));
     }
   }
 
   _applySliderValue(slider, value, options = {}) {
     const commit = options.commit === true;
-    const nextValue = clamp(Number(value), 0, 100);
+    const state = this._getState();
+    const range = this._getHumidityRange(state);
+    const nextValue = clamp(Number(value), range.min, range.max);
 
-    this._draftPercentage.set(this._config.entity, nextValue);
-    this._updatePercentagePreview(nextValue);
+    this._draftHumidity.set(this._config.entity, nextValue);
+    this._updateHumidityPreview(nextValue);
 
     if (commit) {
       this._triggerHaptic("selection");
-      this._commitPercentage(nextValue);
+      this._commitHumidity(nextValue);
     }
-  }
-
-  _onShadowPointerDown(event) {
-    const slider = event
-      .composedPath()
-      .find(node =>
-        node instanceof HTMLInputElement &&
-        node.type === "range" &&
-        node.dataset?.fanControl,
-      );
-
-    if (this._activeSliderDrag || !slider || (typeof event.button === "number" && event.button !== 0)) {
-      return;
-    }
-
-    this._startSliderDrag(slider, event.clientX, event, event.pointerId);
-  }
-
-  _queueSliderDragUpdate(slider, clientX) {
-    const nextValue = getRangeValueFromClientX(slider, clientX);
-    slider.value = String(nextValue);
-    this._applySliderValue(slider, nextValue, { commit: false });
-  }
-
-  _startSliderDrag(slider, clientX, event = null, pointerId = null) {
-    if (!slider) {
-      return;
-    }
-
-    this._activeSliderDrag = {
-      pointerId,
-      slider,
-    };
-
-    if (pointerId !== null) {
-      try {
-        slider.setPointerCapture(pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
-      }
-    }
-
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    this._pendingDragUpdate = null;
-    if (this._dragFrame) {
-      window.cancelAnimationFrame(this._dragFrame);
-      this._dragFrame = 0;
-    }
-
-    const nextValue = getRangeValueFromClientX(slider, clientX);
-    slider.value = String(nextValue);
-    this._applySliderValue(slider, nextValue, { commit: false });
-  }
-
-  _commitSliderDrag(clientX, event = null, pointerId = null) {
-    const drag = this._activeSliderDrag;
-    if (!drag) {
-      return;
-    }
-
-    if (event) {
-      event.preventDefault();
-    }
-
-    this._pendingDragUpdate = null;
-    if (this._dragFrame) {
-      window.cancelAnimationFrame(this._dragFrame);
-      this._dragFrame = 0;
-    }
-
-    const nextValue = getRangeValueFromClientX(drag.slider, clientX);
-    drag.slider.value = String(nextValue);
-    this._skipNextSliderChange = drag.slider;
-    this._applySliderValue(drag.slider, nextValue, { commit: true });
-
-    if (pointerId !== null) {
-      try {
-        drag.slider.releasePointerCapture(pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
-      }
-    }
-
-    this._activeSliderDrag = null;
-  }
-
-  _onShadowMouseDown(event) {
-    const slider = event
-      .composedPath()
-      .find(node =>
-        node instanceof HTMLInputElement &&
-        node.type === "range" &&
-        node.dataset?.fanControl,
-      );
-
-    if (this._activeSliderDrag || !slider || event.button !== 0) {
-      return;
-    }
-
-    this._startSliderDrag(slider, event.clientX, event);
-  }
-
-  _onShadowTouchStart(event) {
-    const slider = event
-      .composedPath()
-      .find(node =>
-        node instanceof HTMLInputElement &&
-        node.type === "range" &&
-        node.dataset?.fanControl,
-      );
-
-    if (this._activeSliderDrag || !slider || !event.touches?.length) {
-      return;
-    }
-
-    this._startSliderDrag(slider, event.touches[0].clientX, event);
-  }
-
-  _onWindowPointerMove(event) {
-    const drag = this._activeSliderDrag;
-    if (!drag || drag.pointerId !== event.pointerId) {
-      return;
-    }
-
-    event.preventDefault();
-    this._queueSliderDragUpdate(drag.slider, event.clientX);
-  }
-
-  _onWindowPointerUp(event) {
-    const drag = this._activeSliderDrag;
-    if (!drag || drag.pointerId !== event.pointerId) {
-      return;
-    }
-
-    this._commitSliderDrag(event.clientX, event, event.pointerId);
-  }
-
-  _onWindowMouseMove(event) {
-    if (!this._activeSliderDrag || (typeof event.buttons === "number" && (event.buttons & 1) === 0)) {
-      return;
-    }
-
-    event.preventDefault();
-    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX);
-  }
-
-  _onWindowMouseUp(event) {
-    if (!this._activeSliderDrag) {
-      return;
-    }
-
-    this._commitSliderDrag(event.clientX, event);
-  }
-
-  _onWindowTouchMove(event) {
-    if (!this._activeSliderDrag || !event.touches?.length) {
-      return;
-    }
-
-    event.preventDefault();
-    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.touches[0].clientX);
-  }
-
-  _onWindowTouchEnd(event) {
-    if (!this._activeSliderDrag) {
-      return;
-    }
-
-    const clientX = event.changedTouches?.[0]?.clientX;
-    if (!Number.isFinite(clientX)) {
-      this._activeSliderDrag = null;
-      return;
-    }
-
-    this._commitSliderDrag(clientX, event);
   }
 
   _onShadowInput(event) {
     const slider = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement && node.dataset?.fanControl);
+      .find(node => node instanceof HTMLInputElement && node.dataset?.humidifierControl);
 
     if (!slider) {
       return;
@@ -774,32 +664,27 @@ class NodaliaFanCard extends HTMLElement {
   _onShadowChange(event) {
     const slider = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement && node.dataset?.fanControl);
+      .find(node => node instanceof HTMLInputElement && node.dataset?.humidifierControl);
 
     if (!slider) {
       return;
     }
 
     event.stopPropagation();
-    if (this._skipNextSliderChange === slider) {
-      this._skipNextSliderChange = null;
-      return;
-    }
-
     this._applySliderValue(slider, slider.value, { commit: true });
   }
 
   _onShadowClick(event) {
     const path = event.composedPath();
     const slider = path.find(
-      node => node instanceof HTMLInputElement && node.dataset?.fanControl,
+      node => node instanceof HTMLInputElement && node.dataset?.humidifierControl,
     );
 
     if (slider) {
       return;
     }
 
-    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.fanAction);
+    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.humidifierAction);
 
     if (!actionButton) {
       return;
@@ -811,21 +696,33 @@ class NodaliaFanCard extends HTMLElement {
     const state = this._getState();
     this._triggerHaptic();
 
-    switch (actionButton.dataset.fanAction) {
+    switch (actionButton.dataset.humidifierAction) {
       case "toggle":
-        this._toggleFan(state);
+        this._toggleHumidifier(state);
         break;
-      case "oscillate":
-        this._toggleOscillation(state);
+      case "toggle-mode-panel":
+        this._modePanelOpen = !this._modePanelOpen;
+        if (this._modePanelOpen) {
+          this._fanModePanelOpen = false;
+        }
         this._render();
         break;
-      case "toggle-preset-panel":
-        this._presetPanelOpen = !this._presetPanelOpen;
+      case "toggle-fan-mode-panel":
+        this._fanModePanelOpen = !this._fanModePanelOpen;
+        if (this._fanModePanelOpen) {
+          this._modePanelOpen = false;
+        }
         this._render();
         break;
-      case "preset":
+      case "mode":
         if (actionButton.dataset.mode) {
-          this._commitPresetMode(actionButton.dataset.mode);
+          this._commitMode(actionButton.dataset.mode);
+          this._render();
+        }
+        break;
+      case "fan-mode":
+        if (actionButton.dataset.mode) {
+          this._commitFanMode(actionButton.dataset.mode);
           this._render();
         }
         break;
@@ -836,9 +733,9 @@ class NodaliaFanCard extends HTMLElement {
 
   _renderEmptyState() {
     return `
-      <ha-card class="fan-card fan-card--empty">
-        <div class="fan-card__empty-title">Nodalia Fan Card</div>
-        <div class="fan-card__empty-text">Configura \`entity\` con una entidad \`fan.*\` para mostrar la tarjeta.</div>
+      <ha-card class="humidifier-card humidifier-card--empty">
+        <div class="humidifier-card__empty-title">Nodalia Humidifier Card</div>
+        <div class="humidifier-card__empty-text">Configura \`entity\` con una entidad \`humidifier.*\` para mostrar la tarjeta.</div>
       </ha-card>
     `;
   }
@@ -863,7 +760,7 @@ class NodaliaFanCard extends HTMLElement {
             box-sizing: border-box;
           }
 
-          .fan-card--empty {
+          .humidifier-card--empty {
             background: ${styles.card.background};
             border: ${styles.card.border};
             border-radius: ${styles.card.border_radius};
@@ -873,13 +770,13 @@ class NodaliaFanCard extends HTMLElement {
             padding: ${styles.card.padding};
           }
 
-          .fan-card__empty-title {
+          .humidifier-card__empty-title {
             color: var(--primary-text-color);
             font-size: 15px;
             font-weight: 700;
           }
 
-          .fan-card__empty-text {
+          .humidifier-card__empty-text {
             color: var(--secondary-text-color);
             font-size: 13px;
             line-height: 1.5;
@@ -891,45 +788,38 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     const isOn = this._isOn(state);
-    const title = this._getFanName(state);
-    const icon = this._getFanIcon(state);
+    const title = this._getHumidifierName(state);
+    const icon = this._getHumidifierIcon(state);
     const accentColor = this._getAccentColor(state);
-    const currentPercentage = this._getPercentage(state);
-    const supportsPercentage = config.show_slider !== false && this._supportsPercentage(state);
-    const supportsOscillation = config.show_oscillation !== false && this._supportsOscillation(state);
-    const presetModes = config.show_preset_modes !== false ? this._getPresetModes(state) : [];
-    const currentPresetMode = this._getCurrentPresetMode(state);
-    const translatedPresetMode = currentPresetMode ? translatePresetLabel(currentPresetMode) : "";
+    const supportsHumidity = config.show_slider !== false && this._supportsTargetHumidity(state);
+    const humidityRange = this._getHumidityRange(state);
+    const currentHumidity = this._getTargetHumidity(state);
+    const humidityProgress = ((currentHumidity - humidityRange.min) / Math.max(humidityRange.max - humidityRange.min, 1)) * 100;
+    const modeOptions = config.show_mode_button !== false ? this._getModeOptions(state) : [];
+    const currentMode = this._getCurrentMode(state);
+    const fanModeOptions = config.show_fan_mode_button !== false ? this._getFanModeOptions() : [];
+    const currentFanMode = this._getCurrentFanMode();
     const isCompactLayout = this._isCompactLayout;
-    const hasSecondaryControls = isOn && (supportsOscillation || presetModes.length);
     const chips = [];
-    const showCopyBlock = !isCompactLayout || config.show_state === true || (isOn && ((config.show_percentage_chip !== false && supportsPercentage) || (config.show_mode_chip !== false && translatedPresetMode)));
 
     if (config.show_state === true) {
-      chips.push(`<span class="fan-card__chip fan-card__chip--state">${escapeHtml(this._getStateLabel(state))}</span>`);
+      chips.push(`<div class="humidifier-card__chip humidifier-card__chip--state">${escapeHtml(this._getStateLabel(state))}</div>`);
     }
 
-    if (isOn && config.show_percentage_chip !== false && supportsPercentage) {
-      chips.push(`<span class="fan-card__chip">${escapeHtml(`${Math.round(currentPercentage)}%`)}</span>`);
+    if (config.show_target_humidity_chip !== false && supportsHumidity) {
+      chips.push(`<div class="humidifier-card__chip">${escapeHtml(`${Math.round(currentHumidity)}%`)}</div>`);
     }
 
-    if (isOn && config.show_mode_chip !== false && translatedPresetMode) {
-      chips.push(`<span class="fan-card__chip">${escapeHtml(translatedPresetMode)}</span>`);
+    if (config.show_mode_chip !== false && currentMode) {
+      chips.push(`<div class="humidifier-card__chip">${escapeHtml(translateModeLabel(currentMode))}</div>`);
     }
 
-    const cardBackground = isOn
-      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`
-      : styles.card.background;
-    const cardBorder = isOn
-      ? `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`
-      : styles.card.border;
-    const cardShadow = isOn
-      ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.18))`
-      : styles.card.box_shadow;
-
-    if (!presetModes.length) {
-      this._presetPanelOpen = false;
+    if (config.show_fan_mode_chip !== false && currentFanMode) {
+      chips.push(`<div class="humidifier-card__chip">${escapeHtml(translateModeLabel(currentFanMode))}</div>`);
     }
+
+    const showCopyBlock = !isCompactLayout || chips.length > 0;
+    const hasSecondaryControls = (modeOptions.length > 0) || (fanModeOptions.length > 0);
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -942,70 +832,54 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         ha-card {
-          background: ${cardBackground};
-          border: ${cardBorder};
-          border-radius: ${styles.card.border_radius};
-          box-shadow: ${cardShadow};
-          min-width: 0;
           overflow: hidden;
-          padding: ${styles.card.padding};
-          position: relative;
-          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
 
-        .fan-card.is-off {
-          cursor: pointer;
+        .humidifier-card {
+          background:
+            radial-gradient(circle at top left, color-mix(in srgb, var(--accent-color) 16%, transparent) 0%, transparent 52%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0%, rgba(0, 0, 0, 0.02) 100%),
+            ${styles.card.background};
+          border: ${styles.card.border};
+          border-radius: ${styles.card.border_radius};
+          box-shadow: ${styles.card.box_shadow};
         }
 
-        ha-card::before {
-          background: ${isOn
-            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.06)), rgba(255, 255, 255, 0))`
-            : "linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0))"};
-          content: "";
-          inset: 0;
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
-        }
-
-        .fan-card {
-          color: var(--primary-text-color);
+        .humidifier-card__content {
           display: grid;
-          gap: calc(${styles.card.gap} + 4px);
-          min-width: 0;
-          position: relative;
-          z-index: 1;
+          gap: ${styles.card.gap};
+          padding: ${styles.card.padding};
         }
 
-        .fan-card__hero {
+        .humidifier-card__hero {
           align-items: center;
           display: grid;
           gap: ${styles.card.gap};
-          grid-template-columns: auto minmax(0, 1fr);
-          min-width: 0;
+          grid-template-columns: ${styles.icon.size} minmax(0, 1fr);
         }
 
-        .fan-card--compact .fan-card__hero {
-          justify-items: center;
-          text-align: center;
+        .humidifier-card--compact .humidifier-card__hero {
+          grid-template-columns: ${styles.icon.size};
+          justify-content: center;
         }
 
-        .fan-card__icon {
+        .humidifier-card__icon {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: ${isOn
-            ? `color-mix(in srgb, ${accentColor} 24%, ${styles.icon.background})`
-            : styles.icon.background};
-          border: 1px solid color-mix(in srgb, ${accentColor} 22%, rgba(255, 255, 255, 0.08));
-          border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 24px rgba(0, 0, 0, 0.16);
+          background:
+            radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 60%),
+            ${styles.icon.background};
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: calc(${styles.icon.size} * 0.5);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            0 10px 26px rgba(0, 0, 0, 0.16);
           color: ${isOn ? styles.icon.on_color : styles.icon.off_color};
           cursor: pointer;
           display: inline-flex;
           height: ${styles.icon.size};
           justify-content: center;
-          line-height: 0;
           margin: 0;
           outline: none;
           padding: 0;
@@ -1013,50 +887,49 @@ class NodaliaFanCard extends HTMLElement {
           width: ${styles.icon.size};
         }
 
-        .fan-card__icon ha-icon {
-          --mdc-icon-size: calc(${styles.icon.size} * 0.46);
+        .humidifier-card__icon ha-icon {
+          --mdc-icon-size: calc(${styles.icon.size} * 0.44);
           display: inline-flex;
-          height: calc(${styles.icon.size} * 0.46);
+          height: calc(${styles.icon.size} * 0.44);
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: calc(${styles.icon.size} * 0.46);
+          width: calc(${styles.icon.size} * 0.44);
         }
 
-        .fan-card__copy {
+        .humidifier-card__copy {
           display: grid;
           gap: 10px;
           min-width: 0;
         }
 
-        .fan-card--compact .fan-card__copy {
+        .humidifier-card--compact .humidifier-card__copy {
           justify-items: center;
+          text-align: center;
         }
 
-        .fan-card__title {
+        .humidifier-card__title {
+          color: var(--primary-text-color);
           font-size: ${styles.title_size};
           font-weight: 700;
-          letter-spacing: -0.01em;
-          line-height: 1.15;
+          line-height: 1.2;
           min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
         }
 
-        .fan-card__chips {
+        .humidifier-card__chips {
+          align-items: center;
           display: flex;
           flex-wrap: wrap;
           gap: 10px;
           min-width: 0;
         }
 
-        .fan-card--compact .fan-card__chips {
+        .humidifier-card--compact .humidifier-card__chips {
           justify-content: center;
         }
 
-        .fan-card__chip {
+        .humidifier-card__chip {
           align-items: center;
           backdrop-filter: blur(18px);
           background: rgba(255, 255, 255, 0.05);
@@ -1076,25 +949,113 @@ class NodaliaFanCard extends HTMLElement {
           white-space: nowrap;
         }
 
-        .fan-card__chip--state {
+        .humidifier-card__chip--state {
           color: var(--primary-text-color);
         }
 
-        .fan-card__controls {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-          justify-content: center;
+        .humidifier-card__slider-row {
+          align-items: center;
+          display: grid;
+          gap: 14px;
+          grid-template-columns: minmax(0, 1fr) auto;
+          margin-top: 4px;
         }
 
-        .fan-card__slider-actions {
+        .humidifier-card__slider-row--solo {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .humidifier-card__slider-wrap {
+          align-items: center;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          display: flex;
+          min-height: ${styles.slider_wrap_height};
+          padding: 0 14px;
+        }
+
+        .humidifier-card__slider-actions {
           display: inline-flex;
           flex: 0 0 auto;
           gap: 12px;
           justify-content: flex-end;
         }
 
-        .fan-card__control {
+        .humidifier-card__slider {
+          -webkit-appearance: none;
+          appearance: none;
+          background: transparent;
+          cursor: pointer;
+          flex: 1;
+          height: max(44px, calc(${styles.slider_thumb_size} + 12px));
+          margin: 0;
+          touch-action: none;
+          user-select: none;
+          -webkit-user-select: none;
+          width: 100%;
+        }
+
+        .humidifier-card__slider::-webkit-slider-runnable-track {
+          background:
+            linear-gradient(
+              90deg,
+              ${styles.slider_color} calc(var(--humidity, ${clamp(humidityProgress, 0, 100)}) * 1%),
+              rgba(255, 255, 255, 0.08) calc(var(--humidity, ${clamp(humidityProgress, 0, 100)}) * 1%)
+            );
+          border-radius: 999px;
+          height: ${styles.slider_height};
+        }
+
+        .humidifier-card__slider::-moz-range-track {
+          background:
+            linear-gradient(
+              90deg,
+              ${styles.slider_color} calc(var(--humidity, ${clamp(humidityProgress, 0, 100)}) * 1%),
+              rgba(255, 255, 255, 0.08) calc(var(--humidity, ${clamp(humidityProgress, 0, 100)}) * 1%)
+            );
+          border-radius: 999px;
+          height: ${styles.slider_height};
+        }
+
+        .humidifier-card__slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          background: #f5f7fb;
+          background-clip: padding-box;
+          border: 6px solid transparent;
+          border-radius: 50%;
+          box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12);
+          box-sizing: border-box;
+          height: calc(${styles.slider_thumb_size} + 12px);
+          margin-top: calc((${styles.slider_height} - (${styles.slider_thumb_size} + 12px)) / 2);
+          width: calc(${styles.slider_thumb_size} + 12px);
+        }
+
+        .humidifier-card__slider::-moz-range-thumb {
+          background: #f5f7fb;
+          background-clip: padding-box;
+          border: 6px solid transparent;
+          border-radius: 50%;
+          box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12);
+          box-sizing: border-box;
+          height: calc(${styles.slider_thumb_size} + 12px);
+          width: calc(${styles.slider_thumb_size} + 12px);
+        }
+
+        .humidifier-card__slider::-moz-range-track {
+          border: 0;
+        }
+
+        .humidifier-card__controls {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          justify-content: center;
+        }
+
+        .humidifier-card__control {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
@@ -1117,13 +1078,13 @@ class NodaliaFanCard extends HTMLElement {
           width: ${styles.control.size};
         }
 
-        .fan-card__control--active {
+        .humidifier-card__control--active {
           background: color-mix(in srgb, ${accentColor} 18%, ${styles.control.accent_background});
           border-color: color-mix(in srgb, ${accentColor} 48%, rgba(255, 255, 255, 0.12));
           color: ${styles.control.accent_color};
         }
 
-        .fan-card__control ha-icon {
+        .humidifier-card__control ha-icon {
           --mdc-icon-size: calc(${styles.control.size} * 0.46);
           display: inline-flex;
           height: calc(${styles.control.size} * 0.46);
@@ -1134,100 +1095,15 @@ class NodaliaFanCard extends HTMLElement {
           width: calc(${styles.control.size} * 0.46);
         }
 
-        .fan-card__slider-row {
-          align-items: center;
-          display: grid;
-          gap: 14px;
-          grid-template-columns: minmax(0, 1fr) auto;
-          margin-top: 4px;
-        }
-
-        .fan-card__slider-wrap {
-          align-items: center;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-          display: flex;
-          min-height: ${styles.slider_wrap_height};
-          padding: 0 14px;
-        }
-
-        .fan-card__slider-row--solo {
-          grid-template-columns: minmax(0, 1fr);
-        }
-
-        .fan-card__slider {
-          -webkit-appearance: none;
-          appearance: none;
-          background: transparent;
-          cursor: pointer;
-          flex: 1;
-          height: max(44px, calc(${styles.slider_thumb_size} + 12px));
-          margin: 0;
-          touch-action: none;
-          user-select: none;
-          -webkit-user-select: none;
-          width: 100%;
-        }
-
-        .fan-card__slider::-webkit-slider-runnable-track {
-          background:
-            linear-gradient(
-              90deg,
-              ${styles.slider_color} calc(var(--percentage, ${currentPercentage}) * 1%),
-              rgba(255, 255, 255, 0.08) calc(var(--percentage, ${currentPercentage}) * 1%)
-            );
-          border-radius: 999px;
-          height: ${styles.slider_height};
-        }
-
-        .fan-card__slider::-moz-range-track {
-          background:
-            linear-gradient(
-              90deg,
-              ${styles.slider_color} calc(var(--percentage, ${currentPercentage}) * 1%),
-              rgba(255, 255, 255, 0.08) calc(var(--percentage, ${currentPercentage}) * 1%)
-            );
-          border-radius: 999px;
-          height: ${styles.slider_height};
-        }
-
-        .fan-card__slider::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          background: #f5f7fb;
-          background-clip: padding-box;
-          border: 6px solid transparent;
-          border-radius: 50%;
-          box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12);
-          box-sizing: border-box;
-          height: calc(${styles.slider_thumb_size} + 12px);
-          margin-top: calc((${styles.slider_height} - (${styles.slider_thumb_size} + 12px)) / 2);
-          width: calc(${styles.slider_thumb_size} + 12px);
-        }
-
-        .fan-card__slider::-moz-range-thumb {
-          background: #f5f7fb;
-          background-clip: padding-box;
-          border: 6px solid transparent;
-          border-radius: 50%;
-          box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12);
-          box-sizing: border-box;
-          height: calc(${styles.slider_thumb_size} + 12px);
-          width: calc(${styles.slider_thumb_size} + 12px);
-        }
-
-        .fan-card__preset-panel {
+        .humidifier-card__panel {
           display: flex;
           flex-wrap: wrap;
           gap: 10px;
           justify-content: center;
-          margin-top: 8px;
           min-width: 0;
         }
 
-        .fan-card__preset {
+        .humidifier-card__option {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
@@ -1250,107 +1126,106 @@ class NodaliaFanCard extends HTMLElement {
           white-space: nowrap;
         }
 
-        .fan-card__preset.is-active {
+        .humidifier-card__option.is-active {
           background: ${styles.control.accent_background};
           border-color: color-mix(in srgb, ${accentColor} 48%, rgba(255, 255, 255, 0.12));
           color: ${styles.control.accent_color};
         }
 
-        .fan-card--compact:not(.fan-card--with-copy) .fan-card__hero {
+        .humidifier-card--compact:not(.humidifier-card--with-copy) .humidifier-card__hero {
           justify-items: center;
         }
 
         @media (max-width: 420px) {
-          .fan-card__hero {
+          .humidifier-card__hero {
             grid-template-columns: 50px minmax(0, 1fr);
           }
 
-          .fan-card__icon {
+          .humidifier-card__icon {
             height: 50px;
             width: 50px;
           }
 
-          .fan-card__slider-row {
+          .humidifier-card__slider-row {
             gap: 10px;
             grid-template-columns: minmax(0, 1fr) auto;
           }
 
-          .fan-card__slider-actions {
+          .humidifier-card__slider-actions {
             gap: 10px;
             justify-content: flex-end;
           }
         }
       </style>
       <ha-card
-        class="fan-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""}"
+        class="humidifier-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "humidifier-card--compact" : ""} ${showCopyBlock ? "humidifier-card--with-copy" : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
-        data-fan-action="toggle"
       >
-        <div class="fan-card__content">
-          <div class="fan-card__hero">
+        <div class="humidifier-card__content">
+          <div class="humidifier-card__hero">
             <button
               type="button"
-              class="fan-card__icon"
-              data-fan-action="toggle"
+              class="humidifier-card__icon"
+              data-humidifier-action="toggle"
               aria-label="Encender o apagar"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
             </button>
             ${showCopyBlock
               ? `
-                <div class="fan-card__copy">
-                  ${isCompactLayout ? "" : `<div class="fan-card__title">${escapeHtml(title)}</div>`}
-                  ${chips.length ? `<div class="fan-card__chips">${chips.join("")}</div>` : ""}
+                <div class="humidifier-card__copy">
+                  ${isCompactLayout ? "" : `<div class="humidifier-card__title">${escapeHtml(title)}</div>`}
+                  ${chips.length ? `<div class="humidifier-card__chips">${chips.join("")}</div>` : ""}
                 </div>
               `
               : ""}
           </div>
 
           ${
-            isOn && supportsPercentage
+            isOn && supportsHumidity
               ? `
-                <div class="fan-card__slider-row ${hasSecondaryControls ? "" : "fan-card__slider-row--solo"}">
-                  <div class="fan-card__slider-wrap">
+                <div class="humidifier-card__slider-row ${hasSecondaryControls ? "" : "humidifier-card__slider-row--solo"}">
+                  <div class="humidifier-card__slider-wrap">
                     <input
                       type="range"
-                      class="fan-card__slider"
-                      data-fan-control="percentage"
-                      min="0"
-                      max="100"
+                      class="humidifier-card__slider"
+                      data-humidifier-control="humidity"
+                      min="${humidityRange.min}"
+                      max="${humidityRange.max}"
                       step="any"
-                      value="${currentPercentage}"
-                      style="--percentage:${currentPercentage};"
-                      aria-label="Velocidad"
+                      value="${currentHumidity}"
+                      style="--humidity:${clamp(humidityProgress, 0, 100)};"
+                      aria-label="Humedad objetivo"
                     />
                   </div>
                   ${
                     hasSecondaryControls
                       ? `
-                        <div class="fan-card__slider-actions">
+                        <div class="humidifier-card__slider-actions">
                           ${
-                            supportsOscillation
+                            modeOptions.length
                               ? `
                                 <button
                                   type="button"
-                                  class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}"
-                                  data-fan-action="oscillate"
-                                  aria-label="${this._isOscillating(state) ? "Desactivar oscilacion" : "Activar oscilacion"}"
+                                  class="humidifier-card__control ${this._modePanelOpen ? "humidifier-card__control--active" : ""}"
+                                  data-humidifier-action="toggle-mode-panel"
+                                  aria-label="Mostrar modos"
                                 >
-                                  <ha-icon icon="mdi:rotate-360"></ha-icon>
+                                  <ha-icon icon="mdi:tune-variant"></ha-icon>
                                 </button>
                               `
                               : ""
                           }
                           ${
-                            presetModes.length
+                            fanModeOptions.length
                               ? `
                                 <button
                                   type="button"
-                                  class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
-                                  data-fan-action="toggle-preset-panel"
-                                  aria-label="Mostrar modos"
+                                  class="humidifier-card__control ${this._fanModePanelOpen ? "humidifier-card__control--active" : ""}"
+                                  data-humidifier-action="toggle-fan-mode-panel"
+                                  aria-label="Mostrar velocidades"
                                 >
-                                  <ha-icon icon="mdi:tune-variant"></ha-icon>
+                                  <ha-icon icon="mdi:fan"></ha-icon>
                                 </button>
                               `
                               : ""
@@ -1365,33 +1240,33 @@ class NodaliaFanCard extends HTMLElement {
           }
 
           ${
-            !supportsPercentage && hasSecondaryControls
+            !supportsHumidity && hasSecondaryControls && isOn
               ? `
-                <div class="fan-card__controls">
+                <div class="humidifier-card__controls">
                   ${
-                    supportsOscillation
+                    modeOptions.length
                       ? `
                         <button
                           type="button"
-                          class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}"
-                          data-fan-action="oscillate"
-                          aria-label="${this._isOscillating(state) ? "Desactivar oscilacion" : "Activar oscilacion"}"
+                          class="humidifier-card__control ${this._modePanelOpen ? "humidifier-card__control--active" : ""}"
+                          data-humidifier-action="toggle-mode-panel"
+                          aria-label="Mostrar modos"
                         >
-                          <ha-icon icon="mdi:rotate-360"></ha-icon>
+                          <ha-icon icon="mdi:tune-variant"></ha-icon>
                         </button>
                       `
                       : ""
                   }
                   ${
-                    presetModes.length
+                    fanModeOptions.length
                       ? `
                         <button
                           type="button"
-                          class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
-                          data-fan-action="toggle-preset-panel"
-                          aria-label="Mostrar modos"
+                          class="humidifier-card__control ${this._fanModePanelOpen ? "humidifier-card__control--active" : ""}"
+                          data-humidifier-action="toggle-fan-mode-panel"
+                          aria-label="Mostrar velocidades"
                         >
-                          <ha-icon icon="mdi:tune-variant"></ha-icon>
+                          <ha-icon icon="mdi:fan"></ha-icon>
                         </button>
                       `
                       : ""
@@ -1402,18 +1277,39 @@ class NodaliaFanCard extends HTMLElement {
           }
 
           ${
-            isOn && this._presetPanelOpen && presetModes.length
+            isOn && this._modePanelOpen && modeOptions.length
               ? `
-                <div class="fan-card__preset-panel">
-                  ${presetModes
+                <div class="humidifier-card__panel">
+                  ${modeOptions
                     .map(mode => `
                       <button
                         type="button"
-                        class="fan-card__preset ${normalizeTextKey(mode) === normalizeTextKey(currentPresetMode) ? "is-active" : ""}"
-                        data-fan-action="preset"
+                        class="humidifier-card__option ${normalizeTextKey(mode) === normalizeTextKey(currentMode) ? "is-active" : ""}"
+                        data-humidifier-action="mode"
                         data-mode="${escapeHtml(mode)}"
                       >
-                        ${escapeHtml(translatePresetLabel(mode))}
+                        ${escapeHtml(translateModeLabel(mode))}
+                      </button>
+                    `)
+                    .join("")}
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            isOn && this._fanModePanelOpen && fanModeOptions.length
+              ? `
+                <div class="humidifier-card__panel">
+                  ${fanModeOptions
+                    .map(mode => `
+                      <button
+                        type="button"
+                        class="humidifier-card__option ${normalizeTextKey(mode) === normalizeTextKey(currentFanMode) ? "is-active" : ""}"
+                        data-humidifier-action="fan-mode"
+                        data-mode="${escapeHtml(mode)}"
+                      >
+                        ${escapeHtml(translateModeLabel(mode))}
                       </button>
                     `)
                     .join("")}
@@ -1428,10 +1324,10 @@ class NodaliaFanCard extends HTMLElement {
 }
 
 if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaFanCard);
+  customElements.define(CARD_TAG, NodaliaHumidifierCard);
 }
 
-class NodaliaFanCardEditor extends HTMLElement {
+class NodaliaHumidifierCardEditor extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -1473,7 +1369,7 @@ class NodaliaFanCardEditor extends HTMLElement {
 
   _getEntityOptionsSignature(hass = this._hass) {
     return Object.keys(hass?.states || {})
-      .filter(entityId => entityId.startsWith("fan."))
+      .filter(entityId => entityId.startsWith("humidifier.") || entityId.startsWith("select.") || entityId.startsWith("input_select."))
       .sort((left, right) => left.localeCompare(right, "es"))
       .join("|");
   }
@@ -1660,17 +1556,19 @@ class NodaliaFanCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsMarkup() {
-    const entityIds = Object.keys(this._hass?.states || {})
-      .filter(entityId => entityId.startsWith("fan."))
+    const humidifierIds = Object.keys(this._hass?.states || {})
+      .filter(entityId => entityId.startsWith("humidifier."))
+      .sort((left, right) => left.localeCompare(right, "es"));
+    const optionEntityIds = Object.keys(this._hass?.states || {})
+      .filter(entityId => entityId.startsWith("select.") || entityId.startsWith("input_select."))
       .sort((left, right) => left.localeCompare(right, "es"));
 
-    if (!entityIds.length) {
-      return "";
-    }
-
     return `
-      <datalist id="fan-card-entities">
-        ${entityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
+      <datalist id="humidifier-card-entities">
+        ${humidifierIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
+      </datalist>
+      <datalist id="humidifier-card-select-entities">
+        ${optionEntityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
       </datalist>
     `;
   }
@@ -1787,17 +1685,23 @@ class NodaliaFanCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal y textos visibles de la tarjeta.</div>
+            <div class="editor-section__hint">Entidad principal, textos visibles y selects auxiliares.</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Entidad", "entity", config.entity, {
-              placeholder: "fan.salon",
+              placeholder: "humidifier.deshumidificador",
             })}
             ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Salon",
+              placeholder: "Deshumidificador",
             })}
             ${this._renderTextField("Icono", "icon", config.icon, {
-              placeholder: "mdi:fan",
+              placeholder: "mdi:air-humidifier",
+            })}
+            ${this._renderTextField("Select modo", "mode_entity", config.mode_entity, {
+              placeholder: "select.deshumidificador_modo",
+            })}
+            ${this._renderTextField("Select ventilacion", "fan_mode_entity", config.fan_mode_entity, {
+              placeholder: "select.deshumidificador_ventilador",
             })}
           </div>
         </section>
@@ -1819,11 +1723,12 @@ class NodaliaFanCardEditor extends HTMLElement {
               ],
             )}
             ${this._renderCheckboxField("Mostrar estado en burbuja", "show_state", config.show_state === true)}
-            ${this._renderCheckboxField("Mostrar chip de velocidad", "show_percentage_chip", config.show_percentage_chip !== false)}
+            ${this._renderCheckboxField("Mostrar chip de humedad", "show_target_humidity_chip", config.show_target_humidity_chip !== false)}
             ${this._renderCheckboxField("Mostrar chip de modo", "show_mode_chip", config.show_mode_chip !== false)}
+            ${this._renderCheckboxField("Mostrar chip de ventilacion", "show_fan_mode_chip", config.show_fan_mode_chip !== false)}
             ${this._renderCheckboxField("Mostrar slider", "show_slider", config.show_slider !== false)}
-            ${this._renderCheckboxField("Mostrar boton oscilacion", "show_oscillation", config.show_oscillation !== false)}
-            ${this._renderCheckboxField("Mostrar boton modo", "show_preset_modes", config.show_preset_modes !== false)}
+            ${this._renderCheckboxField("Mostrar boton modo", "show_mode_button", config.show_mode_button !== false)}
+            ${this._renderCheckboxField("Mostrar boton ventilacion", "show_fan_mode_button", config.show_fan_mode_button !== false)}
           </div>
         </section>
 
@@ -1886,20 +1791,22 @@ class NodaliaFanCardEditor extends HTMLElement {
 
     this.shadowRoot
       .querySelectorAll('input[data-field="entity"]')
-      .forEach(input => {
-        input.setAttribute("list", "fan-card-entities");
-      });
+      .forEach(input => input.setAttribute("list", "humidifier-card-entities"));
+
+    this.shadowRoot
+      .querySelectorAll('input[data-field="mode_entity"], input[data-field="fan_mode_entity"]')
+      .forEach(input => input.setAttribute("list", "humidifier-card-select-entities"));
   }
 }
 
 if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaFanCardEditor);
+  customElements.define(EDITOR_TAG, NodaliaHumidifierCardEditor);
 }
 
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: CARD_TAG,
-  name: "Nodalia Fan Card",
-  description: "Tarjeta de ventilador con slider de velocidad, oscilacion y modos.",
+  name: "Nodalia Humidifier Card",
+  description: "Tarjeta de humidificador/deshumidificador con slider de humedad y modos.",
   preview: true,
 });

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "0.1.0";
+const CARD_VERSION = "0.5.0";
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -434,48 +434,20 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
-    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
-    this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
-    this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
-    this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
-    this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
-    this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
-    this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
-    this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
-    this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowChange);
-    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
-    this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
-    this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
   }
 
   connectedCallback() {
     window.addEventListener("resize", this._onResize);
     window.addEventListener("keydown", this._onWindowKeyDown);
-    window.addEventListener("pointermove", this._onWindowPointerMove, { passive: false });
-    window.addEventListener("pointerup", this._onWindowPointerUp, { passive: false });
-    window.addEventListener("pointercancel", this._onWindowPointerUp, { passive: false });
-    window.addEventListener("mousemove", this._onWindowMouseMove, { passive: false });
-    window.addEventListener("mouseup", this._onWindowMouseUp, { passive: false });
-    window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-    window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-    window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
     this._render();
   }
 
   disconnectedCallback() {
     window.removeEventListener("resize", this._onResize);
     window.removeEventListener("keydown", this._onWindowKeyDown);
-    window.removeEventListener("pointermove", this._onWindowPointerMove);
-    window.removeEventListener("pointerup", this._onWindowPointerUp);
-    window.removeEventListener("pointercancel", this._onWindowPointerUp);
-    window.removeEventListener("mousemove", this._onWindowMouseMove);
-    window.removeEventListener("mouseup", this._onWindowMouseUp);
-    window.removeEventListener("touchmove", this._onWindowTouchMove);
-    window.removeEventListener("touchend", this._onWindowTouchEnd);
-    window.removeEventListener("touchcancel", this._onWindowTouchEnd);
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
@@ -987,7 +959,7 @@ class NodaliaMediaPlayer extends HTMLElement {
   _getPlayerVolumePercent(entityId, state) {
     const draftValue = this._draftVolume.get(entityId);
     if (Number.isFinite(draftValue)) {
-      return clamp(Math.round(draftValue), 0, 100);
+      return clamp(Number(draftValue), 0, 100);
     }
 
     return clamp(Math.round(Number(state?.attributes?.volume_level || 0) * 100), 0, 100);
@@ -997,7 +969,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     const slider = this.shadowRoot?.querySelector(
       `.media-player__volume-slider[data-entity="${escapeSelectorValue(entityId)}"]`,
     );
-    const nextValue = clamp(Math.round(Number(value)), 0, 100);
+    const nextValue = clamp(Number(value), 0, 100);
 
     if (slider instanceof HTMLInputElement) {
       slider.style.setProperty("--media-volume", String(nextValue));
@@ -1319,7 +1291,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     if (slider.dataset.mediaSlider === "volume") {
-      const nextValue = clamp(Math.round(Number(slider.value)), 0, 100);
+      const nextValue = clamp(Number(slider.value), 0, 100);
       this._draftVolume.set(slider.dataset.entity, nextValue);
       this._updatePlayerVolumePreview(slider.dataset.entity, nextValue);
     }
@@ -1380,29 +1352,13 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _queueSliderDragUpdate(slider, clientX) {
-    this._pendingDragUpdate = { slider, clientX };
+    const nextValue = getRangeValueFromClientX(slider, clientX);
+    slider.value = String(nextValue);
 
-    if (this._dragFrame) {
-      return;
+    if (slider.dataset.mediaSlider === "volume") {
+      this._draftVolume.set(slider.dataset.entity, nextValue);
+      this._updatePlayerVolumePreview(slider.dataset.entity, nextValue);
     }
-
-    this._dragFrame = window.requestAnimationFrame(() => {
-      this._dragFrame = 0;
-      const pending = this._pendingDragUpdate;
-      this._pendingDragUpdate = null;
-
-      if (!pending) {
-        return;
-      }
-
-      const nextValue = getRangeValueFromClientX(pending.slider, pending.clientX);
-      pending.slider.value = String(nextValue);
-
-      if (pending.slider.dataset.mediaSlider === "volume") {
-        this._draftVolume.set(pending.slider.dataset.entity, nextValue);
-        this._updatePlayerVolumePreview(pending.slider.dataset.entity, nextValue);
-      }
-    });
   }
 
   _commitSliderDrag(clientX, event = null, pointerId = null) {
@@ -1553,7 +1509,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._triggerHaptic("selection");
 
     if (slider.dataset.mediaSlider === "volume") {
-      const nextValue = clamp(Math.round(Number(slider.value)), 0, 100);
+      const nextValue = clamp(Number(slider.value), 0, 100);
       this._draftVolume.set(slider.dataset.entity, nextValue);
       this._commitPlayerVolume(slider.dataset.entity, nextValue);
     }
@@ -2417,7 +2373,7 @@ class NodaliaMediaPlayer extends HTMLElement {
             data-entity="${escapeHtml(player.entity)}"
             min="0"
             max="100"
-            step="1"
+            step="any"
             value="${currentVolumePercent}"
             style="--media-volume:${currentVolumePercent};"
             aria-label="Volumen"

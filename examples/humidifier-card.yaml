@@ -1,0 +1,3 @@
+type: custom:nodalia-humidifier-card
+entity: humidifier.deshumidificador
+name: Deshumidificador
