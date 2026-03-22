@@ -1576,7 +1576,7 @@ class NodaliaLightCard extends HTMLElement {
           border-radius: 999px;
           cursor: pointer;
           display: block;
-          height: ${styles.slider_height};
+          height: max(44px, calc(${styles.slider_height} + 18px));
           outline: none;
           touch-action: none;
           user-select: none;
@@ -1622,22 +1622,26 @@ class NodaliaLightCard extends HTMLElement {
           -webkit-appearance: none;
           appearance: none;
           background: var(--primary-text-color);
-          border: 0;
+          background-clip: padding-box;
+          border: 6px solid transparent;
           border-radius: 50%;
           box-shadow: 0 0 0 calc(${styles.slider_thumb_size} * 0.22) rgba(255, 255, 255, 0.12);
+          box-sizing: border-box;
           cursor: pointer;
-          height: ${styles.slider_thumb_size};
-          width: ${styles.slider_thumb_size};
+          height: calc(${styles.slider_thumb_size} + 12px);
+          width: calc(${styles.slider_thumb_size} + 12px);
         }
 
         .light-card__slider::-moz-range-thumb {
           background: var(--primary-text-color);
-          border: 0;
+          background-clip: padding-box;
+          border: 6px solid transparent;
           border-radius: 50%;
           box-shadow: 0 0 0 calc(${styles.slider_thumb_size} * 0.22) rgba(255, 255, 255, 0.12);
+          box-sizing: border-box;
           cursor: pointer;
-          height: ${styles.slider_thumb_size};
-          width: ${styles.slider_thumb_size};
+          height: calc(${styles.slider_thumb_size} + 12px);
+          width: calc(${styles.slider_thumb_size} + 12px);
         }
 
         .light-card__slider::-moz-range-track {

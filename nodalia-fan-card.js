@@ -1209,7 +1209,7 @@ class NodaliaFanCard extends HTMLElement {
           background: transparent;
           cursor: pointer;
           flex: 1;
-          height: ${styles.slider_thumb_size};
+          height: max(44px, calc(${styles.slider_thumb_size} + 12px));
           margin: 0;
           touch-action: none;
           user-select: none;
@@ -1243,21 +1243,25 @@ class NodaliaFanCard extends HTMLElement {
           -webkit-appearance: none;
           appearance: none;
           background: #f5f7fb;
-          border: 0;
+          background-clip: padding-box;
+          border: 6px solid transparent;
           border-radius: 50%;
           box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12);
-          height: ${styles.slider_thumb_size};
-          margin-top: calc((${styles.slider_height} - ${styles.slider_thumb_size}) / 2);
-          width: ${styles.slider_thumb_size};
+          box-sizing: border-box;
+          height: calc(${styles.slider_thumb_size} + 12px);
+          margin-top: calc((${styles.slider_height} - (${styles.slider_thumb_size} + 12px)) / 2);
+          width: calc(${styles.slider_thumb_size} + 12px);
         }
 
         .fan-card__slider::-moz-range-thumb {
           background: #f5f7fb;
-          border: 0;
+          background-clip: padding-box;
+          border: 6px solid transparent;
           border-radius: 50%;
           box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12);
-          height: ${styles.slider_thumb_size};
-          width: ${styles.slider_thumb_size};
+          box-sizing: border-box;
+          height: calc(${styles.slider_thumb_size} + 12px);
+          width: calc(${styles.slider_thumb_size} + 12px);
         }
 
         .fan-card__preset-panel {
