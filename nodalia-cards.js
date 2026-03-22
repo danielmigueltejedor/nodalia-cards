@@ -4953,6 +4953,25 @@ function clamp(value, minimum, maximum) {
   return Math.min(Math.max(value, minimum), maximum);
 }
 
+function getRangeValueFromClientX(slider, clientX) {
+  const rect = slider.getBoundingClientRect();
+  if (!rect.width) {
+    return Number(slider.value || 0);
+  }
+
+  const min = Number(slider.min || 0);
+  const max = Number(slider.max || 100);
+  const step = slider.step === "any" ? 0 : Number(slider.step || 1);
+  const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
+  let nextValue = min + ((max - min) * ratio);
+
+  if (Number.isFinite(step) && step > 0) {
+    nextValue = min + (Math.round((nextValue - min) / step) * step);
+  }
+
+  return clamp(nextValue, min, max);
+}
+
 function formatDuration(totalSeconds) {
   const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
   const hours = Math.floor(safeSeconds / 3600);
@@ -5051,6 +5070,8 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._lastRenderSignature = "";
     this._draftVolume = new Map();
     this._draftVolumeTimers = new Map();
+    this._activeSliderDrag = null;
+    this._skipNextSliderChange = null;
     this._volumeStepFallback = new Set();
     this._tvSourcePickerEntity = null;
     this._tvVolumePickerEntity = null;
@@ -5067,20 +5088,30 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
+    this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowChange);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
   }
 
   connectedCallback() {
     window.addEventListener("resize", this._onResize);
     window.addEventListener("keydown", this._onWindowKeyDown);
+    window.addEventListener("pointermove", this._onWindowPointerMove, { passive: false });
+    window.addEventListener("pointerup", this._onWindowPointerUp, { passive: false });
+    window.addEventListener("pointercancel", this._onWindowPointerUp, { passive: false });
     this._render();
   }
 
   disconnectedCallback() {
     window.removeEventListener("resize", this._onResize);
     window.removeEventListener("keydown", this._onWindowKeyDown);
+    window.removeEventListener("pointermove", this._onWindowPointerMove);
+    window.removeEventListener("pointerup", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onWindowPointerUp);
     if (this._mediaTicker) {
       window.clearInterval(this._mediaTicker);
       this._mediaTicker = null;
@@ -5921,6 +5952,85 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
   }
 
+  _onShadowPointerDown(event) {
+    const slider = event
+      .composedPath()
+      .find(node =>
+        node instanceof HTMLInputElement &&
+        node.type === "range" &&
+        node.dataset?.mediaSlider,
+      );
+
+    if (!slider || (typeof event.button === "number" && event.button !== 0)) {
+      return;
+    }
+
+    this._activeSliderDrag = {
+      pointerId: event.pointerId,
+      slider,
+    };
+
+    try {
+      slider.setPointerCapture(event.pointerId);
+    } catch (_error) {
+      // Ignore unsupported pointer capture.
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const nextValue = getRangeValueFromClientX(slider, event.clientX);
+    slider.value = String(nextValue);
+
+    if (slider.dataset.mediaSlider === "volume") {
+      this._draftVolume.set(slider.dataset.entity, nextValue);
+      this._updatePlayerVolumePreview(slider.dataset.entity, nextValue);
+    }
+  }
+
+  _onWindowPointerMove(event) {
+    const drag = this._activeSliderDrag;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
+    drag.slider.value = String(nextValue);
+
+    if (drag.slider.dataset.mediaSlider === "volume") {
+      this._draftVolume.set(drag.slider.dataset.entity, nextValue);
+      this._updatePlayerVolumePreview(drag.slider.dataset.entity, nextValue);
+    }
+  }
+
+  _onWindowPointerUp(event) {
+    const drag = this._activeSliderDrag;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
+    drag.slider.value = String(nextValue);
+    this._skipNextSliderChange = drag.slider;
+
+    if (drag.slider.dataset.mediaSlider === "volume") {
+      this._triggerHaptic("selection");
+      this._draftVolume.set(drag.slider.dataset.entity, nextValue);
+      this._updatePlayerVolumePreview(drag.slider.dataset.entity, nextValue);
+      this._commitPlayerVolume(drag.slider.dataset.entity, nextValue);
+    }
+
+    try {
+      drag.slider.releasePointerCapture(event.pointerId);
+    } catch (_error) {
+      // Ignore unsupported pointer capture.
+    }
+
+    this._activeSliderDrag = null;
+  }
+
   _onShadowChange(event) {
     const slider = event
       .composedPath()
@@ -5931,6 +6041,12 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     event.stopPropagation();
+
+    if (this._skipNextSliderChange === slider) {
+      this._skipNextSliderChange = null;
+      return;
+    }
+
     this._triggerHaptic("selection");
 
     if (slider.dataset.mediaSlider === "volume") {
@@ -7826,7 +7942,9 @@ class NodaliaMediaPlayer extends HTMLElement {
           display: block;
           height: ${playerStyles.slider_height};
           outline: none;
-          touch-action: pan-x;
+          touch-action: none;
+          user-select: none;
+          -webkit-user-select: none;
           width: 100%;
         }
 
@@ -9236,6 +9354,25 @@ function escapeSelectorValue(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
+function getRangeValueFromClientX(slider, clientX) {
+  const rect = slider.getBoundingClientRect();
+  if (!rect.width) {
+    return Number(slider.value || 0);
+  }
+
+  const min = Number(slider.min || 0);
+  const max = Number(slider.max || 100);
+  const step = slider.step === "any" ? 0 : Number(slider.step || 1);
+  const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
+  let nextValue = min + ((max - min) * ratio);
+
+  if (Number.isFinite(step) && step > 0) {
+    nextValue = min + (Math.round((nextValue - min) / step) * step);
+  }
+
+  return clamp(nextValue, min, max);
+}
+
 function fireEvent(node, type, detail, options) {
   const event = new CustomEvent(type, {
     bubbles: options?.bubbles ?? true,
@@ -9294,6 +9431,8 @@ class NodaliaLightCard extends HTMLElement {
     this._activeControlMode = "brightness";
     this._cardWidth = 0;
     this._isCompactLayout = false;
+    this._activeSliderDrag = null;
+    this._skipNextSliderChange = null;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -9314,17 +9453,27 @@ class NodaliaLightCard extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
+    this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowChange);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
   }
 
   connectedCallback() {
     this._resizeObserver?.observe(this);
+    window.addEventListener("pointermove", this._onWindowPointerMove, { passive: false });
+    window.addEventListener("pointerup", this._onWindowPointerUp, { passive: false });
+    window.addEventListener("pointercancel", this._onWindowPointerUp, { passive: false });
   }
 
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
+    window.removeEventListener("pointermove", this._onWindowPointerMove);
+    window.removeEventListener("pointerup", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onWindowPointerUp);
   }
 
   setConfig(config) {
@@ -9728,6 +9877,114 @@ class NodaliaLightCard extends HTMLElement {
     }
   }
 
+  _applySliderValue(slider, value, options = {}) {
+    const commit = options.commit === true;
+
+    switch (slider.dataset.lightControl) {
+      case "brightness": {
+        const nextValue = clamp(Math.round(Number(value)), 1, 100);
+        this._draftBrightness.set(this._config.entity, nextValue);
+        this._updateBrightnessPreview(nextValue);
+        if (commit) {
+          this._triggerHaptic("selection");
+          this._commitBrightness(nextValue);
+        }
+        break;
+      }
+      case "temperature": {
+        const state = this._getState();
+        const range = this._getTemperatureRange(state);
+        const nextValue = clamp(Math.round(Number(value)), range.min, range.max);
+        this._draftTemperature.set(this._config.entity, nextValue);
+        this._updateTemperaturePreview(nextValue, state);
+        if (commit) {
+          this._triggerHaptic("selection");
+          this._commitTemperaturePreset(nextValue);
+        }
+        break;
+      }
+      case "color": {
+        const state = this._getState();
+        const nextValue = clamp(Math.round(Number(value)), 0, 360);
+        this._draftHue.set(this._config.entity, nextValue);
+        this._updateColorPreview(nextValue);
+        if (commit) {
+          this._triggerHaptic("selection");
+          this._commitColorHue(nextValue, state);
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  _onShadowPointerDown(event) {
+    const slider = event
+      .composedPath()
+      .find(node =>
+        node instanceof HTMLInputElement &&
+        node.type === "range" &&
+        node.dataset?.lightControl,
+      );
+
+    if (!slider || (typeof event.button === "number" && event.button !== 0)) {
+      return;
+    }
+
+    this._activeSliderDrag = {
+      pointerId: event.pointerId,
+      slider,
+    };
+
+    try {
+      slider.setPointerCapture(event.pointerId);
+    } catch (_error) {
+      // Ignore unsupported pointer capture.
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const nextValue = getRangeValueFromClientX(slider, event.clientX);
+    slider.value = String(nextValue);
+    this._applySliderValue(slider, nextValue, { commit: false });
+  }
+
+  _onWindowPointerMove(event) {
+    const drag = this._activeSliderDrag;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
+    drag.slider.value = String(nextValue);
+    this._applySliderValue(drag.slider, nextValue, { commit: false });
+  }
+
+  _onWindowPointerUp(event) {
+    const drag = this._activeSliderDrag;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
+    drag.slider.value = String(nextValue);
+    this._skipNextSliderChange = drag.slider;
+    this._applySliderValue(drag.slider, nextValue, { commit: true });
+
+    try {
+      drag.slider.releasePointerCapture(event.pointerId);
+    } catch (_error) {
+      // Ignore unsupported pointer capture.
+    }
+
+    this._activeSliderDrag = null;
+  }
+
   _getAvailableControlModes(state) {
     const modes = [];
 
@@ -9781,30 +10038,7 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
-    switch (slider.dataset.lightControl) {
-      case "brightness": {
-        const nextValue = clamp(Math.round(Number(slider.value)), 1, 100);
-        this._draftBrightness.set(this._config.entity, nextValue);
-        this._updateBrightnessPreview(nextValue);
-        break;
-      }
-      case "temperature": {
-        const state = this._getState();
-        const range = this._getTemperatureRange(state);
-        const nextValue = clamp(Math.round(Number(slider.value)), range.min, range.max);
-        this._draftTemperature.set(this._config.entity, nextValue);
-        this._updateTemperaturePreview(nextValue, state);
-        break;
-      }
-      case "color": {
-        const nextValue = clamp(Math.round(Number(slider.value)), 0, 360);
-        this._draftHue.set(this._config.entity, nextValue);
-        this._updateColorPreview(nextValue);
-        break;
-      }
-      default:
-        break;
-    }
+    this._applySliderValue(slider, slider.value, { commit: false });
   }
 
   _onShadowChange(event) {
@@ -9816,33 +10050,12 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
-    this._triggerHaptic("selection");
-
-    switch (slider.dataset.lightControl) {
-      case "brightness": {
-        const nextValue = clamp(Math.round(Number(slider.value)), 1, 100);
-        this._draftBrightness.set(this._config.entity, nextValue);
-        this._commitBrightness(nextValue);
-        break;
-      }
-      case "temperature": {
-        const state = this._getState();
-        const range = this._getTemperatureRange(state);
-        const nextValue = clamp(Math.round(Number(slider.value)), range.min, range.max);
-        this._draftTemperature.set(this._config.entity, nextValue);
-        this._commitTemperaturePreset(nextValue);
-        break;
-      }
-      case "color": {
-        const state = this._getState();
-        const nextValue = clamp(Math.round(Number(slider.value)), 0, 360);
-        this._draftHue.set(this._config.entity, nextValue);
-        this._commitColorHue(nextValue, state);
-        break;
-      }
-      default:
-        break;
+    if (this._skipNextSliderChange === slider) {
+      this._skipNextSliderChange = null;
+      return;
     }
+
+    this._applySliderValue(slider, slider.value, { commit: true });
   }
 
   _onShadowClick(event) {
@@ -10286,7 +10499,9 @@ class NodaliaLightCard extends HTMLElement {
           display: block;
           height: ${styles.slider_height};
           outline: none;
-          touch-action: pan-x;
+          touch-action: none;
+          user-select: none;
+          -webkit-user-select: none;
           width: 100%;
         }
 
@@ -10400,7 +10615,11 @@ class NodaliaLightCard extends HTMLElement {
           }
         }
       </style>
-      <ha-card class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""} ${isMiniLayout ? "light-card--mini" : ""} ${showCopyBlock ? "light-card--with-copy" : ""}" style="--accent-color:${escapeHtml(accentColor)};">
+      <ha-card
+        class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""} ${isMiniLayout ? "light-card--mini" : ""} ${showCopyBlock ? "light-card--with-copy" : ""}"
+        style="--accent-color:${escapeHtml(accentColor)};"
+        ${!isOn ? 'data-light-action="toggle"' : ""}
+      >
         <div class="light-card__content">
           <div class="light-card__hero">
             <button
@@ -11306,6 +11525,25 @@ function normalizeTextKey(value) {
     .replace(/^_+|_+$/g, "");
 }
 
+function getRangeValueFromClientX(slider, clientX) {
+  const rect = slider.getBoundingClientRect();
+  if (!rect.width) {
+    return Number(slider.value || 0);
+  }
+
+  const min = Number(slider.min || 0);
+  const max = Number(slider.max || 100);
+  const step = slider.step === "any" ? 0 : Number(slider.step || 1);
+  const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
+  let nextValue = min + ((max - min) * ratio);
+
+  if (Number.isFinite(step) && step > 0) {
+    nextValue = min + (Math.round((nextValue - min) / step) * step);
+  }
+
+  return clamp(nextValue, min, max);
+}
+
 function translatePresetLabel(value) {
   const normalized = normalizeTextKey(value);
 
@@ -11369,6 +11607,8 @@ class NodaliaFanCard extends HTMLElement {
     this._presetPanelOpen = false;
     this._cardWidth = 0;
     this._isCompactLayout = false;
+    this._activeSliderDrag = null;
+    this._skipNextSliderChange = null;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -11389,17 +11629,27 @@ class NodaliaFanCard extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
+    this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowChange);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
   }
 
   connectedCallback() {
     this._resizeObserver?.observe(this);
+    window.addEventListener("pointermove", this._onWindowPointerMove, { passive: false });
+    window.addEventListener("pointerup", this._onWindowPointerUp, { passive: false });
+    window.addEventListener("pointercancel", this._onWindowPointerUp, { passive: false });
   }
 
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
+    window.removeEventListener("pointermove", this._onWindowPointerMove);
+    window.removeEventListener("pointerup", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onWindowPointerUp);
   }
 
   setConfig(config) {
@@ -11629,6 +11879,84 @@ class NodaliaFanCard extends HTMLElement {
     }
   }
 
+  _applySliderValue(slider, value, options = {}) {
+    const commit = options.commit === true;
+    const nextValue = clamp(Math.round(Number(value)), 0, 100);
+
+    this._draftPercentage.set(this._config.entity, nextValue);
+    this._updatePercentagePreview(nextValue);
+
+    if (commit) {
+      this._triggerHaptic("selection");
+      this._commitPercentage(nextValue);
+    }
+  }
+
+  _onShadowPointerDown(event) {
+    const slider = event
+      .composedPath()
+      .find(node =>
+        node instanceof HTMLInputElement &&
+        node.type === "range" &&
+        node.dataset?.fanControl,
+      );
+
+    if (!slider || (typeof event.button === "number" && event.button !== 0)) {
+      return;
+    }
+
+    this._activeSliderDrag = {
+      pointerId: event.pointerId,
+      slider,
+    };
+
+    try {
+      slider.setPointerCapture(event.pointerId);
+    } catch (_error) {
+      // Ignore unsupported pointer capture.
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const nextValue = getRangeValueFromClientX(slider, event.clientX);
+    slider.value = String(nextValue);
+    this._applySliderValue(slider, nextValue, { commit: false });
+  }
+
+  _onWindowPointerMove(event) {
+    const drag = this._activeSliderDrag;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
+    drag.slider.value = String(nextValue);
+    this._applySliderValue(drag.slider, nextValue, { commit: false });
+  }
+
+  _onWindowPointerUp(event) {
+    const drag = this._activeSliderDrag;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
+    drag.slider.value = String(nextValue);
+    this._skipNextSliderChange = drag.slider;
+    this._applySliderValue(drag.slider, nextValue, { commit: true });
+
+    try {
+      drag.slider.releasePointerCapture(event.pointerId);
+    } catch (_error) {
+      // Ignore unsupported pointer capture.
+    }
+
+    this._activeSliderDrag = null;
+  }
+
   _onShadowInput(event) {
     const slider = event
       .composedPath()
@@ -11638,9 +11966,7 @@ class NodaliaFanCard extends HTMLElement {
       return;
     }
 
-    const nextValue = clamp(Math.round(Number(slider.value)), 0, 100);
-    this._draftPercentage.set(this._config.entity, nextValue);
-    this._updatePercentagePreview(nextValue);
+    this._applySliderValue(slider, slider.value, { commit: false });
   }
 
   _onShadowChange(event) {
@@ -11652,10 +11978,12 @@ class NodaliaFanCard extends HTMLElement {
       return;
     }
 
-    const nextValue = clamp(Math.round(Number(slider.value)), 0, 100);
-    this._draftPercentage.set(this._config.entity, nextValue);
-    this._triggerHaptic("selection");
-    this._commitPercentage(nextValue);
+    if (this._skipNextSliderChange === slider) {
+      this._skipNextSliderChange = null;
+      return;
+    }
+
+    this._applySliderValue(slider, slider.value, { commit: true });
   }
 
   _onShadowClick(event) {
@@ -11961,6 +12289,13 @@ class NodaliaFanCard extends HTMLElement {
           justify-content: center;
         }
 
+        .fan-card__slider-actions {
+          display: inline-flex;
+          flex: 0 0 auto;
+          gap: 10px;
+          justify-content: flex-end;
+        }
+
         .fan-card__control {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
@@ -12005,7 +12340,7 @@ class NodaliaFanCard extends HTMLElement {
           align-items: center;
           display: grid;
           gap: 10px;
-          grid-template-columns: minmax(0, 1fr);
+          grid-template-columns: minmax(0, 1fr) auto;
         }
 
         .fan-card__slider-wrap {
@@ -12019,6 +12354,10 @@ class NodaliaFanCard extends HTMLElement {
           padding: 0 14px;
         }
 
+        .fan-card__slider-row--solo {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
         .fan-card__slider {
           -webkit-appearance: none;
           appearance: none;
@@ -12027,7 +12366,9 @@ class NodaliaFanCard extends HTMLElement {
           flex: 1;
           height: ${styles.slider_thumb_size};
           margin: 0;
-          touch-action: pan-x;
+          touch-action: none;
+          user-select: none;
+          -webkit-user-select: none;
           width: 100%;
         }
 
@@ -12124,9 +12465,21 @@ class NodaliaFanCard extends HTMLElement {
             height: 50px;
             width: 50px;
           }
+
+          .fan-card__slider-row {
+            grid-template-columns: 1fr;
+          }
+
+          .fan-card__slider-actions {
+            justify-content: center;
+          }
         }
       </style>
-      <ha-card class="fan-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""}" style="--accent-color:${escapeHtml(accentColor)};">
+      <ha-card
+        class="fan-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""}"
+        style="--accent-color:${escapeHtml(accentColor)};"
+        ${!isOn ? 'data-fan-action="toggle"' : ""}
+      >
         <div class="fan-card__content">
           <div class="fan-card__hero">
             <button
@@ -12148,7 +12501,65 @@ class NodaliaFanCard extends HTMLElement {
           </div>
 
           ${
-            hasSecondaryControls
+            isOn && supportsPercentage
+              ? `
+                <div class="fan-card__slider-row ${hasSecondaryControls ? "" : "fan-card__slider-row--solo"}">
+                  <div class="fan-card__slider-wrap">
+                    <input
+                      type="range"
+                      class="fan-card__slider"
+                      data-fan-control="percentage"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value="${currentPercentage}"
+                      style="--percentage:${currentPercentage};"
+                      aria-label="Velocidad"
+                    />
+                  </div>
+                  ${
+                    hasSecondaryControls
+                      ? `
+                        <div class="fan-card__slider-actions">
+                          ${
+                            supportsOscillation
+                              ? `
+                                <button
+                                  type="button"
+                                  class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}"
+                                  data-fan-action="oscillate"
+                                  aria-label="${this._isOscillating(state) ? "Desactivar oscilacion" : "Activar oscilacion"}"
+                                >
+                                  <ha-icon icon="mdi:rotate-360"></ha-icon>
+                                </button>
+                              `
+                              : ""
+                          }
+                          ${
+                            presetModes.length
+                              ? `
+                                <button
+                                  type="button"
+                                  class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
+                                  data-fan-action="toggle-preset-panel"
+                                  aria-label="Mostrar modos"
+                                >
+                                  <ha-icon icon="mdi:tune-variant"></ha-icon>
+                                </button>
+                              `
+                              : ""
+                          }
+                        </div>
+                      `
+                      : ""
+                  }
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            !supportsPercentage && hasSecondaryControls
               ? `
                 <div class="fan-card__controls">
                   ${
@@ -12179,28 +12590,6 @@ class NodaliaFanCard extends HTMLElement {
                       `
                       : ""
                   }
-                </div>
-              `
-              : ""
-          }
-
-          ${
-            isOn && supportsPercentage
-              ? `
-                <div class="fan-card__slider-row">
-                  <div class="fan-card__slider-wrap">
-                    <input
-                      type="range"
-                      class="fan-card__slider"
-                      data-fan-control="percentage"
-                      min="0"
-                      max="100"
-                      step="1"
-                      value="${currentPercentage}"
-                      style="--percentage:${currentPercentage};"
-                      aria-label="Velocidad"
-                    />
-                  </div>
                 </div>
               `
               : ""
@@ -12627,8 +13016,8 @@ class NodaliaFanCardEditor extends HTMLElement {
             ${this._renderCheckboxField("Mostrar chip de velocidad", "show_percentage_chip", config.show_percentage_chip !== false)}
             ${this._renderCheckboxField("Mostrar chip de modo", "show_mode_chip", config.show_mode_chip !== false)}
             ${this._renderCheckboxField("Mostrar slider", "show_slider", config.show_slider !== false)}
-            ${this._renderCheckboxField("Mostrar oscilacion", "show_oscillation", config.show_oscillation !== false)}
-            ${this._renderCheckboxField("Mostrar modos", "show_preset_modes", config.show_preset_modes !== false)}
+            ${this._renderCheckboxField("Mostrar boton oscilacion", "show_oscillation", config.show_oscillation !== false)}
+            ${this._renderCheckboxField("Mostrar boton modo", "show_preset_modes", config.show_preset_modes !== false)}
           </div>
         </section>
 

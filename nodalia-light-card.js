@@ -941,7 +941,6 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
-    this._triggerHaptic("selection");
     this._applySliderValue(slider, slider.value, { commit: true });
   }
 
@@ -1386,7 +1385,9 @@ class NodaliaLightCard extends HTMLElement {
           display: block;
           height: ${styles.slider_height};
           outline: none;
-          touch-action: pan-x;
+          touch-action: none;
+          user-select: none;
+          -webkit-user-select: none;
           width: 100%;
         }
 
@@ -1500,7 +1501,11 @@ class NodaliaLightCard extends HTMLElement {
           }
         }
       </style>
-      <ha-card class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""} ${isMiniLayout ? "light-card--mini" : ""} ${showCopyBlock ? "light-card--with-copy" : ""}" style="--accent-color:${escapeHtml(accentColor)};">
+      <ha-card
+        class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""} ${isMiniLayout ? "light-card--mini" : ""} ${showCopyBlock ? "light-card--with-copy" : ""}"
+        style="--accent-color:${escapeHtml(accentColor)};"
+        ${!isOn ? 'data-light-action="toggle"' : ""}
+      >
         <div class="light-card__content">
           <div class="light-card__hero">
             <button

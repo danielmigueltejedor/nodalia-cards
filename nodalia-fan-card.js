@@ -979,6 +979,13 @@ class NodaliaFanCard extends HTMLElement {
           justify-content: center;
         }
 
+        .fan-card__slider-actions {
+          display: inline-flex;
+          flex: 0 0 auto;
+          gap: 10px;
+          justify-content: flex-end;
+        }
+
         .fan-card__control {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
@@ -1023,7 +1030,7 @@ class NodaliaFanCard extends HTMLElement {
           align-items: center;
           display: grid;
           gap: 10px;
-          grid-template-columns: minmax(0, 1fr);
+          grid-template-columns: minmax(0, 1fr) auto;
         }
 
         .fan-card__slider-wrap {
@@ -1037,6 +1044,10 @@ class NodaliaFanCard extends HTMLElement {
           padding: 0 14px;
         }
 
+        .fan-card__slider-row--solo {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
         .fan-card__slider {
           -webkit-appearance: none;
           appearance: none;
@@ -1045,7 +1056,9 @@ class NodaliaFanCard extends HTMLElement {
           flex: 1;
           height: ${styles.slider_thumb_size};
           margin: 0;
-          touch-action: pan-x;
+          touch-action: none;
+          user-select: none;
+          -webkit-user-select: none;
           width: 100%;
         }
 
@@ -1142,9 +1155,21 @@ class NodaliaFanCard extends HTMLElement {
             height: 50px;
             width: 50px;
           }
+
+          .fan-card__slider-row {
+            grid-template-columns: 1fr;
+          }
+
+          .fan-card__slider-actions {
+            justify-content: center;
+          }
         }
       </style>
-      <ha-card class="fan-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""}" style="--accent-color:${escapeHtml(accentColor)};">
+      <ha-card
+        class="fan-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""}"
+        style="--accent-color:${escapeHtml(accentColor)};"
+        ${!isOn ? 'data-fan-action="toggle"' : ""}
+      >
         <div class="fan-card__content">
           <div class="fan-card__hero">
             <button
@@ -1166,7 +1191,65 @@ class NodaliaFanCard extends HTMLElement {
           </div>
 
           ${
-            hasSecondaryControls
+            isOn && supportsPercentage
+              ? `
+                <div class="fan-card__slider-row ${hasSecondaryControls ? "" : "fan-card__slider-row--solo"}">
+                  <div class="fan-card__slider-wrap">
+                    <input
+                      type="range"
+                      class="fan-card__slider"
+                      data-fan-control="percentage"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value="${currentPercentage}"
+                      style="--percentage:${currentPercentage};"
+                      aria-label="Velocidad"
+                    />
+                  </div>
+                  ${
+                    hasSecondaryControls
+                      ? `
+                        <div class="fan-card__slider-actions">
+                          ${
+                            supportsOscillation
+                              ? `
+                                <button
+                                  type="button"
+                                  class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}"
+                                  data-fan-action="oscillate"
+                                  aria-label="${this._isOscillating(state) ? "Desactivar oscilacion" : "Activar oscilacion"}"
+                                >
+                                  <ha-icon icon="mdi:rotate-360"></ha-icon>
+                                </button>
+                              `
+                              : ""
+                          }
+                          ${
+                            presetModes.length
+                              ? `
+                                <button
+                                  type="button"
+                                  class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
+                                  data-fan-action="toggle-preset-panel"
+                                  aria-label="Mostrar modos"
+                                >
+                                  <ha-icon icon="mdi:tune-variant"></ha-icon>
+                                </button>
+                              `
+                              : ""
+                          }
+                        </div>
+                      `
+                      : ""
+                  }
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            !supportsPercentage && hasSecondaryControls
               ? `
                 <div class="fan-card__controls">
                   ${
@@ -1197,28 +1280,6 @@ class NodaliaFanCard extends HTMLElement {
                       `
                       : ""
                   }
-                </div>
-              `
-              : ""
-          }
-
-          ${
-            isOn && supportsPercentage
-              ? `
-                <div class="fan-card__slider-row">
-                  <div class="fan-card__slider-wrap">
-                    <input
-                      type="range"
-                      class="fan-card__slider"
-                      data-fan-control="percentage"
-                      min="0"
-                      max="100"
-                      step="1"
-                      value="${currentPercentage}"
-                      style="--percentage:${currentPercentage};"
-                      aria-label="Velocidad"
-                    />
-                  </div>
                 </div>
               `
               : ""
@@ -1645,8 +1706,8 @@ class NodaliaFanCardEditor extends HTMLElement {
             ${this._renderCheckboxField("Mostrar chip de velocidad", "show_percentage_chip", config.show_percentage_chip !== false)}
             ${this._renderCheckboxField("Mostrar chip de modo", "show_mode_chip", config.show_mode_chip !== false)}
             ${this._renderCheckboxField("Mostrar slider", "show_slider", config.show_slider !== false)}
-            ${this._renderCheckboxField("Mostrar oscilacion", "show_oscillation", config.show_oscillation !== false)}
-            ${this._renderCheckboxField("Mostrar modos", "show_preset_modes", config.show_preset_modes !== false)}
+            ${this._renderCheckboxField("Mostrar boton oscilacion", "show_oscillation", config.show_oscillation !== false)}
+            ${this._renderCheckboxField("Mostrar boton modo", "show_preset_modes", config.show_preset_modes !== false)}
           </div>
         </section>
 

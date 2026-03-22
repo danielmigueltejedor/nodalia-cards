@@ -414,6 +414,8 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._lastRenderSignature = "";
     this._draftVolume = new Map();
     this._draftVolumeTimers = new Map();
+    this._activeSliderDrag = null;
+    this._skipNextSliderChange = null;
     this._volumeStepFallback = new Set();
     this._tvSourcePickerEntity = null;
     this._tvVolumePickerEntity = null;
@@ -430,20 +432,30 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
+    this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowChange);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
   }
 
   connectedCallback() {
     window.addEventListener("resize", this._onResize);
     window.addEventListener("keydown", this._onWindowKeyDown);
+    window.addEventListener("pointermove", this._onWindowPointerMove, { passive: false });
+    window.addEventListener("pointerup", this._onWindowPointerUp, { passive: false });
+    window.addEventListener("pointercancel", this._onWindowPointerUp, { passive: false });
     this._render();
   }
 
   disconnectedCallback() {
     window.removeEventListener("resize", this._onResize);
     window.removeEventListener("keydown", this._onWindowKeyDown);
+    window.removeEventListener("pointermove", this._onWindowPointerMove);
+    window.removeEventListener("pointerup", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onWindowPointerUp);
     if (this._mediaTicker) {
       window.clearInterval(this._mediaTicker);
       this._mediaTicker = null;
@@ -1284,6 +1296,85 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
   }
 
+  _onShadowPointerDown(event) {
+    const slider = event
+      .composedPath()
+      .find(node =>
+        node instanceof HTMLInputElement &&
+        node.type === "range" &&
+        node.dataset?.mediaSlider,
+      );
+
+    if (!slider || (typeof event.button === "number" && event.button !== 0)) {
+      return;
+    }
+
+    this._activeSliderDrag = {
+      pointerId: event.pointerId,
+      slider,
+    };
+
+    try {
+      slider.setPointerCapture(event.pointerId);
+    } catch (_error) {
+      // Ignore unsupported pointer capture.
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const nextValue = getRangeValueFromClientX(slider, event.clientX);
+    slider.value = String(nextValue);
+
+    if (slider.dataset.mediaSlider === "volume") {
+      this._draftVolume.set(slider.dataset.entity, nextValue);
+      this._updatePlayerVolumePreview(slider.dataset.entity, nextValue);
+    }
+  }
+
+  _onWindowPointerMove(event) {
+    const drag = this._activeSliderDrag;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
+    drag.slider.value = String(nextValue);
+
+    if (drag.slider.dataset.mediaSlider === "volume") {
+      this._draftVolume.set(drag.slider.dataset.entity, nextValue);
+      this._updatePlayerVolumePreview(drag.slider.dataset.entity, nextValue);
+    }
+  }
+
+  _onWindowPointerUp(event) {
+    const drag = this._activeSliderDrag;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
+    drag.slider.value = String(nextValue);
+    this._skipNextSliderChange = drag.slider;
+
+    if (drag.slider.dataset.mediaSlider === "volume") {
+      this._triggerHaptic("selection");
+      this._draftVolume.set(drag.slider.dataset.entity, nextValue);
+      this._updatePlayerVolumePreview(drag.slider.dataset.entity, nextValue);
+      this._commitPlayerVolume(drag.slider.dataset.entity, nextValue);
+    }
+
+    try {
+      drag.slider.releasePointerCapture(event.pointerId);
+    } catch (_error) {
+      // Ignore unsupported pointer capture.
+    }
+
+    this._activeSliderDrag = null;
+  }
+
   _onShadowChange(event) {
     const slider = event
       .composedPath()
@@ -1294,6 +1385,12 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     event.stopPropagation();
+
+    if (this._skipNextSliderChange === slider) {
+      this._skipNextSliderChange = null;
+      return;
+    }
+
     this._triggerHaptic("selection");
 
     if (slider.dataset.mediaSlider === "volume") {
@@ -3189,7 +3286,9 @@ class NodaliaMediaPlayer extends HTMLElement {
           display: block;
           height: ${playerStyles.slider_height};
           outline: none;
-          touch-action: pan-x;
+          touch-action: none;
+          user-select: none;
+          -webkit-user-select: none;
           width: 100%;
         }
 
