@@ -299,6 +299,8 @@ class NodaliaFanCard extends HTMLElement {
     this._isCompactLayout = false;
     this._activeSliderDrag = null;
     this._skipNextSliderChange = null;
+    this._dragFrame = 0;
+    this._pendingDragUpdate = null;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -340,6 +342,11 @@ class NodaliaFanCard extends HTMLElement {
     window.removeEventListener("pointermove", this._onWindowPointerMove);
     window.removeEventListener("pointerup", this._onWindowPointerUp);
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+    this._pendingDragUpdate = null;
   }
 
   setConfig(config) {
@@ -609,9 +616,37 @@ class NodaliaFanCard extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
 
+    this._pendingDragUpdate = null;
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+
     const nextValue = getRangeValueFromClientX(slider, event.clientX);
     slider.value = String(nextValue);
     this._applySliderValue(slider, nextValue, { commit: false });
+  }
+
+  _queueSliderDragUpdate(slider, clientX) {
+    this._pendingDragUpdate = { slider, clientX };
+
+    if (this._dragFrame) {
+      return;
+    }
+
+    this._dragFrame = window.requestAnimationFrame(() => {
+      this._dragFrame = 0;
+      const pending = this._pendingDragUpdate;
+      this._pendingDragUpdate = null;
+
+      if (!pending) {
+        return;
+      }
+
+      const nextValue = getRangeValueFromClientX(pending.slider, pending.clientX);
+      pending.slider.value = String(nextValue);
+      this._applySliderValue(pending.slider, nextValue, { commit: false });
+    });
   }
 
   _onWindowPointerMove(event) {
@@ -621,9 +656,7 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     event.preventDefault();
-    const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
-    drag.slider.value = String(nextValue);
-    this._applySliderValue(drag.slider, nextValue, { commit: false });
+    this._queueSliderDragUpdate(drag.slider, event.clientX);
   }
 
   _onWindowPointerUp(event) {
@@ -633,6 +666,13 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     event.preventDefault();
+
+    this._pendingDragUpdate = null;
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+
     const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
     drag.slider.value = String(nextValue);
     this._skipNextSliderChange = drag.slider;
@@ -653,6 +693,10 @@ class NodaliaFanCard extends HTMLElement {
       .find(node => node instanceof HTMLInputElement && node.dataset?.fanControl);
 
     if (!slider) {
+      return;
+    }
+
+    if (this._activeSliderDrag?.slider === slider) {
       return;
     }
 
@@ -677,22 +721,18 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   _onShadowClick(event) {
-    const actionButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.fanAction);
+    const path = event.composedPath();
+    const slider = path.find(
+      node => node instanceof HTMLInputElement && node.dataset?.fanControl,
+    );
+
+    if (slider) {
+      return;
+    }
+
+    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.fanAction);
 
     if (!actionButton) {
-      const state = this._getState();
-      const card = event
-        .composedPath()
-        .find(node => node instanceof HTMLElement && node.tagName === "HA-CARD");
-
-      if (card && !this._isOn(state)) {
-        event.preventDefault();
-        event.stopPropagation();
-        this._triggerHaptic();
-        this._toggleFan(state);
-      }
       return;
     }
 
@@ -863,7 +903,7 @@ class NodaliaFanCard extends HTMLElement {
         .fan-card {
           color: var(--primary-text-color);
           display: grid;
-          gap: ${styles.card.gap};
+          gap: calc(${styles.card.gap} + 4px);
           min-width: 0;
           position: relative;
           z-index: 1;
@@ -918,7 +958,7 @@ class NodaliaFanCard extends HTMLElement {
 
         .fan-card__copy {
           display: grid;
-          gap: 8px;
+          gap: 10px;
           min-width: 0;
         }
 
@@ -940,7 +980,7 @@ class NodaliaFanCard extends HTMLElement {
         .fan-card__chips {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
+          gap: 10px;
           min-width: 0;
         }
 
@@ -982,7 +1022,7 @@ class NodaliaFanCard extends HTMLElement {
         .fan-card__slider-actions {
           display: inline-flex;
           flex: 0 0 auto;
-          gap: 10px;
+          gap: 12px;
           justify-content: flex-end;
         }
 
@@ -1029,7 +1069,7 @@ class NodaliaFanCard extends HTMLElement {
         .fan-card__slider-row {
           align-items: center;
           display: grid;
-          gap: 10px;
+          gap: 14px;
           grid-template-columns: minmax(0, 1fr) auto;
         }
 
@@ -1108,7 +1148,7 @@ class NodaliaFanCard extends HTMLElement {
         .fan-card__preset-panel {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
+          gap: 10px;
           justify-content: center;
           min-width: 0;
         }
@@ -1168,7 +1208,7 @@ class NodaliaFanCard extends HTMLElement {
       <ha-card
         class="fan-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
-        ${!isOn ? 'data-fan-action="toggle"' : ""}
+        data-fan-action="toggle"
       >
         <div class="fan-card__content">
           <div class="fan-card__hero">

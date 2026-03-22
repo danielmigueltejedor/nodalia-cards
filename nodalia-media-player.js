@@ -416,6 +416,8 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._draftVolumeTimers = new Map();
     this._activeSliderDrag = null;
     this._skipNextSliderChange = null;
+    this._dragFrame = 0;
+    this._pendingDragUpdate = null;
     this._volumeStepFallback = new Set();
     this._tvSourcePickerEntity = null;
     this._tvVolumePickerEntity = null;
@@ -456,6 +458,11 @@ class NodaliaMediaPlayer extends HTMLElement {
     window.removeEventListener("pointermove", this._onWindowPointerMove);
     window.removeEventListener("pointerup", this._onWindowPointerUp);
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+    this._pendingDragUpdate = null;
     if (this._mediaTicker) {
       window.clearInterval(this._mediaTicker);
       this._mediaTicker = null;
@@ -1289,6 +1296,10 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     event.stopPropagation();
 
+    if (this._activeSliderDrag?.slider === slider) {
+      return;
+    }
+
     if (slider.dataset.mediaSlider === "volume") {
       const nextValue = clamp(Math.round(Number(slider.value)), 0, 100);
       this._draftVolume.set(slider.dataset.entity, nextValue);
@@ -1323,6 +1334,12 @@ class NodaliaMediaPlayer extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
 
+    this._pendingDragUpdate = null;
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+
     const nextValue = getRangeValueFromClientX(slider, event.clientX);
     slider.value = String(nextValue);
 
@@ -1332,6 +1349,32 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
   }
 
+  _queueSliderDragUpdate(slider, clientX) {
+    this._pendingDragUpdate = { slider, clientX };
+
+    if (this._dragFrame) {
+      return;
+    }
+
+    this._dragFrame = window.requestAnimationFrame(() => {
+      this._dragFrame = 0;
+      const pending = this._pendingDragUpdate;
+      this._pendingDragUpdate = null;
+
+      if (!pending) {
+        return;
+      }
+
+      const nextValue = getRangeValueFromClientX(pending.slider, pending.clientX);
+      pending.slider.value = String(nextValue);
+
+      if (pending.slider.dataset.mediaSlider === "volume") {
+        this._draftVolume.set(pending.slider.dataset.entity, nextValue);
+        this._updatePlayerVolumePreview(pending.slider.dataset.entity, nextValue);
+      }
+    });
+  }
+
   _onWindowPointerMove(event) {
     const drag = this._activeSliderDrag;
     if (!drag || drag.pointerId !== event.pointerId) {
@@ -1339,13 +1382,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     event.preventDefault();
-    const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
-    drag.slider.value = String(nextValue);
-
-    if (drag.slider.dataset.mediaSlider === "volume") {
-      this._draftVolume.set(drag.slider.dataset.entity, nextValue);
-      this._updatePlayerVolumePreview(drag.slider.dataset.entity, nextValue);
-    }
+    this._queueSliderDragUpdate(drag.slider, event.clientX);
   }
 
   _onWindowPointerUp(event) {
@@ -1355,6 +1392,13 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     event.preventDefault();
+
+    this._pendingDragUpdate = null;
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+
     const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
     drag.slider.value = String(nextValue);
     this._skipNextSliderChange = drag.slider;
@@ -3029,7 +3073,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player-card--tv:not(.media-player-card--idle) .media-player__content {
           gap: 4px;
-          padding-bottom: 0;
+          padding-bottom: 12px;
         }
 
         .media-player-card--tv .media-player__hero {
@@ -3109,6 +3153,10 @@ class NodaliaMediaPlayer extends HTMLElement {
           justify-self: end;
           max-width: 100%;
           text-align: right;
+        }
+
+        .media-player-card--tv:not(.media-player-card--idle) .media-player__chips-wrap {
+          margin-bottom: 4px;
         }
 
         .media-player-card--tv .media-player__subtitle--tv {

@@ -5072,6 +5072,8 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._draftVolumeTimers = new Map();
     this._activeSliderDrag = null;
     this._skipNextSliderChange = null;
+    this._dragFrame = 0;
+    this._pendingDragUpdate = null;
     this._volumeStepFallback = new Set();
     this._tvSourcePickerEntity = null;
     this._tvVolumePickerEntity = null;
@@ -5112,6 +5114,11 @@ class NodaliaMediaPlayer extends HTMLElement {
     window.removeEventListener("pointermove", this._onWindowPointerMove);
     window.removeEventListener("pointerup", this._onWindowPointerUp);
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+    this._pendingDragUpdate = null;
     if (this._mediaTicker) {
       window.clearInterval(this._mediaTicker);
       this._mediaTicker = null;
@@ -5945,6 +5952,10 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     event.stopPropagation();
 
+    if (this._activeSliderDrag?.slider === slider) {
+      return;
+    }
+
     if (slider.dataset.mediaSlider === "volume") {
       const nextValue = clamp(Math.round(Number(slider.value)), 0, 100);
       this._draftVolume.set(slider.dataset.entity, nextValue);
@@ -5979,6 +5990,12 @@ class NodaliaMediaPlayer extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
 
+    this._pendingDragUpdate = null;
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+
     const nextValue = getRangeValueFromClientX(slider, event.clientX);
     slider.value = String(nextValue);
 
@@ -5988,6 +6005,32 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
   }
 
+  _queueSliderDragUpdate(slider, clientX) {
+    this._pendingDragUpdate = { slider, clientX };
+
+    if (this._dragFrame) {
+      return;
+    }
+
+    this._dragFrame = window.requestAnimationFrame(() => {
+      this._dragFrame = 0;
+      const pending = this._pendingDragUpdate;
+      this._pendingDragUpdate = null;
+
+      if (!pending) {
+        return;
+      }
+
+      const nextValue = getRangeValueFromClientX(pending.slider, pending.clientX);
+      pending.slider.value = String(nextValue);
+
+      if (pending.slider.dataset.mediaSlider === "volume") {
+        this._draftVolume.set(pending.slider.dataset.entity, nextValue);
+        this._updatePlayerVolumePreview(pending.slider.dataset.entity, nextValue);
+      }
+    });
+  }
+
   _onWindowPointerMove(event) {
     const drag = this._activeSliderDrag;
     if (!drag || drag.pointerId !== event.pointerId) {
@@ -5995,13 +6038,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     event.preventDefault();
-    const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
-    drag.slider.value = String(nextValue);
-
-    if (drag.slider.dataset.mediaSlider === "volume") {
-      this._draftVolume.set(drag.slider.dataset.entity, nextValue);
-      this._updatePlayerVolumePreview(drag.slider.dataset.entity, nextValue);
-    }
+    this._queueSliderDragUpdate(drag.slider, event.clientX);
   }
 
   _onWindowPointerUp(event) {
@@ -6011,6 +6048,13 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     event.preventDefault();
+
+    this._pendingDragUpdate = null;
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+
     const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
     drag.slider.value = String(nextValue);
     this._skipNextSliderChange = drag.slider;
@@ -7685,7 +7729,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player-card--tv:not(.media-player-card--idle) .media-player__content {
           gap: 4px;
-          padding-bottom: 0;
+          padding-bottom: 12px;
         }
 
         .media-player-card--tv .media-player__hero {
@@ -7765,6 +7809,10 @@ class NodaliaMediaPlayer extends HTMLElement {
           justify-self: end;
           max-width: 100%;
           text-align: right;
+        }
+
+        .media-player-card--tv:not(.media-player-card--idle) .media-player__chips-wrap {
+          margin-bottom: 4px;
         }
 
         .media-player-card--tv .media-player__subtitle--tv {
@@ -9433,6 +9481,8 @@ class NodaliaLightCard extends HTMLElement {
     this._isCompactLayout = false;
     this._activeSliderDrag = null;
     this._skipNextSliderChange = null;
+    this._dragFrame = 0;
+    this._pendingDragUpdate = null;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -9474,6 +9524,11 @@ class NodaliaLightCard extends HTMLElement {
     window.removeEventListener("pointermove", this._onWindowPointerMove);
     window.removeEventListener("pointerup", this._onWindowPointerUp);
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+    this._pendingDragUpdate = null;
   }
 
   setConfig(config) {
@@ -9668,6 +9723,41 @@ class NodaliaLightCard extends HTMLElement {
     };
   }
 
+  _getTemperatureControlDomain(state) {
+    const minMireds = Number(state?.attributes?.min_mireds);
+    const maxMireds = Number(state?.attributes?.max_mireds);
+
+    if (Number.isFinite(minMireds) && Number.isFinite(maxMireds) && minMireds > 0 && maxMireds > 0) {
+      return {
+        unit: "mired",
+        min: Math.min(minMireds, maxMireds),
+        max: Math.max(minMireds, maxMireds),
+        step: 1,
+      };
+    }
+
+    const range = this._getTemperatureRange(state);
+    return {
+      unit: "kelvin",
+      min: range.min,
+      max: range.max,
+      step: 25,
+    };
+  }
+
+  _temperatureSliderValueToKelvin(value, state) {
+    const domain = this._getTemperatureControlDomain(state);
+    const boundedValue = clamp(Math.round(Number(value)), domain.min, domain.max);
+    return domain.unit === "mired" ? miredToKelvin(boundedValue) : boundedValue;
+  }
+
+  _kelvinToTemperatureSliderValue(kelvin, state) {
+    const domain = this._getTemperatureControlDomain(state);
+    const numericKelvin = clamp(Math.round(Number(kelvin)), 1, 100000);
+    const nextValue = domain.unit === "mired" ? kelvinToMired(numericKelvin) : numericKelvin;
+    return clamp(Math.round(nextValue), domain.min, domain.max);
+  }
+
   _getCurrentKelvin(state) {
     const entityId = this._config?.entity;
     if (entityId && this._draftTemperature.has(entityId)) {
@@ -9835,7 +9925,8 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _commitTemperaturePreset(kelvin) {
-    const numericKelvin = Math.round(Number(kelvin));
+    const range = this._getTemperatureRange(this._getState());
+    const numericKelvin = clamp(Math.round(Number(kelvin)), range.min, range.max);
     if (!Number.isFinite(numericKelvin) || numericKelvin <= 0) {
       return;
     }
@@ -9856,11 +9947,11 @@ class NodaliaLightCard extends HTMLElement {
 
   _updateTemperaturePreview(value, state) {
     const slider = this.shadowRoot?.querySelector('.light-card__slider[data-light-control="temperature"]');
-    const range = this._getTemperatureRange(state);
-    const boundedValue = clamp(Math.round(Number(value)), range.min, range.max);
-    const percent = range.max === range.min
+    const domain = this._getTemperatureControlDomain(state);
+    const boundedValue = clamp(Math.round(Number(value)), domain.min, domain.max);
+    const percent = domain.max === domain.min
       ? 0
-      : ((boundedValue - range.min) / (range.max - range.min)) * 100;
+      : ((boundedValue - domain.min) / (domain.max - domain.min)) * 100;
 
     if (slider instanceof HTMLInputElement) {
       slider.style.setProperty("--temperature-progress", String(clamp(percent, 0, 100)));
@@ -9893,13 +9984,14 @@ class NodaliaLightCard extends HTMLElement {
       }
       case "temperature": {
         const state = this._getState();
-        const range = this._getTemperatureRange(state);
-        const nextValue = clamp(Math.round(Number(value)), range.min, range.max);
-        this._draftTemperature.set(this._config.entity, nextValue);
+        const domain = this._getTemperatureControlDomain(state);
+        const nextValue = clamp(Math.round(Number(value)), domain.min, domain.max);
+        const nextKelvin = this._temperatureSliderValueToKelvin(nextValue, state);
+        this._draftTemperature.set(this._config.entity, nextKelvin);
         this._updateTemperaturePreview(nextValue, state);
         if (commit) {
           this._triggerHaptic("selection");
-          this._commitTemperaturePreset(nextValue);
+          this._commitTemperaturePreset(nextKelvin);
         }
         break;
       }
@@ -9946,9 +10038,37 @@ class NodaliaLightCard extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
 
+    this._pendingDragUpdate = null;
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+
     const nextValue = getRangeValueFromClientX(slider, event.clientX);
     slider.value = String(nextValue);
     this._applySliderValue(slider, nextValue, { commit: false });
+  }
+
+  _queueSliderDragUpdate(slider, clientX) {
+    this._pendingDragUpdate = { slider, clientX };
+
+    if (this._dragFrame) {
+      return;
+    }
+
+    this._dragFrame = window.requestAnimationFrame(() => {
+      this._dragFrame = 0;
+      const pending = this._pendingDragUpdate;
+      this._pendingDragUpdate = null;
+
+      if (!pending) {
+        return;
+      }
+
+      const nextValue = getRangeValueFromClientX(pending.slider, pending.clientX);
+      pending.slider.value = String(nextValue);
+      this._applySliderValue(pending.slider, nextValue, { commit: false });
+    });
   }
 
   _onWindowPointerMove(event) {
@@ -9958,9 +10078,7 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     event.preventDefault();
-    const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
-    drag.slider.value = String(nextValue);
-    this._applySliderValue(drag.slider, nextValue, { commit: false });
+    this._queueSliderDragUpdate(drag.slider, event.clientX);
   }
 
   _onWindowPointerUp(event) {
@@ -9970,6 +10088,12 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     event.preventDefault();
+
+    this._pendingDragUpdate = null;
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
 
     const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
     drag.slider.value = String(nextValue);
@@ -10038,6 +10162,10 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
+    if (this._activeSliderDrag?.slider === slider) {
+      return;
+    }
+
     this._applySliderValue(slider, slider.value, { commit: false });
   }
 
@@ -10059,22 +10187,18 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _onShadowClick(event) {
-    const actionButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.lightAction);
+    const path = event.composedPath();
+    const slider = path.find(
+      node => node instanceof HTMLInputElement && node.dataset?.lightControl,
+    );
+
+    if (slider) {
+      return;
+    }
+
+    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.lightAction);
 
     if (!actionButton) {
-      const state = this._getState();
-      const card = event
-        .composedPath()
-        .find(node => node instanceof HTMLElement && node.tagName === "HA-CARD");
-
-      if (card && !this._isOn(state)) {
-        event.preventDefault();
-        event.stopPropagation();
-        this._triggerHaptic();
-        this._toggleLight();
-      }
       return;
     }
 
@@ -10194,9 +10318,11 @@ class NodaliaLightCard extends HTMLElement {
     const activeControlMode = isOn ? this._getActiveControlMode(state) : "brightness";
     const currentHue = this._getCurrentHue(state);
     const temperatureRange = this._getTemperatureRange(state);
-    const temperatureProgress = temperatureRange.max === temperatureRange.min
+    const temperatureControlDomain = this._getTemperatureControlDomain(state);
+    const currentTemperatureSliderValue = this._kelvinToTemperatureSliderValue(currentKelvin, state);
+    const temperatureProgress = temperatureControlDomain.max === temperatureControlDomain.min
       ? 0
-      : ((currentKelvin - temperatureRange.min) / (temperatureRange.max - temperatureRange.min)) * 100;
+      : ((currentTemperatureSliderValue - temperatureControlDomain.min) / (temperatureControlDomain.max - temperatureControlDomain.min)) * 100;
     const colorProgress = (currentHue / 360) * 100;
     const chips = [];
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
@@ -10279,7 +10405,7 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__content {
           display: grid;
-          gap: ${styles.card.gap};
+          gap: calc(${styles.card.gap} + 4px);
           position: relative;
           z-index: 1;
         }
@@ -10399,7 +10525,7 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__chips {
           display: flex;
           flex-wrap: wrap;
-          gap: 6px;
+          gap: 8px;
         }
 
         .light-card--compact .light-card__chips {
@@ -10426,7 +10552,7 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__section {
           display: grid;
-          gap: 8px;
+          gap: 10px;
         }
 
         .light-card__section-header {
@@ -10463,7 +10589,7 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__mode-actions {
           display: flex;
-          gap: 8px;
+          gap: 10px;
         }
 
         .light-card__mode-button {
@@ -10569,7 +10695,7 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__actions {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
+          gap: 10px;
         }
 
         .light-card__brightness-preset,
@@ -10618,7 +10744,7 @@ class NodaliaLightCard extends HTMLElement {
       <ha-card
         class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""} ${isMiniLayout ? "light-card--mini" : ""} ${showCopyBlock ? "light-card--with-copy" : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
-        ${!isOn ? 'data-light-action="toggle"' : ""}
+        data-light-action="toggle"
       >
         <div class="light-card__content">
           <div class="light-card__hero">
@@ -10653,10 +10779,10 @@ class NodaliaLightCard extends HTMLElement {
                               type="range"
                               class="light-card__slider"
                               data-light-control="temperature"
-                              min="${temperatureRange.min}"
-                              max="${temperatureRange.max}"
-                              step="50"
-                              value="${currentKelvin}"
+                              min="${temperatureControlDomain.min}"
+                              max="${temperatureControlDomain.max}"
+                              step="${temperatureControlDomain.step}"
+                              value="${currentTemperatureSliderValue}"
                               style="--temperature-progress:${clamp(temperatureProgress, 0, 100)};"
                               aria-label="Temperatura"
                             />
@@ -11609,6 +11735,8 @@ class NodaliaFanCard extends HTMLElement {
     this._isCompactLayout = false;
     this._activeSliderDrag = null;
     this._skipNextSliderChange = null;
+    this._dragFrame = 0;
+    this._pendingDragUpdate = null;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -11650,6 +11778,11 @@ class NodaliaFanCard extends HTMLElement {
     window.removeEventListener("pointermove", this._onWindowPointerMove);
     window.removeEventListener("pointerup", this._onWindowPointerUp);
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+    this._pendingDragUpdate = null;
   }
 
   setConfig(config) {
@@ -11919,9 +12052,37 @@ class NodaliaFanCard extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
 
+    this._pendingDragUpdate = null;
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+
     const nextValue = getRangeValueFromClientX(slider, event.clientX);
     slider.value = String(nextValue);
     this._applySliderValue(slider, nextValue, { commit: false });
+  }
+
+  _queueSliderDragUpdate(slider, clientX) {
+    this._pendingDragUpdate = { slider, clientX };
+
+    if (this._dragFrame) {
+      return;
+    }
+
+    this._dragFrame = window.requestAnimationFrame(() => {
+      this._dragFrame = 0;
+      const pending = this._pendingDragUpdate;
+      this._pendingDragUpdate = null;
+
+      if (!pending) {
+        return;
+      }
+
+      const nextValue = getRangeValueFromClientX(pending.slider, pending.clientX);
+      pending.slider.value = String(nextValue);
+      this._applySliderValue(pending.slider, nextValue, { commit: false });
+    });
   }
 
   _onWindowPointerMove(event) {
@@ -11931,9 +12092,7 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     event.preventDefault();
-    const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
-    drag.slider.value = String(nextValue);
-    this._applySliderValue(drag.slider, nextValue, { commit: false });
+    this._queueSliderDragUpdate(drag.slider, event.clientX);
   }
 
   _onWindowPointerUp(event) {
@@ -11943,6 +12102,13 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     event.preventDefault();
+
+    this._pendingDragUpdate = null;
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+
     const nextValue = getRangeValueFromClientX(drag.slider, event.clientX);
     drag.slider.value = String(nextValue);
     this._skipNextSliderChange = drag.slider;
@@ -11963,6 +12129,10 @@ class NodaliaFanCard extends HTMLElement {
       .find(node => node instanceof HTMLInputElement && node.dataset?.fanControl);
 
     if (!slider) {
+      return;
+    }
+
+    if (this._activeSliderDrag?.slider === slider) {
       return;
     }
 
@@ -11987,22 +12157,18 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   _onShadowClick(event) {
-    const actionButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.fanAction);
+    const path = event.composedPath();
+    const slider = path.find(
+      node => node instanceof HTMLInputElement && node.dataset?.fanControl,
+    );
+
+    if (slider) {
+      return;
+    }
+
+    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.fanAction);
 
     if (!actionButton) {
-      const state = this._getState();
-      const card = event
-        .composedPath()
-        .find(node => node instanceof HTMLElement && node.tagName === "HA-CARD");
-
-      if (card && !this._isOn(state)) {
-        event.preventDefault();
-        event.stopPropagation();
-        this._triggerHaptic();
-        this._toggleFan(state);
-      }
       return;
     }
 
@@ -12173,7 +12339,7 @@ class NodaliaFanCard extends HTMLElement {
         .fan-card {
           color: var(--primary-text-color);
           display: grid;
-          gap: ${styles.card.gap};
+          gap: calc(${styles.card.gap} + 4px);
           min-width: 0;
           position: relative;
           z-index: 1;
@@ -12228,7 +12394,7 @@ class NodaliaFanCard extends HTMLElement {
 
         .fan-card__copy {
           display: grid;
-          gap: 8px;
+          gap: 10px;
           min-width: 0;
         }
 
@@ -12250,7 +12416,7 @@ class NodaliaFanCard extends HTMLElement {
         .fan-card__chips {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
+          gap: 10px;
           min-width: 0;
         }
 
@@ -12292,7 +12458,7 @@ class NodaliaFanCard extends HTMLElement {
         .fan-card__slider-actions {
           display: inline-flex;
           flex: 0 0 auto;
-          gap: 10px;
+          gap: 12px;
           justify-content: flex-end;
         }
 
@@ -12339,7 +12505,7 @@ class NodaliaFanCard extends HTMLElement {
         .fan-card__slider-row {
           align-items: center;
           display: grid;
-          gap: 10px;
+          gap: 14px;
           grid-template-columns: minmax(0, 1fr) auto;
         }
 
@@ -12418,7 +12584,7 @@ class NodaliaFanCard extends HTMLElement {
         .fan-card__preset-panel {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
+          gap: 10px;
           justify-content: center;
           min-width: 0;
         }
@@ -12478,7 +12644,7 @@ class NodaliaFanCard extends HTMLElement {
       <ha-card
         class="fan-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
-        ${!isOn ? 'data-fan-action="toggle"' : ""}
+        data-fan-action="toggle"
       >
         <div class="fan-card__content">
           <div class="fan-card__hero">
