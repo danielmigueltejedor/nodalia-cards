@@ -17926,6 +17926,15 @@ function parseNumber(value) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+function parseHistoryTimestamp(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value > 1e12 ? value : value * 1000;
+  }
+
+  const parsed = Date.parse(String(value ?? ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function formatNumberValue(value, decimals = 0) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
@@ -18028,6 +18037,62 @@ function buildAreaPath(points, bottomY) {
   const first = points[0];
   const last = points[points.length - 1];
   return `${linePath} L ${last.x.toFixed(2)} ${bottomY.toFixed(2)} L ${first.x.toFixed(2)} ${bottomY.toFixed(2)} Z`;
+}
+
+function buildInterpolatedSamples(events, startMs, endMs, pointsCount, fallbackValue = null) {
+  if (!Array.isArray(events) || !events.length) {
+    if (!Number.isFinite(fallbackValue)) {
+      return [];
+    }
+
+    return Array.from({ length: pointsCount }, (_item, index) => ({
+      ts: startMs + (((endMs - startMs) * index) / Math.max(pointsCount - 1, 1)),
+      value: fallbackValue,
+    }));
+  }
+
+  const dedupedEvents = events.filter((event, index) => (
+    index === 0
+    || event.ts !== events[index - 1].ts
+    || event.value !== events[index - 1].value
+  ));
+
+  const samples = [];
+  let rightIndex = 0;
+
+  for (let index = 0; index < pointsCount; index += 1) {
+    const sampleTs = startMs + (((endMs - startMs) * index) / Math.max(pointsCount - 1, 1));
+
+    while (rightIndex < dedupedEvents.length && dedupedEvents[rightIndex].ts < sampleTs) {
+      rightIndex += 1;
+    }
+
+    const right = dedupedEvents[rightIndex] || null;
+    const left = dedupedEvents[rightIndex - 1] || null;
+    let value = fallbackValue;
+
+    if (!left && right) {
+      value = right.value;
+    } else if (left && !right) {
+      value = left.value;
+    } else if (left && right) {
+      if (right.ts === left.ts) {
+        value = right.value;
+      } else {
+        const progress = clamp((sampleTs - left.ts) / (right.ts - left.ts), 0, 1);
+        value = left.value + ((right.value - left.value) * progress);
+      }
+    }
+
+    if (Number.isFinite(value)) {
+      samples.push({
+        ts: sampleTs,
+        value,
+      });
+    }
+  }
+
+  return samples;
 }
 
 class NodaliaGraphCard extends HTMLElement {
@@ -18133,23 +18198,22 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   _getCurrentValuesText() {
-    const entries = this._getEntityEntries();
-    const values = entries
-      .map(entry => {
-        const state = this._hass?.states?.[entry.entity];
-        return parseNumber(state?.state);
-      })
-      .filter(value => Number.isFinite(value));
+    const primaryEntry = this._getEntityEntries()[0];
+    const primaryState = primaryEntry ? this._hass?.states?.[primaryEntry.entity] : null;
+    const primaryValue = parseNumber(primaryState?.state);
 
-    if (!values.length) {
+    if (!Number.isFinite(primaryValue)) {
       return { value: "--", unit: this._getUnit() };
     }
 
     const decimals = this._getDecimals();
-    const average = values.reduce((sum, value) => sum + value, 0) / values.length;
     return {
-      value: formatNumberValue(average, decimals),
-      unit: this._getUnit(),
+      value: formatNumberValue(primaryValue, decimals),
+      unit: String(
+        primaryState?.attributes?.unit_of_measurement
+        || primaryState?.attributes?.native_unit_of_measurement
+        || this._getUnit(),
+      ).trim(),
     };
   }
 
@@ -18222,14 +18286,29 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   async _fetchHistory(start, end, entityIds, signal) {
+    if (typeof this._hass?.callWS === "function") {
+      try {
+        return await this._hass.callWS({
+          type: "history/history_during_period",
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+          entity_ids: entityIds,
+          minimal_response: true,
+          no_attributes: true,
+          significant_changes_only: false,
+        });
+      } catch (_error) {
+        // Fall back to the authenticated REST endpoint below.
+      }
+    }
+
     const query = [
       `filter_entity_id=${encodeURIComponent(entityIds.join(","))}`,
       `end_time=${encodeURIComponent(end.toISOString())}`,
-      "minimal_response",
-      "no_attributes",
+      "significant_changes_only=0",
     ].join("&");
 
-    const apiPath = `history/period/${start.toISOString()}?${query}`;
+    const apiPath = `history/period/${encodeURIComponent(start.toISOString())}?${query}`;
 
     if (typeof this._hass?.callApi === "function") {
       return this._hass.callApi("GET", apiPath);
@@ -18258,12 +18337,17 @@ class NodaliaGraphCard extends HTMLElement {
     const pointsCount = Math.max(20, Number(this._config?.points) || DEFAULT_CONFIG.points);
     const startMs = start.getTime();
     const endMs = end.getTime();
-    const spanMs = Math.max(endMs - startMs, 1);
 
     if (Array.isArray(raw)) {
       raw.forEach(group => {
         if (Array.isArray(group) && group[0]?.entity_id) {
           historyByEntity.set(group[0].entity_id, group);
+        }
+      });
+    } else if (isObject(raw)) {
+      Object.entries(raw).forEach(([entityId, group]) => {
+        if (Array.isArray(group)) {
+          historyByEntity.set(entityId, group);
         }
       });
     }
@@ -18273,8 +18357,15 @@ class NodaliaGraphCard extends HTMLElement {
       const rawGroup = historyByEntity.get(entry.entity) || [];
       const events = rawGroup
         .map(item => ({
-          ts: Date.parse(item.last_changed || item.last_updated || ""),
-          value: parseNumber(item.state),
+          ts: parseHistoryTimestamp(
+            item.last_changed
+            || item.last_updated
+            || item.lc
+            || item.lu
+            || item.last_changed_ts
+            || item.last_updated_ts,
+          ),
+          value: parseNumber(item.state ?? item.s ?? item.value ?? item.v),
         }))
         .filter(item => Number.isFinite(item.ts) && Number.isFinite(item.value))
         .sort((left, right) => left.ts - right.ts);
@@ -18286,28 +18377,7 @@ class NodaliaGraphCard extends HTMLElement {
           events.push({ ts: nowTs, value: currentValue });
         }
       }
-
-      let cursor = 0;
-      let lastValue = events[0]?.value ?? currentValue ?? null;
-      const samples = [];
-
-      for (let index = 0; index < pointsCount; index += 1) {
-        const sampleTs = startMs + ((spanMs * index) / Math.max(pointsCount - 1, 1));
-
-        while (cursor < events.length && events[cursor].ts <= sampleTs) {
-          lastValue = events[cursor].value;
-          cursor += 1;
-        }
-
-        if (!Number.isFinite(lastValue) && Number.isFinite(currentValue)) {
-          lastValue = currentValue;
-        }
-
-        samples.push({
-          ts: sampleTs,
-          value: Number.isFinite(lastValue) ? lastValue : 0,
-        });
-      }
+      const samples = buildInterpolatedSamples(events, startMs, endMs, pointsCount, currentValue);
 
       return {
         ...entry,
@@ -18317,6 +18387,7 @@ class NodaliaGraphCard extends HTMLElement {
           || "",
         ).trim(),
         currentValue: Number.isFinite(currentValue) ? currentValue : samples[samples.length - 1]?.value ?? 0,
+        rawEventCount: events.length,
         samples,
       };
     });
@@ -18350,18 +18421,20 @@ class NodaliaGraphCard extends HTMLElement {
         return;
       }
 
-      this._historySeries = this._normalizeHistorySeries(raw || [], start, end);
-      this._historyKey = requestKey;
-      this._historyLoadedAt = Date.now();
+      const normalized = this._normalizeHistorySeries(raw || [], start, end);
+      const hasMeaningfulHistory = normalized.some(entry => entry.rawEventCount > 1 && entry.samples.length > 1);
+      this._historySeries = normalized;
+      this._historyKey = hasMeaningfulHistory ? requestKey : "";
+      this._historyLoadedAt = hasMeaningfulHistory ? Date.now() : 0;
       this._render();
     } catch (_error) {
       if (controller.signal.aborted) {
         return;
       }
 
-      this._historySeries = this._normalizeHistorySeries([], start, end);
-      this._historyKey = requestKey;
-      this._historyLoadedAt = Date.now();
+      this._historySeries = [];
+      this._historyKey = "";
+      this._historyLoadedAt = 0;
       this._render();
     } finally {
       if (this._historyAbortController === controller) {
@@ -18413,6 +18486,14 @@ class NodaliaGraphCard extends HTMLElement {
       width,
       height,
       entries: series.map(entry => {
+        if (!entry.samples.length) {
+          return {
+            ...entry,
+            linePath: "",
+            fillPath: "",
+          };
+        }
+
         const points = entry.samples.map((sample, index) => {
           const x = paddingX + ((width - (paddingX * 2)) * index) / Math.max(entry.samples.length - 1, 1);
           const normalized = clamp((sample.value - bounds.min) / range, 0, 1);
@@ -18430,14 +18511,10 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   _getSeriesData() {
-    if (this._historySeries.length) {
+    if (this._historySeries.some(entry => entry.samples?.length > 1)) {
       return this._historySeries;
     }
-
-    const end = new Date();
-    const hoursToShow = Math.max(1, Number(this._config?.hours_to_show) || DEFAULT_CONFIG.hours_to_show);
-    const start = new Date(end.getTime() - (hoursToShow * 60 * 60 * 1000));
-    return this._normalizeHistorySeries([], start, end);
+    return [];
   }
 
   _renderEmptyState() {
@@ -18500,6 +18577,7 @@ class NodaliaGraphCard extends HTMLElement {
     const compactLayout = Number(config?.grid_options?.rows) > 0 && Number(config?.grid_options?.rows) <= 3;
     const currentValue = this._getCurrentValuesText();
     const chart = this._buildChartSeries(this._getSeriesData());
+    const hasGraphData = chart.entries.some(entry => entry.linePath);
     const icon = this._getIcon();
     const title = this._getTitle();
     const accentColor = legendEntries[0]?.color || "var(--primary-color)";
@@ -18682,6 +18760,17 @@ class NodaliaGraphCard extends HTMLElement {
           width: 100%;
         }
 
+        .graph-card__chart-empty {
+          align-items: center;
+          color: var(--secondary-text-color);
+          display: flex;
+          font-size: 13px;
+          inset: 0;
+          justify-content: center;
+          opacity: 0.8;
+          position: absolute;
+        }
+
         .graph-card__chart-series-fill {
           opacity: 0.045;
         }
@@ -18762,6 +18851,7 @@ class NodaliaGraphCard extends HTMLElement {
                 <path class="graph-card__chart-series-line" d="${entry.linePath}" stroke="${escapeHtml(entry.color)}"></path>
               `).join("")}
             </svg>
+            ${hasGraphData ? "" : `<div class="graph-card__chart-empty">Sin historial disponible</div>`}
           </div>
         </div>
       </ha-card>
