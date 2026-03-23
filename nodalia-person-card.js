@@ -502,6 +502,8 @@ class NodaliaPersonCard extends HTMLElement {
 
     const config = this._config;
     const styles = config.styles || DEFAULT_CONFIG.styles;
+    const configuredRows = Number(this._config?.grid_options?.rows);
+    const singleRowLayout = Number.isFinite(configuredRows) ? configuredRows <= 1 : true;
     const title = this._getTitle(state);
     const subtitle = config.show_state !== false ? this._translateState(state) : "";
     const picture = this._getPersonPicture(state);
@@ -509,8 +511,18 @@ class NodaliaPersonCard extends HTMLElement {
     const badge = this._getBadgeDescriptor(state);
     const accentColor = this._getAccentColor(state);
     const canRunPrimaryAction = this._canRunTapAction();
-    const avatarSize = `${Math.max(46, Math.min(parseSizeToPixels(styles.avatar.size, 58), 68))}px`;
-    const badgeSize = `${Math.max(18, Math.min(parseSizeToPixels(styles.badge.size, 20), 24))}px`;
+    const singleRowPaddingY = singleRowLayout ? 6 : 12;
+    const singleRowPaddingX = singleRowLayout ? 10 : 12;
+    const avatarSizePx = Math.max(40, Math.min(parseSizeToPixels(styles.avatar.size, 58), singleRowLayout ? 44 : 68));
+    const avatarSize = `${avatarSizePx}px`;
+    const avatarTrackSize = `${avatarSizePx + (singleRowLayout ? 8 : 12)}px`;
+    const badgeSize = `${Math.max(16, Math.min(parseSizeToPixels(styles.badge.size, 20), singleRowLayout ? 18 : 24))}px`;
+    const effectiveTitleSize = `${Math.max(11, Math.min(parseSizeToPixels(styles.title_size, 14), singleRowLayout ? 12 : 14))}px`;
+    const effectiveSubtitleSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.subtitle_size, 13), singleRowLayout ? 11 : 13))}px`;
+    const effectiveGap = singleRowLayout ? "8px" : styles.card.gap;
+    const effectivePadding = singleRowLayout ? `${singleRowPaddingY}px ${singleRowPaddingX}px` : styles.card.padding;
+    const effectiveCardHeightPx = singleRowLayout ? Math.max(64, avatarSizePx + (singleRowPaddingY * 2)) : avatarSizePx + (singleRowPaddingY * 2);
+    const effectiveContentMinHeight = `${Math.max(avatarSizePx, effectiveCardHeightPx - (singleRowPaddingY * 2))}px`;
     const isUnavailable = isUnavailableState(state);
     const cardBackground = isUnavailable
       ? styles.card.background
@@ -555,13 +567,17 @@ class NodaliaPersonCard extends HTMLElement {
           align-items: center;
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           display: grid;
-          gap: ${styles.card.gap};
-          grid-template-columns: ${avatarSize} minmax(0, 1fr);
-          min-height: calc(${avatarSize} + 10px);
+          gap: ${effectiveGap};
+          grid-template-columns: ${avatarTrackSize} minmax(0, 1fr);
+          min-height: ${effectiveContentMinHeight};
           min-width: 0;
-          padding: ${styles.card.padding};
+          padding: ${effectivePadding};
           position: relative;
           z-index: 1;
+        }
+
+        .person-card--single-row {
+          min-height: ${effectiveCardHeightPx}px;
         }
 
         .person-card__avatar {
@@ -621,7 +637,7 @@ class NodaliaPersonCard extends HTMLElement {
         }
 
         .person-card__title {
-          font-size: ${styles.title_size};
+          font-size: ${effectiveTitleSize};
           font-weight: 700;
           letter-spacing: -0.02em;
           line-height: 1.12;
@@ -633,7 +649,7 @@ class NodaliaPersonCard extends HTMLElement {
 
         .person-card__subtitle {
           color: var(--secondary-text-color);
-          font-size: ${styles.subtitle_size};
+          font-size: ${effectiveSubtitleSize};
           font-weight: 500;
           line-height: 1.2;
           min-width: 0;
@@ -659,7 +675,7 @@ class NodaliaPersonCard extends HTMLElement {
           line-height: 1.5;
         }
       </style>
-      <ha-card class="person-card">
+      <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""}">
         <div class="person-card__content" ${canRunPrimaryAction ? 'data-person-action="primary"' : ""}>
           <div class="person-card__avatar">
             ${

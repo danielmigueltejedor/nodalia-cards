@@ -18604,17 +18604,21 @@ class NodaliaEntityCard extends HTMLElement {
     const singleRowLayout = configuredRows !== null ? configuredRows <= 1 : quickActions.length === 0;
     const narrowCard = configuredColumns !== null ? configuredColumns <= 6 : (this._cardWidth || this.clientWidth || 0) <= 300;
     const compactMetrics = narrowCard || singleRowLayout;
-    const effectivePadding = singleRowLayout ? "8px 10px" : compactMetrics ? "10px 12px" : styles.card.padding;
-    const effectiveGap = singleRowLayout ? "0px" : compactMetrics ? "8px" : styles.card.gap;
-    const effectiveIconSizePx = Math.max(36, Math.min(parseSizeToPixels(styles.icon.size, 58), singleRowLayout ? 40 : compactMetrics ? 46 : 58));
+    const singleRowPaddingY = singleRowLayout ? 6 : 0;
+    const singleRowPaddingX = singleRowLayout ? 10 : 0;
+    const effectivePadding = singleRowLayout ? `${singleRowPaddingY}px ${singleRowPaddingX}px` : compactMetrics ? "10px 12px" : styles.card.padding;
+    const effectiveGap = singleRowLayout ? "4px" : compactMetrics ? "8px" : styles.card.gap;
+    const effectiveIconSizePx = Math.max(34, Math.min(parseSizeToPixels(styles.icon.size, 58), singleRowLayout ? 36 : compactMetrics ? 46 : 58));
     const effectiveIconSize = `${effectiveIconSizePx}px`;
-    const effectiveIconTrackSize = `${effectiveIconSizePx + 10}px`;
+    const effectiveIconTrackSize = `${effectiveIconSizePx + (singleRowLayout ? 8 : 10)}px`;
     const effectiveControlSize = `${Math.max(34, Math.min(parseSizeToPixels(styles.control.size, 40), compactMetrics ? 36 : 40))}px`;
-    const effectiveTitleSize = `${Math.max(11, Math.min(parseSizeToPixels(styles.title_size, 14), singleRowLayout ? 11 : compactMetrics ? 12 : 14))}px`;
-    const effectiveChipHeight = `${Math.max(18, Math.min(parseSizeToPixels(styles.chip_height, 24), singleRowLayout ? 20 : compactMetrics ? 22 : 24))}px`;
-    const effectiveChipFontSize = `${Math.max(9, Math.min(parseSizeToPixels(styles.chip_font_size, 11), singleRowLayout ? 9 : compactMetrics ? 10 : 11))}px`;
+    const effectiveTitleSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.title_size, 14), singleRowLayout ? 10.5 : compactMetrics ? 12 : 14))}px`;
+    const effectiveChipHeight = `${Math.max(17, Math.min(parseSizeToPixels(styles.chip_height, 24), singleRowLayout ? 18 : compactMetrics ? 22 : 24))}px`;
+    const effectiveChipFontSize = `${Math.max(8.5, Math.min(parseSizeToPixels(styles.chip_font_size, 11), singleRowLayout ? 9 : compactMetrics ? 10 : 11))}px`;
     const effectiveChipPadding = singleRowLayout ? "0 7px" : compactMetrics ? "0 8px" : styles.chip_padding;
-    const effectiveCardMinHeight = singleRowLayout ? `${Math.max(76, effectiveIconSizePx + 18)}px` : "0px";
+    const effectiveCardHeightPx = singleRowLayout ? Math.max(64, effectiveIconSizePx + (singleRowPaddingY * 2)) : 0;
+    const effectiveCardMinHeight = singleRowLayout ? `${effectiveCardHeightPx}px` : "0px";
+    const effectiveContentMinHeight = singleRowLayout ? `${Math.max(effectiveIconSizePx, effectiveCardHeightPx - (singleRowPaddingY * 2))}px` : "0px";
     const title = this._getTitle(state);
     const icon = this._getIcon(state);
     const isCompactLayout = this._isCompactLayout;
@@ -18696,7 +18700,7 @@ class NodaliaEntityCard extends HTMLElement {
 
         .entity-card--single-row .entity-card__content {
           align-content: center;
-          min-height: ${effectiveCardMinHeight};
+          min-height: ${effectiveContentMinHeight};
         }
 
         .entity-card__hero {
@@ -18704,7 +18708,7 @@ class NodaliaEntityCard extends HTMLElement {
           display: grid;
           gap: ${singleRowLayout ? "8px" : narrowCard ? "10px" : "12px"};
           grid-template-columns: ${effectiveIconTrackSize} minmax(0, 1fr);
-          min-height: ${singleRowLayout ? effectiveIconSize : "0px"};
+          min-height: ${singleRowLayout ? effectiveContentMinHeight : "0px"};
           min-width: 0;
         }
 
@@ -18781,7 +18785,7 @@ class NodaliaEntityCard extends HTMLElement {
         .entity-card--single-row .entity-card__copy {
           align-content: center;
           display: grid;
-          gap: 4px;
+          gap: 2px;
           min-width: 0;
         }
 
@@ -18811,6 +18815,7 @@ class NodaliaEntityCard extends HTMLElement {
 
         .entity-card--single-row .entity-card__chips {
           flex-wrap: nowrap;
+          gap: 4px;
           justify-content: flex-start;
           margin-left: 0;
         }
@@ -21699,6 +21704,8 @@ class NodaliaPersonCard extends HTMLElement {
 
     const config = this._config;
     const styles = config.styles || DEFAULT_CONFIG.styles;
+    const configuredRows = Number(this._config?.grid_options?.rows);
+    const singleRowLayout = Number.isFinite(configuredRows) ? configuredRows <= 1 : true;
     const title = this._getTitle(state);
     const subtitle = config.show_state !== false ? this._translateState(state) : "";
     const picture = this._getPersonPicture(state);
@@ -21706,8 +21713,18 @@ class NodaliaPersonCard extends HTMLElement {
     const badge = this._getBadgeDescriptor(state);
     const accentColor = this._getAccentColor(state);
     const canRunPrimaryAction = this._canRunTapAction();
-    const avatarSize = `${Math.max(46, Math.min(parseSizeToPixels(styles.avatar.size, 58), 68))}px`;
-    const badgeSize = `${Math.max(18, Math.min(parseSizeToPixels(styles.badge.size, 20), 24))}px`;
+    const singleRowPaddingY = singleRowLayout ? 6 : 12;
+    const singleRowPaddingX = singleRowLayout ? 10 : 12;
+    const avatarSizePx = Math.max(40, Math.min(parseSizeToPixels(styles.avatar.size, 58), singleRowLayout ? 44 : 68));
+    const avatarSize = `${avatarSizePx}px`;
+    const avatarTrackSize = `${avatarSizePx + (singleRowLayout ? 8 : 12)}px`;
+    const badgeSize = `${Math.max(16, Math.min(parseSizeToPixels(styles.badge.size, 20), singleRowLayout ? 18 : 24))}px`;
+    const effectiveTitleSize = `${Math.max(11, Math.min(parseSizeToPixels(styles.title_size, 14), singleRowLayout ? 12 : 14))}px`;
+    const effectiveSubtitleSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.subtitle_size, 13), singleRowLayout ? 11 : 13))}px`;
+    const effectiveGap = singleRowLayout ? "8px" : styles.card.gap;
+    const effectivePadding = singleRowLayout ? `${singleRowPaddingY}px ${singleRowPaddingX}px` : styles.card.padding;
+    const effectiveCardHeightPx = singleRowLayout ? Math.max(64, avatarSizePx + (singleRowPaddingY * 2)) : avatarSizePx + (singleRowPaddingY * 2);
+    const effectiveContentMinHeight = `${Math.max(avatarSizePx, effectiveCardHeightPx - (singleRowPaddingY * 2))}px`;
     const isUnavailable = isUnavailableState(state);
     const cardBackground = isUnavailable
       ? styles.card.background
@@ -21752,13 +21769,17 @@ class NodaliaPersonCard extends HTMLElement {
           align-items: center;
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           display: grid;
-          gap: ${styles.card.gap};
-          grid-template-columns: ${avatarSize} minmax(0, 1fr);
-          min-height: calc(${avatarSize} + 10px);
+          gap: ${effectiveGap};
+          grid-template-columns: ${avatarTrackSize} minmax(0, 1fr);
+          min-height: ${effectiveContentMinHeight};
           min-width: 0;
-          padding: ${styles.card.padding};
+          padding: ${effectivePadding};
           position: relative;
           z-index: 1;
+        }
+
+        .person-card--single-row {
+          min-height: ${effectiveCardHeightPx}px;
         }
 
         .person-card__avatar {
@@ -21818,7 +21839,7 @@ class NodaliaPersonCard extends HTMLElement {
         }
 
         .person-card__title {
-          font-size: ${styles.title_size};
+          font-size: ${effectiveTitleSize};
           font-weight: 700;
           letter-spacing: -0.02em;
           line-height: 1.12;
@@ -21830,7 +21851,7 @@ class NodaliaPersonCard extends HTMLElement {
 
         .person-card__subtitle {
           color: var(--secondary-text-color);
-          font-size: ${styles.subtitle_size};
+          font-size: ${effectiveSubtitleSize};
           font-weight: 500;
           line-height: 1.2;
           min-width: 0;
@@ -21856,7 +21877,7 @@ class NodaliaPersonCard extends HTMLElement {
           line-height: 1.5;
         }
       </style>
-      <ha-card class="person-card">
+      <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""}">
         <div class="person-card__content" ${canRunPrimaryAction ? 'data-person-action="primary"' : ""}>
           <div class="person-card__avatar">
             ${
