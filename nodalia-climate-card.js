@@ -55,7 +55,7 @@ const DEFAULT_CONFIG = {
     chip_padding: "0 10px",
     title_size: "16px",
     current_size: "16px",
-    target_size: "54px",
+    target_size: "50px",
     dial: {
       size: "280px",
       stroke: "18px",
@@ -1393,27 +1393,32 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__target {
-          align-items: flex-start;
           color: var(--primary-text-color);
-          display: inline-flex;
+          display: inline-block;
           font-size: ${styles.target_size};
-          gap: 4px;
           font-weight: 500;
           letter-spacing: -0.06em;
           line-height: 0.94;
           min-height: calc(${styles.target_size} * 0.94);
           min-width: 0;
+          padding-right: calc(${styles.target_size} * 0.34);
+          position: relative;
+          white-space: nowrap;
+        }
+
+        .climate-card__target-value {
+          display: inline-block;
         }
 
         .climate-card__target-unit {
           color: var(--primary-text-color);
-          display: inline-flex;
-          font-size: calc(${styles.target_size} * 0.28);
+          font-size: calc(${styles.target_size} * 0.24);
           font-weight: 500;
           line-height: 1;
-          margin-left: 0;
           opacity: 0.92;
-          transform: translateY(8px);
+          position: absolute;
+          right: 0;
+          top: 0.16em;
         }
 
         .climate-card__divider {
@@ -1608,7 +1613,7 @@ class NodaliaClimateCard extends HTMLElement {
               <span class="climate-card__dial-thumb" data-climate-control="dial-hit" aria-hidden="true"></span>
               <div class="climate-card__dial-center">
                 <div class="climate-card__target">
-                  <span data-climate-readout="target">${escapeHtml(formatTemperature(targetTemperature, temperatureStep, false))}</span>
+                  <span class="climate-card__target-value" data-climate-readout="target">${escapeHtml(formatTemperature(targetTemperature, temperatureStep, false))}</span>
                   <span class="climate-card__target-unit">°C</span>
                 </div>
                 <div class="climate-card__divider"></div>
