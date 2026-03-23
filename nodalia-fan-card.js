@@ -298,6 +298,7 @@ class NodaliaFanCard extends HTMLElement {
     this._cardWidth = 0;
     this._isCompactLayout = false;
     this._activeSliderDrag = null;
+    this._pendingRenderAfterDrag = false;
     this._skipNextSliderChange = null;
     this._dragFrame = 0;
     this._pendingDragUpdate = null;
@@ -316,22 +317,56 @@ class NodaliaFanCard extends HTMLElement {
 
       this._cardWidth = nextWidth;
       this._isCompactLayout = nextCompact;
+
+      if (this._activeSliderDrag) {
+        this._pendingRenderAfterDrag = true;
+        return;
+      }
+
       this._render();
     });
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
+    this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
+    this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
+    this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
+    this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
+    this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
+    this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
+    this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowChange);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
+    this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
+    this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
   }
 
   connectedCallback() {
     this._resizeObserver?.observe(this);
+    window.addEventListener("pointermove", this._onWindowPointerMove);
+    window.addEventListener("pointerup", this._onWindowPointerUp);
+    window.addEventListener("pointercancel", this._onWindowPointerUp);
+    window.addEventListener("mousemove", this._onWindowMouseMove);
+    window.addEventListener("mouseup", this._onWindowMouseUp);
+    window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+    window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+    window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
   }
 
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
+    window.removeEventListener("pointermove", this._onWindowPointerMove);
+    window.removeEventListener("pointerup", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    window.removeEventListener("mousemove", this._onWindowMouseMove);
+    window.removeEventListener("mouseup", this._onWindowMouseUp);
+    window.removeEventListener("touchmove", this._onWindowTouchMove);
+    window.removeEventListener("touchend", this._onWindowTouchEnd);
+    window.removeEventListener("touchcancel", this._onWindowTouchEnd);
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
@@ -349,6 +384,12 @@ class NodaliaFanCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+
+    if (this._activeSliderDrag) {
+      this._pendingRenderAfterDrag = true;
+      return;
+    }
+
     this._render();
   }
 
@@ -665,6 +706,11 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     this._activeSliderDrag = null;
+
+    if (this._pendingRenderAfterDrag) {
+      this._pendingRenderAfterDrag = false;
+      this._render();
+    }
   }
 
   _onShadowMouseDown(event) {
@@ -752,6 +798,10 @@ class NodaliaFanCard extends HTMLElement {
     const clientX = event.changedTouches?.[0]?.clientX;
     if (!Number.isFinite(clientX)) {
       this._activeSliderDrag = null;
+      if (this._pendingRenderAfterDrag) {
+        this._pendingRenderAfterDrag = false;
+        this._render();
+      }
       return;
     }
 
@@ -768,6 +818,11 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     event.stopPropagation();
+
+    if (this._activeSliderDrag?.slider === slider) {
+      return;
+    }
+
     this._applySliderValue(slider, slider.value, { commit: false });
   }
 
@@ -1165,7 +1220,7 @@ class NodaliaFanCard extends HTMLElement {
           flex: 1;
           height: max(44px, calc(${styles.slider_thumb_size} + 12px));
           margin: 0;
-          touch-action: none;
+          touch-action: pan-y;
           user-select: none;
           -webkit-user-select: none;
           width: 100%;

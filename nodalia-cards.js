@@ -5071,6 +5071,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._draftVolume = new Map();
     this._draftVolumeTimers = new Map();
     this._activeSliderDrag = null;
+    this._pendingRenderAfterDrag = false;
     this._skipNextSliderChange = null;
     this._dragFrame = 0;
     this._pendingDragUpdate = null;
@@ -5079,6 +5080,10 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._tvVolumePickerEntity = null;
     this._tvPanelScrollPositions = new Map();
     this._onResize = () => {
+      if (this._activeSliderDrag) {
+        this._pendingRenderAfterDrag = true;
+        return;
+      }
       this._render();
     };
     this._onWindowKeyDown = event => {
@@ -5090,20 +5095,48 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
+    this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
+    this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
+    this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
+    this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
+    this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
+    this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
+    this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowChange);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
+    this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
+    this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
   }
 
   connectedCallback() {
     window.addEventListener("resize", this._onResize);
     window.addEventListener("keydown", this._onWindowKeyDown);
+    window.addEventListener("pointermove", this._onWindowPointerMove);
+    window.addEventListener("pointerup", this._onWindowPointerUp);
+    window.addEventListener("pointercancel", this._onWindowPointerUp);
+    window.addEventListener("mousemove", this._onWindowMouseMove);
+    window.addEventListener("mouseup", this._onWindowMouseUp);
+    window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+    window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+    window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
     this._render();
   }
 
   disconnectedCallback() {
     window.removeEventListener("resize", this._onResize);
     window.removeEventListener("keydown", this._onWindowKeyDown);
+    window.removeEventListener("pointermove", this._onWindowPointerMove);
+    window.removeEventListener("pointerup", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    window.removeEventListener("mousemove", this._onWindowMouseMove);
+    window.removeEventListener("mouseup", this._onWindowMouseUp);
+    window.removeEventListener("touchmove", this._onWindowTouchMove);
+    window.removeEventListener("touchend", this._onWindowTouchEnd);
+    window.removeEventListener("touchcancel", this._onWindowTouchEnd);
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
@@ -5133,6 +5166,12 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     this._lastRenderSignature = nextSignature;
+
+    if (this._activeSliderDrag) {
+      this._pendingRenderAfterDrag = true;
+      return;
+    }
+
     this._render();
   }
 
@@ -5784,7 +5823,13 @@ class NodaliaMediaPlayer extends HTMLElement {
     });
 
     if (shouldTick && !this._mediaTicker) {
-      this._mediaTicker = window.setInterval(() => this._render(), 1000);
+      this._mediaTicker = window.setInterval(() => {
+        if (this._activeSliderDrag) {
+          this._pendingRenderAfterDrag = true;
+          return;
+        }
+        this._render();
+      }, 1000);
       return;
     }
 
@@ -6053,6 +6098,11 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     this._activeSliderDrag = null;
+
+    if (this._pendingRenderAfterDrag) {
+      this._pendingRenderAfterDrag = false;
+      this._render();
+    }
   }
 
   _onShadowMouseDown(event) {
@@ -6140,6 +6190,10 @@ class NodaliaMediaPlayer extends HTMLElement {
     const clientX = event.changedTouches?.[0]?.clientX;
     if (!Number.isFinite(clientX)) {
       this._activeSliderDrag = null;
+      if (this._pendingRenderAfterDrag) {
+        this._pendingRenderAfterDrag = false;
+        this._render();
+      }
       return;
     }
 
@@ -8061,7 +8115,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           display: block;
           height: max(44px, calc(${playerStyles.slider_height} + 18px));
           outline: none;
-          touch-action: none;
+          touch-action: pan-y;
           user-select: none;
           -webkit-user-select: none;
           width: 100%;
@@ -9555,6 +9609,7 @@ class NodaliaLightCard extends HTMLElement {
     this._cardWidth = 0;
     this._isCompactLayout = false;
     this._activeSliderDrag = null;
+    this._pendingRenderAfterDrag = false;
     this._skipNextSliderChange = null;
     this._dragFrame = 0;
     this._pendingDragUpdate = null;
@@ -9573,22 +9628,56 @@ class NodaliaLightCard extends HTMLElement {
 
       this._cardWidth = nextWidth;
       this._isCompactLayout = nextCompact;
+
+      if (this._activeSliderDrag) {
+        this._pendingRenderAfterDrag = true;
+        return;
+      }
+
       this._render();
     });
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
+    this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
+    this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
+    this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
+    this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
+    this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
+    this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
+    this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowChange);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
+    this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
+    this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
   }
 
   connectedCallback() {
     this._resizeObserver?.observe(this);
+    window.addEventListener("pointermove", this._onWindowPointerMove);
+    window.addEventListener("pointerup", this._onWindowPointerUp);
+    window.addEventListener("pointercancel", this._onWindowPointerUp);
+    window.addEventListener("mousemove", this._onWindowMouseMove);
+    window.addEventListener("mouseup", this._onWindowMouseUp);
+    window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+    window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+    window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
   }
 
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
+    window.removeEventListener("pointermove", this._onWindowPointerMove);
+    window.removeEventListener("pointerup", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    window.removeEventListener("mousemove", this._onWindowMouseMove);
+    window.removeEventListener("mouseup", this._onWindowMouseUp);
+    window.removeEventListener("touchmove", this._onWindowTouchMove);
+    window.removeEventListener("touchend", this._onWindowTouchEnd);
+    window.removeEventListener("touchcancel", this._onWindowTouchEnd);
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
@@ -9606,6 +9695,12 @@ class NodaliaLightCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+
+    if (this._activeSliderDrag) {
+      this._pendingRenderAfterDrag = true;
+      return;
+    }
+
     this._render();
   }
 
@@ -10162,6 +10257,11 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     this._activeSliderDrag = null;
+
+    if (this._pendingRenderAfterDrag) {
+      this._pendingRenderAfterDrag = false;
+      this._render();
+    }
   }
 
   _onShadowMouseDown(event) {
@@ -10249,6 +10349,10 @@ class NodaliaLightCard extends HTMLElement {
     const clientX = event.changedTouches?.[0]?.clientX;
     if (!Number.isFinite(clientX)) {
       this._activeSliderDrag = null;
+      if (this._pendingRenderAfterDrag) {
+        this._pendingRenderAfterDrag = false;
+        this._render();
+      }
       return;
     }
 
@@ -10309,6 +10413,11 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     event.stopPropagation();
+
+    if (this._activeSliderDrag?.slider === slider) {
+      return;
+    }
+
     this._applySliderValue(slider, slider.value, { commit: false });
   }
 
@@ -10769,7 +10878,7 @@ class NodaliaLightCard extends HTMLElement {
           display: block;
           height: max(44px, calc(${styles.slider_height} + 18px));
           outline: none;
-          touch-action: none;
+          touch-action: pan-y;
           user-select: none;
           -webkit-user-select: none;
           width: 100%;
@@ -11882,6 +11991,7 @@ class NodaliaFanCard extends HTMLElement {
     this._cardWidth = 0;
     this._isCompactLayout = false;
     this._activeSliderDrag = null;
+    this._pendingRenderAfterDrag = false;
     this._skipNextSliderChange = null;
     this._dragFrame = 0;
     this._pendingDragUpdate = null;
@@ -11900,22 +12010,56 @@ class NodaliaFanCard extends HTMLElement {
 
       this._cardWidth = nextWidth;
       this._isCompactLayout = nextCompact;
+
+      if (this._activeSliderDrag) {
+        this._pendingRenderAfterDrag = true;
+        return;
+      }
+
       this._render();
     });
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
+    this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
+    this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
+    this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
+    this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
+    this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
+    this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
+    this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowChange);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
+    this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
+    this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
   }
 
   connectedCallback() {
     this._resizeObserver?.observe(this);
+    window.addEventListener("pointermove", this._onWindowPointerMove);
+    window.addEventListener("pointerup", this._onWindowPointerUp);
+    window.addEventListener("pointercancel", this._onWindowPointerUp);
+    window.addEventListener("mousemove", this._onWindowMouseMove);
+    window.addEventListener("mouseup", this._onWindowMouseUp);
+    window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+    window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+    window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
   }
 
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
+    window.removeEventListener("pointermove", this._onWindowPointerMove);
+    window.removeEventListener("pointerup", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    window.removeEventListener("mousemove", this._onWindowMouseMove);
+    window.removeEventListener("mouseup", this._onWindowMouseUp);
+    window.removeEventListener("touchmove", this._onWindowTouchMove);
+    window.removeEventListener("touchend", this._onWindowTouchEnd);
+    window.removeEventListener("touchcancel", this._onWindowTouchEnd);
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
@@ -11933,6 +12077,12 @@ class NodaliaFanCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+
+    if (this._activeSliderDrag) {
+      this._pendingRenderAfterDrag = true;
+      return;
+    }
+
     this._render();
   }
 
@@ -12249,6 +12399,11 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     this._activeSliderDrag = null;
+
+    if (this._pendingRenderAfterDrag) {
+      this._pendingRenderAfterDrag = false;
+      this._render();
+    }
   }
 
   _onShadowMouseDown(event) {
@@ -12336,6 +12491,10 @@ class NodaliaFanCard extends HTMLElement {
     const clientX = event.changedTouches?.[0]?.clientX;
     if (!Number.isFinite(clientX)) {
       this._activeSliderDrag = null;
+      if (this._pendingRenderAfterDrag) {
+        this._pendingRenderAfterDrag = false;
+        this._render();
+      }
       return;
     }
 
@@ -12352,6 +12511,11 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     event.stopPropagation();
+
+    if (this._activeSliderDrag?.slider === slider) {
+      return;
+    }
+
     this._applySliderValue(slider, slider.value, { commit: false });
   }
 
@@ -12749,7 +12913,7 @@ class NodaliaFanCard extends HTMLElement {
           flex: 1;
           height: max(44px, calc(${styles.slider_thumb_size} + 12px));
           margin: 0;
-          touch-action: none;
+          touch-action: pan-y;
           user-select: none;
           -webkit-user-select: none;
           width: 100%;
@@ -13691,6 +13855,25 @@ function escapeSelectorValue(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
+function getRangeValueFromClientX(slider, clientX) {
+  const rect = slider.getBoundingClientRect();
+  if (!rect.width) {
+    return Number(slider.value || 0);
+  }
+
+  const min = Number(slider.min || 0);
+  const max = Number(slider.max || 100);
+  const step = slider.step === "any" ? 0 : Number(slider.step || 1);
+  const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
+  let nextValue = min + ((max - min) * ratio);
+
+  if (Number.isFinite(step) && step > 0) {
+    nextValue = min + (Math.round((nextValue - min) / step) * step);
+  }
+
+  return clamp(nextValue, min, max);
+}
+
 function fireEvent(node, type, detail, options) {
   const event = new CustomEvent(type, {
     bubbles: options?.bubbles ?? true,
@@ -13779,6 +13962,11 @@ class NodaliaHumidifierCard extends HTMLElement {
     this._fanModePanelOpen = false;
     this._cardWidth = 0;
     this._isCompactLayout = false;
+    this._activeSliderDrag = null;
+    this._pendingRenderAfterDrag = false;
+    this._skipNextSliderChange = null;
+    this._dragFrame = 0;
+    this._pendingDragUpdate = null;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -13794,22 +13982,61 @@ class NodaliaHumidifierCard extends HTMLElement {
 
       this._cardWidth = nextWidth;
       this._isCompactLayout = nextCompact;
+
+      if (this._activeSliderDrag) {
+        this._pendingRenderAfterDrag = true;
+        return;
+      }
+
       this._render();
     });
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
+    this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
+    this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
+    this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
+    this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
+    this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
+    this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
+    this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowChange);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
+    this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
+    this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
   }
 
   connectedCallback() {
     this._resizeObserver?.observe(this);
+    window.addEventListener("pointermove", this._onWindowPointerMove);
+    window.addEventListener("pointerup", this._onWindowPointerUp);
+    window.addEventListener("pointercancel", this._onWindowPointerUp);
+    window.addEventListener("mousemove", this._onWindowMouseMove);
+    window.addEventListener("mouseup", this._onWindowMouseUp);
+    window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+    window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+    window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
   }
 
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
+    window.removeEventListener("pointermove", this._onWindowPointerMove);
+    window.removeEventListener("pointerup", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    window.removeEventListener("mousemove", this._onWindowMouseMove);
+    window.removeEventListener("mouseup", this._onWindowMouseUp);
+    window.removeEventListener("touchmove", this._onWindowTouchMove);
+    window.removeEventListener("touchend", this._onWindowTouchEnd);
+    window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+    this._pendingDragUpdate = null;
   }
 
   setConfig(config) {
@@ -13822,6 +14049,12 @@ class NodaliaHumidifierCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+
+    if (this._activeSliderDrag) {
+      this._pendingRenderAfterDrag = true;
+      return;
+    }
+
     this._render();
   }
 
@@ -14141,6 +14374,194 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
   }
 
+  _onShadowPointerDown(event) {
+    const slider = event
+      .composedPath()
+      .find(node =>
+        node instanceof HTMLInputElement &&
+        node.type === "range" &&
+        node.dataset?.humidifierControl,
+      );
+
+    if (this._activeSliderDrag || !slider || (typeof event.button === "number" && event.button !== 0)) {
+      return;
+    }
+
+    this._startSliderDrag(slider, event.clientX, event, event.pointerId);
+  }
+
+  _queueSliderDragUpdate(slider, clientX) {
+    const nextValue = getRangeValueFromClientX(slider, clientX);
+    slider.value = String(nextValue);
+    this._applySliderValue(slider, nextValue, { commit: false });
+  }
+
+  _startSliderDrag(slider, clientX, event = null, pointerId = null) {
+    if (!slider) {
+      return;
+    }
+
+    this._activeSliderDrag = {
+      pointerId,
+      slider,
+    };
+
+    if (pointerId !== null) {
+      try {
+        slider.setPointerCapture(pointerId);
+      } catch (_error) {
+        // Ignore unsupported pointer capture.
+      }
+    }
+
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    this._pendingDragUpdate = null;
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+
+    const nextValue = getRangeValueFromClientX(slider, clientX);
+    slider.value = String(nextValue);
+    this._applySliderValue(slider, nextValue, { commit: false });
+  }
+
+  _commitSliderDrag(clientX, event = null, pointerId = null) {
+    const drag = this._activeSliderDrag;
+    if (!drag) {
+      return;
+    }
+
+    if (event) {
+      event.preventDefault();
+    }
+
+    this._pendingDragUpdate = null;
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+
+    const nextValue = getRangeValueFromClientX(drag.slider, clientX);
+    drag.slider.value = String(nextValue);
+    this._skipNextSliderChange = drag.slider;
+    this._applySliderValue(drag.slider, nextValue, { commit: true });
+
+    if (pointerId !== null) {
+      try {
+        drag.slider.releasePointerCapture(pointerId);
+      } catch (_error) {
+        // Ignore unsupported pointer capture.
+      }
+    }
+
+    this._activeSliderDrag = null;
+
+    if (this._pendingRenderAfterDrag) {
+      this._pendingRenderAfterDrag = false;
+      this._render();
+    }
+  }
+
+  _onShadowMouseDown(event) {
+    const slider = event
+      .composedPath()
+      .find(node =>
+        node instanceof HTMLInputElement &&
+        node.type === "range" &&
+        node.dataset?.humidifierControl,
+      );
+
+    if (this._activeSliderDrag || !slider || event.button !== 0) {
+      return;
+    }
+
+    this._startSliderDrag(slider, event.clientX, event);
+  }
+
+  _onShadowTouchStart(event) {
+    const slider = event
+      .composedPath()
+      .find(node =>
+        node instanceof HTMLInputElement &&
+        node.type === "range" &&
+        node.dataset?.humidifierControl,
+      );
+
+    if (this._activeSliderDrag || !slider || !event.touches?.length) {
+      return;
+    }
+
+    this._startSliderDrag(slider, event.touches[0].clientX, event);
+  }
+
+  _onWindowPointerMove(event) {
+    const drag = this._activeSliderDrag;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    event.preventDefault();
+    this._queueSliderDragUpdate(drag.slider, event.clientX);
+  }
+
+  _onWindowPointerUp(event) {
+    const drag = this._activeSliderDrag;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    this._commitSliderDrag(event.clientX, event, event.pointerId);
+  }
+
+  _onWindowMouseMove(event) {
+    if (!this._activeSliderDrag || (typeof event.buttons === "number" && (event.buttons & 1) === 0)) {
+      return;
+    }
+
+    event.preventDefault();
+    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX);
+  }
+
+  _onWindowMouseUp(event) {
+    if (!this._activeSliderDrag) {
+      return;
+    }
+
+    this._commitSliderDrag(event.clientX, event);
+  }
+
+  _onWindowTouchMove(event) {
+    if (!this._activeSliderDrag || !event.touches?.length) {
+      return;
+    }
+
+    event.preventDefault();
+    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.touches[0].clientX);
+  }
+
+  _onWindowTouchEnd(event) {
+    if (!this._activeSliderDrag) {
+      return;
+    }
+
+    const clientX = event.changedTouches?.[0]?.clientX;
+    if (!Number.isFinite(clientX)) {
+      this._activeSliderDrag = null;
+      if (this._pendingRenderAfterDrag) {
+        this._pendingRenderAfterDrag = false;
+        this._render();
+      }
+      return;
+    }
+
+    this._commitSliderDrag(clientX, event);
+  }
+
   _onShadowInput(event) {
     const slider = event
       .composedPath()
@@ -14151,6 +14572,11 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
 
     event.stopPropagation();
+
+    if (this._activeSliderDrag?.slider === slider) {
+      return;
+    }
+
     this._applySliderValue(slider, slider.value, { commit: false });
   }
 
@@ -14164,6 +14590,12 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
 
     event.stopPropagation();
+
+    if (this._skipNextSliderChange === slider) {
+      this._skipNextSliderChange = null;
+      return;
+    }
+
     this._applySliderValue(slider, slider.value, { commit: true });
   }
 
@@ -14484,7 +14916,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           flex: 1;
           height: max(44px, calc(${styles.slider_thumb_size} + 12px));
           margin: 0;
-          touch-action: none;
+          touch-action: pan-y;
           user-select: none;
           -webkit-user-select: none;
           width: 100%;
@@ -14652,6 +15084,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       </style>
       <ha-card
         class="humidifier-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "humidifier-card--compact" : ""} ${showCopyBlock ? "humidifier-card--with-copy" : ""}"
+        data-humidifier-action="toggle"
         style="--accent-color:${escapeHtml(accentColor)};"
       >
         <div class="humidifier-card__content">
