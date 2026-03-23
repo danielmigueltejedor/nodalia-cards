@@ -976,12 +976,12 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         }
 
         .gauge-card__range-label--min {
-          bottom: ${compactLayout ? "40px" : "46px"};
+          bottom: ${compactLayout ? "4px" : "6px"};
           left: ${compactLayout ? "10px" : "14px"};
         }
 
         .gauge-card__range-label--max {
-          bottom: ${compactLayout ? "40px" : "46px"};
+          bottom: ${compactLayout ? "4px" : "6px"};
           right: ${compactLayout ? "10px" : "14px"};
         }
 

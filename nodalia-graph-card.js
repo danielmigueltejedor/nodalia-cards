@@ -1,0 +1,1551 @@
+const CARD_TAG = "nodalia-graph-card";
+const EDITOR_TAG = "nodalia-graph-card-editor";
+const CARD_VERSION = "0.12.0";
+const HAPTIC_PATTERNS = {
+  selection: 8,
+  light: 10,
+  medium: 16,
+  heavy: 24,
+  success: [10, 40, 10],
+  warning: [20, 50, 12],
+  failure: [12, 40, 12, 40, 18],
+};
+const SERIES_COLORS = [
+  "#f29f05",
+  "#42a5f5",
+  "#7fd0c8",
+  "#f56aa0",
+  "#b993ff",
+  "#7ad66f",
+];
+
+const DEFAULT_CONFIG = {
+  entity: "",
+  entities: [],
+  name: "",
+  icon: "",
+  min: "",
+  max: "",
+  hours_to_show: 24,
+  points: 48,
+  show_header: true,
+  show_icon: true,
+  show_value: true,
+  show_legend: true,
+  show_fill: true,
+  show_unavailable_badge: true,
+  tap_action: "more-info",
+  haptics: {
+    enabled: false,
+    style: "selection",
+    fallback_vibrate: false,
+  },
+  styles: {
+    card: {
+      background: "var(--ha-card-background)",
+      border: "1px solid var(--divider-color)",
+      border_radius: "30px",
+      box_shadow: "var(--ha-card-box-shadow)",
+      padding: "18px",
+      gap: "14px",
+    },
+    icon: {
+      color: "var(--primary-text-color)",
+      size: "28px",
+    },
+    title_size: "15px",
+    value_size: "52px",
+    unit_size: "20px",
+    legend_size: "13px",
+    chart_height: "170px",
+    line_width: "4px",
+  },
+};
+
+const STUB_CONFIG = {
+  name: "Humedad",
+  entities: [
+    {
+      entity: "sensor.termostato_dormitorios_humedad",
+      name: "Dormitorio de Rocio",
+      color: "#f29f05",
+    },
+    {
+      entity: "sensor.termostato_habitaciones_comunes_humedad",
+      name: "Pasillo",
+      color: "#42a5f5",
+    },
+  ],
+};
+
+function isObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function deepClone(value) {
+  if (value === undefined) {
+    return undefined;
+  }
+  return JSON.parse(JSON.stringify(value));
+}
+
+function mergeConfig(base, override) {
+  if (Array.isArray(base)) {
+    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
+  }
+
+  if (!isObject(base)) {
+    return override === undefined ? base : override;
+  }
+
+  const result = {};
+  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
+
+  keys.forEach(key => {
+    const baseValue = base[key];
+    const overrideValue = override ? override[key] : undefined;
+
+    if (overrideValue === undefined) {
+      result[key] = deepClone(baseValue);
+      return;
+    }
+
+    if (Array.isArray(overrideValue)) {
+      result[key] = deepClone(overrideValue);
+      return;
+    }
+
+    if (isObject(baseValue) && isObject(overrideValue)) {
+      result[key] = mergeConfig(baseValue, overrideValue);
+      return;
+    }
+
+    result[key] = overrideValue;
+  });
+
+  return result;
+}
+
+function compactConfig(value) {
+  if (Array.isArray(value)) {
+    return value.map(item => compactConfig(item)).filter(item => item !== undefined);
+  }
+
+  if (isObject(value)) {
+    const compacted = {};
+
+    Object.entries(value).forEach(([key, item]) => {
+      const cleaned = compactConfig(item);
+      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
+
+      if (cleaned !== undefined && !isEmptyObject) {
+        compacted[key] = cleaned;
+      }
+    });
+
+    return compacted;
+  }
+
+  if (value === "" || value === null || value === undefined) {
+    return undefined;
+  }
+
+  return value;
+}
+
+function setByPath(target, path, value) {
+  const parts = path.split(".");
+  let cursor = target;
+
+  for (let index = 0; index < parts.length - 1; index += 1) {
+    const key = parts[index];
+    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
+      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
+    }
+    cursor = cursor[key];
+  }
+
+  cursor[parts[parts.length - 1]] = value;
+}
+
+function deleteByPath(target, path) {
+  const parts = path.split(".");
+  let cursor = target;
+
+  for (let index = 0; index < parts.length - 1; index += 1) {
+    const key = parts[index];
+    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
+      return;
+    }
+    cursor = cursor[key];
+  }
+
+  delete cursor[parts[parts.length - 1]];
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function fireEvent(node, type, detail, options) {
+  const event = new CustomEvent(type, {
+    bubbles: options?.bubbles ?? true,
+    cancelable: Boolean(options?.cancelable),
+    composed: options?.composed ?? true,
+    detail,
+  });
+  node.dispatchEvent(event);
+  return event;
+}
+
+function normalizeTextKey(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function isUnavailableState(state) {
+  return normalizeTextKey(state?.state) === "unavailable";
+}
+
+function parseNumber(value) {
+  const numeric = Number(String(value ?? "").replace(",", "."));
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function formatNumberValue(value, decimals = 0) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "--";
+  }
+
+  return numeric.toLocaleString("es-ES", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+}
+
+function inferDecimals(rawValue) {
+  const text = String(rawValue ?? "").trim().replace(",", ".");
+  if (!text.includes(".")) {
+    return 0;
+  }
+  return Math.min(3, text.split(".")[1].length);
+}
+
+function parseSizeToPixels(value, fallback = 0) {
+  const numeric = Number.parseFloat(String(value ?? ""));
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function resolveEntityEntries(config) {
+  const source = Array.isArray(config?.entities) && config.entities.length
+    ? config.entities
+    : config?.entity
+      ? [{ entity: config.entity, name: config.name || "" }]
+      : [];
+
+  return source
+    .map((entry, index) => {
+      if (typeof entry === "string") {
+        return {
+          entity: entry.trim(),
+          name: "",
+          color: SERIES_COLORS[index % SERIES_COLORS.length],
+        };
+      }
+
+      if (!isObject(entry) || !entry.entity) {
+        return null;
+      }
+
+      return {
+        entity: String(entry.entity).trim(),
+        name: String(entry.name || "").trim(),
+        color: String(entry.color || SERIES_COLORS[index % SERIES_COLORS.length]).trim(),
+      };
+    })
+    .filter(entry => entry?.entity);
+}
+
+function normalizeConfig(rawConfig) {
+  const merged = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  merged.entities = resolveEntityEntries(merged);
+  return merged;
+}
+
+function buildSmoothPath(points) {
+  if (!Array.isArray(points) || points.length === 0) {
+    return "";
+  }
+
+  if (points.length === 1) {
+    return `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+  }
+
+  let path = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const p0 = points[index - 1] || points[index];
+    const p1 = points[index];
+    const p2 = points[index + 1];
+    const p3 = points[index + 2] || p2;
+
+    const cp1x = p1.x + ((p2.x - p0.x) / 6);
+    const cp1y = p1.y + ((p2.y - p0.y) / 6);
+    const cp2x = p2.x - ((p3.x - p1.x) / 6);
+    const cp2y = p2.y - ((p3.y - p1.y) / 6);
+
+    path += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+
+  return path;
+}
+
+function buildAreaPath(points, bottomY) {
+  if (!Array.isArray(points) || points.length === 0) {
+    return "";
+  }
+
+  const linePath = buildSmoothPath(points);
+  const first = points[0];
+  const last = points[points.length - 1];
+  return `${linePath} L ${last.x.toFixed(2)} ${bottomY.toFixed(2)} L ${first.x.toFixed(2)} ${bottomY.toFixed(2)} Z`;
+}
+
+class NodaliaGraphCard extends HTMLElement {
+  static async getConfigElement() {
+    return document.createElement(EDITOR_TAG);
+  }
+
+  static getStubConfig() {
+    return deepClone(STUB_CONFIG);
+  }
+
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._config = normalizeConfig(STUB_CONFIG);
+    this._hass = null;
+    this._historySeries = [];
+    this._historyKey = "";
+    this._historyLoadedAt = 0;
+    this._historyAbortController = null;
+    this._onShadowClick = this._onShadowClick.bind(this);
+    this.shadowRoot.addEventListener("click", this._onShadowClick);
+  }
+
+  disconnectedCallback() {
+    this._historyAbortController?.abort();
+    this._historyAbortController = null;
+  }
+
+  setConfig(config) {
+    this._config = normalizeConfig(config || {});
+    this._historySeries = [];
+    this._historyKey = "";
+    this._historyLoadedAt = 0;
+    this._requestHistory();
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this._requestHistory();
+    this._render();
+  }
+
+  getCardSize() {
+    return 4;
+  }
+
+  getGridOptions() {
+    return {
+      rows: 4,
+      columns: 12,
+      min_rows: 3,
+      min_columns: 6,
+    };
+  }
+
+  _getEntityEntries() {
+    return resolveEntityEntries(this._config);
+  }
+
+  _getPrimaryEntityId() {
+    return this._getEntityEntries()[0]?.entity || "";
+  }
+
+  _getPrimaryState() {
+    const primaryEntityId = this._getPrimaryEntityId();
+    return primaryEntityId ? this._hass?.states?.[primaryEntityId] || null : null;
+  }
+
+  _getTitle() {
+    return this._config?.name || "Grafica";
+  }
+
+  _getIcon() {
+    return this._config?.icon || this._getPrimaryState()?.attributes?.icon || "mdi:chart-line";
+  }
+
+  _getUnit() {
+    const entries = this._getEntityEntries();
+    const units = entries
+      .map(entry => {
+        const state = this._hass?.states?.[entry.entity];
+        return String(
+          state?.attributes?.unit_of_measurement
+          || state?.attributes?.native_unit_of_measurement
+          || "",
+        ).trim();
+      })
+      .filter(Boolean);
+
+    return units.length && units.every(unit => unit === units[0]) ? units[0] : "";
+  }
+
+  _getDecimals() {
+    const entry = this._getEntityEntries()[0];
+    if (!entry) {
+      return 0;
+    }
+
+    const state = this._hass?.states?.[entry.entity];
+    return inferDecimals(state?.state);
+  }
+
+  _getCurrentValuesText() {
+    const entries = this._getEntityEntries();
+    const values = entries
+      .map(entry => {
+        const state = this._hass?.states?.[entry.entity];
+        return parseNumber(state?.state);
+      })
+      .filter(value => Number.isFinite(value));
+
+    if (!values.length) {
+      return { value: "--", unit: this._getUnit() };
+    }
+
+    const decimals = this._getDecimals();
+    const joined = values.map(value => formatNumberValue(value, decimals)).join(", ");
+    return {
+      value: joined,
+      unit: this._getUnit(),
+    };
+  }
+
+  _getLegendEntries() {
+    return this._getEntityEntries().map((entry, index) => {
+      const state = this._hass?.states?.[entry.entity];
+      return {
+        entity: entry.entity,
+        name: entry.name || state?.attributes?.friendly_name || entry.entity,
+        color: entry.color || SERIES_COLORS[index % SERIES_COLORS.length],
+      };
+    });
+  }
+
+  _canRunTapAction() {
+    return (this._config?.tap_action || "more-info") !== "none" && Boolean(this._getPrimaryEntityId());
+  }
+
+  _triggerHaptic(styleOverride = null) {
+    const haptics = this._config?.haptics || {};
+    if (haptics.enabled !== true) {
+      return;
+    }
+
+    const style = styleOverride || haptics.style || "selection";
+    fireEvent(this, "haptic", style, {
+      bubbles: true,
+      cancelable: false,
+      composed: true,
+    });
+
+    if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
+      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+    }
+  }
+
+  _openMoreInfo() {
+    const entityId = this._getPrimaryEntityId();
+    if (!entityId) {
+      return;
+    }
+
+    fireEvent(this, "hass-more-info", {
+      entityId,
+    });
+  }
+
+  _onShadowClick(event) {
+    const target = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.graphAction === "primary");
+
+    if (!target || !this._canRunTapAction()) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this._triggerHaptic();
+    this._openMoreInfo();
+  }
+
+  _getHistoryRequestKey() {
+    const entries = this._getEntityEntries();
+    return JSON.stringify({
+      entities: entries.map(entry => entry.entity),
+      hours: Number(this._config?.hours_to_show) || DEFAULT_CONFIG.hours_to_show,
+      points: Number(this._config?.points) || DEFAULT_CONFIG.points,
+    });
+  }
+
+  async _fetchHistory(start, end, entityIds, signal) {
+    const token = this._hass?.auth?.data?.accessToken;
+    const query = [
+      `filter_entity_id=${encodeURIComponent(entityIds.join(","))}`,
+      `end_time=${encodeURIComponent(end.toISOString())}`,
+      "minimal_response",
+      "no_attributes",
+    ].join("&");
+
+    const response = await fetch(
+      `/api/history/period/${encodeURIComponent(start.toISOString())}?${query}`,
+      {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        signal,
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`History request failed with ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  _normalizeHistorySeries(raw, start, end) {
+    const entries = this._getLegendEntries();
+    const historyByEntity = new Map();
+    const pointsCount = Math.max(20, Number(this._config?.points) || DEFAULT_CONFIG.points);
+    const startMs = start.getTime();
+    const endMs = end.getTime();
+    const spanMs = Math.max(endMs - startMs, 1);
+
+    if (Array.isArray(raw)) {
+      raw.forEach(group => {
+        if (Array.isArray(group) && group[0]?.entity_id) {
+          historyByEntity.set(group[0].entity_id, group);
+        }
+      });
+    }
+
+    return entries.map(entry => {
+      const state = this._hass?.states?.[entry.entity];
+      const rawGroup = historyByEntity.get(entry.entity) || [];
+      const events = rawGroup
+        .map(item => ({
+          ts: Date.parse(item.last_changed || item.last_updated || ""),
+          value: parseNumber(item.state),
+        }))
+        .filter(item => Number.isFinite(item.ts) && Number.isFinite(item.value))
+        .sort((left, right) => left.ts - right.ts);
+
+      const currentValue = parseNumber(state?.state);
+      if (Number.isFinite(currentValue)) {
+        const nowTs = end.getTime();
+        if (!events.length || Math.abs(events[events.length - 1].ts - nowTs) > 1000) {
+          events.push({ ts: nowTs, value: currentValue });
+        }
+      }
+
+      let cursor = 0;
+      let lastValue = events[0]?.value ?? currentValue ?? null;
+      const samples = [];
+
+      for (let index = 0; index < pointsCount; index += 1) {
+        const sampleTs = startMs + ((spanMs * index) / Math.max(pointsCount - 1, 1));
+
+        while (cursor < events.length && events[cursor].ts <= sampleTs) {
+          lastValue = events[cursor].value;
+          cursor += 1;
+        }
+
+        if (!Number.isFinite(lastValue) && Number.isFinite(currentValue)) {
+          lastValue = currentValue;
+        }
+
+        samples.push({
+          ts: sampleTs,
+          value: Number.isFinite(lastValue) ? lastValue : 0,
+        });
+      }
+
+      return {
+        ...entry,
+        unit: String(
+          state?.attributes?.unit_of_measurement
+          || state?.attributes?.native_unit_of_measurement
+          || "",
+        ).trim(),
+        currentValue: Number.isFinite(currentValue) ? currentValue : samples[samples.length - 1]?.value ?? 0,
+        samples,
+      };
+    });
+  }
+
+  async _requestHistory() {
+    if (!this._hass || !this._getEntityEntries().length) {
+      return;
+    }
+
+    const requestKey = this._getHistoryRequestKey();
+    if (
+      requestKey === this._historyKey &&
+      this._historySeries.length &&
+      Date.now() - this._historyLoadedAt < 180000
+    ) {
+      return;
+    }
+
+    this._historyAbortController?.abort();
+    const controller = new AbortController();
+    this._historyAbortController = controller;
+
+    const end = new Date();
+    const hoursToShow = Math.max(1, Number(this._config?.hours_to_show) || DEFAULT_CONFIG.hours_to_show);
+    const start = new Date(end.getTime() - (hoursToShow * 60 * 60 * 1000));
+
+    try {
+      const raw = await this._fetchHistory(start, end, this._getEntityEntries().map(entry => entry.entity), controller.signal);
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      this._historySeries = this._normalizeHistorySeries(raw, start, end);
+      this._historyKey = requestKey;
+      this._historyLoadedAt = Date.now();
+      this._render();
+    } catch (_error) {
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      this._historySeries = this._normalizeHistorySeries([], start, end);
+      this._historyKey = requestKey;
+      this._historyLoadedAt = Date.now();
+      this._render();
+    } finally {
+      if (this._historyAbortController === controller) {
+        this._historyAbortController = null;
+      }
+    }
+  }
+
+  _getGraphBounds(series) {
+    const configuredMin = Number(this._config?.min);
+    const configuredMax = Number(this._config?.max);
+    const values = series.flatMap(entry => entry.samples.map(sample => sample.value)).filter(Number.isFinite);
+
+    let min = Number.isFinite(configuredMin) ? configuredMin : Math.min(...values);
+    let max = Number.isFinite(configuredMax) ? configuredMax : Math.max(...values);
+
+    if (!Number.isFinite(min) || !Number.isFinite(max)) {
+      min = 0;
+      max = 100;
+    }
+
+    if (!Number.isFinite(configuredMin)) {
+      const spread = Math.max(max - min, 1);
+      min -= spread * 0.14;
+    }
+
+    if (!Number.isFinite(configuredMax)) {
+      const spread = Math.max(max - min, 1);
+      max += spread * 0.08;
+    }
+
+    if (max <= min) {
+      max = min + 1;
+    }
+
+    return { min, max };
+  }
+
+  _buildChartSeries(series) {
+    const width = 100;
+    const height = 44;
+    const paddingX = 1;
+    const paddingTop = 2;
+    const paddingBottom = 3;
+    const bounds = this._getGraphBounds(series);
+    const range = Math.max(bounds.max - bounds.min, 1);
+
+    return {
+      width,
+      height,
+      entries: series.map(entry => {
+        const points = entry.samples.map((sample, index) => {
+          const x = paddingX + ((width - (paddingX * 2)) * index) / Math.max(entry.samples.length - 1, 1);
+          const normalized = clamp((sample.value - bounds.min) / range, 0, 1);
+          const y = paddingTop + ((height - paddingTop - paddingBottom) * (1 - normalized));
+          return { x, y };
+        });
+
+        return {
+          ...entry,
+          linePath: buildSmoothPath(points),
+          fillPath: buildAreaPath(points, height - paddingBottom),
+        };
+      }),
+    };
+  }
+
+  _getSeriesData() {
+    if (this._historySeries.length) {
+      return this._historySeries;
+    }
+
+    const end = new Date();
+    const hoursToShow = Math.max(1, Number(this._config?.hours_to_show) || DEFAULT_CONFIG.hours_to_show);
+    const start = new Date(end.getTime() - (hoursToShow * 60 * 60 * 1000));
+    return this._normalizeHistorySeries([], start, end);
+  }
+
+  _renderEmptyState() {
+    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    return `
+      <style>
+        :host {
+          display: block;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        .graph-card--empty {
+          background: ${styles.card.background};
+          border: ${styles.card.border};
+          border-radius: ${styles.card.border_radius};
+          box-shadow: ${styles.card.box_shadow};
+          display: grid;
+          gap: 6px;
+          padding: ${styles.card.padding};
+        }
+
+        .graph-card__empty-title {
+          color: var(--primary-text-color);
+          font-size: 15px;
+          font-weight: 700;
+        }
+
+        .graph-card__empty-text {
+          color: var(--secondary-text-color);
+          font-size: 13px;
+          line-height: 1.5;
+        }
+      </style>
+      <ha-card class="graph-card graph-card--empty">
+        <div class="graph-card__empty-title">Nodalia Graph Card</div>
+        <div class="graph-card__empty-text">Configura \`entities\` con una o varias entidades numericas para mostrar la grafica.</div>
+      </ha-card>
+    `;
+  }
+
+  _render() {
+    if (!this.shadowRoot) {
+      return;
+    }
+
+    const entries = this._getEntityEntries();
+    if (!entries.length) {
+      this.shadowRoot.innerHTML = this._renderEmptyState();
+      return;
+    }
+
+    const config = this._config || normalizeConfig({});
+    const styles = config.styles || DEFAULT_CONFIG.styles;
+    const legendEntries = this._getLegendEntries();
+    const primaryState = this._getPrimaryState();
+    const showUnavailableBadge = config.show_unavailable_badge !== false && entries.some(entry => isUnavailableState(this._hass?.states?.[entry.entity]));
+    const compactLayout = Number(config?.grid_options?.rows) > 0 && Number(config?.grid_options?.rows) <= 3;
+    const currentValue = this._getCurrentValuesText();
+    const chart = this._buildChartSeries(this._getSeriesData());
+    const icon = this._getIcon();
+    const title = this._getTitle();
+    const accentColor = legendEntries[0]?.color || "var(--primary-color)";
+    const chartHeight = `${Math.max(120, Math.min(parseSizeToPixels(styles.chart_height, 170), compactLayout ? 136 : 170))}px`;
+    const valueSize = `${Math.max(40, Math.min(parseSizeToPixels(styles.value_size, 52), compactLayout ? 44 : 52))}px`;
+    const unitSize = `${Math.max(16, Math.min(parseSizeToPixels(styles.unit_size, 20), compactLayout ? 18 : 20))}px`;
+    const titleSize = `${Math.max(14, Math.min(parseSizeToPixels(styles.title_size, 15), compactLayout ? 14 : 15))}px`;
+    const legendSize = `${Math.max(12, Math.min(parseSizeToPixels(styles.legend_size, 13), compactLayout ? 12 : 13))}px`;
+    const lineWidth = `${Math.max(2.5, Math.min(parseSizeToPixels(styles.line_width, 4), compactLayout ? 3.5 : 4))}`;
+    const cardBackground = `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
+    const cardBorder = `1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color))`;
+    const cardShadow = `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 8%, rgba(0, 0, 0, 0.16))`;
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+          height: 100%;
+          min-height: 0;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        ha-card {
+          height: 100%;
+          min-height: 0;
+          overflow: hidden;
+        }
+
+        .graph-card {
+          background:
+            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 12%, transparent) 0%, transparent 44%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0%, rgba(0, 0, 0, 0.02) 100%),
+            ${cardBackground};
+          border: ${cardBorder};
+          border-radius: ${styles.card.border_radius};
+          box-shadow: ${cardShadow};
+          color: var(--primary-text-color);
+          position: relative;
+        }
+
+        .graph-card__content {
+          cursor: ${this._canRunTapAction() ? "pointer" : "default"};
+          display: flex;
+          flex-direction: column;
+          gap: ${styles.card.gap};
+          height: 100%;
+          min-height: 0;
+          padding: ${styles.card.padding};
+          position: relative;
+          z-index: 1;
+        }
+
+        .graph-card__header {
+          align-items: start;
+          display: grid;
+          gap: 10px;
+          grid-template-columns: minmax(0, 1fr) auto;
+        }
+
+        .graph-card__title {
+          color: var(--primary-text-color);
+          font-size: ${titleSize};
+          font-weight: 600;
+          line-height: 1.15;
+          min-width: 0;
+          opacity: 0.95;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .graph-card__icon {
+          color: ${styles.icon.color};
+          display: inline-flex;
+          opacity: 0.9;
+          position: relative;
+        }
+
+        .graph-card__icon ha-icon {
+          --mdc-icon-size: ${styles.icon.size};
+          height: ${styles.icon.size};
+          width: ${styles.icon.size};
+        }
+
+        .graph-card__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #ffffff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -4px;
+          top: -3px;
+          width: 18px;
+          z-index: 2;
+        }
+
+        .graph-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          height: 11px;
+          width: 11px;
+        }
+
+        .graph-card__value {
+          align-items: start;
+          display: flex;
+          flex-wrap: nowrap;
+          gap: 8px;
+          line-height: 0.94;
+          min-width: 0;
+        }
+
+        .graph-card__value-number {
+          font-size: ${valueSize};
+          font-weight: 300;
+          letter-spacing: -0.06em;
+          line-height: 0.9;
+          min-width: 0;
+        }
+
+        .graph-card__value-unit {
+          font-size: ${unitSize};
+          font-weight: 500;
+          line-height: 1;
+          opacity: 0.84;
+          padding-top: 10px;
+        }
+
+        .graph-card__legend {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 14px 20px;
+          justify-content: center;
+          min-height: 0;
+        }
+
+        .graph-card__legend-item {
+          align-items: center;
+          color: var(--primary-text-color);
+          display: inline-flex;
+          font-size: ${legendSize};
+          gap: 10px;
+          min-width: 0;
+          opacity: 0.92;
+        }
+
+        .graph-card__legend-dot {
+          border-radius: 999px;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 10px;
+          width: 10px;
+        }
+
+        .graph-card__legend-text {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .graph-card__chart-wrap {
+          flex: 1 1 auto;
+          min-height: ${chartHeight};
+          position: relative;
+        }
+
+        .graph-card__chart {
+          display: block;
+          height: 100%;
+          width: 100%;
+        }
+
+        .graph-card__chart-base {
+          fill: rgba(255, 255, 255, 0.018);
+        }
+
+        .graph-card__chart-series-fill {
+          opacity: 0.08;
+        }
+
+        .graph-card__chart-series-line {
+          fill: none;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+          stroke-width: ${lineWidth};
+        }
+
+        @media (max-width: 640px) {
+          .graph-card__header {
+            gap: 8px;
+          }
+
+          .graph-card__legend {
+            justify-content: flex-start;
+          }
+        }
+      </style>
+      <ha-card class="graph-card">
+        <div class="graph-card__content" ${this._canRunTapAction() ? 'data-graph-action="primary"' : ""}>
+          ${
+            config.show_header !== false
+              ? `
+                <div class="graph-card__header">
+                  <div class="graph-card__title">${escapeHtml(title)}</div>
+                  ${
+                    config.show_icon !== false
+                      ? `
+                        <div class="graph-card__icon">
+                          <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+                          ${showUnavailableBadge ? `<span class="graph-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
+                        </div>
+                      `
+                      : ""
+                  }
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            config.show_value !== false
+              ? `
+                <div class="graph-card__value">
+                  <div class="graph-card__value-number">${escapeHtml(currentValue.value)}</div>
+                  ${currentValue.unit ? `<div class="graph-card__value-unit">${escapeHtml(currentValue.unit)}</div>` : ""}
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            config.show_legend !== false
+              ? `
+                <div class="graph-card__legend">
+                  ${legendEntries.map(entry => `
+                    <div class="graph-card__legend-item">
+                      <span class="graph-card__legend-dot" style="background:${escapeHtml(entry.color)};"></span>
+                      <span class="graph-card__legend-text">${escapeHtml(entry.name)}</span>
+                    </div>
+                  `).join("")}
+                </div>
+              `
+              : ""
+          }
+
+          <div class="graph-card__chart-wrap">
+            <svg class="graph-card__chart" viewBox="0 0 ${chart.width} ${chart.height}" preserveAspectRatio="none">
+              <rect class="graph-card__chart-base" x="0" y="0" width="${chart.width}" height="${chart.height}"></rect>
+              ${chart.entries.map(entry => `
+                ${
+                  config.show_fill !== false
+                    ? `<path class="graph-card__chart-series-fill" d="${entry.fillPath}" fill="${escapeHtml(entry.color)}"></path>`
+                    : ""
+                }
+                <path class="graph-card__chart-series-line" d="${entry.linePath}" stroke="${escapeHtml(entry.color)}"></path>
+              `).join("")}
+            </svg>
+          </div>
+        </div>
+      </ha-card>
+    `;
+  }
+}
+
+if (!customElements.get(CARD_TAG)) {
+  customElements.define(CARD_TAG, NodaliaGraphCard);
+}
+
+class NodaliaGraphCardEditor extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._config = normalizeConfig(STUB_CONFIG);
+    this._hass = null;
+    this._entityOptionsSignature = "";
+    this._onShadowInput = this._onShadowInput.bind(this);
+    this.shadowRoot.addEventListener("input", this._onShadowInput);
+    this.shadowRoot.addEventListener("change", this._onShadowInput);
+  }
+
+  set hass(hass) {
+    const nextSignature = this._getEntityOptionsSignature(hass);
+    const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+    this._hass = hass;
+    this._entityOptionsSignature = nextSignature;
+
+    if (shouldRender) {
+      this._render();
+    }
+  }
+
+  setConfig(config) {
+    this._config = normalizeConfig(config || {});
+    this._render();
+  }
+
+  _getEntityOptionsSignature(hass) {
+    if (!hass?.states) {
+      return "";
+    }
+
+    return Object.keys(hass.states)
+      .filter(entityId => entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number."))
+      .sort((left, right) => left.localeCompare(right, "es"))
+      .join("|");
+  }
+
+  _captureFocusState() {
+    const activeElement = this.shadowRoot?.activeElement;
+    if (
+      !(
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement instanceof HTMLSelectElement
+      ) ||
+      !activeElement.dataset?.field
+    ) {
+      return null;
+    }
+
+    const selector = `[data-field="${CSS.escape(activeElement.dataset.field)}"]`;
+    const supportsSelection =
+      (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement) &&
+      activeElement.type !== "checkbox" &&
+      typeof activeElement.selectionStart === "number" &&
+      typeof activeElement.selectionEnd === "number";
+
+    return {
+      selector,
+      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
+      selectionStart: supportsSelection ? activeElement.selectionStart : null,
+      type: activeElement.type,
+    };
+  }
+
+  _restoreFocusState(focusState) {
+    if (!focusState?.selector || !this.shadowRoot) {
+      return;
+    }
+
+    const target = this.shadowRoot.querySelector(focusState.selector);
+    if (
+      !(
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      )
+    ) {
+      return;
+    }
+
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_error) {
+      target.focus();
+    }
+
+    const canRestoreSelection =
+      focusState.type !== "checkbox" &&
+      typeof focusState.selectionStart === "number" &&
+      typeof focusState.selectionEnd === "number" &&
+      typeof target.setSelectionRange === "function";
+
+    if (!canRestoreSelection) {
+      return;
+    }
+
+    try {
+      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+    } catch (_error) {
+      // Ignore unsupported inputs.
+    }
+  }
+
+  _emitConfig() {
+    const focusState = this._captureFocusState();
+    const nextConfig = deepClone(this._config);
+    this._config = normalizeConfig(compactConfig(nextConfig));
+    this._render();
+    this._restoreFocusState(focusState);
+    fireEvent(this, "config-changed", {
+      config: compactConfig(nextConfig),
+    });
+  }
+
+  _setEditorConfig() {
+    this._config = normalizeConfig(compactConfig(this._config));
+  }
+
+  _setFieldValue(path, value) {
+    if (value === undefined || value === null || value === "") {
+      deleteByPath(this._config, path);
+      return;
+    }
+
+    setByPath(this._config, path, value);
+  }
+
+  _readFieldValue(input) {
+    const valueType = input.dataset.valueType || "string";
+
+    switch (valueType) {
+      case "boolean":
+        return Boolean(input.checked);
+      case "entities":
+        return String(input.value || "")
+          .split("\n")
+          .map(line => line.trim())
+          .filter(Boolean)
+          .map((line, index) => {
+            const [entity, name = "", color = ""] = line.split("|").map(part => part.trim());
+            return {
+              entity,
+              name,
+              color: color || SERIES_COLORS[index % SERIES_COLORS.length],
+            };
+          })
+          .filter(entry => entry.entity);
+      default:
+        return input.value;
+    }
+  }
+
+  _onShadowInput(event) {
+    const input = event
+      .composedPath()
+      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+
+    if (!input?.dataset?.field) {
+      return;
+    }
+
+    event.stopPropagation();
+    const nextValue = this._readFieldValue(input);
+    this._setFieldValue(input.dataset.field, nextValue);
+    this._setEditorConfig();
+
+    if (event.type === "change") {
+      this._emitConfig();
+    }
+  }
+
+  _renderTextField(label, field, value, options = {}) {
+    const inputType = options.type || "text";
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const valueType = options.valueType || "string";
+    const inputValue = value === undefined || value === null ? "" : String(value);
+
+    return `
+      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <input
+          type="${escapeHtml(inputType)}"
+          data-field="${escapeHtml(field)}"
+          data-value-type="${escapeHtml(valueType)}"
+          value="${escapeHtml(inputValue)}"
+          ${placeholder}
+        />
+      </label>
+    `;
+  }
+
+  _renderTextareaField(label, field, value, options = {}) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+
+    return `
+      <label class="editor-field editor-field--full">
+        <span>${escapeHtml(label)}</span>
+        <textarea
+          data-field="${escapeHtml(field)}"
+          data-value-type="${escapeHtml(options.valueType || "string")}"
+          rows="${escapeHtml(String(options.rows || 4))}"
+          ${placeholder}
+        >${escapeHtml(inputValue)}</textarea>
+      </label>
+    `;
+  }
+
+  _renderCheckboxField(label, field, checked) {
+    return `
+      <label class="editor-toggle">
+        <input
+          type="checkbox"
+          data-field="${escapeHtml(field)}"
+          data-value-type="boolean"
+          ${checked ? "checked" : ""}
+        />
+        <span>${escapeHtml(label)}</span>
+      </label>
+    `;
+  }
+
+  _renderSelectField(label, field, value, options) {
+    return `
+      <label class="editor-field">
+        <span>${escapeHtml(label)}</span>
+        <select data-field="${escapeHtml(field)}">
+          ${options
+            .map(option => `
+              <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
+                ${escapeHtml(option.label)}
+              </option>
+            `)
+            .join("")}
+        </select>
+      </label>
+    `;
+  }
+
+  _serializeEntities() {
+    return this._config.entities
+      .map(entry => [entry.entity || "", entry.name || "", entry.color || ""].join("|"))
+      .join("\n");
+  }
+
+  _render() {
+    if (!this.shadowRoot) {
+      return;
+    }
+
+    const config = this._config || normalizeConfig({});
+    const hapticStyle = config.haptics?.style || "selection";
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        .editor {
+          color: var(--primary-text-color);
+          display: grid;
+          gap: 16px;
+        }
+
+        .editor-section {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 18px;
+          display: grid;
+          gap: 14px;
+          padding: 16px;
+        }
+
+        .editor-section__header {
+          display: grid;
+          gap: 4px;
+        }
+
+        .editor-section__title {
+          font-size: 15px;
+          font-weight: 700;
+        }
+
+        .editor-section__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .editor-grid {
+          display: grid;
+          gap: 12px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .editor-field,
+        .editor-toggle {
+          display: grid;
+          gap: 6px;
+          min-width: 0;
+        }
+
+        .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+        .editor-field > span,
+        .editor-toggle > span {
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .editor-field input,
+        .editor-field select,
+        .editor-field textarea {
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          color: var(--primary-text-color);
+          font: inherit;
+          min-height: 40px;
+          padding: 10px 12px;
+          width: 100%;
+        }
+
+        .editor-field textarea {
+          min-height: 110px;
+          resize: vertical;
+        }
+
+        .editor-toggle {
+          align-items: center;
+          grid-template-columns: auto 1fr;
+          padding-top: 20px;
+        }
+
+        .editor-toggle input {
+          accent-color: var(--primary-color);
+          height: 18px;
+          margin: 0;
+          width: 18px;
+        }
+
+        @media (max-width: 640px) {
+          .editor-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .editor-toggle {
+            padding-top: 0;
+          }
+        }
+      </style>
+      <div class="editor">
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">General</div>
+            <div class="editor-section__hint">Configura titulo, entidades y rango visible de la grafica.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderTextField("Nombre", "name", config.name, {
+              placeholder: "Humedad",
+            })}
+            ${this._renderTextField("Icono", "icon", config.icon, {
+              placeholder: "mdi:water-percent",
+            })}
+            ${this._renderTextField("Minimo", "min", config.min, {
+              type: "number",
+              placeholder: "0",
+            })}
+            ${this._renderTextField("Maximo", "max", config.max, {
+              type: "number",
+              placeholder: "100",
+            })}
+            ${this._renderTextField("Horas a mostrar", "hours_to_show", config.hours_to_show, {
+              type: "number",
+              placeholder: "24",
+            })}
+            ${this._renderTextField("Puntos", "points", config.points, {
+              type: "number",
+              placeholder: "48",
+            })}
+            ${this._renderTextareaField("Entidades", "entities", this._serializeEntities(), {
+              valueType: "entities",
+              rows: 5,
+              placeholder: "sensor.humedad_dormitorio|Dormitorio de Rocio|#f29f05\nsensor.humedad_pasillo|Pasillo|#42a5f5",
+            })}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Visibilidad</div>
+            <div class="editor-section__hint">Activa o desactiva cabecera, valor, leyenda y relleno.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderCheckboxField("Mostrar cabecera", "show_header", config.show_header !== false)}
+            ${this._renderCheckboxField("Mostrar icono", "show_icon", config.show_icon !== false)}
+            ${this._renderCheckboxField("Mostrar valor grande", "show_value", config.show_value !== false)}
+            ${this._renderCheckboxField("Mostrar leyenda", "show_legend", config.show_legend !== false)}
+            ${this._renderCheckboxField("Mostrar relleno", "show_fill", config.show_fill !== false)}
+            ${this._renderCheckboxField("Mostrar badge de no disponible", "show_unavailable_badge", config.show_unavailable_badge !== false)}
+            ${this._renderSelectField(
+              "Tap action",
+              "tap_action",
+              config.tap_action || "more-info",
+              [
+                { value: "more-info", label: "More info" },
+                { value: "none", label: "Sin accion" },
+              ],
+            )}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Haptics</div>
+            <div class="editor-section__hint">Respuesta haptica opcional al tocar la tarjeta.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderSelectField(
+              "Estilo",
+              "haptics.style",
+              hapticStyle,
+              [
+                { value: "selection", label: "Selection" },
+                { value: "light", label: "Light" },
+                { value: "medium", label: "Medium" },
+                { value: "heavy", label: "Heavy" },
+                { value: "success", label: "Success" },
+                { value: "warning", label: "Warning" },
+                { value: "failure", label: "Failure" },
+              ],
+            )}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Estilos</div>
+            <div class="editor-section__hint">Ajustes visuales del grafico y el look Nodalia.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
+            ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
+            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
+            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
+            ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
+            ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
+            ${this._renderTextField("Tamano icono", "styles.icon.size", config.styles.icon.size)}
+            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
+            ${this._renderTextField("Tamano valor", "styles.value_size", config.styles.value_size)}
+            ${this._renderTextField("Tamano unidad", "styles.unit_size", config.styles.unit_size)}
+            ${this._renderTextField("Tamano leyenda", "styles.legend_size", config.styles.legend_size)}
+            ${this._renderTextField("Alto grafico", "styles.chart_height", config.styles.chart_height)}
+            ${this._renderTextField("Grosor linea", "styles.line_width", config.styles.line_width)}
+          </div>
+        </section>
+      </div>
+    `;
+  }
+}
+
+if (!customElements.get(EDITOR_TAG)) {
+  customElements.define(EDITOR_TAG, NodaliaGraphCardEditor);
+}
+
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: CARD_TAG,
+  name: "Nodalia Graph Card",
+  description: "Tarjeta de grafica elegante para una o varias entidades numericas con estilo Nodalia.",
+  preview: true,
+});

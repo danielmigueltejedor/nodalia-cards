@@ -10,6 +10,7 @@ Ahora mismo incluye:
 - `custom:nodalia-fan-card`
 - `custom:nodalia-humidifier-card`
 - `custom:nodalia-circular-gauge-card`
+- `custom:nodalia-graph-card`
 - `custom:nodalia-climate-card`
 - `custom:nodalia-alarm-panel-card`
 - `custom:nodalia-entity-card`
@@ -37,6 +38,7 @@ Ese recurso carga automaticamente:
 - `nodalia-fan-card.js`
 - `nodalia-humidifier-card.js`
 - `nodalia-circular-gauge-card.js`
+- `nodalia-graph-card.js`
 - `nodalia-climate-card.js`
 - `nodalia-alarm-panel-card.js`
 - `nodalia-entity-card.js`
@@ -59,6 +61,10 @@ Si prefieres cargarlas por separado:
 - url: /local/nodalia-fan-card.js
   type: module
 - url: /local/nodalia-humidifier-card.js
+  type: module
+- url: /local/nodalia-circular-gauge-card.js
+  type: module
+- url: /local/nodalia-graph-card.js
   type: module
 - url: /local/nodalia-climate-card.js
   type: module
@@ -146,6 +152,18 @@ max: 2500
 show_percentage_chip: true
 ```
 
+### Nodalia Graph Card
+
+```yaml
+type: custom:nodalia-graph-card
+name: Humedad
+entities:
+  - entity: sensor.termostato_dormitorios_humedad
+    name: Dormitorio de Rocio
+  - entity: sensor.termostato_habitaciones_comunes_humedad
+    name: Pasillo
+```
+
 ### Nodalia Climate Card
 
 ```yaml
@@ -218,6 +236,7 @@ show_zone_badge: true
 - `nodalia-fan-card.js`: tarjeta de ventilador
 - `nodalia-humidifier-card.js`: tarjeta de humidificador o deshumidificador
 - `nodalia-circular-gauge-card.js`: tarjeta circular para sensores y valores numericos
+- `nodalia-graph-card.js`: tarjeta de grafica elegante para una o varias entidades
 - `nodalia-climate-card.js`: tarjeta de clima con dial circular
 - `nodalia-alarm-panel-card.js`: tarjeta elegante para paneles de alarma
 - `nodalia-entity-card.js`: tarjeta todoterreno para cualquier entidad
