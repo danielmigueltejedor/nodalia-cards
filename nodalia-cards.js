@@ -17172,7 +17172,7 @@ class NodaliaClimateCard extends HTMLElement {
     const dialSizePx = parseSizeToPixels(styles.dial.size, 280);
     const dialStrokePx = parseSizeToPixels(styles.dial.stroke, 18);
     const thumbSizePx = parseSizeToPixels(styles.dial.thumb_size, 24);
-    const dialRadiusPx = Math.max(72, Math.round((dialSizePx / 2) - (dialStrokePx / 2) - 12));
+    const dialRadiusPx = Number(((DIAL_CIRCLE_RADIUS * dialSizePx) / DIAL_VIEWBOX_SIZE).toFixed(3));
     const stepControlSize = parseSizeToPixels(styles.step_control.size, 50);
     const ratio = supportsTargetTemperature
       ? (targetTemperature - temperatureRange.min) / Math.max(temperatureRange.max - temperatureRange.min, temperatureStep)
@@ -17422,12 +17422,12 @@ class NodaliaClimateCard extends HTMLElement {
           background: #f5f7fb;
           border: 4px solid color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.72));
           border-radius: 50%;
-          box-shadow: 0 0 0 7px rgba(255, 255, 255, 0.12);
+          box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.12);
           height: var(--climate-thumb-size);
           left: 50%;
           position: absolute;
           top: 50%;
-          transform: translate(-50%, -50%) rotate(var(--climate-angle)) translateY(calc(-1 * var(--climate-dial-radius)));
+          transform: translate(-50%, -50%) rotate(calc(var(--climate-angle) + 90deg)) translateY(calc(-1 * var(--climate-dial-radius)));
           width: var(--climate-thumb-size);
           z-index: 2;
         }
