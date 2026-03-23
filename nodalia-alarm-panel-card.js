@@ -592,7 +592,9 @@ class NodaliaAlarmPanelCard extends HTMLElement {
         label: "Casa",
         icon: "mdi:home-lock",
         service: "alarm_arm_home",
-        enabled: this._config?.show_arm_home !== false && this._supportsMode(state, "home"),
+        enabled: this._config?.show_arm_home !== false
+          && this._supportsMode(state, "home")
+          && normalizeTextKey(state?.state) !== "armed_home",
         active: normalizeTextKey(state?.state) === "armed_home",
       },
       {
@@ -600,7 +602,9 @@ class NodaliaAlarmPanelCard extends HTMLElement {
         label: "Ausente",
         icon: "mdi:shield-lock",
         service: "alarm_arm_away",
-        enabled: this._config?.show_arm_away !== false && this._supportsMode(state, "away"),
+        enabled: this._config?.show_arm_away !== false
+          && this._supportsMode(state, "away")
+          && normalizeTextKey(state?.state) !== "armed_away",
         active: normalizeTextKey(state?.state) === "armed_away",
       },
       {
@@ -608,7 +612,9 @@ class NodaliaAlarmPanelCard extends HTMLElement {
         label: "Noche",
         icon: "mdi:weather-night",
         service: "alarm_arm_night",
-        enabled: this._config?.show_arm_night !== false && this._supportsMode(state, "night"),
+        enabled: this._config?.show_arm_night !== false
+          && this._supportsMode(state, "night")
+          && normalizeTextKey(state?.state) !== "armed_night",
         active: normalizeTextKey(state?.state) === "armed_night",
       },
       {
@@ -616,7 +622,9 @@ class NodaliaAlarmPanelCard extends HTMLElement {
         label: "Vacaciones",
         icon: "mdi:palm-tree",
         service: "alarm_arm_vacation",
-        enabled: this._config?.show_arm_vacation === true && this._supportsMode(state, "vacation"),
+        enabled: this._config?.show_arm_vacation === true
+          && this._supportsMode(state, "vacation")
+          && normalizeTextKey(state?.state) !== "armed_vacation",
         active: normalizeTextKey(state?.state) === "armed_vacation",
       },
       {
@@ -624,7 +632,9 @@ class NodaliaAlarmPanelCard extends HTMLElement {
         label: "Personalizado",
         icon: "mdi:tune-variant",
         service: "alarm_arm_custom_bypass",
-        enabled: this._config?.show_custom_bypass === true && this._supportsMode(state, "custom_bypass"),
+        enabled: this._config?.show_custom_bypass === true
+          && this._supportsMode(state, "custom_bypass")
+          && normalizeTextKey(state?.state) !== "armed_custom_bypass",
         active: normalizeTextKey(state?.state) === "armed_custom_bypass",
       },
     ];
