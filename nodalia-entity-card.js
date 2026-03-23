@@ -1197,6 +1197,23 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
     event.stopPropagation();
 
+    if (input.dataset.field === "__info_only") {
+      const isInfoOnly = this._readFieldValue(input) === true;
+
+      if (isInfoOnly) {
+        this._config.tap_action = "none";
+      } else if ((this._config.tap_action || "auto") === "none") {
+        this._config.tap_action = "auto";
+      }
+
+      this._setEditorConfig();
+
+      if (event.type === "change") {
+        this._emitConfig();
+      }
+      return;
+    }
+
     const nextValue = this._readFieldValue(input);
     this._setFieldValue(input.dataset.field, nextValue);
     this._setEditorConfig();
@@ -1579,6 +1596,11 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 { value: "service", label: "Servicio" },
                 { value: "none", label: "Solo informacion" },
               ],
+            )}
+            ${this._renderCheckboxField(
+              "Sin accion al tocar",
+              "__info_only",
+              (config.tap_action || "auto") === "none",
             )}
             ${this._renderTextField("Servicio al tocar", "tap_service", config.tap_service, {
               placeholder: "light.turn_on",

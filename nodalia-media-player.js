@@ -371,6 +371,10 @@ function normalizeConfig(rawConfig) {
         image: config.image,
         tv_mode: config.tv_mode,
         browse_path: config.browse_path,
+        tap_action: config.tap_action,
+        power_action_off: config.power_action_off,
+        power_action_on: config.power_action_on,
+        power_action_unavailable: config.power_action_unavailable,
       },
     ];
   }
@@ -1193,19 +1197,32 @@ class NodaliaMediaPlayer extends HTMLElement {
       return;
     }
 
-    this._hass.callService(domain, service, action.service_data || action.data || {});
+    let payload = action.service_data ?? action.data ?? {};
+
+    if (typeof payload === "string") {
+      try {
+        const parsed = JSON.parse(payload);
+        payload = isObject(parsed) ? parsed : {};
+      } catch (_error) {
+        payload = {};
+      }
+    }
+
+    if (!isObject(payload)) {
+      payload = {};
+    }
+
+    this._hass.callService(domain, service, payload);
   }
 
-  _runPlayerAction(player, defaultAction = null) {
-    const action = player.tap_action || defaultAction;
-
+  _runActionDefinition(action, fallbackEntityId = "") {
     if (!action || action.action === "none") {
       return;
     }
 
     switch (action.action) {
       case "more-info": {
-        const entityId = action.entity || player.entity;
+        const entityId = action.entity || fallbackEntityId;
         if (entityId) {
           fireEvent(this, "hass-more-info", { entityId });
         }
@@ -1238,6 +1255,28 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
   }
 
+  _getPlayerPowerAction(player, currentState) {
+    const stateKey = normalizeTextKey(currentState);
+
+    if (["unavailable", "unknown"].includes(stateKey) && player?.power_action_unavailable?.action) {
+      return player.power_action_unavailable;
+    }
+
+    if (["off", "standby"].includes(stateKey) && player?.power_action_off?.action) {
+      return player.power_action_off;
+    }
+
+    if (player?.power_action_on?.action) {
+      return player.power_action_on;
+    }
+
+    return null;
+  }
+
+  _runPlayerAction(player, defaultAction = null) {
+    this._runActionDefinition(player.tap_action || defaultAction, player.entity);
+  }
+
   _handleMediaControl(control, entityId, options = {}) {
     if (!this._hass || !entityId) {
       return;
@@ -1245,10 +1284,20 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     switch (control) {
       case "power-toggle": {
+        const player = this._findPlayerConfig(entityId) || { entity: entityId };
         const currentState = String(options.state || this._hass?.states?.[entityId]?.state || "");
         this._tvSourcePickerEntity = null;
         this._tvVolumePickerEntity = null;
-        const service = currentState === "off" ? "turn_on" : "turn_off";
+        const customAction = this._getPlayerPowerAction(player, currentState);
+
+        if (customAction) {
+          this._runActionDefinition(customAction, entityId);
+          break;
+        }
+
+        const service = ["off", "standby", "unavailable", "unknown"].includes(normalizeTextKey(currentState))
+          ? "turn_on"
+          : "turn_off";
         this._hass.callService("media_player", service, { entity_id: entityId });
         break;
       }
@@ -4121,6 +4170,18 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
       this._config.players.push({
         entity: "",
         label: "",
+        tap_action: {
+          action: "more-info",
+        },
+        power_action_off: {
+          action: "none",
+        },
+        power_action_on: {
+          action: "none",
+        },
+        power_action_unavailable: {
+          action: "none",
+        },
       });
       this._emitConfig();
       return;
@@ -4216,6 +4277,44 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     `;
   }
 
+  _renderActionConfigFields(title, path, action = {}) {
+    return `
+      <div class="player-editor-subgroup">
+        <div class="player-editor-subgroup__title">${escapeHtml(title)}</div>
+        <div class="editor-grid">
+          ${this._renderSelectField(
+            "Accion",
+            `${path}.action`,
+            action?.action || "none",
+            [
+              { value: "none", label: "Sin accion" },
+              { value: "more-info", label: "More info" },
+              { value: "navigate", label: "Navegar" },
+              { value: "url", label: "Abrir URL" },
+              { value: "call-service", label: "Llamar servicio" },
+            ],
+          )}
+          ${this._renderTextField("Entidad more info", `${path}.entity`, action?.entity, {
+            placeholder: "media_player.salon",
+          })}
+          ${this._renderTextField("Ruta navigate", `${path}.navigation_path`, action?.navigation_path, {
+            placeholder: "/lovelace/salon",
+          })}
+          ${this._renderTextField("URL", `${path}.url`, action?.url || action?.url_path, {
+            placeholder: "https://example.com",
+          })}
+          ${this._renderCheckboxField("Abrir URL en pestana nueva", `${path}.new_tab`, action?.new_tab === true)}
+          ${this._renderTextField("Servicio", `${path}.service`, action?.service, {
+            placeholder: "input_boolean.turn_off",
+          })}
+          ${this._renderTextareaField("Datos servicio (JSON)", `${path}.service_data`, action?.service_data, {
+            placeholder: '{"entity_id":"input_boolean.media_power"}',
+          })}
+        </div>
+      </div>
+    `;
+  }
+
   _renderPlayerCard(player, index) {
     return `
       <div class="player-editor-card">
@@ -4240,6 +4339,34 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             placeholder: "mdi:speaker",
           })}
           ${this._renderCheckboxField("Modo TV / Apple TV", `players.${index}.tv_mode`, player.tv_mode === true)}
+          ${this._renderSelectField(
+            "Tap action",
+            `players.${index}.tap_action.action`,
+            player.tap_action?.action || "more-info",
+            [
+              { value: "more-info", label: "More info" },
+              { value: "navigate", label: "Navegar" },
+              { value: "url", label: "Abrir URL" },
+              { value: "call-service", label: "Llamar servicio" },
+              { value: "none", label: "Sin accion" },
+            ],
+          )}
+          ${this._renderTextField("Entidad more info", `players.${index}.tap_action.entity`, player.tap_action?.entity, {
+            placeholder: "media_player.salon",
+          })}
+          ${this._renderTextField("Ruta navigate", `players.${index}.tap_action.navigation_path`, player.tap_action?.navigation_path, {
+            placeholder: "/lovelace/salon",
+          })}
+          ${this._renderTextField("URL al tocar", `players.${index}.tap_action.url`, player.tap_action?.url || player.tap_action?.url_path, {
+            placeholder: "https://example.com",
+          })}
+          ${this._renderCheckboxField("Abrir URL en pestana nueva", `players.${index}.tap_action.new_tab`, player.tap_action?.new_tab === true)}
+          ${this._renderTextField("Servicio al tocar", `players.${index}.tap_action.service`, player.tap_action?.service, {
+            placeholder: "media_player.media_play_pause",
+          })}
+          ${this._renderTextareaField("Datos servicio tap (JSON)", `players.${index}.tap_action.service_data`, player.tap_action?.service_data, {
+            placeholder: '{"entity_id":"media_player.salon"}',
+          })}
           ${this._renderTextField("Imagen", `players.${index}.image`, player.image, {
             placeholder: "/local/cover.png",
           })}
@@ -4268,6 +4395,9 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             valueType: "number",
           })}
         </div>
+        ${this._renderActionConfigFields("Power cuando esta apagado o standby", `players.${index}.power_action_off`, player.power_action_off)}
+        ${this._renderActionConfigFields("Power cuando esta encendido", `players.${index}.power_action_on`, player.power_action_on)}
+        ${this._renderActionConfigFields("Power cuando esta no disponible", `players.${index}.power_action_unavailable`, player.power_action_unavailable)}
       </div>
     `;
   }
@@ -4432,6 +4562,20 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           display: grid;
           gap: 12px;
           padding: 14px;
+        }
+
+        .player-editor-subgroup {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 14px;
+          display: grid;
+          gap: 12px;
+          padding: 12px;
+        }
+
+        .player-editor-subgroup__title {
+          font-size: 12px;
+          font-weight: 700;
         }
 
         .player-editor-card__header {
