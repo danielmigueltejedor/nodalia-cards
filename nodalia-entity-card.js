@@ -1029,8 +1029,8 @@ class NodaliaEntityCard extends HTMLElement {
           height: 18px;
           justify-content: center;
           position: absolute;
-          right: -2px;
-          top: -2px;
+          right: 3px;
+          top: 3px;
           width: 18px;
           z-index: 2;
         }
