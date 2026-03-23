@@ -25,15 +25,19 @@ const DEFAULT_CONFIG = {
   icon: "",
   min: "",
   max: "",
+  min_label: "",
+  max_label: "",
   unit: "",
   decimals: "",
   start_from_zero: true,
   show_header: true,
   show_name: true,
   show_icon: true,
+  show_name_chip: true,
   show_percentage_chip: false,
   show_range_labels: true,
   show_unavailable_badge: true,
+  show_bottom_icon_bubble: false,
   tap_action: "more-info",
   haptics: {
     enabled: false,
@@ -60,6 +64,7 @@ const DEFAULT_CONFIG = {
     title_size: "16px",
     value_size: "52px",
     range_size: "14px",
+    name_chip_max_width: "170px",
     gauge: {
       size: "280px",
       stroke: "18px",
@@ -364,9 +369,9 @@ class NodaliaCircularGaugeCard extends HTMLElement {
 
   getGridOptions() {
     return {
-      rows: 4,
+      rows: 5,
       columns: 12,
-      min_rows: 3,
+      min_rows: 5,
       min_columns: 6,
     };
   }
@@ -467,6 +472,18 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     }
 
     return { min, max };
+  }
+
+  _getRangeLabel(boundary, range, state) {
+    const configuredLabel = String(
+      boundary === "min" ? this._config?.min_label ?? "" : this._config?.max_label ?? "",
+    ).trim();
+
+    if (configuredLabel) {
+      return configuredLabel;
+    }
+
+    return formatNumberValue(boundary === "min" ? range.min : range.max, this._getDecimals(state));
   }
 
   _getAccentColor(state, ratio) {
@@ -668,6 +685,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const effectiveChipHeight = `${Math.max(22, Math.min(parseSizeToPixels(styles.chip_height, 24), compactLayout ? 23 : 24))}px`;
     const effectiveChipFontSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.chip_font_size, 11), compactLayout ? 10.5 : 11))}px`;
     const effectiveChipPadding = compactLayout ? "0 9px" : styles.chip_padding;
+    const effectiveNameChipMaxWidth = `${Math.max(120, Math.min(parseSizeToPixels(styles.name_chip_max_width, 170), compactLayout ? 148 : 170))}px`;
     const cardBackground = value === null
       ? styles.card.background
       : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
@@ -908,11 +926,20 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         .gauge-card__dial-center {
           align-content: center;
           display: grid;
-          gap: ${compactLayout ? "10px" : "12px"};
-          inset: ${compactLayout ? "24% 16% 18% 16%" : "23% 16% 18% 16%"};
+          gap: ${compactLayout ? "8px" : "10px"};
+          inset: ${compactLayout ? "28% 16% 24% 16%" : "26% 16% 24% 16%"};
           justify-items: center;
           position: absolute;
           text-align: center;
+        }
+
+        .gauge-card__name-chip {
+          left: 50%;
+          max-width: ${effectiveNameChipMaxWidth};
+          position: absolute;
+          top: ${compactLayout ? "16px" : "18px"};
+          transform: translateX(-50%);
+          z-index: 3;
         }
 
         .gauge-card__value {
@@ -940,30 +967,51 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           top: 0.16em;
         }
 
-        .gauge-card__divider {
-          background: rgba(255, 255, 255, 0.18);
-          border-radius: 999px;
-          height: 1px;
-          width: 100%;
-        }
-
-        .gauge-card__range {
-          align-items: center;
+        .gauge-card__range-label {
           color: var(--secondary-text-color);
-          display: grid;
           font-size: ${effectiveRangeSize};
-          gap: 16px;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+          font-weight: 600;
           line-height: 1;
-          width: 100%;
+          position: absolute;
+          z-index: 2;
         }
 
-        .gauge-card__range span:first-child {
-          justify-self: start;
+        .gauge-card__range-label--min {
+          bottom: ${compactLayout ? "64px" : "68px"};
+          left: ${compactLayout ? "36px" : "42px"};
         }
 
-        .gauge-card__range span:last-child {
-          justify-self: end;
+        .gauge-card__range-label--max {
+          bottom: ${compactLayout ? "64px" : "68px"};
+          right: ${compactLayout ? "36px" : "42px"};
+        }
+
+        .gauge-card__bottom-icon {
+          align-items: center;
+          background:
+            radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 60%),
+            ${styles.icon.background};
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            0 10px 26px rgba(0, 0, 0, 0.16);
+          color: ${styles.icon.color};
+          display: inline-flex;
+          height: ${compactLayout ? "42px" : "46px"};
+          justify-content: center;
+          left: 50%;
+          bottom: ${compactLayout ? "36px" : "40px"};
+          position: absolute;
+          transform: translateX(-50%);
+          width: ${compactLayout ? "42px" : "46px"};
+          z-index: 3;
+        }
+
+        .gauge-card__bottom-icon ha-icon {
+          --mdc-icon-size: ${compactLayout ? "20px" : "22px"};
+          height: ${compactLayout ? "20px" : "22px"};
+          width: ${compactLayout ? "20px" : "22px"};
         }
 
         @media (max-width: 560px) {
@@ -1009,6 +1057,11 @@ class NodaliaCircularGaugeCard extends HTMLElement {
 
           <div class="gauge-card__dial-wrap">
             <div class="gauge-card__dial" aria-hidden="true">
+              ${
+                !showHeader && showName && config.show_name_chip !== false
+                  ? `<div class="gauge-card__chip gauge-card__name-chip">${escapeHtml(title)}</div>`
+                  : ""
+              }
               <svg class="gauge-card__dial-svg" viewBox="0 0 ${DIAL_VIEWBOX_SIZE} ${DIAL_VIEWBOX_SIZE}">
                 <circle
                   class="gauge-card__dial-track"
@@ -1024,22 +1077,32 @@ class NodaliaCircularGaugeCard extends HTMLElement {
                 ></circle>
               </svg>
               <span class="gauge-card__dial-thumb" aria-hidden="true"></span>
+              ${
+                config.show_range_labels !== false
+                  ? `
+                    <span class="gauge-card__range-label gauge-card__range-label--min">
+                      ${escapeHtml(this._getRangeLabel("min", range, state))}
+                    </span>
+                    <span class="gauge-card__range-label gauge-card__range-label--max">
+                      ${escapeHtml(this._getRangeLabel("max", range, state))}
+                    </span>
+                  `
+                  : ""
+              }
+              ${
+                config.show_bottom_icon_bubble === true && showIcon
+                  ? `
+                    <div class="gauge-card__bottom-icon">
+                      <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+                    </div>
+                  `
+                  : ""
+              }
               <div class="gauge-card__dial-center">
                 <div class="gauge-card__value">
                   ${escapeHtml(this._formatValue(value, state, false))}
                   ${unit ? `<span class="gauge-card__value-unit">${escapeHtml(unit)}</span>` : ""}
                 </div>
-                ${
-                  config.show_range_labels !== false
-                    ? `
-                      <div class="gauge-card__divider"></div>
-                      <div class="gauge-card__range">
-                        <span>${escapeHtml(formatNumberValue(range.min, this._getDecimals(state)))}</span>
-                        <span>${escapeHtml(formatNumberValue(range.max, this._getDecimals(state)))}</span>
-                      </div>
-                    `
-                    : ""
-                }
               </div>
             </div>
           </div>
@@ -1416,6 +1479,12 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
               placeholder: "2500",
               type: "number",
             })}
+            ${this._renderTextField("Etiqueta minimo", "min_label", config.min_label, {
+              placeholder: "0",
+            })}
+            ${this._renderTextField("Etiqueta maximo", "max_label", config.max_label, {
+              placeholder: "∞",
+            })}
             ${this._renderTextField("Decimales", "decimals", config.decimals, {
               placeholder: "0",
               type: "number",
@@ -1441,9 +1510,11 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
             ${this._renderCheckboxField("Empezar desde cero", "start_from_zero", config.start_from_zero !== false)}
             ${this._renderCheckboxField("Mostrar cabecera", "show_header", config.show_header !== false)}
             ${this._renderCheckboxField("Mostrar nombre", "show_name", config.show_name !== false)}
+            ${this._renderCheckboxField("Mostrar nombre en chip", "show_name_chip", config.show_name_chip !== false)}
             ${this._renderCheckboxField("Mostrar icono", "show_icon", config.show_icon !== false)}
             ${this._renderCheckboxField("Mostrar chip de porcentaje", "show_percentage_chip", config.show_percentage_chip === true)}
             ${this._renderCheckboxField("Mostrar rango min/max", "show_range_labels", config.show_range_labels !== false)}
+            ${this._renderCheckboxField("Mostrar icono inferior", "show_bottom_icon_bubble", config.show_bottom_icon_bubble === true)}
             ${this._renderCheckboxField("Mostrar badge de no disponible", "show_unavailable_badge", config.show_unavailable_badge !== false)}
           </div>
         </section>
@@ -1489,6 +1560,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
             ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
             ${this._renderTextField("Tamano valor", "styles.value_size", config.styles.value_size)}
             ${this._renderTextField("Tamano rango", "styles.range_size", config.styles.range_size)}
+            ${this._renderTextField("Max ancho chip nombre", "styles.name_chip_max_width", config.styles.name_chip_max_width)}
             ${this._renderTextField("Tamano dial", "styles.gauge.size", config.styles.gauge.size)}
             ${this._renderTextField("Grosor dial", "styles.gauge.stroke", config.styles.gauge.stroke)}
             ${this._renderTextField("Tamano thumb", "styles.gauge.thumb_size", config.styles.gauge.thumb_size)}
