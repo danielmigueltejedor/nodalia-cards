@@ -1,0 +1,9 @@
+type: custom:nodalia-alarm-panel-card
+entity: alarm_control_panel.casa
+name: Alarma
+code_entity: input_text.codigo_alarma
+show_state: true
+show_disarm: true
+show_arm_home: true
+show_arm_away: true
+show_arm_night: true

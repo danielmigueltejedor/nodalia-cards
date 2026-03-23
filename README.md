@@ -9,6 +9,7 @@ Ahora mismo incluye:
 - `custom:nodalia-light-card`
 - `custom:nodalia-fan-card`
 - `custom:nodalia-humidifier-card`
+- `custom:nodalia-alarm-panel-card`
 - `custom:nodalia-entity-card`
 - `custom:nodalia-vacuum-card`
 
@@ -30,6 +31,7 @@ Ese recurso carga automaticamente:
 - `nodalia-light-card.js`
 - `nodalia-fan-card.js`
 - `nodalia-humidifier-card.js`
+- `nodalia-alarm-panel-card.js`
 - `nodalia-entity-card.js`
 - `nodalia-vacuum-card.js`
 
@@ -47,6 +49,8 @@ Si prefieres cargarlas por separado:
 - url: /local/nodalia-fan-card.js
   type: module
 - url: /local/nodalia-humidifier-card.js
+  type: module
+- url: /local/nodalia-alarm-panel-card.js
   type: module
 - url: /local/nodalia-entity-card.js
   type: module
@@ -113,6 +117,15 @@ entity: humidifier.deshumidificador
 name: Deshumidificador
 ```
 
+### Nodalia Alarm Panel Card
+
+```yaml
+type: custom:nodalia-alarm-panel-card
+entity: alarm_control_panel.casa
+name: Alarma
+code_entity: input_text.codigo_alarma
+```
+
 ### Nodalia Entity Card
 
 ```yaml
@@ -136,6 +149,7 @@ quick_actions:
 - `nodalia-light-card.js`: tarjeta de iluminacion
 - `nodalia-fan-card.js`: tarjeta de ventilador
 - `nodalia-humidifier-card.js`: tarjeta de humidificador o deshumidificador
+- `nodalia-alarm-panel-card.js`: tarjeta elegante para paneles de alarma
 - `nodalia-entity-card.js`: tarjeta todoterreno para cualquier entidad
 - `nodalia-vacuum-card.js`: tarjeta de aspirador
 
