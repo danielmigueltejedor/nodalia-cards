@@ -17751,19 +17751,19 @@ const DEFAULT_CONFIG = {
       border: "1px solid var(--divider-color)",
       border_radius: "30px",
       box_shadow: "var(--ha-card-box-shadow)",
-      padding: "18px",
-      gap: "14px",
+      padding: "16px",
+      gap: "12px",
     },
     icon: {
       color: "var(--primary-text-color)",
-      size: "28px",
+      size: "24px",
     },
-    title_size: "15px",
-    value_size: "52px",
-    unit_size: "20px",
-    legend_size: "13px",
-    chart_height: "170px",
-    line_width: "4px",
+    title_size: "14px",
+    value_size: "46px",
+    unit_size: "18px",
+    legend_size: "12px",
+    chart_height: "150px",
+    line_width: "3px",
   },
 };
 
@@ -18167,6 +18167,11 @@ class NodaliaGraphCard extends HTMLElement {
     return primaryEntityId ? this._hass?.states?.[primaryEntityId] || null : null;
   }
 
+  _getSelectedEntityId() {
+    const entityIds = this._getEntityEntries().map(entry => entry.entity);
+    return entityIds.includes(this._activeSeriesEntityId) ? this._activeSeriesEntityId : "";
+  }
+
   _getTitle() {
     return this._config?.name || "Grafica";
   }
@@ -18202,7 +18207,8 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   _getCurrentValuesText() {
-    const primaryEntry = this._getEntityEntries()[0];
+    const selectedEntityId = this._getSelectedEntityId();
+    const primaryEntry = this._getEntityEntries().find(entry => entry.entity === selectedEntityId) || this._getEntityEntries()[0];
     const primaryState = primaryEntry ? this._hass?.states?.[primaryEntry.entity] : null;
     const primaryValue = parseNumber(primaryState?.state);
 
@@ -18222,12 +18228,15 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   _getLegendEntries() {
+    const selectedEntityId = this._getSelectedEntityId();
     return this._getEntityEntries().map((entry, index) => {
       const state = this._hass?.states?.[entry.entity];
       return {
         entity: entry.entity,
         name: entry.name || state?.attributes?.friendly_name || entry.entity,
         color: entry.color || SERIES_COLORS[index % SERIES_COLORS.length],
+        active: !selectedEntityId || selectedEntityId === entry.entity,
+        muted: Boolean(selectedEntityId) && selectedEntityId !== entry.entity,
       };
     });
   }
@@ -18266,6 +18275,21 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   _onShadowClick(event) {
+    const seriesChip = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.graphSeries);
+
+    if (seriesChip) {
+      event.preventDefault();
+      event.stopPropagation();
+      const entityId = seriesChip.dataset.graphSeries;
+      this._activeSeriesEntityId = this._activeSeriesEntityId === entityId ? null : entityId;
+      this._hoverIndex = null;
+      this._triggerHaptic("selection");
+      this._render();
+      return;
+    }
+
     const target = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.graphAction === "primary");
@@ -18278,6 +18302,15 @@ class NodaliaGraphCard extends HTMLElement {
     event.stopPropagation();
     this._triggerHaptic();
     this._openMoreInfo();
+  }
+
+  _getVisibleSeries(series) {
+    const selectedEntityId = this._getSelectedEntityId();
+    if (!selectedEntityId) {
+      return series;
+    }
+
+    return series.filter(entry => entry.entity === selectedEntityId);
   }
 
   _onShadowPointerMove(event) {
@@ -18609,9 +18642,9 @@ class NodaliaGraphCard extends HTMLElement {
   _buildChartSeries(series) {
     const width = 100;
     const height = 56;
-    const paddingX = 1;
-    const paddingTop = 5;
-    const paddingBottom = 5;
+    const paddingX = 0;
+    const paddingTop = 3;
+    const paddingBottom = 2;
     const bounds = this._getGraphBounds(series);
     const range = Math.max(bounds.max - bounds.min, 1);
 
@@ -18745,23 +18778,23 @@ class NodaliaGraphCard extends HTMLElement {
     const config = this._config || normalizeConfig({});
     const styles = config.styles || DEFAULT_CONFIG.styles;
     const legendEntries = this._getLegendEntries();
-    const primaryState = this._getPrimaryState();
     const showUnavailableBadge = config.show_unavailable_badge !== false && entries.some(entry => isUnavailableState(this._hass?.states?.[entry.entity]));
     const compactLayout = Number(config?.grid_options?.rows) > 0 && Number(config?.grid_options?.rows) <= 3;
     const currentValue = this._getCurrentValuesText();
-    const chart = this._buildChartSeries(this._getSeriesData());
+    const allSeries = this._getSeriesData();
+    const chart = this._buildChartSeries(this._getVisibleSeries(allSeries));
     this._hoverChart = chart;
     const hasGraphData = chart.entries.some(entry => entry.linePath);
     const hover = hasGraphData ? this._getHoverPayload(chart) : null;
     const icon = this._getIcon();
     const title = this._getTitle();
-    const accentColor = legendEntries[0]?.color || "var(--primary-color)";
-    const chartHeight = `${Math.max(130, Math.min(parseSizeToPixels(styles.chart_height, 170), compactLayout ? 140 : 170))}px`;
-    const valueSize = `${Math.max(42, Math.min(parseSizeToPixels(styles.value_size, 52), compactLayout ? 46 : 52))}px`;
-    const unitSize = `${Math.max(16, Math.min(parseSizeToPixels(styles.unit_size, 20), compactLayout ? 18 : 20))}px`;
-    const titleSize = `${Math.max(14, Math.min(parseSizeToPixels(styles.title_size, 15), compactLayout ? 14 : 15))}px`;
-    const legendSize = `${Math.max(12, Math.min(parseSizeToPixels(styles.legend_size, 13), compactLayout ? 12 : 13))}px`;
-    const lineWidth = `${Math.max(2.5, Math.min(parseSizeToPixels(styles.line_width, 4), compactLayout ? 3.5 : 4))}`;
+    const accentColor = chart.entries[0]?.color || legendEntries[0]?.color || "var(--primary-color)";
+    const chartHeight = `${Math.max(120, Math.min(parseSizeToPixels(styles.chart_height, 150), compactLayout ? 132 : 150))}px`;
+    const valueSize = `${Math.max(38, Math.min(parseSizeToPixels(styles.value_size, 46), compactLayout ? 42 : 46))}px`;
+    const unitSize = `${Math.max(15, Math.min(parseSizeToPixels(styles.unit_size, 18), compactLayout ? 16 : 18))}px`;
+    const titleSize = `${Math.max(13, Math.min(parseSizeToPixels(styles.title_size, 14), compactLayout ? 13 : 14))}px`;
+    const legendSize = `${Math.max(11, Math.min(parseSizeToPixels(styles.legend_size, 12), compactLayout ? 11 : 12))}px`;
+    const lineWidth = `${Math.max(2, Math.min(parseSizeToPixels(styles.line_width, 3), compactLayout ? 2.4 : 3))}`;
     const cardBackground = `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
     const cardBorder = `1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color))`;
     const cardShadow = `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 8%, rgba(0, 0, 0, 0.16))`;
@@ -18811,7 +18844,7 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__header {
           align-items: start;
           display: grid;
-          gap: 12px;
+          gap: 10px;
           grid-template-columns: minmax(0, 1fr) auto;
         }
 
@@ -18831,13 +18864,13 @@ class NodaliaGraphCard extends HTMLElement {
           align-items: center;
           background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.03) 100%);
           border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 22px;
+          border-radius: 20px;
           color: ${styles.icon.color};
           display: inline-flex;
-          height: 46px;
+          height: 42px;
           justify-content: center;
           opacity: 0.9;
-          padding: 0 14px;
+          padding: 0 12px;
           position: relative;
         }
 
@@ -18874,7 +18907,7 @@ class NodaliaGraphCard extends HTMLElement {
           align-items: baseline;
           display: flex;
           flex-wrap: nowrap;
-          gap: 8px;
+          gap: 6px;
           line-height: 0.94;
           min-width: 0;
         }
@@ -18899,10 +18932,10 @@ class NodaliaGraphCard extends HTMLElement {
           align-items: center;
           display: flex;
           flex-wrap: wrap;
-          gap: 10px 12px;
+          gap: 8px 10px;
           justify-content: flex-start;
           min-height: 0;
-          padding-top: 4px;
+          padding-top: 2px;
         }
 
         .graph-card__legend-item {
@@ -18911,12 +18944,30 @@ class NodaliaGraphCard extends HTMLElement {
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 999px;
           color: var(--primary-text-color);
+          cursor: pointer;
           display: inline-flex;
           font-size: ${legendSize};
           gap: 10px;
+          max-width: min(100%, 220px);
           min-width: 0;
-          opacity: 0.92;
-          padding: 8px 12px;
+          opacity: 0.9;
+          padding: 7px 12px;
+          transition: opacity 160ms ease, transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+        }
+
+        .graph-card__legend-item:hover {
+          opacity: 1;
+          transform: translateY(-1px);
+        }
+
+        .graph-card__legend-item--active {
+          background: linear-gradient(180deg, color-mix(in srgb, var(--legend-color) 14%, rgba(255,255,255,0.05)) 0%, rgba(255,255,255,0.035) 100%);
+          border-color: color-mix(in srgb, var(--legend-color) 34%, rgba(255,255,255,0.08));
+          box-shadow: 0 12px 24px color-mix(in srgb, var(--legend-color) 10%, rgba(0, 0, 0, 0.14));
+        }
+
+        .graph-card__legend-item--muted {
+          opacity: 0.48;
         }
 
         .graph-card__legend-dot {
@@ -18934,13 +18985,11 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__chart-wrap {
-          background: linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0%, rgba(255, 255, 255, 0.012) 100%);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          border-radius: 28px;
           flex: 1 1 auto;
           min-height: ${chartHeight};
-          overflow: hidden;
-          padding: 10px 12px 6px;
+          margin-top: 8px;
+          overflow: visible;
+          padding: 6px 0 0;
           position: relative;
         }
 
@@ -18961,17 +19010,18 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__tooltip {
-          background: linear-gradient(180deg, rgba(48, 49, 59, 0.96) 0%, rgba(38, 39, 49, 0.96) 100%);
-          border: 1px solid rgba(255, 255, 255, 0.09);
+          backdrop-filter: blur(18px);
+          background: linear-gradient(180deg, rgba(42, 43, 53, 0.96) 0%, rgba(31, 32, 41, 0.96) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: 18px;
-          box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
+          box-shadow: 0 18px 32px rgba(0, 0, 0, 0.28);
           color: var(--primary-text-color);
-          max-width: min(280px, calc(100% - 16px));
-          min-width: 150px;
-          padding: 10px 12px;
+          max-width: min(320px, calc(100% - 20px));
+          min-width: 210px;
+          padding: 12px 14px;
           pointer-events: none;
           position: absolute;
-          top: 10px;
+          top: 0;
           transform: translateX(-50%);
           z-index: 3;
         }
@@ -19006,6 +19056,7 @@ class NodaliaGraphCard extends HTMLElement {
 
         .graph-card__tooltip-name {
           font-size: 12px;
+          font-weight: 500;
           min-width: 0;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -19030,13 +19081,23 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__chart-series-fill {
-          opacity: 0.045;
+          opacity: 0.028;
+        }
+
+        .graph-card__chart-series-glow {
+          fill: none;
+          filter: url(#graph-glow);
+          opacity: 0.18;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+          stroke-width: calc(${lineWidth} * 2.1);
         }
 
         .graph-card__chart-series-line {
           fill: none;
           stroke-linecap: round;
           stroke-linejoin: round;
+          stroke-opacity: 0.9;
           stroke-width: ${lineWidth};
         }
 
@@ -19088,7 +19149,11 @@ class NodaliaGraphCard extends HTMLElement {
               ? `
                 <div class="graph-card__legend">
                   ${legendEntries.map(entry => `
-                    <div class="graph-card__legend-item">
+                    <div
+                      class="graph-card__legend-item ${entry.active ? "graph-card__legend-item--active" : ""} ${entry.muted ? "graph-card__legend-item--muted" : ""}"
+                      data-graph-series="${escapeHtml(entry.entity)}"
+                      style="--legend-color:${escapeHtml(entry.color)};"
+                    >
                       <span class="graph-card__legend-dot" style="background:${escapeHtml(entry.color)};"></span>
                       <span class="graph-card__legend-text">${escapeHtml(entry.name)}</span>
                     </div>
@@ -19118,6 +19183,11 @@ class NodaliaGraphCard extends HTMLElement {
                 : ""
             }
             <svg class="graph-card__chart" viewBox="0 0 ${chart.width} ${chart.height}" preserveAspectRatio="none">
+              <defs>
+                <filter id="graph-glow" x="-30%" y="-30%" width="160%" height="160%">
+                  <feGaussianBlur stdDeviation="1.5" />
+                </filter>
+              </defs>
               ${
                 hover
                   ? `<line class="graph-card__hover-line" x1="${hover.x.toFixed(2)}" y1="0" x2="${hover.x.toFixed(2)}" y2="${chart.height}"></line>`
@@ -19129,6 +19199,7 @@ class NodaliaGraphCard extends HTMLElement {
                     ? `<path class="graph-card__chart-series-fill" d="${entry.fillPath}" fill="${escapeHtml(entry.color)}"></path>`
                     : ""
                 }
+                <path class="graph-card__chart-series-glow" d="${entry.linePath}" stroke="${escapeHtml(entry.color)}"></path>
                 <path class="graph-card__chart-series-line" d="${entry.linePath}" stroke="${escapeHtml(entry.color)}"></path>
                 ${
                   hover
