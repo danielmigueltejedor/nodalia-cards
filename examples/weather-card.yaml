@@ -1,0 +1,7 @@
+type: custom:nodalia-weather-card
+entity: weather.casa
+name: Tiempo
+show_condition: true
+show_humidity_chip: true
+show_wind_chip: true
+show_pressure_chip: false

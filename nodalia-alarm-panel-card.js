@@ -22,6 +22,7 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  code: "",
   code_entity: "",
   show_state: true,
   show_code_input: true,
@@ -661,6 +662,13 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   }
 
   _getCodeValue(state) {
+    if (this._shouldShowCodeInput(state)) {
+      const manualCode = String(this._codeInput || "").trim();
+      if (manualCode) {
+        return manualCode;
+      }
+    }
+
     const helperEntityId = String(this._config?.code_entity || "").trim();
 
     if (helperEntityId) {
@@ -671,8 +679,9 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       }
     }
 
-    if (this._shouldShowCodeInput(state)) {
-      return String(this._codeInput || "").trim();
+    const configuredCode = String(this._config?.code || "").trim();
+    if (configuredCode) {
+      return configuredCode;
     }
 
     return "";
@@ -680,10 +689,6 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
   _shouldShowCodeInput(state) {
     if (this._config?.show_code_input === false) {
-      return false;
-    }
-
-    if (this._config?.code_entity) {
       return false;
     }
 
@@ -1462,6 +1467,9 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
             ${this._renderTextField("Icono", "icon", config.icon, {
               placeholder: "mdi:shield-home",
             })}
+            ${this._renderTextField("PIN fijo", "code", config.code, {
+              placeholder: "1234",
+            })}
             ${this._renderTextField("Helper codigo", "code_entity", config.code_entity, {
               placeholder: "input_text.codigo_alarma",
             })}
@@ -1476,7 +1484,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
               ],
             )}
             ${this._renderCheckboxField("Mostrar estado en burbuja", "show_state", config.show_state !== false)}
-            ${this._renderCheckboxField("Mostrar input de codigo", "show_code_input", config.show_code_input !== false)}
+            ${this._renderCheckboxField("Mostrar cuadro de texto del PIN", "show_code_input", config.show_code_input !== false)}
           </div>
         </section>
 

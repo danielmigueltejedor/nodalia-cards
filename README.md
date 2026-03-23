@@ -12,6 +12,7 @@ Ahora mismo incluye:
 - `custom:nodalia-alarm-panel-card`
 - `custom:nodalia-entity-card`
 - `custom:nodalia-fav-card`
+- `custom:nodalia-weather-card`
 - `custom:nodalia-vacuum-card`
 
 ## Instalacion
@@ -35,6 +36,7 @@ Ese recurso carga automaticamente:
 - `nodalia-alarm-panel-card.js`
 - `nodalia-entity-card.js`
 - `nodalia-fav-card.js`
+- `nodalia-weather-card.js`
 - `nodalia-vacuum-card.js`
 
 ### Opcion 2: recursos individuales
@@ -55,6 +57,8 @@ Si prefieres cargarlas por separado:
 - url: /local/nodalia-alarm-panel-card.js
   type: module
 - url: /local/nodalia-entity-card.js
+  type: module
+- url: /local/nodalia-weather-card.js
   type: module
 - url: /local/nodalia-vacuum-card.js
   type: module
@@ -128,6 +132,14 @@ name: Alarma
 code_entity: input_text.codigo_alarma
 ```
 
+### Nodalia Weather Card
+
+```yaml
+type: custom:nodalia-weather-card
+entity: weather.casa
+name: Tiempo
+```
+
 ### Nodalia Entity Card
 
 ```yaml
@@ -167,6 +179,7 @@ grid_options:
 - `nodalia-alarm-panel-card.js`: tarjeta elegante para paneles de alarma
 - `nodalia-entity-card.js`: tarjeta todoterreno para cualquier entidad
 - `nodalia-fav-card.js`: tarjeta mini para favoritos y controles rapidos
+- `nodalia-weather-card.js`: tarjeta meteorologica elegante
 - `nodalia-vacuum-card.js`: tarjeta de aspirador
 
 ## Siguiente paso recomendado
