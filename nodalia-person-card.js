@@ -575,6 +575,7 @@ class NodaliaPersonCard extends HTMLElement {
           min-width: 0;
           padding: ${effectivePadding};
           position: relative;
+          place-items: center start;
           z-index: 1;
         }
 
@@ -645,6 +646,7 @@ class NodaliaPersonCard extends HTMLElement {
           display: grid;
           gap: ${singleRowLayout ? "4px" : "6px"};
           min-width: 0;
+          width: 100%;
         }
 
         .person-card__title {

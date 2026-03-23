@@ -17544,22 +17544,24 @@ class NodaliaClimateCard extends HTMLElement {
           display: flex;
           flex-wrap: wrap;
           font-size: ${styles.current_size};
-          gap: 8px;
+          gap: 12px;
           justify-content: center;
+          line-height: 1;
           pointer-events: none;
         }
 
         .climate-card__dial-action {
           align-items: center;
           display: inline-flex;
-          gap: 6px;
+          justify-content: center;
         }
 
         .climate-card__dial-action ha-icon {
-          --mdc-icon-size: 15px;
+          --mdc-icon-size: 17px;
           color: ${accentColor};
-          height: 15px;
-          width: 15px;
+          display: inline-flex;
+          height: 17px;
+          width: 17px;
         }
 
         .climate-card__dial-controls {
@@ -17733,7 +17735,6 @@ class NodaliaClimateCard extends HTMLElement {
                   ${currentTemperature !== null ? `<span>${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true))}</span>` : ""}
                   <span class="climate-card__dial-action">
                     <ha-icon icon="${escapeHtml(currentActionMeta.icon)}"></ha-icon>
-                    <span>${escapeHtml(currentActionMeta.label)}</span>
                   </span>
                 </div>
                 <div class="climate-card__dial-controls">
@@ -23934,6 +23935,7 @@ class NodaliaPersonCard extends HTMLElement {
           min-width: 0;
           padding: ${effectivePadding};
           position: relative;
+          place-items: center start;
           z-index: 1;
         }
 
@@ -24004,6 +24006,7 @@ class NodaliaPersonCard extends HTMLElement {
           display: grid;
           gap: ${singleRowLayout ? "4px" : "6px"};
           min-width: 0;
+          width: 100%;
         }
 
         .person-card__title {
