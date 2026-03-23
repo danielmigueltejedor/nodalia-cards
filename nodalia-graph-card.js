@@ -530,20 +530,21 @@ class NodaliaGraphCard extends HTMLElement {
       return this._hass.callApi("GET", apiPath);
     }
 
-    const token = this._hass?.auth?.data?.accessToken;
-    const response = await fetch(
-      `/api/${apiPath}`,
-      {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        signal,
-      },
-    );
+    if (typeof this._hass?.auth?.fetchWithAuth === "function") {
+      const response = await this._hass.auth.fetchWithAuth(
+        `/api/${apiPath}`,
+        { signal },
+      );
 
-    if (!response.ok) {
-      throw new Error(`History request failed with ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`History request failed with ${response.status}`);
+      }
+
+      return response.json();
     }
 
-    return response.json();
+    // Avoid unauthenticated fallback requests, which can trigger invalid auth attempts.
+    return null;
   }
 
   _normalizeHistorySeries(raw, start, end) {
@@ -644,7 +645,7 @@ class NodaliaGraphCard extends HTMLElement {
         return;
       }
 
-      this._historySeries = this._normalizeHistorySeries(raw, start, end);
+      this._historySeries = this._normalizeHistorySeries(raw || [], start, end);
       this._historyKey = requestKey;
       this._historyLoadedAt = Date.now();
       this._render();
