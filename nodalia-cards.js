@@ -18305,61 +18305,67 @@ class NodaliaGraphCard extends HTMLElement {
     }
 
     try {
-      return await this._hass.callWS({
-        type: "recorder/statistics_during_period",
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
-        statistic_ids: entityIds,
-        period: this._getStatisticsPeriod(),
-        types: ["mean", "min", "max", "state", "sum"],
-      });
+      const groups = await Promise.all(entityIds.map(async entityId => {
+        const result = await this._hass.callWS({
+          type: "recorder/statistics_during_period",
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+          statistic_ids: [entityId],
+          period: this._getStatisticsPeriod(),
+          types: ["mean", "min", "max", "state", "sum"],
+        });
+
+        return [entityId, Array.isArray(result?.[entityId]) ? result[entityId] : []];
+      }));
+
+      return Object.fromEntries(groups);
     } catch (_error) {
       return null;
     }
   }
 
   async _fetchHistory(start, end, entityIds, signal) {
-    if (typeof this._hass?.callWS === "function") {
-      try {
-        return await this._hass.callWS({
-          type: "history/history_during_period",
-          start_time: start.toISOString(),
-          end_time: end.toISOString(),
-          entity_ids: entityIds,
-          significant_changes_only: false,
-        });
-      } catch (_error) {
-        // Fall back to the authenticated REST endpoint below.
-      }
-    }
+    const groups = await Promise.all(entityIds.map(async entityId => {
+      if (typeof this._hass?.callWS === "function") {
+        try {
+          const result = await this._hass.callWS({
+            type: "history/history_during_period",
+            start_time: start.toISOString(),
+            end_time: end.toISOString(),
+            entity_ids: [entityId],
+            significant_changes_only: false,
+          });
 
-    const query = [
-      `filter_entity_id=${encodeURIComponent(entityIds.join(","))}`,
-      `end_time=${encodeURIComponent(end.toISOString())}`,
-      "significant_changes_only=0",
-    ].join("&");
-
-    const apiPath = `history/period/${encodeURIComponent(start.toISOString())}?${query}`;
-
-    if (typeof this._hass?.callApi === "function") {
-      return this._hass.callApi("GET", apiPath);
-    }
-
-    if (typeof this._hass?.auth?.fetchWithAuth === "function") {
-      const response = await this._hass.auth.fetchWithAuth(
-        `/api/${apiPath}`,
-        { signal },
-      );
-
-      if (!response.ok) {
-        throw new Error(`History request failed with ${response.status}`);
+          const rows = Array.isArray(result?.[0]) ? result[0] : Array.isArray(result?.[entityId]) ? result[entityId] : [];
+          return [entityId, rows];
+        } catch (_error) {
+          // Fall through to REST.
+        }
       }
 
-      return response.json();
-    }
+      if (typeof this._hass?.auth?.fetchWithAuth === "function") {
+        const query = [
+          `filter_entity_id=${encodeURIComponent(entityId)}`,
+          `end_time=${encodeURIComponent(end.toISOString())}`,
+        ].join("&");
 
-    // Avoid unauthenticated fallback requests, which can trigger invalid auth attempts.
-    return null;
+        const response = await this._hass.auth.fetchWithAuth(
+          `/api/history/period/${encodeURIComponent(start.toISOString())}?${query}`,
+          { signal },
+        );
+
+        if (!response.ok) {
+          throw new Error(`History request failed with ${response.status}`);
+        }
+
+        const result = await response.json();
+        return [entityId, Array.isArray(result?.[0]) ? result[0] : []];
+      }
+
+      return [entityId, []];
+    }));
+
+    return Object.fromEntries(groups);
   }
 
   _normalizeStatisticsSeries(raw) {
