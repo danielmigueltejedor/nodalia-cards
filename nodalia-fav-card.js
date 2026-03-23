@@ -361,6 +361,20 @@ class NodaliaFavCard extends HTMLElement {
     return true;
   }
 
+  _isDomainOn(state) {
+    const stateKey = normalizeTextKey(state?.state);
+    const domain = this._getDomain();
+
+    switch (domain) {
+      case "light":
+      case "fan":
+      case "humidifier":
+        return stateKey === "on";
+      default:
+        return this._isActiveState(state);
+    }
+  }
+
   _usesCustomOnColor() {
     const configuredColor = this._config?.styles?.icon?.on_color;
     return Boolean(configuredColor) && configuredColor !== DEFAULT_CONFIG.styles.icon.on_color;
@@ -419,7 +433,7 @@ class NodaliaFavCard extends HTMLElement {
 
   _getAccentColor(state) {
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
-    if (!this._isActiveState(state)) {
+    if (!this._isDomainOn(state)) {
       return this._usesCustomOffColor()
         ? styles?.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color
         : "var(--state-inactive-color, rgba(255, 255, 255, 0.5))";
@@ -727,7 +741,7 @@ class NodaliaFavCard extends HTMLElement {
       ? (config.state_attribute ? this._formatAttributeValue(state, config.state_attribute) : this._translateStateValue(state))
       : null;
     const canRunPrimaryAction = this._canRunTapAction(state);
-    const isActive = this._isActiveState(state);
+    const isActive = this._isDomainOn(state);
     const iconSizePx = Math.max(40, Math.min(parseSizeToPixels(styles.icon.size, 52), isMini ? 54 : 56));
     const titleSizePx = Math.max(11, Math.min(parseSizeToPixels(styles.title_size, 13), isMini ? 0 : 14));
     const chipHeightPx = Math.max(18, Math.min(parseSizeToPixels(styles.chip_height, 22), 24));
@@ -738,13 +752,13 @@ class NodaliaFavCard extends HTMLElement {
         ? styles.icon.off_color
         : "var(--state-inactive-color, rgba(255, 255, 255, 0.55))");
     const cardBackground = isActive
-      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 13%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 6%, ${styles.card.background}) 58%, ${styles.card.background} 100%)`
+      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`
       : styles.card.background;
     const cardBorder = isActive
-      ? `1px solid color-mix(in srgb, ${accentColor} 24%, rgba(255, 255, 255, 0.08))`
+      ? `1px solid color-mix(in srgb, ${accentColor} 32%, rgba(255, 255, 255, 0.08))`
       : styles.card.border;
     const cardShadow = isActive
-      ? `${styles.card.box_shadow}, 0 16px 30px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`
+      ? `${styles.card.box_shadow}, 0 16px 30px color-mix(in srgb, ${accentColor} 16%, rgba(0, 0, 0, 0.18))`
       : styles.card.box_shadow;
     const showTitle = config.show_name !== false && !isMini;
     const showValue = Boolean(displayValue) && !isMini;
@@ -773,7 +787,7 @@ class NodaliaFavCard extends HTMLElement {
 
         ha-card::before {
           background: ${isActive
-            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, rgba(255, 255, 255, 0.04)), rgba(255, 255, 255, 0))`
+            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, rgba(255, 255, 255, 0.04)), rgba(255, 255, 255, 0))`
             : "linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0))"};
           content: "";
           inset: 0;

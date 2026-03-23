@@ -16206,9 +16206,13 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     this._cardWidth = 0;
     this._isCompactLayout = false;
     this._codeInput = "";
+    this._isCodeInputFocused = false;
+    this._pendingRenderWhileCodeFocused = false;
     this._resizeObserver = null;
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowFocusIn = this._onShadowFocusIn.bind(this);
+    this._onShadowFocusOut = this._onShadowFocusOut.bind(this);
   }
 
   _captureCodeFocusState() {
@@ -16267,9 +16271,30 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     this._restoreCodeFocusState(focusState);
   }
 
+  _shouldDeferRenderForCodeInput() {
+    if (!this._isCodeInputFocused) {
+      return false;
+    }
+
+    const activeElement = this.shadowRoot?.activeElement;
+    return activeElement instanceof HTMLInputElement && activeElement.dataset?.alarmField === "code";
+  }
+
+  _requestRender() {
+    if (this._shouldDeferRenderForCodeInput()) {
+      this._pendingRenderWhileCodeFocused = true;
+      return;
+    }
+
+    this._pendingRenderWhileCodeFocused = false;
+    this._renderWithFocusPreserved();
+  }
+
   connectedCallback() {
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
+    this.shadowRoot.addEventListener("focusin", this._onShadowFocusIn);
+    this.shadowRoot.addEventListener("focusout", this._onShadowFocusOut);
 
     if (!this._resizeObserver) {
       this._resizeObserver = new ResizeObserver(entries => {
@@ -16280,7 +16305,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
         this._cardWidth = entry.contentRect.width;
         this._isCompactLayout = this._shouldUseCompactLayout(this._cardWidth);
-        this._renderWithFocusPreserved();
+        this._requestRender();
       });
     }
 
@@ -16290,17 +16315,19 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   disconnectedCallback() {
     this.shadowRoot.removeEventListener("click", this._onShadowClick);
     this.shadowRoot.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot.removeEventListener("focusin", this._onShadowFocusIn);
+    this.shadowRoot.removeEventListener("focusout", this._onShadowFocusOut);
     this._resizeObserver?.disconnect();
   }
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
-    this._renderWithFocusPreserved();
+    this._requestRender();
   }
 
   set hass(hass) {
     this._hass = hass;
-    this._renderWithFocusPreserved();
+    this._requestRender();
   }
 
   getCardSize() {
@@ -16608,6 +16635,34 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     }
 
     this._codeInput = input.value;
+  }
+
+  _onShadowFocusIn(event) {
+    const input = event.composedPath().find(node => node instanceof HTMLInputElement && node.dataset?.alarmField === "code");
+    if (!input) {
+      return;
+    }
+
+    this._isCodeInputFocused = true;
+  }
+
+  _onShadowFocusOut(event) {
+    const input = event.composedPath().find(node => node instanceof HTMLInputElement && node.dataset?.alarmField === "code");
+    if (!input) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      const activeElement = this.shadowRoot?.activeElement;
+      const stillFocused = activeElement instanceof HTMLInputElement && activeElement.dataset?.alarmField === "code";
+
+      this._isCodeInputFocused = stillFocused;
+
+      if (!stillFocused && this._pendingRenderWhileCodeFocused) {
+        this._pendingRenderWhileCodeFocused = false;
+        this._renderWithFocusPreserved();
+      }
+    }, 0);
   }
 
   _renderChip(label, tone = "default", accentColor = "var(--accent-color)") {
@@ -19531,6 +19586,20 @@ class NodaliaFavCard extends HTMLElement {
     return true;
   }
 
+  _isDomainOn(state) {
+    const stateKey = normalizeTextKey(state?.state);
+    const domain = this._getDomain();
+
+    switch (domain) {
+      case "light":
+      case "fan":
+      case "humidifier":
+        return stateKey === "on";
+      default:
+        return this._isActiveState(state);
+    }
+  }
+
   _usesCustomOnColor() {
     const configuredColor = this._config?.styles?.icon?.on_color;
     return Boolean(configuredColor) && configuredColor !== DEFAULT_CONFIG.styles.icon.on_color;
@@ -19589,7 +19658,7 @@ class NodaliaFavCard extends HTMLElement {
 
   _getAccentColor(state) {
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
-    if (!this._isActiveState(state)) {
+    if (!this._isDomainOn(state)) {
       return this._usesCustomOffColor()
         ? styles?.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color
         : "var(--state-inactive-color, rgba(255, 255, 255, 0.5))";
@@ -19897,7 +19966,7 @@ class NodaliaFavCard extends HTMLElement {
       ? (config.state_attribute ? this._formatAttributeValue(state, config.state_attribute) : this._translateStateValue(state))
       : null;
     const canRunPrimaryAction = this._canRunTapAction(state);
-    const isActive = this._isActiveState(state);
+    const isActive = this._isDomainOn(state);
     const iconSizePx = Math.max(40, Math.min(parseSizeToPixels(styles.icon.size, 52), isMini ? 54 : 56));
     const titleSizePx = Math.max(11, Math.min(parseSizeToPixels(styles.title_size, 13), isMini ? 0 : 14));
     const chipHeightPx = Math.max(18, Math.min(parseSizeToPixels(styles.chip_height, 22), 24));
@@ -19908,13 +19977,13 @@ class NodaliaFavCard extends HTMLElement {
         ? styles.icon.off_color
         : "var(--state-inactive-color, rgba(255, 255, 255, 0.55))");
     const cardBackground = isActive
-      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 13%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 6%, ${styles.card.background}) 58%, ${styles.card.background} 100%)`
+      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`
       : styles.card.background;
     const cardBorder = isActive
-      ? `1px solid color-mix(in srgb, ${accentColor} 24%, rgba(255, 255, 255, 0.08))`
+      ? `1px solid color-mix(in srgb, ${accentColor} 32%, rgba(255, 255, 255, 0.08))`
       : styles.card.border;
     const cardShadow = isActive
-      ? `${styles.card.box_shadow}, 0 16px 30px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`
+      ? `${styles.card.box_shadow}, 0 16px 30px color-mix(in srgb, ${accentColor} 16%, rgba(0, 0, 0, 0.18))`
       : styles.card.box_shadow;
     const showTitle = config.show_name !== false && !isMini;
     const showValue = Boolean(displayValue) && !isMini;
@@ -19943,7 +20012,7 @@ class NodaliaFavCard extends HTMLElement {
 
         ha-card::before {
           background: ${isActive
-            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, rgba(255, 255, 255, 0.04)), rgba(255, 255, 255, 0))`
+            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, rgba(255, 255, 255, 0.04)), rgba(255, 255, 255, 0))`
             : "linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0))"};
           content: "";
           inset: 0;

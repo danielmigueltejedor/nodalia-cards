@@ -242,9 +242,13 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     this._cardWidth = 0;
     this._isCompactLayout = false;
     this._codeInput = "";
+    this._isCodeInputFocused = false;
+    this._pendingRenderWhileCodeFocused = false;
     this._resizeObserver = null;
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowFocusIn = this._onShadowFocusIn.bind(this);
+    this._onShadowFocusOut = this._onShadowFocusOut.bind(this);
   }
 
   _captureCodeFocusState() {
@@ -303,9 +307,30 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     this._restoreCodeFocusState(focusState);
   }
 
+  _shouldDeferRenderForCodeInput() {
+    if (!this._isCodeInputFocused) {
+      return false;
+    }
+
+    const activeElement = this.shadowRoot?.activeElement;
+    return activeElement instanceof HTMLInputElement && activeElement.dataset?.alarmField === "code";
+  }
+
+  _requestRender() {
+    if (this._shouldDeferRenderForCodeInput()) {
+      this._pendingRenderWhileCodeFocused = true;
+      return;
+    }
+
+    this._pendingRenderWhileCodeFocused = false;
+    this._renderWithFocusPreserved();
+  }
+
   connectedCallback() {
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
+    this.shadowRoot.addEventListener("focusin", this._onShadowFocusIn);
+    this.shadowRoot.addEventListener("focusout", this._onShadowFocusOut);
 
     if (!this._resizeObserver) {
       this._resizeObserver = new ResizeObserver(entries => {
@@ -316,7 +341,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
         this._cardWidth = entry.contentRect.width;
         this._isCompactLayout = this._shouldUseCompactLayout(this._cardWidth);
-        this._renderWithFocusPreserved();
+        this._requestRender();
       });
     }
 
@@ -326,17 +351,19 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   disconnectedCallback() {
     this.shadowRoot.removeEventListener("click", this._onShadowClick);
     this.shadowRoot.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot.removeEventListener("focusin", this._onShadowFocusIn);
+    this.shadowRoot.removeEventListener("focusout", this._onShadowFocusOut);
     this._resizeObserver?.disconnect();
   }
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
-    this._renderWithFocusPreserved();
+    this._requestRender();
   }
 
   set hass(hass) {
     this._hass = hass;
-    this._renderWithFocusPreserved();
+    this._requestRender();
   }
 
   getCardSize() {
@@ -644,6 +671,34 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     }
 
     this._codeInput = input.value;
+  }
+
+  _onShadowFocusIn(event) {
+    const input = event.composedPath().find(node => node instanceof HTMLInputElement && node.dataset?.alarmField === "code");
+    if (!input) {
+      return;
+    }
+
+    this._isCodeInputFocused = true;
+  }
+
+  _onShadowFocusOut(event) {
+    const input = event.composedPath().find(node => node instanceof HTMLInputElement && node.dataset?.alarmField === "code");
+    if (!input) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      const activeElement = this.shadowRoot?.activeElement;
+      const stillFocused = activeElement instanceof HTMLInputElement && activeElement.dataset?.alarmField === "code";
+
+      this._isCodeInputFocused = stillFocused;
+
+      if (!stillFocused && this._pendingRenderWhileCodeFocused) {
+        this._pendingRenderWhileCodeFocused = false;
+        this._renderWithFocusPreserved();
+      }
+    }, 0);
   }
 
   _renderChip(label, tone = "default", accentColor = "var(--accent-color)") {
