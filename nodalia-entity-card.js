@@ -1061,7 +1061,7 @@ class NodaliaEntityCard extends HTMLElement {
         .entity-card--single-row .entity-card__copy {
           align-content: center;
           display: grid;
-          gap: 1px;
+          gap: 3px;
           min-width: 0;
         }
 
