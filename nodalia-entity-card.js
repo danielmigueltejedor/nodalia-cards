@@ -884,11 +884,8 @@ class NodaliaEntityCard extends HTMLElement {
         }
 
         .entity-card--single-row .entity-card__copy {
-          align-items: center;
-          display: flex;
-          flex-wrap: nowrap;
-          gap: 8px;
-          justify-content: space-between;
+          display: grid;
+          gap: 4px;
           min-width: 0;
         }
 
@@ -917,10 +914,9 @@ class NodaliaEntityCard extends HTMLElement {
         }
 
         .entity-card--single-row .entity-card__chips {
-          flex: 0 0 auto;
           flex-wrap: nowrap;
-          justify-content: flex-end;
-          margin-left: auto;
+          justify-content: flex-start;
+          margin-left: 0;
         }
 
         .entity-card__chip {
@@ -943,7 +939,6 @@ class NodaliaEntityCard extends HTMLElement {
         }
 
         .entity-card--single-row .entity-card__title {
-          flex: 1 1 auto;
           min-width: 0;
         }
 
