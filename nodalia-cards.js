@@ -4736,6 +4736,7 @@ const DEFAULT_CONFIG = {
   show: true,
   show_state: false,
   album_cover_background: true,
+  show_unavailable_badge: true,
   haptics: {
     enabled: false,
     style: "selection",
@@ -5033,6 +5034,9 @@ function normalizeConfig(rawConfig) {
     }
     if (mediaConfig.album_cover_background !== undefined) {
       config.album_cover_background = mediaConfig.album_cover_background;
+    }
+    if (mediaConfig.show_unavailable_badge !== undefined) {
+      config.show_unavailable_badge = mediaConfig.show_unavailable_badge;
     }
     if (mediaConfig.show_desktop !== undefined) {
       config.layout.show_desktop = mediaConfig.show_desktop;
@@ -7014,7 +7018,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     const playerStyles = this._config.styles.player;
     const hasAlbumBackground = this._config.album_cover_background !== false && Boolean(artwork);
     const useActiveTint = isTvPlayer && this._isPlayerActive(state) && !hasAlbumBackground;
-    const showUnavailableBadge = isUnavailableState(state);
+    const showUnavailableBadge = this._config.show_unavailable_badge !== false && isUnavailableState(state);
     const playerCardClasses = [
       "media-player-card",
       isIdleLayout ? "media-player-card--idle" : "",
@@ -7736,7 +7740,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           display: flex;
           height: ${playerStyles.artwork_size};
           justify-content: center;
-          overflow: hidden;
+          overflow: visible;
           padding: 0;
           position: relative;
           text-decoration: none;
@@ -7750,6 +7754,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__artwork img {
+          border-radius: inherit;
           height: 100%;
           object-fit: cover;
           width: 100%;
@@ -7781,8 +7786,8 @@ class NodaliaMediaPlayer extends HTMLElement {
           height: 18px;
           justify-content: center;
           position: absolute;
-          right: -2px;
-          top: -2px;
+          right: 3px;
+          top: 3px;
           width: 18px;
           z-index: 3;
         }
@@ -9377,6 +9382,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             )}
             ${this._renderCheckboxField("Mostrar estado textual", "show_state", config.show_state === true)}
             ${this._renderCheckboxField("Fondo con caratula", "album_cover_background", config.album_cover_background !== false)}
+            ${this._renderCheckboxField("Mostrar badge de no disponible", "show_unavailable_badge", config.show_unavailable_badge !== false)}
             ${this._renderCheckboxField("Mostrar en escritorio", "layout.show_desktop", config.layout.show_desktop === true)}
           </div>
         </section>
