@@ -21721,6 +21721,8 @@ class NodaliaPersonCard extends HTMLElement {
     const badgeSize = `${Math.max(15, Math.min(parseSizeToPixels(styles.badge.size, 20), singleRowLayout ? 16 : 24))}px`;
     const effectiveTitleSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.title_size, 14), singleRowLayout ? 10.5 : 14))}px`;
     const effectiveSubtitleSize = `${Math.max(9, Math.min(parseSizeToPixels(styles.subtitle_size, 13), singleRowLayout ? 9.5 : 13))}px`;
+    const effectiveStateChipHeight = `${singleRowLayout ? 18 : 22}px`;
+    const effectiveStateChipPadding = singleRowLayout ? "0 8px" : "0 10px";
     const effectiveGap = singleRowLayout ? "6px" : styles.card.gap;
     const effectivePadding = singleRowLayout ? `${singleRowPaddingY}px ${singleRowPaddingX}px` : styles.card.padding;
     const effectiveCardHeightPx = singleRowLayout ? Math.max(54, avatarSizePx + (singleRowPaddingY * 2)) : avatarSizePx + (singleRowPaddingY * 2);
@@ -21813,9 +21815,11 @@ class NodaliaPersonCard extends HTMLElement {
         .person-card__badge {
           align-items: center;
           background: var(--badge-color);
-          border: 2px solid ${styles.card.background};
+          border: 1px solid rgba(255, 255, 255, 0.18);
           border-radius: 999px;
-          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          box-shadow:
+            0 6px 14px rgba(0, 0, 0, 0.18),
+            inset 0 1px 0 rgba(255, 255, 255, 0.14);
           color: #ffffff;
           display: inline-flex;
           height: ${badgeSize};
@@ -21830,11 +21834,16 @@ class NodaliaPersonCard extends HTMLElement {
 
         .person-card__badge ha-icon {
           --mdc-icon-size: calc(${badgeSize} * 0.56);
+          align-items: center;
+          display: inline-flex;
+          height: calc(${badgeSize} * 0.56);
+          justify-content: center;
+          width: calc(${badgeSize} * 0.56);
         }
 
         .person-card__copy {
           display: grid;
-          gap: ${singleRowLayout ? "1px" : "4px"};
+          gap: ${singleRowLayout ? "4px" : "6px"};
           min-width: 0;
         }
 
@@ -21849,13 +21858,30 @@ class NodaliaPersonCard extends HTMLElement {
           white-space: nowrap;
         }
 
-        .person-card__subtitle {
+        .person-card__chips {
+          align-items: center;
+          display: flex;
+          flex-wrap: nowrap;
+          gap: 4px;
+          min-width: 0;
+        }
+
+        .person-card__state-chip {
+          align-items: center;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
           color: var(--secondary-text-color);
+          display: inline-flex;
           font-size: ${effectiveSubtitleSize};
-          font-weight: 500;
-          line-height: ${singleRowLayout ? "1.02" : "1.2"};
+          font-weight: 700;
+          height: ${effectiveStateChipHeight};
+          line-height: 1;
+          max-width: 100%;
           min-width: 0;
           overflow: hidden;
+          padding: ${effectiveStateChipPadding};
           text-overflow: ellipsis;
           white-space: nowrap;
         }
@@ -21893,7 +21919,7 @@ class NodaliaPersonCard extends HTMLElement {
           </div>
           <div class="person-card__copy">
             <div class="person-card__title">${escapeHtml(title)}</div>
-            ${subtitle ? `<div class="person-card__subtitle">${escapeHtml(subtitle)}</div>` : ""}
+            ${subtitle ? `<div class="person-card__chips"><div class="person-card__state-chip">${escapeHtml(subtitle)}</div></div>` : ""}
           </div>
         </div>
       </ha-card>
