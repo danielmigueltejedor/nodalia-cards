@@ -621,8 +621,6 @@ class NodaliaGraphCard extends HTMLElement {
           start_time: start.toISOString(),
           end_time: end.toISOString(),
           entity_ids: entityIds,
-          minimal_response: true,
-          no_attributes: true,
           significant_changes_only: false,
         });
       } catch (_error) {
@@ -698,9 +696,14 @@ class NodaliaGraphCard extends HTMLElement {
     const endMs = end.getTime();
 
     if (Array.isArray(raw)) {
-      raw.forEach(group => {
-        if (Array.isArray(group) && group[0]?.entity_id) {
-          historyByEntity.set(group[0].entity_id, group);
+      raw.forEach((group, index) => {
+        if (!Array.isArray(group)) {
+          return;
+        }
+
+        const resolvedEntityId = group[0]?.entity_id || entries[index]?.entity;
+        if (resolvedEntityId) {
+          historyByEntity.set(resolvedEntityId, group);
         }
       });
     } else if (isObject(raw)) {

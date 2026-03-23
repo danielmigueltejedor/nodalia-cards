@@ -18285,6 +18285,39 @@ class NodaliaGraphCard extends HTMLElement {
     });
   }
 
+  _getStatisticsPeriod() {
+    const hoursToShow = Math.max(1, Number(this._config?.hours_to_show) || DEFAULT_CONFIG.hours_to_show);
+
+    if (hoursToShow <= 48) {
+      return "5minute";
+    }
+
+    if (hoursToShow <= 24 * 14) {
+      return "hour";
+    }
+
+    return "day";
+  }
+
+  async _fetchStatistics(start, end, entityIds) {
+    if (typeof this._hass?.callWS !== "function") {
+      return null;
+    }
+
+    try {
+      return await this._hass.callWS({
+        type: "recorder/statistics_during_period",
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        statistic_ids: entityIds,
+        period: this._getStatisticsPeriod(),
+        types: ["mean", "min", "max", "state", "sum"],
+      });
+    } catch (_error) {
+      return null;
+    }
+  }
+
   async _fetchHistory(start, end, entityIds, signal) {
     if (typeof this._hass?.callWS === "function") {
       try {
@@ -18293,8 +18326,6 @@ class NodaliaGraphCard extends HTMLElement {
           start_time: start.toISOString(),
           end_time: end.toISOString(),
           entity_ids: entityIds,
-          minimal_response: true,
-          no_attributes: true,
           significant_changes_only: false,
         });
       } catch (_error) {
@@ -18331,6 +18362,37 @@ class NodaliaGraphCard extends HTMLElement {
     return null;
   }
 
+  _normalizeStatisticsSeries(raw) {
+    const entries = this._getLegendEntries();
+
+    return entries.map(entry => {
+      const state = this._hass?.states?.[entry.entity];
+      const rows = Array.isArray(raw?.[entry.entity]) ? raw[entry.entity] : [];
+      const samples = rows
+        .map(item => {
+          const ts = parseHistoryTimestamp(item.start ?? item.end);
+          const value = parseNumber(item.mean ?? item.state ?? item.max ?? item.min ?? item.sum);
+          return { ts, value };
+        })
+        .filter(item => Number.isFinite(item.ts) && Number.isFinite(item.value))
+        .sort((left, right) => left.ts - right.ts);
+
+      const currentValue = parseNumber(state?.state);
+
+      return {
+        ...entry,
+        unit: String(
+          state?.attributes?.unit_of_measurement
+          || state?.attributes?.native_unit_of_measurement
+          || "",
+        ).trim(),
+        currentValue: Number.isFinite(currentValue) ? currentValue : samples[samples.length - 1]?.value ?? 0,
+        rawEventCount: samples.length,
+        samples,
+      };
+    });
+  }
+
   _normalizeHistorySeries(raw, start, end) {
     const entries = this._getLegendEntries();
     const historyByEntity = new Map();
@@ -18339,9 +18401,14 @@ class NodaliaGraphCard extends HTMLElement {
     const endMs = end.getTime();
 
     if (Array.isArray(raw)) {
-      raw.forEach(group => {
-        if (Array.isArray(group) && group[0]?.entity_id) {
-          historyByEntity.set(group[0].entity_id, group);
+      raw.forEach((group, index) => {
+        if (!Array.isArray(group)) {
+          return;
+        }
+
+        const resolvedEntityId = group[0]?.entity_id || entries[index]?.entity;
+        if (resolvedEntityId) {
+          historyByEntity.set(resolvedEntityId, group);
         }
       });
     } else if (isObject(raw)) {
@@ -18416,7 +18483,24 @@ class NodaliaGraphCard extends HTMLElement {
     const start = new Date(end.getTime() - (hoursToShow * 60 * 60 * 1000));
 
     try {
-      const raw = await this._fetchHistory(start, end, this._getEntityEntries().map(entry => entry.entity), controller.signal);
+      const entityIds = this._getEntityEntries().map(entry => entry.entity);
+      const statisticsRaw = await this._fetchStatistics(start, end, entityIds);
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      const statisticsSeries = this._normalizeStatisticsSeries(statisticsRaw || {});
+      const hasMeaningfulStatistics = statisticsSeries.some(entry => entry.rawEventCount > 1 && entry.samples.length > 1);
+
+      if (hasMeaningfulStatistics) {
+        this._historySeries = statisticsSeries;
+        this._historyKey = requestKey;
+        this._historyLoadedAt = Date.now();
+        this._render();
+        return;
+      }
+
+      const raw = await this._fetchHistory(start, end, entityIds, controller.signal);
       if (controller.signal.aborted) {
         return;
       }
