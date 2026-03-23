@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "0.5.0";
+const CARD_VERSION = "0.6.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1172,9 +1172,22 @@ class NodaliaHumidifierCard extends HTMLElement {
           min-width: 0;
         }
 
+        .humidifier-card__headline {
+          align-items: start;
+          display: grid;
+          gap: 10px;
+          grid-template-columns: minmax(0, 1fr) auto;
+          min-width: 0;
+        }
+
         .humidifier-card--compact .humidifier-card__copy {
           justify-items: center;
           text-align: center;
+        }
+
+        .humidifier-card--compact .humidifier-card__headline {
+          grid-template-columns: minmax(0, 1fr);
+          justify-items: center;
         }
 
         .humidifier-card__title {
@@ -1188,9 +1201,12 @@ class NodaliaHumidifierCard extends HTMLElement {
         .humidifier-card__chips {
           align-items: center;
           display: flex;
+          flex: 0 0 auto;
           flex-wrap: wrap;
           gap: 10px;
+          justify-content: flex-end;
           min-width: 0;
+          max-width: 100%;
         }
 
         .humidifier-card--compact .humidifier-card__chips {
@@ -1443,8 +1459,10 @@ class NodaliaHumidifierCard extends HTMLElement {
             ${showCopyBlock
               ? `
                 <div class="humidifier-card__copy">
-                  ${isCompactLayout ? "" : `<div class="humidifier-card__title">${escapeHtml(title)}</div>`}
-                  ${chips.length ? `<div class="humidifier-card__chips">${chips.join("")}</div>` : ""}
+                  <div class="humidifier-card__headline">
+                    ${isCompactLayout ? "" : `<div class="humidifier-card__title">${escapeHtml(title)}</div>`}
+                    ${chips.length ? `<div class="humidifier-card__chips">${chips.join("")}</div>` : ""}
+                  </div>
                 </div>
               `
               : ""}

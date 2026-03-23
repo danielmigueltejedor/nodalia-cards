@@ -9,6 +9,7 @@ Ahora mismo incluye:
 - `custom:nodalia-light-card`
 - `custom:nodalia-fan-card`
 - `custom:nodalia-humidifier-card`
+- `custom:nodalia-entity-card`
 - `custom:nodalia-vacuum-card`
 
 ## Instalacion
@@ -29,6 +30,7 @@ Ese recurso carga automaticamente:
 - `nodalia-light-card.js`
 - `nodalia-fan-card.js`
 - `nodalia-humidifier-card.js`
+- `nodalia-entity-card.js`
 - `nodalia-vacuum-card.js`
 
 ### Opcion 2: recursos individuales
@@ -45,6 +47,8 @@ Si prefieres cargarlas por separado:
 - url: /local/nodalia-fan-card.js
   type: module
 - url: /local/nodalia-humidifier-card.js
+  type: module
+- url: /local/nodalia-entity-card.js
   type: module
 - url: /local/nodalia-vacuum-card.js
   type: module
@@ -109,6 +113,21 @@ entity: humidifier.deshumidificador
 name: Deshumidificador
 ```
 
+### Nodalia Entity Card
+
+```yaml
+type: custom:nodalia-entity-card
+entity: switch.lampara
+name: Lampara
+tap_action: auto
+show_state: true
+quick_actions:
+  - icon: mdi:power
+    type: toggle
+  - icon: mdi:cog
+    type: more-info
+```
+
 ## Estructura
 
 - `nodalia-cards.js`: entrypoint comun
@@ -117,6 +136,7 @@ name: Deshumidificador
 - `nodalia-light-card.js`: tarjeta de iluminacion
 - `nodalia-fan-card.js`: tarjeta de ventilador
 - `nodalia-humidifier-card.js`: tarjeta de humidificador o deshumidificador
+- `nodalia-entity-card.js`: tarjeta todoterreno para cualquier entidad
 - `nodalia-vacuum-card.js`: tarjeta de aspirador
 
 ## Siguiente paso recomendado
