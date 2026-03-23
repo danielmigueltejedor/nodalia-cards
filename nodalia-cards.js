@@ -21242,7 +21242,7 @@ const DEFAULT_CONFIG = {
       color: "var(--primary-text-color)",
     },
     badge: {
-      size: "20px",
+      size: "22px",
     },
     title_size: "14px",
     subtitle_size: "13px",
@@ -21718,7 +21718,7 @@ class NodaliaPersonCard extends HTMLElement {
     const avatarSizePx = Math.max(34, Math.min(parseSizeToPixels(styles.avatar.size, 58), singleRowLayout ? 38 : 68));
     const avatarSize = `${avatarSizePx}px`;
     const avatarTrackSize = `${avatarSizePx + (singleRowLayout ? 7 : 12)}px`;
-    const badgeSize = `${Math.max(15, Math.min(parseSizeToPixels(styles.badge.size, 20), singleRowLayout ? 16 : 24))}px`;
+    const badgeSize = `${Math.max(16, Math.min(parseSizeToPixels(styles.badge.size, 22), singleRowLayout ? 18 : 26))}px`;
     const effectiveTitleSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.title_size, 14), singleRowLayout ? 10.5 : 14))}px`;
     const effectiveSubtitleSize = `${Math.max(9, Math.min(parseSizeToPixels(styles.subtitle_size, 13), singleRowLayout ? 9.5 : 13))}px`;
     const effectiveStateChipHeight = `${singleRowLayout ? 18 : 22}px`;
@@ -21833,12 +21833,12 @@ class NodaliaPersonCard extends HTMLElement {
         }
 
         .person-card__badge ha-icon {
-          --mdc-icon-size: calc(${badgeSize} * 0.56);
+          --mdc-icon-size: calc(${badgeSize} * 0.62);
           align-items: center;
           display: inline-flex;
-          height: calc(${badgeSize} * 0.56);
+          height: calc(${badgeSize} * 0.62);
           justify-content: center;
-          width: calc(${badgeSize} * 0.56);
+          width: calc(${badgeSize} * 0.62);
         }
 
         .person-card__copy {
