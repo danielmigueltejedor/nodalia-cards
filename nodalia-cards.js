@@ -16538,6 +16538,37 @@ class NodaliaClimateCard extends HTMLElement {
     };
   }
 
+  _getConfiguredGridRows() {
+    const numericRows = Number(this._config?.grid_options?.rows);
+    return Number.isFinite(numericRows) ? numericRows : null;
+  }
+
+  _getConfiguredGridColumns() {
+    const numericColumns = Number(this._config?.grid_options?.columns);
+    return Number.isFinite(numericColumns) ? numericColumns : null;
+  }
+
+  _getCompactLevel() {
+    const configuredRows = this._getConfiguredGridRows();
+    const configuredColumns = this._getConfiguredGridColumns();
+
+    if (
+      (configuredRows !== null && configuredRows <= 3)
+      || (configuredColumns !== null && configuredColumns <= 4)
+    ) {
+      return "tight";
+    }
+
+    if (
+      (configuredRows !== null && configuredRows <= 4)
+      || (configuredColumns !== null && configuredColumns <= 6)
+    ) {
+      return "compact";
+    }
+
+    return "default";
+  }
+
   _getState() {
     return this._config?.entity ? this._hass?.states?.[this._config.entity] || null : null;
   }
@@ -17187,15 +17218,63 @@ class NodaliaClimateCard extends HTMLElement {
     const temperatureRange = this._getTemperatureRange(state);
     const temperatureStep = this._getTemperatureStep(state);
     const supportsTargetTemperature = this._supportsTargetTemperature(state);
+    const compactLevel = this._getCompactLevel();
+    const compactLayout = compactLevel !== "default";
+    const tightLayout = compactLevel === "tight";
     const modeOptions = config.show_mode_buttons !== false ? this._getOrderedModeOptions(state) : [];
     const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
     const isOff = this._isOff(state) || isUnavailableState(state);
-    const dialSizePx = parseSizeToPixels(styles.dial.size, 280);
-    const dialStrokePx = parseSizeToPixels(styles.dial.stroke, 18);
-    const thumbSizePx = parseSizeToPixels(styles.dial.thumb_size, 24);
+    const cardPaddingY = tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
+    const cardPaddingX = tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
+    const effectiveCardPadding = `${cardPaddingY}px ${cardPaddingX}px`;
+    const effectiveCardGap = tightLayout ? "10px" : compactLayout ? "12px" : styles.card.gap;
+    const effectiveIconSizePx = Math.max(
+      48,
+      Math.min(parseSizeToPixels(styles.icon.size, 58), tightLayout ? 50 : compactLayout ? 54 : 58),
+    );
+    const effectiveIconSize = `${effectiveIconSizePx}px`;
+    const effectiveTitleSize = `${Math.max(
+      14,
+      Math.min(parseSizeToPixels(styles.title_size, 16), tightLayout ? 15 : compactLayout ? 15.5 : 16),
+    )}px`;
+    const effectiveCurrentSize = `${Math.max(
+      14,
+      Math.min(parseSizeToPixels(styles.current_size, 16), tightLayout ? 15 : compactLayout ? 15.5 : 16),
+    )}px`;
+    const effectiveTargetSize = `${Math.max(
+      42,
+      Math.min(parseSizeToPixels(styles.target_size, 50), tightLayout ? 44 : compactLayout ? 46 : 50),
+    )}px`;
+    const effectiveChipHeight = `${Math.max(
+      21,
+      Math.min(parseSizeToPixels(styles.chip_height, 24), tightLayout ? 22 : compactLayout ? 23 : 24),
+    )}px`;
+    const effectiveChipFontSize = `${Math.max(
+      10,
+      Math.min(parseSizeToPixels(styles.chip_font_size, 11), tightLayout ? 10 : compactLayout ? 10.5 : 11),
+    )}px`;
+    const effectiveChipPadding = tightLayout ? "0 9px" : compactLayout ? "0 10px" : styles.chip_padding;
+    const dialSizePx = Math.max(
+      220,
+      Math.min(parseSizeToPixels(styles.dial.size, 280), tightLayout ? 236 : compactLayout ? 252 : 280),
+    );
+    const dialStrokePx = Math.max(
+      15,
+      Math.min(parseSizeToPixels(styles.dial.stroke, 18), tightLayout ? 16 : compactLayout ? 17 : 18),
+    );
+    const thumbSizePx = Math.max(
+      20,
+      Math.min(parseSizeToPixels(styles.dial.thumb_size, 24), tightLayout ? 21 : compactLayout ? 22 : 24),
+    );
     const dialRadiusPx = Number(((DIAL_CIRCLE_RADIUS * dialSizePx) / DIAL_VIEWBOX_SIZE).toFixed(3));
-    const stepControlSize = parseSizeToPixels(styles.step_control.size, 50);
-    const modeControlSize = Math.max(34, parseSizeToPixels(styles.control.size, 42) - 4);
+    const stepControlSize = Math.max(
+      40,
+      Math.min(parseSizeToPixels(styles.step_control.size, 50), tightLayout ? 42 : compactLayout ? 46 : 50),
+    );
+    const modeControlSize = Math.max(
+      32,
+      Math.min(parseSizeToPixels(styles.control.size, 42) - 4, tightLayout ? 34 : compactLayout ? 36 : 38),
+    );
     const ratio = supportsTargetTemperature
       ? (targetTemperature - temperatureRange.min) / Math.max(temperatureRange.max - temperatureRange.min, temperatureStep)
       : 0;
@@ -17240,6 +17319,8 @@ class NodaliaClimateCard extends HTMLElement {
       <style>
         :host {
           display: block;
+          height: 100%;
+          min-height: 0;
         }
 
         * {
@@ -17247,6 +17328,8 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         ha-card {
+          height: 100%;
+          min-height: 0;
           overflow: hidden;
         }
 
@@ -17262,16 +17345,21 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__content {
-          display: grid;
-          gap: ${styles.card.gap};
-          padding: ${styles.card.padding};
+          display: flex;
+          flex-direction: column;
+          gap: ${effectiveCardGap};
+          height: 100%;
+          min-height: 0;
+          padding: ${effectiveCardPadding};
         }
 
         .climate-card__hero {
           align-items: center;
           display: grid;
-          gap: ${styles.card.gap};
-          grid-template-columns: ${styles.icon.size} minmax(0, 1fr);
+          gap: ${effectiveCardGap};
+          grid-template-columns: ${effectiveIconSize} minmax(0, 1fr);
+          min-height: 0;
+          width: 100%;
         }
 
         .climate-card__icon {
@@ -17289,24 +17377,24 @@ class NodaliaClimateCard extends HTMLElement {
           color: ${isOff ? styles.icon.off_color : styles.icon.on_color};
           cursor: pointer;
           display: inline-flex;
-          height: ${styles.icon.size};
+          height: ${effectiveIconSize};
           justify-content: center;
           margin: 0;
           outline: none;
           padding: 0;
           position: relative;
-          width: ${styles.icon.size};
+          width: ${effectiveIconSize};
         }
 
         .climate-card__icon ha-icon {
-          --mdc-icon-size: calc(${styles.icon.size} * 0.44);
+          --mdc-icon-size: calc(${effectiveIconSize} * 0.44);
           display: inline-flex;
-          height: calc(${styles.icon.size} * 0.44);
+          height: calc(${effectiveIconSize} * 0.44);
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: calc(${styles.icon.size} * 0.44);
+          width: calc(${effectiveIconSize} * 0.44);
         }
 
         .climate-card__unavailable-badge {
@@ -17338,21 +17426,21 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__copy {
           display: grid;
-          gap: 10px;
+          gap: ${tightLayout ? "8px" : "10px"};
           min-width: 0;
         }
 
         .climate-card__headline {
           align-items: start;
           display: grid;
-          gap: 10px;
+          gap: ${tightLayout ? "8px" : "10px"};
           grid-template-columns: minmax(0, 1fr) auto;
           min-width: 0;
         }
 
         .climate-card__title {
           color: var(--primary-text-color);
-          font-size: ${styles.title_size};
+          font-size: ${effectiveTitleSize};
           font-weight: 700;
           line-height: 1.14;
           min-width: 0;
@@ -17366,7 +17454,7 @@ class NodaliaClimateCard extends HTMLElement {
           display: flex;
           flex: 0 0 auto;
           flex-wrap: wrap;
-          gap: 10px;
+          gap: ${tightLayout ? "8px" : "10px"};
           justify-content: flex-end;
           min-width: 0;
           max-width: 100%;
@@ -17381,13 +17469,13 @@ class NodaliaClimateCard extends HTMLElement {
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
           color: var(--secondary-text-color);
           display: inline-flex;
-          font-size: ${styles.chip_font_size};
+          font-size: ${effectiveChipFontSize};
           font-weight: 700;
-          height: ${styles.chip_height};
+          height: ${effectiveChipHeight};
           max-width: 100%;
           min-width: 0;
           overflow: hidden;
-          padding: ${styles.chip_padding};
+          padding: ${effectiveChipPadding};
           text-overflow: ellipsis;
           white-space: nowrap;
         }
@@ -17397,9 +17485,12 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__dial-wrap {
+          align-items: center;
           display: flex;
+          flex: 1 1 auto;
           justify-content: center;
-          padding-top: 2px;
+          min-height: 0;
+          padding-top: ${tightLayout ? "0" : "2px"};
         }
 
         .climate-card__dial {
@@ -17492,8 +17583,8 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__dial-center {
           align-content: center;
           display: grid;
-          gap: 12px;
-          inset: 23% 16% 18% 16%;
+          gap: ${tightLayout ? "10px" : compactLayout ? "11px" : "12px"};
+          inset: ${tightLayout ? "23% 15% 17% 15%" : compactLayout ? "23% 15.5% 17.5% 15.5%" : "23% 16% 18% 16%"};
           justify-items: center;
           pointer-events: auto;
           position: absolute;
@@ -17503,13 +17594,13 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__target {
           color: var(--primary-text-color);
           display: inline-block;
-          font-size: ${styles.target_size};
+          font-size: ${effectiveTargetSize};
           font-weight: 500;
           letter-spacing: -0.06em;
           line-height: 0.94;
-          min-height: calc(${styles.target_size} * 0.94);
+          min-height: calc(${effectiveTargetSize} * 0.94);
           min-width: 0;
-          padding-right: calc(${styles.target_size} * 0.34);
+          padding-right: calc(${effectiveTargetSize} * 0.34);
           pointer-events: none;
           position: relative;
           white-space: nowrap;
@@ -17521,7 +17612,7 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__target-unit {
           color: var(--primary-text-color);
-          font-size: calc(${styles.target_size} * 0.24);
+          font-size: calc(${effectiveTargetSize} * 0.24);
           font-weight: 500;
           line-height: 1;
           opacity: 0.92;
@@ -17543,8 +17634,8 @@ class NodaliaClimateCard extends HTMLElement {
           color: var(--secondary-text-color);
           display: flex;
           flex-wrap: wrap;
-          font-size: ${styles.current_size};
-          gap: 12px;
+          font-size: ${effectiveCurrentSize};
+          gap: ${tightLayout ? "10px" : "12px"};
           justify-content: center;
           line-height: 1;
           pointer-events: none;
@@ -17557,18 +17648,18 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__dial-action ha-icon {
-          --mdc-icon-size: 17px;
+          --mdc-icon-size: ${tightLayout ? "15px" : compactLayout ? "16px" : "17px"};
           color: ${accentColor};
           display: inline-flex;
-          height: 17px;
-          width: 17px;
+          height: ${tightLayout ? "15px" : compactLayout ? "16px" : "17px"};
+          width: ${tightLayout ? "15px" : compactLayout ? "16px" : "17px"};
         }
 
         .climate-card__dial-controls {
           align-items: center;
           display: flex;
           flex-wrap: wrap;
-          gap: 10px;
+          gap: ${tightLayout ? "8px" : "10px"};
           justify-content: center;
           margin-top: 2px;
           pointer-events: auto;
@@ -17635,7 +17726,7 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__steps {
           display: flex;
-          gap: 14px;
+          gap: ${tightLayout ? "10px" : compactLayout ? "12px" : "14px"};
           justify-content: center;
         }
 
@@ -17671,7 +17762,7 @@ class NodaliaClimateCard extends HTMLElement {
           }
         }
       </style>
-      <ha-card class="climate-card" style="--accent-color:${escapeHtml(accentColor)};">
+      <ha-card class="climate-card climate-card--${escapeHtml(compactLevel)}" style="--accent-color:${escapeHtml(accentColor)};">
         <div class="climate-card__content">
           <div class="climate-card__hero">
             <button
