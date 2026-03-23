@@ -1,0 +1,10 @@
+type: custom:nodalia-circular-gauge-card
+entity: sensor.enchufe_inteligente_potencia
+name: Potencia
+min: 0
+max: 2500
+show_header: false
+show_percentage_chip: true
+grid_options:
+  columns: 12
+  rows: 4

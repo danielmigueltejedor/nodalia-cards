@@ -1,6 +1,6 @@
 {
   "name": "nodalia-cards",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": false,
   "type": "module",
   "description": "Suite de tarjetas personalizadas de Home Assistant para Nodalia.",
@@ -11,6 +11,7 @@
     "nodalia-light-card.js",
     "nodalia-fan-card.js",
     "nodalia-humidifier-card.js",
+    "nodalia-circular-gauge-card.js",
     "nodalia-climate-card.js",
     "nodalia-alarm-panel-card.js",
     "nodalia-entity-card.js",

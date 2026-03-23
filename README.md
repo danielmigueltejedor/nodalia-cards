@@ -9,6 +9,7 @@ Ahora mismo incluye:
 - `custom:nodalia-light-card`
 - `custom:nodalia-fan-card`
 - `custom:nodalia-humidifier-card`
+- `custom:nodalia-circular-gauge-card`
 - `custom:nodalia-climate-card`
 - `custom:nodalia-alarm-panel-card`
 - `custom:nodalia-entity-card`
@@ -35,6 +36,7 @@ Ese recurso carga automaticamente:
 - `nodalia-light-card.js`
 - `nodalia-fan-card.js`
 - `nodalia-humidifier-card.js`
+- `nodalia-circular-gauge-card.js`
 - `nodalia-climate-card.js`
 - `nodalia-alarm-panel-card.js`
 - `nodalia-entity-card.js`
@@ -133,6 +135,17 @@ entity: humidifier.deshumidificador
 name: Deshumidificador
 ```
 
+### Nodalia Circular Gauge Card
+
+```yaml
+type: custom:nodalia-circular-gauge-card
+entity: sensor.enchufe_inteligente_potencia
+name: Potencia
+min: 0
+max: 2500
+show_percentage_chip: true
+```
+
 ### Nodalia Climate Card
 
 ```yaml
@@ -204,6 +217,7 @@ show_zone_badge: true
 - `nodalia-light-card.js`: tarjeta de iluminacion
 - `nodalia-fan-card.js`: tarjeta de ventilador
 - `nodalia-humidifier-card.js`: tarjeta de humidificador o deshumidificador
+- `nodalia-circular-gauge-card.js`: tarjeta circular para sensores y valores numericos
 - `nodalia-climate-card.js`: tarjeta de clima con dial circular
 - `nodalia-alarm-panel-card.js`: tarjeta elegante para paneles de alarma
 - `nodalia-entity-card.js`: tarjeta todoterreno para cualquier entidad

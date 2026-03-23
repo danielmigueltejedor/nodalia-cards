@@ -571,12 +571,13 @@ class NodaliaPersonCard extends HTMLElement {
 
         .person-card__content {
           align-items: center;
+          align-content: center;
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           display: grid;
           gap: ${effectiveGap};
           grid-template-columns: ${avatarTrackSize} minmax(0, 1fr);
+          grid-template-rows: 1fr;
           height: 100%;
-          align-content: center;
           min-height: ${effectiveContentMinHeight};
           min-width: 0;
           padding: ${effectivePadding};
@@ -590,7 +591,13 @@ class NodaliaPersonCard extends HTMLElement {
           min-height: ${effectiveCardHeightPx}px;
         }
 
+        .person-card--single-row .person-card__content {
+          padding-bottom: ${singleRowPaddingY - 1}px;
+          padding-top: ${singleRowPaddingY + 1}px;
+        }
+
         .person-card__avatar {
+          align-self: center;
           align-items: center;
           background: ${styles.avatar.background};
           border: 1px solid color-mix(in srgb, ${accentColor} 16%, rgba(255, 255, 255, 0.08));
@@ -636,6 +643,10 @@ class NodaliaPersonCard extends HTMLElement {
           transform: translate(28%, -28%);
           width: ${badgeSize};
           z-index: 2;
+        }
+
+        .person-card--single-row .person-card__badge {
+          transform: translate(20%, -14%);
         }
 
         .person-card__badge ha-icon {
