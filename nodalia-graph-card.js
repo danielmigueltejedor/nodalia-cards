@@ -937,7 +937,7 @@ class NodaliaGraphCard extends HTMLElement {
   _buildChartSeries(series) {
     const width = 100;
     const height = 56;
-    const paddingX = 0;
+    const paddingX = -4;
     const paddingTop = 3;
     const paddingBottom = 2;
     const bounds = this._getGraphBounds(series);
@@ -1282,10 +1282,12 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__chart-wrap {
           flex: 1 1 auto;
           min-height: ${chartHeight};
+          margin-inline: -10px;
           margin-top: 8px;
           overflow: visible;
-          padding: 6px 0 0;
+          padding: 2px 0 0;
           position: relative;
+          width: calc(100% + 20px);
         }
 
         .graph-card__chart {
@@ -1304,6 +1306,18 @@ class NodaliaGraphCard extends HTMLElement {
           filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.22));
         }
 
+        .graph-card__hover-point-halo {
+          fill: color-mix(in srgb, var(--hover-color) 22%, rgba(255, 255, 255, 0.14));
+        }
+
+        .graph-card__hover-point-outer {
+          fill: rgba(255, 255, 255, 0.18);
+        }
+
+        .graph-card__hover-point-ring {
+          fill: rgba(255, 255, 255, 0.95);
+        }
+
         .graph-card__tooltip {
           backdrop-filter: blur(18px);
           background: linear-gradient(180deg, rgba(42, 43, 53, 0.96) 0%, rgba(31, 32, 41, 0.96) 100%);
@@ -1316,7 +1330,7 @@ class NodaliaGraphCard extends HTMLElement {
           padding: 12px 14px;
           pointer-events: none;
           position: absolute;
-          top: 0;
+          top: -96px;
           transform: translateX(-50%);
           z-index: 3;
         }
@@ -1501,7 +1515,12 @@ class NodaliaGraphCard extends HTMLElement {
                     ? (() => {
                         const point = hover.values.find(item => item.name === entry.name)?.point;
                         return point
-                          ? `<circle class="graph-card__hover-point" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="2.3" fill="${escapeHtml(entry.color)}" stroke="rgba(255,255,255,0.78)" stroke-width="1.2"></circle>`
+                          ? `
+                              <circle class="graph-card__hover-point-halo" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="7.2" style="--hover-color:${escapeHtml(entry.color)};"></circle>
+                              <circle class="graph-card__hover-point-outer" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="5.4"></circle>
+                              <circle class="graph-card__hover-point-ring" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="3.9"></circle>
+                              <circle class="graph-card__hover-point" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="2.5" fill="${escapeHtml(entry.color)}"></circle>
+                            `
                           : "";
                       })()
                     : ""
