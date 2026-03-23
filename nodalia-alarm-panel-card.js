@@ -247,6 +247,62 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
   }
 
+  _captureCodeFocusState() {
+    const activeElement = this.shadowRoot?.activeElement;
+    if (!(activeElement instanceof HTMLInputElement) || activeElement.dataset?.alarmField !== "code") {
+      return null;
+    }
+
+    const supportsSelection =
+      typeof activeElement.selectionStart === "number" &&
+      typeof activeElement.selectionEnd === "number";
+
+    return {
+      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
+      selectionStart: supportsSelection ? activeElement.selectionStart : null,
+      value: activeElement.value,
+    };
+  }
+
+  _restoreCodeFocusState(focusState) {
+    if (!focusState || !(this.shadowRoot instanceof ShadowRoot)) {
+      return;
+    }
+
+    const target = this.shadowRoot.querySelector('input[data-alarm-field="code"]');
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    if (typeof focusState.value === "string" && target.value !== focusState.value) {
+      target.value = focusState.value;
+    }
+
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_error) {
+      target.focus();
+    }
+
+    if (
+      typeof focusState.selectionStart === "number" &&
+      typeof focusState.selectionEnd === "number" &&
+      typeof target.setSelectionRange === "function"
+    ) {
+      try {
+        target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+      } catch (_error) {
+        // Ignore unsupported input selection issues.
+      }
+    }
+  }
+
+  _renderWithFocusPreserved() {
+    const focusState = this._captureCodeFocusState();
+    this._render();
+    this._restoreCodeFocusState(focusState);
+  }
+
   connectedCallback() {
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
@@ -260,7 +316,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
         this._cardWidth = entry.contentRect.width;
         this._isCompactLayout = this._shouldUseCompactLayout(this._cardWidth);
-        this._render();
+        this._renderWithFocusPreserved();
       });
     }
 
@@ -275,12 +331,12 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
-    this._render();
+    this._renderWithFocusPreserved();
   }
 
   set hass(hass) {
     this._hass = hass;
-    this._render();
+    this._renderWithFocusPreserved();
   }
 
   getCardSize() {

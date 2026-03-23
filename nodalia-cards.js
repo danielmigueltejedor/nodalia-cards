@@ -16211,6 +16211,62 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
   }
 
+  _captureCodeFocusState() {
+    const activeElement = this.shadowRoot?.activeElement;
+    if (!(activeElement instanceof HTMLInputElement) || activeElement.dataset?.alarmField !== "code") {
+      return null;
+    }
+
+    const supportsSelection =
+      typeof activeElement.selectionStart === "number" &&
+      typeof activeElement.selectionEnd === "number";
+
+    return {
+      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
+      selectionStart: supportsSelection ? activeElement.selectionStart : null,
+      value: activeElement.value,
+    };
+  }
+
+  _restoreCodeFocusState(focusState) {
+    if (!focusState || !(this.shadowRoot instanceof ShadowRoot)) {
+      return;
+    }
+
+    const target = this.shadowRoot.querySelector('input[data-alarm-field="code"]');
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    if (typeof focusState.value === "string" && target.value !== focusState.value) {
+      target.value = focusState.value;
+    }
+
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_error) {
+      target.focus();
+    }
+
+    if (
+      typeof focusState.selectionStart === "number" &&
+      typeof focusState.selectionEnd === "number" &&
+      typeof target.setSelectionRange === "function"
+    ) {
+      try {
+        target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+      } catch (_error) {
+        // Ignore unsupported input selection issues.
+      }
+    }
+  }
+
+  _renderWithFocusPreserved() {
+    const focusState = this._captureCodeFocusState();
+    this._render();
+    this._restoreCodeFocusState(focusState);
+  }
+
   connectedCallback() {
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
@@ -16224,7 +16280,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
         this._cardWidth = entry.contentRect.width;
         this._isCompactLayout = this._shouldUseCompactLayout(this._cardWidth);
-        this._render();
+        this._renderWithFocusPreserved();
       });
     }
 
@@ -16239,12 +16295,12 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
-    this._render();
+    this._renderWithFocusPreserved();
   }
 
   set hass(hass) {
     this._hass = hass;
-    this._render();
+    this._renderWithFocusPreserved();
   }
 
   getCardSize() {
@@ -19288,6 +19344,19 @@ function parseSizeToPixels(value, fallback = 0) {
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function miredToKelvin(mired) {
+  const numeric = Number(mired);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return 0;
+  }
+
+  return Math.round(1000000 / numeric);
+}
+
 function normalizeTextKey(value) {
   return String(value ?? "")
     .normalize("NFD")
@@ -19443,6 +19512,10 @@ class NodaliaFavCard extends HTMLElement {
     return this._hass?.states?.[this._config?.entity] || null;
   }
 
+  _getDomain(entityId = this._config?.entity) {
+    return String(entityId || "").split(".")[0] || "";
+  }
+
   _isBinaryOnOff(state) {
     const stateKey = normalizeTextKey(state?.state);
     return stateKey === "on" || stateKey === "off";
@@ -19458,11 +19531,75 @@ class NodaliaFavCard extends HTMLElement {
     return true;
   }
 
+  _usesCustomOnColor() {
+    const configuredColor = this._config?.styles?.icon?.on_color;
+    return Boolean(configuredColor) && configuredColor !== DEFAULT_CONFIG.styles.icon.on_color;
+  }
+
+  _usesCustomOffColor() {
+    const configuredColor = this._config?.styles?.icon?.off_color;
+    return Boolean(configuredColor) && configuredColor !== DEFAULT_CONFIG.styles.icon.off_color;
+  }
+
+  _getLightAccentColor(state) {
+    const rgbColor = Array.isArray(state?.attributes?.rgb_color) ? state.attributes.rgb_color : null;
+    if (this._isActiveState(state) && rgbColor?.length === 3) {
+      return `rgb(${rgbColor[0]}, ${rgbColor[1]}, ${rgbColor[2]})`;
+    }
+
+    if (this._isActiveState(state)) {
+      const kelvin = typeof state?.attributes?.color_temp_kelvin === "number"
+        ? Math.round(state.attributes.color_temp_kelvin)
+        : (typeof state?.attributes?.color_temp === "number" ? miredToKelvin(state.attributes.color_temp) : 0);
+
+      if (kelvin >= 5200) {
+        return "#8fd3ff";
+      }
+
+      if (kelvin > 0 && kelvin <= 3000) {
+        return "#f4b55f";
+      }
+
+      if (kelvin > 0) {
+        return "#ffe29a";
+      }
+    }
+
+    return "var(--warning-color, #f6b73c)";
+  }
+
+  _getDomainDefaultOnColor(state) {
+    switch (this._getDomain()) {
+      case "light":
+        return this._getLightAccentColor(state);
+      case "fan":
+        return "var(--info-color, #71c0ff)";
+      case "humidifier":
+        return "var(--info-color, #71c0ff)";
+      case "switch":
+        return "var(--primary-color)";
+      case "media_player":
+        return "var(--info-color, #71c0ff)";
+      case "vacuum":
+        return "#82d18a";
+      default:
+        return DEFAULT_CONFIG.styles.icon.on_color;
+    }
+  }
+
   _getAccentColor(state) {
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
-    return this._isActiveState(state)
-      ? styles?.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color
-      : styles?.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color;
+    if (!this._isActiveState(state)) {
+      return this._usesCustomOffColor()
+        ? styles?.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color
+        : "var(--state-inactive-color, rgba(255, 255, 255, 0.5))";
+    }
+
+    if (this._usesCustomOnColor()) {
+      return styles?.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color;
+    }
+
+    return this._getDomainDefaultOnColor(state);
   }
 
   _translateStateValue(state) {
@@ -19765,6 +19902,11 @@ class NodaliaFavCard extends HTMLElement {
     const titleSizePx = Math.max(11, Math.min(parseSizeToPixels(styles.title_size, 13), isMini ? 0 : 14));
     const chipHeightPx = Math.max(18, Math.min(parseSizeToPixels(styles.chip_height, 22), 24));
     const chipFontSizePx = Math.max(9, Math.min(parseSizeToPixels(styles.chip_font_size, 11), 12));
+    const iconColor = isActive
+      ? accentColor
+      : (this._usesCustomOffColor()
+        ? styles.icon.off_color
+        : "var(--state-inactive-color, rgba(255, 255, 255, 0.55))");
     const cardBackground = isActive
       ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 13%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 6%, ${styles.card.background}) 58%, ${styles.card.background} 100%)`
       : styles.card.background;
@@ -19848,7 +19990,7 @@ class NodaliaFavCard extends HTMLElement {
           box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.08),
             0 12px 30px rgba(0, 0, 0, 0.18);
-          color: ${isActive ? styles.icon.on_color : styles.icon.off_color};
+          color: ${iconColor};
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           display: inline-flex;
           height: ${iconSizePx}px;
