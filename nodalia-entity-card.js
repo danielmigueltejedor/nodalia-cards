@@ -308,14 +308,14 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 2;
+    return 1;
   }
 
   getGridOptions() {
     return {
       rows: "auto",
       columns: 6,
-      min_rows: 2,
+      min_rows: 1,
       min_columns: 2,
     };
   }
