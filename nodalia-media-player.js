@@ -3130,8 +3130,9 @@ class NodaliaMediaPlayer extends HTMLElement {
           height: 18px;
           justify-content: center;
           position: absolute;
-          right: 3px;
-          top: 3px;
+          right: 0;
+          top: 0;
+          transform: translate(28%, -28%);
           width: 18px;
           z-index: 3;
         }

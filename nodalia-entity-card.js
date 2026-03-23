@@ -884,6 +884,7 @@ class NodaliaEntityCard extends HTMLElement {
     const effectiveGap = singleRowLayout ? "0px" : compactMetrics ? "8px" : styles.card.gap;
     const effectiveIconSizePx = Math.max(36, Math.min(parseSizeToPixels(styles.icon.size, 58), singleRowLayout ? 40 : compactMetrics ? 46 : 58));
     const effectiveIconSize = `${effectiveIconSizePx}px`;
+    const effectiveIconTrackSize = `${effectiveIconSizePx + 10}px`;
     const effectiveControlSize = `${Math.max(34, Math.min(parseSizeToPixels(styles.control.size, 40), compactMetrics ? 36 : 40))}px`;
     const effectiveTitleSize = `${Math.max(11, Math.min(parseSizeToPixels(styles.title_size, 14), singleRowLayout ? 11 : compactMetrics ? 12 : 14))}px`;
     const effectiveChipHeight = `${Math.max(18, Math.min(parseSizeToPixels(styles.chip_height, 24), singleRowLayout ? 20 : compactMetrics ? 22 : 24))}px`;
@@ -978,7 +979,7 @@ class NodaliaEntityCard extends HTMLElement {
           align-items: center;
           display: grid;
           gap: ${singleRowLayout ? "8px" : narrowCard ? "10px" : "12px"};
-          grid-template-columns: ${effectiveIconSize} minmax(0, 1fr);
+          grid-template-columns: ${effectiveIconTrackSize} minmax(0, 1fr);
           min-height: ${singleRowLayout ? effectiveIconSize : "0px"};
           min-width: 0;
         }
@@ -1004,6 +1005,7 @@ class NodaliaEntityCard extends HTMLElement {
           outline: none;
           padding: 0;
           position: relative;
+          justify-self: start;
           width: ${effectiveIconSize};
         }
 
@@ -1029,8 +1031,9 @@ class NodaliaEntityCard extends HTMLElement {
           height: 18px;
           justify-content: center;
           position: absolute;
-          right: 3px;
-          top: 3px;
+          right: 0;
+          top: 0;
+          transform: translate(28%, -28%);
           width: 18px;
           z-index: 2;
         }

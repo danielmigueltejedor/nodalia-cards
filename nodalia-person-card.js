@@ -603,8 +603,9 @@ class NodaliaPersonCard extends HTMLElement {
           height: ${badgeSize};
           justify-content: center;
           position: absolute;
-          right: 3px;
-          top: 3px;
+          right: 0;
+          top: 0;
+          transform: translate(28%, -28%);
           width: ${badgeSize};
           z-index: 2;
         }
