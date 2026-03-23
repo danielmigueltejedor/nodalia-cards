@@ -640,6 +640,8 @@ class NodaliaPersonCard extends HTMLElement {
         }
 
         .person-card__copy {
+          align-content: center;
+          align-self: center;
           display: grid;
           gap: ${singleRowLayout ? "4px" : "6px"};
           min-width: 0;

@@ -1,0 +1,8 @@
+type: custom:nodalia-climate-card
+entity: climate.salon
+name: Salon
+show_state_chip: true
+show_current_temperature_chip: true
+show_humidity_chip: true
+show_mode_buttons: true
+show_step_controls: true
