@@ -17650,8 +17650,9 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__step-button span {
+          align-items: center;
           display: inline-flex;
-          transform: translateY(-1px);
+          justify-content: center;
         }
 
         @media (max-width: 560px) {
