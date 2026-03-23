@@ -20531,6 +20531,66 @@ class NodaliaEntityCard extends HTMLElement {
         return "Desarmado";
       case "triggered":
         return "Disparado";
+      case "comfortable":
+        return "Comodo";
+      case "very_comfortable":
+        return "Muy comodo";
+      case "slightly_uncomfortable":
+        return "Ligeramente incomodo";
+      case "somewhat_uncomfortable":
+        return "Algo incomodo";
+      case "quite_uncomfortable":
+        return "Bastante incomodo";
+      case "extremely_uncomfortable":
+        return "Muy incomodo";
+      case "ok_but_humid":
+        return "Bien, pero humedo";
+      case "little_or_no_discomfort":
+        return "Poco o ningun malestar";
+      case "some_discomfort":
+        return "Algo de malestar";
+      case "great_discomfort_avoid_exertion":
+        return "Gran malestar";
+      case "dangerous_discomfort":
+        return "Malestar peligroso";
+      case "heat_stroke_imminent":
+        return "Golpe de calor inminente";
+      case "dry":
+        return "Seco";
+      case "very_dry":
+        return "Muy seco";
+      case "too_dry":
+        return "Demasiado seco";
+      case "humid":
+        return "Humedo";
+      case "very_humid":
+        return "Muy humedo";
+      case "too_humid":
+        return "Demasiado humedo";
+      case "wet":
+        return "Mojado";
+      case "low":
+        return "Bajo";
+      case "medium":
+        return "Medio";
+      case "moderate":
+        return "Moderado";
+      case "high":
+        return "Alto";
+      case "very_high":
+        return "Muy alto";
+      case "severely_high":
+        return "Extremadamente alto";
+      case "critical":
+        return "Critico";
+      case "excellent":
+        return "Excelente";
+      case "good":
+        return "Bueno";
+      case "fair":
+        return "Aceptable";
+      case "poor":
+        return "Malo";
       default:
         return rawState || null;
     }
