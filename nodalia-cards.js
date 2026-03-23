@@ -12778,7 +12778,20 @@ class NodaliaFanCard extends HTMLElement {
           min-width: 0;
         }
 
+        .fan-card__headline {
+          align-items: start;
+          display: grid;
+          gap: 10px;
+          grid-template-columns: minmax(0, 1fr) auto;
+          min-width: 0;
+        }
+
         .fan-card--compact .fan-card__copy {
+          justify-items: center;
+        }
+
+        .fan-card--compact .fan-card__headline {
+          grid-template-columns: minmax(0, 1fr);
           justify-items: center;
         }
 
@@ -12795,9 +12808,12 @@ class NodaliaFanCard extends HTMLElement {
 
         .fan-card__chips {
           display: flex;
+          flex: 0 0 auto;
           flex-wrap: wrap;
           gap: 10px;
+          justify-content: flex-end;
           min-width: 0;
+          max-width: 100%;
         }
 
         .fan-card--compact .fan-card__chips {
@@ -13047,8 +13063,10 @@ class NodaliaFanCard extends HTMLElement {
             ${showCopyBlock
               ? `
                 <div class="fan-card__copy">
-                  ${isCompactLayout ? "" : `<div class="fan-card__title">${escapeHtml(title)}</div>`}
-                  ${chips.length ? `<div class="fan-card__chips">${chips.join("")}</div>` : ""}
+                  <div class="fan-card__headline">
+                    ${isCompactLayout ? "" : `<div class="fan-card__title">${escapeHtml(title)}</div>`}
+                    ${chips.length ? `<div class="fan-card__chips">${chips.join("")}</div>` : ""}
+                  </div>
                 </div>
               `
               : ""}
@@ -16498,8 +16516,16 @@ class NodaliaEntityCard extends HTMLElement {
     const showCopyBlock = showTitle || chips.length > 0;
     const quickActions = Array.isArray(config.quick_actions) ? config.quick_actions.filter(action => action?.icon) : [];
     const canRunPrimaryAction = this._canRunTapAction(state);
-    const iconPixelSize = parseSizeToPixels(styles.icon.size, 58);
     const isActive = this._isActiveState(state);
+    const cardBackground = isActive
+      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`
+      : styles.card.background;
+    const cardBorder = isActive
+      ? `1px solid color-mix(in srgb, ${accentColor} 24%, var(--divider-color))`
+      : "1px solid rgba(255, 255, 255, 0.06)";
+    const cardShadow = isActive
+      ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`
+      : styles.card.box_shadow;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -16512,21 +16538,24 @@ class NodaliaEntityCard extends HTMLElement {
         }
 
         ha-card {
-          background:
-            linear-gradient(
-              180deg,
-              color-mix(in srgb, ${accentColor} ${isActive ? "14%" : "0%"}, ${styles.card.background}) 0%,
-              color-mix(in srgb, ${accentColor} ${isActive ? "7%" : "0%"}, ${styles.card.background}) 100%
-            );
-          border: ${styles.card.border};
-          border-color: color-mix(in srgb, ${accentColor} ${isActive ? "26%" : "6%"}, ${styles.card.border});
+          background: ${cardBackground};
+          border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
-            0 18px 42px rgba(0, 0, 0, 0.22);
+          box-shadow: ${cardShadow};
           color: var(--primary-text-color);
           overflow: hidden;
           position: relative;
+        }
+
+        ha-card::before {
+          background: ${isActive
+            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, rgba(255, 255, 255, 0.05)), rgba(255, 255, 255, 0))`
+            : "linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0))"};
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
         }
 
         .entity-card--clickable {

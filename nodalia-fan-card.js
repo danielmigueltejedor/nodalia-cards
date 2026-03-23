@@ -1085,7 +1085,20 @@ class NodaliaFanCard extends HTMLElement {
           min-width: 0;
         }
 
+        .fan-card__headline {
+          align-items: start;
+          display: grid;
+          gap: 10px;
+          grid-template-columns: minmax(0, 1fr) auto;
+          min-width: 0;
+        }
+
         .fan-card--compact .fan-card__copy {
+          justify-items: center;
+        }
+
+        .fan-card--compact .fan-card__headline {
+          grid-template-columns: minmax(0, 1fr);
           justify-items: center;
         }
 
@@ -1102,9 +1115,12 @@ class NodaliaFanCard extends HTMLElement {
 
         .fan-card__chips {
           display: flex;
+          flex: 0 0 auto;
           flex-wrap: wrap;
           gap: 10px;
+          justify-content: flex-end;
           min-width: 0;
+          max-width: 100%;
         }
 
         .fan-card--compact .fan-card__chips {
@@ -1354,8 +1370,10 @@ class NodaliaFanCard extends HTMLElement {
             ${showCopyBlock
               ? `
                 <div class="fan-card__copy">
-                  ${isCompactLayout ? "" : `<div class="fan-card__title">${escapeHtml(title)}</div>`}
-                  ${chips.length ? `<div class="fan-card__chips">${chips.join("")}</div>` : ""}
+                  <div class="fan-card__headline">
+                    ${isCompactLayout ? "" : `<div class="fan-card__title">${escapeHtml(title)}</div>`}
+                    ${chips.length ? `<div class="fan-card__chips">${chips.join("")}</div>` : ""}
+                  </div>
                 </div>
               `
               : ""}
