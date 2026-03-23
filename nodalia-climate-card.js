@@ -1066,6 +1066,7 @@ class NodaliaClimateCard extends HTMLElement {
     const thumbSizePx = parseSizeToPixels(styles.dial.thumb_size, 24);
     const dialRadiusPx = Number(((DIAL_CIRCLE_RADIUS * dialSizePx) / DIAL_VIEWBOX_SIZE).toFixed(3));
     const stepControlSize = parseSizeToPixels(styles.step_control.size, 50);
+    const modeControlSize = Math.max(34, parseSizeToPixels(styles.control.size, 42) - 4);
     const ratio = supportsTargetTemperature
       ? (targetTemperature - temperatureRange.min) / Math.max(temperatureRange.max - temperatureRange.min, temperatureStep)
       : 0;
@@ -1353,8 +1354,8 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__dial-center {
           align-content: center;
           display: grid;
-          gap: 14px;
-          inset: 25% 18% 22% 18%;
+          gap: 12px;
+          inset: 23% 16% 18% 16%;
           justify-items: center;
           pointer-events: none;
           position: absolute;
@@ -1392,7 +1393,7 @@ class NodaliaClimateCard extends HTMLElement {
           display: flex;
           flex-wrap: wrap;
           font-size: ${styles.current_size};
-          gap: 10px;
+          gap: 8px;
           justify-content: center;
         }
 
@@ -1409,12 +1410,15 @@ class NodaliaClimateCard extends HTMLElement {
           width: 15px;
         }
 
-        .climate-card__modes {
+        .climate-card__dial-controls {
+          align-items: center;
           display: flex;
           flex-wrap: wrap;
           gap: 10px;
           justify-content: center;
-          margin-top: -4px;
+          margin-top: 2px;
+          pointer-events: auto;
+          width: 100%;
         }
 
         .climate-card__mode-button,
@@ -1435,12 +1439,31 @@ class NodaliaClimateCard extends HTMLElement {
           margin: 0;
           outline: none;
           padding: 0;
+          pointer-events: auto;
           position: relative;
+          transition:
+            background 160ms ease,
+            border-color 160ms ease,
+            transform 160ms ease,
+            box-shadow 160ms ease;
         }
 
         .climate-card__mode-button {
-          height: ${styles.control.size};
-          width: ${styles.control.size};
+          backdrop-filter: blur(18px);
+          background:
+            radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 60%),
+            rgba(255, 255, 255, 0.04);
+          height: ${modeControlSize}px;
+          width: ${modeControlSize}px;
+        }
+
+        .climate-card__mode-button:hover,
+        .climate-card__step-button:hover {
+          transform: translateY(-1px);
+        }
+
+        .climate-card__mode-button--power {
+          border-color: color-mix(in srgb, ${accentColor} 32%, rgba(255, 255, 255, 0.1));
         }
 
         .climate-card__mode-button.is-active {
@@ -1450,19 +1473,23 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__mode-button ha-icon {
-          --mdc-icon-size: calc(${styles.control.size} * 0.44);
+          --mdc-icon-size: calc(${modeControlSize}px * 0.46);
           display: inline-flex;
-          height: calc(${styles.control.size} * 0.44);
-          width: calc(${styles.control.size} * 0.44);
+          height: calc(${modeControlSize}px * 0.46);
+          width: calc(${modeControlSize}px * 0.46);
         }
 
         .climate-card__steps {
           display: flex;
-          gap: 16px;
+          gap: 14px;
           justify-content: center;
         }
 
         .climate-card__step-button {
+          backdrop-filter: blur(18px);
+          background:
+            radial-gradient(circle at top left, rgba(255, 255, 255, 0.05), transparent 60%),
+            rgba(255, 255, 255, 0.04);
           color: var(--primary-text-color);
           font-size: calc(${stepControlSize}px * 0.8);
           height: ${stepControlSize}px;
@@ -1549,14 +1576,16 @@ class NodaliaClimateCard extends HTMLElement {
                     <span>${escapeHtml(currentActionMeta.label)}</span>
                   </span>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          ${
-            modeOptions.length
-              ? `
-                <div class="climate-card__modes">
+                <div class="climate-card__dial-controls">
+                  <button
+                    type="button"
+                    class="climate-card__mode-button climate-card__mode-button--power ${!isOff ? "is-active" : ""}"
+                    data-climate-action="toggle"
+                    title="${escapeHtml(isOff ? "Encender" : "Apagar")}"
+                    aria-label="${escapeHtml(isOff ? "Encender" : "Apagar")}"
+                  >
+                    <ha-icon icon="mdi:power"></ha-icon>
+                  </button>
                   ${modeOptions
                     .map(mode => {
                       const meta = getModeMeta(mode);
@@ -1576,9 +1605,9 @@ class NodaliaClimateCard extends HTMLElement {
                     })
                     .join("")}
                 </div>
-              `
-              : ""
-          }
+              </div>
+            </div>
+          </div>
 
           ${
             config.show_step_controls !== false && supportsTargetTemperature
