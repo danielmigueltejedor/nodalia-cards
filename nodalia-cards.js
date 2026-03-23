@@ -17495,7 +17495,7 @@ class NodaliaClimateCard extends HTMLElement {
           gap: 12px;
           inset: 23% 16% 18% 16%;
           justify-items: center;
-          pointer-events: none;
+          pointer-events: auto;
           position: absolute;
           text-align: center;
         }
@@ -17510,6 +17510,7 @@ class NodaliaClimateCard extends HTMLElement {
           min-height: calc(${styles.target_size} * 0.94);
           min-width: 0;
           padding-right: calc(${styles.target_size} * 0.34);
+          pointer-events: none;
           position: relative;
           white-space: nowrap;
         }
@@ -17533,6 +17534,7 @@ class NodaliaClimateCard extends HTMLElement {
           background: rgba(255, 255, 255, 0.18);
           border-radius: 999px;
           height: 1px;
+          pointer-events: none;
           width: 100%;
         }
 
@@ -17544,6 +17546,7 @@ class NodaliaClimateCard extends HTMLElement {
           font-size: ${styles.current_size};
           gap: 8px;
           justify-content: center;
+          pointer-events: none;
         }
 
         .climate-card__dial-action {
