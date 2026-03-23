@@ -577,6 +577,24 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     }
   }
 
+  _getAlarmStateCandidates(state) {
+    return [
+      state?.state,
+      state?.attributes?.next_state,
+      state?.attributes?.post_pending_state,
+      state?.attributes?.post_delay_state,
+      state?.attributes?.arm_mode,
+      state?.attributes?.arming_mode,
+    ]
+      .map(value => normalizeTextKey(value))
+      .filter(Boolean);
+  }
+
+  _matchesAlarmMode(state, ...keys) {
+    const candidates = this._getAlarmStateCandidates(state);
+    return keys.some(key => candidates.includes(normalizeTextKey(key)));
+  }
+
   _getModeDefinitions(state) {
     const modes = [
       {
@@ -584,8 +602,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
         label: "Desarmar",
         icon: "mdi:shield-off-outline",
         service: "alarm_disarm",
-        enabled: this._config?.show_disarm !== false && normalizeTextKey(state?.state) !== "disarmed",
-        active: normalizeTextKey(state?.state) === "disarmed",
+        enabled: this._config?.show_disarm !== false && !this._matchesAlarmMode(state, "disarmed"),
+        active: this._matchesAlarmMode(state, "disarmed"),
       },
       {
         key: "home",
@@ -594,8 +612,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
         service: "alarm_arm_home",
         enabled: this._config?.show_arm_home !== false
           && this._supportsMode(state, "home")
-          && normalizeTextKey(state?.state) !== "armed_home",
-        active: normalizeTextKey(state?.state) === "armed_home",
+          && !this._matchesAlarmMode(state, "armed_home"),
+        active: this._matchesAlarmMode(state, "armed_home"),
       },
       {
         key: "away",
@@ -604,8 +622,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
         service: "alarm_arm_away",
         enabled: this._config?.show_arm_away !== false
           && this._supportsMode(state, "away")
-          && normalizeTextKey(state?.state) !== "armed_away",
-        active: normalizeTextKey(state?.state) === "armed_away",
+          && !this._matchesAlarmMode(state, "armed_away"),
+        active: this._matchesAlarmMode(state, "armed_away"),
       },
       {
         key: "night",
@@ -614,8 +632,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
         service: "alarm_arm_night",
         enabled: this._config?.show_arm_night !== false
           && this._supportsMode(state, "night")
-          && normalizeTextKey(state?.state) !== "armed_night",
-        active: normalizeTextKey(state?.state) === "armed_night",
+          && !this._matchesAlarmMode(state, "armed_night"),
+        active: this._matchesAlarmMode(state, "armed_night"),
       },
       {
         key: "vacation",
@@ -624,8 +642,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
         service: "alarm_arm_vacation",
         enabled: this._config?.show_arm_vacation === true
           && this._supportsMode(state, "vacation")
-          && normalizeTextKey(state?.state) !== "armed_vacation",
-        active: normalizeTextKey(state?.state) === "armed_vacation",
+          && !this._matchesAlarmMode(state, "armed_vacation"),
+        active: this._matchesAlarmMode(state, "armed_vacation"),
       },
       {
         key: "custom_bypass",
@@ -634,8 +652,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
         service: "alarm_arm_custom_bypass",
         enabled: this._config?.show_custom_bypass === true
           && this._supportsMode(state, "custom_bypass")
-          && normalizeTextKey(state?.state) !== "armed_custom_bypass",
-        active: normalizeTextKey(state?.state) === "armed_custom_bypass",
+          && !this._matchesAlarmMode(state, "armed_custom_bypass"),
+        active: this._matchesAlarmMode(state, "armed_custom_bypass"),
       },
     ];
 
