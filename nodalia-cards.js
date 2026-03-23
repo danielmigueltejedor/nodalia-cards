@@ -17042,11 +17042,10 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         }
 
         .gauge-card__name-chip {
-          left: 50%;
+          left: ${compactLayout ? "14px" : "16px"};
           max-width: ${effectiveNameChipMaxWidth};
           position: absolute;
-          top: ${compactLayout ? "16px" : "18px"};
-          transform: translateX(-50%);
+          top: ${compactLayout ? "14px" : "16px"};
           z-index: 3;
         }
 
@@ -17085,13 +17084,13 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         }
 
         .gauge-card__range-label--min {
-          bottom: ${compactLayout ? "64px" : "68px"};
-          left: ${compactLayout ? "36px" : "42px"};
+          bottom: ${compactLayout ? "40px" : "46px"};
+          left: ${compactLayout ? "10px" : "14px"};
         }
 
         .gauge-card__range-label--max {
-          bottom: ${compactLayout ? "64px" : "68px"};
-          right: ${compactLayout ? "36px" : "42px"};
+          bottom: ${compactLayout ? "40px" : "46px"};
+          right: ${compactLayout ? "10px" : "14px"};
         }
 
         .gauge-card__bottom-icon {
@@ -17163,13 +17162,13 @@ class NodaliaCircularGaugeCard extends HTMLElement {
               : ""
           }
 
+          ${
+            !showHeader && showName && config.show_name_chip !== false
+              ? `<div class="gauge-card__chip gauge-card__name-chip">${escapeHtml(title)}</div>`
+              : ""
+          }
           <div class="gauge-card__dial-wrap">
             <div class="gauge-card__dial" aria-hidden="true">
-              ${
-                !showHeader && showName && config.show_name_chip !== false
-                  ? `<div class="gauge-card__chip gauge-card__name-chip">${escapeHtml(title)}</div>`
-                  : ""
-              }
               <svg class="gauge-card__dial-svg" viewBox="0 0 ${DIAL_VIEWBOX_SIZE} ${DIAL_VIEWBOX_SIZE}">
                 <circle
                   class="gauge-card__dial-track"
