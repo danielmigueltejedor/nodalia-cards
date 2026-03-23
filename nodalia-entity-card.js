@@ -19,6 +19,8 @@ const DEFAULT_CONFIG = {
   tap_action: "auto",
   tap_service: "",
   tap_service_data: "",
+  tap_url: "",
+  tap_new_tab: false,
   show_state: true,
   primary_attribute: "",
   secondary_attribute: "",
@@ -516,6 +518,10 @@ class NodaliaEntityCard extends HTMLElement {
       return Boolean(this._config?.tap_service);
     }
 
+    if (tapAction === "url") {
+      return Boolean(this._config?.tap_url);
+    }
+
     if (tapAction === "toggle") {
       return this._isBinaryOnOff(state);
     }
@@ -584,6 +590,20 @@ class NodaliaEntityCard extends HTMLElement {
     this._hass.callService(domain, service, payload);
   }
 
+  _openConfiguredUrl(urlValue = this._config?.tap_url, newTab = this._config?.tap_new_tab === true) {
+    const url = String(urlValue || "").trim();
+    if (!url) {
+      return;
+    }
+
+    if (newTab) {
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    window.location.href = url;
+  }
+
   _performPrimaryAction(state) {
     const tapAction = this._config?.tap_action || "auto";
 
@@ -596,6 +616,9 @@ class NodaliaEntityCard extends HTMLElement {
         break;
       case "service":
         this._callConfiguredService(this._config?.tap_service, this._config?.entity, this._config?.tap_service_data);
+        break;
+      case "url":
+        this._openConfiguredUrl(this._config?.tap_url, this._config?.tap_new_tab);
         break;
       case "auto":
       default:
@@ -1593,6 +1616,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 { value: "auto", label: "Auto (toggle o info)" },
                 { value: "toggle", label: "Toggle" },
                 { value: "more-info", label: "More info" },
+                { value: "url", label: "Abrir URL" },
                 { value: "service", label: "Servicio" },
                 { value: "none", label: "Solo informacion" },
               ],
@@ -1608,6 +1632,10 @@ class NodaliaEntityCardEditor extends HTMLElement {
             ${this._renderTextareaField("Datos del servicio al tocar (JSON)", "tap_service_data", config.tap_service_data, {
               placeholder: '{"brightness_pct": 70}',
             })}
+            ${this._renderTextField("URL al tocar", "tap_url", config.tap_url, {
+              placeholder: "https://example.com",
+            })}
+            ${this._renderCheckboxField("Abrir URL en pestana nueva", "tap_new_tab", config.tap_new_tab === true)}
           </div>
         </section>
 

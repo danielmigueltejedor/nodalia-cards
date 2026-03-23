@@ -4864,6 +4864,33 @@ function compactConfig(value) {
   return value;
 }
 
+function normalizePowerActionConfig(action) {
+  if (!isObject(action)) {
+    return undefined;
+  }
+
+  const normalized = compactConfig(deepClone(action));
+
+  if (!isObject(normalized)) {
+    return undefined;
+  }
+
+  const actionType = String(normalized.action || "").trim();
+
+  if (!actionType || actionType === "default") {
+    return undefined;
+  }
+
+  // Older editor builds seeded "none" by default, which made power no-op.
+  // Treat that exact minimal shape as "use default power behavior".
+  if (actionType === "none" && Object.keys(normalized).length === 1) {
+    return undefined;
+  }
+
+  normalized.action = actionType;
+  return normalized;
+}
+
 function setByPath(target, path, value) {
   const parts = path.split(".");
   let cursor = target;
@@ -5036,6 +5063,12 @@ function normalizeConfig(rawConfig) {
   }
 
   config.players = Array.isArray(config.players) ? config.players.filter(player => player?.entity) : [];
+  config.players = config.players.map(player => ({
+    ...player,
+    power_action_off: normalizePowerActionConfig(player.power_action_off),
+    power_action_on: normalizePowerActionConfig(player.power_action_on),
+    power_action_unavailable: normalizePowerActionConfig(player.power_action_unavailable),
+  }));
   config.layout.position = config.layout.position === "top" ? "top" : "bottom";
 
   return config;
@@ -5914,15 +5947,15 @@ class NodaliaMediaPlayer extends HTMLElement {
   _getPlayerPowerAction(player, currentState) {
     const stateKey = normalizeTextKey(currentState);
 
-    if (["unavailable", "unknown"].includes(stateKey) && player?.power_action_unavailable?.action) {
+    if (["unavailable", "unknown"].includes(stateKey) && player?.power_action_unavailable?.action && player.power_action_unavailable.action !== "default") {
       return player.power_action_unavailable;
     }
 
-    if (["off", "standby"].includes(stateKey) && player?.power_action_off?.action) {
+    if (["off", "standby"].includes(stateKey) && player?.power_action_off?.action && player.power_action_off.action !== "default") {
       return player.power_action_off;
     }
 
-    if (player?.power_action_on?.action) {
+    if (player?.power_action_on?.action && player.power_action_on.action !== "default") {
       return player.power_action_on;
     }
 
@@ -8830,13 +8863,13 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           action: "more-info",
         },
         power_action_off: {
-          action: "none",
+          action: "default",
         },
         power_action_on: {
-          action: "none",
+          action: "default",
         },
         power_action_unavailable: {
-          action: "none",
+          action: "default",
         },
       });
       this._emitConfig();
@@ -8949,8 +8982,9 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           ${this._renderSelectField(
             "Accion",
             `${path}.action`,
-            action?.action || "none",
+            action?.action || "default",
             [
+              { value: "default", label: "Por defecto" },
               { value: "none", label: "Sin accion" },
               { value: "more-info", label: "More info" },
               { value: "navigate", label: "Navegar" },
@@ -15949,6 +15983,8 @@ const DEFAULT_CONFIG = {
   tap_action: "auto",
   tap_service: "",
   tap_service_data: "",
+  tap_url: "",
+  tap_new_tab: false,
   show_state: true,
   primary_attribute: "",
   secondary_attribute: "",
@@ -16446,6 +16482,10 @@ class NodaliaEntityCard extends HTMLElement {
       return Boolean(this._config?.tap_service);
     }
 
+    if (tapAction === "url") {
+      return Boolean(this._config?.tap_url);
+    }
+
     if (tapAction === "toggle") {
       return this._isBinaryOnOff(state);
     }
@@ -16514,6 +16554,20 @@ class NodaliaEntityCard extends HTMLElement {
     this._hass.callService(domain, service, payload);
   }
 
+  _openConfiguredUrl(urlValue = this._config?.tap_url, newTab = this._config?.tap_new_tab === true) {
+    const url = String(urlValue || "").trim();
+    if (!url) {
+      return;
+    }
+
+    if (newTab) {
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    window.location.href = url;
+  }
+
   _performPrimaryAction(state) {
     const tapAction = this._config?.tap_action || "auto";
 
@@ -16526,6 +16580,9 @@ class NodaliaEntityCard extends HTMLElement {
         break;
       case "service":
         this._callConfiguredService(this._config?.tap_service, this._config?.entity, this._config?.tap_service_data);
+        break;
+      case "url":
+        this._openConfiguredUrl(this._config?.tap_url, this._config?.tap_new_tab);
         break;
       case "auto":
       default:
@@ -17523,6 +17580,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 { value: "auto", label: "Auto (toggle o info)" },
                 { value: "toggle", label: "Toggle" },
                 { value: "more-info", label: "More info" },
+                { value: "url", label: "Abrir URL" },
                 { value: "service", label: "Servicio" },
                 { value: "none", label: "Solo informacion" },
               ],
@@ -17538,6 +17596,10 @@ class NodaliaEntityCardEditor extends HTMLElement {
             ${this._renderTextareaField("Datos del servicio al tocar (JSON)", "tap_service_data", config.tap_service_data, {
               placeholder: '{"brightness_pct": 70}',
             })}
+            ${this._renderTextField("URL al tocar", "tap_url", config.tap_url, {
+              placeholder: "https://example.com",
+            })}
+            ${this._renderCheckboxField("Abrir URL en pestana nueva", "tap_new_tab", config.tap_new_tab === true)}
           </div>
         </section>
 

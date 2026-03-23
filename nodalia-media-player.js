@@ -208,6 +208,33 @@ function compactConfig(value) {
   return value;
 }
 
+function normalizePowerActionConfig(action) {
+  if (!isObject(action)) {
+    return undefined;
+  }
+
+  const normalized = compactConfig(deepClone(action));
+
+  if (!isObject(normalized)) {
+    return undefined;
+  }
+
+  const actionType = String(normalized.action || "").trim();
+
+  if (!actionType || actionType === "default") {
+    return undefined;
+  }
+
+  // Older editor builds seeded "none" by default, which made power no-op.
+  // Treat that exact minimal shape as "use default power behavior".
+  if (actionType === "none" && Object.keys(normalized).length === 1) {
+    return undefined;
+  }
+
+  normalized.action = actionType;
+  return normalized;
+}
+
 function setByPath(target, path, value) {
   const parts = path.split(".");
   let cursor = target;
@@ -380,6 +407,12 @@ function normalizeConfig(rawConfig) {
   }
 
   config.players = Array.isArray(config.players) ? config.players.filter(player => player?.entity) : [];
+  config.players = config.players.map(player => ({
+    ...player,
+    power_action_off: normalizePowerActionConfig(player.power_action_off),
+    power_action_on: normalizePowerActionConfig(player.power_action_on),
+    power_action_unavailable: normalizePowerActionConfig(player.power_action_unavailable),
+  }));
   config.layout.position = config.layout.position === "top" ? "top" : "bottom";
 
   return config;
@@ -1258,15 +1291,15 @@ class NodaliaMediaPlayer extends HTMLElement {
   _getPlayerPowerAction(player, currentState) {
     const stateKey = normalizeTextKey(currentState);
 
-    if (["unavailable", "unknown"].includes(stateKey) && player?.power_action_unavailable?.action) {
+    if (["unavailable", "unknown"].includes(stateKey) && player?.power_action_unavailable?.action && player.power_action_unavailable.action !== "default") {
       return player.power_action_unavailable;
     }
 
-    if (["off", "standby"].includes(stateKey) && player?.power_action_off?.action) {
+    if (["off", "standby"].includes(stateKey) && player?.power_action_off?.action && player.power_action_off.action !== "default") {
       return player.power_action_off;
     }
 
-    if (player?.power_action_on?.action) {
+    if (player?.power_action_on?.action && player.power_action_on.action !== "default") {
       return player.power_action_on;
     }
 
@@ -4174,13 +4207,13 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           action: "more-info",
         },
         power_action_off: {
-          action: "none",
+          action: "default",
         },
         power_action_on: {
-          action: "none",
+          action: "default",
         },
         power_action_unavailable: {
-          action: "none",
+          action: "default",
         },
       });
       this._emitConfig();
@@ -4293,8 +4326,9 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           ${this._renderSelectField(
             "Accion",
             `${path}.action`,
-            action?.action || "none",
+            action?.action || "default",
             [
+              { value: "default", label: "Por defecto" },
               { value: "none", label: "Sin accion" },
               { value: "more-info", label: "More info" },
               { value: "navigate", label: "Navegar" },
