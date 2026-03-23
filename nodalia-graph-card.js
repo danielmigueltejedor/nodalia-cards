@@ -441,9 +441,9 @@ class NodaliaGraphCard extends HTMLElement {
     }
 
     const decimals = this._getDecimals();
-    const joined = values.map(value => formatNumberValue(value, decimals)).join(", ");
+    const average = values.reduce((sum, value) => sum + value, 0) / values.length;
     return {
-      value: joined,
+      value: formatNumberValue(average, decimals),
       unit: this._getUnit(),
     };
   }
@@ -517,7 +517,6 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   async _fetchHistory(start, end, entityIds, signal) {
-    const token = this._hass?.auth?.data?.accessToken;
     const query = [
       `filter_entity_id=${encodeURIComponent(entityIds.join(","))}`,
       `end_time=${encodeURIComponent(end.toISOString())}`,
@@ -525,8 +524,15 @@ class NodaliaGraphCard extends HTMLElement {
       "no_attributes",
     ].join("&");
 
+    const apiPath = `history/period/${start.toISOString()}?${query}`;
+
+    if (typeof this._hass?.callApi === "function") {
+      return this._hass.callApi("GET", apiPath);
+    }
+
+    const token = this._hass?.auth?.data?.accessToken;
     const response = await fetch(
-      `/api/history/period/${encodeURIComponent(start.toISOString())}?${query}`,
+      `/api/${apiPath}`,
       {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         signal,
@@ -690,10 +696,10 @@ class NodaliaGraphCard extends HTMLElement {
 
   _buildChartSeries(series) {
     const width = 100;
-    const height = 44;
+    const height = 56;
     const paddingX = 1;
-    const paddingTop = 2;
-    const paddingBottom = 3;
+    const paddingTop = 5;
+    const paddingBottom = 5;
     const bounds = this._getGraphBounds(series);
     const range = Math.max(bounds.max - bounds.min, 1);
 
@@ -791,8 +797,8 @@ class NodaliaGraphCard extends HTMLElement {
     const icon = this._getIcon();
     const title = this._getTitle();
     const accentColor = legendEntries[0]?.color || "var(--primary-color)";
-    const chartHeight = `${Math.max(120, Math.min(parseSizeToPixels(styles.chart_height, 170), compactLayout ? 136 : 170))}px`;
-    const valueSize = `${Math.max(40, Math.min(parseSizeToPixels(styles.value_size, 52), compactLayout ? 44 : 52))}px`;
+    const chartHeight = `${Math.max(130, Math.min(parseSizeToPixels(styles.chart_height, 170), compactLayout ? 140 : 170))}px`;
+    const valueSize = `${Math.max(42, Math.min(parseSizeToPixels(styles.value_size, 52), compactLayout ? 46 : 52))}px`;
     const unitSize = `${Math.max(16, Math.min(parseSizeToPixels(styles.unit_size, 20), compactLayout ? 18 : 20))}px`;
     const titleSize = `${Math.max(14, Math.min(parseSizeToPixels(styles.title_size, 15), compactLayout ? 14 : 15))}px`;
     const legendSize = `${Math.max(12, Math.min(parseSizeToPixels(styles.legend_size, 13), compactLayout ? 12 : 13))}px`;
@@ -846,14 +852,14 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__header {
           align-items: start;
           display: grid;
-          gap: 10px;
+          gap: 8px;
           grid-template-columns: minmax(0, 1fr) auto;
         }
 
         .graph-card__title {
           color: var(--primary-text-color);
           font-size: ${titleSize};
-          font-weight: 600;
+          font-weight: 500;
           line-height: 1.15;
           min-width: 0;
           opacity: 0.95;
@@ -899,17 +905,17 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__value {
-          align-items: start;
+          align-items: baseline;
           display: flex;
           flex-wrap: nowrap;
-          gap: 8px;
+          gap: 10px;
           line-height: 0.94;
           min-width: 0;
         }
 
         .graph-card__value-number {
           font-size: ${valueSize};
-          font-weight: 300;
+          font-weight: 400;
           letter-spacing: -0.06em;
           line-height: 0.9;
           min-width: 0;
@@ -920,16 +926,17 @@ class NodaliaGraphCard extends HTMLElement {
           font-weight: 500;
           line-height: 1;
           opacity: 0.84;
-          padding-top: 10px;
+          padding-top: 0;
         }
 
         .graph-card__legend {
           align-items: center;
           display: flex;
           flex-wrap: wrap;
-          gap: 14px 20px;
+          gap: 14px 28px;
           justify-content: center;
           min-height: 0;
+          padding-top: 2px;
         }
 
         .graph-card__legend-item {
@@ -959,6 +966,7 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__chart-wrap {
           flex: 1 1 auto;
           min-height: ${chartHeight};
+          padding-top: 6px;
           position: relative;
         }
 
@@ -968,12 +976,8 @@ class NodaliaGraphCard extends HTMLElement {
           width: 100%;
         }
 
-        .graph-card__chart-base {
-          fill: rgba(255, 255, 255, 0.018);
-        }
-
         .graph-card__chart-series-fill {
-          opacity: 0.08;
+          opacity: 0.045;
         }
 
         .graph-card__chart-series-line {
@@ -1043,7 +1047,6 @@ class NodaliaGraphCard extends HTMLElement {
 
           <div class="graph-card__chart-wrap">
             <svg class="graph-card__chart" viewBox="0 0 ${chart.width} ${chart.height}" preserveAspectRatio="none">
-              <rect class="graph-card__chart-base" x="0" y="0" width="${chart.width}" height="${chart.height}"></rect>
               ${chart.entries.map(entry => `
                 ${
                   config.show_fill !== false
