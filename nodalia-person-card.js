@@ -511,17 +511,17 @@ class NodaliaPersonCard extends HTMLElement {
     const badge = this._getBadgeDescriptor(state);
     const accentColor = this._getAccentColor(state);
     const canRunPrimaryAction = this._canRunTapAction();
-    const singleRowPaddingY = singleRowLayout ? 6 : 12;
-    const singleRowPaddingX = singleRowLayout ? 10 : 12;
-    const avatarSizePx = Math.max(40, Math.min(parseSizeToPixels(styles.avatar.size, 58), singleRowLayout ? 44 : 68));
+    const singleRowPaddingY = singleRowLayout ? 4 : 12;
+    const singleRowPaddingX = singleRowLayout ? 9 : 12;
+    const avatarSizePx = Math.max(34, Math.min(parseSizeToPixels(styles.avatar.size, 58), singleRowLayout ? 38 : 68));
     const avatarSize = `${avatarSizePx}px`;
-    const avatarTrackSize = `${avatarSizePx + (singleRowLayout ? 8 : 12)}px`;
-    const badgeSize = `${Math.max(16, Math.min(parseSizeToPixels(styles.badge.size, 20), singleRowLayout ? 18 : 24))}px`;
-    const effectiveTitleSize = `${Math.max(11, Math.min(parseSizeToPixels(styles.title_size, 14), singleRowLayout ? 12 : 14))}px`;
-    const effectiveSubtitleSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.subtitle_size, 13), singleRowLayout ? 11 : 13))}px`;
-    const effectiveGap = singleRowLayout ? "8px" : styles.card.gap;
+    const avatarTrackSize = `${avatarSizePx + (singleRowLayout ? 7 : 12)}px`;
+    const badgeSize = `${Math.max(15, Math.min(parseSizeToPixels(styles.badge.size, 20), singleRowLayout ? 16 : 24))}px`;
+    const effectiveTitleSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.title_size, 14), singleRowLayout ? 10.5 : 14))}px`;
+    const effectiveSubtitleSize = `${Math.max(9, Math.min(parseSizeToPixels(styles.subtitle_size, 13), singleRowLayout ? 9.5 : 13))}px`;
+    const effectiveGap = singleRowLayout ? "6px" : styles.card.gap;
     const effectivePadding = singleRowLayout ? `${singleRowPaddingY}px ${singleRowPaddingX}px` : styles.card.padding;
-    const effectiveCardHeightPx = singleRowLayout ? Math.max(64, avatarSizePx + (singleRowPaddingY * 2)) : avatarSizePx + (singleRowPaddingY * 2);
+    const effectiveCardHeightPx = singleRowLayout ? Math.max(54, avatarSizePx + (singleRowPaddingY * 2)) : avatarSizePx + (singleRowPaddingY * 2);
     const effectiveContentMinHeight = `${Math.max(avatarSizePx, effectiveCardHeightPx - (singleRowPaddingY * 2))}px`;
     const isUnavailable = isUnavailableState(state);
     const cardBackground = isUnavailable
@@ -632,7 +632,7 @@ class NodaliaPersonCard extends HTMLElement {
 
         .person-card__copy {
           display: grid;
-          gap: 4px;
+          gap: ${singleRowLayout ? "1px" : "4px"};
           min-width: 0;
         }
 
@@ -640,7 +640,7 @@ class NodaliaPersonCard extends HTMLElement {
           font-size: ${effectiveTitleSize};
           font-weight: 700;
           letter-spacing: -0.02em;
-          line-height: 1.12;
+          line-height: ${singleRowLayout ? "1.02" : "1.12"};
           min-width: 0;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -651,7 +651,7 @@ class NodaliaPersonCard extends HTMLElement {
           color: var(--secondary-text-color);
           font-size: ${effectiveSubtitleSize};
           font-weight: 500;
-          line-height: 1.2;
+          line-height: ${singleRowLayout ? "1.02" : "1.2"};
           min-width: 0;
           overflow: hidden;
           text-overflow: ellipsis;
