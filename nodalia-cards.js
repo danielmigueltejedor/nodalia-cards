@@ -16705,6 +16705,16 @@ class NodaliaEntityCard extends HTMLElement {
 
     const config = this._config;
     const styles = config.styles || DEFAULT_CONFIG.styles;
+    const configuredColumns = this._getConfiguredGridColumns();
+    const narrowCard = configuredColumns !== null ? configuredColumns <= 6 : (this._cardWidth || this.clientWidth || 0) <= 300;
+    const effectivePadding = narrowCard ? "10px 12px" : styles.card.padding;
+    const effectiveGap = narrowCard ? "8px" : styles.card.gap;
+    const effectiveIconSize = `${Math.max(40, Math.min(parseSizeToPixels(styles.icon.size, 58), narrowCard ? 46 : 58))}px`;
+    const effectiveControlSize = `${Math.max(34, Math.min(parseSizeToPixels(styles.control.size, 40), narrowCard ? 36 : 40))}px`;
+    const effectiveTitleSize = `${Math.max(12, Math.min(parseSizeToPixels(styles.title_size, 14), narrowCard ? 12 : 14))}px`;
+    const effectiveChipHeight = `${Math.max(20, Math.min(parseSizeToPixels(styles.chip_height, 24), narrowCard ? 22 : 24))}px`;
+    const effectiveChipFontSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.chip_font_size, 11), narrowCard ? 10 : 11))}px`;
+    const effectiveChipPadding = narrowCard ? "0 8px" : styles.chip_padding;
     const title = this._getTitle(state);
     const icon = this._getIcon(state);
     const isCompactLayout = this._isCompactLayout;
@@ -16773,9 +16783,9 @@ class NodaliaEntityCard extends HTMLElement {
 
         .entity-card__content {
           display: grid;
-          gap: ${styles.card.gap};
+          gap: ${effectiveGap};
           min-width: 0;
-          padding: ${styles.card.padding};
+          padding: ${effectivePadding};
           position: relative;
           z-index: 1;
         }
@@ -16783,8 +16793,8 @@ class NodaliaEntityCard extends HTMLElement {
         .entity-card__hero {
           align-items: center;
           display: grid;
-          gap: 12px;
-          grid-template-columns: ${styles.icon.size} minmax(0, 1fr);
+          gap: ${narrowCard ? "10px" : "12px"};
+          grid-template-columns: ${effectiveIconSize} minmax(0, 1fr);
           min-width: 0;
         }
 
@@ -16802,30 +16812,30 @@ class NodaliaEntityCard extends HTMLElement {
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           display: inline-flex;
           flex: 0 0 auto;
-          height: ${styles.icon.size};
+          height: ${effectiveIconSize};
           justify-content: center;
           line-height: 0;
           margin: 0;
           outline: none;
           padding: 0;
           position: relative;
-          width: ${styles.icon.size};
+          width: ${effectiveIconSize};
         }
 
         .entity-card__icon ha-icon {
-          --mdc-icon-size: calc(${styles.icon.size} * 0.44);
+          --mdc-icon-size: calc(${effectiveIconSize} * 0.44);
           display: inline-flex;
-          height: calc(${styles.icon.size} * 0.44);
+          height: calc(${effectiveIconSize} * 0.44);
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: calc(${styles.icon.size} * 0.44);
+          width: calc(${effectiveIconSize} * 0.44);
         }
 
         .entity-card__copy {
           display: grid;
-          gap: 10px;
+          gap: ${narrowCard ? "6px" : "10px"};
           min-width: 0;
         }
 
@@ -16835,10 +16845,10 @@ class NodaliaEntityCard extends HTMLElement {
         }
 
         .entity-card__title {
-          font-size: ${styles.title_size};
+          font-size: ${effectiveTitleSize};
           font-weight: 700;
           letter-spacing: -0.02em;
-          line-height: 1.15;
+          line-height: ${narrowCard ? "1.1" : "1.15"};
           min-width: 0;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -16849,7 +16859,7 @@ class NodaliaEntityCard extends HTMLElement {
           align-items: center;
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
+          gap: ${narrowCard ? "6px" : "8px"};
           min-width: 0;
         }
 
@@ -16862,13 +16872,13 @@ class NodaliaEntityCard extends HTMLElement {
           color: var(--secondary-text-color);
           display: inline-flex;
           flex: 0 0 auto;
-          font-size: ${styles.chip_font_size};
+          font-size: ${effectiveChipFontSize};
           font-weight: 700;
-          height: max(24px, ${styles.chip_height});
+          height: ${effectiveChipHeight};
           line-height: 1;
           max-width: 100%;
           min-width: 0;
-          padding: ${styles.chip_padding};
+          padding: ${effectiveChipPadding};
           white-space: nowrap;
         }
 
@@ -16879,7 +16889,7 @@ class NodaliaEntityCard extends HTMLElement {
         .entity-card__actions {
           display: flex;
           flex-wrap: wrap;
-          gap: 10px;
+          gap: ${narrowCard ? "8px" : "10px"};
           justify-content: center;
         }
 
@@ -16897,26 +16907,26 @@ class NodaliaEntityCard extends HTMLElement {
           cursor: pointer;
           display: inline-flex;
           flex: 0 0 auto;
-          height: ${styles.control.size};
+          height: ${effectiveControlSize};
           justify-content: center;
           line-height: 0;
           margin: 0;
-          min-width: ${styles.control.size};
+          min-width: ${effectiveControlSize};
           outline: none;
           padding: 0;
           position: relative;
-          width: ${styles.control.size};
+          width: ${effectiveControlSize};
         }
 
         .entity-card__control ha-icon {
-          --mdc-icon-size: calc(${styles.control.size} * 0.46);
+          --mdc-icon-size: calc(${effectiveControlSize} * 0.46);
           display: inline-flex;
-          height: calc(${styles.control.size} * 0.46);
+          height: calc(${effectiveControlSize} * 0.46);
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: calc(${styles.control.size} * 0.46);
+          width: calc(${effectiveControlSize} * 0.46);
         }
 
         .entity-card__empty-title {
@@ -16939,12 +16949,12 @@ class NodaliaEntityCard extends HTMLElement {
         @media (max-width: 420px) {
           .entity-card__hero {
             gap: 10px;
-            grid-template-columns: min(${styles.icon.size}, 52px) minmax(0, 1fr);
+            grid-template-columns: min(${effectiveIconSize}, 52px) minmax(0, 1fr);
           }
 
           .entity-card__icon {
-            height: min(${styles.icon.size}, 52px);
-            width: min(${styles.icon.size}, 52px);
+            height: min(${effectiveIconSize}, 52px);
+            width: min(${effectiveIconSize}, 52px);
           }
         }
       </style>
