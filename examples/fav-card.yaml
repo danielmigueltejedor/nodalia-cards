@@ -1,0 +1,8 @@
+type: custom:nodalia-fav-card
+entity: light.sofa
+name: Sofa
+tap_action: auto
+show_state: false
+grid_options:
+  columns: 2
+  rows: 1

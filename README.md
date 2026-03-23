@@ -11,6 +11,7 @@ Ahora mismo incluye:
 - `custom:nodalia-humidifier-card`
 - `custom:nodalia-alarm-panel-card`
 - `custom:nodalia-entity-card`
+- `custom:nodalia-fav-card`
 - `custom:nodalia-vacuum-card`
 
 ## Instalacion
@@ -33,6 +34,7 @@ Ese recurso carga automaticamente:
 - `nodalia-humidifier-card.js`
 - `nodalia-alarm-panel-card.js`
 - `nodalia-entity-card.js`
+- `nodalia-fav-card.js`
 - `nodalia-vacuum-card.js`
 
 ### Opcion 2: recursos individuales
@@ -141,6 +143,19 @@ quick_actions:
     type: more-info
 ```
 
+### Nodalia Fav Card
+
+```yaml
+type: custom:nodalia-fav-card
+entity: light.sofa
+name: Sofa
+tap_action: auto
+show_state: false
+grid_options:
+  columns: 2
+  rows: 1
+```
+
 ## Estructura
 
 - `nodalia-cards.js`: entrypoint comun
@@ -151,6 +166,7 @@ quick_actions:
 - `nodalia-humidifier-card.js`: tarjeta de humidificador o deshumidificador
 - `nodalia-alarm-panel-card.js`: tarjeta elegante para paneles de alarma
 - `nodalia-entity-card.js`: tarjeta todoterreno para cualquier entidad
+- `nodalia-fav-card.js`: tarjeta mini para favoritos y controles rapidos
 - `nodalia-vacuum-card.js`: tarjeta de aspirador
 
 ## Siguiente paso recomendado
