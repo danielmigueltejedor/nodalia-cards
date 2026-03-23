@@ -8895,6 +8895,14 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     `;
   }
 
+  _renderTextareaField(label, field, value, options = {}) {
+    return this._renderTextField(label, field, value, {
+      ...options,
+      multiline: true,
+      fullWidth: options.fullWidth !== false,
+    });
+  }
+
   _renderCheckboxField(label, field, checked) {
     return `
       <label class="editor-toggle">
