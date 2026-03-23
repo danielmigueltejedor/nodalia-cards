@@ -187,6 +187,10 @@ function normalizeTextKey(value) {
     .replace(/^_+|_+$/g, "");
 }
 
+function isUnavailableState(state) {
+  return normalizeTextKey(state?.state) === "unavailable";
+}
+
 function formatNumber(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
@@ -495,6 +499,7 @@ class NodaliaWeatherCard extends HTMLElement {
     const title = this._getTitle(state);
     const icon = this._getIcon(state);
     const accentColor = this._getAccentColor(state);
+    const showUnavailableBadge = isUnavailableState(state);
     const conditionLabel = translateCondition(state?.state);
     const temperatureLabel = this._formatTemperature(state);
     const chips = [
@@ -562,11 +567,35 @@ class NodaliaWeatherCard extends HTMLElement {
           display: inline-flex;
           height: ${styles.icon.size};
           justify-content: center;
+          position: relative;
           width: ${styles.icon.size};
         }
 
         .weather-card__icon ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.5);
+        }
+
+        .weather-card__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #ffffff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
+          z-index: 2;
+        }
+
+        .weather-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          height: 11px;
+          width: 11px;
         }
 
         .weather-card__copy {
@@ -675,6 +704,7 @@ class NodaliaWeatherCard extends HTMLElement {
           <div class="weather-card__hero">
             <div class="weather-card__icon">
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${showUnavailableBadge ? `<span class="weather-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </div>
             <div class="weather-card__copy">
               <div class="weather-card__header">

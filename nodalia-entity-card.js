@@ -16,6 +16,7 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  use_entity_icon: false,
   tap_action: "auto",
   tap_service: "",
   tap_service_data: "",
@@ -228,6 +229,10 @@ function normalizeTextKey(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
+}
+
+function isUnavailableState(state) {
+  return normalizeTextKey(state?.state) === "unavailable";
 }
 
 function normalizeConfig(rawConfig) {
@@ -510,6 +515,10 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _getIcon(state) {
+    if (this._config?.use_entity_icon === true && state?.attributes?.icon) {
+      return state.attributes.icon;
+    }
+
     return this._config?.icon || state?.attributes?.icon || "mdi:tune";
   }
 
@@ -763,6 +772,7 @@ class NodaliaEntityCard extends HTMLElement {
     const icon = this._getIcon(state);
     const isCompactLayout = this._isCompactLayout;
     const accentColor = this._getAccentColor(state);
+    const showUnavailableBadge = isUnavailableState(state);
     const stateLabel = config.show_state ? this._translateStateValue(state) : null;
     const primaryValue = config.show_primary_chip !== false
       ? this._formatAttributeValue(state, config.primary_attribute)
@@ -875,6 +885,33 @@ class NodaliaEntityCard extends HTMLElement {
           top: 50%;
           transform: translate(-50%, -50%);
           width: calc(${effectiveIconSize} * 0.44);
+        }
+
+        .entity-card__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #ffffff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
+          z-index: 2;
+        }
+
+        .entity-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          height: 11px;
+          left: auto;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 11px;
         }
 
         .entity-card__copy {
@@ -1032,6 +1069,7 @@ class NodaliaEntityCard extends HTMLElement {
               aria-label="${escapeHtml(canRunPrimaryAction ? "Accion principal" : title)}"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${showUnavailableBadge ? `<span class="entity-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${showCopyBlock
               ? `
@@ -1642,6 +1680,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
             ${this._renderTextField("Icono", "icon", config.icon, {
               placeholder: "mdi:lightbulb",
             })}
+            ${this._renderCheckboxField("Usar icono de la entidad", "use_entity_icon", config.use_entity_icon === true)}
             ${this._renderSelectField(
               "Accion principal",
               "tap_action",

@@ -5016,6 +5016,10 @@ function normalizeTextKey(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function isUnavailableState(state) {
+  return normalizeTextKey(state?.state) === "unavailable";
+}
+
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   const mediaConfig = isObject(rawConfig?.media_player) ? rawConfig.media_player : null;
@@ -7010,6 +7014,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     const playerStyles = this._config.styles.player;
     const hasAlbumBackground = this._config.album_cover_background !== false && Boolean(artwork);
     const useActiveTint = isTvPlayer && this._isPlayerActive(state) && !hasAlbumBackground;
+    const showUnavailableBadge = isUnavailableState(state);
     const playerCardClasses = [
       "media-player-card",
       isIdleLayout ? "media-player-card--idle" : "",
@@ -7307,6 +7312,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                           ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
                           : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                       }
+                      ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
                     </button>
                   `
                   : `
@@ -7316,6 +7322,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                           ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
                           : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                       }
+                      ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
                     </div>
                   `
               }
@@ -7373,6 +7380,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                         ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
                         : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                     }
+                    ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
                   </button>
                 `
                 : `
@@ -7382,6 +7390,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                         ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
                         : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                     }
+                    ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
                   </div>
                 `
             }
@@ -7759,6 +7768,34 @@ class NodaliaMediaPlayer extends HTMLElement {
           top: 50%;
           transform: translate(-50%, -50%);
           width: auto;
+        }
+
+        .media-player__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid var(--ha-card-background, rgba(28, 28, 32, 1));
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #ffffff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
+          z-index: 3;
+        }
+
+        .media-player__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          color: inherit;
+          height: 11px;
+          left: auto;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 11px;
         }
 
         .media-player__artwork--interactive {
@@ -9668,6 +9705,10 @@ function parseSizeToPixels(value, fallback = 0) {
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
+function isUnavailableState(state) {
+  return String(state?.state || "").toLowerCase() === "unavailable";
+}
+
 function rgbToHs(rgb) {
   if (!Array.isArray(rgb) || rgb.length !== 3) {
     return null;
@@ -10747,6 +10788,7 @@ class NodaliaLightCard extends HTMLElement {
     const accentColor = this._getAccentColor(state);
     const title = this._getLightName(state);
     const icon = this._getLightIcon(state);
+    const showUnavailableBadge = isUnavailableState(state);
     const stateLabel = this._getStateLabel(state);
     const isCompactLayout = this._isCompactLayout;
     const isMiniLayout = this._shouldUseMiniLayout();
@@ -10938,6 +10980,34 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__icon ha-icon {
           color: ${isOn ? styles.icon.color : styles.icon.off_color};
           font-size: 26px;
+        }
+
+        .light-card__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #ffffff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
+          z-index: 2;
+        }
+
+        .light-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          color: inherit;
+          height: 11px;
+          left: auto;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 11px;
         }
 
         .light-card__copy {
@@ -11198,6 +11268,7 @@ class NodaliaLightCard extends HTMLElement {
               aria-label="Encender o apagar"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${showUnavailableBadge ? `<span class="light-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${showCopyBlock
               ? `
@@ -12094,6 +12165,10 @@ function normalizeTextKey(value) {
     .replace(/^_+|_+$/g, "");
 }
 
+function isUnavailableState(state) {
+  return normalizeTextKey(state?.state) === "unavailable";
+}
+
 function getRangeValueFromClientX(slider, clientX) {
   const rect = slider.getBoundingClientRect();
   if (!rect.width) {
@@ -12828,6 +12903,7 @@ class NodaliaFanCard extends HTMLElement {
     const title = this._getFanName(state);
     const icon = this._getFanIcon(state);
     const accentColor = this._getAccentColor(state);
+    const showUnavailableBadge = isUnavailableState(state);
     const currentPercentage = this._getPercentage(state);
     const supportsPercentage = config.show_slider !== false && this._supportsPercentage(state);
     const supportsOscillation = config.show_oscillation !== false && this._supportsOscillation(state);
@@ -12956,6 +13032,33 @@ class NodaliaFanCard extends HTMLElement {
           top: 50%;
           transform: translate(-50%, -50%);
           width: calc(${styles.icon.size} * 0.46);
+        }
+
+        .fan-card__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #ffffff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
+          z-index: 2;
+        }
+
+        .fan-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          height: 11px;
+          left: auto;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 11px;
         }
 
         .fan-card__copy {
@@ -13245,6 +13348,7 @@ class NodaliaFanCard extends HTMLElement {
               aria-label="Encender o apagar"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${showUnavailableBadge ? `<span class="fan-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${showCopyBlock
               ? `
@@ -14098,6 +14202,10 @@ function normalizeTextKey(value) {
     .replace(/^_+|_+$/g, "");
 }
 
+function isUnavailableState(state) {
+  return normalizeTextKey(state?.state) === "unavailable";
+}
+
 function translateModeLabel(value) {
   const normalized = normalizeTextKey(value);
 
@@ -14920,6 +15028,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     const title = this._getHumidifierName(state);
     const icon = this._getHumidifierIcon(state);
     const accentColor = this._getAccentColor(state);
+    const showUnavailableBadge = isUnavailableState(state);
     const supportsHumidity = config.show_slider !== false && this._supportsTargetHumidity(state);
     const humidityRange = this._getHumidityRange(state);
     const currentHumidity = this._getTargetHumidity(state);
@@ -15025,6 +15134,33 @@ class NodaliaHumidifierCard extends HTMLElement {
           top: 50%;
           transform: translate(-50%, -50%);
           width: calc(${styles.icon.size} * 0.44);
+        }
+
+        .humidifier-card__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #ffffff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
+          z-index: 2;
+        }
+
+        .humidifier-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          height: 11px;
+          left: auto;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 11px;
         }
 
         .humidifier-card__copy {
@@ -15316,6 +15452,7 @@ class NodaliaHumidifierCard extends HTMLElement {
               aria-label="Encender o apagar"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${showUnavailableBadge ? `<span class="humidifier-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${showCopyBlock
               ? `
@@ -16186,6 +16323,10 @@ function normalizeTextKey(value) {
     .replace(/^_+|_+$/g, "");
 }
 
+function isUnavailableState(state) {
+  return normalizeTextKey(state?.state) === "unavailable";
+}
+
 function normalizeConfig(rawConfig) {
   return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
 }
@@ -16810,6 +16951,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     const title = this._getTitle(state);
     const icon = this._getIcon();
     const accentColor = this._getAccentColor(state);
+    const showUnavailableBadge = isUnavailableState(state);
     const isCompactLayout = this._isCompactLayout;
     const isActive = this._isActiveState(state);
     const stateLabel = config.show_state !== false ? this._translateState(state) : null;
@@ -16913,6 +17055,33 @@ class NodaliaAlarmPanelCard extends HTMLElement {
           top: 50%;
           transform: translate(-50%, -50%);
           width: calc(${styles.icon.size} * 0.44);
+        }
+
+        .alarm-card__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #ffffff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
+          z-index: 2;
+        }
+
+        .alarm-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          height: 11px;
+          left: auto;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 11px;
         }
 
         .alarm-card__copy {
@@ -17095,6 +17264,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
               aria-label="${escapeHtml(title)}"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${showUnavailableBadge ? `<span class="alarm-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             <div class="alarm-card__copy">
               ${isCompactLayout ? "" : `<div class="alarm-card__title">${escapeHtml(title)}</div>`}
@@ -17563,6 +17733,7 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  use_entity_icon: false,
   tap_action: "auto",
   tap_service: "",
   tap_service_data: "",
@@ -17775,6 +17946,10 @@ function normalizeTextKey(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
+}
+
+function isUnavailableState(state) {
+  return normalizeTextKey(state?.state) === "unavailable";
 }
 
 function normalizeConfig(rawConfig) {
@@ -18057,6 +18232,10 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _getIcon(state) {
+    if (this._config?.use_entity_icon === true && state?.attributes?.icon) {
+      return state.attributes.icon;
+    }
+
     return this._config?.icon || state?.attributes?.icon || "mdi:tune";
   }
 
@@ -18310,6 +18489,7 @@ class NodaliaEntityCard extends HTMLElement {
     const icon = this._getIcon(state);
     const isCompactLayout = this._isCompactLayout;
     const accentColor = this._getAccentColor(state);
+    const showUnavailableBadge = isUnavailableState(state);
     const stateLabel = config.show_state ? this._translateStateValue(state) : null;
     const primaryValue = config.show_primary_chip !== false
       ? this._formatAttributeValue(state, config.primary_attribute)
@@ -18422,6 +18602,33 @@ class NodaliaEntityCard extends HTMLElement {
           top: 50%;
           transform: translate(-50%, -50%);
           width: calc(${effectiveIconSize} * 0.44);
+        }
+
+        .entity-card__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #ffffff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
+          z-index: 2;
+        }
+
+        .entity-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          height: 11px;
+          left: auto;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 11px;
         }
 
         .entity-card__copy {
@@ -18579,6 +18786,7 @@ class NodaliaEntityCard extends HTMLElement {
               aria-label="${escapeHtml(canRunPrimaryAction ? "Accion principal" : title)}"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${showUnavailableBadge ? `<span class="entity-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${showCopyBlock
               ? `
@@ -19189,6 +19397,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
             ${this._renderTextField("Icono", "icon", config.icon, {
               placeholder: "mdi:lightbulb",
             })}
+            ${this._renderCheckboxField("Usar icono de la entidad", "use_entity_icon", config.use_entity_icon === true)}
             ${this._renderSelectField(
               "Accion principal",
               "tap_action",
@@ -19529,6 +19738,10 @@ function normalizeTextKey(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
+}
+
+function isUnavailableState(state) {
+  return normalizeTextKey(state?.state) === "unavailable";
 }
 
 function escapeHtml(value) {
@@ -20072,6 +20285,7 @@ class NodaliaFavCard extends HTMLElement {
     const icon = this._getIcon(state);
     const title = this._getTitle(state);
     const accentColor = this._getAccentColor(state);
+    const showUnavailableBadge = isUnavailableState(state);
     const displayValue = config.show_state !== false
       ? (config.state_attribute ? this._formatAttributeValue(state, config.state_attribute) : this._translateStateValue(state))
       : null;
@@ -20194,6 +20408,33 @@ class NodaliaFavCard extends HTMLElement {
           width: calc(${iconSizePx}px * 0.45);
         }
 
+        .fav-card__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #ffffff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
+          z-index: 2;
+        }
+
+        .fav-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          height: 11px;
+          left: auto;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 11px;
+        }
+
         .fav-card__copy {
           display: grid;
           gap: 6px;
@@ -20266,6 +20507,7 @@ class NodaliaFavCard extends HTMLElement {
               aria-label="${escapeHtml(canRunPrimaryAction ? "Accion principal" : title)}"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${showUnavailableBadge ? `<span class="fav-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${showCopy
               ? `
@@ -20998,6 +21240,10 @@ function normalizeTextKey(value) {
     .replace(/^_+|_+$/g, "");
 }
 
+function isUnavailableState(state) {
+  return normalizeTextKey(state?.state) === "unavailable";
+}
+
 function formatNumber(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
@@ -21306,6 +21552,7 @@ class NodaliaWeatherCard extends HTMLElement {
     const title = this._getTitle(state);
     const icon = this._getIcon(state);
     const accentColor = this._getAccentColor(state);
+    const showUnavailableBadge = isUnavailableState(state);
     const conditionLabel = translateCondition(state?.state);
     const temperatureLabel = this._formatTemperature(state);
     const chips = [
@@ -21373,11 +21620,35 @@ class NodaliaWeatherCard extends HTMLElement {
           display: inline-flex;
           height: ${styles.icon.size};
           justify-content: center;
+          position: relative;
           width: ${styles.icon.size};
         }
 
         .weather-card__icon ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.5);
+        }
+
+        .weather-card__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #ffffff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
+          z-index: 2;
+        }
+
+        .weather-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          height: 11px;
+          width: 11px;
         }
 
         .weather-card__copy {
@@ -21486,6 +21757,7 @@ class NodaliaWeatherCard extends HTMLElement {
           <div class="weather-card__hero">
             <div class="weather-card__icon">
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${showUnavailableBadge ? `<span class="weather-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </div>
             <div class="weather-card__copy">
               <div class="weather-card__header">
@@ -22145,6 +22417,10 @@ function normalizeTextKey(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
+}
+
+function isUnavailableState(state) {
+  return normalizeTextKey(state?.state) === "unavailable";
 }
 
 function humanizeModeLabel(value, kind = "generic") {
@@ -23380,6 +23656,7 @@ class NodaliaVacuumCard extends HTMLElement {
     const title = this._getVacuumName(state);
     const icon = this._getVacuumIcon(state);
     const stateLabel = this._getStateLabel(state);
+    const showUnavailableBadge = isUnavailableState(state);
     const batteryLevel = this._getBatteryLevel(state);
     const modeControlsEnabled = config.show_mode_controls !== false && config.show_fan_presets !== false;
     const suctionMode = modeControlsEnabled ? this._getModeDescriptor("suction", state) : null;
@@ -23526,6 +23803,33 @@ class NodaliaVacuumCard extends HTMLElement {
           top: 50%;
           transform: translate(-50%, -50%);
           width: calc(${styles.icon.size} * 0.46);
+        }
+
+        .vacuum-card__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #ffffff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
+          z-index: 2;
+        }
+
+        .vacuum-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          height: 11px;
+          left: auto;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 11px;
         }
 
         .vacuum-card__copy {
@@ -23761,6 +24065,7 @@ class NodaliaVacuumCard extends HTMLElement {
               aria-label="${escapeHtml(iconButtonLabel)}"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${showUnavailableBadge ? `<span class="vacuum-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${
               showCopyBlock

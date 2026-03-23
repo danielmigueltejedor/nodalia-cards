@@ -222,6 +222,10 @@ function normalizeTextKey(value) {
     .replace(/^_+|_+$/g, "");
 }
 
+function isUnavailableState(state) {
+  return normalizeTextKey(state?.state) === "unavailable";
+}
+
 function normalizeConfig(rawConfig) {
   return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
 }
@@ -846,6 +850,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     const title = this._getTitle(state);
     const icon = this._getIcon();
     const accentColor = this._getAccentColor(state);
+    const showUnavailableBadge = isUnavailableState(state);
     const isCompactLayout = this._isCompactLayout;
     const isActive = this._isActiveState(state);
     const stateLabel = config.show_state !== false ? this._translateState(state) : null;
@@ -949,6 +954,33 @@ class NodaliaAlarmPanelCard extends HTMLElement {
           top: 50%;
           transform: translate(-50%, -50%);
           width: calc(${styles.icon.size} * 0.44);
+        }
+
+        .alarm-card__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #ffffff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
+          z-index: 2;
+        }
+
+        .alarm-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          height: 11px;
+          left: auto;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 11px;
         }
 
         .alarm-card__copy {
@@ -1131,6 +1163,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
               aria-label="${escapeHtml(title)}"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${showUnavailableBadge ? `<span class="alarm-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             <div class="alarm-card__copy">
               ${isCompactLayout ? "" : `<div class="alarm-card__title">${escapeHtml(title)}</div>`}

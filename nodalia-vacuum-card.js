@@ -288,6 +288,10 @@ function normalizeTextKey(value) {
     .replace(/^_+|_+$/g, "");
 }
 
+function isUnavailableState(state) {
+  return normalizeTextKey(state?.state) === "unavailable";
+}
+
 function humanizeModeLabel(value, kind = "generic") {
   const raw = String(value || "").trim();
   if (!raw) {
@@ -1521,6 +1525,7 @@ class NodaliaVacuumCard extends HTMLElement {
     const title = this._getVacuumName(state);
     const icon = this._getVacuumIcon(state);
     const stateLabel = this._getStateLabel(state);
+    const showUnavailableBadge = isUnavailableState(state);
     const batteryLevel = this._getBatteryLevel(state);
     const modeControlsEnabled = config.show_mode_controls !== false && config.show_fan_presets !== false;
     const suctionMode = modeControlsEnabled ? this._getModeDescriptor("suction", state) : null;
@@ -1667,6 +1672,33 @@ class NodaliaVacuumCard extends HTMLElement {
           top: 50%;
           transform: translate(-50%, -50%);
           width: calc(${styles.icon.size} * 0.46);
+        }
+
+        .vacuum-card__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #ffffff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
+          z-index: 2;
+        }
+
+        .vacuum-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          height: 11px;
+          left: auto;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 11px;
         }
 
         .vacuum-card__copy {
@@ -1902,6 +1934,7 @@ class NodaliaVacuumCard extends HTMLElement {
               aria-label="${escapeHtml(iconButtonLabel)}"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${showUnavailableBadge ? `<span class="vacuum-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${
               showCopyBlock

@@ -196,6 +196,10 @@ function normalizeTextKey(value) {
     .replace(/^_+|_+$/g, "");
 }
 
+function isUnavailableState(state) {
+  return normalizeTextKey(state?.state) === "unavailable";
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -737,6 +741,7 @@ class NodaliaFavCard extends HTMLElement {
     const icon = this._getIcon(state);
     const title = this._getTitle(state);
     const accentColor = this._getAccentColor(state);
+    const showUnavailableBadge = isUnavailableState(state);
     const displayValue = config.show_state !== false
       ? (config.state_attribute ? this._formatAttributeValue(state, config.state_attribute) : this._translateStateValue(state))
       : null;
@@ -859,6 +864,33 @@ class NodaliaFavCard extends HTMLElement {
           width: calc(${iconSizePx}px * 0.45);
         }
 
+        .fav-card__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #ffffff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
+          z-index: 2;
+        }
+
+        .fav-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          height: 11px;
+          left: auto;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 11px;
+        }
+
         .fav-card__copy {
           display: grid;
           gap: 6px;
@@ -931,6 +963,7 @@ class NodaliaFavCard extends HTMLElement {
               aria-label="${escapeHtml(canRunPrimaryAction ? "Accion principal" : title)}"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${showUnavailableBadge ? `<span class="fav-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${showCopy
               ? `

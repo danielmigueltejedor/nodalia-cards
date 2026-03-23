@@ -215,6 +215,10 @@ function normalizeTextKey(value) {
     .replace(/^_+|_+$/g, "");
 }
 
+function isUnavailableState(state) {
+  return normalizeTextKey(state?.state) === "unavailable";
+}
+
 function getRangeValueFromClientX(slider, clientX) {
   const rect = slider.getBoundingClientRect();
   if (!rect.width) {
@@ -949,6 +953,7 @@ class NodaliaFanCard extends HTMLElement {
     const title = this._getFanName(state);
     const icon = this._getFanIcon(state);
     const accentColor = this._getAccentColor(state);
+    const showUnavailableBadge = isUnavailableState(state);
     const currentPercentage = this._getPercentage(state);
     const supportsPercentage = config.show_slider !== false && this._supportsPercentage(state);
     const supportsOscillation = config.show_oscillation !== false && this._supportsOscillation(state);
@@ -1077,6 +1082,33 @@ class NodaliaFanCard extends HTMLElement {
           top: 50%;
           transform: translate(-50%, -50%);
           width: calc(${styles.icon.size} * 0.46);
+        }
+
+        .fan-card__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #ffffff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
+          z-index: 2;
+        }
+
+        .fan-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          height: 11px;
+          left: auto;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 11px;
         }
 
         .fan-card__copy {
@@ -1366,6 +1398,7 @@ class NodaliaFanCard extends HTMLElement {
               aria-label="Encender o apagar"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${showUnavailableBadge ? `<span class="fan-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${showCopyBlock
               ? `

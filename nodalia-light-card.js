@@ -191,6 +191,10 @@ function parseSizeToPixels(value, fallback = 0) {
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
+function isUnavailableState(state) {
+  return String(state?.state || "").toLowerCase() === "unavailable";
+}
+
 function rgbToHs(rgb) {
   if (!Array.isArray(rgb) || rgb.length !== 3) {
     return null;
@@ -1270,6 +1274,7 @@ class NodaliaLightCard extends HTMLElement {
     const accentColor = this._getAccentColor(state);
     const title = this._getLightName(state);
     const icon = this._getLightIcon(state);
+    const showUnavailableBadge = isUnavailableState(state);
     const stateLabel = this._getStateLabel(state);
     const isCompactLayout = this._isCompactLayout;
     const isMiniLayout = this._shouldUseMiniLayout();
@@ -1461,6 +1466,34 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__icon ha-icon {
           color: ${isOn ? styles.icon.color : styles.icon.off_color};
           font-size: 26px;
+        }
+
+        .light-card__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #ffffff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
+          z-index: 2;
+        }
+
+        .light-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          color: inherit;
+          height: 11px;
+          left: auto;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 11px;
         }
 
         .light-card__copy {
@@ -1721,6 +1754,7 @@ class NodaliaLightCard extends HTMLElement {
               aria-label="Encender o apagar"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${showUnavailableBadge ? `<span class="light-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${showCopyBlock
               ? `

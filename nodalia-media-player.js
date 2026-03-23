@@ -360,6 +360,10 @@ function normalizeTextKey(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function isUnavailableState(state) {
+  return normalizeTextKey(state?.state) === "unavailable";
+}
+
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   const mediaConfig = isObject(rawConfig?.media_player) ? rawConfig.media_player : null;
@@ -2354,6 +2358,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     const playerStyles = this._config.styles.player;
     const hasAlbumBackground = this._config.album_cover_background !== false && Boolean(artwork);
     const useActiveTint = isTvPlayer && this._isPlayerActive(state) && !hasAlbumBackground;
+    const showUnavailableBadge = isUnavailableState(state);
     const playerCardClasses = [
       "media-player-card",
       isIdleLayout ? "media-player-card--idle" : "",
@@ -2651,6 +2656,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                           ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
                           : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                       }
+                      ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
                     </button>
                   `
                   : `
@@ -2660,6 +2666,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                           ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
                           : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                       }
+                      ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
                     </div>
                   `
               }
@@ -2717,6 +2724,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                         ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
                         : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                     }
+                    ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
                   </button>
                 `
                 : `
@@ -2726,6 +2734,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                         ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
                         : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                     }
+                    ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
                   </div>
                 `
             }
@@ -3103,6 +3112,34 @@ class NodaliaMediaPlayer extends HTMLElement {
           top: 50%;
           transform: translate(-50%, -50%);
           width: auto;
+        }
+
+        .media-player__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid var(--ha-card-background, rgba(28, 28, 32, 1));
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #ffffff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
+          z-index: 3;
+        }
+
+        .media-player__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          color: inherit;
+          height: 11px;
+          left: auto;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 11px;
         }
 
         .media-player__artwork--interactive {
