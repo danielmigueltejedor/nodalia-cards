@@ -1,0 +1,64 @@
+type: custom:nodalia-advance-vacuum-card
+entity: vacuum.roborock_qrevo_s
+name: Roborock Qrevo S
+vacuum_platform: Roborock
+map_source:
+  camera: image.roborock_qrevo_s_calzada_de_los_molinos_custom
+calibration_source:
+  camera: true
+show_state_chip: true
+show_battery_chip: true
+show_header_icons: true
+show_return_to_base: true
+show_stop: true
+show_locate: true
+allow_segment_mode: true
+allow_zone_mode: true
+allow_goto_mode: true
+max_zone_selections: 5
+max_repeats: 3
+icons:
+  - icon: mdi:arrow-left
+    tooltip: Atras
+    order: 1
+    tap_action:
+      action: navigate
+      navigation_path: /lovelace/principal
+map_modes:
+  - template: vacuum_clean_zone
+  - template: vacuum_goto
+  - template: vacuum_clean_segment
+    predefined_selections:
+      - id: "17"
+        icon:
+          name: mdi:broom
+          x: 26650
+          y: 24250
+        label:
+          text: Salon
+          x: 26650
+          y: 24250
+          offset_y: 35
+        outline:
+          - [23050, 22050]
+          - [30250, 22050]
+          - [30250, 26450]
+          - [23050, 26450]
+      - id: "18"
+        icon:
+          name: mdi:broom
+          x: 20250
+          y: 25225
+        label:
+          text: Cocina
+          x: 20250
+          y: 25225
+          offset_y: 35
+        outline:
+          - [17400, 22300]
+          - [23100, 22300]
+          - [23100, 28150]
+          - [17400, 28150]
+language: es
+map_locked: true
+two_finger_pan: false

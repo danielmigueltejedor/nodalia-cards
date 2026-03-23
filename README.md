@@ -13,6 +13,7 @@ Ahora mismo incluye:
 - `custom:nodalia-graph-card`
 - `custom:nodalia-climate-card`
 - `custom:nodalia-alarm-panel-card`
+- `custom:nodalia-advance-vacuum-card`
 - `custom:nodalia-entity-card`
 - `custom:nodalia-fav-card`
 - `custom:nodalia-person-card`
@@ -41,6 +42,7 @@ Ese recurso carga automaticamente:
 - `nodalia-graph-card.js`
 - `nodalia-climate-card.js`
 - `nodalia-alarm-panel-card.js`
+- `nodalia-advance-vacuum-card.js`
 - `nodalia-entity-card.js`
 - `nodalia-fav-card.js`
 - `nodalia-person-card.js`
@@ -69,6 +71,8 @@ Si prefieres cargarlas por separado:
 - url: /local/nodalia-climate-card.js
   type: module
 - url: /local/nodalia-alarm-panel-card.js
+  type: module
+- url: /local/nodalia-advance-vacuum-card.js
   type: module
 - url: /local/nodalia-entity-card.js
   type: module
@@ -181,6 +185,19 @@ name: Alarma
 code_entity: input_text.codigo_alarma
 ```
 
+### Nodalia Advance Vacuum Card
+
+```yaml
+type: custom:nodalia-advance-vacuum-card
+entity: vacuum.roborock_qrevo_s
+name: Roborock Qrevo S
+map_source:
+  camera: image.roborock_qrevo_s_calzada_de_los_molinos_custom
+calibration_source:
+  camera: true
+vacuum_platform: Roborock
+```
+
 ### Nodalia Weather Card
 
 ```yaml
@@ -239,6 +256,7 @@ show_zone_badge: true
 - `nodalia-graph-card.js`: tarjeta de grafica elegante para una o varias entidades
 - `nodalia-climate-card.js`: tarjeta de clima con dial circular
 - `nodalia-alarm-panel-card.js`: tarjeta elegante para paneles de alarma
+- `nodalia-advance-vacuum-card.js`: tarjeta avanzada de mapa para robots aspiradores
 - `nodalia-entity-card.js`: tarjeta todoterreno para cualquier entidad
 - `nodalia-fav-card.js`: tarjeta mini para favoritos y controles rapidos
 - `nodalia-person-card.js`: tarjeta compacta de personas con foto y zona

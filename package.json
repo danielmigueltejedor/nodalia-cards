@@ -15,6 +15,7 @@
     "nodalia-graph-card.js",
     "nodalia-climate-card.js",
     "nodalia-alarm-panel-card.js",
+    "nodalia-advance-vacuum-card.js",
     "nodalia-entity-card.js",
     "nodalia-fav-card.js",
     "nodalia-person-card.js",

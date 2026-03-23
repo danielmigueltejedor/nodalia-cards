@@ -1306,19 +1306,19 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__hover-point {
-          filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.22));
+          filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.18));
         }
 
         .graph-card__hover-point-halo {
-          fill: color-mix(in srgb, var(--hover-color) 22%, rgba(255, 255, 255, 0.14));
+          fill: color-mix(in srgb, var(--hover-color) 14%, rgba(255, 255, 255, 0.08));
         }
 
         .graph-card__hover-point-outer {
-          fill: rgba(255, 255, 255, 0.18);
+          fill: color-mix(in srgb, var(--hover-color) 10%, rgba(255, 255, 255, 0.52));
         }
 
         .graph-card__hover-point-ring {
-          fill: rgba(255, 255, 255, 0.95);
+          fill: rgba(255, 255, 255, 0.92);
         }
 
         .graph-card__tooltip {
@@ -1524,10 +1524,10 @@ class NodaliaGraphCard extends HTMLElement {
                         const point = hover.values.find(item => item.name === entry.name)?.point;
                         return point
                           ? `
-                              <circle class="graph-card__hover-point-halo" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="7.2" style="--hover-color:${escapeHtml(entry.color)};"></circle>
-                              <circle class="graph-card__hover-point-outer" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="5.4"></circle>
-                              <circle class="graph-card__hover-point-ring" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="3.9"></circle>
-                              <circle class="graph-card__hover-point" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="2.5" fill="${escapeHtml(entry.color)}"></circle>
+                              <circle class="graph-card__hover-point-halo" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="5.4" style="--hover-color:${escapeHtml(entry.color)};"></circle>
+                              <circle class="graph-card__hover-point-outer" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="4.1"></circle>
+                              <circle class="graph-card__hover-point-ring" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="2.95"></circle>
+                              <circle class="graph-card__hover-point" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="1.8" fill="${escapeHtml(entry.color)}"></circle>
                             `
                           : "";
                       })()
