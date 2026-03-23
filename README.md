@@ -12,6 +12,7 @@ Ahora mismo incluye:
 - `custom:nodalia-alarm-panel-card`
 - `custom:nodalia-entity-card`
 - `custom:nodalia-fav-card`
+- `custom:nodalia-person-card`
 - `custom:nodalia-weather-card`
 - `custom:nodalia-vacuum-card`
 
@@ -36,6 +37,7 @@ Ese recurso carga automaticamente:
 - `nodalia-alarm-panel-card.js`
 - `nodalia-entity-card.js`
 - `nodalia-fav-card.js`
+- `nodalia-person-card.js`
 - `nodalia-weather-card.js`
 - `nodalia-vacuum-card.js`
 
@@ -57,6 +59,10 @@ Si prefieres cargarlas por separado:
 - url: /local/nodalia-alarm-panel-card.js
   type: module
 - url: /local/nodalia-entity-card.js
+  type: module
+- url: /local/nodalia-fav-card.js
+  type: module
+- url: /local/nodalia-person-card.js
   type: module
 - url: /local/nodalia-weather-card.js
   type: module
@@ -168,6 +174,16 @@ grid_options:
   rows: 1
 ```
 
+### Nodalia Person Card
+
+```yaml
+type: custom:nodalia-person-card
+entity: person.rocio
+name: Rocio
+show_state: true
+show_zone_badge: true
+```
+
 ## Estructura
 
 - `nodalia-cards.js`: entrypoint comun
@@ -179,6 +195,7 @@ grid_options:
 - `nodalia-alarm-panel-card.js`: tarjeta elegante para paneles de alarma
 - `nodalia-entity-card.js`: tarjeta todoterreno para cualquier entidad
 - `nodalia-fav-card.js`: tarjeta mini para favoritos y controles rapidos
+- `nodalia-person-card.js`: tarjeta compacta de personas con foto y zona
 - `nodalia-weather-card.js`: tarjeta meteorologica elegante
 - `nodalia-vacuum-card.js`: tarjeta de aspirador
 

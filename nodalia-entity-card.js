@@ -235,6 +235,122 @@ function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
+function getEntityDomain(state) {
+  const entityId = String(state?.entity_id || "");
+  return entityId.includes(".") ? entityId.split(".")[0] : "";
+}
+
+function getDynamicEntityIcon(state) {
+  if (!state) {
+    return "";
+  }
+
+  const domain = getEntityDomain(state);
+  const stateKey = normalizeTextKey(state.state);
+  const deviceClass = normalizeTextKey(state.attributes?.device_class);
+
+  if (domain === "binary_sensor") {
+    switch (deviceClass) {
+      case "door":
+      case "opening":
+        return stateKey === "on" ? "mdi:door-open" : "mdi:door-closed";
+      case "garage_door":
+        return stateKey === "on" ? "mdi:garage-open" : "mdi:garage";
+      case "window":
+        return stateKey === "on" ? "mdi:window-open-variant" : "mdi:window-closed-variant";
+      case "motion":
+        return stateKey === "on" ? "mdi:motion-sensor" : "mdi:motion-sensor-off";
+      case "occupancy":
+      case "presence":
+      case "person":
+        return stateKey === "on" ? "mdi:account" : "mdi:account-off-outline";
+      case "smoke":
+        return stateKey === "on" ? "mdi:smoke-detector-alert" : "mdi:smoke-detector-variant";
+      case "moisture":
+        return stateKey === "on" ? "mdi:water-alert" : "mdi:water-check";
+      case "gas":
+        return stateKey === "on" ? "mdi:gas-cylinder" : "mdi:check-circle-outline";
+      case "tamper":
+      case "safety":
+      case "problem":
+        return stateKey === "on" ? "mdi:alert-circle" : "mdi:check-circle-outline";
+      case "plug":
+      case "power":
+        return stateKey === "on" ? "mdi:power-plug" : "mdi:power-plug-off";
+      case "sound":
+        return stateKey === "on" ? "mdi:volume-high" : "mdi:volume-mute";
+      case "vibration":
+        return stateKey === "on" ? "mdi:vibrate" : "mdi:vibrate-off";
+      case "heat":
+        return stateKey === "on" ? "mdi:fire" : "mdi:fire-off";
+      case "cold":
+        return stateKey === "on" ? "mdi:snowflake-alert" : "mdi:snowflake";
+      case "light":
+        return stateKey === "on" ? "mdi:brightness-7" : "mdi:brightness-5";
+      default:
+        break;
+    }
+  }
+
+  if (domain === "light") {
+    return stateKey === "on" ? "mdi:lightbulb" : "mdi:lightbulb-off";
+  }
+
+  if (domain === "switch") {
+    return stateKey === "on" ? "mdi:toggle-switch-variant" : "mdi:toggle-switch-variant-off";
+  }
+
+  if (domain === "fan") {
+    return stateKey === "on" ? "mdi:fan" : "mdi:fan-off";
+  }
+
+  if (domain === "lock") {
+    switch (stateKey) {
+      case "unlocked":
+      case "open":
+        return "mdi:lock-open-variant";
+      case "jammed":
+        return "mdi:lock-alert";
+      case "locking":
+      case "unlocking":
+        return "mdi:lock-clock";
+      default:
+        return "mdi:lock";
+    }
+  }
+
+  if (domain === "cover") {
+    if (deviceClass === "garage") {
+      return stateKey === "open" ? "mdi:garage-open" : "mdi:garage";
+    }
+
+    if (deviceClass === "door") {
+      return stateKey === "open" ? "mdi:door-open" : "mdi:door-closed";
+    }
+
+    if (deviceClass === "window") {
+      return stateKey === "open" ? "mdi:window-open-variant" : "mdi:window-closed-variant";
+    }
+  }
+
+  if (domain === "person") {
+    switch (stateKey) {
+      case "home":
+      case "casa":
+      case "en_casa":
+        return "mdi:home-account";
+      case "not_home":
+      case "away":
+      case "fuera":
+        return "mdi:account-arrow-right";
+      default:
+        return "mdi:account";
+    }
+  }
+
+  return "";
+}
+
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
 
@@ -318,7 +434,7 @@ class NodaliaEntityCard extends HTMLElement {
 
   getGridOptions() {
     return {
-      rows: "auto",
+      rows: 1,
       columns: 6,
       min_rows: 1,
       min_columns: 2,
@@ -515,8 +631,11 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _getIcon(state) {
-    if (this._config?.use_entity_icon === true && state?.attributes?.icon) {
-      return state.attributes.icon;
+    if (this._config?.use_entity_icon === true) {
+      const resolvedEntityIcon = state?.attributes?.icon || getDynamicEntityIcon(state);
+      if (resolvedEntityIcon) {
+        return resolvedEntityIcon;
+      }
     }
 
     return this._config?.icon || state?.attributes?.icon || "mdi:tune";
@@ -755,19 +874,22 @@ class NodaliaEntityCard extends HTMLElement {
 
     const config = this._config;
     const styles = config.styles || DEFAULT_CONFIG.styles;
+    const quickActions = Array.isArray(config.quick_actions) ? config.quick_actions.filter(action => action?.icon) : [];
     const configuredColumns = this._getConfiguredGridColumns();
     const configuredRows = this._getConfiguredGridRows();
-    const singleRowLayout = configuredRows !== null ? configuredRows <= 1 : false;
+    const singleRowLayout = configuredRows !== null ? configuredRows <= 1 : quickActions.length === 0;
     const narrowCard = configuredColumns !== null ? configuredColumns <= 6 : (this._cardWidth || this.clientWidth || 0) <= 300;
     const compactMetrics = narrowCard || singleRowLayout;
     const effectivePadding = singleRowLayout ? "8px 10px" : compactMetrics ? "10px 12px" : styles.card.padding;
     const effectiveGap = singleRowLayout ? "0px" : compactMetrics ? "8px" : styles.card.gap;
-    const effectiveIconSize = `${Math.max(36, Math.min(parseSizeToPixels(styles.icon.size, 58), singleRowLayout ? 40 : compactMetrics ? 46 : 58))}px`;
+    const effectiveIconSizePx = Math.max(36, Math.min(parseSizeToPixels(styles.icon.size, 58), singleRowLayout ? 40 : compactMetrics ? 46 : 58));
+    const effectiveIconSize = `${effectiveIconSizePx}px`;
     const effectiveControlSize = `${Math.max(34, Math.min(parseSizeToPixels(styles.control.size, 40), compactMetrics ? 36 : 40))}px`;
     const effectiveTitleSize = `${Math.max(11, Math.min(parseSizeToPixels(styles.title_size, 14), singleRowLayout ? 11 : compactMetrics ? 12 : 14))}px`;
     const effectiveChipHeight = `${Math.max(18, Math.min(parseSizeToPixels(styles.chip_height, 24), singleRowLayout ? 20 : compactMetrics ? 22 : 24))}px`;
     const effectiveChipFontSize = `${Math.max(9, Math.min(parseSizeToPixels(styles.chip_font_size, 11), singleRowLayout ? 9 : compactMetrics ? 10 : 11))}px`;
     const effectiveChipPadding = singleRowLayout ? "0 7px" : compactMetrics ? "0 8px" : styles.chip_padding;
+    const effectiveCardMinHeight = singleRowLayout ? `${Math.max(76, effectiveIconSizePx + 18)}px` : "0px";
     const title = this._getTitle(state);
     const icon = this._getIcon(state);
     const isCompactLayout = this._isCompactLayout;
@@ -787,7 +909,6 @@ class NodaliaEntityCard extends HTMLElement {
     ].filter(Boolean);
     const showTitle = !isCompactLayout;
     const showCopyBlock = showTitle || chips.length > 0;
-    const quickActions = Array.isArray(config.quick_actions) ? config.quick_actions.filter(action => action?.icon) : [];
     const canRunPrimaryAction = this._canRunTapAction(state);
     const isActive = this._isActiveState(state);
     const cardBackground = isActive
@@ -820,6 +941,10 @@ class NodaliaEntityCard extends HTMLElement {
           position: relative;
         }
 
+        .entity-card--single-row {
+          min-height: ${effectiveCardMinHeight};
+        }
+
         ha-card::before {
           background: ${isActive
             ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, rgba(255, 255, 255, 0.05)), rgba(255, 255, 255, 0))`
@@ -844,11 +969,17 @@ class NodaliaEntityCard extends HTMLElement {
           z-index: 1;
         }
 
+        .entity-card--single-row .entity-card__content {
+          align-content: center;
+          min-height: ${effectiveCardMinHeight};
+        }
+
         .entity-card__hero {
           align-items: center;
           display: grid;
           gap: ${singleRowLayout ? "8px" : narrowCard ? "10px" : "12px"};
           grid-template-columns: ${effectiveIconSize} minmax(0, 1fr);
+          min-height: ${singleRowLayout ? effectiveIconSize : "0px"};
           min-width: 0;
         }
 
@@ -921,6 +1052,7 @@ class NodaliaEntityCard extends HTMLElement {
         }
 
         .entity-card--single-row .entity-card__copy {
+          align-content: center;
           display: grid;
           gap: 4px;
           min-width: 0;
@@ -971,7 +1103,9 @@ class NodaliaEntityCard extends HTMLElement {
           line-height: 1;
           max-width: 100%;
           min-width: 0;
+          overflow: hidden;
           padding: ${effectiveChipPadding};
+          text-overflow: ellipsis;
           white-space: nowrap;
         }
 

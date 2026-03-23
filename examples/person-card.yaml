@@ -1,0 +1,8 @@
+type: custom:nodalia-person-card
+entity: person.rocio
+name: Rocio
+show_state: true
+show_zone_badge: true
+use_entity_picture: true
+use_zone_icon: true
+tap_action: more-info
