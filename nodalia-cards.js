@@ -16289,6 +16289,11 @@ class NodaliaEntityCard extends HTMLElement {
     return Number.isFinite(numericColumns) ? numericColumns : null;
   }
 
+  _getConfiguredGridRows() {
+    const numericRows = Number(this._config?.grid_options?.rows);
+    return Number.isFinite(numericRows) ? numericRows : null;
+  }
+
   _shouldUseCompactLayout(width) {
     const mode = this._config?.compact_layout_mode || "auto";
 
@@ -16706,15 +16711,18 @@ class NodaliaEntityCard extends HTMLElement {
     const config = this._config;
     const styles = config.styles || DEFAULT_CONFIG.styles;
     const configuredColumns = this._getConfiguredGridColumns();
+    const configuredRows = this._getConfiguredGridRows();
+    const singleRowLayout = configuredRows !== null ? configuredRows <= 1 : false;
     const narrowCard = configuredColumns !== null ? configuredColumns <= 6 : (this._cardWidth || this.clientWidth || 0) <= 300;
-    const effectivePadding = narrowCard ? "10px 12px" : styles.card.padding;
-    const effectiveGap = narrowCard ? "8px" : styles.card.gap;
-    const effectiveIconSize = `${Math.max(40, Math.min(parseSizeToPixels(styles.icon.size, 58), narrowCard ? 46 : 58))}px`;
-    const effectiveControlSize = `${Math.max(34, Math.min(parseSizeToPixels(styles.control.size, 40), narrowCard ? 36 : 40))}px`;
-    const effectiveTitleSize = `${Math.max(12, Math.min(parseSizeToPixels(styles.title_size, 14), narrowCard ? 12 : 14))}px`;
-    const effectiveChipHeight = `${Math.max(20, Math.min(parseSizeToPixels(styles.chip_height, 24), narrowCard ? 22 : 24))}px`;
-    const effectiveChipFontSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.chip_font_size, 11), narrowCard ? 10 : 11))}px`;
-    const effectiveChipPadding = narrowCard ? "0 8px" : styles.chip_padding;
+    const compactMetrics = narrowCard || singleRowLayout;
+    const effectivePadding = singleRowLayout ? "8px 10px" : compactMetrics ? "10px 12px" : styles.card.padding;
+    const effectiveGap = singleRowLayout ? "0px" : compactMetrics ? "8px" : styles.card.gap;
+    const effectiveIconSize = `${Math.max(36, Math.min(parseSizeToPixels(styles.icon.size, 58), singleRowLayout ? 40 : compactMetrics ? 46 : 58))}px`;
+    const effectiveControlSize = `${Math.max(34, Math.min(parseSizeToPixels(styles.control.size, 40), compactMetrics ? 36 : 40))}px`;
+    const effectiveTitleSize = `${Math.max(11, Math.min(parseSizeToPixels(styles.title_size, 14), singleRowLayout ? 11 : compactMetrics ? 12 : 14))}px`;
+    const effectiveChipHeight = `${Math.max(18, Math.min(parseSizeToPixels(styles.chip_height, 24), singleRowLayout ? 20 : compactMetrics ? 22 : 24))}px`;
+    const effectiveChipFontSize = `${Math.max(9, Math.min(parseSizeToPixels(styles.chip_font_size, 11), singleRowLayout ? 9 : compactMetrics ? 10 : 11))}px`;
+    const effectiveChipPadding = singleRowLayout ? "0 7px" : compactMetrics ? "0 8px" : styles.chip_padding;
     const title = this._getTitle(state);
     const icon = this._getIcon(state);
     const isCompactLayout = this._isCompactLayout;
@@ -16793,7 +16801,7 @@ class NodaliaEntityCard extends HTMLElement {
         .entity-card__hero {
           align-items: center;
           display: grid;
-          gap: ${narrowCard ? "10px" : "12px"};
+          gap: ${singleRowLayout ? "8px" : narrowCard ? "10px" : "12px"};
           grid-template-columns: ${effectiveIconSize} minmax(0, 1fr);
           min-width: 0;
         }
@@ -16835,7 +16843,16 @@ class NodaliaEntityCard extends HTMLElement {
 
         .entity-card__copy {
           display: grid;
-          gap: ${narrowCard ? "6px" : "10px"};
+          gap: ${singleRowLayout ? "0" : narrowCard ? "6px" : "10px"};
+          min-width: 0;
+        }
+
+        .entity-card--single-row .entity-card__copy {
+          align-items: center;
+          display: flex;
+          flex-wrap: nowrap;
+          gap: 8px;
+          justify-content: space-between;
           min-width: 0;
         }
 
@@ -16859,8 +16876,15 @@ class NodaliaEntityCard extends HTMLElement {
           align-items: center;
           display: flex;
           flex-wrap: wrap;
-          gap: ${narrowCard ? "6px" : "8px"};
+          gap: ${singleRowLayout ? "0" : narrowCard ? "6px" : "8px"};
           min-width: 0;
+        }
+
+        .entity-card--single-row .entity-card__chips {
+          flex: 0 0 auto;
+          flex-wrap: nowrap;
+          justify-content: flex-end;
+          margin-left: auto;
         }
 
         .entity-card__chip {
@@ -16880,6 +16904,11 @@ class NodaliaEntityCard extends HTMLElement {
           min-width: 0;
           padding: ${effectiveChipPadding};
           white-space: nowrap;
+        }
+
+        .entity-card--single-row .entity-card__title {
+          flex: 1 1 auto;
+          min-width: 0;
         }
 
         .entity-card__chip--state {
@@ -16959,7 +16988,7 @@ class NodaliaEntityCard extends HTMLElement {
         }
       </style>
       <ha-card
-        class="entity-card ${isActive ? "is-on" : "is-off"} ${isCompactLayout ? "entity-card--compact" : ""} ${showCopyBlock ? "entity-card--with-copy" : ""} ${canRunPrimaryAction ? "entity-card--clickable" : ""}"
+        class="entity-card ${isActive ? "is-on" : "is-off"} ${isCompactLayout ? "entity-card--compact" : ""} ${showCopyBlock ? "entity-card--with-copy" : ""} ${singleRowLayout ? "entity-card--single-row" : ""} ${canRunPrimaryAction ? "entity-card--clickable" : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
         ${canRunPrimaryAction ? 'data-entity-action="primary"' : ""}
       >
