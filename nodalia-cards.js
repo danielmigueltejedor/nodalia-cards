@@ -21409,6 +21409,7 @@ class NodaliaPersonCard extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
+    this._renderSignature = "";
     this._onShadowClick = this._onShadowClick.bind(this);
   }
 
@@ -21427,6 +21428,12 @@ class NodaliaPersonCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+
+    const nextSignature = this._getRenderSignature();
+    if (nextSignature && nextSignature === this._renderSignature && this.shadowRoot?.innerHTML) {
+      return;
+    }
+
     this._render();
   }
 
@@ -21576,6 +21583,39 @@ class NodaliaPersonCard extends HTMLElement {
     return this._getBadgeDescriptor(state)?.color || "var(--info-color, #71c0ff)";
   }
 
+  _getRenderSignature() {
+    const state = this._getState();
+    if (!this._config?.entity || !state) {
+      return `empty:${this._config?.entity || ""}`;
+    }
+
+    const title = this._getTitle(state);
+    const subtitle = this._config.show_state !== false ? this._translateState(state) : "";
+    const picture = this._getPersonPicture(state);
+    const fallbackIcon = this._getFallbackIcon(state);
+    const badge = this._getBadgeDescriptor(state);
+    const zoneState = this._getMatchingZoneState(state);
+
+    return JSON.stringify({
+      entity: this._config.entity,
+      state: state.state,
+      title,
+      subtitle,
+      picture,
+      fallbackIcon,
+      badgeIcon: badge?.icon || "",
+      badgeColor: badge?.color || "",
+      zoneEntity: zoneState?.entity_id || "",
+      zoneIcon: zoneState?.attributes?.icon || "",
+      showState: this._config.show_state !== false,
+      showZoneBadge: this._config.show_zone_badge !== false,
+      useEntityPicture: this._config.use_entity_picture !== false,
+      useZoneIcon: this._config.use_zone_icon !== false,
+      name: this._config.name || "",
+      icon: this._config.icon || "",
+    });
+  }
+
   _canRunTapAction() {
     const action = String(this._config?.tap_action || "more-info");
     if (action === "none") {
@@ -21648,6 +21688,7 @@ class NodaliaPersonCard extends HTMLElement {
 
     const state = this._getState();
     if (!this._config?.entity || !state) {
+      this._renderSignature = `empty:${this._config?.entity || ""}`;
       this.shadowRoot.innerHTML = this._renderEmptyState();
       return;
     }
@@ -21728,12 +21769,13 @@ class NodaliaPersonCard extends HTMLElement {
           display: inline-flex;
           height: ${avatarSize};
           justify-content: center;
-          overflow: hidden;
+          overflow: visible;
           position: relative;
           width: ${avatarSize};
         }
 
         .person-card__avatar img {
+          border-radius: inherit;
           height: 100%;
           object-fit: cover;
           width: 100%;
@@ -21754,8 +21796,8 @@ class NodaliaPersonCard extends HTMLElement {
           height: ${badgeSize};
           justify-content: center;
           position: absolute;
-          right: -2px;
-          top: -2px;
+          right: 3px;
+          top: 3px;
           width: ${badgeSize};
           z-index: 2;
         }
@@ -21830,6 +21872,7 @@ class NodaliaPersonCard extends HTMLElement {
         </div>
       </ha-card>
     `;
+    this._renderSignature = this._getRenderSignature();
   }
 }
 
