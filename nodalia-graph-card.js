@@ -345,49 +345,32 @@ function buildInterpolatedSamples(events, startMs, endMs, pointsCount, fallbackV
       value: fallbackValue,
     }));
   }
+  const spanMs = Math.max(endMs - startMs, 1);
+  const bucketSize = spanMs / Math.max(pointsCount - 1, 1);
+  const buckets = Array.from({ length: pointsCount }, () => []);
 
-  const dedupedEvents = events.filter((event, index) => (
-    index === 0
-    || event.ts !== events[index - 1].ts
-    || event.value !== events[index - 1].value
-  ));
+  events.forEach(event => {
+    const clampedTs = clamp(event.ts, startMs, endMs);
+    const rawIndex = Math.floor((clampedTs - startMs) / Math.max(bucketSize, 1));
+    const bucketIndex = clamp(rawIndex, 0, pointsCount - 1);
+    buckets[bucketIndex].push(event.value);
+  });
 
-  const samples = [];
-  let rightIndex = 0;
+  let lastValue = Number.isFinite(fallbackValue)
+    ? fallbackValue
+    : buckets.flat().find(Number.isFinite);
 
-  for (let index = 0; index < pointsCount; index += 1) {
+  return buckets.map((bucket, index) => {
     const sampleTs = startMs + (((endMs - startMs) * index) / Math.max(pointsCount - 1, 1));
-
-    while (rightIndex < dedupedEvents.length && dedupedEvents[rightIndex].ts < sampleTs) {
-      rightIndex += 1;
+    if (bucket.length) {
+      lastValue = bucket.reduce((sum, value) => sum + value, 0) / bucket.length;
     }
 
-    const right = dedupedEvents[rightIndex] || null;
-    const left = dedupedEvents[rightIndex - 1] || null;
-    let value = fallbackValue;
-
-    if (!left && right) {
-      value = right.value;
-    } else if (left && !right) {
-      value = left.value;
-    } else if (left && right) {
-      if (right.ts === left.ts) {
-        value = right.value;
-      } else {
-        const progress = clamp((sampleTs - left.ts) / (right.ts - left.ts), 0, 1);
-        value = left.value + ((right.value - left.value) * progress);
-      }
-    }
-
-    if (Number.isFinite(value)) {
-      samples.push({
-        ts: sampleTs,
-        value,
-      });
-    }
-  }
-
-  return samples;
+    return {
+      ts: sampleTs,
+      value: Number.isFinite(lastValue) ? lastValue : 0,
+    };
+  });
 }
 
 class NodaliaGraphCard extends HTMLElement {
@@ -785,6 +768,22 @@ class NodaliaGraphCard extends HTMLElement {
 
     try {
       const entityIds = this._getEntityEntries().map(entry => entry.entity);
+      const raw = await this._fetchHistory(start, end, entityIds, controller.signal);
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      const normalized = this._normalizeHistorySeries(raw || {}, start, end);
+      const hasMeaningfulHistory = normalized.some(entry => entry.rawEventCount > 1 && entry.samples.length > 1);
+
+      if (hasMeaningfulHistory) {
+        this._historySeries = normalized;
+        this._historyKey = requestKey;
+        this._historyLoadedAt = Date.now();
+        this._render();
+        return;
+      }
+
       const statisticsRaw = await this._fetchStatistics(start, end, entityIds);
       if (controller.signal.aborted) {
         return;
@@ -792,25 +791,9 @@ class NodaliaGraphCard extends HTMLElement {
 
       const statisticsSeries = this._normalizeStatisticsSeries(statisticsRaw || {});
       const hasMeaningfulStatistics = statisticsSeries.some(entry => entry.rawEventCount > 1 && entry.samples.length > 1);
-
-      if (hasMeaningfulStatistics) {
-        this._historySeries = statisticsSeries;
-        this._historyKey = requestKey;
-        this._historyLoadedAt = Date.now();
-        this._render();
-        return;
-      }
-
-      const raw = await this._fetchHistory(start, end, entityIds, controller.signal);
-      if (controller.signal.aborted) {
-        return;
-      }
-
-      const normalized = this._normalizeHistorySeries(raw || [], start, end);
-      const hasMeaningfulHistory = normalized.some(entry => entry.rawEventCount > 1 && entry.samples.length > 1);
-      this._historySeries = normalized;
-      this._historyKey = hasMeaningfulHistory ? requestKey : "";
-      this._historyLoadedAt = hasMeaningfulHistory ? Date.now() : 0;
+      this._historySeries = statisticsSeries;
+      this._historyKey = hasMeaningfulStatistics ? requestKey : "";
+      this._historyLoadedAt = hasMeaningfulStatistics ? Date.now() : 0;
       this._render();
     } catch (_error) {
       if (controller.signal.aborted) {
