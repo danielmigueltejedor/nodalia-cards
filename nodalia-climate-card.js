@@ -55,7 +55,7 @@ const DEFAULT_CONFIG = {
     chip_padding: "0 10px",
     title_size: "16px",
     current_size: "16px",
-    target_size: "60px",
+    target_size: "54px",
     dial: {
       size: "280px",
       stroke: "18px",
@@ -850,9 +850,18 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   _onShadowPointerDown(event) {
-    const dial = event.composedPath().find(
-      node => node instanceof HTMLElement && node.dataset?.climateControl === "dial",
+    const path = event.composedPath();
+    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
+    if (actionButton) {
+      return;
+    }
+
+    const dialHandle = path.find(
+      node => node instanceof Element && node.dataset?.climateControl === "dial-hit",
     );
+    const dial = dialHandle
+      ? path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"))
+      : null;
 
     if (
       this._activeDialDrag ||
@@ -866,9 +875,18 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   _onShadowMouseDown(event) {
-    const dial = event.composedPath().find(
-      node => node instanceof HTMLElement && node.dataset?.climateControl === "dial",
+    const path = event.composedPath();
+    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
+    if (actionButton) {
+      return;
+    }
+
+    const dialHandle = path.find(
+      node => node instanceof Element && node.dataset?.climateControl === "dial-hit",
     );
+    const dial = dialHandle
+      ? path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"))
+      : null;
 
     if (this._activeDialDrag || !dial || event.button !== 0) {
       return;
@@ -878,9 +896,18 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   _onShadowTouchStart(event) {
-    const dial = event.composedPath().find(
-      node => node instanceof HTMLElement && node.dataset?.climateControl === "dial",
+    const path = event.composedPath();
+    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
+    if (actionButton) {
+      return;
+    }
+
+    const dialHandle = path.find(
+      node => node instanceof Element && node.dataset?.climateControl === "dial-hit",
     );
+    const dial = dialHandle
+      ? path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"))
+      : null;
 
     if (this._activeDialDrag || !dial || !event.touches?.length) {
       return;
@@ -951,12 +978,6 @@ class NodaliaClimateCard extends HTMLElement {
 
   _onShadowClick(event) {
     const path = event.composedPath();
-    const dial = path.find(node => node instanceof HTMLElement && node.dataset?.climateControl === "dial");
-
-    if (dial) {
-      return;
-    }
-
     const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
     if (!actionButton) {
       return;
@@ -1302,6 +1323,7 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__dial-track,
+        .climate-card__dial-hit,
         .climate-card__dial-progress {
           fill: none;
           stroke-dasharray: ${DIAL_VISIBLE_LENGTH} ${DIAL_HIDDEN_LENGTH};
@@ -1313,6 +1335,13 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__dial-track {
           stroke: ${styles.dial.track_color};
+        }
+
+        .climate-card__dial-hit {
+          cursor: ${supportsTargetTemperature ? "grab" : "default"};
+          pointer-events: stroke;
+          stroke: transparent;
+          stroke-width: ${dialStrokePx + 22};
         }
 
         .climate-card__dial-progress {
@@ -1328,6 +1357,7 @@ class NodaliaClimateCard extends HTMLElement {
           box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.12);
           height: var(--climate-thumb-size);
           left: 50%;
+          pointer-events: auto;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%) rotate(calc(var(--climate-angle) + 90deg)) translateY(calc(-1 * var(--climate-dial-radius)));
@@ -1363,21 +1393,27 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__target {
+          align-items: flex-start;
           color: var(--primary-text-color);
+          display: inline-flex;
           font-size: ${styles.target_size};
+          gap: 4px;
           font-weight: 500;
           letter-spacing: -0.06em;
           line-height: 0.94;
+          min-height: calc(${styles.target_size} * 0.94);
           min-width: 0;
         }
 
         .climate-card__target-unit {
           color: var(--primary-text-color);
-          font-size: calc(${styles.target_size} * 0.36);
+          display: inline-flex;
+          font-size: calc(${styles.target_size} * 0.28);
           font-weight: 500;
-          margin-left: 6px;
+          line-height: 1;
+          margin-left: 0;
           opacity: 0.92;
-          vertical-align: top;
+          transform: translateY(8px);
         }
 
         .climate-card__divider {
@@ -1555,6 +1591,13 @@ class NodaliaClimateCard extends HTMLElement {
                   r="${DIAL_CIRCLE_RADIUS}"
                 ></circle>
                 <circle
+                  class="climate-card__dial-hit"
+                  data-climate-control="dial-hit"
+                  cx="${DIAL_VIEWBOX_SIZE / 2}"
+                  cy="${DIAL_VIEWBOX_SIZE / 2}"
+                  r="${DIAL_CIRCLE_RADIUS}"
+                ></circle>
+                <circle
                   class="climate-card__dial-progress"
                   cx="${DIAL_VIEWBOX_SIZE / 2}"
                   cy="${DIAL_VIEWBOX_SIZE / 2}"
@@ -1562,7 +1605,7 @@ class NodaliaClimateCard extends HTMLElement {
                 ></circle>
               </svg>
               <span class="climate-card__dial-current-marker" aria-hidden="true"></span>
-              <span class="climate-card__dial-thumb" aria-hidden="true"></span>
+              <span class="climate-card__dial-thumb" data-climate-control="dial-hit" aria-hidden="true"></span>
               <div class="climate-card__dial-center">
                 <div class="climate-card__target">
                   <span data-climate-readout="target">${escapeHtml(formatTemperature(targetTemperature, temperatureStep, false))}</span>
