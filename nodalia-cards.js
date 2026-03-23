@@ -16531,10 +16531,10 @@ class NodaliaClimateCard extends HTMLElement {
 
   getGridOptions() {
     return {
-      rows: 4,
-      columns: 6,
-      min_rows: 3,
-      min_columns: 4,
+      rows: 5,
+      columns: 8,
+      min_rows: 5,
+      min_columns: 7,
     };
   }
 
@@ -16831,10 +16831,10 @@ class NodaliaClimateCard extends HTMLElement {
     const nextValue = clamp(Number(value), range.min, range.max);
     const ratio = (nextValue - range.min) / Math.max(range.max - range.min, step);
     const angle = DIAL_START_ANGLE + (ratio * DIAL_SWEEP);
-    const dashOffset = Number((DIAL_VISIBLE_LENGTH * (1 - clamp(ratio, 0, 1))).toFixed(3));
+    const progressLength = Number((DIAL_VISIBLE_LENGTH * clamp(ratio, 0, 1)).toFixed(3));
 
     dial.style.setProperty("--climate-angle", `${angle}deg`);
-    dial.style.setProperty("--climate-dashoffset", `${dashOffset}`);
+    dial.style.setProperty("--climate-progress-length", `${progressLength}`);
 
     if (targetValue instanceof HTMLElement) {
       targetValue.textContent = formatTemperature(nextValue, step, false);
@@ -17178,8 +17178,18 @@ class NodaliaClimateCard extends HTMLElement {
       ? (targetTemperature - temperatureRange.min) / Math.max(temperatureRange.max - temperatureRange.min, temperatureStep)
       : 0;
     const dialAngle = DIAL_START_ANGLE + (clamp(ratio, 0, 1) * DIAL_SWEEP);
-    const dashOffset = Number((DIAL_VISIBLE_LENGTH * (1 - clamp(ratio, 0, 1))).toFixed(3));
+    const progressLength = Number((DIAL_VISIBLE_LENGTH * clamp(ratio, 0, 1)).toFixed(3));
     const chips = [];
+    const currentRatio = currentTemperature !== null
+      ? clamp(
+        (currentTemperature - temperatureRange.min) / Math.max(temperatureRange.max - temperatureRange.min, temperatureStep),
+        0,
+        1,
+      )
+      : null;
+    const currentAngle = currentRatio === null
+      ? null
+      : DIAL_START_ANGLE + (currentRatio * DIAL_SWEEP);
 
     if (config.show_state_chip !== false) {
       chips.push(`<div class="climate-card__chip climate-card__chip--state">${escapeHtml(this._getStateLabel(state))}</div>`);
@@ -17372,7 +17382,7 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__dial {
           --climate-angle: ${dialAngle}deg;
-          --climate-dashoffset: ${dashOffset};
+          --climate-progress-length: ${progressLength};
           --climate-dial-size: ${dialSizePx}px;
           --climate-dial-radius: ${dialRadiusPx}px;
           --climate-thumb-size: ${thumbSizePx}px;
@@ -17414,8 +17424,8 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__dial-progress {
           stroke: ${accentColor};
-          stroke-dashoffset: var(--climate-dashoffset);
-          transition: stroke-dashoffset 140ms ease-out;
+          stroke-dasharray: var(--climate-progress-length) ${DIAL_CIRCUMFERENCE};
+          transition: stroke-dasharray 140ms ease-out;
         }
 
         .climate-card__dial-thumb {
@@ -17430,6 +17440,22 @@ class NodaliaClimateCard extends HTMLElement {
           transform: translate(-50%, -50%) rotate(calc(var(--climate-angle) + 90deg)) translateY(calc(-1 * var(--climate-dial-radius)));
           width: var(--climate-thumb-size);
           z-index: 2;
+        }
+
+        .climate-card__dial-current-marker {
+          background: rgba(255, 255, 255, 0.94);
+          border: 3px solid rgba(255, 255, 255, 0.12);
+          border-radius: 50%;
+          box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.08);
+          height: calc(var(--climate-thumb-size) * 0.58);
+          left: 50%;
+          opacity: ${currentAngle === null ? "0" : "1"};
+          pointer-events: none;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%) rotate(calc(var(--climate-current-angle, 0deg) + 90deg)) translateY(calc(-1 * var(--climate-dial-radius)));
+          width: calc(var(--climate-thumb-size) * 0.58);
+          z-index: 1;
         }
 
         .climate-card__dial-center {
@@ -17600,6 +17626,7 @@ class NodaliaClimateCard extends HTMLElement {
               aria-valuemin="${temperatureRange.min}"
               aria-valuemax="${temperatureRange.max}"
               aria-valuenow="${Number.isFinite(targetTemperature) ? targetTemperature : temperatureRange.min}"
+              style="${currentAngle === null ? "" : `--climate-current-angle:${currentAngle}deg;`}"
             >
               <svg class="climate-card__dial-svg" viewBox="0 0 ${DIAL_VIEWBOX_SIZE} ${DIAL_VIEWBOX_SIZE}" aria-hidden="true">
                 <circle
@@ -17615,6 +17642,7 @@ class NodaliaClimateCard extends HTMLElement {
                   r="${DIAL_CIRCLE_RADIUS}"
                 ></circle>
               </svg>
+              <span class="climate-card__dial-current-marker" aria-hidden="true"></span>
               <span class="climate-card__dial-thumb" aria-hidden="true"></span>
               <div class="climate-card__dial-center">
                 <div class="climate-card__target">
