@@ -18642,7 +18642,7 @@ class NodaliaGraphCard extends HTMLElement {
   _buildChartSeries(series) {
     const width = 100;
     const height = 56;
-    const paddingX = -4;
+    const paddingX = -5.5;
     const paddingTop = 3;
     const paddingBottom = 2;
     const bounds = this._getGraphBounds(series);
@@ -18795,9 +18795,12 @@ class NodaliaGraphCard extends HTMLElement {
     const titleSize = `${Math.max(13, Math.min(parseSizeToPixels(styles.title_size, 14), compactLayout ? 13 : 14))}px`;
     const legendSize = `${Math.max(11, Math.min(parseSizeToPixels(styles.legend_size, 12), compactLayout ? 11 : 12))}px`;
     const lineWidth = `${Math.max(2, Math.min(parseSizeToPixels(styles.line_width, 3), compactLayout ? 2.4 : 3))}`;
+    const cardPaddingPx = Math.max(12, parseSizeToPixels(styles.card.padding, 16));
+    const chartBleed = Math.round(cardPaddingPx * 0.95);
     const cardBackground = `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
     const cardBorder = `1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color))`;
     const cardShadow = `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 8%, rgba(0, 0, 0, 0.16))`;
+    const tooltipTint = hover?.values?.[0]?.color || accentColor;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -18987,12 +18990,12 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__chart-wrap {
           flex: 1 1 auto;
           min-height: ${chartHeight};
-          margin-inline: -10px;
+          margin-inline: -${chartBleed}px;
           margin-top: 8px;
           overflow: visible;
           padding: 2px 0 0;
           position: relative;
-          width: calc(100% + 20px);
+          width: calc(100% + ${chartBleed * 2}px);
         }
 
         .graph-card__chart {
@@ -19025,17 +19028,22 @@ class NodaliaGraphCard extends HTMLElement {
 
         .graph-card__tooltip {
           backdrop-filter: blur(18px);
-          background: linear-gradient(180deg, rgba(42, 43, 53, 0.96) 0%, rgba(31, 32, 41, 0.96) 100%);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          border-radius: 18px;
-          box-shadow: 0 18px 32px rgba(0, 0, 0, 0.28);
+          background:
+            radial-gradient(circle at top left, color-mix(in srgb, var(--tooltip-tint) 18%, transparent) 0%, transparent 48%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.02) 100%),
+            linear-gradient(180deg, rgba(42, 43, 53, 0.96) 0%, rgba(31, 32, 41, 0.97) 100%);
+          border: 1px solid color-mix(in srgb, var(--tooltip-tint) 26%, rgba(255, 255, 255, 0.12));
+          border-radius: 22px;
+          box-shadow:
+            0 22px 38px rgba(0, 0, 0, 0.28),
+            0 10px 26px color-mix(in srgb, var(--tooltip-tint) 12%, rgba(0, 0, 0, 0.18));
           color: var(--primary-text-color);
           max-width: min(320px, calc(100% - 20px));
           min-width: 210px;
-          padding: 12px 14px;
+          padding: 13px 15px;
           pointer-events: none;
           position: absolute;
-          top: -96px;
+          top: -110px;
           transform: translateX(-50%);
           z-index: 3;
         }
@@ -19064,8 +19072,8 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__tooltip-dot {
           border-radius: 999px;
           display: inline-flex;
-          height: 8px;
-          width: 8px;
+          height: 9px;
+          width: 9px;
         }
 
         .graph-card__tooltip-name {
@@ -19181,7 +19189,7 @@ class NodaliaGraphCard extends HTMLElement {
             ${
               hover
                 ? `
-                  <div class="graph-card__tooltip" style="left: ${clamp(hover.x, 12, chart.width - 12)}%;">
+                  <div class="graph-card__tooltip" style="left: ${clamp(hover.x, 10, chart.width - 10)}%; --tooltip-tint:${escapeHtml(tooltipTint)};">
                     <div class="graph-card__tooltip-time">${escapeHtml(hover.label)}</div>
                     <div class="graph-card__tooltip-values">
                       ${hover.values.map(item => `
