@@ -613,11 +613,11 @@ class NodaliaPersonCard extends HTMLElement {
         .person-card__badge {
           align-items: center;
           background: var(--badge-color);
-          border: 1px solid rgba(255, 255, 255, 0.18);
+          border: none;
           border-radius: 999px;
           box-shadow:
-            0 6px 14px rgba(0, 0, 0, 0.18),
-            inset 0 1px 0 rgba(255, 255, 255, 0.14);
+            0 6px 14px rgba(0, 0, 0, 0.14),
+            0 0 0 2px rgba(255, 255, 255, 0.08);
           color: #ffffff;
           display: inline-flex;
           height: ${badgeSize};
@@ -660,17 +660,19 @@ class NodaliaPersonCard extends HTMLElement {
           align-items: center;
           display: flex;
           flex-wrap: nowrap;
-          gap: 4px;
+          gap: 6px;
           min-width: 0;
         }
 
         .person-card__state-chip {
           align-items: center;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-          color: var(--secondary-text-color);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 1px 1px rgba(0, 0, 0, 0.06);
+          color: var(--primary-text-color);
           display: inline-flex;
           font-size: ${effectiveSubtitleSize};
           font-weight: 700;
