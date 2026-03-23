@@ -16238,11 +16238,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   }
 
   setConfig(config) {
-    if (!config?.entity) {
-      throw new Error("Debes definir una entidad de alarm_control_panel.");
-    }
-
-    this._config = normalizeConfig(config);
+    this._config = normalizeConfig(config || {});
     this._render();
   }
 
@@ -17319,7 +17315,7 @@ if (!customElements.get(EDITOR_TAG)) {
 
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: `custom:${CARD_TAG}`,
+  type: CARD_TAG,
   name: "Nodalia Alarm Panel Card",
   description: "Tarjeta elegante para paneles de alarma",
   preview: true,
