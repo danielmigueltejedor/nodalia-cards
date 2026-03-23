@@ -16208,6 +16208,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     this._codeInput = "";
     this._isCodeInputFocused = false;
     this._pendingRenderWhileCodeFocused = false;
+    this._countdownInterval = null;
     this._resizeObserver = null;
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
@@ -16281,6 +16282,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   }
 
   _requestRender() {
+    this._syncCountdownTimer();
+
     if (this._shouldDeferRenderForCodeInput()) {
       this._pendingRenderWhileCodeFocused = true;
       return;
@@ -16310,6 +16313,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     }
 
     this._resizeObserver.observe(this);
+    this._syncCountdownTimer();
   }
 
   disconnectedCallback() {
@@ -16318,15 +16322,18 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     this.shadowRoot.removeEventListener("focusin", this._onShadowFocusIn);
     this.shadowRoot.removeEventListener("focusout", this._onShadowFocusOut);
     this._resizeObserver?.disconnect();
+    this._clearCountdownTimer();
   }
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
+    this._syncCountdownTimer();
     this._requestRender();
   }
 
   set hass(hass) {
     this._hass = hass;
+    this._syncCountdownTimer();
     this._requestRender();
   }
 
@@ -16407,6 +16414,69 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       default:
         return state?.state ? String(state.state) : "Sin estado";
     }
+  }
+
+  _getCountdownSecondsRemaining(state) {
+    const status = normalizeTextKey(state?.state);
+    if (!["arming", "pending"].includes(status)) {
+      return null;
+    }
+
+    const delay = Number(state?.attributes?.delay);
+    if (!Number.isFinite(delay) || delay <= 0) {
+      return null;
+    }
+
+    const changedAt = Date.parse(state?.last_changed || "");
+    if (!Number.isFinite(changedAt)) {
+      return Math.ceil(delay);
+    }
+
+    const elapsedSeconds = Math.max(0, (Date.now() - changedAt) / 1000);
+    return Math.max(0, Math.ceil(delay - elapsedSeconds));
+  }
+
+  _formatCountdownLabel(seconds) {
+    if (!Number.isFinite(seconds) || seconds < 0) {
+      return null;
+    }
+
+    const total = Math.max(0, Math.ceil(seconds));
+    const minutes = Math.floor(total / 60);
+    const remainingSeconds = total % 60;
+    return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+  }
+
+  _clearCountdownTimer() {
+    if (this._countdownInterval !== null) {
+      window.clearInterval(this._countdownInterval);
+      this._countdownInterval = null;
+    }
+  }
+
+  _syncCountdownTimer() {
+    const state = this._getState();
+    const remaining = this._getCountdownSecondsRemaining(state);
+
+    if (!Number.isFinite(remaining)) {
+      this._clearCountdownTimer();
+      return;
+    }
+
+    if (this._countdownInterval !== null) {
+      return;
+    }
+
+    this._countdownInterval = window.setInterval(() => {
+      const nextState = this._getState();
+      const nextRemaining = this._getCountdownSecondsRemaining(nextState);
+
+      if (!Number.isFinite(nextRemaining)) {
+        this._clearCountdownTimer();
+      }
+
+      this._requestRender();
+    }, 1000);
   }
 
   _getAccentColor(state) {
@@ -16710,7 +16780,11 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     const isCompactLayout = this._isCompactLayout;
     const isActive = this._isActiveState(state);
     const stateLabel = config.show_state !== false ? this._translateState(state) : null;
-    const chips = [this._renderChip(stateLabel, "state", accentColor)].filter(Boolean);
+    const countdownLabel = this._formatCountdownLabel(this._getCountdownSecondsRemaining(state));
+    const chips = [
+      this._renderChip(stateLabel, "state", accentColor),
+      this._renderChip(countdownLabel, "countdown", accentColor),
+    ].filter(Boolean);
     const actions = this._getModeDefinitions(state);
     const showCodeInput = this._shouldShowCodeInput(state);
     const cardBackground = isActive
