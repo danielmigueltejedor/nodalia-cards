@@ -22,6 +22,7 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  use_entity_icon: false,
   entity_mode: "auto",
   tap_action: "auto",
   tap_service: "",
@@ -213,6 +214,122 @@ function normalizeTextKey(value) {
 
 function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
+}
+
+function getEntityDomain(state) {
+  const entityId = String(state?.entity_id || "");
+  return entityId.includes(".") ? entityId.split(".")[0] : "";
+}
+
+function getDynamicEntityIcon(state) {
+  if (!state) {
+    return "";
+  }
+
+  const domain = getEntityDomain(state);
+  const stateKey = normalizeTextKey(state.state);
+  const deviceClass = normalizeTextKey(state.attributes?.device_class);
+
+  if (domain === "binary_sensor") {
+    switch (deviceClass) {
+      case "door":
+      case "opening":
+        return stateKey === "on" ? "mdi:door-open" : "mdi:door-closed";
+      case "garage_door":
+        return stateKey === "on" ? "mdi:garage-open" : "mdi:garage";
+      case "window":
+        return stateKey === "on" ? "mdi:window-open-variant" : "mdi:window-closed-variant";
+      case "motion":
+        return stateKey === "on" ? "mdi:motion-sensor" : "mdi:motion-sensor-off";
+      case "occupancy":
+      case "presence":
+      case "person":
+        return stateKey === "on" ? "mdi:account" : "mdi:account-off-outline";
+      case "smoke":
+        return stateKey === "on" ? "mdi:smoke-detector-alert" : "mdi:smoke-detector-variant";
+      case "moisture":
+        return stateKey === "on" ? "mdi:water-alert" : "mdi:water-check";
+      case "gas":
+        return stateKey === "on" ? "mdi:gas-cylinder" : "mdi:check-circle-outline";
+      case "tamper":
+      case "safety":
+      case "problem":
+        return stateKey === "on" ? "mdi:alert-circle" : "mdi:check-circle-outline";
+      case "plug":
+      case "power":
+        return stateKey === "on" ? "mdi:power-plug" : "mdi:power-plug-off";
+      case "sound":
+        return stateKey === "on" ? "mdi:volume-high" : "mdi:volume-mute";
+      case "vibration":
+        return stateKey === "on" ? "mdi:vibrate" : "mdi:vibrate-off";
+      case "heat":
+        return stateKey === "on" ? "mdi:fire" : "mdi:fire-off";
+      case "cold":
+        return stateKey === "on" ? "mdi:snowflake-alert" : "mdi:snowflake";
+      case "light":
+        return stateKey === "on" ? "mdi:brightness-7" : "mdi:brightness-5";
+      default:
+        break;
+    }
+  }
+
+  if (domain === "light") {
+    return stateKey === "on" ? "mdi:lightbulb" : "mdi:lightbulb-off";
+  }
+
+  if (domain === "switch") {
+    return stateKey === "on" ? "mdi:toggle-switch-variant" : "mdi:toggle-switch-variant-off";
+  }
+
+  if (domain === "fan") {
+    return stateKey === "on" ? "mdi:fan" : "mdi:fan-off";
+  }
+
+  if (domain === "lock") {
+    switch (stateKey) {
+      case "unlocked":
+      case "open":
+        return "mdi:lock-open-variant";
+      case "jammed":
+        return "mdi:lock-alert";
+      case "locking":
+      case "unlocking":
+        return "mdi:lock-clock";
+      default:
+        return "mdi:lock";
+    }
+  }
+
+  if (domain === "cover") {
+    if (deviceClass === "garage") {
+      return stateKey === "open" ? "mdi:garage-open" : "mdi:garage";
+    }
+
+    if (deviceClass === "door") {
+      return stateKey === "open" ? "mdi:door-open" : "mdi:door-closed";
+    }
+
+    if (deviceClass === "window") {
+      return stateKey === "open" ? "mdi:window-open-variant" : "mdi:window-closed-variant";
+    }
+  }
+
+  if (domain === "person") {
+    switch (stateKey) {
+      case "home":
+      case "casa":
+      case "en_casa":
+        return "mdi:home-account";
+      case "not_home":
+      case "away":
+      case "fuera":
+        return "mdi:account-arrow-right";
+      default:
+        return "mdi:account";
+    }
+  }
+
+  return "";
 }
 
 function escapeHtml(value) {
@@ -619,6 +736,13 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _getIcon(state) {
+    if (this._config?.use_entity_icon === true) {
+      const resolvedEntityIcon = state?.attributes?.icon || getDynamicEntityIcon(state);
+      if (resolvedEntityIcon) {
+        return resolvedEntityIcon;
+      }
+    }
+
     return this._config?.icon || state?.attributes?.icon || "mdi:star-four-points";
   }
 
@@ -1767,6 +1891,7 @@ class NodaliaFavCardEditor extends HTMLElement {
             ${this._renderTextField("Icono", "icon", config.icon, {
               placeholder: "mdi:lightbulb",
             })}
+            ${this._renderCheckboxField("Usar icono de la entidad", "use_entity_icon", config.use_entity_icon === true)}
             ${this._renderSelectField(
               "Modo de tarjeta",
               "entity_mode",
