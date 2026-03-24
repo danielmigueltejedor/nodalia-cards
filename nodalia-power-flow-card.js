@@ -548,7 +548,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       individual: individualCount,
     });
 
-    return layoutPreset === "simple" ? 2 : 4;
+    return layoutPreset === "simple" ? 1 : 4;
   }
 
   getGridOptions() {
@@ -919,7 +919,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       nodeSize * (
         layoutPreset === "simple"
           ? (node.kind === "home" ? 0.74 : 0.78)
-          : layoutPreset === "compact"
+        : layoutPreset === "compact"
             ? (node.kind === "home" ? 0.88 : 0.92)
             : 1
       )
@@ -1060,7 +1060,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const hasLowerNodes = Boolean(nodes.water.entityId || nodes.gas.entityId || nodes.individual.length);
     const layoutPreset = nodes._layoutPreset || "full";
     const surfaceMinHeight = layoutPreset === "simple"
-      ? 148
+      ? 162
       : layoutPreset === "compact"
         ? (hasLowerNodes ? 296 : 228)
         : (hasLowerNodes ? 328 : 248);
@@ -1078,7 +1078,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         ha-card {
-          height: 100%;
           min-height: 0;
           overflow: hidden;
         }
@@ -1095,7 +1094,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
           display: flex;
           flex-direction: column;
           gap: ${styles.card.gap};
-          height: 100%;
           min-height: 0;
           overflow: hidden;
           padding: ${styles.card.padding};
@@ -1137,13 +1135,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__content {
-          flex: 1 1 auto;
           min-height: 0;
           position: relative;
         }
 
         .power-flow-card__surface {
-          height: 100%;
           min-height: ${surfaceMinHeight}px;
           position: relative;
           width: 100%;
@@ -1154,6 +1150,15 @@ class NodaliaPowerFlowCard extends HTMLElement {
           inset: 0;
           position: absolute;
           width: 100%;
+          pointer-events: none;
+        }
+
+        .power-flow-card__svg--lines {
+          z-index: 0;
+        }
+
+        .power-flow-card__svg--dots {
+          z-index: 3;
         }
 
         .power-flow-card__line {
@@ -1187,6 +1192,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__node {
           position: absolute;
           transform: translate(-50%, -50%);
+          z-index: 1;
         }
 
         .power-flow-card__node-info {
@@ -1217,6 +1223,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
           gap: 8px;
         }
 
+        .power-flow-card--simple {
+          gap: 8px;
+          padding: 10px;
+        }
+
         .power-flow-card--simple .power-flow-card__dashboard-button {
           min-height: 32px;
           padding: 0 11px;
@@ -1224,6 +1235,18 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card--simple .power-flow-card__node-info--home {
           bottom: calc(100% + 6px);
+        }
+
+        .power-flow-card--simple .power-flow-card__surface {
+          min-height: 148px;
+        }
+
+        .power-flow-card--simple .power-flow-card__node-info {
+          gap: 4px;
+        }
+
+        .power-flow-card--simple .power-flow-card__chip {
+          max-width: 120px;
         }
 
         .power-flow-card__bubble {
@@ -1411,7 +1434,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
         <div class="power-flow-card__content" ${this._config?.tap_action === "more-info" ? 'data-card-action="primary"' : ""}>
           <div class="power-flow-card__surface">
-            <svg class="power-flow-card__svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+            <svg class="power-flow-card__svg power-flow-card__svg--lines" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
               <defs>
                 <filter id="power-flow-glow" x="-30%" y="-30%" width="160%" height="160%">
                   <feGaussianBlur stdDeviation="1.2"></feGaussianBlur>
@@ -1423,7 +1446,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
               ${lines.map(line => `
                 <path class="power-flow-card__line-glow" d="${line.path}" stroke="${escapeHtml(line.color)}" opacity="${line.opacity * (line.active ? 1 : 0.7)}"></path>
                 <path class="power-flow-card__line" d="${line.path}" stroke="${escapeHtml(line.color)}" opacity="${line.opacity}"></path>
-                ${this._renderFlowDots(line)}
               `).join("")}
             </svg>
             ${this._renderNode(nodes.home, { layoutPreset })}
@@ -1433,6 +1455,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
             ${nodes.water.entityId ? this._renderNode(nodes.water, { layoutPreset }) : ""}
             ${nodes.gas.entityId ? this._renderNode(nodes.gas, { layoutPreset }) : ""}
             ${nodes.individual.map(node => this._renderNode(node, { layoutPreset })).join("")}
+            <svg class="power-flow-card__svg power-flow-card__svg--dots" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+              ${lines.map(line => this._renderFlowDots(line)).join("")}
+            </svg>
           </div>
         </div>
       </ha-card>
