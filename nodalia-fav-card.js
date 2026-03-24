@@ -1332,6 +1332,10 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _onShadowTouchEnd(event) {
+    if (typeof window !== "undefined" && "PointerEvent" in window) {
+      return;
+    }
+
     if (this._activatePrimaryFromEvent(event)) {
       this._ignoreNextPrimaryClickUntil = Date.now() + 500;
     }
