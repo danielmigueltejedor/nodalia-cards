@@ -1517,11 +1517,19 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           position: relative;
         }
 
+        .advance-vacuum-card__footer {
+          display: grid;
+          gap: 12px;
+          justify-items: center;
+        }
+
         .advance-vacuum-card__header {
-          align-items: start;
+          align-items: center;
           display: grid;
           gap: 14px;
-          grid-template-columns: ${iconSize}px minmax(0, 1fr) auto;
+          grid-template-columns: ${iconSize}px minmax(0, auto) auto;
+          justify-content: center;
+          width: 100%;
         }
 
         .advance-vacuum-card__icon {
@@ -1564,7 +1572,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           display: grid;
           gap: 8px;
           min-width: 0;
-          padding-top: 6px;
+          padding-top: 0;
         }
 
         .advance-vacuum-card__title {
@@ -1580,6 +1588,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
+          justify-content: flex-start;
         }
 
         .advance-vacuum-card__chip {
@@ -1613,7 +1622,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
-          justify-content: flex-end;
+          justify-content: center;
         }
 
         .advance-vacuum-card__header-action,
@@ -1660,6 +1669,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
+          justify-content: center;
         }
 
         .advance-vacuum-card__mode-button {
@@ -1809,10 +1819,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__controls {
           align-items: center;
-          display: flex;
-          flex-wrap: wrap;
+          display: grid;
           gap: 10px;
-          justify-content: space-between;
+          justify-items: center;
+          width: 100%;
         }
 
         .advance-vacuum-card__controls-main,
@@ -1820,6 +1830,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           display: flex;
           flex-wrap: wrap;
           gap: 10px;
+          justify-content: center;
         }
 
         .advance-vacuum-card__control.is-primary {
@@ -1847,54 +1858,6 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         }
       </style>
       <ha-card class="advance-vacuum-card">
-        <div class="advance-vacuum-card__header">
-          <div class="advance-vacuum-card__icon">
-            <ha-icon icon="${escapeHtml(this._getIcon())}"></ha-icon>
-            ${unavailable ? `<span class="advance-vacuum-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
-          </div>
-
-          <div class="advance-vacuum-card__header-main">
-            <div class="advance-vacuum-card__title">${escapeHtml(this._getName())}</div>
-            <div class="advance-vacuum-card__chips">
-              ${this._renderStateChip(state)}
-              ${this._renderBatteryChip(state)}
-            </div>
-          </div>
-
-          <div class="advance-vacuum-card__header-actions">
-            ${
-              config.show_header_icons === false
-                ? ""
-                : this._getHeaderIcons().map((action, index) => `
-                    <button
-                      class="advance-vacuum-card__header-action"
-                      data-header-action-index="${index}"
-                      title="${escapeHtml(action.tooltip || "")}"
-                    >
-                      <ha-icon icon="${escapeHtml(action.icon)}"></ha-icon>
-                    </button>
-                  `).join("")
-            }
-          </div>
-        </div>
-
-        <div class="advance-vacuum-card__modes">
-          ${modes.map(mode => `
-            <button class="advance-vacuum-card__mode-button ${mode.id === currentMode.id ? "is-active" : ""}" data-mode-id="${escapeHtml(mode.id)}">
-              <ha-icon icon="${escapeHtml(mode.icon)}"></ha-icon>
-              <span>${escapeHtml(mode.label)}</span>
-            </button>
-          `).join("")}
-          <button class="advance-vacuum-card__selection-chip" data-control-action="repeats">
-            <ha-icon icon="mdi:repeat"></ha-icon>
-            <strong>x${this._repeats}</strong>
-          </button>
-          <button class="advance-vacuum-card__selection-chip" data-control-action="clear">
-            <ha-icon icon="mdi:close"></ha-icon>
-            <span>Limpiar seleccion</span>
-          </button>
-        </div>
-
         <div class="advance-vacuum-card__map">
           <div class="advance-vacuum-card__map-surface" data-map-surface="main">
             ${
@@ -1965,7 +1928,70 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           </div>
         </div>
 
+        <div class="advance-vacuum-card__footer">
+        <div class="advance-vacuum-card__header">
+          <div class="advance-vacuum-card__icon">
+            <ha-icon icon="${escapeHtml(this._getIcon())}"></ha-icon>
+            ${unavailable ? `<span class="advance-vacuum-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
+          </div>
+
+          <div class="advance-vacuum-card__header-main">
+            <div class="advance-vacuum-card__title">${escapeHtml(this._getName())}</div>
+            <div class="advance-vacuum-card__chips">
+              ${this._renderStateChip(state)}
+              ${this._renderBatteryChip(state)}
+            </div>
+          </div>
+
+          <div class="advance-vacuum-card__header-actions">
+            ${
+              config.show_header_icons === false
+                ? ""
+                : this._getHeaderIcons().map((action, index) => `
+                    <button
+                      class="advance-vacuum-card__header-action"
+                      data-header-action-index="${index}"
+                      title="${escapeHtml(action.tooltip || "")}"
+                    >
+                      <ha-icon icon="${escapeHtml(action.icon)}"></ha-icon>
+                    </button>
+                  `).join("")
+            }
+          </div>
+        </div>
+
+        <div class="advance-vacuum-card__modes">
+          ${modes.map(mode => `
+            <button class="advance-vacuum-card__mode-button ${mode.id === currentMode.id ? "is-active" : ""}" data-mode-id="${escapeHtml(mode.id)}">
+              <ha-icon icon="${escapeHtml(mode.icon)}"></ha-icon>
+              <span>${escapeHtml(mode.label)}</span>
+            </button>
+          `).join("")}
+          <button class="advance-vacuum-card__selection-chip" data-control-action="repeats">
+            <ha-icon icon="mdi:repeat"></ha-icon>
+            <strong>x${this._repeats}</strong>
+          </button>
+          <button class="advance-vacuum-card__selection-chip" data-control-action="clear">
+            <ha-icon icon="mdi:close"></ha-icon>
+            <span>Limpiar seleccion</span>
+          </button>
+        </div>
+
         <div class="advance-vacuum-card__controls">
+          <div class="advance-vacuum-card__controls-side">
+            <div class="advance-vacuum-card__selection-chip">
+              <ha-icon icon="${escapeHtml(currentMode.icon)}"></ha-icon>
+              <span>${escapeHtml(currentMode.label)}</span>
+            </div>
+            ${
+              currentMode.id === "rooms"
+                ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._selectedRoomIds.length}</strong><span>habitaciones</span></div>`
+                : currentMode.id === "zone"
+                  ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._manualZones.length + this._selectedPredefinedZoneIds.length}</strong><span>zonas</span></div>`
+                  : `<div class="advance-vacuum-card__selection-chip"><strong>${this._gotoPoint ? "1" : "0"}</strong><span>punto</span></div>`
+            }
+          </div>
+
           <div class="advance-vacuum-card__controls-main">
             <button class="advance-vacuum-card__control is-primary" data-control-action="primary" title="Ejecutar">
               <ha-icon icon="${primaryButtonIcon}"></ha-icon>
@@ -1998,20 +2024,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                 : ""
             }
           </div>
-
-          <div class="advance-vacuum-card__controls-side">
-            <div class="advance-vacuum-card__selection-chip">
-              <ha-icon icon="${escapeHtml(currentMode.icon)}"></ha-icon>
-              <span>${escapeHtml(currentMode.label)}</span>
-            </div>
-            ${
-              currentMode.id === "rooms"
-                ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._selectedRoomIds.length}</strong><span>habitaciones</span></div>`
-                : currentMode.id === "zone"
-                  ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._manualZones.length + this._selectedPredefinedZoneIds.length}</strong><span>zonas</span></div>`
-                  : `<div class="advance-vacuum-card__selection-chip"><strong>${this._gotoPoint ? "1" : "0"}</strong><span>punto</span></div>`
-            }
-          </div>
+        </div>
         </div>
       </ha-card>
     `;
@@ -2040,25 +2053,123 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     super();
     this.attachShadow({ mode: "open" });
     this._config = normalizeConfig({});
+    this._entityOptionsSignature = "";
     this._onInputChange = this._onInputChange.bind(this);
   }
 
   setConfig(config) {
+    const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
     this._render();
+    this._restoreFocusState(focusState);
   }
 
   set hass(hass) {
+    const nextSignature = this._getEntityOptionsSignature(hass);
+    const shouldRender =
+      !this._hass ||
+      nextSignature !== this._entityOptionsSignature ||
+      !this.shadowRoot?.innerHTML;
+
     this._hass = hass;
+    this._entityOptionsSignature = nextSignature;
+
+    if (!shouldRender) {
+      return;
+    }
+
+    const focusState = this._captureFocusState();
     this._render();
+    this._restoreFocusState(focusState);
+  }
+
+  _getEntityOptionsSignature(hass = this._hass) {
+    return Object.keys(hass?.states || {})
+      .sort((left, right) => left.localeCompare(right, "es"))
+      .join("|");
+  }
+
+  _captureFocusState() {
+    const activeElement = this.shadowRoot?.activeElement;
+
+    if (
+      !(
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement instanceof HTMLSelectElement
+      )
+    ) {
+      return null;
+    }
+
+    const dataset = activeElement.dataset || {};
+    const selector = dataset.field
+      ? `[data-field="${String(dataset.field).replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"]`
+      : null;
+
+    if (!selector) {
+      return null;
+    }
+
+    const supportsSelection =
+      typeof activeElement.selectionStart === "number" &&
+      typeof activeElement.selectionEnd === "number";
+
+    return {
+      selector,
+      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
+      selectionStart: supportsSelection ? activeElement.selectionStart : null,
+      type: activeElement.type,
+    };
+  }
+
+  _restoreFocusState(focusState) {
+    if (!focusState?.selector || !this.shadowRoot) {
+      return;
+    }
+
+    const target = this.shadowRoot.querySelector(focusState.selector);
+    if (
+      !(
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      )
+    ) {
+      return;
+    }
+
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_error) {
+      target.focus();
+    }
+
+    const canRestoreSelection =
+      focusState.type !== "checkbox" &&
+      typeof focusState.selectionStart === "number" &&
+      typeof focusState.selectionEnd === "number" &&
+      typeof target.setSelectionRange === "function";
+
+    if (!canRestoreSelection) {
+      return;
+    }
+
+    try {
+      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+    } catch (_error) {
+      // Ignore unsupported inputs.
+    }
   }
 
   _notifyConfigChange(nextConfig) {
+    const focusState = this._captureFocusState();
     this._config = normalizeConfig(nextConfig);
+    this._render();
+    this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
       config: compactConfig(this._config),
     });
-    this._render();
   }
 
   _onInputChange(event) {
