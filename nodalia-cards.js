@@ -554,18 +554,57 @@ class NodaliaNavigationBarCard extends HTMLElement {
   }
 
   _getRenderSignature(hass = this._hass) {
-    const trackedStates = this._getTrackedEntityIds().map(entityId => {
-      const state = hass?.states?.[entityId] || null;
-      return {
-        entityId,
-        state: String(state?.state || ""),
-        lastUpdated: String(state?.last_updated || ""),
-      };
+    const routeBadgeStates = (this._config?.routes || []).flatMap((route, routeIndex) => {
+      const items = [{ badge: route?.badge, scope: `route:${routeIndex}` }];
+      (route?.popup || []).forEach((item, popupIndex) => {
+        items.push({ badge: item?.badge, scope: `popup:${routeIndex}:${popupIndex}` });
+      });
+
+      return items
+        .filter(item => item?.badge?.entity)
+        .map(item => {
+          const state = hass?.states?.[item.badge.entity] || null;
+          const attribute = String(item.badge.attribute || "");
+          return {
+            scope: item.scope,
+            entityId: String(item.badge.entity || ""),
+            state: String(state?.state || ""),
+            badgeAttribute: attribute,
+            badgeValue: attribute ? String(state?.attributes?.[attribute] ?? "") : String(state?.state || ""),
+          };
+        });
     });
+
+    const mediaPlayerStates = (this._config?.media_player?.players || [])
+      .filter(player => player?.entity)
+      .map(player => {
+        const state = hass?.states?.[player.entity] || null;
+        const attrs = state?.attributes || {};
+        return {
+          entityId: String(player.entity || ""),
+          state: String(state?.state || ""),
+          friendlyName: String(attrs.friendly_name || ""),
+          entityPicture: String(attrs.entity_picture || ""),
+          mediaTitle: String(attrs.media_title || ""),
+          mediaArtist: String(attrs.media_artist || ""),
+          mediaSeriesTitle: String(attrs.media_series_title || ""),
+          mediaAlbumName: String(attrs.media_album_name || ""),
+          appName: String(attrs.app_name || ""),
+          source: String(attrs.source || ""),
+          mediaChannel: String(attrs.media_channel || ""),
+          volumeLevel: Number(attrs.volume_level ?? -1),
+          mediaDuration: Number(attrs.media_duration ?? -1),
+          mediaPosition: Number(attrs.media_position ?? -1),
+          mediaPositionUpdatedAt: String(attrs.media_position_updated_at || ""),
+          supportedFeatures: Number(attrs.supported_features ?? 0),
+          sourceList: Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
+        };
+      });
 
     return JSON.stringify({
       user: String(hass?.user?.id || ""),
-      trackedStates,
+      routeBadgeStates,
+      mediaPlayerStates,
       mediaExpanded: Boolean(this._mediaPlayerExpanded),
       activePlayerIndex: Number(this._activeMediaPlayerIndex || 0),
       popupOpen: Boolean(this._popupState),
@@ -10077,10 +10116,18 @@ class NodaliaLightCard extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
+    const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      brightness: Number(attrs.brightness ?? -1),
+      colorTemp: Number(attrs.color_temp ?? -1),
+      colorTempKelvin: Number(attrs.color_temp_kelvin ?? -1),
+      rgbColor: Array.isArray(attrs.rgb_color) ? attrs.rgb_color.join(",") : "",
+      effect: String(attrs.effect || ""),
+      supportedColorModes: Array.isArray(attrs.supported_color_modes) ? attrs.supported_color_modes.join("|") : "",
       compact: Boolean(this._isCompactLayout),
       controlMode: String(this._activeControlMode || ""),
     });
@@ -12523,10 +12570,18 @@ class NodaliaFanCard extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
+    const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      percentage: Number(attrs.percentage ?? -1),
+      percentageStep: Number(attrs.percentage_step ?? -1),
+      presetMode: String(attrs.preset_mode || ""),
+      presetModes: Array.isArray(attrs.preset_modes) ? attrs.preset_modes.join("|") : "",
+      oscillating: String(attrs.oscillating ?? ""),
+      direction: String(attrs.direction || ""),
       compact: Boolean(this._isCompactLayout),
       presetPanelOpen: Boolean(this._presetPanelOpen),
     });
@@ -14587,12 +14642,20 @@ class NodaliaHumidifierCard extends HTMLElement {
     const helperEntityId = this._config?.fan_mode_entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const helperState = helperEntityId ? hass?.states?.[helperEntityId] || null : null;
+    const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      humidity: Number(attrs.humidity ?? -1),
+      targetHumidity: Number(attrs.target_humidity ?? -1),
+      minHumidity: Number(attrs.min_humidity ?? -1),
+      maxHumidity: Number(attrs.max_humidity ?? -1),
+      mode: String(attrs.mode || ""),
+      availableModes: Array.isArray(attrs.available_modes) ? attrs.available_modes.join("|") : "",
       helperEntityId,
-      helperUpdated: String(helperState?.last_updated || ""),
+      helperState: String(helperState?.state || ""),
       compact: Boolean(this._isCompactLayout),
       modePanelOpen: Boolean(this._modePanelOpen),
       fanModePanelOpen: Boolean(this._fanModePanelOpen),
@@ -16725,10 +16788,13 @@ class NodaliaCircularGaugeCard extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
+    const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      unit: String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || ""),
       rows: Number(this._config?.grid_options?.rows || 0),
       columns: Number(this._config?.grid_options?.columns || 0),
     });
@@ -18418,7 +18484,8 @@ class NodaliaGraphCard extends HTMLElement {
       return {
         entity: String(entry?.entity || ""),
         state: String(state?.state || ""),
-        lastUpdated: String(state?.last_updated || ""),
+        friendlyName: String(state?.attributes?.friendly_name || ""),
+        unit: String(state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || ""),
       };
     });
 
@@ -20849,7 +20916,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
       return {
         entityId,
         state: String(state?.state || ""),
-        lastUpdated: String(state?.last_updated || ""),
         friendly_name: String(state?.attributes?.friendly_name || ""),
         icon: String(state?.attributes?.icon || ""),
         unit: String(state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || ""),
@@ -22957,12 +23023,23 @@ class NodaliaClimateCard extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
+    const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
-      hvacMode: String(state?.attributes?.hvac_mode || ""),
-      hvacAction: String(state?.attributes?.hvac_action || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      temperature: Number(attrs.temperature ?? -1),
+      currentTemperature: Number(attrs.current_temperature ?? -1),
+      targetTempHigh: Number(attrs.target_temp_high ?? -1),
+      targetTempLow: Number(attrs.target_temp_low ?? -1),
+      humidity: Number(attrs.humidity ?? -1),
+      currentHumidity: Number(attrs.current_humidity ?? -1),
+      hvacMode: String(attrs.hvac_mode || ""),
+      hvacAction: String(attrs.hvac_action || ""),
+      presetMode: String(attrs.preset_mode || ""),
+      fanMode: String(attrs.fan_mode || ""),
+      swingMode: String(attrs.swing_mode || ""),
     });
   }
 
@@ -25225,12 +25302,18 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     const helperEntityId = this._config?.code_entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const helperState = helperEntityId ? hass?.states?.[helperEntityId] || null : null;
+    const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
+      supportedFeatures: Number(attrs.supported_features ?? 0),
+      codeFormat: String(attrs.code_format || ""),
+      delay: Number(attrs.delay ?? -1),
+      nextState: String(attrs.next_state || ""),
+      postPendingState: String(attrs.post_pending_state || ""),
+      postDelayState: String(attrs.post_delay_state || ""),
       helperEntityId,
-      helperUpdated: String(helperState?.last_updated || ""),
+      helperState: String(helperState?.state || ""),
       compact: Boolean(this._isCompactLayout),
     });
   }
@@ -29987,10 +30070,18 @@ class NodaliaEntityCard extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
+    const attrs = state?.attributes || {};
+    const configuredStateAttribute = String(this._config?.state_attribute || "").trim();
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      deviceClass: String(attrs.device_class || ""),
+      unit: String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || ""),
+      configuredStateAttribute,
+      configuredStateValue: configuredStateAttribute ? String(attrs[configuredStateAttribute] ?? "") : "",
+      useEntityIcon: Boolean(this._config?.use_entity_icon),
       compact: Boolean(this._isCompactLayout),
       quickActions: Array.isArray(this._config?.quick_actions) ? this._config.quick_actions.length : 0,
     });
@@ -32066,6 +32157,7 @@ class NodaliaFavCard extends HTMLElement {
     this._alarmMenuOpen = false;
     this._alarmCodeInput = "";
     this._ignoreNextPrimaryClickUntil = 0;
+    this._lastAlarmPanelRenderedOpen = null;
     this._lastRenderSignature = "";
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
@@ -32122,7 +32214,7 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   getCardSize() {
-    return this._alarmMenuOpen && this._isAlarmPanelMode(this._getState()) ? 4 : 1;
+    return 1;
   }
 
   getGridOptions() {
@@ -32139,12 +32231,16 @@ class NodaliaFavCard extends HTMLElement {
     const helperEntityId = this._config?.alarm_code_entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const helperState = helperEntityId ? hass?.states?.[helperEntityId] || null : null;
+    const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      deviceClass: String(attrs.device_class || ""),
+      unit: String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || ""),
       helperEntityId,
-      helperUpdated: String(helperState?.last_updated || ""),
+      helperState: String(helperState?.state || ""),
       layout: String(this._layout || ""),
       alarmOpen: Boolean(this._alarmMenuOpen),
     });
@@ -32782,28 +32878,7 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _notifyLayoutChange() {
-    const emit = () => {
-      fireEvent(this, "iron-resize", {});
-      fireEvent(this, "ll-rebuild", {});
-
-      if (typeof document !== "undefined") {
-        fireEvent(document, "iron-resize", {});
-        fireEvent(document, "ll-rebuild", {});
-      }
-
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("resize"));
-      }
-    };
-
-    emit();
-
-    if (typeof window !== "undefined") {
-      requestAnimationFrame(() => {
-        emit();
-        window.setTimeout(() => emit(), 48);
-      });
-    }
+    fireEvent(this, "iron-resize", {});
   }
 
   _getAlarmGridSpan() {
@@ -33456,11 +33531,14 @@ class NodaliaFavCard extends HTMLElement {
       </ha-card>
     `;
 
-    if (isAlarmPanel) {
+    if (isAlarmPanel && this._lastAlarmPanelRenderedOpen !== showAlarmPanel) {
+      this._lastAlarmPanelRenderedOpen = showAlarmPanel;
       requestAnimationFrame(() => {
         this._applyHostGridSpan(showAlarmPanel);
         this._notifyLayoutChange();
       });
+    } else if (!isAlarmPanel) {
+      this._lastAlarmPanelRenderedOpen = false;
     }
   }
 }
@@ -34441,7 +34519,6 @@ class NodaliaPersonCard extends HTMLElement {
     return JSON.stringify({
       entity: entityId,
       state: state.state,
-      lastUpdated: String(state?.last_updated || ""),
       title,
       subtitle,
       picture,
@@ -35507,10 +35584,19 @@ class NodaliaWeatherCard extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
+    const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      temperature: Number(attrs.temperature ?? -1),
+      humidity: Number(attrs.humidity ?? -1),
+      pressure: Number(attrs.pressure ?? -1),
+      windSpeed: Number(attrs.wind_speed ?? -1),
+      windBearing: Number(attrs.wind_bearing ?? -1),
+      visibility: Number(attrs.visibility ?? -1),
+      precipitation: Number(attrs.precipitation ?? -1),
     });
   }
 
@@ -36644,10 +36730,17 @@ class NodaliaVacuumCard extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
+    const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      batteryLevel: Number(attrs.battery_level ?? -1),
+      status: String(attrs.status || ""),
+      fanSpeed: String(attrs.fan_speed || ""),
+      waterGrade: String(attrs.water_grade || attrs.water_box_mode || ""),
+      currentRoom: String(attrs.current_room || attrs.current_segment || ""),
       compact: Boolean(this._isCompactLayout),
       activeModePanel: String(this._activeModePanel || ""),
       roomPanelOpen: Boolean(this._roomPanelOpen),

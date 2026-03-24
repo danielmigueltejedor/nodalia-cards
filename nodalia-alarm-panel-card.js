@@ -427,12 +427,18 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     const helperEntityId = this._config?.code_entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const helperState = helperEntityId ? hass?.states?.[helperEntityId] || null : null;
+    const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
+      supportedFeatures: Number(attrs.supported_features ?? 0),
+      codeFormat: String(attrs.code_format || ""),
+      delay: Number(attrs.delay ?? -1),
+      nextState: String(attrs.next_state || ""),
+      postPendingState: String(attrs.post_pending_state || ""),
+      postDelayState: String(attrs.post_delay_state || ""),
       helperEntityId,
-      helperUpdated: String(helperState?.last_updated || ""),
+      helperState: String(helperState?.state || ""),
       compact: Boolean(this._isCompactLayout),
     });
   }

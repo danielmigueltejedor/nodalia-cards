@@ -422,10 +422,18 @@ class NodaliaFanCard extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
+    const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      percentage: Number(attrs.percentage ?? -1),
+      percentageStep: Number(attrs.percentage_step ?? -1),
+      presetMode: String(attrs.preset_mode || ""),
+      presetModes: Array.isArray(attrs.preset_modes) ? attrs.preset_modes.join("|") : "",
+      oscillating: String(attrs.oscillating ?? ""),
+      direction: String(attrs.direction || ""),
       compact: Boolean(this._isCompactLayout),
       presetPanelOpen: Boolean(this._presetPanelOpen),
     });

@@ -407,10 +407,17 @@ class NodaliaVacuumCard extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
+    const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      batteryLevel: Number(attrs.battery_level ?? -1),
+      status: String(attrs.status || ""),
+      fanSpeed: String(attrs.fan_speed || ""),
+      waterGrade: String(attrs.water_grade || attrs.water_box_mode || ""),
+      currentRoom: String(attrs.current_room || attrs.current_segment || ""),
       compact: Boolean(this._isCompactLayout),
       activeModePanel: String(this._activeModePanel || ""),
       roomPanelOpen: Boolean(this._roomPanelOpen),

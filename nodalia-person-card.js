@@ -409,7 +409,6 @@ class NodaliaPersonCard extends HTMLElement {
     return JSON.stringify({
       entity: entityId,
       state: state.state,
-      lastUpdated: String(state?.last_updated || ""),
       title,
       subtitle,
       picture,

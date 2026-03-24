@@ -390,10 +390,13 @@ class NodaliaCircularGaugeCard extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
+    const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      unit: String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || ""),
       rows: Number(this._config?.grid_options?.rows || 0),
       columns: Number(this._config?.grid_options?.columns || 0),
     });

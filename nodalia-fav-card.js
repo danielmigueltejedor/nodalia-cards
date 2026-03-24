@@ -481,6 +481,7 @@ class NodaliaFavCard extends HTMLElement {
     this._alarmMenuOpen = false;
     this._alarmCodeInput = "";
     this._ignoreNextPrimaryClickUntil = 0;
+    this._lastAlarmPanelRenderedOpen = null;
     this._lastRenderSignature = "";
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
@@ -537,7 +538,7 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   getCardSize() {
-    return this._alarmMenuOpen && this._isAlarmPanelMode(this._getState()) ? 4 : 1;
+    return 1;
   }
 
   getGridOptions() {
@@ -554,12 +555,16 @@ class NodaliaFavCard extends HTMLElement {
     const helperEntityId = this._config?.alarm_code_entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const helperState = helperEntityId ? hass?.states?.[helperEntityId] || null : null;
+    const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      deviceClass: String(attrs.device_class || ""),
+      unit: String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || ""),
       helperEntityId,
-      helperUpdated: String(helperState?.last_updated || ""),
+      helperState: String(helperState?.state || ""),
       layout: String(this._layout || ""),
       alarmOpen: Boolean(this._alarmMenuOpen),
     });
@@ -1197,28 +1202,7 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _notifyLayoutChange() {
-    const emit = () => {
-      fireEvent(this, "iron-resize", {});
-      fireEvent(this, "ll-rebuild", {});
-
-      if (typeof document !== "undefined") {
-        fireEvent(document, "iron-resize", {});
-        fireEvent(document, "ll-rebuild", {});
-      }
-
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("resize"));
-      }
-    };
-
-    emit();
-
-    if (typeof window !== "undefined") {
-      requestAnimationFrame(() => {
-        emit();
-        window.setTimeout(() => emit(), 48);
-      });
-    }
+    fireEvent(this, "iron-resize", {});
   }
 
   _getAlarmGridSpan() {
@@ -1871,11 +1855,14 @@ class NodaliaFavCard extends HTMLElement {
       </ha-card>
     `;
 
-    if (isAlarmPanel) {
+    if (isAlarmPanel && this._lastAlarmPanelRenderedOpen !== showAlarmPanel) {
+      this._lastAlarmPanelRenderedOpen = showAlarmPanel;
       requestAnimationFrame(() => {
         this._applyHostGridSpan(showAlarmPanel);
         this._notifyLayoutChange();
       });
+    } else if (!isAlarmPanel) {
+      this._lastAlarmPanelRenderedOpen = false;
     }
   }
 }

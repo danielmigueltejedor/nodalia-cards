@@ -453,10 +453,18 @@ class NodaliaEntityCard extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
+    const attrs = state?.attributes || {};
+    const configuredStateAttribute = String(this._config?.state_attribute || "").trim();
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      deviceClass: String(attrs.device_class || ""),
+      unit: String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || ""),
+      configuredStateAttribute,
+      configuredStateValue: configuredStateAttribute ? String(attrs[configuredStateAttribute] ?? "") : "",
+      useEntityIcon: Boolean(this._config?.use_entity_icon),
       compact: Boolean(this._isCompactLayout),
       quickActions: Array.isArray(this._config?.quick_actions) ? this._config.quick_actions.length : 0,
     });

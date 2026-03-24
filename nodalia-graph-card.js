@@ -466,7 +466,8 @@ class NodaliaGraphCard extends HTMLElement {
       return {
         entity: String(entry?.entity || ""),
         state: String(state?.state || ""),
-        lastUpdated: String(state?.last_updated || ""),
+        friendlyName: String(state?.attributes?.friendly_name || ""),
+        unit: String(state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || ""),
       };
     });
 

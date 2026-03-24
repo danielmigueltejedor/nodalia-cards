@@ -432,12 +432,20 @@ class NodaliaHumidifierCard extends HTMLElement {
     const helperEntityId = this._config?.fan_mode_entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const helperState = helperEntityId ? hass?.states?.[helperEntityId] || null : null;
+    const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      humidity: Number(attrs.humidity ?? -1),
+      targetHumidity: Number(attrs.target_humidity ?? -1),
+      minHumidity: Number(attrs.min_humidity ?? -1),
+      maxHumidity: Number(attrs.max_humidity ?? -1),
+      mode: String(attrs.mode || ""),
+      availableModes: Array.isArray(attrs.available_modes) ? attrs.available_modes.join("|") : "",
       helperEntityId,
-      helperUpdated: String(helperState?.last_updated || ""),
+      helperState: String(helperState?.state || ""),
       compact: Boolean(this._isCompactLayout),
       modePanelOpen: Boolean(this._modePanelOpen),
       fanModePanelOpen: Boolean(this._fanModePanelOpen),

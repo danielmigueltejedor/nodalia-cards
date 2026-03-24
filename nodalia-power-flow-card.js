@@ -790,7 +790,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
       return {
         entityId,
         state: String(state?.state || ""),
-        lastUpdated: String(state?.last_updated || ""),
         friendly_name: String(state?.attributes?.friendly_name || ""),
         icon: String(state?.attributes?.icon || ""),
         unit: String(state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || ""),

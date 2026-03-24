@@ -553,18 +553,57 @@ class NodaliaNavigationBarCard extends HTMLElement {
   }
 
   _getRenderSignature(hass = this._hass) {
-    const trackedStates = this._getTrackedEntityIds().map(entityId => {
-      const state = hass?.states?.[entityId] || null;
-      return {
-        entityId,
-        state: String(state?.state || ""),
-        lastUpdated: String(state?.last_updated || ""),
-      };
+    const routeBadgeStates = (this._config?.routes || []).flatMap((route, routeIndex) => {
+      const items = [{ badge: route?.badge, scope: `route:${routeIndex}` }];
+      (route?.popup || []).forEach((item, popupIndex) => {
+        items.push({ badge: item?.badge, scope: `popup:${routeIndex}:${popupIndex}` });
+      });
+
+      return items
+        .filter(item => item?.badge?.entity)
+        .map(item => {
+          const state = hass?.states?.[item.badge.entity] || null;
+          const attribute = String(item.badge.attribute || "");
+          return {
+            scope: item.scope,
+            entityId: String(item.badge.entity || ""),
+            state: String(state?.state || ""),
+            badgeAttribute: attribute,
+            badgeValue: attribute ? String(state?.attributes?.[attribute] ?? "") : String(state?.state || ""),
+          };
+        });
     });
+
+    const mediaPlayerStates = (this._config?.media_player?.players || [])
+      .filter(player => player?.entity)
+      .map(player => {
+        const state = hass?.states?.[player.entity] || null;
+        const attrs = state?.attributes || {};
+        return {
+          entityId: String(player.entity || ""),
+          state: String(state?.state || ""),
+          friendlyName: String(attrs.friendly_name || ""),
+          entityPicture: String(attrs.entity_picture || ""),
+          mediaTitle: String(attrs.media_title || ""),
+          mediaArtist: String(attrs.media_artist || ""),
+          mediaSeriesTitle: String(attrs.media_series_title || ""),
+          mediaAlbumName: String(attrs.media_album_name || ""),
+          appName: String(attrs.app_name || ""),
+          source: String(attrs.source || ""),
+          mediaChannel: String(attrs.media_channel || ""),
+          volumeLevel: Number(attrs.volume_level ?? -1),
+          mediaDuration: Number(attrs.media_duration ?? -1),
+          mediaPosition: Number(attrs.media_position ?? -1),
+          mediaPositionUpdatedAt: String(attrs.media_position_updated_at || ""),
+          supportedFeatures: Number(attrs.supported_features ?? 0),
+          sourceList: Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
+        };
+      });
 
     return JSON.stringify({
       user: String(hass?.user?.id || ""),
-      trackedStates,
+      routeBadgeStates,
+      mediaPlayerStates,
       mediaExpanded: Boolean(this._mediaPlayerExpanded),
       activePlayerIndex: Number(this._activeMediaPlayerIndex || 0),
       popupOpen: Boolean(this._popupState),

@@ -442,12 +442,23 @@ class NodaliaClimateCard extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
+    const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
-      hvacMode: String(state?.attributes?.hvac_mode || ""),
-      hvacAction: String(state?.attributes?.hvac_action || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      temperature: Number(attrs.temperature ?? -1),
+      currentTemperature: Number(attrs.current_temperature ?? -1),
+      targetTempHigh: Number(attrs.target_temp_high ?? -1),
+      targetTempLow: Number(attrs.target_temp_low ?? -1),
+      humidity: Number(attrs.humidity ?? -1),
+      currentHumidity: Number(attrs.current_humidity ?? -1),
+      hvacMode: String(attrs.hvac_mode || ""),
+      hvacAction: String(attrs.hvac_action || ""),
+      presetMode: String(attrs.preset_mode || ""),
+      fanMode: String(attrs.fan_mode || ""),
+      swingMode: String(attrs.swing_mode || ""),
     });
   }
 

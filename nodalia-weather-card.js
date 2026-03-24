@@ -368,10 +368,19 @@ class NodaliaWeatherCard extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
+    const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      temperature: Number(attrs.temperature ?? -1),
+      humidity: Number(attrs.humidity ?? -1),
+      pressure: Number(attrs.pressure ?? -1),
+      windSpeed: Number(attrs.wind_speed ?? -1),
+      windBearing: Number(attrs.wind_bearing ?? -1),
+      visibility: Number(attrs.visibility ?? -1),
+      precipitation: Number(attrs.precipitation ?? -1),
     });
   }
 

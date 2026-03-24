@@ -451,10 +451,18 @@ class NodaliaLightCard extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
+    const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
-      lastUpdated: String(state?.last_updated || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      brightness: Number(attrs.brightness ?? -1),
+      colorTemp: Number(attrs.color_temp ?? -1),
+      colorTempKelvin: Number(attrs.color_temp_kelvin ?? -1),
+      rgbColor: Array.isArray(attrs.rgb_color) ? attrs.rgb_color.join(",") : "",
+      effect: String(attrs.effect || ""),
+      supportedColorModes: Array.isArray(attrs.supported_color_modes) ? attrs.supported_color_modes.join("|") : "",
       compact: Boolean(this._isCompactLayout),
       controlMode: String(this._activeControlMode || ""),
     });
