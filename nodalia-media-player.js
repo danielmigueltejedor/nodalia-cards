@@ -499,7 +499,9 @@ class NodaliaMediaPlayer extends HTMLElement {
     this.shadowRoot.addEventListener("change", this._onShadowChange);
     this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
     this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
-    this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    }
   }
 
   connectedCallback() {
@@ -510,10 +512,12 @@ class NodaliaMediaPlayer extends HTMLElement {
     window.addEventListener("pointercancel", this._onWindowPointerUp);
     window.addEventListener("mousemove", this._onWindowMouseMove);
     window.addEventListener("mouseup", this._onWindowMouseUp);
-    window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
-    window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-    window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-    window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
+      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    }
     this._render();
   }
 
@@ -525,10 +529,12 @@ class NodaliaMediaPlayer extends HTMLElement {
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
     window.removeEventListener("mousemove", this._onWindowMouseMove);
     window.removeEventListener("mouseup", this._onWindowMouseUp);
-    window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
-    window.removeEventListener("touchmove", this._onWindowTouchMove);
-    window.removeEventListener("touchend", this._onWindowTouchEnd);
-    window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
+      window.removeEventListener("touchmove", this._onWindowTouchMove);
+      window.removeEventListener("touchend", this._onWindowTouchEnd);
+      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    }
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;

@@ -1078,6 +1078,7 @@ class NodaliaFavCard extends HTMLElement {
     this._triggerHaptic();
     this._hass.callService("alarm_control_panel", service, payload);
     this._alarmMenuOpen = false;
+    this._applyHostGridSpan(false);
     this._render();
     this._notifyLayoutChange();
   }
@@ -1174,6 +1175,12 @@ class NodaliaFavCard extends HTMLElement {
     }
   }
 
+  _getAlarmGridSpan() {
+    const state = this._getState();
+    const showCodeInput = this._shouldShowAlarmCodeInput(state);
+    return showCodeInput ? 4 : 3;
+  }
+
   _applyHostGridSpan(showAlarmPanel = false) {
     const targets = [
       this,
@@ -1190,12 +1197,15 @@ class NodaliaFavCard extends HTMLElement {
 
       if (showAlarmPanel) {
         target.setAttribute("data-fav-alarm-open", "true");
+        const span = this._getAlarmGridSpan();
+        target.style.setProperty("grid-row-end", `span ${span}`);
+        target.style.setProperty("grid-row", `span ${span} / auto`);
       } else {
         target.removeAttribute("data-fav-alarm-open");
+        target.style.removeProperty("grid-row-end");
+        target.style.removeProperty("grid-row");
       }
 
-      target.style.removeProperty("grid-row-end");
-      target.style.removeProperty("grid-row");
       target.style.removeProperty("min-height");
       target.style.removeProperty("height");
       target.style.removeProperty("overflow");
@@ -1239,6 +1249,7 @@ class NodaliaFavCard extends HTMLElement {
   _performPrimaryAction(state) {
     if (this._isAlarmPanelMode(state)) {
       this._alarmMenuOpen = !this._alarmMenuOpen;
+      this._applyHostGridSpan(this._alarmMenuOpen);
       this._render();
       this._notifyLayoutChange();
       return;

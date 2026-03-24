@@ -5156,7 +5156,9 @@ class NodaliaMediaPlayer extends HTMLElement {
     this.shadowRoot.addEventListener("change", this._onShadowChange);
     this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
     this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
-    this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    }
   }
 
   connectedCallback() {
@@ -5167,10 +5169,12 @@ class NodaliaMediaPlayer extends HTMLElement {
     window.addEventListener("pointercancel", this._onWindowPointerUp);
     window.addEventListener("mousemove", this._onWindowMouseMove);
     window.addEventListener("mouseup", this._onWindowMouseUp);
-    window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
-    window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-    window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-    window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
+      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    }
     this._render();
   }
 
@@ -5182,10 +5186,12 @@ class NodaliaMediaPlayer extends HTMLElement {
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
     window.removeEventListener("mousemove", this._onWindowMouseMove);
     window.removeEventListener("mouseup", this._onWindowMouseUp);
-    window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
-    window.removeEventListener("touchmove", this._onWindowTouchMove);
-    window.removeEventListener("touchend", this._onWindowTouchEnd);
-    window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
+      window.removeEventListener("touchmove", this._onWindowTouchMove);
+      window.removeEventListener("touchend", this._onWindowTouchEnd);
+      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    }
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
@@ -9917,7 +9923,9 @@ class NodaliaLightCard extends HTMLElement {
     this.shadowRoot.addEventListener("change", this._onShadowChange);
     this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
     this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
-    this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    }
   }
 
   connectedCallback() {
@@ -9927,10 +9935,12 @@ class NodaliaLightCard extends HTMLElement {
     window.addEventListener("pointercancel", this._onWindowPointerUp);
     window.addEventListener("mousemove", this._onWindowMouseMove);
     window.addEventListener("mouseup", this._onWindowMouseUp);
-    window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
-    window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-    window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-    window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
+      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    }
   }
 
   disconnectedCallback() {
@@ -9940,10 +9950,12 @@ class NodaliaLightCard extends HTMLElement {
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
     window.removeEventListener("mousemove", this._onWindowMouseMove);
     window.removeEventListener("mouseup", this._onWindowMouseUp);
-    window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
-    window.removeEventListener("touchmove", this._onWindowTouchMove);
-    window.removeEventListener("touchend", this._onWindowTouchEnd);
-    window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
+      window.removeEventListener("touchmove", this._onWindowTouchMove);
+      window.removeEventListener("touchend", this._onWindowTouchEnd);
+      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    }
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
@@ -12361,7 +12373,9 @@ class NodaliaFanCard extends HTMLElement {
     this.shadowRoot.addEventListener("change", this._onShadowChange);
     this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
     this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
-    this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    }
   }
 
   connectedCallback() {
@@ -12371,10 +12385,12 @@ class NodaliaFanCard extends HTMLElement {
     window.addEventListener("pointercancel", this._onWindowPointerUp);
     window.addEventListener("mousemove", this._onWindowMouseMove);
     window.addEventListener("mouseup", this._onWindowMouseUp);
-    window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
-    window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-    window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-    window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
+      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    }
   }
 
   disconnectedCallback() {
@@ -12384,10 +12400,12 @@ class NodaliaFanCard extends HTMLElement {
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
     window.removeEventListener("mousemove", this._onWindowMouseMove);
     window.removeEventListener("mouseup", this._onWindowMouseUp);
-    window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
-    window.removeEventListener("touchmove", this._onWindowTouchMove);
-    window.removeEventListener("touchend", this._onWindowTouchEnd);
-    window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
+      window.removeEventListener("touchmove", this._onWindowTouchMove);
+      window.removeEventListener("touchend", this._onWindowTouchEnd);
+      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    }
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
@@ -14412,7 +14430,9 @@ class NodaliaHumidifierCard extends HTMLElement {
     this.shadowRoot.addEventListener("change", this._onShadowChange);
     this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
     this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
-    this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    }
   }
 
   connectedCallback() {
@@ -14422,10 +14442,12 @@ class NodaliaHumidifierCard extends HTMLElement {
     window.addEventListener("pointercancel", this._onWindowPointerUp);
     window.addEventListener("mousemove", this._onWindowMouseMove);
     window.addEventListener("mouseup", this._onWindowMouseUp);
-    window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
-    window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-    window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-    window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
+      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    }
   }
 
   disconnectedCallback() {
@@ -14435,10 +14457,12 @@ class NodaliaHumidifierCard extends HTMLElement {
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
     window.removeEventListener("mousemove", this._onWindowMouseMove);
     window.removeEventListener("mouseup", this._onWindowMouseUp);
-    window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
-    window.removeEventListener("touchmove", this._onWindowTouchMove);
-    window.removeEventListener("touchend", this._onWindowTouchEnd);
-    window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
+      window.removeEventListener("touchmove", this._onWindowTouchMove);
+      window.removeEventListener("touchend", this._onWindowTouchEnd);
+      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    }
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
@@ -22728,7 +22752,9 @@ class NodaliaClimateCard extends HTMLElement {
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
     this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
-    this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    }
   }
 
   connectedCallback() {
@@ -22737,10 +22763,12 @@ class NodaliaClimateCard extends HTMLElement {
     window.addEventListener("pointercancel", this._onWindowPointerUp);
     window.addEventListener("mousemove", this._onWindowMouseMove);
     window.addEventListener("mouseup", this._onWindowMouseUp);
-    window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
-    window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-    window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-    window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
+      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    }
   }
 
   disconnectedCallback() {
@@ -22749,10 +22777,12 @@ class NodaliaClimateCard extends HTMLElement {
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
     window.removeEventListener("mousemove", this._onWindowMouseMove);
     window.removeEventListener("mouseup", this._onWindowMouseUp);
-    window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
-    window.removeEventListener("touchmove", this._onWindowTouchMove);
-    window.removeEventListener("touchend", this._onWindowTouchEnd);
-    window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
+      window.removeEventListener("touchmove", this._onWindowTouchMove);
+      window.removeEventListener("touchend", this._onWindowTouchEnd);
+      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    }
 
     if (this._draftResetTimer) {
       window.clearTimeout(this._draftResetTimer);
@@ -32449,6 +32479,7 @@ class NodaliaFavCard extends HTMLElement {
     this._triggerHaptic();
     this._hass.callService("alarm_control_panel", service, payload);
     this._alarmMenuOpen = false;
+    this._applyHostGridSpan(false);
     this._render();
     this._notifyLayoutChange();
   }
@@ -32545,6 +32576,12 @@ class NodaliaFavCard extends HTMLElement {
     }
   }
 
+  _getAlarmGridSpan() {
+    const state = this._getState();
+    const showCodeInput = this._shouldShowAlarmCodeInput(state);
+    return showCodeInput ? 4 : 3;
+  }
+
   _applyHostGridSpan(showAlarmPanel = false) {
     const targets = [
       this,
@@ -32561,12 +32598,15 @@ class NodaliaFavCard extends HTMLElement {
 
       if (showAlarmPanel) {
         target.setAttribute("data-fav-alarm-open", "true");
+        const span = this._getAlarmGridSpan();
+        target.style.setProperty("grid-row-end", `span ${span}`);
+        target.style.setProperty("grid-row", `span ${span} / auto`);
       } else {
         target.removeAttribute("data-fav-alarm-open");
+        target.style.removeProperty("grid-row-end");
+        target.style.removeProperty("grid-row");
       }
 
-      target.style.removeProperty("grid-row-end");
-      target.style.removeProperty("grid-row");
       target.style.removeProperty("min-height");
       target.style.removeProperty("height");
       target.style.removeProperty("overflow");
@@ -32610,6 +32650,7 @@ class NodaliaFavCard extends HTMLElement {
   _performPrimaryAction(state) {
     if (this._isAlarmPanelMode(state)) {
       this._alarmMenuOpen = !this._alarmMenuOpen;
+      this._applyHostGridSpan(this._alarmMenuOpen);
       this._render();
       this._notifyLayoutChange();
       return;
