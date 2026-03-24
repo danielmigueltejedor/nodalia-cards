@@ -31750,7 +31750,7 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   getCardSize() {
-    return this._alarmMenuOpen && this._isAlarmPanelMode(this._getState()) ? 3 : 1;
+    return this._alarmMenuOpen && this._isAlarmPanelMode(this._getState()) ? 4 : 1;
   }
 
   getGridOptions() {
@@ -32342,6 +32342,19 @@ class NodaliaFavCard extends HTMLElement {
     }
   }
 
+  _applyHostGridSpan(showAlarmPanel = false) {
+    if (!this.style) {
+      return;
+    }
+
+    if (showAlarmPanel) {
+      this.style.gridRowEnd = "span 4";
+      return;
+    }
+
+    this.style.removeProperty("grid-row-end");
+  }
+
   _performPrimaryAction(state) {
     if (this._isAlarmPanelMode(state)) {
       this._alarmMenuOpen = !this._alarmMenuOpen;
@@ -32507,9 +32520,11 @@ class NodaliaFavCard extends HTMLElement {
     const isMini = layout === "mini";
     const isSingleRow = this._isSingleRowLayout();
     const isCompactInline = !isMini && isSingleRow;
+    const isCompactMini = isMini && isSingleRow;
     const configuredColumns = this._getConfiguredGridColumns();
     const isTightInline = isCompactInline && (configuredColumns === null || configuredColumns >= 4);
-    const singleRowHeightPx = isSingleRow ? 94 : 0;
+    const singleRowHeightPx = isSingleRow ? 72 : 0;
+    const singleRowContentHeightPx = isSingleRow ? Math.max(40, singleRowHeightPx - 16) : 0;
     const icon = this._getIcon(state);
     const title = this._getTitle(state);
     const accentColor = this._getAccentColor(state);
@@ -32523,10 +32538,10 @@ class NodaliaFavCard extends HTMLElement {
     const showAlarmCodeInput = showAlarmPanel && this._shouldShowAlarmCodeInput(state);
     const canRunPrimaryAction = this._canRunTapAction(state);
     const isActive = this._isDomainOn(state);
-    const iconSizePx = Math.max(36, Math.min(parseSizeToPixels(styles.icon.size, 52), isSingleRow ? 46 : (isMini ? 54 : 56)));
-    const titleSizePx = Math.max(10, Math.min(parseSizeToPixels(styles.title_size, 13), isMini ? 0 : (isSingleRow ? 12 : 14)));
-    const chipHeightPx = Math.max(16, Math.min(parseSizeToPixels(styles.chip_height, 22), isSingleRow ? 20 : 24));
-    const chipFontSizePx = Math.max(9, Math.min(parseSizeToPixels(styles.chip_font_size, 11), isSingleRow ? 10 : 12));
+    const iconSizePx = Math.max(34, Math.min(parseSizeToPixels(styles.icon.size, 52), isMini ? (isCompactMini ? 38 : 44) : (isCompactInline ? 40 : 56)));
+    const titleSizePx = Math.max(10, Math.min(parseSizeToPixels(styles.title_size, 13), isMini ? 0 : (isCompactInline ? 11 : 14)));
+    const chipHeightPx = Math.max(16, Math.min(parseSizeToPixels(styles.chip_height, 22), isCompactInline ? 18 : 24));
+    const chipFontSizePx = Math.max(8.5, Math.min(parseSizeToPixels(styles.chip_font_size, 11), isCompactInline ? 9.5 : 12));
     const iconColor = isActive
       ? accentColor
       : (this._usesCustomOffColor()
@@ -32545,6 +32560,8 @@ class NodaliaFavCard extends HTMLElement {
     const showValue = Boolean(displayValue) && !isMini;
     const showCopy = showTitle || showValue || showAlarmPanel;
 
+    this._applyHostGridSpan(showAlarmPanel);
+
     this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -32561,8 +32578,7 @@ class NodaliaFavCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
-          height: ${showAlarmPanel ? "auto" : "100%"};
-          min-height: ${showAlarmPanel ? "0" : (isSingleRow ? `${singleRowHeightPx}px` : "100%")};
+          min-height: ${showAlarmPanel ? "0" : (isSingleRow ? `${singleRowHeightPx}px` : "0")};
           overflow: hidden;
           position: relative;
         }
@@ -32584,28 +32600,27 @@ class NodaliaFavCard extends HTMLElement {
         }
 
         .fav-card__content {
-          align-items: center;
           display: grid;
-          gap: ${showAlarmPanel ? "10px" : (isSingleRow ? "6px" : (isMini ? "0" : styles.card.gap))};
-          height: 100%;
+          gap: ${showAlarmPanel ? "10px" : (isCompactInline ? "6px" : (isMini ? "0" : styles.card.gap))};
+          min-height: ${showAlarmPanel ? "0" : (isSingleRow ? `${singleRowContentHeightPx}px` : "0")};
           min-width: 0;
-          padding: ${isSingleRow ? "8px 10px" : (isMini ? "8px" : styles.card.padding)};
+          padding: ${isCompactInline ? "8px 10px" : (isMini ? "8px" : styles.card.padding)};
           position: relative;
           z-index: 1;
         }
 
         .fav-card--mini .fav-card__content {
+          align-content: center;
           justify-items: center;
-          place-items: center;
         }
 
         .fav-card--single-row .fav-card__content {
-          align-items: center;
+          align-content: center;
         }
 
         .fav-card--alarm-open .fav-card__content {
           align-items: start;
-          height: auto;
+          min-height: 0;
         }
 
         .fav-card--alarm-open .fav-card__hero {
@@ -32615,10 +32630,11 @@ class NodaliaFavCard extends HTMLElement {
         .fav-card__hero {
           align-items: center;
           display: grid;
-          gap: ${isMini ? "0" : (isSingleRow ? "10px" : "12px")};
+          gap: ${isMini ? "0" : (isCompactInline ? "10px" : "12px")};
           grid-template-columns: ${isMini ? "1fr" : `${iconSizePx}px minmax(0, 1fr)`};
+          min-height: ${showAlarmPanel ? "0" : (isSingleRow ? `${singleRowContentHeightPx}px` : "0")};
           min-width: 0;
-          width: 100%;
+          width: ${isCompactInline ? "100%" : "auto"};
         }
 
         .fav-card__icon {
@@ -32627,7 +32643,7 @@ class NodaliaFavCard extends HTMLElement {
           appearance: none;
           background: ${styles.icon.background};
           border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: ${isSingleRow ? "22px" : (isMini ? "22px" : "24px")};
+          border-radius: ${isSingleRow ? "18px" : (isMini ? "22px" : "24px")};
           box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.08),
             0 12px 30px rgba(0, 0, 0, 0.18);
@@ -32643,6 +32659,10 @@ class NodaliaFavCard extends HTMLElement {
           padding: 0;
           position: relative;
           width: ${iconSizePx}px;
+        }
+
+        .fav-card--mini .fav-card__hero {
+          justify-items: center;
         }
 
         .fav-card__icon ha-icon {
@@ -32685,7 +32705,7 @@ class NodaliaFavCard extends HTMLElement {
 
         .fav-card__copy {
           display: grid;
-          gap: ${isSingleRow ? "4px" : "6px"};
+          gap: ${isCompactInline ? "4px" : "6px"};
           min-width: 0;
         }
 
@@ -32754,7 +32774,7 @@ class NodaliaFavCard extends HTMLElement {
           font-size: ${titleSizePx}px;
           font-weight: 700;
           letter-spacing: -0.02em;
-          line-height: ${isSingleRow ? "1.08" : "1.12"};
+          line-height: ${isCompactInline ? "1.08" : "1.12"};
           min-width: 0;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -32764,7 +32784,7 @@ class NodaliaFavCard extends HTMLElement {
         .fav-card__chips {
           align-items: center;
           display: flex;
-          gap: ${isSingleRow ? "6px" : "8px"};
+          gap: ${isCompactInline ? "6px" : "8px"};
           min-width: 0;
         }
 
@@ -32795,10 +32815,6 @@ class NodaliaFavCard extends HTMLElement {
           color: var(--secondary-text-color);
           font-size: 12px;
           line-height: 1.45;
-        }
-
-        .fav-card--single-row .fav-card__icon {
-          border-radius: 20px;
         }
 
         .fav-card--single-row .fav-card__chip {
