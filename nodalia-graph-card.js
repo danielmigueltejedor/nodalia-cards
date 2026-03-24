@@ -1293,6 +1293,13 @@ class NodaliaGraphCard extends HTMLElement {
           width: calc(100% + ${chartBleed * 2}px);
         }
 
+        .graph-card__hover-points-layer {
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 2;
+        }
+
         .graph-card__chart {
           display: block;
           height: 100%;
@@ -1306,19 +1313,48 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__hover-point {
-          filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.18));
+          align-items: center;
+          display: inline-flex;
+          height: 10px;
+          justify-content: center;
+          left: 0;
+          pointer-events: none;
+          position: absolute;
+          top: 0;
+          transform: translate(-50%, -50%);
+          width: 10px;
+          z-index: 3;
         }
 
         .graph-card__hover-point-halo {
-          fill: color-mix(in srgb, var(--hover-color) 14%, rgba(255, 255, 255, 0.08));
+          background: color-mix(in srgb, var(--hover-color) 10%, transparent);
+          border-radius: 999px;
+          inset: -4px;
+          opacity: 0.82;
+          position: absolute;
         }
 
         .graph-card__hover-point-outer {
-          fill: color-mix(in srgb, var(--hover-color) 10%, rgba(255, 255, 255, 0.52));
+          background:
+            radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.92) 0 26%, color-mix(in srgb, var(--hover-color) 24%, rgba(255, 255, 255, 0.76)) 27% 100%);
+          border: 1px solid color-mix(in srgb, var(--hover-color) 24%, rgba(255, 255, 255, 0.42));
+          border-radius: 999px;
+          box-shadow:
+            0 6px 12px rgba(0, 0, 0, 0.12),
+            0 0 0 1px color-mix(in srgb, var(--hover-color) 10%, transparent) inset;
+          inset: 0;
+          position: absolute;
         }
 
         .graph-card__hover-point-ring {
-          fill: rgba(255, 255, 255, 0.92);
+          background: color-mix(in srgb, var(--hover-color) 82%, rgba(255, 255, 255, 0.86));
+          border-radius: 999px;
+          height: 4px;
+          left: 50%;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: 4px;
         }
 
         .graph-card__tooltip {
@@ -1518,23 +1554,31 @@ class NodaliaGraphCard extends HTMLElement {
                 }
                 <path class="graph-card__chart-series-glow" d="${entry.linePath}" stroke="${escapeHtml(entry.color)}"></path>
                 <path class="graph-card__chart-series-line" d="${entry.linePath}" stroke="${escapeHtml(entry.color)}"></path>
-                ${
-                  hover
-                    ? (() => {
-                        const point = hover.values.find(item => item.name === entry.name)?.point;
-                        return point
-                          ? `
-                              <circle class="graph-card__hover-point-halo" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="5.4" style="--hover-color:${escapeHtml(entry.color)};"></circle>
-                              <circle class="graph-card__hover-point-outer" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="4.1"></circle>
-                              <circle class="graph-card__hover-point-ring" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="2.95"></circle>
-                              <circle class="graph-card__hover-point" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="1.8" fill="${escapeHtml(entry.color)}"></circle>
-                            `
-                          : "";
-                      })()
-                    : ""
-                }
               `).join("")}
             </svg>
+            ${
+              hover
+                ? `
+                  <div class="graph-card__hover-points-layer">
+                    ${chart.entries.map(entry => {
+                      const point = hover.values.find(item => item.name === entry.name)?.point;
+                      if (!point) {
+                        return "";
+                      }
+                      const left = (point.x / chart.width) * 100;
+                      const top = (point.y / chart.height) * 100;
+                      return `
+                        <span class="graph-card__hover-point" style="left:${left}%; top:${top}%; --hover-color:${escapeHtml(entry.color)};">
+                          <span class="graph-card__hover-point-halo"></span>
+                          <span class="graph-card__hover-point-outer"></span>
+                          <span class="graph-card__hover-point-ring"></span>
+                        </span>
+                      `;
+                    }).join("")}
+                  </div>
+                `
+                : ""
+            }
             ${hasGraphData ? "" : `<div class="graph-card__chart-empty">Sin historial disponible</div>`}
           </div>
         </div>

@@ -1066,55 +1066,65 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
     return `
       <div class="power-flow-card__simple-layout">
-        <div class="power-flow-card__simple-column power-flow-card__simple-column--source">
-          <button
-            class="power-flow-card__bubble ${sourceClickable ? "is-clickable" : ""}"
-            data-node-entity="${escapeHtml(sourceNode.entityId)}"
-            data-node-action="${sourceClickable ? "more-info" : ""}"
-            style="--node-size:${nodeSize}px; --node-tint:${escapeHtml(sourceNode.color)};"
-            title="${escapeHtml(sourceNode.label)}"
-          >
-            ${sourceUnavailableBadge}
-            <ha-icon icon="${escapeHtml(sourceNode.icon)}"></ha-icon>
-          </button>
-          ${this._renderSimpleNodeInfo(sourceNode, "source")}
-        </div>
+        <div class="power-flow-card__simple-rail">
+          <div class="power-flow-card__simple-rail-node">
+            <button
+              class="power-flow-card__bubble ${sourceClickable ? "is-clickable" : ""}"
+              data-node-entity="${escapeHtml(sourceNode.entityId)}"
+              data-node-action="${sourceClickable ? "more-info" : ""}"
+              style="--node-size:${nodeSize}px; --node-tint:${escapeHtml(sourceNode.color)};"
+              title="${escapeHtml(sourceNode.label)}"
+            >
+              ${sourceUnavailableBadge}
+              <ha-icon icon="${escapeHtml(sourceNode.icon)}"></ha-icon>
+            </button>
+          </div>
 
-        <div class="power-flow-card__simple-line-wrap">
-          <div
-            class="power-flow-card__simple-line ${flowLine?.active ? "is-active" : ""}"
-            style="--line-color:${escapeHtml(lineColor)}; --line-opacity:${lineOpacity}; --line-background:${escapeHtml(lineBackground)};"
-          >
-            ${flowLine?.active ? `
-              <span class="power-flow-card__simple-dot" style="animation-duration:${bubbleDuration.toFixed(2)}s;"></span>
-            ` : ""}
+          <div class="power-flow-card__simple-line-wrap">
+            <div
+              class="power-flow-card__simple-line ${flowLine?.active ? "is-active" : ""}"
+              style="--line-color:${escapeHtml(lineColor)}; --line-opacity:${lineOpacity}; --line-background:${escapeHtml(lineBackground)};"
+            >
+              ${flowLine?.active ? `
+                <span class="power-flow-card__simple-dot" style="animation-duration:${bubbleDuration.toFixed(2)}s;"></span>
+              ` : ""}
+            </div>
+          </div>
+
+          <div class="power-flow-card__simple-rail-node">
+            <button
+              class="power-flow-card__bubble power-flow-card__bubble--home ${homeClickable ? "is-clickable" : ""}"
+              data-node-entity="${escapeHtml(nodes.home.entityId)}"
+              data-node-action="${homeClickable ? "more-info" : ""}"
+              style="--node-size:${homeSize}px; --node-tint:${escapeHtml(nodes.home.color)};"
+              title="${escapeHtml(nodes.home.label)}"
+            >
+              ${homeUnavailableBadge}
+              <span class="power-flow-card__home-icon-wrap">
+                <ha-icon icon="${escapeHtml(nodes.home.icon)}"></ha-icon>
+              </span>
+              ${
+                this._config?.show_values === false
+                  ? ""
+                  : `
+                    <span class="power-flow-card__home-value">
+                      <span class="power-flow-card__home-value-number">${escapeHtml(nodes.home.valueText)}</span>
+                      ${nodes.home.unitText ? `<span class="power-flow-card__home-value-unit">${escapeHtml(nodes.home.unitText)}</span>` : ""}
+                    </span>
+                  `
+              }
+            </button>
           </div>
         </div>
 
-        <div class="power-flow-card__simple-column power-flow-card__simple-column--home">
-          ${this._renderSimpleNodeInfo(nodes.home, "home")}
-          <button
-            class="power-flow-card__bubble power-flow-card__bubble--home ${homeClickable ? "is-clickable" : ""}"
-            data-node-entity="${escapeHtml(nodes.home.entityId)}"
-            data-node-action="${homeClickable ? "more-info" : ""}"
-            style="--node-size:${homeSize}px; --node-tint:${escapeHtml(nodes.home.color)};"
-            title="${escapeHtml(nodes.home.label)}"
-          >
-            ${homeUnavailableBadge}
-            <span class="power-flow-card__home-icon-wrap">
-              <ha-icon icon="${escapeHtml(nodes.home.icon)}"></ha-icon>
-            </span>
-            ${
-              this._config?.show_values === false
-                ? ""
-                : `
-                  <span class="power-flow-card__home-value">
-                    <span class="power-flow-card__home-value-number">${escapeHtml(nodes.home.valueText)}</span>
-                    ${nodes.home.unitText ? `<span class="power-flow-card__home-value-unit">${escapeHtml(nodes.home.unitText)}</span>` : ""}
-                  </span>
-                `
-            }
-          </button>
+        <div class="power-flow-card__simple-meta">
+          <div class="power-flow-card__simple-column power-flow-card__simple-column--source">
+            ${this._renderSimpleNodeInfo(sourceNode, "source")}
+          </div>
+          <div></div>
+          <div class="power-flow-card__simple-column power-flow-card__simple-column--home">
+            ${this._renderSimpleNodeInfo(nodes.home, "home")}
+          </div>
         </div>
       </div>
     `;
@@ -1369,9 +1379,32 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__simple-layout {
+          display: grid;
+          gap: 10px;
+          width: 100%;
+        }
+
+        .power-flow-card__simple-rail {
           align-items: center;
           display: grid;
-          gap: 12px;
+          gap: 0;
+          grid-template-columns: auto minmax(64px, 1fr) auto;
+          width: 100%;
+        }
+
+        .power-flow-card__simple-rail-node {
+          align-items: center;
+          display: flex;
+          justify-content: center;
+          min-width: 0;
+          position: relative;
+          z-index: 1;
+        }
+
+        .power-flow-card__simple-meta {
+          align-items: start;
+          display: grid;
+          gap: 0;
           grid-template-columns: auto minmax(64px, 1fr) auto;
           width: 100%;
         }
@@ -1379,9 +1412,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__simple-column {
           align-items: center;
           display: grid;
-          gap: 10px;
+          gap: 6px;
           justify-items: center;
           min-width: 0;
+          position: relative;
+          z-index: 1;
         }
 
         .power-flow-card__simple-column--home {
@@ -1404,14 +1439,18 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__simple-line-wrap {
           align-items: center;
           display: flex;
+          margin-inline: -16px;
           min-width: 64px;
+          position: relative;
           width: 100%;
+          z-index: 0;
         }
 
         .power-flow-card__simple-line {
           background: linear-gradient(180deg, color-mix(in srgb, var(--line-background) 100%, transparent) 0%, color-mix(in srgb, var(--line-background) 78%, transparent) 100%);
           border-radius: 999px;
-          height: ${flowWidth}px;
+          height: ${Math.max(flowWidth, 4)}px;
+          margin-inline: 0;
           opacity: var(--line-opacity);
           position: relative;
           width: 100%;
@@ -1426,20 +1465,20 @@ class NodaliaPowerFlowCard extends HTMLElement {
           border-radius: 999px;
           box-shadow:
             0 0 0 4px color-mix(in srgb, var(--line-color) 14%, transparent),
-            0 0 12px color-mix(in srgb, var(--line-color) 26%, transparent);
-          height: 10px;
+            0 0 12px color-mix(in srgb, var(--line-color) 22%, transparent);
+          height: 9px;
           left: 0;
           position: absolute;
           top: 50%;
-          transform: translate(-50%, -50%);
-          width: 10px;
+          transform: translateY(-50%);
+          width: 9px;
           will-change: left, opacity;
           animation: power-flow-card-simple-dot linear infinite;
         }
 
         @keyframes power-flow-card-simple-dot {
           0% {
-            left: 0%;
+            left: 0;
             opacity: 0;
           }
           8% {
@@ -1449,7 +1488,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
             opacity: 1;
           }
           100% {
-            left: 100%;
+            left: calc(100% - 9px);
             opacity: 0;
           }
         }
