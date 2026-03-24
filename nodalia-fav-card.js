@@ -1291,12 +1291,18 @@ class NodaliaFavCard extends HTMLElement {
     const styles = config.styles || DEFAULT_CONFIG.styles;
     const layout = this._layout || "inline";
     const isMini = layout === "mini";
-    const isSingleRow = this._isSingleRowLayout();
-    const isCompactInline = !isMini && isSingleRow;
-    const isCompactMini = isMini && isSingleRow;
     const configuredColumns = this._getConfiguredGridColumns();
+    const configuredRows = this._getConfiguredGridRows();
+    const isSingleRow = this._isSingleRowLayout();
+    const usesCompactRowMetrics =
+      isMini ||
+      isSingleRow ||
+      (configuredRows !== null && configuredRows <= 1) ||
+      (configuredColumns !== null && configuredColumns <= 6);
+    const isCompactInline = !isMini && usesCompactRowMetrics;
+    const isCompactMini = isMini && usesCompactRowMetrics;
     const isTightInline = isCompactInline && (configuredColumns === null || configuredColumns >= 4);
-    const singleRowHeightPx = isSingleRow ? 68 : 0;
+    const singleRowHeightPx = usesCompactRowMetrics ? 68 : 0;
     const icon = this._getIcon(state);
     const title = this._getTitle(state);
     const accentColor = this._getAccentColor(state);
@@ -1350,8 +1356,8 @@ class NodaliaFavCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
-          height: ${showAlarmPanel ? "auto" : (isSingleRow ? `${singleRowHeightPx}px` : "100%")};
-          min-height: ${showAlarmPanel ? "0" : (isSingleRow ? `${singleRowHeightPx}px` : "0")};
+          height: ${showAlarmPanel ? "auto" : (usesCompactRowMetrics ? `${singleRowHeightPx}px` : "100%")};
+          min-height: ${showAlarmPanel ? "0" : (usesCompactRowMetrics ? `${singleRowHeightPx}px` : "0")};
           overflow: hidden;
           position: relative;
         }
@@ -1376,7 +1382,7 @@ class NodaliaFavCard extends HTMLElement {
           align-content: ${showAlarmPanel ? "start" : "center"};
           display: grid;
           gap: ${showAlarmPanel ? "10px" : (isCompactInline ? "6px" : (isMini ? "0" : styles.card.gap))};
-          height: ${showAlarmPanel ? "auto" : "100%"};
+          height: ${showAlarmPanel ? "auto" : (usesCompactRowMetrics ? "100%" : "auto")};
           min-width: 0;
           padding: ${isCompactInline ? "6px 10px" : (isMini ? "6px" : styles.card.padding)};
           position: relative;
@@ -1405,7 +1411,7 @@ class NodaliaFavCard extends HTMLElement {
           display: grid;
           gap: ${isMini ? "0" : (isCompactInline ? "10px" : "12px")};
           grid-template-columns: ${isMini ? "1fr" : `${iconSizePx}px minmax(0, 1fr)`};
-          height: ${showAlarmPanel ? "auto" : "100%"};
+          height: ${showAlarmPanel ? "auto" : (usesCompactRowMetrics ? "100%" : "auto")};
           min-width: 0;
           width: ${(isCompactInline || isMini) ? "100%" : "auto"};
         }
