@@ -329,6 +329,108 @@ function getDynamicEntityIcon(state) {
     }
   }
 
+  if (domain === "camera") {
+    return "mdi:video";
+  }
+
+  if (domain === "climate") {
+    if (stateKey === "off") {
+      return "mdi:thermostat-off";
+    }
+    return "mdi:thermostat";
+  }
+
+  if (domain === "media_player") {
+    if (["off", "idle", "standby"].includes(stateKey)) {
+      return "mdi:speaker-off";
+    }
+    return "mdi:speaker";
+  }
+
+  if (domain === "humidifier") {
+    return stateKey === "on" ? "mdi:air-humidifier" : "mdi:air-humidifier-off";
+  }
+
+  if (domain === "vacuum") {
+    return "mdi:robot-vacuum";
+  }
+
+  if (domain === "alarm_control_panel") {
+    switch (stateKey) {
+      case "disarmed":
+        return "mdi:shield-off-outline";
+      case "armed_home":
+        return "mdi:home-lock";
+      case "armed_away":
+        return "mdi:shield-lock";
+      case "armed_night":
+        return "mdi:weather-night";
+      case "armed_vacation":
+        return "mdi:palm-tree";
+      case "armed_custom_bypass":
+        return "mdi:tune-variant";
+      case "triggered":
+        return "mdi:alarm-light";
+      default:
+        return "mdi:shield-outline";
+    }
+  }
+
+  if (domain === "automation") {
+    return stateKey === "on" ? "mdi:robot" : "mdi:robot-off";
+  }
+
+  if (domain === "script") {
+    return "mdi:script-text-outline";
+  }
+
+  if (domain === "scene") {
+    return "mdi:palette-outline";
+  }
+
+  if (domain === "input_boolean") {
+    return stateKey === "on" ? "mdi:check-circle" : "mdi:circle-off-outline";
+  }
+
+  if (domain === "sensor") {
+    switch (deviceClass) {
+      case "temperature":
+        return "mdi:thermometer";
+      case "humidity":
+        return "mdi:water-percent";
+      case "power":
+        return "mdi:flash";
+      case "current":
+        return "mdi:current-ac";
+      case "voltage":
+        return "mdi:sine-wave";
+      case "energy":
+        return "mdi:lightning-bolt";
+      case "battery":
+        return "mdi:battery";
+      case "signal_strength":
+        return "mdi:wifi";
+      case "pressure":
+        return "mdi:gauge";
+      case "illuminance":
+        return "mdi:brightness-6";
+      case "moisture":
+        return "mdi:water";
+      case "aqi":
+        return "mdi:air-filter";
+      case "speed":
+        return "mdi:speedometer";
+      case "distance":
+        return "mdi:map-marker-distance";
+      case "gas":
+        return "mdi:meter-gas";
+      case "water":
+        return "mdi:water";
+      default:
+        return "";
+    }
+  }
+
   return "";
 }
 
@@ -1165,7 +1267,8 @@ class NodaliaFavCard extends HTMLElement {
     const isMini = layout === "mini";
     const isSingleRow = this._isSingleRowLayout();
     const isCompactInline = !isMini && isSingleRow;
-    const useEntityIcon = config.use_entity_icon === true;
+    const configuredColumns = this._getConfiguredGridColumns();
+    const isTightInline = isCompactInline && (configuredColumns === null || configuredColumns >= 4);
     const icon = this._getIcon(state);
     const title = this._getTitle(state);
     const accentColor = this._getAccentColor(state);
@@ -1179,10 +1282,10 @@ class NodaliaFavCard extends HTMLElement {
     const showAlarmCodeInput = showAlarmPanel && this._shouldShowAlarmCodeInput(state);
     const canRunPrimaryAction = this._canRunTapAction(state);
     const isActive = this._isDomainOn(state);
-    const iconSizePx = Math.max(36, Math.min(parseSizeToPixels(styles.icon.size, 52), isMini ? 54 : (isCompactInline ? 46 : 56)));
-    const titleSizePx = Math.max(10, Math.min(parseSizeToPixels(styles.title_size, 13), isMini ? 0 : (isCompactInline ? 12 : 14)));
-    const chipHeightPx = Math.max(17, Math.min(parseSizeToPixels(styles.chip_height, 22), isCompactInline ? 22 : 24));
-    const chipFontSizePx = Math.max(9, Math.min(parseSizeToPixels(styles.chip_font_size, 11), isCompactInline ? 11 : 12));
+    const iconSizePx = Math.max(34, Math.min(parseSizeToPixels(styles.icon.size, 52), isMini ? 54 : (isTightInline ? 40 : (isCompactInline ? 46 : 56))));
+    const titleSizePx = Math.max(10, Math.min(parseSizeToPixels(styles.title_size, 13), isMini ? 0 : (isTightInline ? 11 : (isCompactInline ? 12 : 14))));
+    const chipHeightPx = Math.max(16, Math.min(parseSizeToPixels(styles.chip_height, 22), isTightInline ? 20 : (isCompactInline ? 22 : 24)));
+    const chipFontSizePx = Math.max(9, Math.min(parseSizeToPixels(styles.chip_font_size, 11), isTightInline ? 10 : (isCompactInline ? 11 : 12)));
     const iconColor = isActive
       ? accentColor
       : (this._usesCustomOffColor()
@@ -1244,7 +1347,7 @@ class NodaliaFavCard extends HTMLElement {
           gap: ${isMini ? "0" : styles.card.gap};
           height: 100%;
           min-width: 0;
-          padding: ${isMini ? "8px" : (isCompactInline ? "8px 10px" : styles.card.padding)};
+          padding: ${isMini ? "8px" : (isTightInline ? "6px 8px" : (isCompactInline ? "8px 10px" : styles.card.padding))};
           position: relative;
           z-index: 1;
         }
@@ -1261,7 +1364,7 @@ class NodaliaFavCard extends HTMLElement {
         .fav-card__hero {
           align-items: center;
           display: grid;
-          gap: ${isMini ? "0" : (isCompactInline ? "10px" : "12px")};
+          gap: ${isMini ? "0" : (isTightInline ? "8px" : (isCompactInline ? "10px" : "12px"))};
           grid-template-columns: ${isMini ? "1fr" : `${iconSizePx}px minmax(0, 1fr)`};
           min-width: 0;
         }
@@ -1301,14 +1404,6 @@ class NodaliaFavCard extends HTMLElement {
           width: calc(${iconSizePx}px * 0.45);
         }
 
-        .fav-card__icon ha-state-icon {
-          --mdc-icon-size: calc(${iconSizePx}px * 0.45);
-          color: inherit;
-          display: inline-flex;
-          height: calc(${iconSizePx}px * 0.45);
-          width: calc(${iconSizePx}px * 0.45);
-        }
-
         .fav-card__unavailable-badge {
           align-items: center;
           background: #ff9b4a;
@@ -1338,7 +1433,7 @@ class NodaliaFavCard extends HTMLElement {
 
         .fav-card__copy {
           display: grid;
-          gap: ${isCompactInline ? "4px" : "6px"};
+          gap: ${isTightInline ? "0" : (isCompactInline ? "4px" : "6px")};
           min-width: 0;
         }
 
@@ -1458,6 +1553,23 @@ class NodaliaFavCard extends HTMLElement {
           max-width: 100%;
         }
 
+        .fav-card--tight-inline .fav-card__copy {
+          align-items: center;
+          display: flex;
+          gap: 6px;
+          min-width: 0;
+        }
+
+        .fav-card--tight-inline .fav-card__title {
+          flex: 1 1 auto;
+          min-width: 0;
+        }
+
+        .fav-card--tight-inline .fav-card__chips {
+          flex: 0 0 auto;
+          gap: 4px;
+        }
+
         .fav-card--empty {
           display: grid;
           gap: 8px;
@@ -1465,7 +1577,7 @@ class NodaliaFavCard extends HTMLElement {
         }
       </style>
       <ha-card
-        class="fav-card ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
+        class="fav-card ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
         ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}
       >
         <div class="fav-card__content">
@@ -1476,11 +1588,7 @@ class NodaliaFavCard extends HTMLElement {
               ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}
               aria-label="${escapeHtml(canRunPrimaryAction ? "Accion principal" : title)}"
             >
-              ${
-                useEntityIcon
-                  ? '<ha-state-icon class="fav-card__entity-state-icon" data-fav-state-icon="primary"></ha-state-icon>'
-                  : `<ha-icon icon="${escapeHtml(icon)}"></ha-icon>`
-              }
+              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
               ${showUnavailableBadge ? `<span class="fav-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${showCopy
@@ -1519,14 +1627,6 @@ class NodaliaFavCard extends HTMLElement {
         </div>
       </ha-card>
     `;
-
-    if (useEntityIcon) {
-      this.shadowRoot
-        .querySelectorAll('[data-fav-state-icon="primary"]')
-        .forEach(element => {
-          element.stateObj = state;
-        });
-    }
   }
 }
 
