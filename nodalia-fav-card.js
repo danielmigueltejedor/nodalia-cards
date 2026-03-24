@@ -1105,23 +1105,32 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _notifyLayoutChange() {
-    fireEvent(this, "iron-resize", {});
-    fireEvent(this, "ll-rebuild", {});
+    const emit = () => {
+      fireEvent(this, "iron-resize", {});
+      fireEvent(this, "ll-rebuild", {});
+
+      if (typeof document !== "undefined") {
+        fireEvent(document, "iron-resize", {});
+        fireEvent(document, "ll-rebuild", {});
+      }
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("resize"));
+      }
+    };
+
+    emit();
 
     if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("resize"));
       requestAnimationFrame(() => {
-        fireEvent(this, "iron-resize", {});
-        fireEvent(this, "ll-rebuild", {});
-        window.dispatchEvent(new Event("resize"));
+        emit();
+        window.setTimeout(() => emit(), 48);
       });
     }
   }
 
   _applyHostGridSpan(showAlarmPanel = false) {
-    const renderedCard = this.shadowRoot?.querySelector("ha-card");
-    const renderedHeight = renderedCard ? Math.ceil(renderedCard.getBoundingClientRect().height) : 0;
-    const targets = [
+    const cleanupTargets = [
       this,
       this.parentElement,
       this.closest("hui-card"),
@@ -1129,18 +1138,8 @@ class NodaliaFavCard extends HTMLElement {
       this.closest("hui-section-card"),
     ].filter(Boolean);
 
-    targets.forEach(target => {
+    cleanupTargets.forEach(target => {
       if (!(target instanceof HTMLElement)) {
-        return;
-      }
-
-      if (showAlarmPanel) {
-        target.style.gridRowEnd = "span 4";
-        target.style.gridRow = "span 4";
-        if (renderedHeight > 0) {
-          target.style.minHeight = `${renderedHeight}px`;
-          target.style.height = `${renderedHeight}px`;
-        }
         return;
       }
 
@@ -1148,6 +1147,25 @@ class NodaliaFavCard extends HTMLElement {
       target.style.removeProperty("grid-row");
       target.style.removeProperty("min-height");
       target.style.removeProperty("height");
+      target.style.removeProperty("overflow");
+    });
+
+    if (!showAlarmPanel) {
+      return;
+    }
+
+    const spanTargets = [
+      this,
+      this.closest("hui-card"),
+    ].filter(Boolean);
+
+    spanTargets.forEach(target => {
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+
+      target.style.gridRowEnd = "span 4";
+      target.style.gridRow = "span 4";
     });
   }
 
