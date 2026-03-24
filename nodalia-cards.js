@@ -20348,7 +20348,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       individual: individualCount,
     });
 
-    return layoutPreset === "simple" ? 1 : 4;
+    return layoutPreset === "simple" ? 4 : 4;
   }
 
   getGridOptions() {
@@ -20369,9 +20369,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
     });
 
     return {
-      rows: layoutPreset === "simple" ? 2 : 4,
+      rows: layoutPreset === "simple" ? 4 : 4,
       columns: 12,
-      min_rows: layoutPreset === "simple" ? 2 : 3,
+      min_rows: layoutPreset === "simple" ? 3 : 3,
       min_columns: 6,
     };
   }
@@ -20954,7 +20954,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
             </div>
           </div>
 
-          <div class="power-flow-card__simple-rail-node power-flow-card__simple-rail-node--source">
+          <div class="power-flow-card__simple-rail-node power-flow-card__simple-rail-node--source" style="--simple-node-cover-size:${nodeSize}px;">
             <button
               class="power-flow-card__bubble ${sourceClickable ? "is-clickable" : ""}"
               data-node-entity="${escapeHtml(sourceNode.entityId)}"
@@ -20969,7 +20969,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
           <div class="power-flow-card__simple-rail-spacer"></div>
 
-          <div class="power-flow-card__simple-rail-node power-flow-card__simple-rail-node--home">
+          <div class="power-flow-card__simple-rail-node power-flow-card__simple-rail-node--home" style="--simple-node-cover-size:${homeSize}px;">
             <button
               class="power-flow-card__bubble power-flow-card__bubble--home ${homeClickable ? "is-clickable" : ""}"
               data-node-entity="${escapeHtml(nodes.home.entityId)}"
@@ -21090,6 +21090,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         ha-card {
+          height: 100%;
           min-height: 0;
           overflow: hidden;
         }
@@ -21106,6 +21107,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           display: flex;
           flex-direction: column;
           gap: ${styles.card.gap};
+          height: 100%;
           min-height: 0;
           overflow: hidden;
           padding: ${styles.card.padding};
@@ -21147,14 +21149,15 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__content {
+          flex: 1;
           min-height: 0;
           position: relative;
         }
 
         .power-flow-card--simple .power-flow-card__content {
-          align-items: center;
+          align-items: stretch;
           display: flex;
-          justify-content: center;
+          justify-content: flex-start;
         }
 
         .power-flow-card__surface {
@@ -21264,8 +21267,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__simple-layout {
+          align-content: space-between;
           display: grid;
           gap: 4px;
+          grid-template-rows: auto 1fr auto auto;
+          min-height: 100%;
           width: 100%;
         }
 
@@ -21302,7 +21308,23 @@ class NodaliaPowerFlowCard extends HTMLElement {
           justify-content: center;
           min-width: 0;
           position: relative;
-          z-index: 1;
+          z-index: 2;
+        }
+
+        .power-flow-card__simple-rail-node::before {
+          background:
+            radial-gradient(circle at top left, color-mix(in srgb, ${dominantColor} 9%, transparent) 0%, transparent 58%),
+            linear-gradient(180deg, rgba(255,255,255,0.018) 0%, rgba(0,0,0,0.03) 100%),
+            ${styles.card.background};
+          border-radius: 999px;
+          content: "";
+          height: calc(var(--simple-node-cover-size, 48px) + 12px);
+          left: 50%;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: calc(var(--simple-node-cover-size, 48px) + 12px);
+          z-index: 0;
         }
 
         .power-flow-card__simple-rail-node--source {
@@ -21362,7 +21384,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           top: 50%;
           transform: translateY(-50%);
           width: auto;
-          z-index: 0;
+          z-index: 1;
         }
 
         .power-flow-card__simple-line {
@@ -21426,6 +21448,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           height: var(--node-size);
           justify-content: center;
           position: relative;
+          z-index: 1;
           width: var(--node-size);
         }
 
