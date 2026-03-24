@@ -523,7 +523,7 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 1;
+    return this._alarmMenuOpen && this._isAlarmPanelMode(this._getState()) ? 3 : 1;
   }
 
   getGridOptions() {
@@ -1034,6 +1034,7 @@ class NodaliaFavCard extends HTMLElement {
     this._hass.callService("alarm_control_panel", service, payload);
     this._alarmMenuOpen = false;
     this._render();
+    this._notifyLayoutChange();
   }
 
   _toggleEntity(entityId = this._config?.entity) {
@@ -1103,10 +1104,22 @@ class NodaliaFavCard extends HTMLElement {
     window.location.href = url;
   }
 
+  _notifyLayoutChange() {
+    fireEvent(this, "iron-resize", {});
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("resize"));
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new Event("resize"));
+      });
+    }
+  }
+
   _performPrimaryAction(state) {
     if (this._isAlarmPanelMode(state)) {
       this._alarmMenuOpen = !this._alarmMenuOpen;
       this._render();
+      this._notifyLayoutChange();
       return;
     }
 
@@ -1300,7 +1313,7 @@ class NodaliaFavCard extends HTMLElement {
     const cardShadow = isActive
       ? `${styles.card.box_shadow}, 0 16px 30px color-mix(in srgb, ${accentColor} 16%, rgba(0, 0, 0, 0.18))`
       : styles.card.box_shadow;
-    const showTitle = config.show_name !== false && !isMini;
+    const showTitle = config.show_name !== false && !isMini && !showAlarmPanel;
     const showValue = Boolean(displayValue) && !isMini;
     const showCopy = showTitle || showValue;
 
@@ -1320,7 +1333,8 @@ class NodaliaFavCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
-          height: 100%;
+          height: ${showAlarmPanel ? "auto" : "100%"};
+          min-height: ${showAlarmPanel ? "0" : "100%"};
           overflow: hidden;
           position: relative;
         }
@@ -1359,6 +1373,15 @@ class NodaliaFavCard extends HTMLElement {
 
         .fav-card--single-row .fav-card__content {
           align-items: center;
+        }
+
+        .fav-card--alarm-open .fav-card__content {
+          align-items: start;
+          height: auto;
+        }
+
+        .fav-card--alarm-open .fav-card__hero {
+          align-items: start;
         }
 
         .fav-card__hero {
@@ -1577,7 +1600,7 @@ class NodaliaFavCard extends HTMLElement {
         }
       </style>
       <ha-card
-        class="fav-card ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
+        class="fav-card ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${showAlarmPanel ? "fav-card--alarm-open" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
         ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}
       >
         <div class="fav-card__content">
