@@ -32523,8 +32523,7 @@ class NodaliaFavCard extends HTMLElement {
     const isCompactMini = isMini && isSingleRow;
     const configuredColumns = this._getConfiguredGridColumns();
     const isTightInline = isCompactInline && (configuredColumns === null || configuredColumns >= 4);
-    const singleRowHeightPx = isSingleRow ? 72 : 0;
-    const singleRowContentHeightPx = isSingleRow ? Math.max(40, singleRowHeightPx - 16) : 0;
+    const singleRowHeightPx = isSingleRow ? 68 : 0;
     const icon = this._getIcon(state);
     const title = this._getTitle(state);
     const accentColor = this._getAccentColor(state);
@@ -32538,7 +32537,7 @@ class NodaliaFavCard extends HTMLElement {
     const showAlarmCodeInput = showAlarmPanel && this._shouldShowAlarmCodeInput(state);
     const canRunPrimaryAction = this._canRunTapAction(state);
     const isActive = this._isDomainOn(state);
-    const iconSizePx = Math.max(34, Math.min(parseSizeToPixels(styles.icon.size, 52), isMini ? (isCompactMini ? 38 : 44) : (isCompactInline ? 40 : 56)));
+    const iconSizePx = Math.max(32, Math.min(parseSizeToPixels(styles.icon.size, 52), isMini ? (isCompactMini ? 34 : 40) : (isCompactInline ? 36 : 56)));
     const titleSizePx = Math.max(10, Math.min(parseSizeToPixels(styles.title_size, 13), isMini ? 0 : (isCompactInline ? 11 : 14)));
     const chipHeightPx = Math.max(16, Math.min(parseSizeToPixels(styles.chip_height, 22), isCompactInline ? 18 : 24));
     const chipFontSizePx = Math.max(8.5, Math.min(parseSizeToPixels(styles.chip_font_size, 11), isCompactInline ? 9.5 : 12));
@@ -32578,6 +32577,7 @@ class NodaliaFavCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
+          height: ${showAlarmPanel ? "auto" : (isSingleRow ? `${singleRowHeightPx}px` : "100%")};
           min-height: ${showAlarmPanel ? "0" : (isSingleRow ? `${singleRowHeightPx}px` : "0")};
           overflow: hidden;
           position: relative;
@@ -32600,17 +32600,17 @@ class NodaliaFavCard extends HTMLElement {
         }
 
         .fav-card__content {
+          align-content: ${showAlarmPanel ? "start" : "center"};
           display: grid;
           gap: ${showAlarmPanel ? "10px" : (isCompactInline ? "6px" : (isMini ? "0" : styles.card.gap))};
-          min-height: ${showAlarmPanel ? "0" : (isSingleRow ? `${singleRowContentHeightPx}px` : "0")};
+          height: ${showAlarmPanel ? "auto" : "100%"};
           min-width: 0;
-          padding: ${isCompactInline ? "8px 10px" : (isMini ? "8px" : styles.card.padding)};
+          padding: ${isCompactInline ? "6px 10px" : (isMini ? "6px" : styles.card.padding)};
           position: relative;
           z-index: 1;
         }
 
         .fav-card--mini .fav-card__content {
-          align-content: center;
           justify-items: center;
         }
 
@@ -32632,9 +32632,9 @@ class NodaliaFavCard extends HTMLElement {
           display: grid;
           gap: ${isMini ? "0" : (isCompactInline ? "10px" : "12px")};
           grid-template-columns: ${isMini ? "1fr" : `${iconSizePx}px minmax(0, 1fr)`};
-          min-height: ${showAlarmPanel ? "0" : (isSingleRow ? `${singleRowContentHeightPx}px` : "0")};
+          height: ${showAlarmPanel ? "auto" : "100%"};
           min-width: 0;
-          width: ${isCompactInline ? "100%" : "auto"};
+          width: ${(isCompactInline || isMini) ? "100%" : "auto"};
         }
 
         .fav-card__icon {
@@ -32662,6 +32662,7 @@ class NodaliaFavCard extends HTMLElement {
         }
 
         .fav-card--mini .fav-card__hero {
+          align-content: center;
           justify-items: center;
         }
 
@@ -32704,6 +32705,7 @@ class NodaliaFavCard extends HTMLElement {
         }
 
         .fav-card__copy {
+          align-content: center;
           display: grid;
           gap: ${isCompactInline ? "4px" : "6px"};
           min-width: 0;
@@ -32848,8 +32850,8 @@ class NodaliaFavCard extends HTMLElement {
         class="fav-card ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${showAlarmPanel ? "fav-card--alarm-open" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
         ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}
       >
-        <div class="fav-card__content">
-          <div class="fav-card__hero">
+        <div class="fav-card__content" ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}>
+          <div class="fav-card__hero" ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}>
             <button
               type="button"
               class="fav-card__icon"
