@@ -1007,6 +1007,119 @@ class NodaliaPowerFlowCard extends HTMLElement {
     `;
   }
 
+  _getSimpleSourceNode(nodes) {
+    return [
+      nodes.grid,
+      nodes.solar,
+      nodes.battery,
+      ...nodes.individual,
+    ].find(node => node?.entityId) || nodes.home;
+  }
+
+  _renderSimpleNodeInfo(node, type = "source") {
+    const color = node.color;
+    const valueMarkup = this._config?.show_values === false
+      ? ""
+      : `
+          <span class="power-flow-card__chip power-flow-card__chip--value" style="--chip-tint:${escapeHtml(color)};">
+            <span>${escapeHtml(node.valueText)}</span>
+            ${node.unitText ? `<span class="power-flow-card__chip-unit">${escapeHtml(node.unitText)}</span>` : ""}
+          </span>
+        `;
+    const labelMarkup = this._config?.show_labels === false
+      ? ""
+      : `<span class="power-flow-card__chip power-flow-card__chip--label">${escapeHtml(node.label)}</span>`;
+    const secondaryMarkup = node.secondary
+      ? `<span class="power-flow-card__node-secondary">${escapeHtml(node.secondary)}</span>`
+      : "";
+
+    return `
+      <div class="power-flow-card__simple-info power-flow-card__simple-info--${escapeHtml(type)}">
+        ${type === "home" ? labelMarkup : ""}
+        ${type === "home" ? secondaryMarkup : ""}
+        ${type === "source" ? labelMarkup : ""}
+        ${type === "source" ? valueMarkup : ""}
+        ${type === "source" ? secondaryMarkup : ""}
+      </div>
+    `;
+  }
+
+  _renderSimpleLayout(nodes, lines) {
+    const sourceNode = this._getSimpleSourceNode(nodes);
+    const flowLine = lines.find(line => line.id === sourceNode.id || line.fromNode?.id === sourceNode.id || line.toNode?.id === sourceNode.id) || null;
+    const lineColor = flowLine?.color || sourceNode.color || "#6da8ff";
+    const lineOpacity = flowLine?.active ? 0.92 : (this._shouldShowZeroLines() ? this._getLineNeutralStyle().opacity : 0);
+    const lineBackground = flowLine?.active
+      ? `color-mix(in srgb, ${lineColor} 24%, rgba(255,255,255,0.12))`
+      : this._getLineNeutralStyle().color;
+    const bubbleDuration = Math.max(3.6, Number(flowLine?.duration || 4.8));
+    const homeSize = Math.round(Math.max(92, parseSizeToPixels(this._config?.styles?.icon?.home_size, 96)) * 0.72);
+    const nodeSize = Math.round(Math.max(44, parseSizeToPixels(this._config?.styles?.icon?.node_size, 48)) * 0.8);
+    const sourceClickable = this._config?.clickable_entities !== false && sourceNode.entityId;
+    const homeClickable = this._config?.clickable_entities !== false && nodes.home.entityId;
+    const sourceUnavailableBadge = this._config?.show_unavailable_badge !== false && sourceNode.unavailable
+      ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>`
+      : "";
+    const homeUnavailableBadge = this._config?.show_unavailable_badge !== false && nodes.home.unavailable
+      ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>`
+      : "";
+
+    return `
+      <div class="power-flow-card__simple-layout">
+        <div class="power-flow-card__simple-column power-flow-card__simple-column--source">
+          <button
+            class="power-flow-card__bubble ${sourceClickable ? "is-clickable" : ""}"
+            data-node-entity="${escapeHtml(sourceNode.entityId)}"
+            data-node-action="${sourceClickable ? "more-info" : ""}"
+            style="--node-size:${nodeSize}px; --node-tint:${escapeHtml(sourceNode.color)};"
+            title="${escapeHtml(sourceNode.label)}"
+          >
+            ${sourceUnavailableBadge}
+            <ha-icon icon="${escapeHtml(sourceNode.icon)}"></ha-icon>
+          </button>
+          ${this._renderSimpleNodeInfo(sourceNode, "source")}
+        </div>
+
+        <div class="power-flow-card__simple-line-wrap">
+          <div
+            class="power-flow-card__simple-line ${flowLine?.active ? "is-active" : ""}"
+            style="--line-color:${escapeHtml(lineColor)}; --line-opacity:${lineOpacity}; --line-background:${escapeHtml(lineBackground)};"
+          >
+            ${flowLine?.active ? `
+              <span class="power-flow-card__simple-dot" style="animation-duration:${bubbleDuration.toFixed(2)}s;"></span>
+            ` : ""}
+          </div>
+        </div>
+
+        <div class="power-flow-card__simple-column power-flow-card__simple-column--home">
+          ${this._renderSimpleNodeInfo(nodes.home, "home")}
+          <button
+            class="power-flow-card__bubble power-flow-card__bubble--home ${homeClickable ? "is-clickable" : ""}"
+            data-node-entity="${escapeHtml(nodes.home.entityId)}"
+            data-node-action="${homeClickable ? "more-info" : ""}"
+            style="--node-size:${homeSize}px; --node-tint:${escapeHtml(nodes.home.color)};"
+            title="${escapeHtml(nodes.home.label)}"
+          >
+            ${homeUnavailableBadge}
+            <span class="power-flow-card__home-icon-wrap">
+              <ha-icon icon="${escapeHtml(nodes.home.icon)}"></ha-icon>
+            </span>
+            ${
+              this._config?.show_values === false
+                ? ""
+                : `
+                  <span class="power-flow-card__home-value">
+                    <span class="power-flow-card__home-value-number">${escapeHtml(nodes.home.valueText)}</span>
+                    ${nodes.home.unitText ? `<span class="power-flow-card__home-value-unit">${escapeHtml(nodes.home.unitText)}</span>` : ""}
+                  </span>
+                `
+            }
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
   _onShadowClick(event) {
     const dashboardButton = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.dashboardAction === "navigate");
     if (dashboardButton) {
@@ -1139,6 +1252,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
           position: relative;
         }
 
+        .power-flow-card--simple .power-flow-card__content {
+          align-items: center;
+          display: flex;
+          justify-content: center;
+        }
+
         .power-flow-card__surface {
           min-height: ${surfaceMinHeight}px;
           position: relative;
@@ -1247,6 +1366,92 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card--simple .power-flow-card__chip {
           max-width: 120px;
+        }
+
+        .power-flow-card__simple-layout {
+          align-items: center;
+          display: grid;
+          gap: 12px;
+          grid-template-columns: auto minmax(64px, 1fr) auto;
+          width: 100%;
+        }
+
+        .power-flow-card__simple-column {
+          align-items: center;
+          display: grid;
+          gap: 10px;
+          justify-items: center;
+          min-width: 0;
+        }
+
+        .power-flow-card__simple-column--home {
+          gap: 8px;
+        }
+
+        .power-flow-card__simple-info {
+          align-items: center;
+          display: grid;
+          gap: 5px;
+          justify-items: center;
+          min-width: 0;
+        }
+
+        .power-flow-card__simple-info .power-flow-card__chip,
+        .power-flow-card__simple-info .power-flow-card__node-secondary {
+          max-width: 150px;
+        }
+
+        .power-flow-card__simple-line-wrap {
+          align-items: center;
+          display: flex;
+          min-width: 64px;
+          width: 100%;
+        }
+
+        .power-flow-card__simple-line {
+          background: linear-gradient(180deg, color-mix(in srgb, var(--line-background) 100%, transparent) 0%, color-mix(in srgb, var(--line-background) 78%, transparent) 100%);
+          border-radius: 999px;
+          height: ${flowWidth}px;
+          opacity: var(--line-opacity);
+          position: relative;
+          width: 100%;
+        }
+
+        .power-flow-card__simple-line.is-active {
+          box-shadow: 0 0 14px color-mix(in srgb, var(--line-color) 18%, transparent);
+        }
+
+        .power-flow-card__simple-dot {
+          background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.98) 0 35%, color-mix(in srgb, var(--line-color) 44%, rgba(255,255,255,0.92)) 36% 100%);
+          border-radius: 999px;
+          box-shadow:
+            0 0 0 4px color-mix(in srgb, var(--line-color) 14%, transparent),
+            0 0 12px color-mix(in srgb, var(--line-color) 26%, transparent);
+          height: 10px;
+          left: 0;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: 10px;
+          will-change: left, opacity;
+          animation: power-flow-card-simple-dot linear infinite;
+        }
+
+        @keyframes power-flow-card-simple-dot {
+          0% {
+            left: 0%;
+            opacity: 0;
+          }
+          8% {
+            opacity: 1;
+          }
+          92% {
+            opacity: 1;
+          }
+          100% {
+            left: 100%;
+            opacity: 0;
+          }
         }
 
         .power-flow-card__bubble {
@@ -1433,32 +1638,38 @@ class NodaliaPowerFlowCard extends HTMLElement {
             : ""
         }
         <div class="power-flow-card__content" ${this._config?.tap_action === "more-info" ? 'data-card-action="primary"' : ""}>
-          <div class="power-flow-card__surface">
-            <svg class="power-flow-card__svg power-flow-card__svg--lines" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
-              <defs>
-                <filter id="power-flow-glow" x="-30%" y="-30%" width="160%" height="160%">
-                  <feGaussianBlur stdDeviation="1.2"></feGaussianBlur>
-                </filter>
-                <filter id="power-flow-soften" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="0.18"></feGaussianBlur>
-                </filter>
-              </defs>
-              ${lines.map(line => `
-                <path class="power-flow-card__line-glow" d="${line.path}" stroke="${escapeHtml(line.color)}" opacity="${line.opacity * (line.active ? 1 : 0.7)}"></path>
-                <path class="power-flow-card__line" d="${line.path}" stroke="${escapeHtml(line.color)}" opacity="${line.opacity}"></path>
-              `).join("")}
-            </svg>
-            ${this._renderNode(nodes.home, { layoutPreset })}
-            ${nodes.grid.entityId ? this._renderNode(nodes.grid, { layoutPreset }) : ""}
-            ${nodes.solar.entityId ? this._renderNode(nodes.solar, { layoutPreset }) : ""}
-            ${nodes.battery.entityId ? this._renderNode(nodes.battery, { layoutPreset }) : ""}
-            ${nodes.water.entityId ? this._renderNode(nodes.water, { layoutPreset }) : ""}
-            ${nodes.gas.entityId ? this._renderNode(nodes.gas, { layoutPreset }) : ""}
-            ${nodes.individual.map(node => this._renderNode(node, { layoutPreset })).join("")}
-            <svg class="power-flow-card__svg power-flow-card__svg--dots" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
-              ${lines.map(line => this._renderFlowDots(line)).join("")}
-            </svg>
-          </div>
+          ${
+            layoutPreset === "simple"
+              ? this._renderSimpleLayout(nodes, lines)
+              : `
+                <div class="power-flow-card__surface">
+                  <svg class="power-flow-card__svg power-flow-card__svg--lines" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                      <filter id="power-flow-glow" x="-30%" y="-30%" width="160%" height="160%">
+                        <feGaussianBlur stdDeviation="1.2"></feGaussianBlur>
+                      </filter>
+                      <filter id="power-flow-soften" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="0.18"></feGaussianBlur>
+                      </filter>
+                    </defs>
+                    ${lines.map(line => `
+                      <path class="power-flow-card__line-glow" d="${line.path}" stroke="${escapeHtml(line.color)}" opacity="${line.opacity * (line.active ? 1 : 0.7)}"></path>
+                      <path class="power-flow-card__line" d="${line.path}" stroke="${escapeHtml(line.color)}" opacity="${line.opacity}"></path>
+                    `).join("")}
+                  </svg>
+                  ${this._renderNode(nodes.home, { layoutPreset })}
+                  ${nodes.grid.entityId ? this._renderNode(nodes.grid, { layoutPreset }) : ""}
+                  ${nodes.solar.entityId ? this._renderNode(nodes.solar, { layoutPreset }) : ""}
+                  ${nodes.battery.entityId ? this._renderNode(nodes.battery, { layoutPreset }) : ""}
+                  ${nodes.water.entityId ? this._renderNode(nodes.water, { layoutPreset }) : ""}
+                  ${nodes.gas.entityId ? this._renderNode(nodes.gas, { layoutPreset }) : ""}
+                  ${nodes.individual.map(node => this._renderNode(node, { layoutPreset })).join("")}
+                  <svg class="power-flow-card__svg power-flow-card__svg--dots" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                    ${lines.map(line => this._renderFlowDots(line)).join("")}
+                  </svg>
+                </div>
+              `
+          }
         </div>
       </ha-card>
     `;
