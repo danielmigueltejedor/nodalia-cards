@@ -1282,7 +1282,7 @@ class NodaliaFavCard extends HTMLElement {
     const isCompactInline = !isMini && isSingleRow;
     const configuredColumns = this._getConfiguredGridColumns();
     const isTightInline = isCompactInline && (configuredColumns === null || configuredColumns >= 4);
-    const singleRowHeightPx = isSingleRow ? 84 : 0;
+    const singleRowHeightPx = isSingleRow ? 94 : 0;
     const icon = this._getIcon(state);
     const title = this._getTitle(state);
     const accentColor = this._getAccentColor(state);
@@ -1296,10 +1296,10 @@ class NodaliaFavCard extends HTMLElement {
     const showAlarmCodeInput = showAlarmPanel && this._shouldShowAlarmCodeInput(state);
     const canRunPrimaryAction = this._canRunTapAction(state);
     const isActive = this._isDomainOn(state);
-    const iconSizePx = Math.max(34, Math.min(parseSizeToPixels(styles.icon.size, 52), isSingleRow ? 46 : (isMini ? 54 : 56)));
-    const titleSizePx = Math.max(10, Math.min(parseSizeToPixels(styles.title_size, 13), isMini ? 0 : (isTightInline ? 11 : (isCompactInline ? 12 : 14))));
-    const chipHeightPx = Math.max(16, Math.min(parseSizeToPixels(styles.chip_height, 22), isTightInline ? 20 : (isCompactInline ? 22 : 24)));
-    const chipFontSizePx = Math.max(9, Math.min(parseSizeToPixels(styles.chip_font_size, 11), isTightInline ? 10 : (isCompactInline ? 11 : 12)));
+    const iconSizePx = Math.max(36, Math.min(parseSizeToPixels(styles.icon.size, 52), isSingleRow ? 46 : (isMini ? 54 : 56)));
+    const titleSizePx = Math.max(10, Math.min(parseSizeToPixels(styles.title_size, 13), isMini ? 0 : (isSingleRow ? 12 : 14)));
+    const chipHeightPx = Math.max(16, Math.min(parseSizeToPixels(styles.chip_height, 22), isSingleRow ? 20 : 24));
+    const chipFontSizePx = Math.max(9, Math.min(parseSizeToPixels(styles.chip_font_size, 11), isSingleRow ? 10 : 12));
     const iconColor = isActive
       ? accentColor
       : (this._usesCustomOffColor()
@@ -1359,10 +1359,10 @@ class NodaliaFavCard extends HTMLElement {
         .fav-card__content {
           align-items: center;
           display: grid;
-          gap: ${isMini ? "0" : styles.card.gap};
+          gap: ${showAlarmPanel ? "10px" : (isSingleRow ? "6px" : (isMini ? "0" : styles.card.gap))};
           height: 100%;
           min-width: 0;
-          padding: ${isSingleRow ? "8px 10px" : (isMini ? "8px" : (isTightInline ? "6px 8px" : (isCompactInline ? "8px 10px" : styles.card.padding)))};
+          padding: ${isSingleRow ? "8px 10px" : (isMini ? "8px" : styles.card.padding)};
           position: relative;
           z-index: 1;
         }
@@ -1388,9 +1388,10 @@ class NodaliaFavCard extends HTMLElement {
         .fav-card__hero {
           align-items: center;
           display: grid;
-          gap: ${isMini ? "0" : (isSingleRow ? "10px" : (isTightInline ? "8px" : (isCompactInline ? "10px" : "12px")))};
+          gap: ${isMini ? "0" : (isSingleRow ? "10px" : "12px")};
           grid-template-columns: ${isMini ? "1fr" : `${iconSizePx}px minmax(0, 1fr)`};
           min-width: 0;
+          width: 100%;
         }
 
         .fav-card__icon {
@@ -1457,7 +1458,7 @@ class NodaliaFavCard extends HTMLElement {
 
         .fav-card__copy {
           display: grid;
-          gap: ${isSingleRow ? "4px" : (isTightInline ? "0" : (isCompactInline ? "4px" : "6px"))};
+          gap: ${isSingleRow ? "4px" : "6px"};
           min-width: 0;
         }
 
@@ -1526,7 +1527,7 @@ class NodaliaFavCard extends HTMLElement {
           font-size: ${titleSizePx}px;
           font-weight: 700;
           letter-spacing: -0.02em;
-          line-height: ${isSingleRow ? "1.08" : (isCompactInline ? "1.06" : "1.12")};
+          line-height: ${isSingleRow ? "1.08" : "1.12"};
           min-width: 0;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -1536,7 +1537,7 @@ class NodaliaFavCard extends HTMLElement {
         .fav-card__chips {
           align-items: center;
           display: flex;
-          gap: ${isSingleRow ? "6px" : (isCompactInline ? "6px" : "8px")};
+          gap: ${isSingleRow ? "6px" : "8px"};
           min-width: 0;
         }
 
@@ -1577,19 +1578,19 @@ class NodaliaFavCard extends HTMLElement {
           max-width: 100%;
         }
 
-        .fav-card--tight-inline .fav-card__copy {
+        .fav-card--tight-inline:not(.fav-card--alarm-open) .fav-card__copy {
           align-items: center;
           display: flex;
           gap: 6px;
           min-width: 0;
         }
 
-        .fav-card--tight-inline .fav-card__title {
+        .fav-card--tight-inline:not(.fav-card--alarm-open) .fav-card__title {
           flex: 1 1 auto;
           min-width: 0;
         }
 
-        .fav-card--tight-inline .fav-card__chips {
+        .fav-card--tight-inline:not(.fav-card--alarm-open) .fav-card__chips {
           flex: 0 0 auto;
           gap: 4px;
         }
@@ -1620,34 +1621,34 @@ class NodaliaFavCard extends HTMLElement {
                 <div class="fav-card__copy">
                   ${showTitle ? `<div class="fav-card__title">${escapeHtml(title)}</div>` : ""}
                   ${showValue ? `<div class="fav-card__chips">${this._renderChip(displayValue)}</div>` : ""}
-                  ${showAlarmPanel
-                    ? `
-                      <div class="fav-card__alarm-panel">
-                        <div class="fav-card__alarm-actions">
-                          ${alarmModes.map(mode => this._renderAlarmActionButton(mode, accentColor)).join("")}
-                        </div>
-                        ${showAlarmCodeInput
-                          ? `
-                            <label class="fav-card__alarm-code" data-fav-alarm-ignore="true">
-                              <input
-                                type="password"
-                                inputmode="numeric"
-                                autocomplete="one-time-code"
-                                data-fav-alarm-ignore="true"
-                                data-fav-alarm-field="alarm-code"
-                                placeholder="PIN"
-                                value="${escapeHtml(this._alarmCodeInput)}"
-                              />
-                            </label>
-                          `
-                          : ""}
-                      </div>
-                    `
-                    : ""}
                 </div>
               `
               : ""}
           </div>
+          ${showAlarmPanel
+            ? `
+              <div class="fav-card__alarm-panel">
+                <div class="fav-card__alarm-actions">
+                  ${alarmModes.map(mode => this._renderAlarmActionButton(mode, accentColor)).join("")}
+                </div>
+                ${showAlarmCodeInput
+                  ? `
+                    <label class="fav-card__alarm-code" data-fav-alarm-ignore="true">
+                      <input
+                        type="password"
+                        inputmode="numeric"
+                        autocomplete="one-time-code"
+                        data-fav-alarm-ignore="true"
+                        data-fav-alarm-field="alarm-code"
+                        placeholder="PIN"
+                        value="${escapeHtml(this._alarmCodeInput)}"
+                      />
+                    </label>
+                  `
+                  : ""}
+              </div>
+            `
+            : ""}
         </div>
       </ha-card>
     `;
