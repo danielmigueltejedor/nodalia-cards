@@ -1165,6 +1165,7 @@ class NodaliaFavCard extends HTMLElement {
     const isMini = layout === "mini";
     const isSingleRow = this._isSingleRowLayout();
     const isCompactInline = !isMini && isSingleRow;
+    const useEntityIcon = config.use_entity_icon === true;
     const icon = this._getIcon(state);
     const title = this._getTitle(state);
     const accentColor = this._getAccentColor(state);
@@ -1297,6 +1298,14 @@ class NodaliaFavCard extends HTMLElement {
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
+          width: calc(${iconSizePx}px * 0.45);
+        }
+
+        .fav-card__icon ha-state-icon {
+          --mdc-icon-size: calc(${iconSizePx}px * 0.45);
+          color: inherit;
+          display: inline-flex;
+          height: calc(${iconSizePx}px * 0.45);
           width: calc(${iconSizePx}px * 0.45);
         }
 
@@ -1467,7 +1476,11 @@ class NodaliaFavCard extends HTMLElement {
               ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}
               aria-label="${escapeHtml(canRunPrimaryAction ? "Accion principal" : title)}"
             >
-              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${
+                useEntityIcon
+                  ? '<ha-state-icon class="fav-card__entity-state-icon" data-fav-state-icon="primary"></ha-state-icon>'
+                  : `<ha-icon icon="${escapeHtml(icon)}"></ha-icon>`
+              }
               ${showUnavailableBadge ? `<span class="fav-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${showCopy
@@ -1506,6 +1519,14 @@ class NodaliaFavCard extends HTMLElement {
         </div>
       </ha-card>
     `;
+
+    if (useEntityIcon) {
+      this.shadowRoot
+        .querySelectorAll('[data-fav-state-icon="primary"]')
+        .forEach(element => {
+          element.stateObj = state;
+        });
+    }
   }
 }
 
