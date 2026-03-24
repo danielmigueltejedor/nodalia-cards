@@ -1122,8 +1122,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const bubbleDuration = Math.max(3.6, Number(flowLine?.duration || 4.8));
     const homeSize = Math.round(Math.max(92, parseSizeToPixels(this._config?.styles?.icon?.home_size, 96)) * 0.72);
     const nodeSize = Math.round(Math.max(44, parseSizeToPixels(this._config?.styles?.icon?.node_size, 48)) * 0.8);
-    const lineStartOverlap = Math.max(14, Math.round(nodeSize * 0.38));
-    const lineEndOverlap = Math.max(18, Math.round(homeSize * 0.34));
+    const lineStartOffset = Math.max(18, Math.round(nodeSize * 0.42));
+    const lineEndOffset = Math.max(30, Math.round(homeSize * 0.38));
     const sourceClickable = this._config?.clickable_entities !== false && sourceNode.entityId;
     const homeClickable = this._config?.clickable_entities !== false && nodes.home.entityId;
     const sourceUnavailableBadge = this._config?.show_unavailable_badge !== false && sourceNode.unavailable
@@ -1132,11 +1132,35 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const homeUnavailableBadge = this._config?.show_unavailable_badge !== false && nodes.home.unavailable
       ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>`
       : "";
+    const showDashboardButton = Boolean(this._config?.dashboard_link);
+    const dashboardLabel = this._config?.dashboard_link_label || "Energia";
 
     return `
       <div class="power-flow-card__simple-layout">
-        <div class="power-flow-card__simple-rail">
-          <div class="power-flow-card__simple-rail-node">
+        <div class="power-flow-card__simple-top">
+          <div></div>
+          <div></div>
+          <div class="power-flow-card__simple-column power-flow-card__simple-column--home">
+            ${this._renderSimpleNodeInfo(nodes.home, "home")}
+          </div>
+        </div>
+
+        <div class="power-flow-card__simple-rail" style="--simple-rail-height:${Math.max(nodeSize, homeSize)}px;">
+          <div
+            class="power-flow-card__simple-line-wrap"
+            style="--line-start-offset:${lineStartOffset}px; --line-end-offset:${lineEndOffset}px;"
+          >
+            <div
+              class="power-flow-card__simple-line ${flowLine?.active ? "is-active" : ""}"
+              style="--line-color:${escapeHtml(lineColor)}; --line-opacity:${lineOpacity}; --line-background:${escapeHtml(lineBackground)};"
+            >
+              ${flowLine?.active ? `
+                <span class="power-flow-card__simple-dot" style="animation-duration:${bubbleDuration.toFixed(2)}s;"></span>
+              ` : ""}
+            </div>
+          </div>
+
+          <div class="power-flow-card__simple-rail-node power-flow-card__simple-rail-node--source">
             <button
               class="power-flow-card__bubble ${sourceClickable ? "is-clickable" : ""}"
               data-node-entity="${escapeHtml(sourceNode.entityId)}"
@@ -1149,18 +1173,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
             </button>
           </div>
 
-          <div class="power-flow-card__simple-line-wrap">
-            <div
-              class="power-flow-card__simple-line ${flowLine?.active ? "is-active" : ""}"
-              style="--line-color:${escapeHtml(lineColor)}; --line-opacity:${lineOpacity}; --line-background:${escapeHtml(lineBackground)}; --line-start-overlap:${lineStartOverlap}px; --line-end-overlap:${lineEndOverlap}px;"
-            >
-              ${flowLine?.active ? `
-                <span class="power-flow-card__simple-dot" style="animation-duration:${bubbleDuration.toFixed(2)}s;"></span>
-              ` : ""}
-            </div>
-          </div>
+          <div class="power-flow-card__simple-rail-spacer"></div>
 
-          <div class="power-flow-card__simple-rail-node">
+          <div class="power-flow-card__simple-rail-node power-flow-card__simple-rail-node--home">
             <button
               class="power-flow-card__bubble power-flow-card__bubble--home ${homeClickable ? "is-clickable" : ""}"
               data-node-entity="${escapeHtml(nodes.home.entityId)}"
@@ -1186,15 +1201,26 @@ class NodaliaPowerFlowCard extends HTMLElement {
           </div>
         </div>
 
-        <div class="power-flow-card__simple-meta">
+        <div class="power-flow-card__simple-bottom">
           <div class="power-flow-card__simple-column power-flow-card__simple-column--source">
             ${this._renderSimpleNodeInfo(sourceNode, "source")}
           </div>
           <div></div>
-          <div class="power-flow-card__simple-column power-flow-card__simple-column--home">
-            ${this._renderSimpleNodeInfo(nodes.home, "home")}
-          </div>
+          <div></div>
         </div>
+
+        ${
+          showDashboardButton
+            ? `
+              <div class="power-flow-card__simple-footer">
+                <button class="power-flow-card__dashboard-button power-flow-card__dashboard-button--footer" data-dashboard-action="navigate" title="${escapeHtml(dashboardLabel)}">
+                  <ha-icon icon="mdi:lightning-bolt-circle"></ha-icon>
+                  <span>${escapeHtml(dashboardLabel)}</span>
+                </button>
+              </div>
+            `
+            : ""
+        }
       </div>
     `;
   }
@@ -1431,10 +1457,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
           padding: 0 11px;
         }
 
-        .power-flow-card--simple .power-flow-card__node-info--home {
-          bottom: calc(100% + 6px);
-        }
-
         .power-flow-card--simple .power-flow-card__surface {
           min-height: 148px;
         }
@@ -1449,8 +1471,25 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__simple-layout {
           display: grid;
-          gap: 10px;
+          gap: 4px;
           width: 100%;
+        }
+
+        .power-flow-card__simple-top,
+        .power-flow-card__simple-bottom {
+          align-items: center;
+          display: grid;
+          gap: 0;
+          grid-template-columns: auto minmax(64px, 1fr) auto;
+          width: 100%;
+        }
+
+        .power-flow-card__simple-top {
+          margin-bottom: -2px;
+        }
+
+        .power-flow-card__simple-bottom {
+          margin-top: -2px;
         }
 
         .power-flow-card__simple-rail {
@@ -1458,6 +1497,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
           display: grid;
           gap: 0;
           grid-template-columns: auto minmax(64px, 1fr) auto;
+          min-height: var(--simple-rail-height, 96px);
+          position: relative;
           width: 100%;
         }
 
@@ -1470,18 +1511,23 @@ class NodaliaPowerFlowCard extends HTMLElement {
           z-index: 1;
         }
 
-        .power-flow-card__simple-meta {
-          align-items: start;
-          display: grid;
-          gap: 0;
-          grid-template-columns: auto minmax(64px, 1fr) auto;
-          width: 100%;
+        .power-flow-card__simple-rail-node--source {
+          grid-column: 1;
+        }
+
+        .power-flow-card__simple-rail-node--home {
+          grid-column: 3;
+        }
+
+        .power-flow-card__simple-rail-spacer {
+          grid-column: 2;
+          min-width: 64px;
         }
 
         .power-flow-card__simple-column {
           align-items: center;
           display: grid;
-          gap: 6px;
+          gap: 4px;
           justify-items: center;
           min-width: 0;
           position: relative;
@@ -1489,13 +1535,21 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__simple-column--home {
-          gap: 8px;
+          gap: 3px;
+          justify-self: center;
+          margin-bottom: 2px;
+          transform: translateX(-2px);
+        }
+
+        .power-flow-card__simple-column--source {
+          justify-self: center;
+          margin-top: -1px;
         }
 
         .power-flow-card__simple-info {
           align-items: center;
           display: grid;
-          gap: 5px;
+          gap: 4px;
           justify-items: center;
           min-width: 0;
         }
@@ -1506,11 +1560,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__simple-line-wrap {
-          align-items: center;
-          display: flex;
+          left: var(--line-start-offset, 18px);
           min-width: 64px;
-          position: relative;
-          width: 100%;
+          pointer-events: none;
+          position: absolute;
+          right: var(--line-end-offset, 28px);
+          top: 50%;
+          transform: translateY(-50%);
+          width: auto;
           z-index: 0;
         }
 
@@ -1518,8 +1575,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
           background: linear-gradient(180deg, color-mix(in srgb, var(--line-background) 100%, transparent) 0%, color-mix(in srgb, var(--line-background) 78%, transparent) 100%);
           border-radius: 999px;
           height: ${Math.max(flowWidth, 4)}px;
-          margin-left: calc(var(--line-start-overlap, 16px) * -1);
-          margin-right: calc(var(--line-end-overlap, 18px) * -1);
           opacity: var(--line-opacity);
           position: relative;
           width: 100%;
@@ -1586,6 +1641,17 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__bubble:hover.is-clickable {
           transform: translateY(-1px);
+        }
+
+        .power-flow-card__simple-footer {
+          display: flex;
+          justify-content: center;
+          margin-top: 2px;
+          width: 100%;
+        }
+
+        .power-flow-card__dashboard-button--footer {
+          min-width: 0;
         }
 
         .power-flow-card__bubble ha-icon {
@@ -1732,7 +1798,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
               <div class="power-flow-card__header">
                 <div class="power-flow-card__title">${escapeHtml(this._getTitle())}</div>
                 ${
-                  showDashboardButton
+                  showDashboardButton && layoutPreset !== "simple"
                     ? `
                       <button class="power-flow-card__dashboard-button" data-dashboard-action="navigate" title="${escapeHtml(this._config?.dashboard_link_label || "Energia")}">
                         <ha-icon icon="mdi:lightning-bolt-circle"></ha-icon>
