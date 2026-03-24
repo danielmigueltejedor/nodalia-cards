@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.12.0";
+const CARD_VERSION = "0.12.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -641,6 +641,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._converter = new CoordinatesConverter([]);
     this._pointerStart = null;
     this._pointerSurfaceRect = null;
+    this._lastRenderSignature = "";
 
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
@@ -682,6 +683,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    const nextSignature = this._getRenderSignature();
+    if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+      return;
+    }
     this._updateCalibration();
     this._render();
   }
@@ -878,9 +883,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const fromPicture = mapState.attributes?.entity_picture;
     if (fromPicture) {
-      const url = this._hass.hassUrl(fromPicture);
-      const cacheKey = encodeURIComponent(mapState.last_updated || mapState.last_changed || Date.now());
-      return `${url}${url.includes("?") ? "&" : "?"}v=${cacheKey}`;
+      return this._hass.hassUrl(fromPicture);
     }
 
     if (normalizeTextKey(entityId.split(".")[0]) === "image") {
@@ -888,6 +891,39 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     return "";
+  }
+
+  _getRenderSignature() {
+    const state = this._getVacuumState();
+    const mapState = this._getMapState();
+    const mapPicture = String(mapState?.attributes?.entity_picture || "");
+    const mapEntityId = this._getMapEntityId();
+
+    return JSON.stringify({
+      vacuum: {
+        state: String(state?.state || ""),
+        battery: Number(state?.attributes?.battery_level ?? -1),
+        icon: String(this._getIcon() || ""),
+        name: String(this._getName() || ""),
+      },
+      map: {
+        entity: String(mapEntityId || ""),
+        state: String(mapState?.state || ""),
+        picture: mapPicture,
+      },
+      calibration: {
+        camera: this._config?.calibration_source?.camera === true,
+        entity: String(this._config?.calibration_source?.entity || ""),
+        points: parseCalibrationPoints(this._config, this._hass).length,
+      },
+      activeMode: String(this._activeMode || ""),
+      selectedRooms: this._selectedRoomIds.join("|"),
+      selectedZones: this._selectedPredefinedZoneIds.join("|"),
+      manualZones: this._manualZones.length,
+      goto: this._gotoPoint ? `${Math.round(this._gotoPoint.x)}:${Math.round(this._gotoPoint.y)}` : "",
+      repeats: Number(this._repeats || 1),
+      dimensions: `${this._mapImageWidth}x${this._mapImageHeight}`,
+    });
   }
 
   _updateCalibration() {
@@ -1448,6 +1484,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (!this.shadowRoot) {
       return;
     }
+
+    const previousImage = this.shadowRoot.querySelector("[data-map-image]");
+    const previousImageSrc = previousImage?.getAttribute("src") || "";
 
     const config = this._config || normalizeConfig({});
     const state = this._getVacuumState();
@@ -2029,11 +2068,18 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       </ha-card>
     `;
 
-    const image = this.shadowRoot.querySelector("[data-map-image]");
+    let image = this.shadowRoot.querySelector("[data-map-image]");
+    if (previousImage && image && previousImageSrc && previousImageSrc === image.getAttribute("src")) {
+      image.replaceWith(previousImage);
+      image = previousImage;
+    }
+
     if (image) {
       image.removeEventListener("load", this._onMapImageLoad);
       image.addEventListener("load", this._onMapImageLoad);
     }
+
+    this._lastRenderSignature = this._getRenderSignature();
   }
 }
 
