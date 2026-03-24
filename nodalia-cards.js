@@ -20919,11 +20919,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const homeUnavailableBadge = this._config?.show_unavailable_badge !== false && nodes.home.unavailable
       ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>`
       : "";
-    const showDashboardButton = Boolean(this._config?.dashboard_link);
+    const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
     const dashboardLabel = this._config?.dashboard_link_label || "Energia";
 
     return `
-      <div class="power-flow-card__simple-layout">
+      <div class="power-flow-card__simple-layout ${showDashboardButton ? "has-footer" : ""}">
         <div class="power-flow-card__simple-top">
           <div class="power-flow-card__simple-column power-flow-card__simple-column--source-top">
             ${this._renderSimpleLabelChip(sourceNode)}
@@ -21267,9 +21267,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
           align-content: space-between;
           display: grid;
           gap: 4px;
-          grid-template-rows: auto 1fr auto auto;
+          grid-template-rows: auto 1fr auto;
           min-height: 100%;
+          position: relative;
           width: 100%;
+        }
+
+        .power-flow-card__simple-layout.has-footer {
+          padding-bottom: 42px;
         }
 
         .power-flow-card__simple-top,
@@ -21467,8 +21472,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__simple-footer {
           display: flex;
+          inset: auto 0 0 0;
           justify-content: center;
-          margin-top: 2px;
+          position: absolute;
           width: 100%;
         }
 
