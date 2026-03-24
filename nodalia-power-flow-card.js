@@ -1083,31 +1083,24 @@ class NodaliaPowerFlowCard extends HTMLElement {
     ].find(node => node?.entityId) || nodes.home;
   }
 
-  _renderSimpleNodeInfo(node, type = "source") {
-    const color = node.color;
-    const valueMarkup = this._config?.show_values === false
-      ? ""
-      : `
-          <span class="power-flow-card__chip power-flow-card__chip--value" style="--chip-tint:${escapeHtml(color)};">
-            <span>${escapeHtml(node.valueText)}</span>
-            ${node.unitText ? `<span class="power-flow-card__chip-unit">${escapeHtml(node.unitText)}</span>` : ""}
-          </span>
-        `;
-    const labelMarkup = this._config?.show_labels === false
-      ? ""
-      : `<span class="power-flow-card__chip power-flow-card__chip--label">${escapeHtml(node.label)}</span>`;
-    const secondaryMarkup = node.secondary
-      ? `<span class="power-flow-card__node-secondary">${escapeHtml(node.secondary)}</span>`
-      : "";
+  _renderSimpleLabelChip(node) {
+    if (this._config?.show_labels === false) {
+      return "";
+    }
+
+    return `<span class="power-flow-card__chip power-flow-card__chip--label">${escapeHtml(node.label)}</span>`;
+  }
+
+  _renderSimpleValueChip(node) {
+    if (this._config?.show_values === false) {
+      return "";
+    }
 
     return `
-      <div class="power-flow-card__simple-info power-flow-card__simple-info--${escapeHtml(type)}">
-        ${type === "home" ? labelMarkup : ""}
-        ${type === "home" ? secondaryMarkup : ""}
-        ${type === "source" ? labelMarkup : ""}
-        ${type === "source" ? valueMarkup : ""}
-        ${type === "source" ? secondaryMarkup : ""}
-      </div>
+      <span class="power-flow-card__chip power-flow-card__chip--value" style="--chip-tint:${escapeHtml(node.color)};">
+        <span>${escapeHtml(node.valueText)}</span>
+        ${node.unitText ? `<span class="power-flow-card__chip-unit">${escapeHtml(node.unitText)}</span>` : ""}
+      </span>
     `;
   }
 
@@ -1138,10 +1131,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return `
       <div class="power-flow-card__simple-layout">
         <div class="power-flow-card__simple-top">
-          <div></div>
+          <div class="power-flow-card__simple-column power-flow-card__simple-column--source-top">
+            ${this._renderSimpleLabelChip(sourceNode)}
+          </div>
           <div></div>
           <div class="power-flow-card__simple-column power-flow-card__simple-column--home">
-            ${this._renderSimpleNodeInfo(nodes.home, "home")}
+            ${this._renderSimpleLabelChip(nodes.home)}
           </div>
         </div>
 
@@ -1203,7 +1198,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         <div class="power-flow-card__simple-bottom">
           <div class="power-flow-card__simple-column power-flow-card__simple-column--source">
-            ${this._renderSimpleNodeInfo(sourceNode, "source")}
+            ${this._renderSimpleValueChip(sourceNode)}
+            ${sourceNode.secondary ? `<span class="power-flow-card__node-secondary">${escapeHtml(sourceNode.secondary)}</span>` : ""}
           </div>
           <div></div>
           <div></div>
@@ -1273,10 +1269,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const lines = this._buildLines(nodes);
     const dominantColor = this._getDominantColor(lines);
     const flowWidth = Math.max(3, parseSizeToPixels(styles.flow_width, 4));
-    const hasHeader = this._config?.show_header !== false;
-    const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
     const hasLowerNodes = Boolean(nodes.water.entityId || nodes.gas.entityId || nodes.individual.length);
     const layoutPreset = nodes._layoutPreset || "full";
+    const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
+    const titleText = this._config?.title || this._config?.name || (layoutPreset === "simple" ? "" : "Flujo");
+    const hasHeader = this._config?.show_header !== false && (Boolean(titleText) || (showDashboardButton && layoutPreset !== "simple"));
     const surfaceMinHeight = layoutPreset === "simple"
       ? 162
       : layoutPreset === "compact"
@@ -1491,11 +1488,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__simple-top {
-          margin-bottom: -2px;
+          margin-bottom: 1px;
         }
 
         .power-flow-card__simple-bottom {
-          margin-top: -2px;
+          margin-top: 2px;
         }
 
         .power-flow-card__simple-rail {
@@ -1559,13 +1556,16 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__simple-column--home {
           gap: 3px;
           justify-self: center;
-          margin-bottom: 2px;
-          transform: translateX(-2px);
+          margin-bottom: 0;
         }
 
         .power-flow-card__simple-column--source {
           justify-self: center;
-          margin-top: -1px;
+          margin-top: 0;
+        }
+
+        .power-flow-card__simple-column--source-top {
+          justify-self: center;
         }
 
         .power-flow-card__simple-info {
@@ -1579,6 +1579,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__simple-info .power-flow-card__chip,
         .power-flow-card__simple-info .power-flow-card__node-secondary {
           max-width: 150px;
+        }
+
+        .power-flow-card__simple-top .power-flow-card__chip,
+        .power-flow-card__simple-bottom .power-flow-card__chip {
+          justify-self: center;
         }
 
         .power-flow-card__simple-line-wrap {
@@ -1819,7 +1824,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           hasHeader
             ? `
               <div class="power-flow-card__header">
-                <div class="power-flow-card__title">${escapeHtml(this._getTitle())}</div>
+                <div class="power-flow-card__title">${escapeHtml(titleText)}</div>
                 ${
                   showDashboardButton && layoutPreset !== "simple"
                     ? `
