@@ -1228,34 +1228,16 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _applyHostGridSpan(showAlarmPanel = false) {
-    const targets = [
-      this,
-      this.parentElement,
-      this.closest("hui-card"),
-      this.closest("hui-card-options"),
-      this.closest("hui-section-card"),
-    ].filter(Boolean);
+    const hostCard = this.closest("hui-card");
+    if (!(hostCard instanceof HTMLElement)) {
+      return;
+    }
 
-    targets.forEach(target => {
-      if (!(target instanceof HTMLElement)) {
-        return;
-      }
-
-      if (showAlarmPanel) {
-        target.setAttribute("data-fav-alarm-open", "true");
-        const span = this._getAlarmGridSpan();
-        target.style.setProperty("grid-row-end", `span ${span}`);
-        target.style.setProperty("grid-row", `span ${span} / auto`);
-      } else {
-        target.removeAttribute("data-fav-alarm-open");
-        target.style.removeProperty("grid-row-end");
-        target.style.removeProperty("grid-row");
-      }
-
-      target.style.removeProperty("min-height");
-      target.style.removeProperty("height");
-      target.style.removeProperty("overflow");
-    });
+    if (showAlarmPanel) {
+      hostCard.setAttribute("data-fav-alarm-open", "true");
+    } else {
+      hostCard.removeAttribute("data-fav-alarm-open");
+    }
   }
 
   _getPrimaryActionTarget(event) {
@@ -1514,7 +1496,7 @@ class NodaliaFavCard extends HTMLElement {
       : styles.card.box_shadow;
     const showTitle = config.show_name !== false && !isMini && !showAlarmPanel;
     const showValue = Boolean(displayValue) && !isMini;
-    const showCopy = showTitle || showValue || showAlarmPanel;
+    const showCopy = showTitle || showValue;
 
     this._applyHostGridSpan(showAlarmPanel);
 
@@ -1524,7 +1506,8 @@ class NodaliaFavCard extends HTMLElement {
           display: block;
           overflow: visible;
           position: relative;
-          z-index: ${showAlarmPanel ? 12 : "auto"};
+          isolation: isolate;
+          z-index: ${showAlarmPanel ? 6 : "auto"};
         }
 
         * {
@@ -1537,11 +1520,11 @@ class NodaliaFavCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
-          height: ${showAlarmPanel ? "auto" : (usesCompactRowMetrics ? `${singleRowHeightPx}px` : "100%")};
-          min-height: ${showAlarmPanel ? "0" : (usesCompactRowMetrics ? `${singleRowHeightPx}px` : "0")};
-          overflow: ${showAlarmPanel ? "visible" : "hidden"};
+          height: ${usesCompactRowMetrics ? `${singleRowHeightPx}px` : "100%"};
+          min-height: ${usesCompactRowMetrics ? `${singleRowHeightPx}px` : "0"};
+          overflow: visible;
           position: relative;
-          z-index: ${showAlarmPanel ? 2 : 1};
+          z-index: ${showAlarmPanel ? 3 : 1};
         }
 
         ha-card::before {
@@ -1558,6 +1541,7 @@ class NodaliaFavCard extends HTMLElement {
         .fav-card {
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           min-width: 0;
+          position: relative;
           touch-action: manipulation;
         }
 
@@ -1565,10 +1549,11 @@ class NodaliaFavCard extends HTMLElement {
           align-content: ${showAlarmPanel ? "start" : "center"};
           display: grid;
           gap: ${showAlarmPanel ? "10px" : (isCompactInline ? "6px" : (isMini ? "0" : styles.card.gap))};
-          height: ${showAlarmPanel ? "auto" : (usesCompactRowMetrics ? "100%" : "auto")};
+          height: ${usesCompactRowMetrics ? "100%" : "auto"};
           min-width: 0;
           padding: ${isCompactInline ? "6px 10px" : (isMini ? "6px" : styles.card.padding)};
           position: relative;
+          overflow: visible;
           z-index: 1;
         }
 
@@ -1588,7 +1573,7 @@ class NodaliaFavCard extends HTMLElement {
         .fav-card--alarm-open {
           overflow: visible;
           position: relative;
-          z-index: 3;
+          z-index: 4;
         }
 
         .fav-card--alarm-open .fav-card__hero {
@@ -1681,12 +1666,28 @@ class NodaliaFavCard extends HTMLElement {
         }
 
         .fav-card__alarm-panel {
+          background:
+            linear-gradient(
+              135deg,
+              color-mix(in srgb, ${accentColor} 12%, rgba(255, 255, 255, 0.06)),
+              rgba(255, 255, 255, 0.04)
+            );
+          border: 1px solid color-mix(in srgb, ${accentColor} 24%, rgba(255, 255, 255, 0.08));
+          border-radius: 20px;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 18px 36px rgba(0, 0, 0, 0.24);
           display: grid;
           gap: 10px;
-          margin-top: 2px;
+          left: 0;
+          margin-top: 0;
           min-width: 0;
-          position: relative;
-          z-index: 4;
+          padding: 10px;
+          pointer-events: auto;
+          position: absolute;
+          right: 0;
+          top: calc(100% + 8px);
+          z-index: 8;
         }
 
         .fav-card__alarm-actions {
