@@ -407,6 +407,7 @@ class NodaliaGraphCard extends HTMLElement {
     this._historyAbortController = null;
     this._hoverIndex = null;
     this._hoverChart = null;
+    this._lastRenderSignature = "";
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
     this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
@@ -426,12 +427,18 @@ class NodaliaGraphCard extends HTMLElement {
     this._historyKey = "";
     this._historyLoadedAt = 0;
     this._hoverIndex = null;
+    this._lastRenderSignature = "";
     this._requestHistory();
     this._render();
   }
 
   set hass(hass) {
+    const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+      return;
+    }
+    this._lastRenderSignature = nextSignature;
     this._requestHistory();
     this._render();
   }
@@ -451,6 +458,23 @@ class NodaliaGraphCard extends HTMLElement {
 
   _getEntityEntries() {
     return resolveEntityEntries(this._config);
+  }
+
+  _getRenderSignature(hass = this._hass) {
+    const trackedStates = this._getEntityEntries().map(entry => {
+      const state = entry?.entity ? hass?.states?.[entry.entity] || null : null;
+      return {
+        entity: String(entry?.entity || ""),
+        state: String(state?.state || ""),
+        lastUpdated: String(state?.last_updated || ""),
+      };
+    });
+
+    return JSON.stringify({
+      trackedStates,
+      activeSeries: String(this._activeSeriesEntityId || ""),
+      selectedSeries: String(this._selectedSeriesEntityId || ""),
+    });
   }
 
   _getPrimaryEntityId() {

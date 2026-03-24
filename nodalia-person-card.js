@@ -216,7 +216,7 @@ class NodaliaPersonCard extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
-    this._renderSignature = "";
+    this._lastRenderSignature = "";
     this._onShadowClick = this._onShadowClick.bind(this);
   }
 
@@ -230,17 +230,19 @@ class NodaliaPersonCard extends HTMLElement {
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
+    this._lastRenderSignature = "";
     this._render();
   }
 
   set hass(hass) {
     this._hass = hass;
 
-    const nextSignature = this._getRenderSignature();
-    if (nextSignature && nextSignature === this._renderSignature && this.shadowRoot?.innerHTML) {
+    const nextSignature = this._getRenderSignature(hass);
+    if (nextSignature && nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
       return;
     }
 
+    this._lastRenderSignature = nextSignature;
     this._render();
   }
 
@@ -390,9 +392,10 @@ class NodaliaPersonCard extends HTMLElement {
     return this._getBadgeDescriptor(state)?.color || "var(--info-color, #71c0ff)";
   }
 
-  _getRenderSignature() {
-    const state = this._getState();
-    if (!this._config?.entity || !state) {
+  _getRenderSignature(hass = this._hass) {
+    const entityId = this._config?.entity || "";
+    const state = entityId ? hass?.states?.[entityId] || null : null;
+    if (!entityId || !state) {
       return `empty:${this._config?.entity || ""}`;
     }
 
@@ -404,8 +407,9 @@ class NodaliaPersonCard extends HTMLElement {
     const zoneState = this._getMatchingZoneState(state);
 
     return JSON.stringify({
-      entity: this._config.entity,
+      entity: entityId,
       state: state.state,
+      lastUpdated: String(state?.last_updated || ""),
       title,
       subtitle,
       picture,
@@ -495,7 +499,7 @@ class NodaliaPersonCard extends HTMLElement {
 
     const state = this._getState();
     if (!this._config?.entity || !state) {
-      this._renderSignature = `empty:${this._config?.entity || ""}`;
+      this._lastRenderSignature = `empty:${this._config?.entity || ""}`;
       this.shadowRoot.innerHTML = this._renderEmptyState();
       return;
     }
@@ -746,7 +750,7 @@ class NodaliaPersonCard extends HTMLElement {
         </div>
       </ha-card>
     `;
-    this._renderSignature = this._getRenderSignature();
+    this._lastRenderSignature = this._getRenderSignature();
   }
 }
 

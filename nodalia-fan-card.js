@@ -306,6 +306,7 @@ class NodaliaFanCard extends HTMLElement {
     this._skipNextSliderChange = null;
     this._dragFrame = 0;
     this._pendingDragUpdate = null;
+    this._lastRenderSignature = "";
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -392,11 +393,19 @@ class NodaliaFanCard extends HTMLElement {
     this._isCompactLayout = this._shouldUseCompactLayout(
       Math.round(this._cardWidth || this.clientWidth || 0),
     );
+    this._lastRenderSignature = "";
     this._render();
   }
 
   set hass(hass) {
+    const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+      return;
+    }
+
+    this._lastRenderSignature = nextSignature;
 
     if (this._activeSliderDrag) {
       this._pendingRenderAfterDrag = true;
@@ -408,6 +417,18 @@ class NodaliaFanCard extends HTMLElement {
 
   getCardSize() {
     return 3;
+  }
+
+  _getRenderSignature(hass = this._hass) {
+    const entityId = this._config?.entity || "";
+    const state = entityId ? hass?.states?.[entityId] || null : null;
+    return JSON.stringify({
+      entityId,
+      state: String(state?.state || ""),
+      lastUpdated: String(state?.last_updated || ""),
+      compact: Boolean(this._isCompactLayout),
+      presetPanelOpen: Boolean(this._presetPanelOpen),
+    });
   }
 
   _getConfiguredGridColumns() {

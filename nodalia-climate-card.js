@@ -357,6 +357,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._draftResetTimer = 0;
     this._activeDialDrag = null;
     this._pendingRenderAfterDrag = false;
+    this._lastRenderSignature = "";
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
     this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
@@ -411,12 +412,20 @@ class NodaliaClimateCard extends HTMLElement {
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
+    this._lastRenderSignature = "";
     this._render();
   }
 
   set hass(hass) {
+    const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
     this._syncDraftWithState();
+
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+      return;
+    }
+
+    this._lastRenderSignature = nextSignature;
 
     if (this._activeDialDrag) {
       this._pendingRenderAfterDrag = true;
@@ -428,6 +437,18 @@ class NodaliaClimateCard extends HTMLElement {
 
   getCardSize() {
     return 4;
+  }
+
+  _getRenderSignature(hass = this._hass) {
+    const entityId = this._config?.entity || "";
+    const state = entityId ? hass?.states?.[entityId] || null : null;
+    return JSON.stringify({
+      entityId,
+      state: String(state?.state || ""),
+      lastUpdated: String(state?.last_updated || ""),
+      hvacMode: String(state?.attributes?.hvac_mode || ""),
+      hvacAction: String(state?.attributes?.hvac_action || ""),
+    });
   }
 
   getGridOptions() {

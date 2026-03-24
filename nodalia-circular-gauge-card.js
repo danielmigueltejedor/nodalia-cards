@@ -349,17 +349,24 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
+    this._lastRenderSignature = "";
     this._onShadowClick = this._onShadowClick.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
   }
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
+    this._lastRenderSignature = "";
     this._render();
   }
 
   set hass(hass) {
+    const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+      return;
+    }
+    this._lastRenderSignature = nextSignature;
     this._render();
   }
 
@@ -378,6 +385,18 @@ class NodaliaCircularGaugeCard extends HTMLElement {
 
   _getState() {
     return this._config?.entity ? this._hass?.states?.[this._config.entity] || null : null;
+  }
+
+  _getRenderSignature(hass = this._hass) {
+    const entityId = this._config?.entity || "";
+    const state = entityId ? hass?.states?.[entityId] || null : null;
+    return JSON.stringify({
+      entityId,
+      state: String(state?.state || ""),
+      lastUpdated: String(state?.last_updated || ""),
+      rows: Number(this._config?.grid_options?.rows || 0),
+      columns: Number(this._config?.grid_options?.columns || 0),
+    });
   }
 
   _getConfiguredGridRows() {

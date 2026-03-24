@@ -481,6 +481,7 @@ class NodaliaFavCard extends HTMLElement {
     this._alarmMenuOpen = false;
     this._alarmCodeInput = "";
     this._ignoreNextPrimaryClickUntil = 0;
+    this._lastRenderSignature = "";
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -519,11 +520,19 @@ class NodaliaFavCard extends HTMLElement {
   setConfig(config) {
     this._config = normalizeConfig(config || {});
     this._layout = this._getResolvedLayout(Math.round(this._cardWidth || this.clientWidth || 0));
+    this._lastRenderSignature = "";
     this._render();
   }
 
   set hass(hass) {
+    const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+      return;
+    }
+
+    this._lastRenderSignature = nextSignature;
     this._render();
   }
 
@@ -538,6 +547,22 @@ class NodaliaFavCard extends HTMLElement {
       min_rows: 1,
       min_columns: 1,
     };
+  }
+
+  _getRenderSignature(hass = this._hass) {
+    const entityId = this._config?.entity || "";
+    const helperEntityId = this._config?.alarm_code_entity || "";
+    const state = entityId ? hass?.states?.[entityId] || null : null;
+    const helperState = helperEntityId ? hass?.states?.[helperEntityId] || null : null;
+    return JSON.stringify({
+      entityId,
+      state: String(state?.state || ""),
+      lastUpdated: String(state?.last_updated || ""),
+      helperEntityId,
+      helperUpdated: String(helperState?.last_updated || ""),
+      layout: String(this._layout || ""),
+      alarmOpen: Boolean(this._alarmMenuOpen),
+    });
   }
 
   _getConfiguredGridColumns() {

@@ -327,6 +327,7 @@ class NodaliaWeatherCard extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
+    this._lastRenderSignature = "";
     this._onShadowClick = this._onShadowClick.bind(this);
   }
 
@@ -340,11 +341,19 @@ class NodaliaWeatherCard extends HTMLElement {
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
+    this._lastRenderSignature = "";
     this._render();
   }
 
   set hass(hass) {
+    const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+      return;
+    }
+
+    this._lastRenderSignature = nextSignature;
     this._render();
   }
 
@@ -354,6 +363,16 @@ class NodaliaWeatherCard extends HTMLElement {
 
   _getState() {
     return this._hass?.states?.[this._config?.entity] || null;
+  }
+
+  _getRenderSignature(hass = this._hass) {
+    const entityId = this._config?.entity || "";
+    const state = entityId ? hass?.states?.[entityId] || null : null;
+    return JSON.stringify({
+      entityId,
+      state: String(state?.state || ""),
+      lastUpdated: String(state?.last_updated || ""),
+    });
   }
 
   _getTitle(state) {

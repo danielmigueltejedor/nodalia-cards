@@ -251,6 +251,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     this._pendingRenderWhileCodeFocused = false;
     this._countdownInterval = null;
     this._resizeObserver = null;
+    this._lastRenderSignature = "";
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowFocusIn = this._onShadowFocusIn.bind(this);
@@ -368,12 +369,19 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
+    this._lastRenderSignature = "";
     this._syncCountdownTimer();
     this._requestRender();
   }
 
   set hass(hass) {
+    const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+      this._syncCountdownTimer();
+      return;
+    }
+    this._lastRenderSignature = nextSignature;
     this._syncCountdownTimer();
     this._requestRender();
   }
@@ -412,6 +420,21 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
   _getState() {
     return this._hass?.states?.[this._config?.entity] || null;
+  }
+
+  _getRenderSignature(hass = this._hass) {
+    const entityId = this._config?.entity || "";
+    const helperEntityId = this._config?.code_entity || "";
+    const state = entityId ? hass?.states?.[entityId] || null : null;
+    const helperState = helperEntityId ? hass?.states?.[helperEntityId] || null : null;
+    return JSON.stringify({
+      entityId,
+      state: String(state?.state || ""),
+      lastUpdated: String(state?.last_updated || ""),
+      helperEntityId,
+      helperUpdated: String(helperState?.last_updated || ""),
+      compact: Boolean(this._isCompactLayout),
+    });
   }
 
   _getTitle(state) {

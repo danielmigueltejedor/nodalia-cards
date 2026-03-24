@@ -459,6 +459,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._activeMediaPlayerIndex = 0;
     this._mediaPlayerExpanded = false;
     this._mediaTicker = null;
+    this._lastRenderSignature = "";
     this._onResize = () => {
       this._closePopup(false);
       this._closeMediaBrowser(false);
@@ -510,16 +511,65 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
   setConfig(config) {
     this._config = normalizeConfig(config);
+    this._lastRenderSignature = "";
     this._render();
   }
 
   set hass(hass) {
+    const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+      return;
+    }
+    this._lastRenderSignature = nextSignature;
     this._render();
   }
 
   getCardSize() {
     return 1;
+  }
+
+  _getTrackedEntityIds() {
+    const entityIds = new Set();
+
+    (this._config?.routes || []).forEach(route => {
+      if (route?.badge?.entity) {
+        entityIds.add(route.badge.entity);
+      }
+      (route?.popup || []).forEach(item => {
+        if (item?.badge?.entity) {
+          entityIds.add(item.badge.entity);
+        }
+      });
+    });
+
+    (this._config?.media_player?.players || []).forEach(player => {
+      if (player?.entity) {
+        entityIds.add(player.entity);
+      }
+    });
+
+    return [...entityIds].sort((left, right) => left.localeCompare(right, "es"));
+  }
+
+  _getRenderSignature(hass = this._hass) {
+    const trackedStates = this._getTrackedEntityIds().map(entityId => {
+      const state = hass?.states?.[entityId] || null;
+      return {
+        entityId,
+        state: String(state?.state || ""),
+        lastUpdated: String(state?.last_updated || ""),
+      };
+    });
+
+    return JSON.stringify({
+      user: String(hass?.user?.id || ""),
+      trackedStates,
+      mediaExpanded: Boolean(this._mediaPlayerExpanded),
+      activePlayerIndex: Number(this._activeMediaPlayerIndex || 0),
+      popupOpen: Boolean(this._popupState),
+      mediaBrowserOpen: Boolean(this._mediaBrowserState),
+    });
   }
 
   _triggerHaptic(style = this._config?.haptics?.style) {

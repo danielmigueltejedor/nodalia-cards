@@ -349,6 +349,7 @@ class NodaliaVacuumCard extends HTMLElement {
       suction: "",
       mop: "",
     };
+    this._lastRenderSignature = "";
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -383,16 +384,37 @@ class NodaliaVacuumCard extends HTMLElement {
     this._isCompactLayout = this._shouldUseCompactLayout(
       Math.round(this._cardWidth || this.clientWidth || 0),
     );
+    this._lastRenderSignature = "";
     this._render();
   }
 
   set hass(hass) {
+    const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+      return;
+    }
+
+    this._lastRenderSignature = nextSignature;
     this._render();
   }
 
   getCardSize() {
     return 3;
+  }
+
+  _getRenderSignature(hass = this._hass) {
+    const entityId = this._config?.entity || "";
+    const state = entityId ? hass?.states?.[entityId] || null : null;
+    return JSON.stringify({
+      entityId,
+      state: String(state?.state || ""),
+      lastUpdated: String(state?.last_updated || ""),
+      compact: Boolean(this._isCompactLayout),
+      activeModePanel: String(this._activeModePanel || ""),
+      roomPanelOpen: Boolean(this._roomPanelOpen),
+    });
   }
 
   _getConfiguredGridColumns() {

@@ -781,6 +781,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
+    this._lastRenderSignature = "";
     this._repeats = clamp(Number(this._config.max_repeats || 1), 1, 9);
     this._selectedRoomIds = [];
     this._selectedPredefinedZoneIds = [];
@@ -795,7 +796,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    const nextSignature = this._getRenderSignature();
+    const nextSignature = this._getRenderSignature(hass);
     if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
       return;
     }
@@ -1005,15 +1006,17 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return "";
   }
 
-  _getRenderSignature() {
-    const state = this._getVacuumState();
-    const mapState = this._getMapState();
-    const mapPicture = String(mapState?.attributes?.entity_picture || "");
+  _getRenderSignature(hass = this._hass) {
+    const entityId = this._config?.entity || "";
+    const state = entityId ? hass?.states?.[entityId] || null : null;
     const mapEntityId = this._getMapEntityId();
+    const mapState = mapEntityId ? hass?.states?.[mapEntityId] || null : null;
+    const mapPicture = String(mapState?.attributes?.entity_picture || "");
 
     return JSON.stringify({
       vacuum: {
         state: String(state?.state || ""),
+        lastUpdated: String(state?.last_updated || ""),
         battery: Number(state?.attributes?.battery_level ?? -1),
         icon: String(this._getIcon() || ""),
         name: String(this._getName() || ""),
@@ -1021,6 +1024,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       map: {
         entity: String(mapEntityId || ""),
         state: String(mapState?.state || ""),
+        lastUpdated: String(mapState?.last_updated || ""),
         picture: mapPicture,
       },
       calibration: {
