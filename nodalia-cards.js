@@ -19748,6 +19748,1837 @@ window.customCards.push({
 })();
 
 (() => {
+const CARD_TAG = "nodalia-power-flow-card";
+const EDITOR_TAG = "nodalia-power-flow-card-editor";
+const CARD_VERSION = "0.13.0";
+const HAPTIC_PATTERNS = {
+  selection: 8,
+  light: 10,
+  medium: 16,
+  heavy: 24,
+  success: [10, 40, 10],
+  warning: [20, 50, 12],
+  failure: [12, 40, 12, 40, 18],
+};
+
+const NODE_DEFAULTS = {
+  grid: {
+    name: "Red",
+    icon: "mdi:transmission-tower",
+    color: "#6da8ff",
+    entity: "",
+    secondary_info: {},
+  },
+  home: {
+    name: "Casa",
+    icon: "mdi:home",
+    color: "#ffffff",
+    entity: "",
+    secondary_info: {},
+  },
+  solar: {
+    name: "Solar",
+    icon: "mdi:solar-power-variant",
+    color: "#f6b73c",
+    entity: "",
+    secondary_info: {},
+  },
+  battery: {
+    name: "Bateria",
+    icon: "mdi:battery",
+    color: "#61c97a",
+    entity: "",
+    secondary_info: {},
+  },
+  water: {
+    name: "Agua",
+    icon: "mdi:water",
+    color: "#55b7ff",
+    entity: "",
+    secondary_info: {},
+  },
+  gas: {
+    name: "Gas",
+    icon: "mdi:fire",
+    color: "#f28a5d",
+    entity: "",
+    secondary_info: {},
+  },
+};
+
+const DEFAULT_CONFIG = {
+  title: "",
+  name: "",
+  entities: {
+    grid: deepCloneNode(NODE_DEFAULTS.grid),
+    home: deepCloneNode(NODE_DEFAULTS.home),
+    solar: deepCloneNode(NODE_DEFAULTS.solar),
+    battery: deepCloneNode(NODE_DEFAULTS.battery),
+    water: deepCloneNode(NODE_DEFAULTS.water),
+    gas: deepCloneNode(NODE_DEFAULTS.gas),
+    individual: [],
+  },
+  display_zero_lines: {
+    mode: "show",
+    transparency: 50,
+    grey_color: [189, 189, 189],
+  },
+  dashboard_link: "",
+  dashboard_link_label: "Energia",
+  show_header: true,
+  show_dashboard_link_button: true,
+  show_labels: true,
+  show_values: true,
+  show_secondary_info: true,
+  show_unavailable_badge: true,
+  clickable_entities: true,
+  tap_action: "none",
+  min_flow_rate: 1.4,
+  max_flow_rate: 5.8,
+  haptics: {
+    enabled: false,
+    style: "selection",
+    fallback_vibrate: false,
+  },
+  styles: {
+    card: {
+      background: "var(--ha-card-background)",
+      border: "1px solid var(--divider-color)",
+      border_radius: "32px",
+      box_shadow: "var(--ha-card-box-shadow)",
+      padding: "16px",
+      gap: "14px",
+    },
+    icon: {
+      node_size: "58px",
+      home_size: "136px",
+      individual_size: "48px",
+      color: "var(--primary-text-color)",
+    },
+    title_size: "18px",
+    chip_height: "24px",
+    chip_font_size: "11px",
+    chip_padding: "0 10px",
+    home_value_size: "30px",
+    home_unit_size: "16px",
+    node_value_size: "12px",
+    secondary_size: "11px",
+    flow_width: "4px",
+  },
+};
+
+const STUB_CONFIG = {
+  title: "Energia",
+  entities: {
+    grid: {
+      entity: "sensor.shelly_pro_3em_puerto_c_potencia",
+    },
+    home: {
+      entity: "sensor.shelly_pro_3em_puerto_c_potencia",
+    },
+    solar: {
+      entity: "",
+    },
+    battery: {
+      entity: "",
+    },
+    individual: [],
+  },
+  dashboard_link: "/energy/overview",
+};
+
+function deepCloneNode(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function isObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function deepClone(value) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return JSON.parse(JSON.stringify(value));
+}
+
+function mergeConfig(base, override) {
+  if (Array.isArray(base)) {
+    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
+  }
+
+  if (!isObject(base)) {
+    return override === undefined ? base : override;
+  }
+
+  const result = {};
+  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
+
+  keys.forEach(key => {
+    const baseValue = base[key];
+    const overrideValue = override ? override[key] : undefined;
+
+    if (overrideValue === undefined) {
+      result[key] = deepClone(baseValue);
+      return;
+    }
+
+    if (Array.isArray(overrideValue)) {
+      result[key] = deepClone(overrideValue);
+      return;
+    }
+
+    if (isObject(baseValue) && isObject(overrideValue)) {
+      result[key] = mergeConfig(baseValue, overrideValue);
+      return;
+    }
+
+    result[key] = overrideValue;
+  });
+
+  return result;
+}
+
+function compactConfig(value) {
+  if (Array.isArray(value)) {
+    return value.map(item => compactConfig(item)).filter(item => item !== undefined);
+  }
+
+  if (isObject(value)) {
+    const compacted = {};
+
+    Object.entries(value).forEach(([key, item]) => {
+      const cleaned = compactConfig(item);
+      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
+
+      if (cleaned !== undefined && !isEmptyObject) {
+        compacted[key] = cleaned;
+      }
+    });
+
+    return compacted;
+  }
+
+  if (value === "" || value === null || value === undefined) {
+    return undefined;
+  }
+
+  return value;
+}
+
+function setByPath(target, path, value) {
+  const parts = path.split(".");
+  let cursor = target;
+
+  for (let index = 0; index < parts.length - 1; index += 1) {
+    const key = parts[index];
+    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
+      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
+    }
+    cursor = cursor[key];
+  }
+
+  cursor[parts[parts.length - 1]] = value;
+}
+
+function deleteByPath(target, path) {
+  const parts = path.split(".");
+  let cursor = target;
+
+  for (let index = 0; index < parts.length - 1; index += 1) {
+    const key = parts[index];
+    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
+      return;
+    }
+    cursor = cursor[key];
+  }
+
+  delete cursor[parts[parts.length - 1]];
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function parseSizeToPixels(value, fallback = 0) {
+  const numeric = Number.parseFloat(String(value ?? ""));
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function fireEvent(node, type, detail, options) {
+  const event = new CustomEvent(type, {
+    bubbles: options?.bubbles ?? true,
+    cancelable: Boolean(options?.cancelable),
+    composed: options?.composed ?? true,
+    detail,
+  });
+  node.dispatchEvent(event);
+  return event;
+}
+
+function normalizeTextKey(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function parseNumber(value) {
+  const numeric = Number(String(value ?? "").replace(",", "."));
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function isUnavailableState(state) {
+  const key = normalizeTextKey(state?.state);
+  return key === "unavailable" || key === "unknown";
+}
+
+function formatRawValue(value, decimals = 0) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "--";
+  }
+
+  return numeric.toLocaleString("es-ES", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+}
+
+function formatDisplayValue(value, unit = "") {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return { value: "--", unit: unit || "" };
+  }
+
+  const normalizedUnit = String(unit || "").trim();
+  const key = normalizeTextKey(normalizedUnit);
+  if (["w", "watt", "watts"].includes(key) && Math.abs(numeric) >= 1000) {
+    return {
+      value: formatRawValue(numeric / 1000, 2).replace(/,00$/, "").replace(/0$/, ""),
+      unit: "kW",
+    };
+  }
+
+  const decimals = Math.abs(numeric - Math.round(numeric)) < 0.01 ? 0 : Math.abs(numeric) >= 100 ? 0 : Math.abs(numeric) >= 10 ? 1 : 2;
+  return {
+    value: formatRawValue(numeric, decimals),
+    unit: normalizedUnit,
+  };
+}
+
+function rgbArrayToColor(value, fallback = [189, 189, 189]) {
+  const source = Array.isArray(value) && value.length >= 3 ? value : fallback;
+  const [r, g, b] = source.map(item => clamp(Number(item) || 0, 0, 255));
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function arrayFromMaybe(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function resolveNodeConfig(kind, config) {
+  return mergeConfig(NODE_DEFAULTS[kind] || {}, config?.entities?.[kind] || {});
+}
+
+function resolveIndividualConfigs(config) {
+  return arrayFromMaybe(config?.entities?.individual)
+    .filter(isObject)
+    .map((item, index) => ({
+      entity: String(item.entity || "").trim(),
+      name: String(item.name || "").trim(),
+      icon: String(item.icon || "mdi:flash").trim(),
+      color: String(item.color || ["#f29f05", "#42a5f5", "#7fd0c8", "#f56aa0"][index % 4]).trim(),
+      secondary_info: isObject(item.secondary_info) ? item.secondary_info : {},
+    }))
+    .filter(item => item.entity);
+}
+
+function normalizeConfig(rawConfig) {
+  const merged = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  merged.entities = merged.entities || {};
+  merged.entities.individual = resolveIndividualConfigs(merged);
+  return merged;
+}
+
+function getNodePosition(kind, index = 0, total = 0, hasBottomUtilities = false) {
+  if (kind === "home") {
+    return { x: 50, y: 48 };
+  }
+  if (kind === "solar") {
+    return { x: 50, y: 18 };
+  }
+  if (kind === "grid") {
+    return { x: 17, y: 49 };
+  }
+  if (kind === "battery") {
+    return { x: 83, y: 49 };
+  }
+  if (kind === "water") {
+    return total > 1 ? { x: 29, y: 82 } : { x: 38, y: 82 };
+  }
+  if (kind === "gas") {
+    return total > 1 ? { x: 71, y: 82 } : { x: 62, y: 82 };
+  }
+  if (kind === "individual") {
+    const y = hasBottomUtilities ? 92 : 83;
+    if (total <= 1) {
+      return { x: 50, y };
+    }
+    const start = 24;
+    const end = 76;
+    const step = (end - start) / Math.max(total - 1, 1);
+    return {
+      x: start + (step * index),
+      y,
+    };
+  }
+  return { x: 50, y: 50 };
+}
+
+function offsetPoint(from, to, distance) {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const len = Math.max(Math.hypot(dx, dy), 0.0001);
+  return {
+    x: from.x + ((dx / len) * distance),
+    y: from.y + ((dy / len) * distance),
+  };
+}
+
+function buildFlowPath(from, to, fromRadius = 0, toRadius = 0) {
+  const start = offsetPoint(from, to, fromRadius);
+  const end = offsetPoint(to, from, toRadius);
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const horizontalBias = Math.abs(dx) >= Math.abs(dy);
+  const cp1 = horizontalBias
+    ? { x: start.x + (dx * 0.42), y: start.y }
+    : { x: start.x, y: start.y + (dy * 0.42) };
+  const cp2 = horizontalBias
+    ? { x: end.x - (dx * 0.42), y: end.y }
+    : { x: end.x, y: end.y - (dy * 0.42) };
+
+  return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} C ${cp1.x.toFixed(2)} ${cp1.y.toFixed(2)}, ${cp2.x.toFixed(2)} ${cp2.y.toFixed(2)}, ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+}
+
+class NodaliaPowerFlowCard extends HTMLElement {
+  static async getConfigElement() {
+    return document.createElement(EDITOR_TAG);
+  }
+
+  static getStubConfig() {
+    return deepClone(STUB_CONFIG);
+  }
+
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._config = normalizeConfig(STUB_CONFIG);
+    this._hass = null;
+    this._onShadowClick = this._onShadowClick.bind(this);
+    this.shadowRoot.addEventListener("click", this._onShadowClick);
+  }
+
+  setConfig(config) {
+    this._config = normalizeConfig(config || {});
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this._render();
+  }
+
+  getCardSize() {
+    return 5;
+  }
+
+  getGridOptions() {
+    return {
+      rows: 5,
+      columns: 12,
+      min_rows: 4,
+      min_columns: 6,
+    };
+  }
+
+  _triggerHaptic(styleOverride = null) {
+    const haptics = this._config?.haptics || {};
+    if (haptics.enabled !== true) {
+      return;
+    }
+
+    const style = styleOverride || haptics.style || "selection";
+    fireEvent(this, "haptic", style, {
+      bubbles: true,
+      cancelable: false,
+      composed: true,
+    });
+
+    if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
+      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+    }
+  }
+
+  _navigate(path) {
+    if (!path) {
+      return;
+    }
+
+    window.history.pushState(null, "", path);
+    window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
+  }
+
+  _getNodeSourceState(source) {
+    if (!this._hass?.states) {
+      return null;
+    }
+
+    if (typeof source === "string") {
+      return this._hass.states[source] || null;
+    }
+
+    if (isObject(source)) {
+      const entityId = source.entity || source.consumption || source.production || "";
+      return entityId ? this._hass.states[entityId] || null : null;
+    }
+
+    return null;
+  }
+
+  _resolveSourceValue(source) {
+    if (!this._hass?.states || !source) {
+      return { value: null, unit: "", state: null, entityId: "" };
+    }
+
+    if (typeof source === "string") {
+      const state = this._hass.states[source] || null;
+      return {
+        value: parseNumber(state?.state),
+        unit: String(state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || "").trim(),
+        state,
+        entityId: source,
+      };
+    }
+
+    if (isObject(source)) {
+      const directEntity = String(source.entity || "").trim();
+      if (directEntity) {
+        const state = this._hass.states[directEntity] || null;
+        return {
+          value: parseNumber(state?.state),
+          unit: String(state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || "").trim(),
+          state,
+          entityId: directEntity,
+        };
+      }
+
+      const consumptionEntity = String(source.consumption || "").trim();
+      const productionEntity = String(source.production || "").trim();
+      const consumptionState = consumptionEntity ? this._hass.states[consumptionEntity] || null : null;
+      const productionState = productionEntity ? this._hass.states[productionEntity] || null : null;
+      const consumptionValue = parseNumber(consumptionState?.state) || 0;
+      const productionValue = parseNumber(productionState?.state) || 0;
+      const unit = String(
+        consumptionState?.attributes?.unit_of_measurement
+        || productionState?.attributes?.unit_of_measurement
+        || consumptionState?.attributes?.native_unit_of_measurement
+        || productionState?.attributes?.native_unit_of_measurement
+        || "",
+      ).trim();
+
+      return {
+        value: consumptionValue - productionValue,
+        unit,
+        state: consumptionState || productionState,
+        entityId: consumptionEntity || productionEntity,
+      };
+    }
+
+    return { value: null, unit: "", state: null, entityId: "" };
+  }
+
+  _getSecondaryInfoText(nodeConfig, baseState) {
+    if (this._config?.show_secondary_info === false || !isObject(nodeConfig?.secondary_info)) {
+      return "";
+    }
+
+    const info = nodeConfig.secondary_info;
+    const infoEntity = String(info.entity || "").trim();
+    const infoAttribute = String(info.attribute || "").trim();
+    const infoState = infoEntity ? this._hass?.states?.[infoEntity] || null : baseState;
+
+    if (!infoState) {
+      return "";
+    }
+
+    if (infoAttribute) {
+      const rawAttribute = infoState.attributes?.[infoAttribute];
+      if (rawAttribute === undefined || rawAttribute === null || rawAttribute === "") {
+        return "";
+      }
+      return String(rawAttribute);
+    }
+
+    if (!infoEntity) {
+      return "";
+    }
+
+    const rawValue = parseNumber(infoState.state);
+    const unit = String(info.unit || infoState.attributes?.unit_of_measurement || infoState.attributes?.native_unit_of_measurement || "").trim();
+    if (rawValue === null) {
+      return String(infoState.state || "");
+    }
+
+    const decimals = Number.isFinite(Number(info.decimals)) ? Number(info.decimals) : 0;
+    return `${formatRawValue(rawValue, decimals)}${unit ? ` ${unit}` : ""}`;
+  }
+
+  _resolveNodeDescriptor(kind, configOverride = null, index = 0, total = 0, hasBottomUtilities = false) {
+    const nodeConfig = configOverride || resolveNodeConfig(kind, this._config);
+    const sourceResult = this._resolveSourceValue(nodeConfig.entity);
+    const state = sourceResult.state;
+    const unavailable = Boolean(nodeConfig.entity) && (!state || isUnavailableState(state));
+    const label = nodeConfig.name || state?.attributes?.friendly_name || NODE_DEFAULTS[kind]?.name || kind;
+    const icon = nodeConfig.icon || state?.attributes?.icon || NODE_DEFAULTS[kind]?.icon || "mdi:flash";
+    const color = nodeConfig.color || NODE_DEFAULTS[kind]?.color || "#ffffff";
+    const secondary = this._getSecondaryInfoText(nodeConfig, state);
+    const display = formatDisplayValue(sourceResult.value, sourceResult.unit);
+    const nodeKind = kind === "individual" ? "individual" : kind;
+
+    return {
+      id: kind === "individual" ? `${kind}-${index}` : kind,
+      kind: nodeKind,
+      entityId: sourceResult.entityId || String(nodeConfig.entity || ""),
+      label,
+      icon,
+      color,
+      value: sourceResult.value,
+      unit: sourceResult.unit,
+      valueText: display.value,
+      unitText: display.unit,
+      state,
+      secondary,
+      unavailable,
+      position: getNodePosition(nodeKind, index, total, hasBottomUtilities),
+      sourceConfig: nodeConfig,
+    };
+  }
+
+  _getNodes() {
+    const bottomUtilities = [
+      resolveNodeConfig("water", this._config),
+      resolveNodeConfig("gas", this._config),
+    ].filter(item => item.entity).length;
+    const individualConfigs = resolveIndividualConfigs(this._config);
+
+    const nodes = {
+      home: this._resolveNodeDescriptor("home"),
+      grid: this._resolveNodeDescriptor("grid"),
+      solar: this._resolveNodeDescriptor("solar"),
+      battery: this._resolveNodeDescriptor("battery"),
+      water: this._resolveNodeDescriptor("water", null, 0, bottomUtilities, bottomUtilities > 0),
+      gas: this._resolveNodeDescriptor("gas", null, 1, bottomUtilities, bottomUtilities > 0),
+      individual: individualConfigs.map((config, index) => this._resolveNodeDescriptor("individual", config, index, individualConfigs.length, bottomUtilities > 0)),
+    };
+
+    if (!nodes.home.entityId) {
+      nodes.home.entityId = nodes.grid.entityId || nodes.solar.entityId || nodes.battery.entityId || "";
+    }
+
+    return nodes;
+  }
+
+  _getLineNeutralStyle() {
+    const grey = rgbArrayToColor(this._config?.display_zero_lines?.grey_color);
+    const opacity = 1 - (clamp(Number(this._config?.display_zero_lines?.transparency ?? 50), 0, 100) / 100);
+    return { color: grey, opacity };
+  }
+
+  _shouldShowZeroLines() {
+    return normalizeTextKey(this._config?.display_zero_lines?.mode) !== "hide";
+  }
+
+  _toFlowMagnitude(value, unit) {
+    if (!Number.isFinite(value)) {
+      return 0;
+    }
+
+    const unitKey = normalizeTextKey(unit);
+    if (unitKey === "kw") {
+      return Math.abs(value) * 1000;
+    }
+    return Math.abs(value);
+  }
+
+  _flowDuration(magnitude, maxMagnitude) {
+    const minFlowRate = Math.max(0.6, Number(this._config?.min_flow_rate) || DEFAULT_CONFIG.min_flow_rate);
+    const maxFlowRate = Math.max(minFlowRate + 0.1, Number(this._config?.max_flow_rate) || DEFAULT_CONFIG.max_flow_rate);
+    const safeMax = Math.max(maxMagnitude, 1);
+    const ratio = clamp(magnitude / safeMax, 0, 1);
+    return maxFlowRate - ((maxFlowRate - minFlowRate) * ratio);
+  }
+
+  _buildLines(nodes) {
+    const home = nodes.home;
+    const zeroLineVisible = this._shouldShowZeroLines();
+    const neutralStyle = this._getLineNeutralStyle();
+    const homeRadius = 14.5;
+    const nodeRadius = 6.5;
+    const individualRadius = 5.5;
+    const lineCandidates = [];
+
+    const pushLine = (id, sourceNode, targetNode, value, unit, color, bidirectional = true) => {
+      const magnitude = this._toFlowMagnitude(value, unit);
+      const active = magnitude > 0.001;
+      if (!active && !zeroLineVisible) {
+        return;
+      }
+
+      let fromNode = sourceNode;
+      let toNode = targetNode;
+
+      if (active && bidirectional && value < 0) {
+        fromNode = targetNode;
+        toNode = sourceNode;
+      }
+
+      const fromRadius = fromNode.kind === "home" ? homeRadius : fromNode.kind === "individual" ? individualRadius : nodeRadius;
+      const toRadius = toNode.kind === "home" ? homeRadius : toNode.kind === "individual" ? individualRadius : nodeRadius;
+
+      lineCandidates.push({
+        id,
+        fromNode,
+        toNode,
+        value,
+        unit,
+        magnitude,
+        active,
+        color: active ? color : neutralStyle.color,
+        opacity: active ? 0.9 : neutralStyle.opacity,
+        fromRadius,
+        toRadius,
+      });
+    };
+
+    if (nodes.grid.entityId) {
+      pushLine("grid", nodes.grid, home, nodes.grid.value, nodes.grid.unit, nodes.grid.color, true);
+    }
+    if (nodes.solar.entityId) {
+      pushLine("solar", nodes.solar, home, nodes.solar.value, nodes.solar.unit, nodes.solar.color, true);
+    }
+    if (nodes.battery.entityId) {
+      pushLine("battery", nodes.battery, home, nodes.battery.value, nodes.battery.unit, nodes.battery.color, true);
+    }
+    if (nodes.water.entityId) {
+      pushLine("water", nodes.water, home, nodes.water.value, nodes.water.unit, nodes.water.color, false);
+    }
+    if (nodes.gas.entityId) {
+      pushLine("gas", nodes.gas, home, nodes.gas.value, nodes.gas.unit, nodes.gas.color, false);
+    }
+
+    nodes.individual.forEach(node => {
+      pushLine(node.id, home, node, node.value, node.unit, node.color, true);
+    });
+
+    const maxMagnitude = Math.max(
+      ...lineCandidates.filter(item => item.active).map(item => item.magnitude),
+      1,
+    );
+
+    return lineCandidates.map(line => ({
+      ...line,
+      path: buildFlowPath(line.fromNode.position, line.toNode.position, line.fromRadius, line.toRadius),
+      duration: this._flowDuration(line.magnitude, maxMagnitude),
+      dotCount: line.active ? clamp(Math.round((line.magnitude / maxMagnitude) * 3), 1, 3) : 0,
+    }));
+  }
+
+  _getDominantColor(lines) {
+    const active = [...lines]
+      .filter(line => line.active)
+      .sort((left, right) => right.magnitude - left.magnitude);
+
+    return active[0]?.color || "#f6b73c";
+  }
+
+  _renderFlowDots(line) {
+    if (!line.active || line.dotCount <= 0) {
+      return "";
+    }
+
+    return Array.from({ length: line.dotCount }, (_item, index) => {
+      const begin = `-${((line.duration / line.dotCount) * index).toFixed(2)}s`;
+      return `
+        <g class="power-flow-card__dot-group" style="--dot-color:${escapeHtml(line.color)};">
+          <circle class="power-flow-card__dot-glow" r="1.55">
+            <animateMotion dur="${line.duration.toFixed(2)}s" repeatCount="indefinite" begin="${begin}" path="${line.path}"></animateMotion>
+          </circle>
+          <circle class="power-flow-card__dot-core" r="0.92">
+            <animateMotion dur="${line.duration.toFixed(2)}s" repeatCount="indefinite" begin="${begin}" path="${line.path}"></animateMotion>
+          </circle>
+        </g>
+      `;
+    }).join("");
+  }
+
+  _renderNode(node, options = {}) {
+    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    const iconSizes = styles.icon || DEFAULT_CONFIG.styles.icon;
+    const nodeSize = node.kind === "home"
+      ? Math.max(124, parseSizeToPixels(iconSizes.home_size, 136))
+      : node.kind === "individual"
+        ? Math.max(44, parseSizeToPixels(iconSizes.individual_size, 48))
+        : Math.max(54, parseSizeToPixels(iconSizes.node_size, 58));
+    const chipHeight = Math.max(22, parseSizeToPixels(styles.chip_height, 24));
+    const chipFontSize = Math.max(11, parseSizeToPixels(styles.chip_font_size, 11));
+    const chipPadding = styles.chip_padding || "0 10px";
+    const secondarySize = Math.max(10, parseSizeToPixels(styles.secondary_size, 11));
+    const isBottom = node.position.y >= 74;
+    const infoClass = node.kind === "home" ? "power-flow-card__node-info--home" : isBottom ? "power-flow-card__node-info--above" : "power-flow-card__node-info--below";
+    const color = node.color;
+    const unavailableBadge = this._config?.show_unavailable_badge !== false && node.unavailable
+      ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>`
+      : "";
+    const isClickable = this._config?.clickable_entities !== false && node.entityId;
+
+    const valueMarkup = this._config?.show_values === false
+      ? ""
+      : `
+          <span class="power-flow-card__chip power-flow-card__chip--value" style="--chip-tint:${escapeHtml(color)};">
+            <span>${escapeHtml(node.valueText)}</span>
+            ${node.unitText ? `<span class="power-flow-card__chip-unit">${escapeHtml(node.unitText)}</span>` : ""}
+          </span>
+        `;
+
+    const labelMarkup = this._config?.show_labels === false
+      ? ""
+      : `<span class="power-flow-card__chip power-flow-card__chip--label">${escapeHtml(node.label)}</span>`;
+
+    const secondaryMarkup = node.secondary
+      ? `<span class="power-flow-card__node-secondary">${escapeHtml(node.secondary)}</span>`
+      : "";
+
+    if (node.kind === "home") {
+      return `
+        <div class="power-flow-card__node power-flow-card__node--home" style="left:${node.position.x}%; top:${node.position.y}%;">
+          <button
+            class="power-flow-card__bubble power-flow-card__bubble--home ${isClickable ? "is-clickable" : ""}"
+            data-node-entity="${escapeHtml(node.entityId)}"
+            data-node-action="${isClickable ? "more-info" : ""}"
+            style="--node-size:${nodeSize}px; --node-tint:${escapeHtml(color)};"
+            title="${escapeHtml(node.label)}"
+          >
+            ${unavailableBadge}
+            <span class="power-flow-card__home-icon-wrap">
+              <ha-icon icon="${escapeHtml(node.icon)}"></ha-icon>
+            </span>
+            ${
+              this._config?.show_values === false
+                ? ""
+                : `
+                  <span class="power-flow-card__home-value">
+                    <span class="power-flow-card__home-value-number">${escapeHtml(node.valueText)}</span>
+                    ${node.unitText ? `<span class="power-flow-card__home-value-unit">${escapeHtml(node.unitText)}</span>` : ""}
+                  </span>
+                `
+            }
+          </button>
+          <div class="power-flow-card__node-info ${infoClass}">
+            ${labelMarkup}
+            ${secondaryMarkup}
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="power-flow-card__node power-flow-card__node--${escapeHtml(node.kind)}" style="left:${node.position.x}%; top:${node.position.y}%; --chip-height:${chipHeight}px; --chip-font-size:${chipFontSize}px; --chip-padding:${escapeHtml(chipPadding)}; --secondary-size:${secondarySize}px;">
+        <button
+          class="power-flow-card__bubble ${node.kind === "individual" ? "power-flow-card__bubble--individual" : ""} ${isClickable ? "is-clickable" : ""}"
+          data-node-entity="${escapeHtml(node.entityId)}"
+          data-node-action="${isClickable ? "more-info" : ""}"
+          style="--node-size:${nodeSize}px; --node-tint:${escapeHtml(color)};"
+          title="${escapeHtml(node.label)}"
+        >
+          ${unavailableBadge}
+          <ha-icon icon="${escapeHtml(node.icon)}"></ha-icon>
+        </button>
+        <div class="power-flow-card__node-info ${infoClass}">
+          ${labelMarkup}
+          ${valueMarkup}
+          ${secondaryMarkup}
+        </div>
+      </div>
+    `;
+  }
+
+  _onShadowClick(event) {
+    const dashboardButton = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.dashboardAction === "navigate");
+    if (dashboardButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._triggerHaptic("selection");
+      this._navigate(this._config?.dashboard_link);
+      return;
+    }
+
+    const nodeAction = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.nodeAction === "more-info");
+    if (nodeAction && nodeAction.dataset?.nodeEntity) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._triggerHaptic("selection");
+      fireEvent(this, "hass-more-info", {
+        entityId: nodeAction.dataset.nodeEntity,
+      });
+      return;
+    }
+
+    if ((this._config?.tap_action || "none") === "more-info" && this._config?.entities?.home?.entity) {
+      const content = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.cardAction === "primary");
+      if (content) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._triggerHaptic("selection");
+        fireEvent(this, "hass-more-info", {
+          entityId: this._config.entities.home.entity,
+        });
+      }
+    }
+  }
+
+  _getTitle() {
+    return this._config?.title || this._config?.name || "Flujo";
+  }
+
+  _render() {
+    if (!this.shadowRoot) {
+      return;
+    }
+
+    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    const nodes = this._getNodes();
+    const lines = this._buildLines(nodes);
+    const dominantColor = this._getDominantColor(lines);
+    const flowWidth = Math.max(3, parseSizeToPixels(styles.flow_width, 4));
+    const hasHeader = this._config?.show_header !== false;
+    const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+          height: 100%;
+          min-height: 0;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        ha-card {
+          height: 100%;
+          min-height: 0;
+          overflow: hidden;
+        }
+
+        .power-flow-card {
+          background:
+            radial-gradient(circle at top left, color-mix(in srgb, ${dominantColor} 12%, transparent) 0%, transparent 42%),
+            linear-gradient(180deg, rgba(255,255,255,0.018) 0%, rgba(0,0,0,0.03) 100%),
+            ${styles.card.background};
+          border: 1px solid color-mix(in srgb, ${dominantColor} 18%, var(--divider-color));
+          border-radius: ${styles.card.border_radius};
+          box-shadow: ${styles.card.box_shadow}, 0 18px 34px color-mix(in srgb, ${dominantColor} 8%, rgba(0,0,0,0.14));
+          color: var(--primary-text-color);
+          display: flex;
+          flex-direction: column;
+          gap: ${styles.card.gap};
+          height: 100%;
+          min-height: 0;
+          overflow: hidden;
+          padding: ${styles.card.padding};
+          position: relative;
+        }
+
+        .power-flow-card__header {
+          align-items: center;
+          display: grid;
+          gap: 12px;
+          grid-template-columns: minmax(0, 1fr) auto;
+        }
+
+        .power-flow-card__title {
+          font-size: ${Math.max(15, parseSizeToPixels(styles.title_size, 18))}px;
+          font-weight: 700;
+          line-height: 1.1;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .power-flow-card__dashboard-button {
+          align-items: center;
+          background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          gap: 8px;
+          min-height: 38px;
+          padding: 0 14px;
+        }
+
+        .power-flow-card__dashboard-button ha-icon {
+          --mdc-icon-size: 18px;
+        }
+
+        .power-flow-card__content {
+          flex: 1 1 auto;
+          min-height: 0;
+          position: relative;
+        }
+
+        .power-flow-card__surface {
+          height: 100%;
+          min-height: 430px;
+          position: relative;
+          width: 100%;
+        }
+
+        .power-flow-card__svg {
+          height: 100%;
+          inset: 0;
+          position: absolute;
+          width: 100%;
+        }
+
+        .power-flow-card__line {
+          fill: none;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+          stroke-width: ${flowWidth}px;
+        }
+
+        .power-flow-card__line-glow {
+          fill: none;
+          filter: url(#power-flow-glow);
+          opacity: 0.2;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+          stroke-width: ${flowWidth * 2.2}px;
+        }
+
+        .power-flow-card__dot-glow {
+          fill: color-mix(in srgb, var(--dot-color) 24%, rgba(255, 255, 255, 0.18));
+        }
+
+        .power-flow-card__dot-core {
+          fill: rgba(255, 255, 255, 0.92);
+        }
+
+        .power-flow-card__node {
+          position: absolute;
+          transform: translate(-50%, -50%);
+        }
+
+        .power-flow-card__node-info {
+          align-items: center;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          left: 50%;
+          max-width: 180px;
+          min-width: 0;
+          position: absolute;
+          transform: translateX(-50%);
+        }
+
+        .power-flow-card__node-info--below {
+          top: calc(100% + 8px);
+        }
+
+        .power-flow-card__node-info--above {
+          bottom: calc(100% + 8px);
+        }
+
+        .power-flow-card__node-info--home {
+          bottom: calc(100% + 12px);
+        }
+
+        .power-flow-card__bubble {
+          align-items: center;
+          appearance: none;
+          background:
+            radial-gradient(circle at top left, color-mix(in srgb, var(--node-tint) 12%, transparent) 0%, transparent 48%),
+            linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%);
+          border: 1px solid color-mix(in srgb, var(--node-tint) 24%, rgba(255,255,255,0.09));
+          border-radius: 999px;
+          box-shadow: 0 14px 26px color-mix(in srgb, var(--node-tint) 8%, rgba(0,0,0,0.14));
+          color: ${styles.icon.color || "var(--primary-text-color)"};
+          cursor: default;
+          display: inline-flex;
+          height: var(--node-size);
+          justify-content: center;
+          position: relative;
+          width: var(--node-size);
+        }
+
+        .power-flow-card__bubble.is-clickable {
+          cursor: pointer;
+        }
+
+        .power-flow-card__bubble:hover.is-clickable {
+          transform: translateY(-1px);
+        }
+
+        .power-flow-card__bubble ha-icon {
+          --mdc-icon-size: calc(var(--node-size) * 0.44);
+        }
+
+        .power-flow-card__bubble--home {
+          align-items: center;
+          border-radius: 40px;
+          display: grid;
+          gap: 8px;
+          grid-auto-rows: min-content;
+          justify-items: center;
+          padding: 14px 16px;
+        }
+
+        .power-flow-card__home-icon-wrap {
+          align-items: center;
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 999px;
+          display: inline-flex;
+          height: 38px;
+          justify-content: center;
+          width: 38px;
+        }
+
+        .power-flow-card__home-icon-wrap ha-icon {
+          --mdc-icon-size: 20px;
+        }
+
+        .power-flow-card__home-value {
+          align-items: baseline;
+          display: inline-flex;
+          gap: 5px;
+          justify-content: center;
+          min-width: 0;
+        }
+
+        .power-flow-card__home-value-number {
+          font-size: ${Math.max(25, parseSizeToPixels(styles.home_value_size, 30))}px;
+          font-weight: 700;
+          letter-spacing: -0.04em;
+          line-height: 0.9;
+        }
+
+        .power-flow-card__home-value-unit {
+          font-size: ${Math.max(13, parseSizeToPixels(styles.home_unit_size, 16))}px;
+          font-weight: 600;
+          opacity: 0.84;
+        }
+
+        .power-flow-card__bubble--individual {
+          border-radius: 18px;
+        }
+
+        .power-flow-card__chip {
+          align-items: center;
+          background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.03) 100%);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          display: inline-flex;
+          font-size: var(--chip-font-size, 11px);
+          font-weight: 600;
+          gap: 5px;
+          height: var(--chip-height, 24px);
+          justify-content: center;
+          max-width: 180px;
+          min-width: 0;
+          padding: var(--chip-padding, 0 10px);
+          white-space: nowrap;
+        }
+
+        .power-flow-card__chip--label,
+        .power-flow-card__chip--value {
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .power-flow-card__chip--value {
+          background: linear-gradient(180deg, color-mix(in srgb, var(--chip-tint) 14%, rgba(255,255,255,0.05)) 0%, rgba(255,255,255,0.035) 100%);
+          border-color: color-mix(in srgb, var(--chip-tint) 26%, rgba(255,255,255,0.08));
+        }
+
+        .power-flow-card__chip-unit {
+          opacity: 0.82;
+        }
+
+        .power-flow-card__node-secondary {
+          color: var(--secondary-text-color);
+          display: block;
+          font-size: var(--secondary-size, 11px);
+          font-weight: 500;
+          max-width: 170px;
+          overflow: hidden;
+          text-align: center;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .power-flow-card__unavailable {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          color: #fff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -3px;
+          top: -3px;
+          width: 18px;
+          z-index: 2;
+        }
+
+        .power-flow-card__unavailable ha-icon {
+          --mdc-icon-size: 11px;
+        }
+
+        @media (max-width: 640px) {
+          .power-flow-card__surface {
+            min-height: 400px;
+          }
+
+          .power-flow-card__dashboard-button {
+            min-height: 34px;
+            padding: 0 12px;
+          }
+        }
+      </style>
+      <ha-card class="power-flow-card">
+        ${
+          hasHeader
+            ? `
+              <div class="power-flow-card__header">
+                <div class="power-flow-card__title">${escapeHtml(this._getTitle())}</div>
+                ${
+                  showDashboardButton
+                    ? `
+                      <button class="power-flow-card__dashboard-button" data-dashboard-action="navigate" title="${escapeHtml(this._config?.dashboard_link_label || "Energia")}">
+                        <ha-icon icon="mdi:lightning-bolt-circle"></ha-icon>
+                        <span>${escapeHtml(this._config?.dashboard_link_label || "Energia")}</span>
+                      </button>
+                    `
+                    : ""
+                }
+              </div>
+            `
+            : ""
+        }
+        <div class="power-flow-card__content" ${this._config?.tap_action === "more-info" ? 'data-card-action="primary"' : ""}>
+          <div class="power-flow-card__surface">
+            <svg class="power-flow-card__svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <filter id="power-flow-glow" x="-30%" y="-30%" width="160%" height="160%">
+                  <feGaussianBlur stdDeviation="1.8"></feGaussianBlur>
+                </filter>
+              </defs>
+              ${lines.map(line => `
+                <path class="power-flow-card__line-glow" d="${line.path}" stroke="${escapeHtml(line.color)}" opacity="${line.opacity * (line.active ? 1 : 0.7)}"></path>
+                <path class="power-flow-card__line" d="${line.path}" stroke="${escapeHtml(line.color)}" opacity="${line.opacity}"></path>
+                ${this._renderFlowDots(line)}
+              `).join("")}
+            </svg>
+            ${this._renderNode(nodes.home)}
+            ${nodes.grid.entityId ? this._renderNode(nodes.grid) : ""}
+            ${nodes.solar.entityId ? this._renderNode(nodes.solar) : ""}
+            ${nodes.battery.entityId ? this._renderNode(nodes.battery) : ""}
+            ${nodes.water.entityId ? this._renderNode(nodes.water) : ""}
+            ${nodes.gas.entityId ? this._renderNode(nodes.gas) : ""}
+            ${nodes.individual.map(node => this._renderNode(node)).join("")}
+          </div>
+        </div>
+      </ha-card>
+    `;
+  }
+}
+
+if (!customElements.get(CARD_TAG)) {
+  customElements.define(CARD_TAG, NodaliaPowerFlowCard);
+}
+
+class NodaliaPowerFlowCardEditor extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._config = normalizeConfig(STUB_CONFIG);
+    this._hass = null;
+    this._entityOptionsSignature = "";
+    this._onShadowInput = this._onShadowInput.bind(this);
+    this.shadowRoot.addEventListener("input", this._onShadowInput);
+    this.shadowRoot.addEventListener("change", this._onShadowInput);
+  }
+
+  set hass(hass) {
+    const nextSignature = this._getEntityOptionsSignature(hass);
+    const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+    this._hass = hass;
+    this._entityOptionsSignature = nextSignature;
+
+    if (shouldRender) {
+      this._render();
+    }
+  }
+
+  setConfig(config) {
+    this._config = normalizeConfig(config || {});
+    this._render();
+  }
+
+  _getEntityOptionsSignature(hass) {
+    if (!hass?.states) {
+      return "";
+    }
+
+    return Object.keys(hass.states)
+      .filter(entityId => entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number."))
+      .sort((left, right) => left.localeCompare(right, "es"))
+      .join("|");
+  }
+
+  _captureFocusState() {
+    const activeElement = this.shadowRoot?.activeElement;
+    if (
+      !(
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement instanceof HTMLSelectElement
+      ) ||
+      !activeElement.dataset?.field
+    ) {
+      return null;
+    }
+
+    const selector = `[data-field="${CSS.escape(activeElement.dataset.field)}"]`;
+    const supportsSelection =
+      (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement) &&
+      activeElement.type !== "checkbox" &&
+      typeof activeElement.selectionStart === "number" &&
+      typeof activeElement.selectionEnd === "number";
+
+    return {
+      selector,
+      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
+      selectionStart: supportsSelection ? activeElement.selectionStart : null,
+      type: activeElement.type,
+    };
+  }
+
+  _restoreFocusState(focusState) {
+    if (!focusState?.selector || !this.shadowRoot) {
+      return;
+    }
+
+    const target = this.shadowRoot.querySelector(focusState.selector);
+    if (
+      !(
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      )
+    ) {
+      return;
+    }
+
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_error) {
+      target.focus();
+    }
+
+    const canRestoreSelection =
+      focusState.type !== "checkbox" &&
+      typeof focusState.selectionStart === "number" &&
+      typeof focusState.selectionEnd === "number" &&
+      typeof target.setSelectionRange === "function";
+
+    if (!canRestoreSelection) {
+      return;
+    }
+
+    try {
+      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+    } catch (_error) {
+      // Ignore unsupported inputs.
+    }
+  }
+
+  _emitConfig() {
+    const focusState = this._captureFocusState();
+    const nextConfig = deepClone(this._config);
+    this._config = normalizeConfig(compactConfig(nextConfig));
+    this._render();
+    this._restoreFocusState(focusState);
+    fireEvent(this, "config-changed", {
+      config: compactConfig(nextConfig),
+    });
+  }
+
+  _setEditorConfig() {
+    this._config = normalizeConfig(compactConfig(this._config));
+  }
+
+  _setFieldValue(path, value) {
+    if (value === undefined || value === null || value === "") {
+      deleteByPath(this._config, path);
+      return;
+    }
+
+    setByPath(this._config, path, value);
+  }
+
+  _readFieldValue(input) {
+    const valueType = input.dataset.valueType || "string";
+
+    switch (valueType) {
+      case "boolean":
+        return Boolean(input.checked);
+      case "number": {
+        const numeric = Number(input.value);
+        return Number.isFinite(numeric) ? numeric : undefined;
+      }
+      case "rgb-array":
+        return String(input.value || "")
+          .split(",")
+          .map(item => clamp(Number.parseInt(item.trim(), 10) || 0, 0, 255))
+          .slice(0, 3);
+      case "individuals":
+        return String(input.value || "")
+          .split("\n")
+          .map(line => line.trim())
+          .filter(Boolean)
+          .map(line => {
+            const [entity, name = "", icon = "", color = ""] = line.split("|").map(part => part.trim());
+            return { entity, name, icon, color };
+          })
+          .filter(item => item.entity);
+      default:
+        return input.value;
+    }
+  }
+
+  _onShadowInput(event) {
+    const input = event
+      .composedPath()
+      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+
+    if (!input?.dataset?.field) {
+      return;
+    }
+
+    event.stopPropagation();
+    const nextValue = this._readFieldValue(input);
+    this._setFieldValue(input.dataset.field, nextValue);
+    this._setEditorConfig();
+
+    if (event.type === "change") {
+      this._emitConfig();
+    }
+  }
+
+  _renderTextField(label, field, value, options = {}) {
+    const inputType = options.type || "text";
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const valueType = options.valueType || "string";
+    const inputValue = value === undefined || value === null ? "" : String(value);
+
+    return `
+      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <input
+          type="${escapeHtml(inputType)}"
+          data-field="${escapeHtml(field)}"
+          data-value-type="${escapeHtml(valueType)}"
+          value="${escapeHtml(inputValue)}"
+          ${placeholder}
+        />
+      </label>
+    `;
+  }
+
+  _renderTextareaField(label, field, value, options = {}) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+
+    return `
+      <label class="editor-field editor-field--full">
+        <span>${escapeHtml(label)}</span>
+        <textarea
+          data-field="${escapeHtml(field)}"
+          data-value-type="${escapeHtml(options.valueType || "string")}"
+          rows="${escapeHtml(String(options.rows || 4))}"
+          ${placeholder}
+        >${escapeHtml(inputValue)}</textarea>
+      </label>
+    `;
+  }
+
+  _renderCheckboxField(label, field, checked) {
+    return `
+      <label class="editor-toggle">
+        <input
+          type="checkbox"
+          data-field="${escapeHtml(field)}"
+          data-value-type="boolean"
+          ${checked ? "checked" : ""}
+        />
+        <span>${escapeHtml(label)}</span>
+      </label>
+    `;
+  }
+
+  _renderSelectField(label, field, value, options) {
+    return `
+      <label class="editor-field">
+        <span>${escapeHtml(label)}</span>
+        <select data-field="${escapeHtml(field)}">
+          ${options.map(option => `
+            <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
+              ${escapeHtml(option.label)}
+            </option>
+          `).join("")}
+        </select>
+      </label>
+    `;
+  }
+
+  _serializeIndividuals() {
+    return resolveIndividualConfigs(this._config)
+      .map(entry => [entry.entity || "", entry.name || "", entry.icon || "", entry.color || ""].join("|"))
+      .join("\n");
+  }
+
+  _getEntityOptionsMarkup() {
+    const allEntities = Object.keys(this._hass?.states || {})
+      .filter(entityId => entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number."))
+      .sort((left, right) => left.localeCompare(right, "es"));
+
+    return `
+      <datalist id="power-flow-card-entity-options">
+        ${allEntities.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
+      </datalist>
+    `;
+  }
+
+  _renderNodeSection(title, hint, prefix, values) {
+    return `
+      <section class="editor-section">
+        <div class="editor-section__header">
+          <div class="editor-section__title">${escapeHtml(title)}</div>
+          <div class="editor-section__hint">${escapeHtml(hint)}</div>
+        </div>
+        <div class="editor-grid">
+          ${this._renderTextField("Entidad", `${prefix}.entity`, values.entity, { placeholder: "sensor.mi_sensor" })}
+          ${this._renderTextField("Nombre", `${prefix}.name`, values.name)}
+          ${this._renderTextField("Icono", `${prefix}.icon`, values.icon, { placeholder: "mdi:flash" })}
+          ${this._renderTextField("Color", `${prefix}.color`, values.color, { placeholder: "#f6b73c" })}
+          ${this._renderTextField("Entidad secundaria", `${prefix}.secondary_info.entity`, values.secondary_info?.entity, { placeholder: "sensor.mi_secundaria" })}
+          ${this._renderTextField("Atributo secundario", `${prefix}.secondary_info.attribute`, values.secondary_info?.attribute, { placeholder: "battery_level" })}
+        </div>
+      </section>
+    `;
+  }
+
+  _render() {
+    if (!this.shadowRoot) {
+      return;
+    }
+
+    const config = this._config || normalizeConfig(STUB_CONFIG);
+    const hapticStyle = config.haptics?.style || "selection";
+    const grid = resolveNodeConfig("grid", config);
+    const home = resolveNodeConfig("home", config);
+    const solar = resolveNodeConfig("solar", config);
+    const battery = resolveNodeConfig("battery", config);
+    const water = resolveNodeConfig("water", config);
+    const gas = resolveNodeConfig("gas", config);
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        .editor {
+          color: var(--primary-text-color);
+          display: grid;
+          gap: 16px;
+        }
+
+        .editor-section {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 18px;
+          display: grid;
+          gap: 14px;
+          padding: 16px;
+        }
+
+        .editor-section__header {
+          display: grid;
+          gap: 4px;
+        }
+
+        .editor-section__title {
+          font-size: 15px;
+          font-weight: 700;
+        }
+
+        .editor-section__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .editor-grid {
+          display: grid;
+          gap: 12px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .editor-field,
+        .editor-toggle {
+          display: grid;
+          gap: 6px;
+          min-width: 0;
+        }
+
+        .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+        .editor-field > span,
+        .editor-toggle > span {
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .editor-field input,
+        .editor-field select,
+        .editor-field textarea {
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          color: var(--primary-text-color);
+          font: inherit;
+          min-height: 40px;
+          padding: 10px 12px;
+          width: 100%;
+        }
+
+        .editor-field textarea {
+          min-height: 110px;
+          resize: vertical;
+        }
+
+        .editor-toggle {
+          align-items: center;
+          grid-template-columns: auto 1fr;
+          padding-top: 20px;
+        }
+
+        .editor-toggle input {
+          accent-color: var(--primary-color);
+          height: 18px;
+          margin: 0;
+          width: 18px;
+        }
+
+        @media (max-width: 640px) {
+          .editor-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .editor-toggle {
+            padding-top: 0;
+          }
+        }
+      </style>
+      <div class="editor">
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">General</div>
+            <div class="editor-section__hint">Titulo, enlace al panel de energia y comportamiento general de la tarjeta.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderTextField("Titulo", "title", config.title, { placeholder: "Energia" })}
+            ${this._renderTextField("Enlace panel energia", "dashboard_link", config.dashboard_link, { placeholder: "/energy/overview" })}
+            ${this._renderTextField("Etiqueta boton energia", "dashboard_link_label", config.dashboard_link_label, { placeholder: "Energia" })}
+            ${this._renderSelectField("Tap card", "tap_action", config.tap_action || "none", [
+              { value: "none", label: "Sin accion" },
+              { value: "more-info", label: "More info casa" },
+            ])}
+            ${this._renderCheckboxField("Mostrar cabecera", "show_header", config.show_header !== false)}
+            ${this._renderCheckboxField("Mostrar boton energia", "show_dashboard_link_button", config.show_dashboard_link_button !== false)}
+            ${this._renderCheckboxField("Etiquetas", "show_labels", config.show_labels !== false)}
+            ${this._renderCheckboxField("Valores", "show_values", config.show_values !== false)}
+            ${this._renderCheckboxField("Info secundaria", "show_secondary_info", config.show_secondary_info !== false)}
+            ${this._renderCheckboxField("Click entidades", "clickable_entities", config.clickable_entities !== false)}
+            ${this._renderCheckboxField("Badge no disponible", "show_unavailable_badge", config.show_unavailable_badge !== false)}
+          </div>
+        </section>
+
+        ${this._renderNodeSection("Red", "Sensor de red con potencia positiva de consumo y negativa de exportacion, o split de consumo/produccion.", "entities.grid", grid)}
+        ${this._renderNodeSection("Casa", "Entidad central del hogar que se abrira en more-info si pulsas la burbuja central.", "entities.home", home)}
+        ${this._renderNodeSection("Solar", "Produccion solar instantanea.", "entities.solar", solar)}
+        ${this._renderNodeSection("Bateria", "Potencia de bateria. Positiva descarga hacia casa, negativa carga desde casa.", "entities.battery", battery)}
+        ${this._renderNodeSection("Agua", "Caudal o consumo de agua hacia el hogar.", "entities.water", water)}
+        ${this._renderNodeSection("Gas", "Caudal o consumo de gas hacia el hogar.", "entities.gas", gas)}
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Individuales</div>
+            <div class="editor-section__hint">Una linea por entidad: \`entity|nombre|icono|color\`.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderTextareaField("Entidades individuales", "entities.individual", this._serializeIndividuals(), {
+              valueType: "individuals",
+              rows: 5,
+              placeholder: "sensor.cargador_coche|Cargador|mdi:car-electric|#42a5f5",
+            })}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Flujo</div>
+            <div class="editor-section__hint">Controla la visualizacion de lineas sin consumo y la velocidad de animacion.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderSelectField("Lineas a cero", "display_zero_lines.mode", config.display_zero_lines?.mode || "show", [
+              { value: "show", label: "Mostrar" },
+              { value: "hide", label: "Ocultar" },
+            ])}
+            ${this._renderTextField("Transparencia lineas cero", "display_zero_lines.transparency", config.display_zero_lines?.transparency, {
+              type: "number",
+              valueType: "number",
+              placeholder: "50",
+            })}
+            ${this._renderTextField("Color gris RGB", "display_zero_lines.grey_color", arrayFromMaybe(config.display_zero_lines?.grey_color).join(", "), {
+              valueType: "rgb-array",
+              placeholder: "189, 189, 189",
+            })}
+            ${this._renderTextField("Flujo minimo (s)", "min_flow_rate", config.min_flow_rate, {
+              type: "number",
+              valueType: "number",
+              placeholder: "1.4",
+            })}
+            ${this._renderTextField("Flujo maximo (s)", "max_flow_rate", config.max_flow_rate, {
+              type: "number",
+              valueType: "number",
+              placeholder: "5.8",
+            })}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Estilo</div>
+            <div class="editor-section__hint">Ajustes visuales base de la tarjeta y las burbujas.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderTextField("Background", "styles.card.background", config.styles?.card?.background)}
+            ${this._renderTextField("Border", "styles.card.border", config.styles?.card?.border)}
+            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles?.card?.border_radius)}
+            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles?.card?.box_shadow)}
+            ${this._renderTextField("Padding", "styles.card.padding", config.styles?.card?.padding)}
+            ${this._renderTextField("Gap", "styles.card.gap", config.styles?.card?.gap)}
+            ${this._renderTextField("Tamano nodo", "styles.icon.node_size", config.styles?.icon?.node_size)}
+            ${this._renderTextField("Tamano casa", "styles.icon.home_size", config.styles?.icon?.home_size)}
+            ${this._renderTextField("Tamano individual", "styles.icon.individual_size", config.styles?.icon?.individual_size)}
+            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles?.title_size)}
+            ${this._renderTextField("Tamano chip", "styles.chip_height", config.styles?.chip_height)}
+            ${this._renderTextField("Texto chip", "styles.chip_font_size", config.styles?.chip_font_size)}
+            ${this._renderTextField("Valor casa", "styles.home_value_size", config.styles?.home_value_size)}
+            ${this._renderTextField("Unidad casa", "styles.home_unit_size", config.styles?.home_unit_size)}
+            ${this._renderTextField("Valor nodo", "styles.node_value_size", config.styles?.node_value_size)}
+            ${this._renderTextField("Grosor lineas", "styles.flow_width", config.styles?.flow_width)}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Haptics</div>
+            <div class="editor-section__hint">Respuesta tactil opcional al pulsar nodos o botones.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics?.enabled === true)}
+            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
+            ${this._renderSelectField("Estilo", "haptics.style", hapticStyle, [
+              { value: "selection", label: "Selection" },
+              { value: "light", label: "Light" },
+              { value: "medium", label: "Medium" },
+              { value: "heavy", label: "Heavy" },
+              { value: "success", label: "Success" },
+              { value: "warning", label: "Warning" },
+              { value: "failure", label: "Failure" },
+            ])}
+          </div>
+        </section>
+        ${this._getEntityOptionsMarkup()}
+      </div>
+    `;
+
+    this.shadowRoot.querySelectorAll('input[data-field$=".entity"]').forEach(input => {
+      input.setAttribute("list", "power-flow-card-entity-options");
+    });
+  }
+}
+
+if (!customElements.get(EDITOR_TAG)) {
+  customElements.define(EDITOR_TAG, NodaliaPowerFlowCardEditor);
+}
+
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: CARD_TAG,
+  name: "Nodalia Power Flow Card",
+  description: "Tarjeta Nodalia de flujo energetico para red, solar, bateria, agua, gas y consumos individuales.",
+  preview: true,
+});
+
+
+})();
+
+(() => {
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
 const CARD_VERSION = "0.10.0";
@@ -28028,7 +29859,7 @@ window.customCards.push({
 (() => {
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "0.7.0";
+const CARD_VERSION = "0.8.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -28040,16 +29871,31 @@ const HAPTIC_PATTERNS = {
 };
 const MINI_LAYOUT_THRESHOLD = 126;
 const INLINE_LAYOUT_THRESHOLD = 340;
+const FEATURE_ARM_HOME = 1;
+const FEATURE_ARM_AWAY = 2;
+const FEATURE_ARM_NIGHT = 4;
+const FEATURE_ARM_CUSTOM_BYPASS = 16;
+const FEATURE_ARM_VACATION = 32;
 
 const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  entity_mode: "auto",
   tap_action: "auto",
   tap_service: "",
   tap_service_data: "",
   tap_url: "",
   tap_new_tab: false,
+  alarm_code: "",
+  alarm_code_entity: "",
+  alarm_show_code_input: true,
+  alarm_show_disarm: true,
+  alarm_show_arm_home: true,
+  alarm_show_arm_away: true,
+  alarm_show_arm_night: true,
+  alarm_show_arm_vacation: false,
+  alarm_show_custom_bypass: false,
   show_name: true,
   show_state: true,
   state_attribute: "",
@@ -28272,6 +30118,8 @@ class NodaliaFavCard extends HTMLElement {
     this._hass = null;
     this._cardWidth = 0;
     this._layout = "inline";
+    this._alarmMenuOpen = false;
+    this._alarmCodeInput = "";
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -28290,7 +30138,9 @@ class NodaliaFavCard extends HTMLElement {
       this._render();
     });
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowInput = this._onShadowInput.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this.shadowRoot.addEventListener("input", this._onShadowInput);
   }
 
   connectedCallback() {
@@ -28378,6 +30228,20 @@ class NodaliaFavCard extends HTMLElement {
     return String(entityId || "").split(".")[0] || "";
   }
 
+  _isAlarmPanelMode(state = this._getState()) {
+    const mode = normalizeTextKey(this._config?.entity_mode || "auto");
+
+    if (mode === "alarm_control_panel") {
+      return true;
+    }
+
+    if (mode === "standard") {
+      return false;
+    }
+
+    return this._getDomain(state?.entity_id || this._config?.entity) === "alarm_control_panel";
+  }
+
   _isBinaryOnOff(state) {
     const stateKey = normalizeTextKey(state?.state);
     return stateKey === "on" || stateKey === "off";
@@ -28386,7 +30250,7 @@ class NodaliaFavCard extends HTMLElement {
   _isActiveState(state) {
     const stateKey = normalizeTextKey(state?.state);
 
-    if (!stateKey || ["off", "closed", "locked", "unavailable", "unknown", "none", "idle", "standby"].includes(stateKey)) {
+    if (!stateKey || ["off", "closed", "locked", "unavailable", "unknown", "none", "idle", "standby", "disarmed"].includes(stateKey)) {
       return false;
     }
 
@@ -28452,6 +30316,8 @@ class NodaliaFavCard extends HTMLElement {
         return "var(--info-color, #71c0ff)";
       case "humidifier":
         return "var(--info-color, #71c0ff)";
+      case "alarm_control_panel":
+        return this._getAlarmAccentColor(state);
       case "switch":
         return "var(--primary-color)";
       case "media_player":
@@ -28476,6 +30342,31 @@ class NodaliaFavCard extends HTMLElement {
     }
 
     return this._getDomainDefaultOnColor(state);
+  }
+
+  _getAlarmAccentColor(state) {
+    const key = normalizeTextKey(state?.state);
+
+    switch (key) {
+      case "armed_home":
+        return "#74c0ff";
+      case "armed_away":
+        return "#8aa7ff";
+      case "armed_night":
+        return "#9488ff";
+      case "armed_vacation":
+        return "#5fd7cf";
+      case "armed_custom_bypass":
+        return "#64d4a6";
+      case "arming":
+        return "#71c0ff";
+      case "pending":
+        return "#f2c46d";
+      case "triggered":
+        return "#ff7474";
+      default:
+        return "var(--info-color, #71c0ff)";
+    }
   }
 
   _translateStateValue(state) {
@@ -28512,6 +30403,26 @@ class NodaliaFavCard extends HTMLElement {
         return "En casa";
       case "not_home":
         return "Fuera";
+      case "disarmed":
+        return "Desarmada";
+      case "armed_home":
+        return "En casa";
+      case "armed_away":
+        return "Ausente";
+      case "armed_night":
+        return "Noche";
+      case "armed_vacation":
+        return "Vacaciones";
+      case "armed_custom_bypass":
+        return "Personalizada";
+      case "arming":
+        return "Armando";
+      case "disarming":
+        return "Desarmando";
+      case "pending":
+        return "Retardo";
+      case "triggered":
+        return "Disparada";
       case "detected":
         return "Detectado";
       case "clear":
@@ -28571,6 +30482,10 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _canRunTapAction(state) {
+    if (this._isAlarmPanelMode(state)) {
+      return Boolean(this._config?.entity);
+    }
+
     const tapAction = this._config?.tap_action || "auto";
 
     if (tapAction === "none") {
@@ -28594,6 +30509,164 @@ class NodaliaFavCard extends HTMLElement {
     }
 
     return Boolean(this._config?.entity);
+  }
+
+  _getAlarmSupportedFeatures(state) {
+    const value = Number(state?.attributes?.supported_features);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  _supportsAlarmMode(state, mode) {
+    const features = this._getAlarmSupportedFeatures(state);
+
+    if (!features) {
+      return true;
+    }
+
+    switch (mode) {
+      case "home":
+        return Boolean(features & FEATURE_ARM_HOME);
+      case "away":
+        return Boolean(features & FEATURE_ARM_AWAY);
+      case "night":
+        return Boolean(features & FEATURE_ARM_NIGHT);
+      case "vacation":
+        return Boolean(features & FEATURE_ARM_VACATION);
+      case "custom_bypass":
+        return Boolean(features & FEATURE_ARM_CUSTOM_BYPASS);
+      default:
+        return true;
+    }
+  }
+
+  _getAlarmStateCandidates(state) {
+    return [
+      state?.state,
+      state?.attributes?.next_state,
+      state?.attributes?.post_pending_state,
+      state?.attributes?.post_delay_state,
+      state?.attributes?.arm_mode,
+      state?.attributes?.arming_mode,
+    ]
+      .map(value => normalizeTextKey(value))
+      .filter(Boolean);
+  }
+
+  _matchesAlarmMode(state, ...keys) {
+    const candidates = this._getAlarmStateCandidates(state);
+    return keys.some(key => candidates.includes(normalizeTextKey(key)));
+  }
+
+  _getAlarmModeDefinitions(state) {
+    const modes = [
+      {
+        key: "disarm",
+        label: "Desarmar",
+        icon: "mdi:shield-off-outline",
+        service: "alarm_disarm",
+        enabled: this._config?.alarm_show_disarm !== false && !this._matchesAlarmMode(state, "disarmed"),
+      },
+      {
+        key: "home",
+        label: "Casa",
+        icon: "mdi:home-lock",
+        service: "alarm_arm_home",
+        enabled: this._config?.alarm_show_arm_home !== false
+          && this._supportsAlarmMode(state, "home")
+          && !this._matchesAlarmMode(state, "armed_home"),
+      },
+      {
+        key: "away",
+        label: "Ausente",
+        icon: "mdi:shield-lock",
+        service: "alarm_arm_away",
+        enabled: this._config?.alarm_show_arm_away !== false
+          && this._supportsAlarmMode(state, "away")
+          && !this._matchesAlarmMode(state, "armed_away"),
+      },
+      {
+        key: "night",
+        label: "Noche",
+        icon: "mdi:weather-night",
+        service: "alarm_arm_night",
+        enabled: this._config?.alarm_show_arm_night !== false
+          && this._supportsAlarmMode(state, "night")
+          && !this._matchesAlarmMode(state, "armed_night"),
+      },
+      {
+        key: "vacation",
+        label: "Vacaciones",
+        icon: "mdi:palm-tree",
+        service: "alarm_arm_vacation",
+        enabled: this._config?.alarm_show_arm_vacation === true
+          && this._supportsAlarmMode(state, "vacation")
+          && !this._matchesAlarmMode(state, "armed_vacation"),
+      },
+      {
+        key: "custom_bypass",
+        label: "Personalizada",
+        icon: "mdi:tune-variant",
+        service: "alarm_arm_custom_bypass",
+        enabled: this._config?.alarm_show_custom_bypass === true
+          && this._supportsAlarmMode(state, "custom_bypass")
+          && !this._matchesAlarmMode(state, "armed_custom_bypass"),
+      },
+    ];
+
+    return modes.filter(mode => mode.enabled);
+  }
+
+  _shouldShowAlarmCodeInput(state) {
+    if (this._config?.alarm_show_code_input === false) {
+      return false;
+    }
+
+    return Boolean(String(state?.attributes?.code_format || "").trim());
+  }
+
+  _getAlarmCodeValue(state) {
+    if (this._shouldShowAlarmCodeInput(state)) {
+      const manualCode = String(this._alarmCodeInput || "").trim();
+      if (manualCode) {
+        return manualCode;
+      }
+    }
+
+    const helperEntityId = String(this._config?.alarm_code_entity || "").trim();
+    if (helperEntityId) {
+      const helperState = this._hass?.states?.[helperEntityId];
+      const helperValue = String(helperState?.state || "").trim();
+      if (helperValue && !["unknown", "unavailable"].includes(normalizeTextKey(helperValue))) {
+        return helperValue;
+      }
+    }
+
+    const configuredCode = String(this._config?.alarm_code || "").trim();
+    if (configuredCode) {
+      return configuredCode;
+    }
+
+    return "";
+  }
+
+  _runAlarmAction(service) {
+    const state = this._getState();
+    if (!this._hass || !this._config?.entity || !service || !state) {
+      return;
+    }
+
+    const payload = {
+      entity_id: this._config.entity,
+    };
+    const code = this._getAlarmCodeValue(state);
+    if (code) {
+      payload.code = code;
+    }
+
+    this._triggerHaptic();
+    this._hass.callService("alarm_control_panel", service, payload);
+    this._alarmMenuOpen = false;
+    this._render();
   }
 
   _toggleEntity(entityId = this._config?.entity) {
@@ -28664,6 +30737,12 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _performPrimaryAction(state) {
+    if (this._isAlarmPanelMode(state)) {
+      this._alarmMenuOpen = !this._alarmMenuOpen;
+      this._render();
+      return;
+    }
+
     const tapAction = this._config?.tap_action || "auto";
 
     switch (tapAction) {
@@ -28710,6 +30789,25 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _onShadowClick(event) {
+    const alarmInput = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.favAlarmIgnore === "true");
+
+    if (alarmInput) {
+      return;
+    }
+
+    const alarmButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLButtonElement && node.dataset?.favAlarmAction);
+
+    if (alarmButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._runAlarmAction(alarmButton.dataset.favAlarmAction);
+      return;
+    }
+
     const actionTarget = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.favAction);
@@ -28729,6 +30827,19 @@ class NodaliaFavCard extends HTMLElement {
     this._performPrimaryAction(state);
   }
 
+  _onShadowInput(event) {
+    const input = event
+      .composedPath()
+      .find(node => node instanceof HTMLInputElement && node.dataset?.favAlarmField === "alarm-code");
+
+    if (!input) {
+      return;
+    }
+
+    event.stopPropagation();
+    this._alarmCodeInput = input.value;
+  }
+
   _renderChip(label) {
     if (!label) {
       return "";
@@ -28743,6 +30854,23 @@ class NodaliaFavCard extends HTMLElement {
         <div class="fav-card__empty-title">Nodalia Fav Card</div>
         <div class="fav-card__empty-text">Configura \`entity\` para mostrar el favorito.</div>
       </ha-card>
+    `;
+  }
+
+  _renderAlarmActionButton(mode, accentColor) {
+    return `
+      <button
+        type="button"
+        class="fav-card__alarm-button"
+        data-fav-alarm-action="${escapeHtml(mode.service)}"
+        style="
+          --fav-alarm-accent:${escapeHtml(accentColor)};
+        "
+        aria-label="${escapeHtml(mode.label)}"
+      >
+        <ha-icon icon="${escapeHtml(mode.icon)}"></ha-icon>
+        <span>${escapeHtml(mode.label)}</span>
+      </button>
     `;
   }
 
@@ -28773,6 +30901,10 @@ class NodaliaFavCard extends HTMLElement {
     const displayValue = config.show_state !== false
       ? (config.state_attribute ? this._formatAttributeValue(state, config.state_attribute) : this._translateStateValue(state))
       : null;
+    const isAlarmPanel = this._isAlarmPanelMode(state);
+    const alarmModes = isAlarmPanel ? this._getAlarmModeDefinitions(state) : [];
+    const showAlarmPanel = isAlarmPanel && this._alarmMenuOpen && alarmModes.length > 0;
+    const showAlarmCodeInput = showAlarmPanel && this._shouldShowAlarmCodeInput(state);
     const canRunPrimaryAction = this._canRunTapAction(state);
     const isActive = this._isDomainOn(state);
     const iconSizePx = Math.max(40, Math.min(parseSizeToPixels(styles.icon.size, 52), isMini ? 54 : 56));
@@ -28925,6 +31057,67 @@ class NodaliaFavCard extends HTMLElement {
           min-width: 0;
         }
 
+        .fav-card__alarm-panel {
+          display: grid;
+          gap: 10px;
+          margin-top: 2px;
+          min-width: 0;
+        }
+
+        .fav-card__alarm-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          min-width: 0;
+        }
+
+        .fav-card__alarm-button {
+          align-items: center;
+          appearance: none;
+          background:
+            linear-gradient(
+              135deg,
+              color-mix(in srgb, var(--fav-alarm-accent) 14%, rgba(255, 255, 255, 0.05)),
+              rgba(255, 255, 255, 0.05)
+            );
+          border: 1px solid color-mix(in srgb, var(--fav-alarm-accent) 28%, rgba(255, 255, 255, 0.08));
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.07),
+            0 10px 24px rgba(0, 0, 0, 0.14);
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: ${Math.max(11, chipFontSizePx)}px;
+          font-weight: 700;
+          gap: 6px;
+          min-height: ${Math.max(28, chipHeightPx + 6)}px;
+          padding: 0 11px;
+        }
+
+        .fav-card__alarm-button ha-icon {
+          --mdc-icon-size: 14px;
+          height: 14px;
+          width: 14px;
+        }
+
+        .fav-card__alarm-code {
+          min-width: 0;
+        }
+
+        .fav-card__alarm-code input {
+          appearance: none;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 14px;
+          color: var(--primary-text-color);
+          font: inherit;
+          min-height: 38px;
+          padding: 0 12px;
+          width: 100%;
+        }
+
         .fav-card__title {
           font-size: ${titleSizePx}px;
           font-weight: 700;
@@ -28998,6 +31191,30 @@ class NodaliaFavCard extends HTMLElement {
                 <div class="fav-card__copy">
                   ${showTitle ? `<div class="fav-card__title">${escapeHtml(title)}</div>` : ""}
                   ${showValue ? `<div class="fav-card__chips">${this._renderChip(displayValue)}</div>` : ""}
+                  ${showAlarmPanel
+                    ? `
+                      <div class="fav-card__alarm-panel">
+                        <div class="fav-card__alarm-actions">
+                          ${alarmModes.map(mode => this._renderAlarmActionButton(mode, accentColor)).join("")}
+                        </div>
+                        ${showAlarmCodeInput
+                          ? `
+                            <label class="fav-card__alarm-code" data-fav-alarm-ignore="true">
+                              <input
+                                type="password"
+                                inputmode="numeric"
+                                autocomplete="one-time-code"
+                                data-fav-alarm-ignore="true"
+                                data-fav-alarm-field="alarm-code"
+                                placeholder="PIN"
+                                value="${escapeHtml(this._alarmCodeInput)}"
+                              />
+                            </label>
+                          `
+                          : ""}
+                      </div>
+                    `
+                    : ""}
                 </div>
               `
               : ""}
@@ -29410,6 +31627,16 @@ class NodaliaFavCardEditor extends HTMLElement {
               placeholder: "mdi:lightbulb",
             })}
             ${this._renderSelectField(
+              "Modo de tarjeta",
+              "entity_mode",
+              config.entity_mode || "auto",
+              [
+                { value: "auto", label: "Automatico" },
+                { value: "standard", label: "Normal" },
+                { value: "alarm_control_panel", label: "Alarm control panel" },
+              ],
+            )}
+            ${this._renderSelectField(
               "Accion principal",
               "tap_action",
               config.tap_action || "auto",
@@ -29466,6 +31693,28 @@ class NodaliaFavCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
+            <div class="editor-section__title">Alarma</div>
+            <div class="editor-section__hint">Si la entidad es una alarma, al tocar la tarjeta puede desplegar los modos de armado y usar PIN fijo o helper.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderTextField("PIN fijo", "alarm_code", config.alarm_code, {
+              placeholder: "1234",
+            })}
+            ${this._renderTextField("Helper codigo", "alarm_code_entity", config.alarm_code_entity, {
+              placeholder: "input_text.alarm_pin",
+            })}
+            ${this._renderCheckboxField("Mostrar cuadro de texto del PIN", "alarm_show_code_input", config.alarm_show_code_input !== false)}
+            ${this._renderCheckboxField("Mostrar desarmar", "alarm_show_disarm", config.alarm_show_disarm !== false)}
+            ${this._renderCheckboxField("Mostrar en casa", "alarm_show_arm_home", config.alarm_show_arm_home !== false)}
+            ${this._renderCheckboxField("Mostrar ausente", "alarm_show_arm_away", config.alarm_show_arm_away !== false)}
+            ${this._renderCheckboxField("Mostrar noche", "alarm_show_arm_night", config.alarm_show_arm_night !== false)}
+            ${this._renderCheckboxField("Mostrar vacaciones", "alarm_show_arm_vacation", config.alarm_show_arm_vacation === true)}
+            ${this._renderCheckboxField("Mostrar personalizado", "alarm_show_custom_bypass", config.alarm_show_custom_bypass === true)}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
             <div class="editor-section__title">Haptics</div>
             <div class="editor-section__hint">Respuesta haptica opcional al tocar la tarjeta.</div>
           </div>
@@ -29516,6 +31765,10 @@ class NodaliaFavCardEditor extends HTMLElement {
 
     this.shadowRoot
       .querySelectorAll('input[data-field="entity"]')
+      .forEach(input => input.setAttribute("list", "fav-card-entities"));
+
+    this.shadowRoot
+      .querySelectorAll('input[data-field="alarm_code_entity"]')
       .forEach(input => input.setAttribute("list", "fav-card-entities"));
   }
 }

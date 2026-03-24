@@ -1,0 +1,28 @@
+type: custom:nodalia-power-flow-card
+title: Energia
+entities:
+  grid:
+    entity: sensor.shelly_pro_3em_puerto_c_potencia
+    name: Red
+  home:
+    entity: sensor.shelly_pro_3em_puerto_c_potencia
+    name: Casa
+  solar:
+    entity: sensor.solar_power
+    name: Solar
+  battery:
+    entity: sensor.battery_power
+    name: Bateria
+  individual:
+    - entity: sensor.enchufe_inteligente_potencia
+      name: Enchufe salon
+      icon: mdi:power-plug
+      color: "#42a5f5"
+display_zero_lines:
+  mode: show
+  transparency: 50
+  grey_color:
+    - 189
+    - 189
+    - 189
+dashboard_link: /energy/overview

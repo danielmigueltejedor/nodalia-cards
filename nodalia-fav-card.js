@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "0.7.0";
+const CARD_VERSION = "0.8.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -12,16 +12,31 @@ const HAPTIC_PATTERNS = {
 };
 const MINI_LAYOUT_THRESHOLD = 126;
 const INLINE_LAYOUT_THRESHOLD = 340;
+const FEATURE_ARM_HOME = 1;
+const FEATURE_ARM_AWAY = 2;
+const FEATURE_ARM_NIGHT = 4;
+const FEATURE_ARM_CUSTOM_BYPASS = 16;
+const FEATURE_ARM_VACATION = 32;
 
 const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  entity_mode: "auto",
   tap_action: "auto",
   tap_service: "",
   tap_service_data: "",
   tap_url: "",
   tap_new_tab: false,
+  alarm_code: "",
+  alarm_code_entity: "",
+  alarm_show_code_input: true,
+  alarm_show_disarm: true,
+  alarm_show_arm_home: true,
+  alarm_show_arm_away: true,
+  alarm_show_arm_night: true,
+  alarm_show_arm_vacation: false,
+  alarm_show_custom_bypass: false,
   show_name: true,
   show_state: true,
   state_attribute: "",
@@ -244,6 +259,8 @@ class NodaliaFavCard extends HTMLElement {
     this._hass = null;
     this._cardWidth = 0;
     this._layout = "inline";
+    this._alarmMenuOpen = false;
+    this._alarmCodeInput = "";
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -262,7 +279,9 @@ class NodaliaFavCard extends HTMLElement {
       this._render();
     });
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowInput = this._onShadowInput.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this.shadowRoot.addEventListener("input", this._onShadowInput);
   }
 
   connectedCallback() {
@@ -350,6 +369,20 @@ class NodaliaFavCard extends HTMLElement {
     return String(entityId || "").split(".")[0] || "";
   }
 
+  _isAlarmPanelMode(state = this._getState()) {
+    const mode = normalizeTextKey(this._config?.entity_mode || "auto");
+
+    if (mode === "alarm_control_panel") {
+      return true;
+    }
+
+    if (mode === "standard") {
+      return false;
+    }
+
+    return this._getDomain(state?.entity_id || this._config?.entity) === "alarm_control_panel";
+  }
+
   _isBinaryOnOff(state) {
     const stateKey = normalizeTextKey(state?.state);
     return stateKey === "on" || stateKey === "off";
@@ -358,7 +391,7 @@ class NodaliaFavCard extends HTMLElement {
   _isActiveState(state) {
     const stateKey = normalizeTextKey(state?.state);
 
-    if (!stateKey || ["off", "closed", "locked", "unavailable", "unknown", "none", "idle", "standby"].includes(stateKey)) {
+    if (!stateKey || ["off", "closed", "locked", "unavailable", "unknown", "none", "idle", "standby", "disarmed"].includes(stateKey)) {
       return false;
     }
 
@@ -424,6 +457,8 @@ class NodaliaFavCard extends HTMLElement {
         return "var(--info-color, #71c0ff)";
       case "humidifier":
         return "var(--info-color, #71c0ff)";
+      case "alarm_control_panel":
+        return this._getAlarmAccentColor(state);
       case "switch":
         return "var(--primary-color)";
       case "media_player":
@@ -448,6 +483,31 @@ class NodaliaFavCard extends HTMLElement {
     }
 
     return this._getDomainDefaultOnColor(state);
+  }
+
+  _getAlarmAccentColor(state) {
+    const key = normalizeTextKey(state?.state);
+
+    switch (key) {
+      case "armed_home":
+        return "#74c0ff";
+      case "armed_away":
+        return "#8aa7ff";
+      case "armed_night":
+        return "#9488ff";
+      case "armed_vacation":
+        return "#5fd7cf";
+      case "armed_custom_bypass":
+        return "#64d4a6";
+      case "arming":
+        return "#71c0ff";
+      case "pending":
+        return "#f2c46d";
+      case "triggered":
+        return "#ff7474";
+      default:
+        return "var(--info-color, #71c0ff)";
+    }
   }
 
   _translateStateValue(state) {
@@ -484,6 +544,26 @@ class NodaliaFavCard extends HTMLElement {
         return "En casa";
       case "not_home":
         return "Fuera";
+      case "disarmed":
+        return "Desarmada";
+      case "armed_home":
+        return "En casa";
+      case "armed_away":
+        return "Ausente";
+      case "armed_night":
+        return "Noche";
+      case "armed_vacation":
+        return "Vacaciones";
+      case "armed_custom_bypass":
+        return "Personalizada";
+      case "arming":
+        return "Armando";
+      case "disarming":
+        return "Desarmando";
+      case "pending":
+        return "Retardo";
+      case "triggered":
+        return "Disparada";
       case "detected":
         return "Detectado";
       case "clear":
@@ -543,6 +623,10 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _canRunTapAction(state) {
+    if (this._isAlarmPanelMode(state)) {
+      return Boolean(this._config?.entity);
+    }
+
     const tapAction = this._config?.tap_action || "auto";
 
     if (tapAction === "none") {
@@ -566,6 +650,164 @@ class NodaliaFavCard extends HTMLElement {
     }
 
     return Boolean(this._config?.entity);
+  }
+
+  _getAlarmSupportedFeatures(state) {
+    const value = Number(state?.attributes?.supported_features);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  _supportsAlarmMode(state, mode) {
+    const features = this._getAlarmSupportedFeatures(state);
+
+    if (!features) {
+      return true;
+    }
+
+    switch (mode) {
+      case "home":
+        return Boolean(features & FEATURE_ARM_HOME);
+      case "away":
+        return Boolean(features & FEATURE_ARM_AWAY);
+      case "night":
+        return Boolean(features & FEATURE_ARM_NIGHT);
+      case "vacation":
+        return Boolean(features & FEATURE_ARM_VACATION);
+      case "custom_bypass":
+        return Boolean(features & FEATURE_ARM_CUSTOM_BYPASS);
+      default:
+        return true;
+    }
+  }
+
+  _getAlarmStateCandidates(state) {
+    return [
+      state?.state,
+      state?.attributes?.next_state,
+      state?.attributes?.post_pending_state,
+      state?.attributes?.post_delay_state,
+      state?.attributes?.arm_mode,
+      state?.attributes?.arming_mode,
+    ]
+      .map(value => normalizeTextKey(value))
+      .filter(Boolean);
+  }
+
+  _matchesAlarmMode(state, ...keys) {
+    const candidates = this._getAlarmStateCandidates(state);
+    return keys.some(key => candidates.includes(normalizeTextKey(key)));
+  }
+
+  _getAlarmModeDefinitions(state) {
+    const modes = [
+      {
+        key: "disarm",
+        label: "Desarmar",
+        icon: "mdi:shield-off-outline",
+        service: "alarm_disarm",
+        enabled: this._config?.alarm_show_disarm !== false && !this._matchesAlarmMode(state, "disarmed"),
+      },
+      {
+        key: "home",
+        label: "Casa",
+        icon: "mdi:home-lock",
+        service: "alarm_arm_home",
+        enabled: this._config?.alarm_show_arm_home !== false
+          && this._supportsAlarmMode(state, "home")
+          && !this._matchesAlarmMode(state, "armed_home"),
+      },
+      {
+        key: "away",
+        label: "Ausente",
+        icon: "mdi:shield-lock",
+        service: "alarm_arm_away",
+        enabled: this._config?.alarm_show_arm_away !== false
+          && this._supportsAlarmMode(state, "away")
+          && !this._matchesAlarmMode(state, "armed_away"),
+      },
+      {
+        key: "night",
+        label: "Noche",
+        icon: "mdi:weather-night",
+        service: "alarm_arm_night",
+        enabled: this._config?.alarm_show_arm_night !== false
+          && this._supportsAlarmMode(state, "night")
+          && !this._matchesAlarmMode(state, "armed_night"),
+      },
+      {
+        key: "vacation",
+        label: "Vacaciones",
+        icon: "mdi:palm-tree",
+        service: "alarm_arm_vacation",
+        enabled: this._config?.alarm_show_arm_vacation === true
+          && this._supportsAlarmMode(state, "vacation")
+          && !this._matchesAlarmMode(state, "armed_vacation"),
+      },
+      {
+        key: "custom_bypass",
+        label: "Personalizada",
+        icon: "mdi:tune-variant",
+        service: "alarm_arm_custom_bypass",
+        enabled: this._config?.alarm_show_custom_bypass === true
+          && this._supportsAlarmMode(state, "custom_bypass")
+          && !this._matchesAlarmMode(state, "armed_custom_bypass"),
+      },
+    ];
+
+    return modes.filter(mode => mode.enabled);
+  }
+
+  _shouldShowAlarmCodeInput(state) {
+    if (this._config?.alarm_show_code_input === false) {
+      return false;
+    }
+
+    return Boolean(String(state?.attributes?.code_format || "").trim());
+  }
+
+  _getAlarmCodeValue(state) {
+    if (this._shouldShowAlarmCodeInput(state)) {
+      const manualCode = String(this._alarmCodeInput || "").trim();
+      if (manualCode) {
+        return manualCode;
+      }
+    }
+
+    const helperEntityId = String(this._config?.alarm_code_entity || "").trim();
+    if (helperEntityId) {
+      const helperState = this._hass?.states?.[helperEntityId];
+      const helperValue = String(helperState?.state || "").trim();
+      if (helperValue && !["unknown", "unavailable"].includes(normalizeTextKey(helperValue))) {
+        return helperValue;
+      }
+    }
+
+    const configuredCode = String(this._config?.alarm_code || "").trim();
+    if (configuredCode) {
+      return configuredCode;
+    }
+
+    return "";
+  }
+
+  _runAlarmAction(service) {
+    const state = this._getState();
+    if (!this._hass || !this._config?.entity || !service || !state) {
+      return;
+    }
+
+    const payload = {
+      entity_id: this._config.entity,
+    };
+    const code = this._getAlarmCodeValue(state);
+    if (code) {
+      payload.code = code;
+    }
+
+    this._triggerHaptic();
+    this._hass.callService("alarm_control_panel", service, payload);
+    this._alarmMenuOpen = false;
+    this._render();
   }
 
   _toggleEntity(entityId = this._config?.entity) {
@@ -636,6 +878,12 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _performPrimaryAction(state) {
+    if (this._isAlarmPanelMode(state)) {
+      this._alarmMenuOpen = !this._alarmMenuOpen;
+      this._render();
+      return;
+    }
+
     const tapAction = this._config?.tap_action || "auto";
 
     switch (tapAction) {
@@ -682,6 +930,25 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _onShadowClick(event) {
+    const alarmInput = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.favAlarmIgnore === "true");
+
+    if (alarmInput) {
+      return;
+    }
+
+    const alarmButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLButtonElement && node.dataset?.favAlarmAction);
+
+    if (alarmButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._runAlarmAction(alarmButton.dataset.favAlarmAction);
+      return;
+    }
+
     const actionTarget = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.favAction);
@@ -701,6 +968,19 @@ class NodaliaFavCard extends HTMLElement {
     this._performPrimaryAction(state);
   }
 
+  _onShadowInput(event) {
+    const input = event
+      .composedPath()
+      .find(node => node instanceof HTMLInputElement && node.dataset?.favAlarmField === "alarm-code");
+
+    if (!input) {
+      return;
+    }
+
+    event.stopPropagation();
+    this._alarmCodeInput = input.value;
+  }
+
   _renderChip(label) {
     if (!label) {
       return "";
@@ -715,6 +995,23 @@ class NodaliaFavCard extends HTMLElement {
         <div class="fav-card__empty-title">Nodalia Fav Card</div>
         <div class="fav-card__empty-text">Configura \`entity\` para mostrar el favorito.</div>
       </ha-card>
+    `;
+  }
+
+  _renderAlarmActionButton(mode, accentColor) {
+    return `
+      <button
+        type="button"
+        class="fav-card__alarm-button"
+        data-fav-alarm-action="${escapeHtml(mode.service)}"
+        style="
+          --fav-alarm-accent:${escapeHtml(accentColor)};
+        "
+        aria-label="${escapeHtml(mode.label)}"
+      >
+        <ha-icon icon="${escapeHtml(mode.icon)}"></ha-icon>
+        <span>${escapeHtml(mode.label)}</span>
+      </button>
     `;
   }
 
@@ -745,6 +1042,10 @@ class NodaliaFavCard extends HTMLElement {
     const displayValue = config.show_state !== false
       ? (config.state_attribute ? this._formatAttributeValue(state, config.state_attribute) : this._translateStateValue(state))
       : null;
+    const isAlarmPanel = this._isAlarmPanelMode(state);
+    const alarmModes = isAlarmPanel ? this._getAlarmModeDefinitions(state) : [];
+    const showAlarmPanel = isAlarmPanel && this._alarmMenuOpen && alarmModes.length > 0;
+    const showAlarmCodeInput = showAlarmPanel && this._shouldShowAlarmCodeInput(state);
     const canRunPrimaryAction = this._canRunTapAction(state);
     const isActive = this._isDomainOn(state);
     const iconSizePx = Math.max(40, Math.min(parseSizeToPixels(styles.icon.size, 52), isMini ? 54 : 56));
@@ -897,6 +1198,67 @@ class NodaliaFavCard extends HTMLElement {
           min-width: 0;
         }
 
+        .fav-card__alarm-panel {
+          display: grid;
+          gap: 10px;
+          margin-top: 2px;
+          min-width: 0;
+        }
+
+        .fav-card__alarm-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          min-width: 0;
+        }
+
+        .fav-card__alarm-button {
+          align-items: center;
+          appearance: none;
+          background:
+            linear-gradient(
+              135deg,
+              color-mix(in srgb, var(--fav-alarm-accent) 14%, rgba(255, 255, 255, 0.05)),
+              rgba(255, 255, 255, 0.05)
+            );
+          border: 1px solid color-mix(in srgb, var(--fav-alarm-accent) 28%, rgba(255, 255, 255, 0.08));
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.07),
+            0 10px 24px rgba(0, 0, 0, 0.14);
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: ${Math.max(11, chipFontSizePx)}px;
+          font-weight: 700;
+          gap: 6px;
+          min-height: ${Math.max(28, chipHeightPx + 6)}px;
+          padding: 0 11px;
+        }
+
+        .fav-card__alarm-button ha-icon {
+          --mdc-icon-size: 14px;
+          height: 14px;
+          width: 14px;
+        }
+
+        .fav-card__alarm-code {
+          min-width: 0;
+        }
+
+        .fav-card__alarm-code input {
+          appearance: none;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 14px;
+          color: var(--primary-text-color);
+          font: inherit;
+          min-height: 38px;
+          padding: 0 12px;
+          width: 100%;
+        }
+
         .fav-card__title {
           font-size: ${titleSizePx}px;
           font-weight: 700;
@@ -970,6 +1332,30 @@ class NodaliaFavCard extends HTMLElement {
                 <div class="fav-card__copy">
                   ${showTitle ? `<div class="fav-card__title">${escapeHtml(title)}</div>` : ""}
                   ${showValue ? `<div class="fav-card__chips">${this._renderChip(displayValue)}</div>` : ""}
+                  ${showAlarmPanel
+                    ? `
+                      <div class="fav-card__alarm-panel">
+                        <div class="fav-card__alarm-actions">
+                          ${alarmModes.map(mode => this._renderAlarmActionButton(mode, accentColor)).join("")}
+                        </div>
+                        ${showAlarmCodeInput
+                          ? `
+                            <label class="fav-card__alarm-code" data-fav-alarm-ignore="true">
+                              <input
+                                type="password"
+                                inputmode="numeric"
+                                autocomplete="one-time-code"
+                                data-fav-alarm-ignore="true"
+                                data-fav-alarm-field="alarm-code"
+                                placeholder="PIN"
+                                value="${escapeHtml(this._alarmCodeInput)}"
+                              />
+                            </label>
+                          `
+                          : ""}
+                      </div>
+                    `
+                    : ""}
                 </div>
               `
               : ""}
@@ -1382,6 +1768,16 @@ class NodaliaFavCardEditor extends HTMLElement {
               placeholder: "mdi:lightbulb",
             })}
             ${this._renderSelectField(
+              "Modo de tarjeta",
+              "entity_mode",
+              config.entity_mode || "auto",
+              [
+                { value: "auto", label: "Automatico" },
+                { value: "standard", label: "Normal" },
+                { value: "alarm_control_panel", label: "Alarm control panel" },
+              ],
+            )}
+            ${this._renderSelectField(
               "Accion principal",
               "tap_action",
               config.tap_action || "auto",
@@ -1438,6 +1834,28 @@ class NodaliaFavCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
+            <div class="editor-section__title">Alarma</div>
+            <div class="editor-section__hint">Si la entidad es una alarma, al tocar la tarjeta puede desplegar los modos de armado y usar PIN fijo o helper.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderTextField("PIN fijo", "alarm_code", config.alarm_code, {
+              placeholder: "1234",
+            })}
+            ${this._renderTextField("Helper codigo", "alarm_code_entity", config.alarm_code_entity, {
+              placeholder: "input_text.alarm_pin",
+            })}
+            ${this._renderCheckboxField("Mostrar cuadro de texto del PIN", "alarm_show_code_input", config.alarm_show_code_input !== false)}
+            ${this._renderCheckboxField("Mostrar desarmar", "alarm_show_disarm", config.alarm_show_disarm !== false)}
+            ${this._renderCheckboxField("Mostrar en casa", "alarm_show_arm_home", config.alarm_show_arm_home !== false)}
+            ${this._renderCheckboxField("Mostrar ausente", "alarm_show_arm_away", config.alarm_show_arm_away !== false)}
+            ${this._renderCheckboxField("Mostrar noche", "alarm_show_arm_night", config.alarm_show_arm_night !== false)}
+            ${this._renderCheckboxField("Mostrar vacaciones", "alarm_show_arm_vacation", config.alarm_show_arm_vacation === true)}
+            ${this._renderCheckboxField("Mostrar personalizado", "alarm_show_custom_bypass", config.alarm_show_custom_bypass === true)}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
             <div class="editor-section__title">Haptics</div>
             <div class="editor-section__hint">Respuesta haptica opcional al tocar la tarjeta.</div>
           </div>
@@ -1488,6 +1906,10 @@ class NodaliaFavCardEditor extends HTMLElement {
 
     this.shadowRoot
       .querySelectorAll('input[data-field="entity"]')
+      .forEach(input => input.setAttribute("list", "fav-card-entities"));
+
+    this.shadowRoot
+      .querySelectorAll('input[data-field="alarm_code_entity"]')
       .forEach(input => input.setAttribute("list", "fav-card-entities"));
   }
 }

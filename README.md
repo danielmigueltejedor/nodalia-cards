@@ -11,6 +11,7 @@ Ahora mismo incluye:
 - `custom:nodalia-humidifier-card`
 - `custom:nodalia-circular-gauge-card`
 - `custom:nodalia-graph-card`
+- `custom:nodalia-power-flow-card`
 - `custom:nodalia-climate-card`
 - `custom:nodalia-alarm-panel-card`
 - `custom:nodalia-advance-vacuum-card`
@@ -40,6 +41,7 @@ Ese recurso carga automaticamente:
 - `nodalia-humidifier-card.js`
 - `nodalia-circular-gauge-card.js`
 - `nodalia-graph-card.js`
+- `nodalia-power-flow-card.js`
 - `nodalia-climate-card.js`
 - `nodalia-alarm-panel-card.js`
 - `nodalia-advance-vacuum-card.js`
@@ -67,6 +69,8 @@ Si prefieres cargarlas por separado:
 - url: /local/nodalia-circular-gauge-card.js
   type: module
 - url: /local/nodalia-graph-card.js
+  type: module
+- url: /local/nodalia-power-flow-card.js
   type: module
 - url: /local/nodalia-climate-card.js
   type: module
@@ -168,6 +172,19 @@ entities:
     name: Pasillo
 ```
 
+### Nodalia Power Flow Card
+
+```yaml
+type: custom:nodalia-power-flow-card
+title: Energia
+entities:
+  grid:
+    entity: sensor.shelly_pro_3em_puerto_c_potencia
+  home:
+    entity: sensor.shelly_pro_3em_puerto_c_potencia
+dashboard_link: /energy/overview
+```
+
 ### Nodalia Climate Card
 
 ```yaml
@@ -254,6 +271,7 @@ show_zone_badge: true
 - `nodalia-humidifier-card.js`: tarjeta de humidificador o deshumidificador
 - `nodalia-circular-gauge-card.js`: tarjeta circular para sensores y valores numericos
 - `nodalia-graph-card.js`: tarjeta de grafica elegante para una o varias entidades
+- `nodalia-power-flow-card.js`: tarjeta de flujo energetico para red, solar, bateria, agua, gas y consumos
 - `nodalia-climate-card.js`: tarjeta de clima con dial circular
 - `nodalia-alarm-panel-card.js`: tarjeta elegante para paneles de alarma
 - `nodalia-advance-vacuum-card.js`: tarjeta avanzada de mapa para robots aspiradores
