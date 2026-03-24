@@ -339,6 +339,7 @@ class NodaliaFanCard extends HTMLElement {
     this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
     this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
     this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
+    this._onWindowTouchStartCapture = this._onWindowTouchStartCapture.bind(this);
     this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
     this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
@@ -356,6 +357,7 @@ class NodaliaFanCard extends HTMLElement {
     window.addEventListener("pointercancel", this._onWindowPointerUp);
     window.addEventListener("mousemove", this._onWindowMouseMove);
     window.addEventListener("mouseup", this._onWindowMouseUp);
+    window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
     window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
     window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
     window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
@@ -368,6 +370,7 @@ class NodaliaFanCard extends HTMLElement {
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
     window.removeEventListener("mousemove", this._onWindowMouseMove);
     window.removeEventListener("mouseup", this._onWindowMouseUp);
+    window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
     window.removeEventListener("touchmove", this._onWindowTouchMove);
     window.removeEventListener("touchend", this._onWindowTouchEnd);
     window.removeEventListener("touchcancel", this._onWindowTouchEnd);
@@ -792,6 +795,30 @@ class NodaliaFanCard extends HTMLElement {
 
     event.preventDefault();
     this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.touches[0].clientX);
+  }
+
+  _onWindowTouchStartCapture(event) {
+    const drag = this._activeSliderDrag;
+    if (!drag) {
+      return;
+    }
+
+    const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+    if (path.includes(drag.slider)) {
+      return;
+    }
+
+    this._activeSliderDrag = null;
+    this._pendingDragUpdate = null;
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+
+    if (this._pendingRenderAfterDrag) {
+      this._pendingRenderAfterDrag = false;
+      this._render();
+    }
   }
 
   _onWindowTouchEnd(event) {

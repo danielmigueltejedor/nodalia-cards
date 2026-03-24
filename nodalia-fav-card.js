@@ -480,6 +480,7 @@ class NodaliaFavCard extends HTMLElement {
     this._layout = "inline";
     this._alarmMenuOpen = false;
     this._alarmCodeInput = "";
+    this._ignoreNextPrimaryClickUntil = 0;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -498,8 +499,12 @@ class NodaliaFavCard extends HTMLElement {
       this._render();
     });
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowPointerUp = this._onShadowPointerUp.bind(this);
+    this._onShadowTouchEnd = this._onShadowTouchEnd.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this.shadowRoot.addEventListener("pointerup", this._onShadowPointerUp);
+    this.shadowRoot.addEventListener("touchend", this._onShadowTouchEnd, { passive: false });
     this.shadowRoot.addEventListener("input", this._onShadowInput);
   }
 
@@ -983,6 +988,46 @@ class NodaliaFavCard extends HTMLElement {
     return modes.filter(mode => mode.enabled);
   }
 
+  _getAlarmRenderedModes(state) {
+    const detectedModes = this._getAlarmModeDefinitions(state);
+    if (detectedModes.length) {
+      return detectedModes;
+    }
+
+    const fallbackModes = [
+      {
+        key: "disarm",
+        label: "Desarmar",
+        icon: "mdi:shield-off-outline",
+        service: "alarm_disarm",
+        enabled: this._config?.alarm_show_disarm !== false && !this._matchesAlarmMode(state, "disarmed"),
+      },
+      {
+        key: "home",
+        label: "Casa",
+        icon: "mdi:home-lock",
+        service: "alarm_arm_home",
+        enabled: this._config?.alarm_show_arm_home !== false && !this._matchesAlarmMode(state, "armed_home"),
+      },
+      {
+        key: "away",
+        label: "Ausente",
+        icon: "mdi:shield-lock",
+        service: "alarm_arm_away",
+        enabled: this._config?.alarm_show_arm_away !== false && !this._matchesAlarmMode(state, "armed_away"),
+      },
+      {
+        key: "night",
+        label: "Noche",
+        icon: "mdi:weather-night",
+        service: "alarm_arm_night",
+        enabled: this._config?.alarm_show_arm_night !== false && !this._matchesAlarmMode(state, "armed_night"),
+      },
+    ];
+
+    return fallbackModes.filter(mode => mode.enabled);
+  }
+
   _shouldShowAlarmCodeInput(state) {
     if (this._config?.alarm_show_code_input === false) {
       return false;
@@ -1130,7 +1175,7 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _applyHostGridSpan(showAlarmPanel = false) {
-    const cleanupTargets = [
+    const targets = [
       this,
       this.parentElement,
       this.closest("hui-card"),
@@ -1138,9 +1183,15 @@ class NodaliaFavCard extends HTMLElement {
       this.closest("hui-section-card"),
     ].filter(Boolean);
 
-    cleanupTargets.forEach(target => {
+    targets.forEach(target => {
       if (!(target instanceof HTMLElement)) {
         return;
+      }
+
+      if (showAlarmPanel) {
+        target.setAttribute("data-fav-alarm-open", "true");
+      } else {
+        target.removeAttribute("data-fav-alarm-open");
       }
 
       target.style.removeProperty("grid-row-end");
@@ -1149,24 +1200,40 @@ class NodaliaFavCard extends HTMLElement {
       target.style.removeProperty("height");
       target.style.removeProperty("overflow");
     });
+  }
 
-    if (!showAlarmPanel) {
-      return;
+  _getPrimaryActionTarget(event) {
+    const path = event.composedPath();
+    const alarmInput = path.find(node => node instanceof HTMLElement && node.dataset?.favAlarmIgnore === "true");
+    if (alarmInput) {
+      return null;
     }
 
-    const spanTargets = [
-      this,
-      this.closest("hui-card"),
-    ].filter(Boolean);
+    const alarmButton = path.find(node => node instanceof HTMLButtonElement && node.dataset?.favAlarmAction);
+    if (alarmButton) {
+      return null;
+    }
 
-    spanTargets.forEach(target => {
-      if (!(target instanceof HTMLElement)) {
-        return;
-      }
+    const actionTarget = path.find(node => node instanceof HTMLElement && node.dataset?.favAction === "primary");
+    return actionTarget || null;
+  }
 
-      target.style.gridRowEnd = "span 4";
-      target.style.gridRow = "span 4";
-    });
+  _activatePrimaryFromEvent(event) {
+    const actionTarget = this._getPrimaryActionTarget(event);
+    if (!actionTarget) {
+      return false;
+    }
+
+    const state = this._getState();
+    if (!this._canRunTapAction(state)) {
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this._triggerHaptic();
+    this._performPrimaryAction(state);
+    return true;
   }
 
   _performPrimaryAction(state) {
@@ -1223,6 +1290,15 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _onShadowClick(event) {
+    if (Date.now() < this._ignoreNextPrimaryClickUntil) {
+      const actionTarget = this._getPrimaryActionTarget(event);
+      if (actionTarget) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+    }
+
     const alarmInput = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.favAlarmIgnore === "true");
@@ -1242,23 +1318,23 @@ class NodaliaFavCard extends HTMLElement {
       return;
     }
 
-    const actionTarget = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.favAction);
+    this._activatePrimaryFromEvent(event);
+  }
 
-    if (!actionTarget || actionTarget.dataset.favAction !== "primary") {
+  _onShadowPointerUp(event) {
+    if (event.pointerType !== "touch") {
       return;
     }
 
-    const state = this._getState();
-    if (!this._canRunTapAction(state)) {
-      return;
+    if (this._activatePrimaryFromEvent(event)) {
+      this._ignoreNextPrimaryClickUntil = Date.now() + 500;
     }
+  }
 
-    event.preventDefault();
-    event.stopPropagation();
-    this._triggerHaptic();
-    this._performPrimaryAction(state);
+  _onShadowTouchEnd(event) {
+    if (this._activatePrimaryFromEvent(event)) {
+      this._ignoreNextPrimaryClickUntil = Date.now() + 500;
+    }
   }
 
   _onShadowInput(event) {
@@ -1352,8 +1428,8 @@ class NodaliaFavCard extends HTMLElement {
       ? (config.state_attribute ? this._formatAttributeValue(state, config.state_attribute) : this._translateStateValue(state))
       : null;
     const isAlarmPanel = this._isAlarmPanelMode(state);
-    const alarmModes = isAlarmPanel ? this._getAlarmModeDefinitions(state) : [];
-    const showAlarmPanel = isAlarmPanel && this._alarmMenuOpen && alarmModes.length > 0;
+    const alarmModes = isAlarmPanel ? this._getAlarmRenderedModes(state) : [];
+    const showAlarmPanel = isAlarmPanel && this._alarmMenuOpen;
     const showAlarmCodeInput = showAlarmPanel && this._shouldShowAlarmCodeInput(state);
     const canRunPrimaryAction = this._canRunTapAction(state);
     const isActive = this._isDomainOn(state);
@@ -1417,6 +1493,7 @@ class NodaliaFavCard extends HTMLElement {
         .fav-card {
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           min-width: 0;
+          touch-action: manipulation;
         }
 
         .fav-card__content {
@@ -1479,6 +1556,7 @@ class NodaliaFavCard extends HTMLElement {
           padding: 0;
           position: relative;
           width: ${iconSizePx}px;
+          touch-action: manipulation;
         }
 
         .fav-card--mini .fav-card__hero {
@@ -1568,6 +1646,7 @@ class NodaliaFavCard extends HTMLElement {
           gap: 6px;
           min-height: ${Math.max(28, chipHeightPx + 6)}px;
           padding: 0 11px;
+          touch-action: manipulation;
         }
 
         .fav-card__alarm-button ha-icon {
