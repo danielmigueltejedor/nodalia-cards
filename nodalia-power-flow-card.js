@@ -1130,7 +1130,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
     return `
       <div class="power-flow-card__simple-layout ${showDashboardButton ? "has-footer" : ""}">
-        <div class="power-flow-card__simple-top">
+        <div
+          class="power-flow-card__simple-top"
+          style="--simple-source-column:${nodeSize}px; --simple-home-column:${homeSize}px;"
+        >
           <div class="power-flow-card__simple-column power-flow-card__simple-column--source-top">
             ${this._renderSimpleLabelChip(sourceNode)}
           </div>
@@ -1140,7 +1143,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
           </div>
         </div>
 
-        <div class="power-flow-card__simple-rail" style="--simple-rail-height:${Math.max(nodeSize, homeSize)}px;">
+        <div
+          class="power-flow-card__simple-rail"
+          style="--simple-rail-height:${Math.max(nodeSize, homeSize)}px; --simple-source-column:${nodeSize}px; --simple-home-column:${homeSize}px;"
+        >
           <div
             class="power-flow-card__simple-line-wrap"
             style="--line-start-offset:${lineStartOffset}px; --line-end-offset:${lineEndOffset}px;"
@@ -1196,7 +1202,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
           </div>
         </div>
 
-        <div class="power-flow-card__simple-bottom">
+        <div
+          class="power-flow-card__simple-bottom"
+          style="--simple-source-column:${nodeSize}px; --simple-home-column:${homeSize}px;"
+        >
           <div class="power-flow-card__simple-column power-flow-card__simple-column--source">
             ${this._renderSimpleValueChip(sourceNode)}
             ${sourceNode.secondary ? `<span class="power-flow-card__node-secondary">${escapeHtml(sourceNode.secondary)}</span>` : ""}
@@ -1488,7 +1497,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           align-items: center;
           display: grid;
           gap: 0;
-          grid-template-columns: auto minmax(64px, 1fr) auto;
+          grid-template-columns: var(--simple-source-column, 48px) minmax(64px, 1fr) var(--simple-home-column, 96px);
           width: 100%;
         }
 
@@ -1504,7 +1513,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           align-items: center;
           display: grid;
           gap: 0;
-          grid-template-columns: auto minmax(64px, 1fr) auto;
+          grid-template-columns: var(--simple-source-column, 48px) minmax(64px, 1fr) var(--simple-home-column, 96px);
           min-height: var(--simple-rail-height, 96px);
           position: relative;
           width: 100%;
@@ -1562,15 +1571,18 @@ class NodaliaPowerFlowCard extends HTMLElement {
           gap: 3px;
           justify-self: center;
           margin-bottom: 0;
+          width: 100%;
         }
 
         .power-flow-card__simple-column--source {
           justify-self: center;
           margin-top: 0;
+          width: 100%;
         }
 
         .power-flow-card__simple-column--source-top {
           justify-self: center;
+          width: 100%;
         }
 
         .power-flow-card__simple-info {
@@ -1589,6 +1601,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__simple-top .power-flow-card__chip,
         .power-flow-card__simple-bottom .power-flow-card__chip {
           justify-self: center;
+          margin-left: auto;
+          margin-right: auto;
         }
 
         .power-flow-card__simple-line-wrap {

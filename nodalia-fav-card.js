@@ -1106,26 +1106,49 @@ class NodaliaFavCard extends HTMLElement {
 
   _notifyLayoutChange() {
     fireEvent(this, "iron-resize", {});
+    fireEvent(this, "ll-rebuild", {});
 
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("resize"));
       requestAnimationFrame(() => {
+        fireEvent(this, "iron-resize", {});
+        fireEvent(this, "ll-rebuild", {});
         window.dispatchEvent(new Event("resize"));
       });
     }
   }
 
   _applyHostGridSpan(showAlarmPanel = false) {
-    if (!this.style) {
-      return;
-    }
+    const renderedCard = this.shadowRoot?.querySelector("ha-card");
+    const renderedHeight = renderedCard ? Math.ceil(renderedCard.getBoundingClientRect().height) : 0;
+    const targets = [
+      this,
+      this.parentElement,
+      this.closest("hui-card"),
+      this.closest("hui-card-options"),
+      this.closest("hui-section-card"),
+    ].filter(Boolean);
 
-    if (showAlarmPanel) {
-      this.style.gridRowEnd = "span 4";
-      return;
-    }
+    targets.forEach(target => {
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
 
-    this.style.removeProperty("grid-row-end");
+      if (showAlarmPanel) {
+        target.style.gridRowEnd = "span 4";
+        target.style.gridRow = "span 4";
+        if (renderedHeight > 0) {
+          target.style.minHeight = `${renderedHeight}px`;
+          target.style.height = `${renderedHeight}px`;
+        }
+        return;
+      }
+
+      target.style.removeProperty("grid-row-end");
+      target.style.removeProperty("grid-row");
+      target.style.removeProperty("min-height");
+      target.style.removeProperty("height");
+    });
   }
 
   _performPrimaryAction(state) {
@@ -1676,6 +1699,13 @@ class NodaliaFavCard extends HTMLElement {
         </div>
       </ha-card>
     `;
+
+    if (isAlarmPanel) {
+      requestAnimationFrame(() => {
+        this._applyHostGridSpan(showAlarmPanel);
+        this._notifyLayoutChange();
+      });
+    }
   }
 }
 

@@ -20924,7 +20924,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
     return `
       <div class="power-flow-card__simple-layout ${showDashboardButton ? "has-footer" : ""}">
-        <div class="power-flow-card__simple-top">
+        <div
+          class="power-flow-card__simple-top"
+          style="--simple-source-column:${nodeSize}px; --simple-home-column:${homeSize}px;"
+        >
           <div class="power-flow-card__simple-column power-flow-card__simple-column--source-top">
             ${this._renderSimpleLabelChip(sourceNode)}
           </div>
@@ -20934,7 +20937,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
           </div>
         </div>
 
-        <div class="power-flow-card__simple-rail" style="--simple-rail-height:${Math.max(nodeSize, homeSize)}px;">
+        <div
+          class="power-flow-card__simple-rail"
+          style="--simple-rail-height:${Math.max(nodeSize, homeSize)}px; --simple-source-column:${nodeSize}px; --simple-home-column:${homeSize}px;"
+        >
           <div
             class="power-flow-card__simple-line-wrap"
             style="--line-start-offset:${lineStartOffset}px; --line-end-offset:${lineEndOffset}px;"
@@ -20990,7 +20996,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
           </div>
         </div>
 
-        <div class="power-flow-card__simple-bottom">
+        <div
+          class="power-flow-card__simple-bottom"
+          style="--simple-source-column:${nodeSize}px; --simple-home-column:${homeSize}px;"
+        >
           <div class="power-flow-card__simple-column power-flow-card__simple-column--source">
             ${this._renderSimpleValueChip(sourceNode)}
             ${sourceNode.secondary ? `<span class="power-flow-card__node-secondary">${escapeHtml(sourceNode.secondary)}</span>` : ""}
@@ -21282,7 +21291,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           align-items: center;
           display: grid;
           gap: 0;
-          grid-template-columns: auto minmax(64px, 1fr) auto;
+          grid-template-columns: var(--simple-source-column, 48px) minmax(64px, 1fr) var(--simple-home-column, 96px);
           width: 100%;
         }
 
@@ -21298,7 +21307,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           align-items: center;
           display: grid;
           gap: 0;
-          grid-template-columns: auto minmax(64px, 1fr) auto;
+          grid-template-columns: var(--simple-source-column, 48px) minmax(64px, 1fr) var(--simple-home-column, 96px);
           min-height: var(--simple-rail-height, 96px);
           position: relative;
           width: 100%;
@@ -21356,15 +21365,18 @@ class NodaliaPowerFlowCard extends HTMLElement {
           gap: 3px;
           justify-self: center;
           margin-bottom: 0;
+          width: 100%;
         }
 
         .power-flow-card__simple-column--source {
           justify-self: center;
           margin-top: 0;
+          width: 100%;
         }
 
         .power-flow-card__simple-column--source-top {
           justify-self: center;
+          width: 100%;
         }
 
         .power-flow-card__simple-info {
@@ -21383,6 +21395,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__simple-top .power-flow-card__chip,
         .power-flow-card__simple-bottom .power-flow-card__chip {
           justify-self: center;
+          margin-left: auto;
+          margin-right: auto;
         }
 
         .power-flow-card__simple-line-wrap {
@@ -32333,26 +32347,49 @@ class NodaliaFavCard extends HTMLElement {
 
   _notifyLayoutChange() {
     fireEvent(this, "iron-resize", {});
+    fireEvent(this, "ll-rebuild", {});
 
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("resize"));
       requestAnimationFrame(() => {
+        fireEvent(this, "iron-resize", {});
+        fireEvent(this, "ll-rebuild", {});
         window.dispatchEvent(new Event("resize"));
       });
     }
   }
 
   _applyHostGridSpan(showAlarmPanel = false) {
-    if (!this.style) {
-      return;
-    }
+    const renderedCard = this.shadowRoot?.querySelector("ha-card");
+    const renderedHeight = renderedCard ? Math.ceil(renderedCard.getBoundingClientRect().height) : 0;
+    const targets = [
+      this,
+      this.parentElement,
+      this.closest("hui-card"),
+      this.closest("hui-card-options"),
+      this.closest("hui-section-card"),
+    ].filter(Boolean);
 
-    if (showAlarmPanel) {
-      this.style.gridRowEnd = "span 4";
-      return;
-    }
+    targets.forEach(target => {
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
 
-    this.style.removeProperty("grid-row-end");
+      if (showAlarmPanel) {
+        target.style.gridRowEnd = "span 4";
+        target.style.gridRow = "span 4";
+        if (renderedHeight > 0) {
+          target.style.minHeight = `${renderedHeight}px`;
+          target.style.height = `${renderedHeight}px`;
+        }
+        return;
+      }
+
+      target.style.removeProperty("grid-row-end");
+      target.style.removeProperty("grid-row");
+      target.style.removeProperty("min-height");
+      target.style.removeProperty("height");
+    });
   }
 
   _performPrimaryAction(state) {
@@ -32903,6 +32940,13 @@ class NodaliaFavCard extends HTMLElement {
         </div>
       </ha-card>
     `;
+
+    if (isAlarmPanel) {
+      requestAnimationFrame(() => {
+        this._applyHostGridSpan(showAlarmPanel);
+        this._notifyLayoutChange();
+      });
+    }
   }
 }
 
