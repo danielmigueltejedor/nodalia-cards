@@ -1,4 +1,3 @@
-(() => {
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
 const CARD_VERSION = "0.6.0";
@@ -4757,11 +4756,6 @@ console.info(
   "background:#2f4858;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;",
   "background:#4f7c82;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;",
 );
-
-
-})();
-
-(() => {
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
 const CARD_VERSION = "0.6.0";
@@ -9658,11 +9652,6 @@ window.customCards.push({
   description: "Media player fijo con estetica Nodalia y editor visual.",
   preview: true,
 });
-
-
-})();
-
-(() => {
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
 const CARD_VERSION = "0.6.0";
@@ -12141,11 +12130,6 @@ window.customCards.push({
   description: "Tarjeta de luz con estilo Nodalia, presets y editor visual.",
   preview: true,
 });
-
-
-})();
-
-(() => {
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
 const CARD_VERSION = "0.6.0";
@@ -14203,11 +14187,6 @@ window.customCards.push({
   description: "Tarjeta de ventilador con slider de velocidad, oscilacion y modos.",
   preview: true,
 });
-
-
-})();
-
-(() => {
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
 const CARD_VERSION = "0.6.0";
@@ -16391,11 +16370,6 @@ window.customCards.push({
   description: "Tarjeta de humidificador/deshumidificador con slider de humedad y modos.",
   preview: true,
 });
-
-
-})();
-
-(() => {
 const CARD_TAG = "nodalia-circular-gauge-card";
 const EDITOR_TAG = "nodalia-circular-gauge-card-editor";
 const CARD_VERSION = "0.11.0";
@@ -18011,11 +17985,6 @@ window.customCards.push({
   description: "Tarjeta circular para sensores y valores numericos con estetica Nodalia.",
   preview: true,
 });
-
-
-})();
-
-(() => {
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
 const CARD_VERSION = "0.12.0";
@@ -20119,11 +20088,6 @@ window.customCards.push({
   description: "Tarjeta de grafica elegante para una o varias entidades numericas con estilo Nodalia.",
   preview: true,
 });
-
-
-})();
-
-(() => {
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
 const CARD_VERSION = "0.13.4";
@@ -22574,11 +22538,6 @@ window.customCards.push({
   description: "Tarjeta Nodalia de flujo energetico para red, solar, bateria, agua, gas y consumos individuales.",
   preview: true,
 });
-
-
-})();
-
-(() => {
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
 const CARD_VERSION = "0.10.0";
@@ -24868,11 +24827,6 @@ window.customCards.push({
   description: "Tarjeta de clima con dial circular, modos HVAC y control rapido de temperatura.",
   preview: true,
 });
-
-
-})();
-
-(() => {
 const CARD_TAG = "nodalia-alarm-panel-card";
 const EDITOR_TAG = "nodalia-alarm-panel-card-editor";
 const CARD_VERSION = "0.6.0";
@@ -26514,11 +26468,6 @@ window.customCards.push({
   description: "Tarjeta elegante para paneles de alarma",
   preview: true,
 });
-
-
-})();
-
-(() => {
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
 const CARD_VERSION = "0.12.2";
@@ -29610,11 +29559,6 @@ window.customCards.push({
   description: "Tarjeta de mapa avanzada para robots con estilo Nodalia y seleccion de habitaciones, zonas y puntos.",
   preview: true,
 });
-
-
-})();
-
-(() => {
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
 const CARD_VERSION = "0.6.0";
@@ -31669,11 +31613,6 @@ window.customCards.push({
   description: "Tarjeta todoterreno para entidades, informacion y botones rapidos.",
   preview: true,
 });
-
-
-})();
-
-(() => {
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
 const CARD_VERSION = "0.8.0";
@@ -32177,12 +32116,8 @@ class NodaliaFavCard extends HTMLElement {
       this._render();
     });
     this._onShadowClick = this._onShadowClick.bind(this);
-    this._onShadowPointerUp = this._onShadowPointerUp.bind(this);
-    this._onShadowTouchEnd = this._onShadowTouchEnd.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this.shadowRoot.addEventListener("pointerup", this._onShadowPointerUp);
-    this.shadowRoot.addEventListener("touchend", this._onShadowTouchEnd, { passive: false });
     this.shadowRoot.addEventListener("input", this._onShadowInput);
   }
 
@@ -32214,6 +32149,10 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   getCardSize() {
+    if (this._alarmMenuOpen && this._isAlarmPanelMode(this._getState())) {
+      return this._getAlarmGridSpan();
+    }
+
     return 1;
   }
 
@@ -32879,6 +32818,12 @@ class NodaliaFavCard extends HTMLElement {
 
   _notifyLayoutChange() {
     fireEvent(this, "iron-resize", {});
+
+    if (typeof window !== "undefined") {
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new Event("resize"));
+      });
+    }
   }
 
   _getAlarmGridSpan() {
@@ -33020,26 +32965,6 @@ class NodaliaFavCard extends HTMLElement {
     this._activatePrimaryFromEvent(event);
   }
 
-  _onShadowPointerUp(event) {
-    if (event.pointerType !== "touch") {
-      return;
-    }
-
-    if (this._activatePrimaryFromEvent(event)) {
-      this._ignoreNextPrimaryClickUntil = Date.now() + 500;
-    }
-  }
-
-  _onShadowTouchEnd(event) {
-    if (typeof window !== "undefined" && "PointerEvent" in window) {
-      return;
-    }
-
-    if (this._activatePrimaryFromEvent(event)) {
-      this._ignoreNextPrimaryClickUntil = Date.now() + 500;
-    }
-  }
-
   _onShadowInput(event) {
     const input = event
       .composedPath()
@@ -33167,7 +33092,7 @@ class NodaliaFavCard extends HTMLElement {
           overflow: visible;
           position: relative;
           isolation: isolate;
-          z-index: ${showAlarmPanel ? 6 : "auto"};
+          z-index: ${showAlarmPanel ? 4 : "auto"};
         }
 
         * {
@@ -33180,11 +33105,11 @@ class NodaliaFavCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
-          height: ${usesCompactRowMetrics ? `${singleRowHeightPx}px` : "100%"};
+          height: ${showAlarmPanel ? "auto" : (usesCompactRowMetrics ? `${singleRowHeightPx}px` : "100%")};
           min-height: ${usesCompactRowMetrics ? `${singleRowHeightPx}px` : "0"};
-          overflow: visible;
+          overflow: hidden;
           position: relative;
-          z-index: ${showAlarmPanel ? 3 : 1};
+          z-index: ${showAlarmPanel ? 2 : 1};
         }
 
         ha-card::before {
@@ -33209,11 +33134,11 @@ class NodaliaFavCard extends HTMLElement {
           align-content: ${showAlarmPanel ? "start" : "center"};
           display: grid;
           gap: ${showAlarmPanel ? "10px" : (isCompactInline ? "6px" : (isMini ? "0" : styles.card.gap))};
-          height: ${usesCompactRowMetrics ? "100%" : "auto"};
+          height: ${showAlarmPanel ? "auto" : (usesCompactRowMetrics ? "100%" : "auto")};
           min-width: 0;
-          padding: ${isCompactInline ? "6px 10px" : (isMini ? "6px" : styles.card.padding)};
+          padding: ${showAlarmPanel ? "8px 10px 10px" : (isCompactInline ? "6px 10px" : (isMini ? "6px" : styles.card.padding))};
           position: relative;
-          overflow: visible;
+          overflow: hidden;
           z-index: 1;
         }
 
@@ -33231,13 +33156,14 @@ class NodaliaFavCard extends HTMLElement {
         }
 
         .fav-card--alarm-open {
-          overflow: visible;
+          overflow: hidden;
           position: relative;
-          z-index: 4;
+          z-index: 3;
         }
 
         .fav-card--alarm-open .fav-card__hero {
-          align-items: start;
+          align-items: center;
+          height: auto;
         }
 
         .fav-card__hero {
@@ -33339,21 +33265,20 @@ class NodaliaFavCard extends HTMLElement {
             0 18px 36px rgba(0, 0, 0, 0.24);
           display: grid;
           gap: 10px;
-          left: 0;
-          margin-top: 0;
+          margin-top: 2px;
           min-width: 0;
           padding: 10px;
           pointer-events: auto;
-          position: absolute;
-          right: 0;
-          top: calc(100% + 8px);
-          z-index: 8;
+          position: static;
+          width: 100%;
+          z-index: 1;
         }
 
         .fav-card__alarm-actions {
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
+          justify-content: center;
           min-width: 0;
         }
 
@@ -34103,11 +34028,6 @@ window.customCards.push({
   description: "Tarjeta mini y elegante para favoritos y controles rapidos en movil.",
   preview: true,
 });
-
-
-})();
-
-(() => {
 const CARD_TAG = "nodalia-person-card";
 const EDITOR_TAG = "nodalia-person-card-editor";
 const CARD_VERSION = "0.9.0";
@@ -35209,11 +35129,6 @@ window.customCards.push({
   description: "Tarjeta compacta de persona con foto y zona",
   preview: true,
 });
-
-
-})();
-
-(() => {
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
 const CARD_VERSION = "0.8.0";
@@ -36316,11 +36231,6 @@ window.customCards.push({
   description: "Tarjeta de tiempo elegante para Home Assistant",
   preview: true,
 });
-
-
-})();
-
-(() => {
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
 const CARD_VERSION = "0.6.0";
@@ -38915,7 +38825,3 @@ window.customCards.push({
   description: "Tarjeta de aspirador con look Nodalia, acciones rapidas y editor visual.",
   preview: true,
 });
-
-
-})();
-
