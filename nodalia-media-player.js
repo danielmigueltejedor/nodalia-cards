@@ -2919,13 +2919,20 @@ class NodaliaMediaPlayer extends HTMLElement {
         .dock-inner {
           margin: ${isFixed ? "0 auto" : "0"};
           max-width: ${config.layout.max_width};
-          pointer-events: auto;
+          pointer-events: none;
           width: 100%;
         }
 
         .player-stack {
           display: grid;
           gap: 0;
+          pointer-events: none;
+        }
+
+        .player-stack > *,
+        .media-browser-backdrop,
+        .media-browser-panel {
+          pointer-events: auto;
         }
 
         .empty-card,

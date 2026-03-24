@@ -924,19 +924,39 @@ class NodaliaFavCard extends HTMLElement {
       .filter(Boolean);
   }
 
+  _getAlarmCurrentModeKey(state) {
+    switch (normalizeTextKey(state?.state)) {
+      case "disarmed":
+        return "disarm";
+      case "armed_home":
+        return "home";
+      case "armed_away":
+        return "away";
+      case "armed_night":
+        return "night";
+      case "armed_vacation":
+        return "vacation";
+      case "armed_custom_bypass":
+        return "custom_bypass";
+      default:
+        return "";
+    }
+  }
+
   _matchesAlarmMode(state, ...keys) {
     const candidates = this._getAlarmStateCandidates(state);
     return keys.some(key => candidates.includes(normalizeTextKey(key)));
   }
 
   _getAlarmModeDefinitions(state) {
+    const currentModeKey = this._getAlarmCurrentModeKey(state);
     const modes = [
       {
         key: "disarm",
         label: "Desarmar",
         icon: "mdi:shield-off-outline",
         service: "alarm_disarm",
-        enabled: this._config?.alarm_show_disarm !== false && !this._matchesAlarmMode(state, "disarmed"),
+        enabled: this._config?.alarm_show_disarm !== false && currentModeKey !== "disarm",
       },
       {
         key: "home",
@@ -945,7 +965,7 @@ class NodaliaFavCard extends HTMLElement {
         service: "alarm_arm_home",
         enabled: this._config?.alarm_show_arm_home !== false
           && this._supportsAlarmMode(state, "home")
-          && !this._matchesAlarmMode(state, "armed_home"),
+          && currentModeKey !== "home",
       },
       {
         key: "away",
@@ -954,7 +974,7 @@ class NodaliaFavCard extends HTMLElement {
         service: "alarm_arm_away",
         enabled: this._config?.alarm_show_arm_away !== false
           && this._supportsAlarmMode(state, "away")
-          && !this._matchesAlarmMode(state, "armed_away"),
+          && currentModeKey !== "away",
       },
       {
         key: "night",
@@ -963,7 +983,7 @@ class NodaliaFavCard extends HTMLElement {
         service: "alarm_arm_night",
         enabled: this._config?.alarm_show_arm_night !== false
           && this._supportsAlarmMode(state, "night")
-          && !this._matchesAlarmMode(state, "armed_night"),
+          && currentModeKey !== "night",
       },
       {
         key: "vacation",
@@ -972,7 +992,7 @@ class NodaliaFavCard extends HTMLElement {
         service: "alarm_arm_vacation",
         enabled: this._config?.alarm_show_arm_vacation === true
           && this._supportsAlarmMode(state, "vacation")
-          && !this._matchesAlarmMode(state, "armed_vacation"),
+          && currentModeKey !== "vacation",
       },
       {
         key: "custom_bypass",
@@ -981,7 +1001,7 @@ class NodaliaFavCard extends HTMLElement {
         service: "alarm_arm_custom_bypass",
         enabled: this._config?.alarm_show_custom_bypass === true
           && this._supportsAlarmMode(state, "custom_bypass")
-          && !this._matchesAlarmMode(state, "armed_custom_bypass"),
+          && currentModeKey !== "custom_bypass",
       },
     ];
 
@@ -994,34 +1014,35 @@ class NodaliaFavCard extends HTMLElement {
       return detectedModes;
     }
 
+    const currentModeKey = this._getAlarmCurrentModeKey(state);
     const fallbackModes = [
       {
         key: "disarm",
         label: "Desarmar",
         icon: "mdi:shield-off-outline",
         service: "alarm_disarm",
-        enabled: this._config?.alarm_show_disarm !== false && !this._matchesAlarmMode(state, "disarmed"),
+        enabled: this._config?.alarm_show_disarm !== false && currentModeKey !== "disarm",
       },
       {
         key: "home",
         label: "Casa",
         icon: "mdi:home-lock",
         service: "alarm_arm_home",
-        enabled: this._config?.alarm_show_arm_home !== false && !this._matchesAlarmMode(state, "armed_home"),
+        enabled: this._config?.alarm_show_arm_home !== false && currentModeKey !== "home",
       },
       {
         key: "away",
         label: "Ausente",
         icon: "mdi:shield-lock",
         service: "alarm_arm_away",
-        enabled: this._config?.alarm_show_arm_away !== false && !this._matchesAlarmMode(state, "armed_away"),
+        enabled: this._config?.alarm_show_arm_away !== false && currentModeKey !== "away",
       },
       {
         key: "night",
         label: "Noche",
         icon: "mdi:weather-night",
         service: "alarm_arm_night",
-        enabled: this._config?.alarm_show_arm_night !== false && !this._matchesAlarmMode(state, "armed_night"),
+        enabled: this._config?.alarm_show_arm_night !== false && currentModeKey !== "night",
       },
     ];
 

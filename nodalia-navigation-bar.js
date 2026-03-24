@@ -2455,12 +2455,23 @@ class NodaliaNavigationBarCard extends HTMLElement {
           width: 100%;
           max-width: ${config.styles.bar.max_width};
           margin: 0 auto;
-          pointer-events: auto;
+          pointer-events: none;
         }
 
         .dock-stack {
           display: grid;
           gap: ${mediaStackGap};
+          pointer-events: none;
+        }
+
+        .dock-stack > *,
+        .dock-stack > * > *,
+        ha-card,
+        .popup-backdrop,
+        .popup-panel,
+        .media-browser-backdrop,
+        .media-browser-panel {
+          pointer-events: auto;
         }
 
         .media-player-toggle-wrap {
