@@ -407,6 +407,8 @@ class NodaliaGraphCard extends HTMLElement {
     this._historyAbortController = null;
     this._hoverIndex = null;
     this._hoverChart = null;
+    this._hoverFrame = 0;
+    this._pendingHoverIndex = null;
     this._lastRenderSignature = "";
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
@@ -419,6 +421,11 @@ class NodaliaGraphCard extends HTMLElement {
   disconnectedCallback() {
     this._historyAbortController?.abort();
     this._historyAbortController = null;
+    if (this._hoverFrame) {
+      window.cancelAnimationFrame(this._hoverFrame);
+      this._hoverFrame = 0;
+    }
+    this._pendingHoverIndex = null;
   }
 
   setConfig(config) {
@@ -634,15 +641,19 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   _onShadowPointerMove(event) {
+    if (
+      (typeof event.pointerType === "string" && event.pointerType === "touch")
+      || (typeof window !== "undefined" && typeof window.matchMedia === "function" && !window.matchMedia("(hover: hover)").matches)
+    ) {
+      return;
+    }
+
     const surface = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.graphSurface === "chart");
 
     if (!surface || !this._hoverChart?.entries?.length) {
-      if (this._hoverIndex !== null) {
-        this._hoverIndex = null;
-        this._render();
-      }
+      this._scheduleHoverRender(null);
       return;
     }
 
@@ -659,17 +670,36 @@ class NodaliaGraphCard extends HTMLElement {
     const relativeX = clamp(event.clientX - rect.left, 0, rect.width);
     const nextIndex = Math.round((relativeX / rect.width) * (sampleCount - 1));
 
-    if (nextIndex !== this._hoverIndex) {
-      this._hoverIndex = nextIndex;
-      this._render();
-    }
+    this._scheduleHoverRender(nextIndex);
   }
 
   _onShadowPointerLeave() {
-    if (this._hoverIndex !== null) {
-      this._hoverIndex = null;
-      this._render();
+    this._scheduleHoverRender(null);
+  }
+
+  _scheduleHoverRender(nextIndex) {
+    if (nextIndex === this._hoverIndex && !this._hoverFrame) {
+      return;
     }
+
+    this._pendingHoverIndex = nextIndex;
+
+    if (this._hoverFrame) {
+      return;
+    }
+
+    this._hoverFrame = window.requestAnimationFrame(() => {
+      this._hoverFrame = 0;
+      const resolvedIndex = this._pendingHoverIndex;
+      this._pendingHoverIndex = null;
+
+      if (resolvedIndex === this._hoverIndex) {
+        return;
+      }
+
+      this._hoverIndex = resolvedIndex;
+      this._render();
+    });
   }
 
   _getHistoryRequestKey() {

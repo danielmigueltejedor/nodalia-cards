@@ -494,6 +494,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._onWindowTouchStartCapture = this._onWindowTouchStartCapture.bind(this);
     this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
     this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
+    this._onVisibilityChange = this._onVisibilityChange.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowChange);
@@ -507,6 +508,7 @@ class NodaliaMediaPlayer extends HTMLElement {
   connectedCallback() {
     window.addEventListener("resize", this._onResize);
     window.addEventListener("keydown", this._onWindowKeyDown);
+    document.addEventListener("visibilitychange", this._onVisibilityChange);
     window.addEventListener("pointermove", this._onWindowPointerMove);
     window.addEventListener("pointerup", this._onWindowPointerUp);
     window.addEventListener("pointercancel", this._onWindowPointerUp);
@@ -524,6 +526,7 @@ class NodaliaMediaPlayer extends HTMLElement {
   disconnectedCallback() {
     window.removeEventListener("resize", this._onResize);
     window.removeEventListener("keydown", this._onWindowKeyDown);
+    document.removeEventListener("visibilitychange", this._onVisibilityChange);
     window.removeEventListener("pointermove", this._onWindowPointerMove);
     window.removeEventListener("pointerup", this._onWindowPointerUp);
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
@@ -615,8 +618,6 @@ class NodaliaMediaPlayer extends HTMLElement {
           attrs.media_channel || "",
           attrs.volume_level ?? "",
           attrs.media_duration ?? "",
-          attrs.media_position ?? "",
-          attrs.media_position_updated_at || "",
           attrs.supported_features ?? "",
           Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
         ].join("::");
@@ -1206,6 +1207,14 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _syncTicker(players) {
+    if (typeof document !== "undefined" && document.hidden) {
+      if (this._mediaTicker) {
+        window.clearInterval(this._mediaTicker);
+        this._mediaTicker = null;
+      }
+      return;
+    }
+
     if (this._mediaBrowserState) {
       if (this._mediaTicker) {
         window.clearInterval(this._mediaTicker);
@@ -1222,6 +1231,10 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     if (shouldTick && !this._mediaTicker) {
       this._mediaTicker = window.setInterval(() => {
+        if (typeof document !== "undefined" && document.hidden) {
+          return;
+        }
+
         if (this._activeSliderDrag) {
           this._pendingRenderAfterDrag = true;
           return;
@@ -1235,6 +1248,18 @@ class NodaliaMediaPlayer extends HTMLElement {
       window.clearInterval(this._mediaTicker);
       this._mediaTicker = null;
     }
+  }
+
+  _onVisibilityChange() {
+    if (typeof document !== "undefined" && document.hidden) {
+      if (this._mediaTicker) {
+        window.clearInterval(this._mediaTicker);
+        this._mediaTicker = null;
+      }
+      return;
+    }
+
+    this._render();
   }
 
   _callService(action) {

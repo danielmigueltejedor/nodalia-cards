@@ -482,6 +482,17 @@ class NodaliaNavigationBarCard extends HTMLElement {
         this._closePopup();
       }
     };
+    this._onVisibilityChange = () => {
+      if (typeof document !== "undefined" && document.hidden) {
+        if (this._mediaTicker) {
+          window.clearInterval(this._mediaTicker);
+          this._mediaTicker = null;
+        }
+        return;
+      }
+
+      this._render();
+    };
     this._onShadowClick = this._onShadowClick.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
   }
@@ -491,6 +502,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     window.addEventListener("popstate", this._onLocationChange);
     window.addEventListener("location-changed", this._onLocationChange);
     window.addEventListener("keydown", this._onWindowKeyDown);
+    document.addEventListener("visibilitychange", this._onVisibilityChange);
     this._render();
   }
 
@@ -499,6 +511,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     window.removeEventListener("popstate", this._onLocationChange);
     window.removeEventListener("location-changed", this._onLocationChange);
     window.removeEventListener("keydown", this._onWindowKeyDown);
+    document.removeEventListener("visibilitychange", this._onVisibilityChange);
     if (this._popupPositionFrame) {
       cancelAnimationFrame(this._popupPositionFrame);
       this._popupPositionFrame = null;
@@ -593,8 +606,6 @@ class NodaliaNavigationBarCard extends HTMLElement {
           mediaChannel: String(attrs.media_channel || ""),
           volumeLevel: Number(attrs.volume_level ?? -1),
           mediaDuration: Number(attrs.media_duration ?? -1),
-          mediaPosition: Number(attrs.media_position ?? -1),
-          mediaPositionUpdatedAt: String(attrs.media_position_updated_at || ""),
           supportedFeatures: Number(attrs.supported_features ?? 0),
           sourceList: Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
         };
@@ -1819,6 +1830,14 @@ class NodaliaNavigationBarCard extends HTMLElement {
   }
 
   _syncMediaTicker(visiblePlayers) {
+    if (typeof document !== "undefined" && document.hidden) {
+      if (this._mediaTicker) {
+        window.clearInterval(this._mediaTicker);
+        this._mediaTicker = null;
+      }
+      return;
+    }
+
     const shouldTick = visiblePlayers.some(player => {
       const state = this._hass?.states?.[player.entity];
       const progress = state ? this._getMediaPlayerProgress(state) : null;
@@ -1827,6 +1846,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     if (shouldTick && !this._mediaTicker) {
       this._mediaTicker = window.setInterval(() => {
+        if (typeof document !== "undefined" && document.hidden) {
+          return;
+        }
+
         this._render();
       }, 1000);
       return;
