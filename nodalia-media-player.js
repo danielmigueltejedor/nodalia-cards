@@ -1467,14 +1467,6 @@ class NodaliaMediaPlayer extends HTMLElement {
       slider,
     };
 
-    if (pointerId !== null) {
-      try {
-        slider.setPointerCapture(pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
-      }
-    }
-
     if (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -1530,14 +1522,6 @@ class NodaliaMediaPlayer extends HTMLElement {
       this._draftVolume.set(drag.slider.dataset.entity, nextValue);
       this._updatePlayerVolumePreview(drag.slider.dataset.entity, nextValue);
       this._commitPlayerVolume(drag.slider.dataset.entity, nextValue);
-    }
-
-    if (pointerId !== null) {
-      try {
-        drag.slider.releasePointerCapture(pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
-      }
     }
 
     this._activeSliderDrag = null;
@@ -2930,8 +2914,19 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .player-stack > *,
+        .player-stack > * > *,
         .media-browser-backdrop,
         .media-browser-panel {
+          pointer-events: auto;
+        }
+
+        .empty-card,
+        .media-player-card {
+          pointer-events: none;
+        }
+
+        .empty-card > *,
+        .media-player-card > * {
           pointer-events: auto;
         }
 

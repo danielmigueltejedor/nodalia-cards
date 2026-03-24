@@ -2466,7 +2466,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .dock-stack > *,
         .dock-stack > * > *,
-        ha-card,
+        .navbar,
+        .navbar *,
+        .media-player-toggle-wrap,
+        .media-player-toggle,
+        .media-player-toggle *,
+        .media-player-card,
+        .media-player-card *,
         .popup-backdrop,
         .popup-panel,
         .media-browser-backdrop,
@@ -2488,6 +2494,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           padding: ${config.styles.bar.padding};
           min-height: ${config.styles.bar.min_height};
           overflow: hidden;
+          pointer-events: none;
         }
 
         .navbar-title {

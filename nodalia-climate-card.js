@@ -802,14 +802,6 @@ class NodaliaClimateCard extends HTMLElement {
       pointerId,
     };
 
-    if (pointerId !== null) {
-      try {
-        dial.setPointerCapture(pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
-      }
-    }
-
     if (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -872,14 +864,6 @@ class NodaliaClimateCard extends HTMLElement {
       this._getTemperatureStep(state),
     );
     this._applyDialValue(nextValue, { commit: true });
-
-    if (pointerId !== null) {
-      try {
-        drag.dial.releasePointerCapture(pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
-      }
-    }
 
     this._activeDialDrag = null;
 

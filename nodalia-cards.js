@@ -2467,7 +2467,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .dock-stack > *,
         .dock-stack > * > *,
-        ha-card,
+        .navbar,
+        .navbar *,
+        .media-player-toggle-wrap,
+        .media-player-toggle,
+        .media-player-toggle *,
+        .media-player-card,
+        .media-player-card *,
         .popup-backdrop,
         .popup-panel,
         .media-browser-backdrop,
@@ -2489,6 +2495,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           padding: ${config.styles.bar.padding};
           min-height: ${config.styles.bar.min_height};
           overflow: hidden;
+          pointer-events: none;
         }
 
         .navbar-title {
@@ -6135,14 +6142,6 @@ class NodaliaMediaPlayer extends HTMLElement {
       slider,
     };
 
-    if (pointerId !== null) {
-      try {
-        slider.setPointerCapture(pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
-      }
-    }
-
     if (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -6198,14 +6197,6 @@ class NodaliaMediaPlayer extends HTMLElement {
       this._draftVolume.set(drag.slider.dataset.entity, nextValue);
       this._updatePlayerVolumePreview(drag.slider.dataset.entity, nextValue);
       this._commitPlayerVolume(drag.slider.dataset.entity, nextValue);
-    }
-
-    if (pointerId !== null) {
-      try {
-        drag.slider.releasePointerCapture(pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
-      }
     }
 
     this._activeSliderDrag = null;
@@ -7598,8 +7589,19 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .player-stack > *,
+        .player-stack > * > *,
         .media-browser-backdrop,
         .media-browser-panel {
+          pointer-events: auto;
+        }
+
+        .empty-card,
+        .media-player-card {
+          pointer-events: none;
+        }
+
+        .empty-card > *,
+        .media-player-card > * {
           pointer-events: auto;
         }
 
@@ -10499,14 +10501,6 @@ class NodaliaLightCard extends HTMLElement {
       slider,
     };
 
-    if (pointerId !== null) {
-      try {
-        slider.setPointerCapture(pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
-      }
-    }
-
     if (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -10543,14 +10537,6 @@ class NodaliaLightCard extends HTMLElement {
     drag.slider.value = String(nextValue);
     this._skipNextSliderChange = drag.slider;
     this._applySliderValue(drag.slider, nextValue, { commit: true });
-
-    if (pointerId !== null) {
-      try {
-        drag.slider.releasePointerCapture(pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
-      }
-    }
 
     this._activeSliderDrag = null;
 
@@ -12709,14 +12695,6 @@ class NodaliaFanCard extends HTMLElement {
       slider,
     };
 
-    if (pointerId !== null) {
-      try {
-        slider.setPointerCapture(pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
-      }
-    }
-
     if (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -12753,14 +12731,6 @@ class NodaliaFanCard extends HTMLElement {
     drag.slider.value = String(nextValue);
     this._skipNextSliderChange = drag.slider;
     this._applySliderValue(drag.slider, nextValue, { commit: true });
-
-    if (pointerId !== null) {
-      try {
-        drag.slider.releasePointerCapture(pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
-      }
-    }
 
     this._activeSliderDrag = null;
 
@@ -14855,14 +14825,6 @@ class NodaliaHumidifierCard extends HTMLElement {
       slider,
     };
 
-    if (pointerId !== null) {
-      try {
-        slider.setPointerCapture(pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
-      }
-    }
-
     if (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -14899,14 +14861,6 @@ class NodaliaHumidifierCard extends HTMLElement {
     drag.slider.value = String(nextValue);
     this._skipNextSliderChange = drag.slider;
     this._applySliderValue(drag.slider, nextValue, { commit: true });
-
-    if (pointerId !== null) {
-      try {
-        drag.slider.releasePointerCapture(pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
-      }
-    }
 
     this._activeSliderDrag = null;
 
@@ -23201,14 +23155,6 @@ class NodaliaClimateCard extends HTMLElement {
       pointerId,
     };
 
-    if (pointerId !== null) {
-      try {
-        dial.setPointerCapture(pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
-      }
-    }
-
     if (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -23271,14 +23217,6 @@ class NodaliaClimateCard extends HTMLElement {
       this._getTemperatureStep(state),
     );
     this._applyDialValue(nextValue, { commit: true });
-
-    if (pointerId !== null) {
-      try {
-        drag.dial.releasePointerCapture(pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
-      }
-    }
 
     this._activeDialDrag = null;
 
@@ -27962,9 +27900,6 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       y2: Math.round(vacuumPoint.y),
     };
 
-    if (surface.setPointerCapture) {
-      surface.setPointerCapture(event.pointerId);
-    }
     event.preventDefault();
     event.stopPropagation();
     this._render();
@@ -32916,6 +32851,9 @@ class NodaliaFavCard extends HTMLElement {
       <style>
         :host {
           display: block;
+          overflow: visible;
+          position: relative;
+          z-index: ${showAlarmPanel ? 12 : "auto"};
         }
 
         * {
@@ -32930,8 +32868,9 @@ class NodaliaFavCard extends HTMLElement {
           color: var(--primary-text-color);
           height: ${showAlarmPanel ? "auto" : (usesCompactRowMetrics ? `${singleRowHeightPx}px` : "100%")};
           min-height: ${showAlarmPanel ? "0" : (usesCompactRowMetrics ? `${singleRowHeightPx}px` : "0")};
-          overflow: hidden;
+          overflow: ${showAlarmPanel ? "visible" : "hidden"};
           position: relative;
+          z-index: ${showAlarmPanel ? 2 : 1};
         }
 
         ha-card::before {
@@ -32973,6 +32912,12 @@ class NodaliaFavCard extends HTMLElement {
         .fav-card--alarm-open .fav-card__content {
           align-items: start;
           min-height: 0;
+        }
+
+        .fav-card--alarm-open {
+          overflow: visible;
+          position: relative;
+          z-index: 3;
         }
 
         .fav-card--alarm-open .fav-card__hero {
@@ -33069,6 +33014,8 @@ class NodaliaFavCard extends HTMLElement {
           gap: 10px;
           margin-top: 2px;
           min-width: 0;
+          position: relative;
+          z-index: 4;
         }
 
         .fav-card__alarm-actions {

@@ -925,14 +925,6 @@ class NodaliaLightCard extends HTMLElement {
       slider,
     };
 
-    if (pointerId !== null) {
-      try {
-        slider.setPointerCapture(pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
-      }
-    }
-
     if (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -969,14 +961,6 @@ class NodaliaLightCard extends HTMLElement {
     drag.slider.value = String(nextValue);
     this._skipNextSliderChange = drag.slider;
     this._applySliderValue(drag.slider, nextValue, { commit: true });
-
-    if (pointerId !== null) {
-      try {
-        drag.slider.releasePointerCapture(pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
-      }
-    }
 
     this._activeSliderDrag = null;
 

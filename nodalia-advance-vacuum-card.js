@@ -1668,9 +1668,6 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       y2: Math.round(vacuumPoint.y),
     };
 
-    if (surface.setPointerCapture) {
-      surface.setPointerCapture(event.pointerId);
-    }
     event.preventDefault();
     event.stopPropagation();
     this._render();

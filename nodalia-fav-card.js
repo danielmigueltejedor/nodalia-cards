@@ -1497,6 +1497,9 @@ class NodaliaFavCard extends HTMLElement {
       <style>
         :host {
           display: block;
+          overflow: visible;
+          position: relative;
+          z-index: ${showAlarmPanel ? 12 : "auto"};
         }
 
         * {
@@ -1511,8 +1514,9 @@ class NodaliaFavCard extends HTMLElement {
           color: var(--primary-text-color);
           height: ${showAlarmPanel ? "auto" : (usesCompactRowMetrics ? `${singleRowHeightPx}px` : "100%")};
           min-height: ${showAlarmPanel ? "0" : (usesCompactRowMetrics ? `${singleRowHeightPx}px` : "0")};
-          overflow: hidden;
+          overflow: ${showAlarmPanel ? "visible" : "hidden"};
           position: relative;
+          z-index: ${showAlarmPanel ? 2 : 1};
         }
 
         ha-card::before {
@@ -1554,6 +1558,12 @@ class NodaliaFavCard extends HTMLElement {
         .fav-card--alarm-open .fav-card__content {
           align-items: start;
           min-height: 0;
+        }
+
+        .fav-card--alarm-open {
+          overflow: visible;
+          position: relative;
+          z-index: 3;
         }
 
         .fav-card--alarm-open .fav-card__hero {
@@ -1650,6 +1660,8 @@ class NodaliaFavCard extends HTMLElement {
           gap: 10px;
           margin-top: 2px;
           min-width: 0;
+          position: relative;
+          z-index: 4;
         }
 
         .fav-card__alarm-actions {
