@@ -1182,11 +1182,13 @@ class NodaliaClimateCard extends HTMLElement {
     const targetTemperature = this._getTargetTemperature(state);
     const temperatureRange = this._getTemperatureRange(state);
     const temperatureStep = this._getTemperatureStep(state);
+    const normalizedCurrentMode = normalizeTextKey(currentMode);
     const supportsTargetTemperature = this._supportsTargetTemperature(state);
     const compactLevel = this._getCompactLevel();
     const compactLayout = compactLevel !== "default";
     const tightLayout = compactLevel === "tight";
     const modeOptions = config.show_mode_buttons !== false ? this._getOrderedModeOptions(state) : [];
+    const visibleModeOptions = modeOptions.filter(mode => normalizeTextKey(mode) !== normalizedCurrentMode);
     const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
     const isOff = this._isOff(state) || isUnavailableState(state);
     const cardPaddingY = tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
@@ -1814,23 +1816,23 @@ class NodaliaClimateCard extends HTMLElement {
                   </span>
                 </div>
                 <div class="climate-card__dial-controls">
+                  ${isOff ? "" : `
                   <button
                     type="button"
-                    class="climate-card__mode-button climate-card__mode-button--power ${!isOff ? "is-active" : ""}"
+                    class="climate-card__mode-button climate-card__mode-button--power is-active"
                     data-climate-action="toggle"
-                    title="${escapeHtml(isOff ? "Encender" : "Apagar")}"
-                    aria-label="${escapeHtml(isOff ? "Encender" : "Apagar")}"
+                    title="Apagar"
+                    aria-label="Apagar"
                   >
                     <ha-icon icon="mdi:power"></ha-icon>
-                  </button>
-                  ${modeOptions
+                  </button>`}
+                  ${visibleModeOptions
                     .map(mode => {
                       const meta = getModeMeta(mode);
-                      const active = normalizeTextKey(mode) === normalizeTextKey(currentMode);
                       return `
                         <button
                           type="button"
-                          class="climate-card__mode-button ${active ? "is-active" : ""}"
+                          class="climate-card__mode-button"
                           data-climate-action="mode"
                           data-mode="${escapeHtml(mode)}"
                           title="${escapeHtml(meta.label)}"
