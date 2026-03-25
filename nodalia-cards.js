@@ -24122,7 +24122,7 @@ class NodaliaClimateCard extends HTMLElement {
           --climate-angle: ${dialAngle}deg;
           --climate-progress-length: ${progressLength};
           --climate-dial-size: ${dialSizePx}px;
-          --climate-dial-radius: ${dialRadiusPx}px;
+          --climate-dial-radius: calc(var(--climate-dial-size) * ${(DIAL_CIRCLE_RADIUS / DIAL_VIEWBOX_SIZE).toFixed(6)});
           --climate-thumb-size: ${thumbSizePx}px;
           background: ${styles.dial.background};
           border-radius: 50%;
