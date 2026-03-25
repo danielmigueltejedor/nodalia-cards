@@ -23003,14 +23003,24 @@ function normalizeConfig(rawConfig) {
   return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
 }
 
-function getDialValueFromPoint(dial, clientX, clientY, range, step) {
+function getDialValueFromPoint(dial, clientX, clientY, range, step, fallbackValue = null) {
   const rect = dial.getBoundingClientRect();
   if (!rect.width || !rect.height) {
-    return range.min;
+    return Number.isFinite(Number(fallbackValue)) ? Number(fallbackValue) : range.min;
   }
 
   const centerX = rect.left + (rect.width / 2);
   const centerY = rect.top + (rect.height / 2);
+  const dx = clientX - centerX;
+  const dy = clientY - centerY;
+  const distance = Math.sqrt((dx ** 2) + (dy ** 2));
+  const outerRadius = Math.min(rect.width, rect.height) / 2;
+  const innerDeadZone = outerRadius * 0.42;
+
+  if (distance < innerDeadZone && Number.isFinite(Number(fallbackValue))) {
+    return Number(fallbackValue);
+  }
+
   const angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
   let normalizedAngle = angle < 0 ? angle + 360 : angle;
 
@@ -23534,6 +23544,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._activeDialDrag = {
       dial,
       pointerId,
+      lastValue: null,
     };
 
     if (event) {
@@ -23553,6 +23564,7 @@ class NodaliaClimateCard extends HTMLElement {
       this._getTemperatureRange(state),
       this._getTemperatureStep(state),
     );
+    this._activeDialDrag.lastValue = nextValue;
     this._applyDialValue(nextValue, { commit: false });
   }
 
@@ -23574,7 +23586,9 @@ class NodaliaClimateCard extends HTMLElement {
       clientY,
       this._getTemperatureRange(state),
       this._getTemperatureStep(state),
+      drag.lastValue,
     );
+    drag.lastValue = nextValue;
     this._applyDialValue(nextValue, { commit: false });
   }
 
@@ -23596,7 +23610,9 @@ class NodaliaClimateCard extends HTMLElement {
       clientY,
       this._getTemperatureRange(state),
       this._getTemperatureStep(state),
+      drag.lastValue,
     );
+    drag.lastValue = nextValue;
     this._applyDialValue(nextValue, { commit: true });
 
     this._activeDialDrag = null;
@@ -24249,14 +24265,27 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__target-unit {
+          align-items: flex-start;
           color: var(--primary-text-color);
+          display: inline-flex;
           font-size: calc(${effectiveTargetSize} * 0.24);
           font-weight: 500;
+          gap: 0.04em;
           line-height: 1;
           opacity: 0.92;
           position: absolute;
           right: 0;
-          top: 0.16em;
+          top: 0.14em;
+        }
+
+        .climate-card__target-degree,
+        .climate-card__target-scale {
+          display: inline-block;
+          line-height: 1;
+        }
+
+        .climate-card__target-degree {
+          transform: translateY(-0.06em);
         }
 
         .climate-card__divider {
@@ -24463,7 +24492,7 @@ class NodaliaClimateCard extends HTMLElement {
               <div class="climate-card__dial-center">
                 <div class="climate-card__target">
                   <span class="climate-card__target-value" data-climate-readout="target">${escapeHtml(formatTemperature(targetTemperature, temperatureStep, false))}</span>
-                  <span class="climate-card__target-unit">°C</span>
+                  <span class="climate-card__target-unit"><span class="climate-card__target-degree">°</span><span class="climate-card__target-scale">C</span></span>
                 </div>
                 <div class="climate-card__divider"></div>
                 <div class="climate-card__dial-meta">
