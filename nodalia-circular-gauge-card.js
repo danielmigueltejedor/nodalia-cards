@@ -708,15 +708,36 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const effectiveChipFontSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.chip_font_size, 11), compactLayout ? 10.5 : 11))}px`;
     const effectiveChipPadding = compactLayout ? "0 9px" : styles.chip_padding;
     const effectiveNameChipMaxWidth = `${Math.max(120, Math.min(parseSizeToPixels(styles.name_chip_max_width, 170), compactLayout ? 148 : 170))}px`;
+    const isLightTheme = this._hass?.themes?.darkMode === false;
     const cardBackground = value === null
-      ? styles.card.background
-      : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
+      ? isLightTheme
+        ? "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.94) 100%)"
+        : styles.card.background
+      : isLightTheme
+        ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 4%, rgba(255, 255, 255, 0.98)) 0%, rgba(255, 255, 255, 0.95) 100%)`
+        : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
     const cardBorder = value === null
-      ? styles.card.border
-      : `1px solid color-mix(in srgb, ${accentColor} 26%, var(--divider-color))`;
+      ? isLightTheme
+        ? "1px solid rgba(15, 23, 42, 0.08)"
+        : styles.card.border
+      : isLightTheme
+        ? `1px solid color-mix(in srgb, ${accentColor} 18%, rgba(15, 23, 42, 0.1))`
+        : `1px solid color-mix(in srgb, ${accentColor} 26%, var(--divider-color))`;
     const cardShadow = value === null
-      ? styles.card.box_shadow
-      : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
+      ? isLightTheme
+        ? `${styles.card.box_shadow}, 0 16px 30px rgba(15, 23, 42, 0.08), 0 3px 8px rgba(15, 23, 42, 0.05)`
+        : styles.card.box_shadow
+      : isLightTheme
+        ? `${styles.card.box_shadow}, 0 12px 24px color-mix(in srgb, ${accentColor} 2%, rgba(15, 23, 42, 0.12)), 0 2px 6px rgba(15, 23, 42, 0.06)`
+        : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
+    const surfaceBackground = isLightTheme
+      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
+      : "rgba(255, 255, 255, 0.05)";
+    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
+    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.05)";
+    const surfaceShadow = isLightTheme
+      ? "0 8px 18px rgba(15, 23, 42, 0.08), 0 2px 5px rgba(15, 23, 42, 0.05)"
+      : "0 10px 26px rgba(0, 0, 0, 0.16)";
     const chips = [];
 
     if (config.show_percentage_chip === true && value !== null) {
@@ -743,8 +764,8 @@ class NodaliaCircularGaugeCard extends HTMLElement {
 
         .gauge-card {
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, transparent 48%),
-            linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0%, rgba(0, 0, 0, 0.02) 100%),
+            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} ${isLightTheme ? "5%" : "18%"}%, transparent) 0%, transparent 46%),
+            linear-gradient(180deg, ${isLightTheme ? "rgba(255, 255, 255, 0.12)" : "rgba(255, 255, 255, 0.018)"} 0%, ${isLightTheme ? "rgba(255, 255, 255, 0)" : "rgba(0, 0, 0, 0.02)"} 100%),
             ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -778,13 +799,13 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           align-items: center;
           appearance: none;
           background:
-            radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 60%),
-            ${styles.icon.background};
-          border: 1px solid rgba(255, 255, 255, 0.08);
+            radial-gradient(circle at top left, ${isLightTheme ? "rgba(255, 255, 255, 0.5)" : "rgba(255, 255, 255, 0.06)"}, transparent 60%),
+            ${surfaceBackground};
+          border: 1px solid ${surfaceBorder};
           border-radius: calc(${effectiveIconSize} * 0.5);
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
-            0 10px 26px rgba(0, 0, 0, 0.16);
+            inset 0 1px 0 ${surfaceInset},
+            ${surfaceShadow};
           color: ${styles.icon.color};
           display: inline-flex;
           height: ${effectiveIconSize};
@@ -809,7 +830,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         .gauge-card__unavailable-badge {
           align-items: center;
           background: #ff9b4a;
-          border: 2px solid ${styles.card.background};
+          border: 2px solid ${isLightTheme ? "rgba(255, 255, 255, 0.94)" : styles.card.background};
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
           color: #ffffff;
@@ -866,10 +887,12 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         .gauge-card__chip {
           align-items: center;
           backdrop-filter: blur(18px);
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: ${surfaceBackground};
+          border: 1px solid ${surfaceBorder};
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          box-shadow:
+            inset 0 1px 0 ${surfaceInset},
+            ${isLightTheme ? "0 8px 18px rgba(15, 23, 42, 0.05)" : "none"};
           color: var(--primary-text-color);
           display: inline-flex;
           font-size: ${effectiveChipFontSize};
@@ -932,10 +955,10 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         }
 
         .gauge-card__dial-thumb {
-          background: #f5f7fb;
-          border: 4px solid color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.72));
+          background: ${isLightTheme ? "#ffffff" : "#f5f7fb"};
+          border: 4px solid color-mix(in srgb, ${accentColor} 18%, ${isLightTheme ? "rgba(255, 255, 255, 0.96)" : "rgba(255, 255, 255, 0.72)"});
           border-radius: 50%;
-          box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.12);
+          box-shadow: 0 0 0 5px ${isLightTheme ? "rgba(255, 255, 255, 0.32)" : "rgba(255, 255, 255, 0.12)"};
           height: var(--gauge-thumb-size);
           left: 50%;
           position: absolute;
@@ -1010,13 +1033,13 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         .gauge-card__bottom-icon {
           align-items: center;
           background:
-            radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 60%),
-            ${styles.icon.background};
-          border: 1px solid rgba(255, 255, 255, 0.08);
+            radial-gradient(circle at top left, ${isLightTheme ? "rgba(255, 255, 255, 0.72)" : "rgba(255, 255, 255, 0.08)"}, transparent 60%),
+            ${surfaceBackground};
+          border: 1px solid ${surfaceBorder};
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
-            0 10px 26px rgba(0, 0, 0, 0.16);
+            inset 0 1px 0 ${surfaceInset},
+            ${surfaceShadow};
           color: ${styles.icon.color};
           display: inline-flex;
           height: ${compactLayout ? "42px" : "46px"};

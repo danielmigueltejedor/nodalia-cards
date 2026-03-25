@@ -1005,15 +1005,36 @@ class NodaliaEntityCard extends HTMLElement {
     const showCopyBlock = showTitle || chips.length > 0;
     const canRunPrimaryAction = this._canRunTapAction(state);
     const isActive = this._isActiveState(state);
+    const isLightTheme = this._hass?.themes?.darkMode === false;
     const cardBackground = isActive
-      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`
-      : styles.card.background;
+      ? isLightTheme
+        ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, rgba(255, 255, 255, 0.98)) 0%, color-mix(in srgb, ${accentColor} 8%, rgba(255, 255, 255, 0.94)) 56%, rgba(255, 255, 255, 0.94) 100%)`
+        : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`
+      : isLightTheme
+        ? "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.94) 100%)"
+        : styles.card.background;
     const cardBorder = isActive
-      ? `1px solid color-mix(in srgb, ${accentColor} 24%, var(--divider-color))`
-      : "1px solid rgba(255, 255, 255, 0.06)";
+      ? isLightTheme
+        ? `1px solid color-mix(in srgb, ${accentColor} 20%, rgba(15, 23, 42, 0.1))`
+        : `1px solid color-mix(in srgb, ${accentColor} 24%, var(--divider-color))`
+      : isLightTheme
+        ? "1px solid rgba(15, 23, 42, 0.08)"
+        : "1px solid rgba(255, 255, 255, 0.06)";
     const cardShadow = isActive
-      ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`
-      : styles.card.box_shadow;
+      ? isLightTheme
+        ? `${styles.card.box_shadow}, 0 18px 32px color-mix(in srgb, ${accentColor} 6%, rgba(15, 23, 42, 0.14)), 0 3px 10px rgba(15, 23, 42, 0.07)`
+        : `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`
+      : isLightTheme
+        ? `${styles.card.box_shadow}, 0 14px 26px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)`
+        : styles.card.box_shadow;
+    const surfaceBackground = isLightTheme
+      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.84) 100%)"
+      : "rgba(255, 255, 255, 0.05)";
+    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
+    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.05)";
+    const surfaceShadow = isLightTheme
+      ? "0 10px 22px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)"
+      : "0 12px 30px rgba(0, 0, 0, 0.18)";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1041,8 +1062,12 @@ class NodaliaEntityCard extends HTMLElement {
 
         ha-card::before {
           background: ${isActive
-            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, rgba(255, 255, 255, 0.05)), rgba(255, 255, 255, 0))`
-            : "linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0))"};
+            ? isLightTheme
+              ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 12%, rgba(255, 255, 255, 0.62)), rgba(255, 255, 255, 0))`
+              : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, rgba(255, 255, 255, 0.05)), rgba(255, 255, 255, 0))`
+            : isLightTheme
+              ? "linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0))"
+              : "linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0))"};
           content: "";
           inset: 0;
           pointer-events: none;
@@ -1081,12 +1106,12 @@ class NodaliaEntityCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: ${styles.icon.background};
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: ${surfaceBackground};
+          border: 1px solid ${surfaceBorder};
           border-radius: ${singleRowLayout ? "18px" : "24px"};
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.08),
-            0 12px 30px rgba(0, 0, 0, 0.18);
+            inset 0 1px 0 ${surfaceInset},
+            ${surfaceShadow};
           color: ${isActive ? styles.icon.on_color : styles.icon.off_color};
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           display: inline-flex;
@@ -1116,7 +1141,7 @@ class NodaliaEntityCard extends HTMLElement {
         .entity-card__unavailable-badge {
           align-items: center;
           background: #ff9b4a;
-          border: 2px solid ${styles.card.background};
+          border: 2px solid ${isLightTheme ? "rgba(255, 255, 255, 0.94)" : styles.card.background};
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
           color: #ffffff;
@@ -1187,10 +1212,12 @@ class NodaliaEntityCard extends HTMLElement {
 
         .entity-card__chip {
           align-items: center;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: ${surfaceBackground};
+          border: 1px solid ${surfaceBorder};
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+          box-shadow:
+            inset 0 1px 0 ${surfaceInset},
+            ${isLightTheme ? "0 8px 18px rgba(15, 23, 42, 0.05)" : "none"};
           color: var(--secondary-text-color);
           display: inline-flex;
           flex: 0 0 auto;
@@ -1225,12 +1252,12 @@ class NodaliaEntityCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: ${surfaceBackground};
+          border: 1px solid ${isLightTheme ? "rgba(15, 23, 42, 0.07)" : "rgba(255, 255, 255, 0.06)"};
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.06),
-            0 10px 24px rgba(0, 0, 0, 0.16);
+            inset 0 1px 0 ${surfaceInset},
+            ${isLightTheme ? "0 10px 20px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)" : "0 10px 24px rgba(0, 0, 0, 0.16)"};
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;

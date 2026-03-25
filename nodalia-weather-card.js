@@ -527,6 +527,7 @@ class NodaliaWeatherCard extends HTMLElement {
     const title = this._getTitle(state);
     const icon = this._getIcon(state);
     const accentColor = this._getAccentColor(state);
+    const isLightTheme = this._hass?.themes?.darkMode === false;
     const showUnavailableBadge = isUnavailableState(state);
     const conditionLabel = translateCondition(state?.state);
     const temperatureLabel = this._formatTemperature(state);
@@ -542,6 +543,23 @@ class NodaliaWeatherCard extends HTMLElement {
         : "",
     ].filter(Boolean);
     const tapEnabled = String(config.tap_action || "more-info") !== "none";
+    const cardBackground = isLightTheme
+      ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 4%, rgba(255, 255, 255, 0.98)) 0%, color-mix(in srgb, ${accentColor} 2%, rgba(255, 255, 255, 0.95)) 100%)`
+      : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.04)), rgba(255, 255, 255, 0) 44%), linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
+    const cardBorder = isLightTheme
+      ? `1px solid color-mix(in srgb, ${accentColor} 18%, rgba(15, 23, 42, 0.1))`
+      : `1px solid color-mix(in srgb, ${accentColor} 28%, var(--divider-color))`;
+    const cardShadow = isLightTheme
+      ? `${styles.card.box_shadow}, 0 12px 24px color-mix(in srgb, ${accentColor} 2%, rgba(15, 23, 42, 0.12)), 0 2px 6px rgba(15, 23, 42, 0.06)`
+      : `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`;
+    const surfaceBackground = isLightTheme
+      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
+      : "rgba(255, 255, 255, 0.06)";
+    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
+    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.9)" : "rgba(255, 255, 255, 0.05)";
+    const surfaceShadow = isLightTheme
+      ? "0 8px 18px rgba(15, 23, 42, 0.08), 0 2px 5px rgba(15, 23, 42, 0.05)"
+      : "0 14px 28px rgba(0, 0, 0, 0.14)";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -554,12 +572,10 @@ class NodaliaWeatherCard extends HTMLElement {
         }
 
         ha-card {
-          background:
-            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.04)), rgba(255, 255, 255, 0) 44%),
-            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.card.background}) 56%, ${styles.card.background} 100%);
-          border: 1px solid color-mix(in srgb, ${accentColor} 28%, var(--divider-color));
+          background: ${cardBackground};
+          border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
-          box-shadow: ${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18));
+          box-shadow: ${cardShadow};
           color: var(--primary-text-color);
           overflow: hidden;
           position: relative;
@@ -585,12 +601,12 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__icon {
           align-items: center;
-          background: ${styles.icon.background};
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: ${surfaceBackground};
+          border: 1px solid ${surfaceBorder};
           border-radius: 22px;
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.08),
-            0 14px 28px rgba(0, 0, 0, 0.14);
+            inset 0 1px 0 ${surfaceInset},
+            ${surfaceShadow};
           color: ${styles.icon.color};
           display: inline-flex;
           height: ${styles.icon.size};
@@ -606,7 +622,7 @@ class NodaliaWeatherCard extends HTMLElement {
         .weather-card__unavailable-badge {
           align-items: center;
           background: #ff9b4a;
-          border: 2px solid ${styles.card.background};
+          border: 2px solid ${isLightTheme ? "rgba(255, 255, 255, 0.94)" : styles.card.background};
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
           color: #ffffff;
@@ -656,10 +672,12 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__chip {
           align-items: center;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid color-mix(in srgb, var(--chip-accent) 18%, rgba(255, 255, 255, 0.08));
+          background: ${surfaceBackground};
+          border: 1px solid color-mix(in srgb, var(--chip-accent) 14%, ${surfaceBorder});
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+          box-shadow:
+            inset 0 1px 0 ${surfaceInset},
+            ${isLightTheme ? "0 8px 20px rgba(15, 23, 42, 0.06)" : "none"};
           color: var(--primary-text-color);
           display: inline-flex;
           gap: 6px;

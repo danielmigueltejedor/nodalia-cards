@@ -1241,15 +1241,39 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     const currentActionMeta = getActionMeta(this._getCurrentAction(state) || currentMode);
+    const isLightTheme = this._hass?.themes?.darkMode === false;
     const cardBackground = isOff
-      ? styles.card.background
-      : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
+      ? isLightTheme
+        ? "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.94) 100%)"
+        : styles.card.background
+      : isLightTheme
+        ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 4%, rgba(255, 255, 255, 0.98)) 0%, rgba(255, 255, 255, 0.95) 100%)`
+        : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
     const cardBorder = isOff
-      ? styles.card.border
-      : `1px solid color-mix(in srgb, ${accentColor} 26%, var(--divider-color))`;
+      ? isLightTheme
+        ? "1px solid rgba(15, 23, 42, 0.08)"
+        : styles.card.border
+      : isLightTheme
+        ? `1px solid color-mix(in srgb, ${accentColor} 20%, rgba(15, 23, 42, 0.1))`
+        : `1px solid color-mix(in srgb, ${accentColor} 26%, var(--divider-color))`;
     const cardShadow = isOff
-      ? styles.card.box_shadow
-      : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
+      ? isLightTheme
+        ? `${styles.card.box_shadow}, 0 16px 30px rgba(15, 23, 42, 0.08), 0 3px 8px rgba(15, 23, 42, 0.05)`
+        : styles.card.box_shadow
+      : isLightTheme
+        ? `${styles.card.box_shadow}, 0 12px 24px color-mix(in srgb, ${accentColor} 2%, rgba(15, 23, 42, 0.12)), 0 2px 6px rgba(15, 23, 42, 0.06)`
+        : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
+    const surfaceBackground = isLightTheme
+      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
+      : styles.icon.background;
+    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
+    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.05)";
+    const surfaceShadow = isLightTheme
+      ? "0 8px 18px rgba(15, 23, 42, 0.08), 0 2px 5px rgba(15, 23, 42, 0.05)"
+      : "0 10px 26px rgba(0, 0, 0, 0.16)";
+    const chipBackground = isLightTheme
+      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
+      : "rgba(255, 255, 255, 0.05)";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1271,8 +1295,8 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card {
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, transparent 48%),
-            linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0%, rgba(0, 0, 0, 0.02) 100%),
+            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} ${isLightTheme ? "5%" : "18%"}%, transparent) 0%, transparent 46%),
+            linear-gradient(180deg, ${isLightTheme ? "rgba(255, 255, 255, 0.12)" : "rgba(255, 255, 255, 0.018)"} 0%, ${isLightTheme ? "rgba(255, 255, 255, 0)" : "rgba(0, 0, 0, 0.02)"} 100%),
             ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -1303,13 +1327,13 @@ class NodaliaClimateCard extends HTMLElement {
           align-items: center;
           appearance: none;
           background:
-            radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 60%),
-            ${styles.icon.background};
-          border: 1px solid rgba(255, 255, 255, 0.08);
+            radial-gradient(circle at top left, ${isLightTheme ? "rgba(255, 255, 255, 0.5)" : "rgba(255, 255, 255, 0.06)"}, transparent 60%),
+            ${surfaceBackground};
+          border: 1px solid ${surfaceBorder};
           border-radius: calc(${styles.icon.size} * 0.5);
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
-            0 10px 26px rgba(0, 0, 0, 0.16);
+            inset 0 1px 0 ${surfaceInset},
+            ${surfaceShadow};
           color: ${isOff ? styles.icon.off_color : styles.icon.on_color};
           cursor: pointer;
           display: inline-flex;
@@ -1336,7 +1360,7 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__unavailable-badge {
           align-items: center;
           background: #ff9b4a;
-          border: 2px solid ${styles.card.background};
+          border: 2px solid ${isLightTheme ? "rgba(255, 255, 255, 0.94)" : styles.card.background};
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
           color: #ffffff;
@@ -1399,10 +1423,12 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__chip {
           align-items: center;
           backdrop-filter: blur(18px);
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: ${chipBackground};
+          border: 1px solid ${surfaceBorder};
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          box-shadow:
+            inset 0 1px 0 ${surfaceInset},
+            ${isLightTheme ? "0 8px 18px rgba(15, 23, 42, 0.05)" : "none"};
           color: var(--secondary-text-color);
           display: inline-flex;
           font-size: ${effectiveChipFontSize};
@@ -1486,10 +1512,10 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__dial-thumb {
-          background: #f5f7fb;
-          border: 4px solid color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.72));
+          background: ${isLightTheme ? "#ffffff" : "#f5f7fb"};
+          border: 4px solid color-mix(in srgb, ${accentColor} 18%, ${isLightTheme ? "rgba(255, 255, 255, 0.96)" : "rgba(255, 255, 255, 0.72)"});
           border-radius: 50%;
-          box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.12);
+          box-shadow: 0 0 0 5px ${isLightTheme ? "rgba(255, 255, 255, 0.32)" : "rgba(255, 255, 255, 0.12)"};
           height: var(--climate-thumb-size);
           left: 50%;
           pointer-events: auto;
@@ -1607,12 +1633,12 @@ class NodaliaClimateCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: ${chipBackground};
+          border: 1px solid ${isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.06)"};
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.06),
-            0 10px 24px rgba(0, 0, 0, 0.16);
+            inset 0 1px 0 ${surfaceInset},
+            ${isLightTheme ? "0 10px 22px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)" : "0 10px 24px rgba(0, 0, 0, 0.16)"};
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
@@ -1632,8 +1658,8 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__mode-button {
           backdrop-filter: blur(18px);
           background:
-            radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 60%),
-            rgba(255, 255, 255, 0.04);
+            radial-gradient(circle at top left, ${isLightTheme ? "rgba(255, 255, 255, 0.72)" : "rgba(255, 255, 255, 0.06)"}, transparent 60%),
+            ${chipBackground};
           height: ${modeControlSize}px;
           width: ${modeControlSize}px;
         }
@@ -1669,8 +1695,8 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__step-button {
           backdrop-filter: blur(18px);
           background:
-            radial-gradient(circle at top left, rgba(255, 255, 255, 0.05), transparent 60%),
-            rgba(255, 255, 255, 0.04);
+            radial-gradient(circle at top left, ${isLightTheme ? "rgba(255, 255, 255, 0.72)" : "rgba(255, 255, 255, 0.05)"}, transparent 60%),
+            ${chipBackground};
           color: var(--primary-text-color);
           font-size: calc(${stepControlSize}px * 0.8);
           height: ${stepControlSize}px;

@@ -1,6 +1,6 @@
-const CARD_TAG = "nodalia-person-card";
-const EDITOR_TAG = "nodalia-person-card-editor";
-const CARD_VERSION = "0.9.0";
+const CARD_TAG = "nodalia-calendar-card";
+const EDITOR_TAG = "nodalia-calendar-card-editor";
+const CARD_VERSION = "0.16.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -16,10 +16,11 @@ const DEFAULT_CONFIG = {
   name: "",
   icon: "",
   tap_action: "more-info",
-  show_state: true,
-  show_zone_badge: true,
-  use_entity_picture: true,
-  use_zone_icon: true,
+  show_status_chip: true,
+  show_date_chip: true,
+  show_time_chip: true,
+  show_location_chip: true,
+  show_description: true,
   haptics: {
     enabled: false,
     style: "selection",
@@ -31,25 +32,27 @@ const DEFAULT_CONFIG = {
       border: "1px solid var(--divider-color)",
       border_radius: "28px",
       box_shadow: "var(--ha-card-box-shadow)",
-      padding: "12px",
+      padding: "14px",
       gap: "12px",
     },
-    avatar: {
+    icon: {
       size: "58px",
       background: "rgba(255, 255, 255, 0.06)",
       color: "var(--primary-text-color)",
     },
-    badge: {
-      size: "22px",
-    },
+    chip_height: "24px",
+    chip_font_size: "11px",
+    chip_padding: "0 9px",
     title_size: "14px",
-    subtitle_size: "13px",
+    event_size: "25px",
+    meta_size: "13px",
+    description_size: "12px",
   },
 };
 
 const STUB_CONFIG = {
-  entity: "person.ana",
-  name: "Ana",
+  entity: "calendar.casa",
+  name: "Calendario",
 };
 
 function isObject(value) {
@@ -60,7 +63,6 @@ function deepClone(value) {
   if (value === undefined) {
     return undefined;
   }
-
   return JSON.parse(JSON.stringify(value));
 }
 
@@ -103,9 +105,7 @@ function mergeConfig(base, override) {
 
 function compactConfig(value) {
   if (Array.isArray(value)) {
-    return value
-      .map(item => compactConfig(item))
-      .filter(item => item !== undefined);
+    return value.map(item => compactConfig(item)).filter(item => item !== undefined);
   }
 
   if (isObject(value)) {
@@ -160,11 +160,6 @@ function deleteByPath(target, path) {
   delete cursor[parts[parts.length - 1]];
 }
 
-function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -198,11 +193,128 @@ function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
+function parseDateValue(value) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function isSameDay(left, right) {
+  if (!(left instanceof Date) || !(right instanceof Date)) {
+    return false;
+  }
+
+  return left.getFullYear() === right.getFullYear()
+    && left.getMonth() === right.getMonth()
+    && left.getDate() === right.getDate();
+}
+
+function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function formatShortDate(date) {
+  if (!(date instanceof Date)) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "numeric",
+    month: "short",
+  }).format(date).replace(/\./g, "");
+}
+
+function formatLongDate(date) {
+  if (!(date instanceof Date)) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("es-ES", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(date).replace(/\./g, "");
+}
+
+function formatTime(date) {
+  if (!(date instanceof Date)) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function getRelativeDateLabel(date) {
+  if (!(date instanceof Date)) {
+    return null;
+  }
+
+  const today = startOfDay(new Date());
+  const target = startOfDay(date);
+  const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
+
+  if (diff === 0) {
+    return "Hoy";
+  }
+
+  if (diff === 1) {
+    return "Mañana";
+  }
+
+  if (diff === -1) {
+    return "Ayer";
+  }
+
+  return formatShortDate(date);
+}
+
+function getCalendarAccent(state) {
+  if (isUnavailableState(state)) {
+    return "#ff9b4a";
+  }
+
+  if (normalizeTextKey(state?.state) === "on") {
+    return "#8f7dff";
+  }
+
+  return "#f4ad4a";
+}
+
+function getCalendarStatusLabel(state, startDate) {
+  if (isUnavailableState(state)) {
+    return "No disponible";
+  }
+
+  if (normalizeTextKey(state?.state) === "on") {
+    return "En curso";
+  }
+
+  if (startDate) {
+    return "Próximo";
+  }
+
+  return "Sin eventos";
+}
+
+function getCalendarDefaultIcon() {
+  return "mdi:calendar-month-outline";
+}
+
 function normalizeConfig(rawConfig) {
   return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
 }
 
-class NodaliaPersonCard extends HTMLElement {
+class NodaliaCalendarCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -235,10 +347,10 @@ class NodaliaPersonCard extends HTMLElement {
   }
 
   set hass(hass) {
+    const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
 
-    const nextSignature = this._getRenderSignature(hass);
-    if (nextSignature && nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
     }
 
@@ -247,192 +359,142 @@ class NodaliaPersonCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 1;
-  }
-
-  getGridOptions() {
-    return {
-      rows: 1,
-      columns: 6,
-      min_rows: 1,
-      min_columns: 2,
-    };
+    return 2;
   }
 
   _getState() {
     return this._hass?.states?.[this._config?.entity] || null;
   }
 
-  _getTitle(state) {
-    return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Persona";
-  }
-
-  _getPersonPicture(state) {
-    if (this._config?.use_entity_picture === false) {
-      return "";
-    }
-
-    return String(
-      state?.attributes?.entity_picture_local
-      || state?.attributes?.entity_picture
-      || "",
-    ).trim();
-  }
-
-  _getFallbackIcon(state) {
-    return this._config?.icon || state?.attributes?.icon || "mdi:account";
-  }
-
-  _translateState(state) {
-    const raw = String(state?.state || "").trim();
-    const key = normalizeTextKey(raw);
-
-    switch (key) {
-      case "home":
-      case "casa":
-      case "en_casa":
-        return "En casa";
-      case "not_home":
-      case "away":
-      case "fuera":
-        return "Fuera";
-      case "work":
-      case "trabajo":
-      case "office":
-      case "oficina":
-        return "Trabajo";
-      case "school":
-      case "colegio":
-      case "escuela":
-        return "Colegio";
-      case "unavailable":
-        return "No disponible";
-      case "unknown":
-        return "Desconocido";
-      default:
-        return raw || "Ubicacion desconocida";
-    }
-  }
-
-  _getMatchingZoneState(state) {
-    const target = normalizeTextKey(state?.state);
-    if (!target || !this._hass?.states) {
-      return null;
-    }
-
-    const zoneEntry = Object.entries(this._hass.states).find(([entityId, entityState]) => {
-      if (!entityId.startsWith("zone.")) {
-        return false;
-      }
-
-      const objectId = entityId.split(".")[1] || "";
-      const friendlyName = String(entityState?.attributes?.friendly_name || "").trim();
-
-      return normalizeTextKey(objectId) === target || normalizeTextKey(friendlyName) === target;
-    });
-
-    return zoneEntry?.[1] || null;
-  }
-
-  _getBadgeDescriptor(state) {
-    if (this._config?.show_zone_badge === false) {
-      return null;
-    }
-
-    if (isUnavailableState(state)) {
-      return {
-        icon: "mdi:help",
-        color: "#ff9b4a",
-      };
-    }
-
-    const key = normalizeTextKey(state?.state);
-
-    switch (key) {
-      case "home":
-      case "casa":
-      case "en_casa":
-        return { icon: "mdi:home", color: "#67d26f" };
-      case "not_home":
-      case "away":
-      case "fuera":
-        return { icon: "mdi:home-export-outline", color: "#ff6b6b" };
-      case "work":
-      case "trabajo":
-      case "office":
-      case "oficina":
-        return { icon: "mdi:briefcase", color: "#4dabf7" };
-      case "school":
-      case "colegio":
-      case "escuela":
-        return { icon: "mdi:school", color: "#8c7bff" };
-      default:
-        break;
-    }
-
-    const zoneState = this._getMatchingZoneState(state);
-    if (this._config?.use_zone_icon !== false && zoneState?.attributes?.icon) {
-      return {
-        icon: zoneState.attributes.icon,
-        color: "var(--info-color, #71c0ff)",
-      };
-    }
-
-    if (String(state?.state || "").trim()) {
-      return {
-        icon: "mdi:map-marker",
-        color: "var(--info-color, #71c0ff)",
-      };
-    }
-
-    return null;
-  }
-
-  _getAccentColor(state) {
-    return this._getBadgeDescriptor(state)?.color || "var(--info-color, #71c0ff)";
-  }
-
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
-    if (!entityId || !state) {
-      return `empty:${this._config?.entity || ""}`;
-    }
-
-    const title = this._getTitle(state);
-    const subtitle = this._config.show_state !== false ? this._translateState(state) : "";
-    const picture = this._getPersonPicture(state);
-    const fallbackIcon = this._getFallbackIcon(state);
-    const badge = this._getBadgeDescriptor(state);
-    const zoneState = this._getMatchingZoneState(state);
+    const attrs = state?.attributes || {};
 
     return JSON.stringify({
-      entity: entityId,
-      state: state.state,
-      title,
-      subtitle,
-      picture,
-      fallbackIcon,
-      badgeIcon: badge?.icon || "",
-      badgeColor: badge?.color || "",
-      zoneEntity: zoneState?.entity_id || "",
-      zoneIcon: zoneState?.attributes?.icon || "",
-      showState: this._config.show_state !== false,
-      showZoneBadge: this._config.show_zone_badge !== false,
-      useEntityPicture: this._config.use_entity_picture !== false,
-      useZoneIcon: this._config.use_zone_icon !== false,
-      name: this._config.name || "",
-      icon: this._config.icon || "",
+      entityId,
+      state: String(state?.state || ""),
+      friendlyName: String(attrs.friendly_name || ""),
+      icon: String(attrs.icon || ""),
+      message: String(attrs.message || ""),
+      startTime: String(attrs.start_time || ""),
+      endTime: String(attrs.end_time || ""),
+      location: String(attrs.location || ""),
+      description: String(attrs.description || ""),
+      allDay: Boolean(attrs.all_day),
     });
   }
 
-  _canRunTapAction() {
-    const action = String(this._config?.tap_action || "more-info");
-    if (action === "none") {
-      return false;
+  _getTitle(state) {
+    const customName = String(this._config?.name || "").trim();
+    if (customName) {
+      return customName;
     }
 
-    return Boolean(this._config?.entity);
+    const friendlyName = String(state?.attributes?.friendly_name || "").trim();
+    return friendlyName || "Calendario";
+  }
+
+  _getEventTitle(state) {
+    const message = String(state?.attributes?.message || "").trim();
+    if (message) {
+      return message;
+    }
+
+    return "Sin próximos eventos";
+  }
+
+  _getDescription(state) {
+    const description = String(state?.attributes?.description || "").trim();
+    return description || "";
+  }
+
+  _getLocation(state) {
+    const location = String(state?.attributes?.location || "").trim();
+    return location || "";
+  }
+
+  _getIcon(state) {
+    const customIcon = String(this._config?.icon || "").trim();
+    if (customIcon) {
+      return customIcon;
+    }
+
+    const entityIcon = String(state?.attributes?.icon || "").trim();
+    return entityIcon || getCalendarDefaultIcon();
+  }
+
+  _getStartDate(state) {
+    return parseDateValue(state?.attributes?.start_time);
+  }
+
+  _getEndDate(state) {
+    return parseDateValue(state?.attributes?.end_time);
+  }
+
+  _isAllDay(state) {
+    return state?.attributes?.all_day === true;
+  }
+
+  _getStatusLabel(state, startDate) {
+    return getCalendarStatusLabel(state, startDate);
+  }
+
+  _getAccentColor(state) {
+    return getCalendarAccent(state);
+  }
+
+  _formatDateChip(startDate) {
+    return getRelativeDateLabel(startDate);
+  }
+
+  _formatTimeChip(startDate, endDate, allDay) {
+    if (!startDate) {
+      return null;
+    }
+
+    if (allDay) {
+      return "Todo el día";
+    }
+
+    const startLabel = formatTime(startDate);
+    const endLabel = formatTime(endDate);
+
+    if (startLabel && endLabel) {
+      return `${startLabel} · ${endLabel}`;
+    }
+
+    return startLabel;
+  }
+
+  _formatMetaLine(startDate, endDate, allDay) {
+    if (!startDate) {
+      return "No hay eventos próximos.";
+    }
+
+    const dateLabel = getRelativeDateLabel(startDate) || formatLongDate(startDate);
+
+    if (allDay) {
+      return dateLabel ? `${dateLabel} · Todo el día` : "Todo el día";
+    }
+
+    const startLabel = formatTime(startDate);
+    if (!startLabel) {
+      return dateLabel || "";
+    }
+
+    const sameDay = isSameDay(startDate, endDate);
+    const endLabel = formatTime(endDate);
+
+    if (endLabel && sameDay) {
+      return `${dateLabel} · ${startLabel} - ${endLabel}`;
+    }
+
+    if (endDate && !sameDay) {
+      return `${dateLabel} · ${startLabel} - ${formatShortDate(endDate)} ${endLabel || ""}`.trim();
+    }
+
+    return dateLabel ? `${dateLabel} · ${startLabel}` : startLabel;
   }
 
   _triggerHaptic(styleOverride = null) {
@@ -469,10 +531,7 @@ class NodaliaPersonCard extends HTMLElement {
   }
 
   _onShadowClick(event) {
-    const card = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.personAction === "primary");
-
+    const card = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.calendarCard === "root");
     if (!card) {
       return;
     }
@@ -482,11 +541,24 @@ class NodaliaPersonCard extends HTMLElement {
     this._performTapAction();
   }
 
+  _renderChip(icon, label, accentColor) {
+    if (!label) {
+      return "";
+    }
+
+    return `
+      <div class="calendar-card__chip" style="--chip-accent:${escapeHtml(accentColor)};">
+        <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+        <span>${escapeHtml(label)}</span>
+      </div>
+    `;
+  }
+
   _renderEmptyState() {
     return `
-      <ha-card class="person-card person-card--empty">
-        <div class="person-card__empty-title">Nodalia Person Card</div>
-        <div class="person-card__empty-text">Configura \`entity\` para mostrar la tarjeta.</div>
+      <ha-card class="calendar-card calendar-card--empty">
+        <div class="calendar-card__empty-title">Nodalia Calendar Card</div>
+        <div class="calendar-card__empty-text">Configura \`entity\` para mostrar un calendario.</div>
       </ha-card>
     `;
   }
@@ -498,77 +570,62 @@ class NodaliaPersonCard extends HTMLElement {
 
     const state = this._getState();
     if (!this._config?.entity || !state) {
-      this._lastRenderSignature = `empty:${this._config?.entity || ""}`;
       this.shadowRoot.innerHTML = this._renderEmptyState();
       return;
     }
 
     const config = this._config;
     const styles = config.styles || DEFAULT_CONFIG.styles;
-    const configuredRows = Number(this._config?.grid_options?.rows);
-    const singleRowLayout = Number.isFinite(configuredRows) ? configuredRows <= 1 : true;
     const title = this._getTitle(state);
-    const subtitle = config.show_state !== false ? this._translateState(state) : "";
-    const picture = this._getPersonPicture(state);
-    const fallbackIcon = this._getFallbackIcon(state);
-    const badge = this._getBadgeDescriptor(state);
+    const eventTitle = this._getEventTitle(state);
+    const description = this._getDescription(state);
+    const location = this._getLocation(state);
+    const startDate = this._getStartDate(state);
+    const endDate = this._getEndDate(state);
+    const allDay = this._isAllDay(state);
+    const icon = this._getIcon(state);
     const accentColor = this._getAccentColor(state);
-    const canRunPrimaryAction = this._canRunTapAction();
-    const singleRowPaddingY = singleRowLayout ? 4 : 12;
-    const singleRowPaddingX = singleRowLayout ? 9 : 12;
-    const avatarSizePx = Math.max(34, Math.min(parseSizeToPixels(styles.avatar.size, 58), singleRowLayout ? 38 : 68));
-    const avatarSize = `${avatarSizePx}px`;
-    const avatarTrackSize = `${avatarSizePx + (singleRowLayout ? 7 : 12)}px`;
-    const badgeSize = `${Math.max(16, Math.min(parseSizeToPixels(styles.badge.size, 22), singleRowLayout ? 18 : 26))}px`;
-    const effectiveTitleSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.title_size, 14), singleRowLayout ? 10.5 : 14))}px`;
-    const effectiveSubtitleSize = `${Math.max(9, Math.min(parseSizeToPixels(styles.subtitle_size, 13), singleRowLayout ? 9.5 : 13))}px`;
-    const effectiveStateChipHeight = `${singleRowLayout ? 18 : 22}px`;
-    const effectiveStateChipPadding = singleRowLayout ? "0 8px" : "0 10px";
-    const effectiveGap = singleRowLayout ? "6px" : styles.card.gap;
-    const effectivePadding = singleRowLayout ? `${singleRowPaddingY}px ${singleRowPaddingX}px` : styles.card.padding;
-    const effectiveCardHeightPx = singleRowLayout ? Math.max(54, avatarSizePx + (singleRowPaddingY * 2)) : avatarSizePx + (singleRowPaddingY * 2);
-    const effectiveContentMinHeight = `${Math.max(avatarSizePx, effectiveCardHeightPx - (singleRowPaddingY * 2))}px`;
-    const isUnavailable = isUnavailableState(state);
+    const statusLabel = this._getStatusLabel(state, startDate);
+    const metaLabel = this._formatMetaLine(startDate, endDate, allDay);
     const isLightTheme = this._hass?.themes?.darkMode === false;
-    const cardBackground = isUnavailable
-      ? isLightTheme
-        ? "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.94) 100%)"
-        : styles.card.background
-      : isLightTheme
-        ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, rgba(255, 255, 255, 0.98)) 0%, color-mix(in srgb, ${accentColor} 6%, rgba(255, 255, 255, 0.94)) 56%, rgba(255, 255, 255, 0.94) 100%)`
-        : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
-    const cardBorder = isUnavailable
-      ? isLightTheme
-        ? "1px solid rgba(15, 23, 42, 0.08)"
-        : styles.card.border
-      : isLightTheme
-        ? `1px solid color-mix(in srgb, ${accentColor} 18%, rgba(15, 23, 42, 0.1))`
-        : `1px solid color-mix(in srgb, ${accentColor} 22%, var(--divider-color))`;
-    const cardShadow = isUnavailable
-      ? isLightTheme
-        ? `${styles.card.box_shadow}, 0 14px 26px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)`
-        : styles.card.box_shadow
-      : isLightTheme
-        ? `${styles.card.box_shadow}, 0 16px 30px color-mix(in srgb, ${accentColor} 5%, rgba(15, 23, 42, 0.14)), 0 3px 8px rgba(15, 23, 42, 0.06)`
-        : `${styles.card.box_shadow}, 0 12px 28px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
+    const showUnavailableBadge = isUnavailableState(state);
+    const chips = [
+      config.show_status_chip !== false
+        ? this._renderChip("mdi:calendar-check-outline", statusLabel, accentColor)
+        : "",
+      config.show_date_chip !== false
+        ? this._renderChip("mdi:calendar", this._formatDateChip(startDate), accentColor)
+        : "",
+      config.show_time_chip !== false
+        ? this._renderChip("mdi:clock-outline", this._formatTimeChip(startDate, endDate, allDay), accentColor)
+        : "",
+      config.show_location_chip !== false
+        ? this._renderChip("mdi:map-marker-outline", location, accentColor)
+        : "",
+    ].filter(Boolean);
+    const tapEnabled = String(config.tap_action || "more-info") !== "none";
+    const cardBackground = isLightTheme
+      ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 4%, rgba(255, 255, 255, 0.98)) 0%, color-mix(in srgb, ${accentColor} 2%, rgba(255, 255, 255, 0.95)) 100%)`
+      : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.04)), rgba(255, 255, 255, 0) 44%), linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
+    const cardBorder = isLightTheme
+      ? `1px solid color-mix(in srgb, ${accentColor} 16%, rgba(15, 23, 42, 0.1))`
+      : `1px solid color-mix(in srgb, ${accentColor} 28%, var(--divider-color))`;
+    const cardShadow = isLightTheme
+      ? `${styles.card.box_shadow}, 0 12px 24px color-mix(in srgb, ${accentColor} 2%, rgba(15, 23, 42, 0.12)), 0 2px 6px rgba(15, 23, 42, 0.06)`
+      : `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`;
     const surfaceBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.84) 100%)"
-      : styles.avatar.background;
-    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : `color-mix(in srgb, ${accentColor} 16%, rgba(255, 255, 255, 0.08))`;
-    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.08)";
+      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
+      : "rgba(255, 255, 255, 0.06)";
+    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
+    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.05)";
     const surfaceShadow = isLightTheme
-      ? "0 10px 22px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)"
-      : "0 10px 24px rgba(0, 0, 0, 0.16)";
-    const chipBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.82) 100%)"
-      : "rgba(255, 255, 255, 0.08)";
+      ? "0 8px 18px rgba(15, 23, 42, 0.08), 0 2px 5px rgba(15, 23, 42, 0.05)"
+      : "0 14px 28px rgba(0, 0, 0, 0.14)";
 
     this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
-          height: 100%;
-          min-height: 0;
         }
 
         * {
@@ -581,209 +638,230 @@ class NodaliaPersonCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
-          height: 100%;
-          min-height: 0;
           overflow: hidden;
           position: relative;
         }
 
-        ha-card::before {
-          background: ${isLightTheme
-            ? "linear-gradient(180deg, rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0))"
-            : "linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0))"};
-          content: "";
-          inset: 0;
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
-        }
-
-        .person-card__content {
-          align-items: center;
-          align-content: center;
-          cursor: ${canRunPrimaryAction ? "pointer" : "default"};
+        .calendar-card__content {
+          cursor: ${tapEnabled ? "pointer" : "default"};
           display: grid;
-          gap: ${effectiveGap};
-          grid-template-columns: ${avatarTrackSize} minmax(0, 1fr);
-          grid-template-rows: 1fr;
-          height: 100%;
-          min-height: ${effectiveContentMinHeight};
+          gap: ${styles.card.gap};
           min-width: 0;
-          padding: ${effectivePadding};
+          padding: ${styles.card.padding};
           position: relative;
-          place-items: center start;
           z-index: 1;
         }
 
-        .person-card--single-row {
-          height: 100%;
-          min-height: ${effectiveCardHeightPx}px;
+        .calendar-card__hero {
+          align-items: start;
+          display: grid;
+          gap: 12px;
+          grid-template-columns: ${styles.icon.size} minmax(0, 1fr);
+          min-width: 0;
         }
 
-        .person-card--single-row .person-card__content {
-          padding-bottom: ${singleRowPaddingY - 1}px;
-          padding-top: ${singleRowPaddingY + 1}px;
-        }
-
-        .person-card__avatar {
-          align-self: center;
+        .calendar-card__icon {
           align-items: center;
           background: ${surfaceBackground};
           border: 1px solid ${surfaceBorder};
-          border-radius: 999px;
+          border-radius: 22px;
           box-shadow:
             inset 0 1px 0 ${surfaceInset},
             ${surfaceShadow};
-          color: ${styles.avatar.color};
+          color: ${styles.icon.color};
           display: inline-flex;
-          height: ${avatarSize};
+          height: ${styles.icon.size};
           justify-content: center;
-          overflow: visible;
           position: relative;
-          width: ${avatarSize};
+          width: ${styles.icon.size};
         }
 
-        .person-card__avatar img {
-          border-radius: inherit;
-          height: 100%;
-          object-fit: cover;
-          width: 100%;
+        .calendar-card__icon ha-icon {
+          --mdc-icon-size: calc(${styles.icon.size} * 0.5);
         }
 
-        .person-card__avatar ha-icon {
-          --mdc-icon-size: calc(${avatarSize} * 0.5);
-        }
-
-        .person-card__badge {
+        .calendar-card__unavailable-badge {
           align-items: center;
-          background: var(--badge-color);
-          border: none;
+          background: #ff9b4a;
+          border: 2px solid ${isLightTheme ? "rgba(255, 255, 255, 0.94)" : styles.card.background};
           border-radius: 999px;
-          box-shadow:
-            0 6px 14px rgba(0, 0, 0, 0.14),
-            0 0 0 2px ${isLightTheme ? "rgba(255, 255, 255, 0.9)" : "rgba(255, 255, 255, 0.08)"};
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
           color: #ffffff;
           display: inline-flex;
-          height: ${badgeSize};
+          height: 18px;
           justify-content: center;
           position: absolute;
-          right: 0;
-          top: 0;
-          transform: translate(28%, -28%);
-          width: ${badgeSize};
+          right: -2px;
+          top: -2px;
+          width: 18px;
           z-index: 2;
         }
 
-        .person-card--single-row .person-card__badge {
-          transform: translate(20%, -14%);
+        .calendar-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          height: 11px;
+          width: 11px;
         }
 
-        .person-card__badge ha-icon {
-          --mdc-icon-size: calc(${badgeSize} * 0.62);
-          align-items: center;
-          display: inline-flex;
-          height: calc(${badgeSize} * 0.62);
-          justify-content: center;
-          width: calc(${badgeSize} * 0.62);
-        }
-
-        .person-card__copy {
-          align-content: center;
-          align-self: center;
+        .calendar-card__copy {
           display: grid;
-          gap: ${singleRowLayout ? "4px" : "6px"};
+          gap: 10px;
           min-width: 0;
-          width: 100%;
         }
 
-        .person-card__title {
-          font-size: ${effectiveTitleSize};
-          font-weight: 700;
-          letter-spacing: -0.02em;
-          line-height: ${singleRowLayout ? "1.02" : "1.12"};
+        .calendar-card__header {
+          align-items: start;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
           min-width: 0;
+        }
+
+        .calendar-card__title {
+          font-size: ${styles.title_size};
+          font-weight: 700;
+          line-height: 1.2;
+          min-width: 0;
+        }
+
+        .calendar-card__chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: flex-end;
+        }
+
+        .calendar-card__chip {
+          align-items: center;
+          background: ${surfaceBackground};
+          border: 1px solid color-mix(in srgb, var(--chip-accent) 14%, ${surfaceBorder});
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 ${surfaceInset},
+            ${isLightTheme ? "0 8px 20px rgba(15, 23, 42, 0.06)" : "none"};
+          color: var(--primary-text-color);
+          display: inline-flex;
+          gap: 6px;
+          height: ${styles.chip_height};
+          line-height: 1;
+          max-width: 100%;
+          overflow: hidden;
+          padding: ${styles.chip_padding};
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .calendar-card__chip ha-icon {
+          --mdc-icon-size: 13px;
+          color: var(--chip-accent);
+          flex: 0 0 auto;
+        }
+
+        .calendar-card__chip span {
+          font-size: ${styles.chip_font_size};
+          font-weight: 700;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
         }
 
-        .person-card__chips {
-          align-items: center;
-          display: flex;
-          flex-wrap: nowrap;
+        .calendar-card__body {
+          display: grid;
           gap: 6px;
           min-width: 0;
         }
 
-        .person-card__state-chip {
-          align-items: center;
-          background: ${chipBackground};
-          border: 1px solid ${isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.1)"};
-          border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 ${isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.06)"},
-            0 6px 14px ${isLightTheme ? "rgba(15, 23, 42, 0.06)" : "rgba(0, 0, 0, 0.06)"};
-          color: var(--primary-text-color);
-          display: inline-flex;
-          font-size: ${effectiveSubtitleSize};
-          font-weight: 700;
-          height: ${effectiveStateChipHeight};
-          line-height: 1;
-          max-width: 100%;
+        .calendar-card__event {
+          font-size: ${styles.event_size};
+          font-weight: 800;
+          letter-spacing: -0.03em;
+          line-height: 1.05;
           min-width: 0;
           overflow: hidden;
-          padding: ${effectiveStateChipPadding};
+          text-overflow: ellipsis;
+        }
+
+        .calendar-card__meta {
+          color: var(--secondary-text-color);
+          font-size: ${styles.meta_size};
+          font-weight: 600;
+          line-height: 1.35;
+          min-width: 0;
+          overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
         }
 
-        .person-card--empty {
+        .calendar-card__description {
+          color: var(--secondary-text-color);
+          font-size: ${styles.description_size};
+          line-height: 1.5;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+        }
+
+        .calendar-card--empty {
           display: grid;
           gap: 8px;
           padding: 16px;
         }
 
-        .person-card__empty-title {
+        .calendar-card__empty-title {
           font-size: 15px;
           font-weight: 700;
         }
 
-        .person-card__empty-text {
+        .calendar-card__empty-text {
           color: var(--secondary-text-color);
           font-size: 13px;
           line-height: 1.5;
         }
+
+        @media (max-width: 520px) {
+          .calendar-card__header {
+            align-items: start;
+            flex-direction: column;
+          }
+
+          .calendar-card__chips {
+            justify-content: flex-start;
+          }
+        }
       </style>
-      <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""}">
-        <div class="person-card__content" ${canRunPrimaryAction ? 'data-person-action="primary"' : ""}>
-          <div class="person-card__avatar">
-            ${
-              picture
-                ? `<img src="${escapeHtml(picture)}" alt="${escapeHtml(title)}" />`
-                : `<ha-icon icon="${escapeHtml(fallbackIcon)}"></ha-icon>`
-            }
-            ${
-              badge
-                ? `<span class="person-card__badge" style="--badge-color:${escapeHtml(badge.color)};"><ha-icon icon="${escapeHtml(badge.icon)}"></ha-icon></span>`
-                : ""
-            }
-          </div>
-          <div class="person-card__copy">
-            <div class="person-card__title">${escapeHtml(title)}</div>
-            ${subtitle ? `<div class="person-card__chips"><div class="person-card__state-chip">${escapeHtml(subtitle)}</div></div>` : ""}
+      <ha-card class="calendar-card">
+        <div class="calendar-card__content" data-calendar-card="root">
+          <div class="calendar-card__hero">
+            <div class="calendar-card__icon">
+              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${showUnavailableBadge ? `<span class="calendar-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
+            </div>
+            <div class="calendar-card__copy">
+              <div class="calendar-card__header">
+                <div class="calendar-card__title">${escapeHtml(title)}</div>
+                ${chips.length ? `<div class="calendar-card__chips">${chips.join("")}</div>` : ""}
+              </div>
+              <div class="calendar-card__body">
+                <div class="calendar-card__event">${escapeHtml(eventTitle)}</div>
+                <div class="calendar-card__meta">${escapeHtml(metaLabel)}</div>
+                ${config.show_description !== false && description ? `<div class="calendar-card__description">${escapeHtml(description)}</div>` : ""}
+              </div>
+            </div>
           </div>
         </div>
       </ha-card>
     `;
-    this._lastRenderSignature = this._getRenderSignature();
   }
 }
 
 if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaPersonCard);
+  customElements.define(CARD_TAG, NodaliaCalendarCard);
 }
 
-class NodaliaPersonCardEditor extends HTMLElement {
+class NodaliaCalendarCardEditor extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -821,7 +899,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
     }
 
     return Object.keys(hass.states)
-      .filter(entityId => entityId.startsWith("person.") || entityId.startsWith("device_tracker."))
+      .filter(entityId => entityId.startsWith("calendar."))
       .sort((left, right) => left.localeCompare(right, "es"))
       .join("|");
   }
@@ -918,11 +996,11 @@ class NodaliaPersonCardEditor extends HTMLElement {
 
   _getEntityOptionsMarkup() {
     const entityIds = Object.keys(this._hass?.states || {})
-      .filter(entityId => entityId.startsWith("person.") || entityId.startsWith("device_tracker."))
+      .filter(entityId => entityId.startsWith("calendar."))
       .sort((left, right) => left.localeCompare(right, "es"));
 
     return `
-      <datalist id="person-card-entities">
+      <datalist id="calendar-card-entities">
         ${entityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
       </datalist>
     `;
@@ -1033,44 +1111,45 @@ class NodaliaPersonCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad persona, foto, badge de zona y accion principal.</div>
+            <div class="editor-section__hint">Entidad de calendario principal y contenido visible.</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Entidad", "entity", config.entity, {
-              placeholder: "person.rocio",
+              placeholder: "calendar.casa",
             })}
             ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Rocio",
+              placeholder: "Calendario",
             })}
-            ${this._renderTextField("Icono fallback", "icon", config.icon, {
-              placeholder: "mdi:account",
+            ${this._renderTextField("Icono", "icon", config.icon, {
+              placeholder: "mdi:calendar-month-outline",
             })}
             ${this._renderSelectField(
-              "Accion al tocar",
+              "Acción al tocar",
               "tap_action",
               config.tap_action || "more-info",
               [
                 { value: "more-info", label: "More info" },
-                { value: "none", label: "Sin accion" },
+                { value: "none", label: "Sin acción" },
               ],
             )}
-            ${this._renderCheckboxField("Mostrar ubicacion", "show_state", config.show_state !== false)}
-            ${this._renderCheckboxField("Mostrar badge de zona", "show_zone_badge", config.show_zone_badge !== false)}
-            ${this._renderCheckboxField("Usar foto de entidad", "use_entity_picture", config.use_entity_picture !== false)}
-            ${this._renderCheckboxField("Usar icono de zona", "use_zone_icon", config.use_zone_icon !== false)}
+            ${this._renderCheckboxField("Mostrar chip estado", "show_status_chip", config.show_status_chip !== false)}
+            ${this._renderCheckboxField("Mostrar chip fecha", "show_date_chip", config.show_date_chip !== false)}
+            ${this._renderCheckboxField("Mostrar chip hora", "show_time_chip", config.show_time_chip !== false)}
+            ${this._renderCheckboxField("Mostrar chip ubicación", "show_location_chip", config.show_location_chip !== false)}
+            ${this._renderCheckboxField("Mostrar descripción", "show_description", config.show_description !== false)}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica al tocar la tarjeta.</div>
+            <div class="editor-section__hint">Respuesta háptica al tocar la tarjeta.</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("Fallback con vibración", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "Estilo haptico",
+              "Estilo háptico",
               "haptics.style",
               hapticStyle,
               [
@@ -1097,11 +1176,15 @@ class NodaliaPersonCardEditor extends HTMLElement {
             ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
             ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
             ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-            ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamano avatar", "styles.avatar.size", config.styles.avatar.size)}
-            ${this._renderTextField("Tamano badge", "styles.badge.size", config.styles.badge.size)}
-            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-            ${this._renderTextField("Tamano subtitulo", "styles.subtitle_size", config.styles.subtitle_size)}
+            ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
+            ${this._renderTextField("Tamaño icono", "styles.icon.size", config.styles.icon.size)}
+            ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
+            ${this._renderTextField("Tamaño evento", "styles.event_size", config.styles.event_size)}
+            ${this._renderTextField("Tamaño meta", "styles.meta_size", config.styles.meta_size)}
+            ${this._renderTextField("Tamaño descripción", "styles.description_size", config.styles.description_size)}
+            ${this._renderTextField("Alto burbuja info", "styles.chip_height", config.styles.chip_height)}
+            ${this._renderTextField("Texto burbuja info", "styles.chip_font_size", config.styles.chip_font_size)}
+            ${this._renderTextField("Padding burbuja info", "styles.chip_padding", config.styles.chip_padding)}
           </div>
         </section>
         ${this._getEntityOptionsMarkup()}
@@ -1109,19 +1192,19 @@ class NodaliaPersonCardEditor extends HTMLElement {
     `;
 
     this.shadowRoot.querySelectorAll('input[data-field="entity"]').forEach(input => {
-      input.setAttribute("list", "person-card-entities");
+      input.setAttribute("list", "calendar-card-entities");
     });
   }
 }
 
 if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaPersonCardEditor);
+  customElements.define(EDITOR_TAG, NodaliaCalendarCardEditor);
 }
 
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: CARD_TAG,
-  name: "Nodalia Person Card",
-  description: "Tarjeta compacta de persona con foto y zona",
+  name: "Nodalia Calendar Card",
+  description: "Tarjeta elegante de calendario para Home Assistant",
   preview: true,
 });

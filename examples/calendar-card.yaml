@@ -1,0 +1,9 @@
+type: custom:nodalia-calendar-card
+entity: calendar.casa
+name: Calendario
+show_status_chip: true
+show_date_chip: true
+show_time_chip: true
+show_location_chip: true
+show_description: true
+tap_action: more-info
