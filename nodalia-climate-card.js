@@ -1681,7 +1681,12 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__step-button span {
           align-items: center;
           display: inline-flex;
+          font-size: calc(${stepControlSize}px * 0.72);
+          height: 100%;
           justify-content: center;
+          line-height: 1;
+          transform: translateY(-0.04em);
+          width: 100%;
         }
 
         @media (max-width: 560px) {

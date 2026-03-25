@@ -4780,6 +4780,7 @@ console.info(
   "background:#2f4858;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;",
   "background:#4f7c82;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;",
 );
+
 }
 {
 const CARD_TAG = "nodalia-media-player";
@@ -9703,6 +9704,7 @@ window.customCards.push({
   description: "Media player fijo con estetica Nodalia y editor visual.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-light-card";
@@ -12183,6 +12185,7 @@ window.customCards.push({
   description: "Tarjeta de luz con estilo Nodalia, presets y editor visual.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-fan-card";
@@ -14242,6 +14245,7 @@ window.customCards.push({
   description: "Tarjeta de ventilador con slider de velocidad, oscilacion y modos.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-humidifier-card";
@@ -16427,6 +16431,7 @@ window.customCards.push({
   description: "Tarjeta de humidificador/deshumidificador con slider de humedad y modos.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-circular-gauge-card";
@@ -18044,6 +18049,7 @@ window.customCards.push({
   description: "Tarjeta circular para sensores y valores numericos con estetica Nodalia.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-graph-card";
@@ -20179,6 +20185,7 @@ window.customCards.push({
   description: "Tarjeta de grafica elegante para una o varias entidades numericas con estilo Nodalia.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-power-flow-card";
@@ -22677,6 +22684,7 @@ window.customCards.push({
   description: "Tarjeta Nodalia de flujo energetico para red, solar, bateria, agua, gas y consumos individuales.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-climate-card";
@@ -24362,7 +24370,12 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__step-button span {
           align-items: center;
           display: inline-flex;
+          font-size: calc(${stepControlSize}px * 0.72);
+          height: 100%;
           justify-content: center;
+          line-height: 1;
+          transform: translateY(-0.04em);
+          width: 100%;
         }
 
         @media (max-width: 560px) {
@@ -24968,6 +24981,7 @@ window.customCards.push({
   description: "Tarjeta de clima con dial circular, modos HVAC y control rapido de temperatura.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-alarm-panel-card";
@@ -26611,6 +26625,7 @@ window.customCards.push({
   description: "Tarjeta elegante para paneles de alarma",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-advance-vacuum-card";
@@ -29704,6 +29719,7 @@ window.customCards.push({
   description: "Tarjeta de mapa avanzada para robots con estilo Nodalia y seleccion de habitaciones, zonas y puntos.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-entity-card";
@@ -31760,6 +31776,7 @@ window.customCards.push({
   description: "Tarjeta todoterreno para entidades, informacion y botones rapidos.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-fav-card";
@@ -34177,6 +34194,7 @@ window.customCards.push({
   description: "Tarjeta mini y elegante para favoritos y controles rapidos en movil.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-person-card";
@@ -35280,6 +35298,7 @@ window.customCards.push({
   description: "Tarjeta compacta de persona con foto y zona",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-weather-card";
@@ -36384,6 +36403,7 @@ window.customCards.push({
   description: "Tarjeta de tiempo elegante para Home Assistant",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-vacuum-card";
@@ -38980,4 +39000,5 @@ window.customCards.push({
   description: "Tarjeta de aspirador con look Nodalia, acciones rapidas y editor visual.",
   preview: true,
 });
+
 }
