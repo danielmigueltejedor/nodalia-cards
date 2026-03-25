@@ -1148,9 +1148,10 @@ class NodaliaGraphCard extends HTMLElement {
     const cardPaddingPx = Math.max(12, parseSizeToPixels(styles.card.padding, 16));
     const chartBleed = Math.round(cardPaddingPx * 0.95);
     const isLightTheme = this._hass?.themes?.darkMode === false;
+    const darkCardBase = "linear-gradient(180deg, rgba(31, 33, 42, 0.98) 0%, rgba(20, 22, 29, 0.98) 100%)";
     const cardBackground = isLightTheme
       ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 3%, rgba(255, 255, 255, 0.98)) 0%, rgba(255, 255, 255, 0.95) 100%)`
-      : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
+      : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 12%, rgba(33, 35, 44, 0.98)) 0%, rgba(20, 22, 29, 0.98) 100%)`;
     const cardBorder = isLightTheme
       ? `1px solid color-mix(in srgb, ${accentColor} 16%, rgba(15, 23, 42, 0.1))`
       : `1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color))`;
@@ -1159,7 +1160,7 @@ class NodaliaGraphCard extends HTMLElement {
       : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 8%, rgba(0, 0, 0, 0.16))`;
     const surfaceBackground = isLightTheme
       ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
-      : "linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.03) 100%)";
+      : "linear-gradient(180deg, rgba(44, 47, 58, 0.88) 0%, rgba(30, 32, 41, 0.9) 100%)";
     const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
     const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.04)";
     const tooltipTint = hover?.values?.[0]?.color || accentColor;
@@ -1186,7 +1187,7 @@ class NodaliaGraphCard extends HTMLElement {
           background:
             radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} ${isLightTheme ? "4%" : "12%"}%, transparent) 0%, transparent 42%),
             linear-gradient(180deg, ${isLightTheme ? "rgba(255, 255, 255, 0.12)" : "rgba(255, 255, 255, 0.018)"} 0%, ${isLightTheme ? "rgba(255, 255, 255, 0)" : "rgba(0, 0, 0, 0.02)"} 100%),
-            ${cardBackground};
+            ${isLightTheme ? cardBackground : darkCardBase},
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};

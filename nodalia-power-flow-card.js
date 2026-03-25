@@ -1284,9 +1284,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const titleText = this._config?.title || this._config?.name || (layoutPreset === "simple" ? "" : "Flujo");
     const hasHeader = this._config?.show_header !== false && (Boolean(titleText) || (showDashboardButton && layoutPreset !== "simple"));
     const isLightTheme = this._hass?.themes?.darkMode === false;
+    const darkCardBase = "linear-gradient(180deg, rgba(31, 33, 42, 0.98) 0%, rgba(20, 22, 29, 0.98) 100%)";
     const surfaceBackground = isLightTheme
       ? "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.9) 100%)"
-      : "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%)";
+      : "linear-gradient(180deg, rgba(44, 47, 58, 0.88) 0%, rgba(30, 32, 41, 0.9) 100%)";
     const surfaceBorder = isLightTheme ? "rgba(15,23,42,0.08)" : "rgba(255,255,255,0.08)";
     const surfaceInset = isLightTheme ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.06)";
     const surfaceShadow = isLightTheme
@@ -1320,7 +1321,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           background:
             radial-gradient(circle at top left, color-mix(in srgb, ${dominantColor} ${isLightTheme ? "4%" : "12%"}%, transparent) 0%, transparent 40%),
             linear-gradient(180deg, ${isLightTheme ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.018)"} 0%, ${isLightTheme ? "rgba(255,255,255,0)" : "rgba(0,0,0,0.03)"} 100%),
-            ${isLightTheme ? "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.95) 100%)" : styles.card.background};
+            ${isLightTheme ? "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.95) 100%)" : darkCardBase};
           border: 1px solid color-mix(in srgb, ${dominantColor} ${isLightTheme ? "14%" : "18%"}%, ${isLightTheme ? "rgba(15,23,42,0.1)" : "var(--divider-color)"});
           border-radius: ${styles.card.border_radius};
           box-shadow: ${styles.card.box_shadow}, ${isLightTheme

@@ -17172,13 +17172,14 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const effectiveChipPadding = compactLayout ? "0 9px" : styles.chip_padding;
     const effectiveNameChipMaxWidth = `${Math.max(120, Math.min(parseSizeToPixels(styles.name_chip_max_width, 170), compactLayout ? 148 : 170))}px`;
     const isLightTheme = this._hass?.themes?.darkMode === false;
+    const darkCardBase = "linear-gradient(180deg, rgba(31, 33, 42, 0.98) 0%, rgba(20, 22, 29, 0.98) 100%)";
     const cardBackground = value === null
       ? isLightTheme
         ? "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.94) 100%)"
-        : styles.card.background
+        : darkCardBase
       : isLightTheme
         ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 4%, rgba(255, 255, 255, 0.98)) 0%, rgba(255, 255, 255, 0.95) 100%)`
-        : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
+        : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, rgba(33, 35, 44, 0.98)) 0%, rgba(20, 22, 29, 0.98) 100%)`;
     const cardBorder = value === null
       ? isLightTheme
         ? "1px solid rgba(15, 23, 42, 0.08)"
@@ -17195,7 +17196,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
     const surfaceBackground = isLightTheme
       ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
-      : "rgba(255, 255, 255, 0.05)";
+      : "linear-gradient(180deg, rgba(44, 47, 58, 0.88) 0%, rgba(30, 32, 41, 0.9) 100%)";
     const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
     const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.05)";
     const surfaceShadow = isLightTheme
@@ -19252,9 +19253,10 @@ class NodaliaGraphCard extends HTMLElement {
     const cardPaddingPx = Math.max(12, parseSizeToPixels(styles.card.padding, 16));
     const chartBleed = Math.round(cardPaddingPx * 0.95);
     const isLightTheme = this._hass?.themes?.darkMode === false;
+    const darkCardBase = "linear-gradient(180deg, rgba(31, 33, 42, 0.98) 0%, rgba(20, 22, 29, 0.98) 100%)";
     const cardBackground = isLightTheme
       ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 3%, rgba(255, 255, 255, 0.98)) 0%, rgba(255, 255, 255, 0.95) 100%)`
-      : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
+      : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 12%, rgba(33, 35, 44, 0.98)) 0%, rgba(20, 22, 29, 0.98) 100%)`;
     const cardBorder = isLightTheme
       ? `1px solid color-mix(in srgb, ${accentColor} 16%, rgba(15, 23, 42, 0.1))`
       : `1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color))`;
@@ -19263,7 +19265,7 @@ class NodaliaGraphCard extends HTMLElement {
       : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 8%, rgba(0, 0, 0, 0.16))`;
     const surfaceBackground = isLightTheme
       ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
-      : "linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.03) 100%)";
+      : "linear-gradient(180deg, rgba(44, 47, 58, 0.88) 0%, rgba(30, 32, 41, 0.9) 100%)";
     const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
     const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.04)";
     const tooltipTint = hover?.values?.[0]?.color || accentColor;
@@ -19290,7 +19292,7 @@ class NodaliaGraphCard extends HTMLElement {
           background:
             radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} ${isLightTheme ? "4%" : "12%"}%, transparent) 0%, transparent 42%),
             linear-gradient(180deg, ${isLightTheme ? "rgba(255, 255, 255, 0.12)" : "rgba(255, 255, 255, 0.018)"} 0%, ${isLightTheme ? "rgba(255, 255, 255, 0)" : "rgba(0, 0, 0, 0.02)"} 100%),
-            ${cardBackground};
+            ${isLightTheme ? cardBackground : darkCardBase},
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
@@ -21541,9 +21543,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const titleText = this._config?.title || this._config?.name || (layoutPreset === "simple" ? "" : "Flujo");
     const hasHeader = this._config?.show_header !== false && (Boolean(titleText) || (showDashboardButton && layoutPreset !== "simple"));
     const isLightTheme = this._hass?.themes?.darkMode === false;
+    const darkCardBase = "linear-gradient(180deg, rgba(31, 33, 42, 0.98) 0%, rgba(20, 22, 29, 0.98) 100%)";
     const surfaceBackground = isLightTheme
       ? "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.9) 100%)"
-      : "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%)";
+      : "linear-gradient(180deg, rgba(44, 47, 58, 0.88) 0%, rgba(30, 32, 41, 0.9) 100%)";
     const surfaceBorder = isLightTheme ? "rgba(15,23,42,0.08)" : "rgba(255,255,255,0.08)";
     const surfaceInset = isLightTheme ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.06)";
     const surfaceShadow = isLightTheme
@@ -21577,7 +21580,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           background:
             radial-gradient(circle at top left, color-mix(in srgb, ${dominantColor} ${isLightTheme ? "4%" : "12%"}%, transparent) 0%, transparent 40%),
             linear-gradient(180deg, ${isLightTheme ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.018)"} 0%, ${isLightTheme ? "rgba(255,255,255,0)" : "rgba(0,0,0,0.03)"} 100%),
-            ${isLightTheme ? "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.95) 100%)" : styles.card.background};
+            ${isLightTheme ? "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.95) 100%)" : darkCardBase};
           border: 1px solid color-mix(in srgb, ${dominantColor} ${isLightTheme ? "14%" : "18%"}%, ${isLightTheme ? "rgba(15,23,42,0.1)" : "var(--divider-color)"});
           border-radius: ${styles.card.border_radius};
           box-shadow: ${styles.card.box_shadow}, ${isLightTheme
@@ -24017,13 +24020,14 @@ class NodaliaClimateCard extends HTMLElement {
 
     const currentActionMeta = getActionMeta(this._getCurrentAction(state) || currentMode);
     const isLightTheme = this._hass?.themes?.darkMode === false;
+    const darkCardBase = "linear-gradient(180deg, rgba(31, 33, 42, 0.98) 0%, rgba(20, 22, 29, 0.98) 100%)";
     const cardBackground = isOff
       ? isLightTheme
         ? "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.94) 100%)"
-        : styles.card.background
+        : darkCardBase
       : isLightTheme
         ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 4%, rgba(255, 255, 255, 0.98)) 0%, rgba(255, 255, 255, 0.95) 100%)`
-        : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
+        : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, rgba(33, 35, 44, 0.98)) 0%, rgba(20, 22, 29, 0.98) 100%)`;
     const cardBorder = isOff
       ? isLightTheme
         ? "1px solid rgba(15, 23, 42, 0.08)"
@@ -24040,7 +24044,7 @@ class NodaliaClimateCard extends HTMLElement {
         : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
     const surfaceBackground = isLightTheme
       ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
-      : styles.icon.background;
+      : "linear-gradient(180deg, rgba(44, 47, 58, 0.88) 0%, rgba(30, 32, 41, 0.9) 100%)";
     const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
     const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.05)";
     const surfaceShadow = isLightTheme
@@ -24048,7 +24052,7 @@ class NodaliaClimateCard extends HTMLElement {
       : "0 10px 26px rgba(0, 0, 0, 0.16)";
     const chipBackground = isLightTheme
       ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
-      : "rgba(255, 255, 255, 0.05)";
+      : "linear-gradient(180deg, rgba(58, 60, 71, 0.56) 0%, rgba(39, 41, 50, 0.52) 100%)";
 
     this.shadowRoot.innerHTML = `
       <style>
