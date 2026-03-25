@@ -1582,6 +1582,7 @@ class NodaliaClimateCard extends HTMLElement {
           font-size: calc(${effectiveTargetSize} * 0.24);
           font-weight: 500;
           gap: 0.04em;
+          letter-spacing: 0;
           line-height: 1;
           opacity: 0.92;
           position: absolute;
