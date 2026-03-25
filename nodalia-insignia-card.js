@@ -262,7 +262,7 @@ function normalizeConfig(rawConfig) {
 }
 
 class NodaliaInsigniaCard extends HTMLElement {
-  static async getConfigElement() {
+  static getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
 
@@ -303,19 +303,6 @@ class NodaliaInsigniaCard extends HTMLElement {
 
     this._lastRenderSignature = nextSignature;
     this._render();
-  }
-
-  getCardSize() {
-    return 1;
-  }
-
-  getGridOptions() {
-    return {
-      rows: 1,
-      columns: 3,
-      min_rows: 1,
-      min_columns: 2,
-    };
   }
 
   _getState() {
@@ -910,10 +897,12 @@ if (!customElements.get(EDITOR_TAG)) {
 }
 
 window.customBadges = window.customBadges || [];
-window.customBadges.push({
-  type: CARD_TAG,
-  name: "Nodalia Insignia",
-  preview: true,
-  description: "Insignia compacta estilo chip burbuja para usar en la zona de badges.",
-  documentationURL: "https://developers.home-assistant.io/docs/frontend/custom-ui/custom-badge/",
-});
+if (!window.customBadges.some(item => item?.type === CARD_TAG)) {
+  window.customBadges.push({
+    type: CARD_TAG,
+    name: "Nodalia Insignia",
+    preview: true,
+    description: "Insignia compacta estilo chip burbuja para usar en la zona de badges.",
+    documentationURL: "https://developers.home-assistant.io/docs/frontend/custom-ui/custom-badge/",
+  });
+}
