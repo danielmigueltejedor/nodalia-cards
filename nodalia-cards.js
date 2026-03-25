@@ -23028,6 +23028,15 @@ function getDialValueFromPoint(dial, clientX, clientY, range, step) {
   return clamp(Number(rounded.toFixed(2)), range.min, range.max);
 }
 
+function getDialMarkerPosition(angle) {
+  const markerRadiusPercent = (DIAL_CIRCLE_RADIUS / DIAL_VIEWBOX_SIZE) * 100;
+  const radians = (angle * Math.PI) / 180;
+  return {
+    left: Number((50 + (Math.cos(radians) * markerRadiusPercent)).toFixed(3)),
+    top: Number((50 + (Math.sin(radians) * markerRadiusPercent)).toFixed(3)),
+  };
+}
+
 class NodaliaClimateCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -23485,9 +23494,13 @@ class NodaliaClimateCard extends HTMLElement {
     const ratio = (nextValue - range.min) / Math.max(range.max - range.min, step);
     const angle = DIAL_START_ANGLE + (ratio * DIAL_SWEEP);
     const progressLength = Number((DIAL_VISIBLE_LENGTH * clamp(ratio, 0, 1)).toFixed(3));
+    const thumbPosition = getDialMarkerPosition(angle);
 
     dial.style.setProperty("--climate-angle", `${angle}deg`);
     dial.style.setProperty("--climate-progress-length", `${progressLength}`);
+    dial.style.setProperty("--climate-thumb-left", `${thumbPosition.left}%`);
+    dial.style.setProperty("--climate-thumb-top", `${thumbPosition.top}%`);
+    dial.setAttribute("aria-valuenow", String(Number(nextValue)));
 
     if (targetValue instanceof HTMLElement) {
       targetValue.textContent = formatTemperature(nextValue, step, false);
@@ -23915,16 +23928,8 @@ class NodaliaClimateCard extends HTMLElement {
     const currentAngle = currentRatio === null
       ? null
       : DIAL_START_ANGLE + (currentRatio * DIAL_SWEEP);
-    const markerRadiusPercent = (DIAL_CIRCLE_RADIUS / DIAL_VIEWBOX_SIZE) * 100;
-    const getMarkerPosition = angle => {
-      const radians = (angle * Math.PI) / 180;
-      return {
-        left: Number((50 + (Math.cos(radians) * markerRadiusPercent)).toFixed(3)),
-        top: Number((50 + (Math.sin(radians) * markerRadiusPercent)).toFixed(3)),
-      };
-    };
-    const thumbPosition = getMarkerPosition(dialAngle);
-    const currentMarkerPosition = currentAngle === null ? null : getMarkerPosition(currentAngle);
+    const thumbPosition = getDialMarkerPosition(dialAngle);
+    const currentMarkerPosition = currentAngle === null ? null : getDialMarkerPosition(currentAngle);
 
     if (config.show_state_chip !== false) {
       chips.push(`<div class="climate-card__chip climate-card__chip--state">${escapeHtml(this._getStateLabel(state))}</div>`);
