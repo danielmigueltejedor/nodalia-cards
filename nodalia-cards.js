@@ -24123,6 +24123,8 @@ class NodaliaClimateCard extends HTMLElement {
           --climate-progress-length: ${progressLength};
           --climate-dial-size: ${dialSizePx}px;
           --climate-dial-radius: calc(var(--climate-dial-size) * ${(DIAL_CIRCLE_RADIUS / DIAL_VIEWBOX_SIZE).toFixed(6)});
+          --climate-marker-inset: 0px;
+          --climate-marker-radius: calc(var(--climate-dial-radius) - var(--climate-marker-inset));
           --climate-thumb-size: ${thumbSizePx}px;
           background: ${styles.dial.background};
           border-radius: 50%;
@@ -24184,7 +24186,7 @@ class NodaliaClimateCard extends HTMLElement {
           pointer-events: auto;
           position: absolute;
           top: 50%;
-          transform: translate(-50%, -50%) rotate(calc(var(--climate-angle) + 90deg)) translateY(calc(-1 * var(--climate-dial-radius)));
+          transform: translate(-50%, -50%) rotate(calc(var(--climate-angle) + 90deg)) translateY(calc(-1 * var(--climate-marker-radius)));
           width: var(--climate-thumb-size);
           z-index: 2;
         }
@@ -24200,7 +24202,7 @@ class NodaliaClimateCard extends HTMLElement {
           pointer-events: none;
           position: absolute;
           top: 50%;
-          transform: translate(-50%, -50%) rotate(calc(var(--climate-current-angle, 0deg) + 90deg)) translateY(calc(-1 * var(--climate-dial-radius)));
+          transform: translate(-50%, -50%) rotate(calc(var(--climate-current-angle, 0deg) + 90deg)) translateY(calc(-1 * var(--climate-marker-radius)));
           width: calc(var(--climate-thumb-size) * 0.58);
           z-index: 1;
         }
@@ -24389,6 +24391,8 @@ class NodaliaClimateCard extends HTMLElement {
 
           .climate-card__dial {
             --climate-dial-size: min(${dialSizePx}px, 100%);
+            --climate-marker-inset: 2px;
+            --climate-thumb-size: min(${thumbSizePx}px, calc(var(--climate-dial-size) * 0.082));
           }
         }
       </style>
