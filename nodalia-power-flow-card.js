@@ -1138,7 +1138,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
             ${this._renderSimpleLabelChip(sourceNode)}
           </div>
           <div></div>
-          <div class="power-flow-card__simple-column power-flow-card__simple-column--home">
+          <div class="power-flow-card__simple-column power-flow-card__simple-column--home power-flow-card__simple-column--home-top">
             ${this._renderSimpleLabelChip(nodes.home)}
           </div>
         </div>
@@ -1206,7 +1206,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           class="power-flow-card__simple-bottom"
           style="--simple-source-column:${nodeSize}px; --simple-home-column:${homeSize}px;"
         >
-          <div class="power-flow-card__simple-column power-flow-card__simple-column--source">
+          <div class="power-flow-card__simple-column power-flow-card__simple-column--source power-flow-card__simple-column--source-bottom">
             ${this._renderSimpleValueChip(sourceNode)}
             ${sourceNode.secondary ? `<span class="power-flow-card__node-secondary">${escapeHtml(sourceNode.secondary)}</span>` : ""}
           </div>
@@ -1462,8 +1462,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card--simple .power-flow-card__dashboard-button {
-          min-height: 32px;
-          padding: 0 11px;
+          min-height: 38px;
+          padding: 0 15px;
         }
 
         .power-flow-card--simple .power-flow-card__surface {
@@ -1571,18 +1571,35 @@ class NodaliaPowerFlowCard extends HTMLElement {
           gap: 3px;
           justify-self: center;
           margin-bottom: 0;
-          width: 100%;
+          max-width: 100%;
+          width: max-content;
         }
 
         .power-flow-card__simple-column--source {
           justify-self: center;
           margin-top: 0;
-          width: 100%;
+          max-width: 100%;
+          width: max-content;
         }
 
         .power-flow-card__simple-column--source-top {
           justify-self: center;
-          width: 100%;
+          max-width: 100%;
+          width: max-content;
+        }
+
+        .power-flow-card__simple-column--home-top {
+          transform: translateY(-4px);
+        }
+
+        .power-flow-card__simple-column--source-top {
+          gap: 3px;
+          transform: translateY(4px);
+        }
+
+        .power-flow-card__simple-column--source-bottom {
+          gap: 3px;
+          transform: translateY(-6px);
         }
 
         .power-flow-card__simple-info {
@@ -1700,6 +1717,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__dashboard-button--footer {
           min-width: 0;
+          min-height: 40px;
+          padding: 0 16px;
+        }
+
+        .power-flow-card__dashboard-button--footer ha-icon {
+          --mdc-icon-size: 18px;
         }
 
         .power-flow-card__bubble ha-icon {
@@ -1716,6 +1739,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
           padding: 10px 12px;
         }
 
+        .power-flow-card--simple .power-flow-card__bubble--home {
+          gap: 4px;
+          padding: 9px 11px;
+        }
+
         .power-flow-card__home-icon-wrap {
           align-items: center;
           background: rgba(255,255,255,0.06);
@@ -1725,6 +1753,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
           height: 31px;
           justify-content: center;
           width: 31px;
+        }
+
+        .power-flow-card--simple .power-flow-card__home-icon-wrap {
+          height: 29px;
+          width: 29px;
         }
 
         .power-flow-card__home-icon-wrap ha-icon {
@@ -1739,6 +1772,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
           min-width: 0;
         }
 
+        .power-flow-card--simple .power-flow-card__home-value {
+          gap: 3px;
+        }
+
         .power-flow-card__home-value-number {
           font-size: ${Math.max(19, parseSizeToPixels(styles.home_value_size, 22))}px;
           font-weight: 700;
@@ -1746,10 +1783,19 @@ class NodaliaPowerFlowCard extends HTMLElement {
           line-height: 0.9;
         }
 
+        .power-flow-card--simple .power-flow-card__home-value-number {
+          font-size: ${Math.max(16, parseSizeToPixels(styles.home_value_size, 22) - 4)}px;
+          letter-spacing: -0.035em;
+        }
+
         .power-flow-card__home-value-unit {
           font-size: ${Math.max(12, parseSizeToPixels(styles.home_unit_size, 14))}px;
           font-weight: 600;
           opacity: 0.84;
+        }
+
+        .power-flow-card--simple .power-flow-card__home-value-unit {
+          font-size: ${Math.max(10, parseSizeToPixels(styles.home_unit_size, 14) - 2)}px;
         }
 
         .power-flow-card__bubble--individual {
