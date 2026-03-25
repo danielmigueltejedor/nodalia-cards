@@ -1,0 +1,7 @@
+type: custom:nodalia-insignia-card
+entity: sensor.temperatura_salon
+name: Salon
+use_entity_icon: true
+show_name: true
+show_value: true
+tap_action: more-info

@@ -17,6 +17,7 @@ Ahora mismo incluye:
 - `custom:nodalia-advance-vacuum-card`
 - `custom:nodalia-entity-card`
 - `custom:nodalia-fav-card`
+- `custom:nodalia-insignia-card`
 - `custom:nodalia-person-card`
 - `custom:nodalia-weather-card`
 - `custom:nodalia-vacuum-card`
@@ -47,6 +48,7 @@ Ese recurso carga automaticamente:
 - `nodalia-advance-vacuum-card.js`
 - `nodalia-entity-card.js`
 - `nodalia-fav-card.js`
+- `nodalia-insignia-card.js`
 - `nodalia-person-card.js`
 - `nodalia-weather-card.js`
 - `nodalia-vacuum-card.js`
@@ -81,6 +83,8 @@ Si prefieres cargarlas por separado:
 - url: /local/nodalia-entity-card.js
   type: module
 - url: /local/nodalia-fav-card.js
+  type: module
+- url: /local/nodalia-insignia-card.js
   type: module
 - url: /local/nodalia-person-card.js
   type: module
@@ -251,6 +255,18 @@ grid_options:
   rows: 1
 ```
 
+### Nodalia Insignia Card
+
+```yaml
+type: custom:nodalia-insignia-card
+entity: sensor.temperatura_salon
+name: Salon
+use_entity_icon: true
+show_name: true
+show_value: true
+tap_action: more-info
+```
+
 ### Nodalia Person Card
 
 ```yaml
@@ -277,6 +293,7 @@ show_zone_badge: true
 - `nodalia-advance-vacuum-card.js`: tarjeta avanzada de mapa para robots aspiradores
 - `nodalia-entity-card.js`: tarjeta todoterreno para cualquier entidad
 - `nodalia-fav-card.js`: tarjeta mini para favoritos y controles rapidos
+- `nodalia-insignia-card.js`: insignia compacta estilo chip burbuja
 - `nodalia-person-card.js`: tarjeta compacta de personas con foto y zona
 - `nodalia-weather-card.js`: tarjeta meteorologica elegante
 - `nodalia-vacuum-card.js`: tarjeta de aspirador
