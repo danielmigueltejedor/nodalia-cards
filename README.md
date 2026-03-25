@@ -19,8 +19,6 @@ Ahora mismo incluye:
 - `custom:nodalia-fav-card`
 - `custom:nodalia-person-card`
 - `custom:nodalia-weather-card`
-- `custom:nodalia-calendar-card`
-- `custom:nodalia-insignia-card`
 - `custom:nodalia-vacuum-card`
 
 ## Instalacion
@@ -51,8 +49,6 @@ Ese recurso carga automaticamente:
 - `nodalia-fav-card.js`
 - `nodalia-person-card.js`
 - `nodalia-weather-card.js`
-- `nodalia-calendar-card.js`
-- `nodalia-insignia-card.js`
 - `nodalia-vacuum-card.js`
 
 ### Opcion 2: recursos individuales
@@ -89,10 +85,6 @@ Si prefieres cargarlas por separado:
 - url: /local/nodalia-person-card.js
   type: module
 - url: /local/nodalia-weather-card.js
-  type: module
-- url: /local/nodalia-calendar-card.js
-  type: module
-- url: /local/nodalia-insignia-card.js
   type: module
 - url: /local/nodalia-vacuum-card.js
   type: module
@@ -231,32 +223,6 @@ entity: weather.casa
 name: Tiempo
 ```
 
-### Nodalia Calendar Card
-
-```yaml
-type: custom:nodalia-calendar-card
-entity: calendar.casa
-name: Calendario
-show_status_chip: true
-show_date_chip: true
-show_time_chip: true
-show_location_chip: true
-show_description: true
-```
-
-### Nodalia Insignia Card
-
-```yaml
-type: custom:nodalia-insignia-card
-entity: sensor.temperatura_salon
-name: Salon
-state_attribute: temperature
-icon: mdi:home-thermometer-outline
-show_name: true
-show_value: true
-tap_action: more-info
-```
-
 ### Nodalia Entity Card
 
 ```yaml
@@ -313,8 +279,6 @@ show_zone_badge: true
 - `nodalia-fav-card.js`: tarjeta mini para favoritos y controles rapidos
 - `nodalia-person-card.js`: tarjeta compacta de personas con foto y zona
 - `nodalia-weather-card.js`: tarjeta meteorologica elegante
-- `nodalia-calendar-card.js`: tarjeta elegante para proximos eventos de calendario
-- `nodalia-insignia-card.js`: tarjeta insignia compacta tipo chip burbuja
 - `nodalia-vacuum-card.js`: tarjeta de aspirador
 
 ## Siguiente paso recomendado

@@ -4780,7 +4780,6 @@ console.info(
   "background:#2f4858;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;",
   "background:#4f7c82;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;",
 );
-
 }
 {
 const CARD_TAG = "nodalia-media-player";
@@ -7680,33 +7679,6 @@ class NodaliaMediaPlayer extends HTMLElement {
     const playerStyles = config.styles.player;
     const browserStyles = config.styles.browser;
     const tvArtworkSize = playerStyles.tv_artwork_size || playerStyles.artwork_size;
-    const isLightTheme = this._hass?.themes?.darkMode === false;
-    const cardBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%)"
-      : playerStyles.background;
-    const cardBorder = isLightTheme ? "1px solid rgba(15, 23, 42, 0.08)" : playerStyles.border;
-    const cardShadow = isLightTheme
-      ? `${playerStyles.box_shadow}, 0 12px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)`
-      : playerStyles.box_shadow;
-    const activeCardBackground = isLightTheme
-      ? "linear-gradient(180deg, color-mix(in srgb, var(--info-color, #71c0ff) 4%, rgba(255, 255, 255, 0.98)) 0%, rgba(255, 255, 255, 0.95) 100%)"
-      : null;
-    const surfaceBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
-      : "rgba(255, 255, 255, 0.05)";
-    const artworkSurfaceBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 255, 255, 0.92) 100%)"
-      : "rgba(255, 255, 255, 0.08)";
-    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.06)";
-    const artworkSurfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
-    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.9)" : "rgba(255, 255, 255, 0.04)";
-    const artworkSurfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.06)";
-    const surfaceShadow = isLightTheme
-      ? "0 8px 18px rgba(15, 23, 42, 0.08), 0 2px 5px rgba(15, 23, 42, 0.05)"
-      : "none";
-    const artworkSurfaceShadow = isLightTheme
-      ? "0 10px 22px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.06)"
-      : "0 10px 24px rgba(0, 0, 0, 0.18)";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -7769,10 +7741,10 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .empty-card,
         .media-player-card {
-          background: ${cardBackground};
-          border: ${cardBorder};
+          background: ${playerStyles.background};
+          border: ${playerStyles.border};
           border-radius: ${playerStyles.border_radius};
-          box-shadow: ${cardShadow};
+          box-shadow: ${playerStyles.box_shadow};
           isolation: isolate;
           min-height: ${playerStyles.min_height};
           overflow: hidden;
@@ -7781,14 +7753,14 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--active {
-          background: ${isLightTheme
-            ? activeCardBackground
-            : `linear-gradient(180deg, rgba(42, 88, 180, 0.22), rgba(18, 34, 74, 0.28)), ${playerStyles.background}`};
-          border-color: ${isLightTheme ? "rgba(109, 163, 255, 0.18)" : "rgba(109, 163, 255, 0.24)"};
+          background:
+            linear-gradient(180deg, rgba(42, 88, 180, 0.22), rgba(18, 34, 74, 0.28)),
+            ${playerStyles.background};
+          border-color: rgba(109, 163, 255, 0.24);
           box-shadow:
-            ${cardShadow},
-            0 0 0 1px ${isLightTheme ? "rgba(109, 163, 255, 0.06)" : "rgba(109, 163, 255, 0.08)"},
-            ${isLightTheme ? "0 12px 24px rgba(16, 34, 82, 0.08)" : "0 18px 38px rgba(16, 34, 82, 0.18)"};
+            ${playerStyles.box_shadow},
+            0 0 0 1px rgba(109, 163, 255, 0.08),
+            0 18px 38px rgba(16, 34, 82, 0.18);
         }
 
         .empty-card {
@@ -7810,7 +7782,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card::before {
-          background: linear-gradient(180deg, ${isLightTheme ? "rgba(255, 255, 255, 0.12)" : "rgba(255, 255, 255, 0.06)"}, rgba(255, 255, 255, 0));
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
           content: "";
           inset: 0;
           pointer-events: none;
@@ -7947,10 +7919,10 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__artwork {
           align-items: center;
           appearance: none;
-          background: ${artworkSurfaceBackground};
-          border: 1px solid ${artworkSurfaceBorder};
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 22px;
-          box-shadow: inset 0 1px 0 ${artworkSurfaceInset}, ${artworkSurfaceShadow};
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 24px rgba(0, 0, 0, 0.18);
           color: inherit;
           cursor: default;
           display: flex;
@@ -7994,7 +7966,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__unavailable-badge {
           align-items: center;
           background: #ff9b4a;
-          border: 2px solid ${isLightTheme ? "rgba(255, 255, 255, 0.94)" : "var(--ha-card-background, rgba(28, 28, 32, 1))"};
+          border: 2px solid var(--ha-card-background, rgba(28, 28, 32, 1));
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
           color: #ffffff;
@@ -8146,10 +8118,10 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__transport {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 ${surfaceInset}, ${surfaceShadow};
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
           display: inline-flex;
           gap: 6px;
           margin: 0 auto;
@@ -8431,8 +8403,8 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__tv-volume-wrap {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
           display: grid;
           min-height: ${playerStyles.slider_wrap_height};
@@ -8495,8 +8467,8 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__chip {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
           color: var(--secondary-text-color);
           display: inline-flex;
@@ -8556,8 +8528,8 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__source-button {
           align-items: center;
           appearance: none;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
           color: var(--secondary-text-color);
           cursor: pointer;
@@ -8585,8 +8557,8 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__volume-button {
           align-items: center;
           appearance: none;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -8597,7 +8569,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__control {
-          box-shadow: inset 0 1px 0 ${surfaceInset}, ${surfaceShadow};
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
           height: ${playerStyles.control_size};
           width: ${playerStyles.control_size};
         }
@@ -8652,10 +8624,10 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__dots {
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 ${surfaceInset}, ${surfaceShadow};
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
           display: inline-flex;
           gap: 4px;
           justify-content: center;
@@ -9731,7 +9703,6 @@ window.customCards.push({
   description: "Media player fijo con estetica Nodalia y editor visual.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-light-card";
@@ -12212,7 +12183,6 @@ window.customCards.push({
   description: "Tarjeta de luz con estilo Nodalia, presets y editor visual.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-fan-card";
@@ -14272,7 +14242,6 @@ window.customCards.push({
   description: "Tarjeta de ventilador con slider de velocidad, oscilacion y modos.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-humidifier-card";
@@ -16458,7 +16427,6 @@ window.customCards.push({
   description: "Tarjeta de humidificador/deshumidificador con slider de humedad y modos.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-circular-gauge-card";
@@ -17171,37 +17139,15 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const effectiveChipFontSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.chip_font_size, 11), compactLayout ? 10.5 : 11))}px`;
     const effectiveChipPadding = compactLayout ? "0 9px" : styles.chip_padding;
     const effectiveNameChipMaxWidth = `${Math.max(120, Math.min(parseSizeToPixels(styles.name_chip_max_width, 170), compactLayout ? 148 : 170))}px`;
-    const isLightTheme = this._hass?.themes?.darkMode === false;
-    const darkCardBase = "linear-gradient(180deg, rgba(31, 33, 42, 0.98) 0%, rgba(20, 22, 29, 0.98) 100%)";
     const cardBackground = value === null
-      ? isLightTheme
-        ? "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.94) 100%)"
-        : darkCardBase
-      : isLightTheme
-        ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 4%, rgba(255, 255, 255, 0.98)) 0%, rgba(255, 255, 255, 0.95) 100%)`
-        : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, rgba(33, 35, 44, 0.98)) 0%, rgba(20, 22, 29, 0.98) 100%)`;
+      ? styles.card.background
+      : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
     const cardBorder = value === null
-      ? isLightTheme
-        ? "1px solid rgba(15, 23, 42, 0.08)"
-        : styles.card.border
-      : isLightTheme
-        ? `1px solid color-mix(in srgb, ${accentColor} 18%, rgba(15, 23, 42, 0.1))`
-        : `1px solid color-mix(in srgb, ${accentColor} 26%, var(--divider-color))`;
+      ? styles.card.border
+      : `1px solid color-mix(in srgb, ${accentColor} 26%, var(--divider-color))`;
     const cardShadow = value === null
-      ? isLightTheme
-        ? `${styles.card.box_shadow}, 0 16px 30px rgba(15, 23, 42, 0.08), 0 3px 8px rgba(15, 23, 42, 0.05)`
-        : styles.card.box_shadow
-      : isLightTheme
-        ? `${styles.card.box_shadow}, 0 12px 24px color-mix(in srgb, ${accentColor} 2%, rgba(15, 23, 42, 0.12)), 0 2px 6px rgba(15, 23, 42, 0.06)`
-        : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
-    const surfaceBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
-      : "linear-gradient(180deg, rgba(44, 47, 58, 0.88) 0%, rgba(30, 32, 41, 0.9) 100%)";
-    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
-    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.05)";
-    const surfaceShadow = isLightTheme
-      ? "0 8px 18px rgba(15, 23, 42, 0.08), 0 2px 5px rgba(15, 23, 42, 0.05)"
-      : "0 10px 26px rgba(0, 0, 0, 0.16)";
+      ? styles.card.box_shadow
+      : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
     const chips = [];
 
     if (config.show_percentage_chip === true && value !== null) {
@@ -17228,8 +17174,8 @@ class NodaliaCircularGaugeCard extends HTMLElement {
 
         .gauge-card {
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} ${isLightTheme ? "5%" : "18%"}%, transparent) 0%, transparent 46%),
-            linear-gradient(180deg, ${isLightTheme ? "rgba(255, 255, 255, 0.12)" : "rgba(255, 255, 255, 0.018)"} 0%, ${isLightTheme ? "rgba(255, 255, 255, 0)" : "rgba(0, 0, 0, 0.02)"} 100%),
+            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, transparent 48%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0%, rgba(0, 0, 0, 0.02) 100%),
             ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -17263,13 +17209,13 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           align-items: center;
           appearance: none;
           background:
-            radial-gradient(circle at top left, ${isLightTheme ? "rgba(255, 255, 255, 0.5)" : "rgba(255, 255, 255, 0.06)"}, transparent 60%),
-            ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+            radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 60%),
+            ${styles.icon.background};
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: calc(${effectiveIconSize} * 0.5);
           box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${surfaceShadow};
+            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            0 10px 26px rgba(0, 0, 0, 0.16);
           color: ${styles.icon.color};
           display: inline-flex;
           height: ${effectiveIconSize};
@@ -17294,7 +17240,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         .gauge-card__unavailable-badge {
           align-items: center;
           background: #ff9b4a;
-          border: 2px solid ${isLightTheme ? "rgba(255, 255, 255, 0.94)" : styles.card.background};
+          border: 2px solid ${styles.card.background};
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
           color: #ffffff;
@@ -17351,12 +17297,10 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         .gauge-card__chip {
           align-items: center;
           backdrop-filter: blur(18px);
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${isLightTheme ? "0 8px 18px rgba(15, 23, 42, 0.05)" : "none"};
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
           color: var(--primary-text-color);
           display: inline-flex;
           font-size: ${effectiveChipFontSize};
@@ -17419,10 +17363,10 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         }
 
         .gauge-card__dial-thumb {
-          background: ${isLightTheme ? "#ffffff" : "#f5f7fb"};
-          border: 4px solid color-mix(in srgb, ${accentColor} 18%, ${isLightTheme ? "rgba(255, 255, 255, 0.96)" : "rgba(255, 255, 255, 0.72)"});
+          background: #f5f7fb;
+          border: 4px solid color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.72));
           border-radius: 50%;
-          box-shadow: 0 0 0 5px ${isLightTheme ? "rgba(255, 255, 255, 0.32)" : "rgba(255, 255, 255, 0.12)"};
+          box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.12);
           height: var(--gauge-thumb-size);
           left: 50%;
           position: absolute;
@@ -17497,13 +17441,13 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         .gauge-card__bottom-icon {
           align-items: center;
           background:
-            radial-gradient(circle at top left, ${isLightTheme ? "rgba(255, 255, 255, 0.72)" : "rgba(255, 255, 255, 0.08)"}, transparent 60%),
-            ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+            radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 60%),
+            ${styles.icon.background};
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${surfaceShadow};
+            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            0 10px 26px rgba(0, 0, 0, 0.16);
           color: ${styles.icon.color};
           display: inline-flex;
           height: ${compactLayout ? "42px" : "46px"};
@@ -18100,7 +18044,6 @@ window.customCards.push({
   description: "Tarjeta circular para sensores y valores numericos con estetica Nodalia.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-graph-card";
@@ -19252,22 +19195,9 @@ class NodaliaGraphCard extends HTMLElement {
     const lineWidth = `${Math.max(2, Math.min(parseSizeToPixels(styles.line_width, 3), compactLayout ? 2.4 : 3))}`;
     const cardPaddingPx = Math.max(12, parseSizeToPixels(styles.card.padding, 16));
     const chartBleed = Math.round(cardPaddingPx * 0.95);
-    const isLightTheme = this._hass?.themes?.darkMode === false;
-    const darkCardBase = "linear-gradient(180deg, rgba(31, 33, 42, 0.98) 0%, rgba(20, 22, 29, 0.98) 100%)";
-    const cardBackground = isLightTheme
-      ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 3%, rgba(255, 255, 255, 0.98)) 0%, rgba(255, 255, 255, 0.95) 100%)`
-      : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 12%, rgba(33, 35, 44, 0.98)) 0%, rgba(20, 22, 29, 0.98) 100%)`;
-    const cardBorder = isLightTheme
-      ? `1px solid color-mix(in srgb, ${accentColor} 16%, rgba(15, 23, 42, 0.1))`
-      : `1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color))`;
-    const cardShadow = isLightTheme
-      ? `${styles.card.box_shadow}, 0 12px 24px color-mix(in srgb, ${accentColor} 2%, rgba(15, 23, 42, 0.12)), 0 2px 6px rgba(15, 23, 42, 0.06)`
-      : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 8%, rgba(0, 0, 0, 0.16))`;
-    const surfaceBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
-      : "linear-gradient(180deg, rgba(44, 47, 58, 0.88) 0%, rgba(30, 32, 41, 0.9) 100%)";
-    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
-    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.04)";
+    const cardBackground = `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
+    const cardBorder = `1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color))`;
+    const cardShadow = `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 8%, rgba(0, 0, 0, 0.16))`;
     const tooltipTint = hover?.values?.[0]?.color || accentColor;
 
     this.shadowRoot.innerHTML = `
@@ -19290,9 +19220,9 @@ class NodaliaGraphCard extends HTMLElement {
 
         .graph-card {
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} ${isLightTheme ? "4%" : "12%"}%, transparent) 0%, transparent 42%),
-            linear-gradient(180deg, ${isLightTheme ? "rgba(255, 255, 255, 0.12)" : "rgba(255, 255, 255, 0.018)"} 0%, ${isLightTheme ? "rgba(255, 255, 255, 0)" : "rgba(0, 0, 0, 0.02)"} 100%),
-            ${isLightTheme ? cardBackground : darkCardBase},
+            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 12%, transparent) 0%, transparent 44%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0%, rgba(0, 0, 0, 0.02) 100%),
+            ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
@@ -19333,8 +19263,8 @@ class NodaliaGraphCard extends HTMLElement {
 
         .graph-card__icon {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.03) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 20px;
           color: ${styles.icon.color};
           display: inline-flex;
@@ -19343,9 +19273,6 @@ class NodaliaGraphCard extends HTMLElement {
           opacity: 0.9;
           padding: 0 12px;
           position: relative;
-          box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${isLightTheme ? "0 10px 22px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)" : "0 10px 22px rgba(0, 0, 0, 0.14)"};
         }
 
         .graph-card__icon ha-icon {
@@ -19357,7 +19284,7 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__unavailable-badge {
           align-items: center;
           background: #ff9b4a;
-          border: 2px solid ${isLightTheme ? "rgba(255, 255, 255, 0.94)" : styles.card.background};
+          border: 2px solid ${styles.card.background};
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
           color: #ffffff;
@@ -19414,8 +19341,8 @@ class NodaliaGraphCard extends HTMLElement {
 
         .graph-card__legend-item {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.03) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 999px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -19435,11 +19362,9 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__legend-item--active {
-          background: ${isLightTheme
-            ? "linear-gradient(180deg, color-mix(in srgb, var(--legend-color) 10%, rgba(255,255,255,0.96)) 0%, rgba(255,255,255,0.84) 100%)"
-            : "linear-gradient(180deg, color-mix(in srgb, var(--legend-color) 14%, rgba(255,255,255,0.05)) 0%, rgba(255,255,255,0.035) 100%)"};
-          border-color: color-mix(in srgb, var(--legend-color) ${isLightTheme ? "22%" : "34%"}%, ${isLightTheme ? "rgba(15,23,42,0.1)" : "rgba(255,255,255,0.08)"});
-          box-shadow: 0 12px 24px color-mix(in srgb, var(--legend-color) 8%, ${isLightTheme ? "rgba(15, 23, 42, 0.14)" : "rgba(0, 0, 0, 0.14)"});
+          background: linear-gradient(180deg, color-mix(in srgb, var(--legend-color) 14%, rgba(255,255,255,0.05)) 0%, rgba(255,255,255,0.035) 100%);
+          border-color: color-mix(in srgb, var(--legend-color) 34%, rgba(255,255,255,0.08));
+          box-shadow: 0 12px 24px color-mix(in srgb, var(--legend-color) 10%, rgba(0, 0, 0, 0.14));
         }
 
         .graph-card__legend-item--muted {
@@ -19505,47 +19430,47 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__hover-point-halo {
-          background: color-mix(in srgb, var(--hover-color) ${isLightTheme ? "12%" : "10%"}%, transparent);
+          background: color-mix(in srgb, var(--hover-color) 10%, transparent);
           border-radius: 999px;
-          inset: -3px;
+          inset: -4px;
           opacity: 0.82;
           position: absolute;
         }
 
         .graph-card__hover-point-outer {
           background:
-            radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.98) 0 24%, color-mix(in srgb, var(--hover-color) ${isLightTheme ? "16%" : "24%"}%, rgba(255, 255, 255, 0.82)) 25% 100%);
-          border: 1px solid color-mix(in srgb, var(--hover-color) ${isLightTheme ? "14%" : "24%"}%, ${isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.42)"});
+            radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.92) 0 26%, color-mix(in srgb, var(--hover-color) 24%, rgba(255, 255, 255, 0.76)) 27% 100%);
+          border: 1px solid color-mix(in srgb, var(--hover-color) 24%, rgba(255, 255, 255, 0.42));
           border-radius: 999px;
           box-shadow:
-            ${isLightTheme ? "0 8px 16px rgba(15, 23, 42, 0.10)" : "0 6px 12px rgba(0, 0, 0, 0.12)"},
-            0 0 0 1px color-mix(in srgb, var(--hover-color) 8%, transparent) inset;
+            0 6px 12px rgba(0, 0, 0, 0.12),
+            0 0 0 1px color-mix(in srgb, var(--hover-color) 10%, transparent) inset;
           inset: 0;
           position: absolute;
         }
 
         .graph-card__hover-point-ring {
-          background: color-mix(in srgb, var(--hover-color) 72%, rgba(255, 255, 255, 0.9));
+          background: color-mix(in srgb, var(--hover-color) 82%, rgba(255, 255, 255, 0.86));
           border-radius: 999px;
-          height: 3px;
+          height: 4px;
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: 3px;
+          width: 4px;
         }
 
         .graph-card__tooltip {
           backdrop-filter: blur(18px);
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, var(--tooltip-tint) ${isLightTheme ? "10%" : "18%"}%, transparent) 0%, transparent 48%),
-            linear-gradient(180deg, ${isLightTheme ? "rgba(255, 255, 255, 0.9)" : "rgba(255, 255, 255, 0.055)"} 0%, ${isLightTheme ? "rgba(255, 255, 255, 0.8)" : "rgba(255, 255, 255, 0.02)"} 100%),
-            ${isLightTheme ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 254, 0.94) 100%)" : "linear-gradient(180deg, rgba(42, 43, 53, 0.96) 0%, rgba(31, 32, 41, 0.97) 100%)"};
-          border: 1px solid color-mix(in srgb, var(--tooltip-tint) ${isLightTheme ? "18%" : "26%"}%, ${isLightTheme ? "rgba(15, 23, 42, 0.1)" : "rgba(255, 255, 255, 0.12)"});
+            radial-gradient(circle at top left, color-mix(in srgb, var(--tooltip-tint) 18%, transparent) 0%, transparent 48%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.02) 100%),
+            linear-gradient(180deg, rgba(42, 43, 53, 0.96) 0%, rgba(31, 32, 41, 0.97) 100%);
+          border: 1px solid color-mix(in srgb, var(--tooltip-tint) 26%, rgba(255, 255, 255, 0.12));
           border-radius: 22px;
           box-shadow:
-            ${isLightTheme ? "0 20px 34px rgba(15, 23, 42, 0.12)" : "0 22px 38px rgba(0, 0, 0, 0.28)"},
-            0 10px 26px color-mix(in srgb, var(--tooltip-tint) 10%, ${isLightTheme ? "rgba(15, 23, 42, 0.14)" : "rgba(0, 0, 0, 0.18)"});
+            0 22px 38px rgba(0, 0, 0, 0.28),
+            0 10px 26px color-mix(in srgb, var(--tooltip-tint) 12%, rgba(0, 0, 0, 0.18));
           color: var(--primary-text-color);
           max-width: min(320px, calc(100% - 20px));
           min-width: 210px;
@@ -20254,7 +20179,6 @@ window.customCards.push({
   description: "Tarjeta de grafica elegante para una o varias entidades numericas con estilo Nodalia.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-power-flow-card";
@@ -21542,16 +21466,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
     const titleText = this._config?.title || this._config?.name || (layoutPreset === "simple" ? "" : "Flujo");
     const hasHeader = this._config?.show_header !== false && (Boolean(titleText) || (showDashboardButton && layoutPreset !== "simple"));
-    const isLightTheme = this._hass?.themes?.darkMode === false;
-    const darkCardBase = "linear-gradient(180deg, rgba(31, 33, 42, 0.98) 0%, rgba(20, 22, 29, 0.98) 100%)";
-    const surfaceBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.9) 100%)"
-      : "linear-gradient(180deg, rgba(44, 47, 58, 0.88) 0%, rgba(30, 32, 41, 0.9) 100%)";
-    const surfaceBorder = isLightTheme ? "rgba(15,23,42,0.08)" : "rgba(255,255,255,0.08)";
-    const surfaceInset = isLightTheme ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.06)";
-    const surfaceShadow = isLightTheme
-      ? "0 8px 18px rgba(15,23,42,0.08), 0 2px 5px rgba(15,23,42,0.05)"
-      : "0 10px 20px rgba(0,0,0,0.14)";
     const surfaceMinHeight = layoutPreset === "simple"
       ? 162
       : layoutPreset === "compact"
@@ -21578,14 +21492,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card {
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${dominantColor} ${isLightTheme ? "4%" : "12%"}%, transparent) 0%, transparent 40%),
-            linear-gradient(180deg, ${isLightTheme ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.018)"} 0%, ${isLightTheme ? "rgba(255,255,255,0)" : "rgba(0,0,0,0.03)"} 100%),
-            ${isLightTheme ? "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.95) 100%)" : darkCardBase};
-          border: 1px solid color-mix(in srgb, ${dominantColor} ${isLightTheme ? "14%" : "18%"}%, ${isLightTheme ? "rgba(15,23,42,0.1)" : "var(--divider-color)"});
+            radial-gradient(circle at top left, color-mix(in srgb, ${dominantColor} 12%, transparent) 0%, transparent 42%),
+            linear-gradient(180deg, rgba(255,255,255,0.018) 0%, rgba(0,0,0,0.03) 100%),
+            ${styles.card.background};
+          border: 1px solid color-mix(in srgb, ${dominantColor} 18%, var(--divider-color));
           border-radius: ${styles.card.border_radius};
-          box-shadow: ${styles.card.box_shadow}, ${isLightTheme
-            ? `0 12px 24px color-mix(in srgb, ${dominantColor} 2%, rgba(15,23,42,0.12)), 0 2px 6px rgba(15,23,42,0.06)`
-            : `0 14px 28px color-mix(in srgb, ${dominantColor} 7%, rgba(0,0,0,0.14))`};
+          box-shadow: ${styles.card.box_shadow}, 0 14px 28px color-mix(in srgb, ${dominantColor} 7%, rgba(0,0,0,0.14));
           color: var(--primary-text-color);
           display: flex;
           flex-direction: column;
@@ -21616,12 +21528,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__dashboard-button {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%);
+          border: 1px solid rgba(255,255,255,0.08);
           border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${isLightTheme ? "0 10px 22px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.05)" : "0 10px 20px rgba(0,0,0,0.12)"};
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
@@ -21804,9 +21713,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__simple-rail-node::before {
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${dominantColor} ${isLightTheme ? "8%" : "9%"}%, transparent) 0%, transparent 58%),
-            linear-gradient(180deg, ${isLightTheme ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.018)"} 0%, ${isLightTheme ? "rgba(255,255,255,0)" : "rgba(0,0,0,0.03)"} 100%),
-            ${isLightTheme ? "rgba(255,255,255,0.96)" : styles.card.background};
+            radial-gradient(circle at top left, color-mix(in srgb, ${dominantColor} 9%, transparent) 0%, transparent 58%),
+            linear-gradient(180deg, rgba(255,255,255,0.018) 0%, rgba(0,0,0,0.03) 100%),
+            ${styles.card.background};
           border-radius: 999px;
           content: "";
           height: calc(var(--simple-node-cover-size, 48px) + 12px);
@@ -21958,13 +21867,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
           align-items: center;
           appearance: none;
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, var(--node-tint) ${isLightTheme ? "10%" : "12%"}%, transparent) 0%, transparent 48%),
-            ${surfaceBackground};
-          border: 1px solid color-mix(in srgb, var(--node-tint) ${isLightTheme ? "14%" : "24%"}%, ${isLightTheme ? "rgba(15,23,42,0.08)" : "rgba(255,255,255,0.09)"});
+            radial-gradient(circle at top left, color-mix(in srgb, var(--node-tint) 12%, transparent) 0%, transparent 48%),
+            linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%);
+          border: 1px solid color-mix(in srgb, var(--node-tint) 24%, rgba(255,255,255,0.09));
           border-radius: 999px;
-          box-shadow: ${isLightTheme
-            ? "0 12px 24px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.05)"
-            : "0 10px 20px color-mix(in srgb, var(--node-tint) 7%, rgba(0,0,0,0.14))"};
+          box-shadow: 0 10px 20px color-mix(in srgb, var(--node-tint) 7%, rgba(0,0,0,0.14));
           color: ${styles.icon.color || "var(--primary-text-color)"};
           cursor: default;
           display: inline-flex;
@@ -22022,8 +21929,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__home-icon-wrap {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.08);
           border-radius: 999px;
           display: inline-flex;
           height: 31px;
@@ -22080,12 +21987,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__chip {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.03) 100%);
+          border: 1px solid rgba(255,255,255,0.08);
           border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${isLightTheme ? "0 8px 18px rgba(15,23,42,0.05)" : "none"};
           color: var(--primary-text-color);
           display: inline-flex;
           font-size: var(--chip-font-size, 10px);
@@ -22773,7 +22677,6 @@ window.customCards.push({
   description: "Tarjeta Nodalia de flujo energetico para red, solar, bateria, agua, gas y consumos individuales.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-climate-card";
@@ -24019,40 +23922,15 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     const currentActionMeta = getActionMeta(this._getCurrentAction(state) || currentMode);
-    const isLightTheme = this._hass?.themes?.darkMode === false;
-    const darkCardBase = "linear-gradient(180deg, rgba(31, 33, 42, 0.98) 0%, rgba(20, 22, 29, 0.98) 100%)";
     const cardBackground = isOff
-      ? isLightTheme
-        ? "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.94) 100%)"
-        : darkCardBase
-      : isLightTheme
-        ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 4%, rgba(255, 255, 255, 0.98)) 0%, rgba(255, 255, 255, 0.95) 100%)`
-        : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, rgba(33, 35, 44, 0.98)) 0%, rgba(20, 22, 29, 0.98) 100%)`;
+      ? styles.card.background
+      : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
     const cardBorder = isOff
-      ? isLightTheme
-        ? "1px solid rgba(15, 23, 42, 0.08)"
-        : styles.card.border
-      : isLightTheme
-        ? `1px solid color-mix(in srgb, ${accentColor} 20%, rgba(15, 23, 42, 0.1))`
-        : `1px solid color-mix(in srgb, ${accentColor} 26%, var(--divider-color))`;
+      ? styles.card.border
+      : `1px solid color-mix(in srgb, ${accentColor} 26%, var(--divider-color))`;
     const cardShadow = isOff
-      ? isLightTheme
-        ? `${styles.card.box_shadow}, 0 16px 30px rgba(15, 23, 42, 0.08), 0 3px 8px rgba(15, 23, 42, 0.05)`
-        : styles.card.box_shadow
-      : isLightTheme
-        ? `${styles.card.box_shadow}, 0 12px 24px color-mix(in srgb, ${accentColor} 2%, rgba(15, 23, 42, 0.12)), 0 2px 6px rgba(15, 23, 42, 0.06)`
-        : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
-    const surfaceBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
-      : "linear-gradient(180deg, rgba(44, 47, 58, 0.88) 0%, rgba(30, 32, 41, 0.9) 100%)";
-    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
-    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.05)";
-    const surfaceShadow = isLightTheme
-      ? "0 8px 18px rgba(15, 23, 42, 0.08), 0 2px 5px rgba(15, 23, 42, 0.05)"
-      : "0 10px 26px rgba(0, 0, 0, 0.16)";
-    const chipBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
-      : "linear-gradient(180deg, rgba(58, 60, 71, 0.56) 0%, rgba(39, 41, 50, 0.52) 100%)";
+      ? styles.card.box_shadow
+      : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -24074,8 +23952,8 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card {
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} ${isLightTheme ? "5%" : "18%"}%, transparent) 0%, transparent 46%),
-            linear-gradient(180deg, ${isLightTheme ? "rgba(255, 255, 255, 0.12)" : "rgba(255, 255, 255, 0.018)"} 0%, ${isLightTheme ? "rgba(255, 255, 255, 0)" : "rgba(0, 0, 0, 0.02)"} 100%),
+            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, transparent 48%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0%, rgba(0, 0, 0, 0.02) 100%),
             ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -24106,13 +23984,13 @@ class NodaliaClimateCard extends HTMLElement {
           align-items: center;
           appearance: none;
           background:
-            radial-gradient(circle at top left, ${isLightTheme ? "rgba(255, 255, 255, 0.5)" : "rgba(255, 255, 255, 0.06)"}, transparent 60%),
-            ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+            radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 60%),
+            ${styles.icon.background};
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: calc(${styles.icon.size} * 0.5);
           box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${surfaceShadow};
+            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            0 10px 26px rgba(0, 0, 0, 0.16);
           color: ${isOff ? styles.icon.off_color : styles.icon.on_color};
           cursor: pointer;
           display: inline-flex;
@@ -24139,7 +24017,7 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__unavailable-badge {
           align-items: center;
           background: #ff9b4a;
-          border: 2px solid ${isLightTheme ? "rgba(255, 255, 255, 0.94)" : styles.card.background};
+          border: 2px solid ${styles.card.background};
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
           color: #ffffff;
@@ -24202,12 +24080,10 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__chip {
           align-items: center;
           backdrop-filter: blur(18px);
-          background: ${chipBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${isLightTheme ? "0 8px 18px rgba(15, 23, 42, 0.05)" : "none"};
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
           color: var(--secondary-text-color);
           display: inline-flex;
           font-size: ${effectiveChipFontSize};
@@ -24291,10 +24167,10 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__dial-thumb {
-          background: ${isLightTheme ? "#ffffff" : "#f5f7fb"};
-          border: 4px solid color-mix(in srgb, ${accentColor} 18%, ${isLightTheme ? "rgba(255, 255, 255, 0.96)" : "rgba(255, 255, 255, 0.72)"});
+          background: #f5f7fb;
+          border: 4px solid color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.72));
           border-radius: 50%;
-          box-shadow: 0 0 0 5px ${isLightTheme ? "rgba(255, 255, 255, 0.32)" : "rgba(255, 255, 255, 0.12)"};
+          box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.12);
           height: var(--climate-thumb-size);
           left: 50%;
           pointer-events: auto;
@@ -24412,12 +24288,12 @@ class NodaliaClimateCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: ${chipBackground};
-          border: 1px solid ${isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.06)"};
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${isLightTheme ? "0 10px 22px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)" : "0 10px 24px rgba(0, 0, 0, 0.16)"};
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 10px 24px rgba(0, 0, 0, 0.16);
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
@@ -24437,8 +24313,8 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__mode-button {
           backdrop-filter: blur(18px);
           background:
-            radial-gradient(circle at top left, ${isLightTheme ? "rgba(255, 255, 255, 0.72)" : "rgba(255, 255, 255, 0.06)"}, transparent 60%),
-            ${chipBackground};
+            radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 60%),
+            rgba(255, 255, 255, 0.04);
           height: ${modeControlSize}px;
           width: ${modeControlSize}px;
         }
@@ -24474,8 +24350,8 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__step-button {
           backdrop-filter: blur(18px);
           background:
-            radial-gradient(circle at top left, ${isLightTheme ? "rgba(255, 255, 255, 0.72)" : "rgba(255, 255, 255, 0.05)"}, transparent 60%),
-            ${chipBackground};
+            radial-gradient(circle at top left, rgba(255, 255, 255, 0.05), transparent 60%),
+            rgba(255, 255, 255, 0.04);
           color: var(--primary-text-color);
           font-size: calc(${stepControlSize}px * 0.8);
           height: ${stepControlSize}px;
@@ -25092,7 +24968,6 @@ window.customCards.push({
   description: "Tarjeta de clima con dial circular, modos HVAC y control rapido de temperatura.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-alarm-panel-card";
@@ -25987,36 +25862,15 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     ].filter(Boolean);
     const actions = this._getModeDefinitions(state);
     const showCodeInput = this._shouldShowCodeInput(state);
-    const isLightTheme = this._hass?.themes?.darkMode === false;
     const cardBackground = isActive
-      ? isLightTheme
-        ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, rgba(255, 255, 255, 0.98)) 0%, color-mix(in srgb, ${accentColor} 8%, rgba(255, 255, 255, 0.94)) 56%, rgba(255, 255, 255, 0.94) 100%)`
-        : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`
-      : isLightTheme
-        ? "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.94) 100%)"
-        : styles.card.background;
+      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`
+      : styles.card.background;
     const cardBorder = isActive
-      ? isLightTheme
-        ? `1px solid color-mix(in srgb, ${accentColor} 22%, rgba(15, 23, 42, 0.1))`
-        : `1px solid color-mix(in srgb, ${accentColor} 24%, var(--divider-color))`
-      : isLightTheme
-        ? "1px solid rgba(15, 23, 42, 0.08)"
-        : styles.card.border;
+      ? `1px solid color-mix(in srgb, ${accentColor} 24%, var(--divider-color))`
+      : styles.card.border;
     const cardShadow = isActive
-      ? isLightTheme
-        ? `${styles.card.box_shadow}, 0 18px 32px color-mix(in srgb, ${accentColor} 5%, rgba(15, 23, 42, 0.14)), 0 3px 10px rgba(15, 23, 42, 0.07)`
-        : `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`
-      : isLightTheme
-        ? `${styles.card.box_shadow}, 0 14px 26px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)`
-        : styles.card.box_shadow;
-    const surfaceBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.84) 100%)"
-      : "rgba(255, 255, 255, 0.05)";
-    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
-    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.05)";
-    const surfaceShadow = isLightTheme
-      ? "0 10px 22px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)"
-      : "0 10px 24px rgba(0, 0, 0, 0.16)";
+      ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`
+      : styles.card.box_shadow;
     const titleSize = isCompactLayout
       ? `${Math.max(12, Math.min(parseSizeToPixels(styles.title_size, 14), 13))}px`
       : styles.title_size;
@@ -26043,12 +25897,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
         ha-card::before {
           background: ${isActive
-            ? isLightTheme
-              ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 10%, rgba(255, 255, 255, 0.62)), rgba(255, 255, 255, 0))`
-              : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, rgba(255, 255, 255, 0.05)), rgba(255, 255, 255, 0))`
-            : isLightTheme
-              ? "linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0))"
-              : "linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0))"};
+            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, rgba(255, 255, 255, 0.05)), rgba(255, 255, 255, 0))`
+            : "linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0))"};
           content: "";
           inset: 0;
           pointer-events: none;
@@ -26077,12 +25927,12 @@ class NodaliaAlarmPanelCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: ${styles.icon.background};
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 24px;
           box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${surfaceShadow};
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            0 12px 30px rgba(0, 0, 0, 0.18);
           color: ${isActive ? styles.icon.on_color : styles.icon.off_color};
           cursor: pointer;
           display: inline-flex;
@@ -26110,7 +25960,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
         .alarm-card__unavailable-badge {
           align-items: center;
           background: #ff9b4a;
-          border: 2px solid ${isLightTheme ? "rgba(255, 255, 255, 0.94)" : styles.card.background};
+          border: 2px solid ${styles.card.background};
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
           color: #ffffff;
@@ -26161,12 +26011,10 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
         .alarm-card__chip {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${isLightTheme ? "0 8px 18px rgba(15, 23, 42, 0.05)" : "none"};
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
           color: var(--secondary-text-color);
           display: inline-flex;
           flex: 0 0 auto;
@@ -26188,12 +26036,10 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
         .alarm-card__code {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${isLightTheme ? "0 8px 18px rgba(15, 23, 42, 0.05)" : "none"};
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
           display: grid;
           grid-template-columns: minmax(0, 1fr);
           min-width: 0;
@@ -26228,12 +26074,12 @@ class NodaliaAlarmPanelCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: ${surfaceBackground};
-          border: 1px solid ${isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.06)"};
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${isLightTheme ? "0 10px 22px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)" : "0 10px 24px rgba(0, 0, 0, 0.16)"};
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 10px 24px rgba(0, 0, 0, 0.16);
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
@@ -26765,7 +26611,6 @@ window.customCards.push({
   description: "Tarjeta elegante para paneles de alarma",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-advance-vacuum-card";
@@ -29859,7 +29704,6 @@ window.customCards.push({
   description: "Tarjeta de mapa avanzada para robots con estilo Nodalia y seleccion de habitaciones, zonas y puntos.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-entity-card";
@@ -30869,36 +30713,15 @@ class NodaliaEntityCard extends HTMLElement {
     const showCopyBlock = showTitle || chips.length > 0;
     const canRunPrimaryAction = this._canRunTapAction(state);
     const isActive = this._isActiveState(state);
-    const isLightTheme = this._hass?.themes?.darkMode === false;
     const cardBackground = isActive
-      ? isLightTheme
-        ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, rgba(255, 255, 255, 0.98)) 0%, color-mix(in srgb, ${accentColor} 8%, rgba(255, 255, 255, 0.94)) 56%, rgba(255, 255, 255, 0.94) 100%)`
-        : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`
-      : isLightTheme
-        ? "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.94) 100%)"
-        : styles.card.background;
+      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`
+      : styles.card.background;
     const cardBorder = isActive
-      ? isLightTheme
-        ? `1px solid color-mix(in srgb, ${accentColor} 20%, rgba(15, 23, 42, 0.1))`
-        : `1px solid color-mix(in srgb, ${accentColor} 24%, var(--divider-color))`
-      : isLightTheme
-        ? "1px solid rgba(15, 23, 42, 0.08)"
-        : "1px solid rgba(255, 255, 255, 0.06)";
+      ? `1px solid color-mix(in srgb, ${accentColor} 24%, var(--divider-color))`
+      : "1px solid rgba(255, 255, 255, 0.06)";
     const cardShadow = isActive
-      ? isLightTheme
-        ? `${styles.card.box_shadow}, 0 18px 32px color-mix(in srgb, ${accentColor} 6%, rgba(15, 23, 42, 0.14)), 0 3px 10px rgba(15, 23, 42, 0.07)`
-        : `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`
-      : isLightTheme
-        ? `${styles.card.box_shadow}, 0 14px 26px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)`
-        : styles.card.box_shadow;
-    const surfaceBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.84) 100%)"
-      : "rgba(255, 255, 255, 0.05)";
-    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
-    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.05)";
-    const surfaceShadow = isLightTheme
-      ? "0 10px 22px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)"
-      : "0 12px 30px rgba(0, 0, 0, 0.18)";
+      ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`
+      : styles.card.box_shadow;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -30926,12 +30749,8 @@ class NodaliaEntityCard extends HTMLElement {
 
         ha-card::before {
           background: ${isActive
-            ? isLightTheme
-              ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 12%, rgba(255, 255, 255, 0.62)), rgba(255, 255, 255, 0))`
-              : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, rgba(255, 255, 255, 0.05)), rgba(255, 255, 255, 0))`
-            : isLightTheme
-              ? "linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0))"
-              : "linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0))"};
+            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, rgba(255, 255, 255, 0.05)), rgba(255, 255, 255, 0))`
+            : "linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0))"};
           content: "";
           inset: 0;
           pointer-events: none;
@@ -30970,12 +30789,12 @@ class NodaliaEntityCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: ${styles.icon.background};
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: ${singleRowLayout ? "18px" : "24px"};
           box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${surfaceShadow};
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            0 12px 30px rgba(0, 0, 0, 0.18);
           color: ${isActive ? styles.icon.on_color : styles.icon.off_color};
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           display: inline-flex;
@@ -31005,7 +30824,7 @@ class NodaliaEntityCard extends HTMLElement {
         .entity-card__unavailable-badge {
           align-items: center;
           background: #ff9b4a;
-          border: 2px solid ${isLightTheme ? "rgba(255, 255, 255, 0.94)" : styles.card.background};
+          border: 2px solid ${styles.card.background};
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
           color: #ffffff;
@@ -31076,12 +30895,10 @@ class NodaliaEntityCard extends HTMLElement {
 
         .entity-card__chip {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${isLightTheme ? "0 8px 18px rgba(15, 23, 42, 0.05)" : "none"};
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
           color: var(--secondary-text-color);
           display: inline-flex;
           flex: 0 0 auto;
@@ -31116,12 +30933,12 @@ class NodaliaEntityCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: ${surfaceBackground};
-          border: 1px solid ${isLightTheme ? "rgba(15, 23, 42, 0.07)" : "rgba(255, 255, 255, 0.06)"};
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${isLightTheme ? "0 10px 20px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)" : "0 10px 24px rgba(0, 0, 0, 0.16)"};
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 10px 24px rgba(0, 0, 0, 0.16);
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
@@ -31943,7 +31760,6 @@ window.customCards.push({
   description: "Tarjeta todoterreno para entidades, informacion y botones rapidos.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-fav-card";
@@ -34361,7 +34177,6 @@ window.customCards.push({
   description: "Tarjeta mini y elegante para favoritos y controles rapidos en movil.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-person-card";
@@ -34895,39 +34710,15 @@ class NodaliaPersonCard extends HTMLElement {
     const effectiveCardHeightPx = singleRowLayout ? Math.max(54, avatarSizePx + (singleRowPaddingY * 2)) : avatarSizePx + (singleRowPaddingY * 2);
     const effectiveContentMinHeight = `${Math.max(avatarSizePx, effectiveCardHeightPx - (singleRowPaddingY * 2))}px`;
     const isUnavailable = isUnavailableState(state);
-    const isLightTheme = this._hass?.themes?.darkMode === false;
     const cardBackground = isUnavailable
-      ? isLightTheme
-        ? "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.94) 100%)"
-        : styles.card.background
-      : isLightTheme
-        ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, rgba(255, 255, 255, 0.98)) 0%, color-mix(in srgb, ${accentColor} 6%, rgba(255, 255, 255, 0.94)) 56%, rgba(255, 255, 255, 0.94) 100%)`
-        : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
+      ? styles.card.background
+      : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
     const cardBorder = isUnavailable
-      ? isLightTheme
-        ? "1px solid rgba(15, 23, 42, 0.08)"
-        : styles.card.border
-      : isLightTheme
-        ? `1px solid color-mix(in srgb, ${accentColor} 18%, rgba(15, 23, 42, 0.1))`
-        : `1px solid color-mix(in srgb, ${accentColor} 22%, var(--divider-color))`;
+      ? styles.card.border
+      : `1px solid color-mix(in srgb, ${accentColor} 22%, var(--divider-color))`;
     const cardShadow = isUnavailable
-      ? isLightTheme
-        ? `${styles.card.box_shadow}, 0 14px 26px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)`
-        : styles.card.box_shadow
-      : isLightTheme
-        ? `${styles.card.box_shadow}, 0 16px 30px color-mix(in srgb, ${accentColor} 5%, rgba(15, 23, 42, 0.14)), 0 3px 8px rgba(15, 23, 42, 0.06)`
-        : `${styles.card.box_shadow}, 0 12px 28px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
-    const surfaceBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.84) 100%)"
-      : styles.avatar.background;
-    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : `color-mix(in srgb, ${accentColor} 16%, rgba(255, 255, 255, 0.08))`;
-    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.08)";
-    const surfaceShadow = isLightTheme
-      ? "0 10px 22px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)"
-      : "0 10px 24px rgba(0, 0, 0, 0.16)";
-    const chipBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.82) 100%)"
-      : "rgba(255, 255, 255, 0.08)";
+      ? styles.card.box_shadow
+      : `${styles.card.box_shadow}, 0 12px 28px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -34954,9 +34745,7 @@ class NodaliaPersonCard extends HTMLElement {
         }
 
         ha-card::before {
-          background: ${isLightTheme
-            ? "linear-gradient(180deg, rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0))"
-            : "linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0))"};
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
           content: "";
           inset: 0;
           pointer-events: none;
@@ -34994,12 +34783,12 @@ class NodaliaPersonCard extends HTMLElement {
         .person-card__avatar {
           align-self: center;
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: ${styles.avatar.background};
+          border: 1px solid color-mix(in srgb, ${accentColor} 16%, rgba(255, 255, 255, 0.08));
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${surfaceShadow};
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            0 10px 24px rgba(0, 0, 0, 0.16);
           color: ${styles.avatar.color};
           display: inline-flex;
           height: ${avatarSize};
@@ -35027,7 +34816,7 @@ class NodaliaPersonCard extends HTMLElement {
           border-radius: 999px;
           box-shadow:
             0 6px 14px rgba(0, 0, 0, 0.14),
-            0 0 0 2px ${isLightTheme ? "rgba(255, 255, 255, 0.9)" : "rgba(255, 255, 255, 0.08)"};
+            0 0 0 2px rgba(255, 255, 255, 0.08);
           color: #ffffff;
           display: inline-flex;
           height: ${badgeSize};
@@ -35083,12 +34872,12 @@ class NodaliaPersonCard extends HTMLElement {
 
         .person-card__state-chip {
           align-items: center;
-          background: ${chipBackground};
-          border: 1px solid ${isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.1)"};
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 ${isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.06)"},
-            0 6px 14px ${isLightTheme ? "rgba(15, 23, 42, 0.06)" : "rgba(0, 0, 0, 0.06)"};
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 1px 1px rgba(0, 0, 0, 0.06);
           color: var(--primary-text-color);
           display: inline-flex;
           font-size: ${effectiveSubtitleSize};
@@ -35491,7 +35280,6 @@ window.customCards.push({
   description: "Tarjeta compacta de persona con foto y zona",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-weather-card";
@@ -36023,7 +35811,6 @@ class NodaliaWeatherCard extends HTMLElement {
     const title = this._getTitle(state);
     const icon = this._getIcon(state);
     const accentColor = this._getAccentColor(state);
-    const isLightTheme = this._hass?.themes?.darkMode === false;
     const showUnavailableBadge = isUnavailableState(state);
     const conditionLabel = translateCondition(state?.state);
     const temperatureLabel = this._formatTemperature(state);
@@ -36039,23 +35826,6 @@ class NodaliaWeatherCard extends HTMLElement {
         : "",
     ].filter(Boolean);
     const tapEnabled = String(config.tap_action || "more-info") !== "none";
-    const cardBackground = isLightTheme
-      ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 4%, rgba(255, 255, 255, 0.98)) 0%, color-mix(in srgb, ${accentColor} 2%, rgba(255, 255, 255, 0.95)) 100%)`
-      : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.04)), rgba(255, 255, 255, 0) 44%), linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
-    const cardBorder = isLightTheme
-      ? `1px solid color-mix(in srgb, ${accentColor} 18%, rgba(15, 23, 42, 0.1))`
-      : `1px solid color-mix(in srgb, ${accentColor} 28%, var(--divider-color))`;
-    const cardShadow = isLightTheme
-      ? `${styles.card.box_shadow}, 0 12px 24px color-mix(in srgb, ${accentColor} 2%, rgba(15, 23, 42, 0.12)), 0 2px 6px rgba(15, 23, 42, 0.06)`
-      : `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`;
-    const surfaceBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
-      : "rgba(255, 255, 255, 0.06)";
-    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
-    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.9)" : "rgba(255, 255, 255, 0.05)";
-    const surfaceShadow = isLightTheme
-      ? "0 8px 18px rgba(15, 23, 42, 0.08), 0 2px 5px rgba(15, 23, 42, 0.05)"
-      : "0 14px 28px rgba(0, 0, 0, 0.14)";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -36068,10 +35838,12 @@ class NodaliaWeatherCard extends HTMLElement {
         }
 
         ha-card {
-          background: ${cardBackground};
-          border: ${cardBorder};
+          background:
+            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.04)), rgba(255, 255, 255, 0) 44%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.card.background}) 56%, ${styles.card.background} 100%);
+          border: 1px solid color-mix(in srgb, ${accentColor} 28%, var(--divider-color));
           border-radius: ${styles.card.border_radius};
-          box-shadow: ${cardShadow};
+          box-shadow: ${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18));
           color: var(--primary-text-color);
           overflow: hidden;
           position: relative;
@@ -36097,12 +35869,12 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__icon {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: ${styles.icon.background};
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 22px;
           box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${surfaceShadow};
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            0 14px 28px rgba(0, 0, 0, 0.14);
           color: ${styles.icon.color};
           display: inline-flex;
           height: ${styles.icon.size};
@@ -36118,7 +35890,7 @@ class NodaliaWeatherCard extends HTMLElement {
         .weather-card__unavailable-badge {
           align-items: center;
           background: #ff9b4a;
-          border: 2px solid ${isLightTheme ? "rgba(255, 255, 255, 0.94)" : styles.card.background};
+          border: 2px solid ${styles.card.background};
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
           color: #ffffff;
@@ -36168,12 +35940,10 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__chip {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid color-mix(in srgb, var(--chip-accent) 14%, ${surfaceBorder});
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid color-mix(in srgb, var(--chip-accent) 18%, rgba(255, 255, 255, 0.08));
           border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${isLightTheme ? "0 8px 20px rgba(15, 23, 42, 0.06)" : "none"};
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
           color: var(--primary-text-color);
           display: inline-flex;
           gap: 6px;
@@ -36614,2372 +36384,6 @@ window.customCards.push({
   description: "Tarjeta de tiempo elegante para Home Assistant",
   preview: true,
 });
-
-}
-{
-const CARD_TAG = "nodalia-calendar-card";
-const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "0.16.0";
-const HAPTIC_PATTERNS = {
-  selection: 8,
-  light: 10,
-  medium: 16,
-  heavy: 24,
-  success: [10, 40, 10],
-  warning: [20, 50, 12],
-  failure: [12, 40, 12, 40, 18],
-};
-
-const DEFAULT_CONFIG = {
-  entity: "",
-  name: "",
-  icon: "",
-  tap_action: "more-info",
-  show_status_chip: true,
-  show_date_chip: true,
-  show_time_chip: true,
-  show_location_chip: true,
-  show_description: true,
-  haptics: {
-    enabled: false,
-    style: "selection",
-    fallback_vibrate: false,
-  },
-  styles: {
-    card: {
-      background: "var(--ha-card-background)",
-      border: "1px solid var(--divider-color)",
-      border_radius: "28px",
-      box_shadow: "var(--ha-card-box-shadow)",
-      padding: "14px",
-      gap: "12px",
-    },
-    icon: {
-      size: "58px",
-      background: "rgba(255, 255, 255, 0.06)",
-      color: "var(--primary-text-color)",
-    },
-    chip_height: "24px",
-    chip_font_size: "11px",
-    chip_padding: "0 9px",
-    title_size: "14px",
-    event_size: "25px",
-    meta_size: "13px",
-    description_size: "12px",
-  },
-};
-
-const STUB_CONFIG = {
-  entity: "calendar.casa",
-  name: "Calendario",
-};
-
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function deepClone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-  return JSON.parse(JSON.stringify(value));
-}
-
-function mergeConfig(base, override) {
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
-  }
-
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-
-  keys.forEach(key => {
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-
-    if (overrideValue === undefined) {
-      result[key] = deepClone(baseValue);
-      return;
-    }
-
-    if (Array.isArray(overrideValue)) {
-      result[key] = deepClone(overrideValue);
-      return;
-    }
-
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      result[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-
-    result[key] = overrideValue;
-  });
-
-  return result;
-}
-
-function compactConfig(value) {
-  if (Array.isArray(value)) {
-    return value.map(item => compactConfig(item)).filter(item => item !== undefined);
-  }
-
-  if (isObject(value)) {
-    const compacted = {};
-
-    Object.entries(value).forEach(([key, item]) => {
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-
-    return compacted;
-  }
-
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
-}
-
-function setByPath(target, path, value) {
-  const parts = path.split(".");
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
-    }
-    cursor = cursor[key];
-  }
-
-  cursor[parts[parts.length - 1]] = value;
-}
-
-function deleteByPath(target, path) {
-  const parts = path.split(".");
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      return;
-    }
-    cursor = cursor[key];
-  }
-
-  delete cursor[parts[parts.length - 1]];
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function fireEvent(node, type, detail, options) {
-  const event = new CustomEvent(type, {
-    bubbles: options?.bubbles ?? true,
-    cancelable: Boolean(options?.cancelable),
-    composed: options?.composed ?? true,
-    detail,
-  });
-  node.dispatchEvent(event);
-  return event;
-}
-
-function normalizeTextKey(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
-function isUnavailableState(state) {
-  return normalizeTextKey(state?.state) === "unavailable";
-}
-
-function parseDateValue(value) {
-  if (!value) {
-    return null;
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
-
-  return parsed;
-}
-
-function isSameDay(left, right) {
-  if (!(left instanceof Date) || !(right instanceof Date)) {
-    return false;
-  }
-
-  return left.getFullYear() === right.getFullYear()
-    && left.getMonth() === right.getMonth()
-    && left.getDate() === right.getDate();
-}
-
-function startOfDay(date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function formatShortDate(date) {
-  if (!(date instanceof Date)) {
-    return null;
-  }
-
-  return new Intl.DateTimeFormat("es-ES", {
-    day: "numeric",
-    month: "short",
-  }).format(date).replace(/\./g, "");
-}
-
-function formatLongDate(date) {
-  if (!(date instanceof Date)) {
-    return null;
-  }
-
-  return new Intl.DateTimeFormat("es-ES", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  }).format(date).replace(/\./g, "");
-}
-
-function formatTime(date) {
-  if (!(date instanceof Date)) {
-    return null;
-  }
-
-  return new Intl.DateTimeFormat("es-ES", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
-function getRelativeDateLabel(date) {
-  if (!(date instanceof Date)) {
-    return null;
-  }
-
-  const today = startOfDay(new Date());
-  const target = startOfDay(date);
-  const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
-
-  if (diff === 0) {
-    return "Hoy";
-  }
-
-  if (diff === 1) {
-    return "Mañana";
-  }
-
-  if (diff === -1) {
-    return "Ayer";
-  }
-
-  return formatShortDate(date);
-}
-
-function getCalendarAccent(state) {
-  if (isUnavailableState(state)) {
-    return "#ff9b4a";
-  }
-
-  if (normalizeTextKey(state?.state) === "on") {
-    return "#8f7dff";
-  }
-
-  return "#f4ad4a";
-}
-
-function getCalendarStatusLabel(state, startDate) {
-  if (isUnavailableState(state)) {
-    return "No disponible";
-  }
-
-  if (normalizeTextKey(state?.state) === "on") {
-    return "En curso";
-  }
-
-  if (startDate) {
-    return "Próximo";
-  }
-
-  return "Sin eventos";
-}
-
-function getCalendarDefaultIcon() {
-  return "mdi:calendar-month-outline";
-}
-
-function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-}
-
-class NodaliaCalendarCard extends HTMLElement {
-  static async getConfigElement() {
-    return document.createElement(EDITOR_TAG);
-  }
-
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
-  }
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    this._lastRenderSignature = "";
-    this._onShadowClick = this._onShadowClick.bind(this);
-  }
-
-  connectedCallback() {
-    this.shadowRoot?.addEventListener("click", this._onShadowClick);
-  }
-
-  disconnectedCallback() {
-    this.shadowRoot?.removeEventListener("click", this._onShadowClick);
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    this._lastRenderSignature = "";
-    this._render();
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getRenderSignature(hass);
-    this._hass = hass;
-
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
-      return;
-    }
-
-    this._lastRenderSignature = nextSignature;
-    this._render();
-  }
-
-  getCardSize() {
-    return 2;
-  }
-
-  _getState() {
-    return this._hass?.states?.[this._config?.entity] || null;
-  }
-
-  _getRenderSignature(hass = this._hass) {
-    const entityId = this._config?.entity || "";
-    const state = entityId ? hass?.states?.[entityId] || null : null;
-    const attrs = state?.attributes || {};
-
-    return JSON.stringify({
-      entityId,
-      state: String(state?.state || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      message: String(attrs.message || ""),
-      startTime: String(attrs.start_time || ""),
-      endTime: String(attrs.end_time || ""),
-      location: String(attrs.location || ""),
-      description: String(attrs.description || ""),
-      allDay: Boolean(attrs.all_day),
-    });
-  }
-
-  _getTitle(state) {
-    const customName = String(this._config?.name || "").trim();
-    if (customName) {
-      return customName;
-    }
-
-    const friendlyName = String(state?.attributes?.friendly_name || "").trim();
-    return friendlyName || "Calendario";
-  }
-
-  _getEventTitle(state) {
-    const message = String(state?.attributes?.message || "").trim();
-    if (message) {
-      return message;
-    }
-
-    return "Sin próximos eventos";
-  }
-
-  _getDescription(state) {
-    const description = String(state?.attributes?.description || "").trim();
-    return description || "";
-  }
-
-  _getLocation(state) {
-    const location = String(state?.attributes?.location || "").trim();
-    return location || "";
-  }
-
-  _getIcon(state) {
-    const customIcon = String(this._config?.icon || "").trim();
-    if (customIcon) {
-      return customIcon;
-    }
-
-    const entityIcon = String(state?.attributes?.icon || "").trim();
-    return entityIcon || getCalendarDefaultIcon();
-  }
-
-  _getStartDate(state) {
-    return parseDateValue(state?.attributes?.start_time);
-  }
-
-  _getEndDate(state) {
-    return parseDateValue(state?.attributes?.end_time);
-  }
-
-  _isAllDay(state) {
-    return state?.attributes?.all_day === true;
-  }
-
-  _getStatusLabel(state, startDate) {
-    return getCalendarStatusLabel(state, startDate);
-  }
-
-  _getAccentColor(state) {
-    return getCalendarAccent(state);
-  }
-
-  _formatDateChip(startDate) {
-    return getRelativeDateLabel(startDate);
-  }
-
-  _formatTimeChip(startDate, endDate, allDay) {
-    if (!startDate) {
-      return null;
-    }
-
-    if (allDay) {
-      return "Todo el día";
-    }
-
-    const startLabel = formatTime(startDate);
-    const endLabel = formatTime(endDate);
-
-    if (startLabel && endLabel) {
-      return `${startLabel} · ${endLabel}`;
-    }
-
-    return startLabel;
-  }
-
-  _formatMetaLine(startDate, endDate, allDay) {
-    if (!startDate) {
-      return "No hay eventos próximos.";
-    }
-
-    const dateLabel = getRelativeDateLabel(startDate) || formatLongDate(startDate);
-
-    if (allDay) {
-      return dateLabel ? `${dateLabel} · Todo el día` : "Todo el día";
-    }
-
-    const startLabel = formatTime(startDate);
-    if (!startLabel) {
-      return dateLabel || "";
-    }
-
-    const sameDay = isSameDay(startDate, endDate);
-    const endLabel = formatTime(endDate);
-
-    if (endLabel && sameDay) {
-      return `${dateLabel} · ${startLabel} - ${endLabel}`;
-    }
-
-    if (endDate && !sameDay) {
-      return `${dateLabel} · ${startLabel} - ${formatShortDate(endDate)} ${endLabel || ""}`.trim();
-    }
-
-    return dateLabel ? `${dateLabel} · ${startLabel}` : startLabel;
-  }
-
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
-    if (haptics.enabled !== true) {
-      return;
-    }
-
-    const style = styleOverride || haptics.style || "selection";
-    fireEvent(this, "haptic", style, {
-      bubbles: true,
-      cancelable: false,
-      composed: true,
-    });
-
-    if (haptics.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
-    }
-  }
-
-  _performTapAction() {
-    const action = String(this._config?.tap_action || "more-info");
-    if (action === "none") {
-      return;
-    }
-
-    this._triggerHaptic();
-
-    if (action === "more-info") {
-      fireEvent(this, "hass-more-info", {
-        entityId: this._config.entity,
-      });
-    }
-  }
-
-  _onShadowClick(event) {
-    const card = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.calendarCard === "root");
-    if (!card) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    this._performTapAction();
-  }
-
-  _renderChip(icon, label, accentColor) {
-    if (!label) {
-      return "";
-    }
-
-    return `
-      <div class="calendar-card__chip" style="--chip-accent:${escapeHtml(accentColor)};">
-        <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
-        <span>${escapeHtml(label)}</span>
-      </div>
-    `;
-  }
-
-  _renderEmptyState() {
-    return `
-      <ha-card class="calendar-card calendar-card--empty">
-        <div class="calendar-card__empty-title">Nodalia Calendar Card</div>
-        <div class="calendar-card__empty-text">Configura \`entity\` para mostrar un calendario.</div>
-      </ha-card>
-    `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const state = this._getState();
-    if (!this._config?.entity || !state) {
-      this.shadowRoot.innerHTML = this._renderEmptyState();
-      return;
-    }
-
-    const config = this._config;
-    const styles = config.styles || DEFAULT_CONFIG.styles;
-    const title = this._getTitle(state);
-    const eventTitle = this._getEventTitle(state);
-    const description = this._getDescription(state);
-    const location = this._getLocation(state);
-    const startDate = this._getStartDate(state);
-    const endDate = this._getEndDate(state);
-    const allDay = this._isAllDay(state);
-    const icon = this._getIcon(state);
-    const accentColor = this._getAccentColor(state);
-    const statusLabel = this._getStatusLabel(state, startDate);
-    const metaLabel = this._formatMetaLine(startDate, endDate, allDay);
-    const isLightTheme = this._hass?.themes?.darkMode === false;
-    const showUnavailableBadge = isUnavailableState(state);
-    const chips = [
-      config.show_status_chip !== false
-        ? this._renderChip("mdi:calendar-check-outline", statusLabel, accentColor)
-        : "",
-      config.show_date_chip !== false
-        ? this._renderChip("mdi:calendar", this._formatDateChip(startDate), accentColor)
-        : "",
-      config.show_time_chip !== false
-        ? this._renderChip("mdi:clock-outline", this._formatTimeChip(startDate, endDate, allDay), accentColor)
-        : "",
-      config.show_location_chip !== false
-        ? this._renderChip("mdi:map-marker-outline", location, accentColor)
-        : "",
-    ].filter(Boolean);
-    const tapEnabled = String(config.tap_action || "more-info") !== "none";
-    const cardBackground = isLightTheme
-      ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 4%, rgba(255, 255, 255, 0.98)) 0%, color-mix(in srgb, ${accentColor} 2%, rgba(255, 255, 255, 0.95)) 100%)`
-      : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.04)), rgba(255, 255, 255, 0) 44%), linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
-    const cardBorder = isLightTheme
-      ? `1px solid color-mix(in srgb, ${accentColor} 16%, rgba(15, 23, 42, 0.1))`
-      : `1px solid color-mix(in srgb, ${accentColor} 28%, var(--divider-color))`;
-    const cardShadow = isLightTheme
-      ? `${styles.card.box_shadow}, 0 12px 24px color-mix(in srgb, ${accentColor} 2%, rgba(15, 23, 42, 0.12)), 0 2px 6px rgba(15, 23, 42, 0.06)`
-      : `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`;
-    const surfaceBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
-      : "rgba(255, 255, 255, 0.06)";
-    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
-    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.05)";
-    const surfaceShadow = isLightTheme
-      ? "0 8px 18px rgba(15, 23, 42, 0.08), 0 2px 5px rgba(15, 23, 42, 0.05)"
-      : "0 14px 28px rgba(0, 0, 0, 0.14)";
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        ha-card {
-          background: ${cardBackground};
-          border: ${cardBorder};
-          border-radius: ${styles.card.border_radius};
-          box-shadow: ${cardShadow};
-          color: var(--primary-text-color);
-          overflow: hidden;
-          position: relative;
-        }
-
-        .calendar-card__content {
-          cursor: ${tapEnabled ? "pointer" : "default"};
-          display: grid;
-          gap: ${styles.card.gap};
-          min-width: 0;
-          padding: ${styles.card.padding};
-          position: relative;
-          z-index: 1;
-        }
-
-        .calendar-card__hero {
-          align-items: start;
-          display: grid;
-          gap: 12px;
-          grid-template-columns: ${styles.icon.size} minmax(0, 1fr);
-          min-width: 0;
-        }
-
-        .calendar-card__icon {
-          align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
-          border-radius: 22px;
-          box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${surfaceShadow};
-          color: ${styles.icon.color};
-          display: inline-flex;
-          height: ${styles.icon.size};
-          justify-content: center;
-          position: relative;
-          width: ${styles.icon.size};
-        }
-
-        .calendar-card__icon ha-icon {
-          --mdc-icon-size: calc(${styles.icon.size} * 0.5);
-        }
-
-        .calendar-card__unavailable-badge {
-          align-items: center;
-          background: #ff9b4a;
-          border: 2px solid ${isLightTheme ? "rgba(255, 255, 255, 0.94)" : styles.card.background};
-          border-radius: 999px;
-          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
-          color: #ffffff;
-          display: inline-flex;
-          height: 18px;
-          justify-content: center;
-          position: absolute;
-          right: -2px;
-          top: -2px;
-          width: 18px;
-          z-index: 2;
-        }
-
-        .calendar-card__unavailable-badge ha-icon {
-          --mdc-icon-size: 11px;
-          height: 11px;
-          width: 11px;
-        }
-
-        .calendar-card__copy {
-          display: grid;
-          gap: 10px;
-          min-width: 0;
-        }
-
-        .calendar-card__header {
-          align-items: start;
-          display: flex;
-          gap: 10px;
-          justify-content: space-between;
-          min-width: 0;
-        }
-
-        .calendar-card__title {
-          font-size: ${styles.title_size};
-          font-weight: 700;
-          line-height: 1.2;
-          min-width: 0;
-        }
-
-        .calendar-card__chips {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          justify-content: flex-end;
-        }
-
-        .calendar-card__chip {
-          align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid color-mix(in srgb, var(--chip-accent) 14%, ${surfaceBorder});
-          border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${isLightTheme ? "0 8px 20px rgba(15, 23, 42, 0.06)" : "none"};
-          color: var(--primary-text-color);
-          display: inline-flex;
-          gap: 6px;
-          height: ${styles.chip_height};
-          line-height: 1;
-          max-width: 100%;
-          overflow: hidden;
-          padding: ${styles.chip_padding};
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .calendar-card__chip ha-icon {
-          --mdc-icon-size: 13px;
-          color: var(--chip-accent);
-          flex: 0 0 auto;
-        }
-
-        .calendar-card__chip span {
-          font-size: ${styles.chip_font_size};
-          font-weight: 700;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .calendar-card__body {
-          display: grid;
-          gap: 6px;
-          min-width: 0;
-        }
-
-        .calendar-card__event {
-          font-size: ${styles.event_size};
-          font-weight: 800;
-          letter-spacing: -0.03em;
-          line-height: 1.05;
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .calendar-card__meta {
-          color: var(--secondary-text-color);
-          font-size: ${styles.meta_size};
-          font-weight: 600;
-          line-height: 1.35;
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .calendar-card__description {
-          color: var(--secondary-text-color);
-          font-size: ${styles.description_size};
-          line-height: 1.5;
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          display: -webkit-box;
-          -webkit-box-orient: vertical;
-          -webkit-line-clamp: 2;
-        }
-
-        .calendar-card--empty {
-          display: grid;
-          gap: 8px;
-          padding: 16px;
-        }
-
-        .calendar-card__empty-title {
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .calendar-card__empty-text {
-          color: var(--secondary-text-color);
-          font-size: 13px;
-          line-height: 1.5;
-        }
-
-        @media (max-width: 520px) {
-          .calendar-card__header {
-            align-items: start;
-            flex-direction: column;
-          }
-
-          .calendar-card__chips {
-            justify-content: flex-start;
-          }
-        }
-      </style>
-      <ha-card class="calendar-card">
-        <div class="calendar-card__content" data-calendar-card="root">
-          <div class="calendar-card__hero">
-            <div class="calendar-card__icon">
-              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
-              ${showUnavailableBadge ? `<span class="calendar-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
-            </div>
-            <div class="calendar-card__copy">
-              <div class="calendar-card__header">
-                <div class="calendar-card__title">${escapeHtml(title)}</div>
-                ${chips.length ? `<div class="calendar-card__chips">${chips.join("")}</div>` : ""}
-              </div>
-              <div class="calendar-card__body">
-                <div class="calendar-card__event">${escapeHtml(eventTitle)}</div>
-                <div class="calendar-card__meta">${escapeHtml(metaLabel)}</div>
-                ${config.show_description !== false && description ? `<div class="calendar-card__description">${escapeHtml(description)}</div>` : ""}
-              </div>
-            </div>
-          </div>
-        </div>
-      </ha-card>
-    `;
-  }
-}
-
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaCalendarCard);
-}
-
-class NodaliaCalendarCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    this._entityOptionsSignature = "";
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getEntityOptionsSignature(hass);
-    const shouldRender =
-      !this._hass ||
-      nextSignature !== this._entityOptionsSignature ||
-      !this.shadowRoot?.innerHTML;
-
-    this._hass = hass;
-    this._entityOptionsSignature = nextSignature;
-
-    if (shouldRender) {
-      this._render();
-    }
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    this._render();
-  }
-
-  _getEntityOptionsSignature(hass) {
-    if (!hass?.states) {
-      return "";
-    }
-
-    return Object.keys(hass.states)
-      .filter(entityId => entityId.startsWith("calendar."))
-      .sort((left, right) => left.localeCompare(right, "es"))
-      .join("|");
-  }
-
-  _emitConfig() {
-    const nextConfig = deepClone(this._config);
-    this._config = normalizeConfig(compactConfig(nextConfig));
-    this._render();
-    fireEvent(this, "config-changed", {
-      config: compactConfig(nextConfig),
-    });
-  }
-
-  _setFieldValue(path, value) {
-    if (value === undefined || value === null || value === "") {
-      deleteByPath(this._config, path);
-      return;
-    }
-
-    setByPath(this._config, path, value);
-  }
-
-  _readFieldValue(input) {
-    const valueType = input.dataset.valueType || "string";
-    if (valueType === "boolean") {
-      return Boolean(input.checked);
-    }
-    return input.value;
-  }
-
-  _onShadowInput(event) {
-    const input = event
-      .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement);
-
-    if (!input?.dataset?.field) {
-      return;
-    }
-
-    event.stopPropagation();
-    this._setFieldValue(input.dataset.field, this._readFieldValue(input));
-    this._config = normalizeConfig(compactConfig(this._config));
-
-    if (event.type === "change") {
-      this._emitConfig();
-    }
-  }
-
-  _renderTextField(label, field, value, options = {}) {
-    const inputValue = value === undefined || value === null ? "" : String(value);
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-
-    return `
-      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
-        <input
-          type="${escapeHtml(options.type || "text")}"
-          data-field="${escapeHtml(field)}"
-          value="${escapeHtml(inputValue)}"
-          ${placeholder}
-        />
-      </label>
-    `;
-  }
-
-  _renderCheckboxField(label, field, checked) {
-    return `
-      <label class="editor-toggle">
-        <input
-          type="checkbox"
-          data-field="${escapeHtml(field)}"
-          data-value-type="boolean"
-          ${checked ? "checked" : ""}
-        />
-        <span>${escapeHtml(label)}</span>
-      </label>
-    `;
-  }
-
-  _renderSelectField(label, field, value, options) {
-    return `
-      <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
-        <select data-field="${escapeHtml(field)}">
-          ${options.map(option => `
-            <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-              ${escapeHtml(option.label)}
-            </option>
-          `).join("")}
-        </select>
-      </label>
-    `;
-  }
-
-  _getEntityOptionsMarkup() {
-    const entityIds = Object.keys(this._hass?.states || {})
-      .filter(entityId => entityId.startsWith("calendar."))
-      .sort((left, right) => left.localeCompare(right, "es"));
-
-    return `
-      <datalist id="calendar-card-entities">
-        ${entityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-    `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        .editor {
-          color: var(--primary-text-color);
-          display: grid;
-          gap: 16px;
-        }
-
-        .editor-section {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 18px;
-          display: grid;
-          gap: 14px;
-          padding: 16px;
-        }
-
-        .editor-section__header {
-          display: grid;
-          gap: 4px;
-        }
-
-        .editor-section__title {
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .editor-section__hint {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-        }
-
-        .editor-grid {
-          display: grid;
-          gap: 12px;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .editor-field,
-        .editor-toggle {
-          display: grid;
-          gap: 6px;
-        }
-
-        .editor-field--full {
-          grid-column: 1 / -1;
-        }
-
-        .editor-field span,
-        .editor-toggle span {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .editor-field input,
-        .editor-field select {
-          appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 14px;
-          color: var(--primary-text-color);
-          font: inherit;
-          min-width: 0;
-          outline: none;
-          padding: 10px 12px;
-          width: 100%;
-        }
-
-        .editor-toggle {
-          align-items: center;
-          grid-auto-flow: column;
-          justify-content: start;
-        }
-
-        .editor-toggle input {
-          accent-color: var(--primary-color);
-        }
-
-        @media (max-width: 720px) {
-          .editor-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      </style>
-      <div class="editor">
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad de calendario principal y contenido visible.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Entidad", "entity", config.entity, {
-              placeholder: "calendar.casa",
-            })}
-            ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Calendario",
-            })}
-            ${this._renderTextField("Icono", "icon", config.icon, {
-              placeholder: "mdi:calendar-month-outline",
-            })}
-            ${this._renderSelectField(
-              "Acción al tocar",
-              "tap_action",
-              config.tap_action || "more-info",
-              [
-                { value: "more-info", label: "More info" },
-                { value: "none", label: "Sin acción" },
-              ],
-            )}
-            ${this._renderCheckboxField("Mostrar chip estado", "show_status_chip", config.show_status_chip !== false)}
-            ${this._renderCheckboxField("Mostrar chip fecha", "show_date_chip", config.show_date_chip !== false)}
-            ${this._renderCheckboxField("Mostrar chip hora", "show_time_chip", config.show_time_chip !== false)}
-            ${this._renderCheckboxField("Mostrar chip ubicación", "show_location_chip", config.show_location_chip !== false)}
-            ${this._renderCheckboxField("Mostrar descripción", "show_description", config.show_description !== false)}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta háptica al tocar la tarjeta.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibración", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
-            ${this._renderSelectField(
-              "Estilo háptico",
-              "haptics.style",
-              hapticStyle,
-              [
-                { value: "selection", label: "Selection" },
-                { value: "light", label: "Light" },
-                { value: "medium", label: "Medium" },
-                { value: "heavy", label: "Heavy" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "failure", label: "Failure" },
-              ],
-            )}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales base de la tarjeta.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
-            ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
-            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
-            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-            ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamaño icono", "styles.icon.size", config.styles.icon.size)}
-            ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
-            ${this._renderTextField("Tamaño evento", "styles.event_size", config.styles.event_size)}
-            ${this._renderTextField("Tamaño meta", "styles.meta_size", config.styles.meta_size)}
-            ${this._renderTextField("Tamaño descripción", "styles.description_size", config.styles.description_size)}
-            ${this._renderTextField("Alto burbuja info", "styles.chip_height", config.styles.chip_height)}
-            ${this._renderTextField("Texto burbuja info", "styles.chip_font_size", config.styles.chip_font_size)}
-            ${this._renderTextField("Padding burbuja info", "styles.chip_padding", config.styles.chip_padding)}
-          </div>
-        </section>
-        ${this._getEntityOptionsMarkup()}
-      </div>
-    `;
-
-    this.shadowRoot.querySelectorAll('input[data-field="entity"]').forEach(input => {
-      input.setAttribute("list", "calendar-card-entities");
-    });
-  }
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaCalendarCardEditor);
-}
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: CARD_TAG,
-  name: "Nodalia Calendar Card",
-  description: "Tarjeta elegante de calendario para Home Assistant",
-  preview: true,
-});
-
-}
-{
-const CARD_TAG = "nodalia-insignia-card";
-const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "0.17.0";
-const HAPTIC_PATTERNS = {
-  selection: 8,
-  light: 10,
-  medium: 16,
-  heavy: 24,
-  success: [10, 40, 10],
-  warning: [20, 50, 12],
-  failure: [12, 40, 12, 40, 18],
-};
-
-const DEFAULT_CONFIG = {
-  entity: "",
-  name: "",
-  value: "",
-  icon: "",
-  image: "",
-  use_entity_icon: false,
-  state_attribute: "",
-  tap_action: "auto",
-  tap_url: "",
-  tap_new_tab: false,
-  service: "",
-  service_data: "",
-  show_name: true,
-  show_value: true,
-  tint_color: "",
-  haptics: {
-    enabled: false,
-    style: "selection",
-    fallback_vibrate: false,
-  },
-  styles: {
-    card: {
-      background: "var(--ha-card-background)",
-      border: "1px solid var(--divider-color)",
-      border_radius: "999px",
-      box_shadow: "var(--ha-card-box-shadow)",
-      padding: "8px 12px",
-      gap: "10px",
-    },
-    icon: {
-      size: "42px",
-      background: "rgba(255, 255, 255, 0.06)",
-      on_color: "var(--primary-text-color)",
-      off_color: "var(--state-inactive-color, rgba(255, 255, 255, 0.55))",
-    },
-    title_size: "13px",
-    value_size: "13px",
-  },
-};
-
-const STUB_CONFIG = {
-  name: "Bienvenido",
-  value: "21,4 °C",
-  icon: "mdi:home-thermometer-outline",
-  tint_color: "#ff6d7a",
-};
-
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function deepClone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-  return JSON.parse(JSON.stringify(value));
-}
-
-function mergeConfig(base, override) {
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
-  }
-
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-
-  keys.forEach(key => {
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-
-    if (overrideValue === undefined) {
-      result[key] = deepClone(baseValue);
-      return;
-    }
-
-    if (Array.isArray(overrideValue)) {
-      result[key] = deepClone(overrideValue);
-      return;
-    }
-
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      result[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-
-    result[key] = overrideValue;
-  });
-
-  return result;
-}
-
-function compactConfig(value) {
-  if (Array.isArray(value)) {
-    return value.map(item => compactConfig(item)).filter(item => item !== undefined);
-  }
-
-  if (isObject(value)) {
-    const compacted = {};
-
-    Object.entries(value).forEach(([key, item]) => {
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-
-    return compacted;
-  }
-
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
-}
-
-function setByPath(target, path, value) {
-  const parts = path.split(".");
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
-    }
-    cursor = cursor[key];
-  }
-
-  cursor[parts[parts.length - 1]] = value;
-}
-
-function deleteByPath(target, path) {
-  const parts = path.split(".");
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      return;
-    }
-    cursor = cursor[key];
-  }
-
-  delete cursor[parts[parts.length - 1]];
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function fireEvent(node, type, detail, options) {
-  const event = new CustomEvent(type, {
-    bubbles: options?.bubbles ?? true,
-    cancelable: Boolean(options?.cancelable),
-    composed: options?.composed ?? true,
-    detail,
-  });
-  node.dispatchEvent(event);
-  return event;
-}
-
-function normalizeTextKey(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
-function isUnavailableState(state) {
-  return normalizeTextKey(state?.state) === "unavailable";
-}
-
-function parseSizeToPixels(value, fallback) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-
-  const normalized = String(value || "").trim();
-  if (!normalized) {
-    return fallback;
-  }
-
-  if (normalized.endsWith("px")) {
-    const numeric = Number.parseFloat(normalized);
-    return Number.isFinite(numeric) ? numeric : fallback;
-  }
-
-  const numeric = Number.parseFloat(normalized);
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-function formatNumber(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return null;
-  }
-
-  if (Math.abs(numeric - Math.round(numeric)) < 0.01) {
-    return String(Math.round(numeric));
-  }
-
-  return numeric.toFixed(1).replace(".", ",");
-}
-
-function parseServiceData(value) {
-  const text = String(value || "").trim();
-  if (!text) {
-    return {};
-  }
-
-  try {
-    const parsed = JSON.parse(text);
-    return isObject(parsed) ? parsed : {};
-  } catch (_error) {
-    return {};
-  }
-}
-
-function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-}
-
-function translateStateValue(state) {
-  const raw = normalizeTextKey(state?.state);
-  switch (raw) {
-    case "on":
-      return "Encendido";
-    case "off":
-      return "Apagado";
-    case "home":
-      return "En casa";
-    case "not_home":
-      return "Fuera";
-    case "playing":
-      return "Reproduciendo";
-    case "paused":
-      return "Pausado";
-    case "idle":
-      return "En espera";
-    case "locked":
-      return "Cerrado";
-    case "unlocked":
-      return "Abierto";
-    case "unavailable":
-      return "No disponible";
-    case "unknown":
-      return "Desconocido";
-    default:
-      return String(state?.state || "").trim() || "";
-  }
-}
-
-function getDomain(entityId) {
-  return String(entityId || "").split(".")[0] || "";
-}
-
-function getAccentColorForState(state, config) {
-  const customTint = String(config?.tint_color || "").trim();
-  if (customTint) {
-    return customTint;
-  }
-
-  if (isUnavailableState(state)) {
-    return "#ff9b4a";
-  }
-
-  const domain = getDomain(state?.entity_id);
-  const attrs = state?.attributes || {};
-  const normalizedState = normalizeTextKey(state?.state);
-
-  if (domain === "light") {
-    const rgbColor = Array.isArray(attrs.rgb_color) ? attrs.rgb_color : null;
-    if (rgbColor && rgbColor.length >= 3) {
-      return `rgb(${rgbColor[0]}, ${rgbColor[1]}, ${rgbColor[2]})`;
-    }
-    return normalizedState === "on" ? "#ffbe55" : "#94a3b8";
-  }
-
-  if (domain === "fan") {
-    return normalizedState === "on" ? "#6ac8ff" : "#94a3b8";
-  }
-
-  if (domain === "humidifier") {
-    return normalizedState === "on" ? "#78d5ff" : "#94a3b8";
-  }
-
-  if (domain === "alarm_control_panel") {
-    if (rawStartsWith(normalizedState, "armed")) {
-      return "#8f7dff";
-    }
-    return "#71c0ff";
-  }
-
-  if (domain === "person") {
-    return normalizedState === "home" ? "#74d572" : "#ff7b7b";
-  }
-
-  if (domain === "weather") {
-    return "#71c0ff";
-  }
-
-  if (domain === "climate") {
-    return "#ffb14a";
-  }
-
-  if (domain === "calendar") {
-    return "#8f7dff";
-  }
-
-  const deviceClass = normalizeTextKey(attrs.device_class);
-  if (deviceClass === "humidity" || String(attrs.unit_of_measurement || "").trim() === "%") {
-    return "#4faeff";
-  }
-
-  if (deviceClass === "temperature" || String(attrs.unit_of_measurement || "").includes("°")) {
-    return "#ffb14a";
-  }
-
-  if (deviceClass === "power" || String(attrs.unit_of_measurement || "").trim().toLowerCase() === "w") {
-    return "#ffd85a";
-  }
-
-  if (normalizedState === "on" || normalizedState === "open" || normalizedState === "unlocked") {
-    return "#71c0ff";
-  }
-
-  return "#8ea3c0";
-}
-
-function rawStartsWith(value, prefix) {
-  return String(value || "").startsWith(prefix);
-}
-
-class NodaliaInsigniaCard extends HTMLElement {
-  static async getConfigElement() {
-    return document.createElement(EDITOR_TAG);
-  }
-
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
-  }
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    this._lastRenderSignature = "";
-    this._onShadowClick = this._onShadowClick.bind(this);
-  }
-
-  connectedCallback() {
-    this.shadowRoot?.addEventListener("click", this._onShadowClick);
-  }
-
-  disconnectedCallback() {
-    this.shadowRoot?.removeEventListener("click", this._onShadowClick);
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    this._lastRenderSignature = "";
-    this._render();
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getRenderSignature(hass);
-    this._hass = hass;
-
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
-      return;
-    }
-
-    this._lastRenderSignature = nextSignature;
-    this._render();
-  }
-
-  getCardSize() {
-    return 1;
-  }
-
-  getGridOptions() {
-    return {
-      rows: 1,
-      columns: 3,
-      min_rows: 1,
-      min_columns: 2,
-    };
-  }
-
-  _getState() {
-    return this._config?.entity ? this._hass?.states?.[this._config.entity] || null : null;
-  }
-
-  _getRenderSignature(hass = this._hass) {
-    const entityId = this._config?.entity || "";
-    const state = entityId ? hass?.states?.[entityId] || null : null;
-    const attrs = state?.attributes || {};
-
-    return JSON.stringify({
-      entityId,
-      name: this._config?.name || "",
-      value: this._config?.value || "",
-      icon: this._config?.icon || "",
-      image: this._config?.image || "",
-      useEntityIcon: this._config?.use_entity_icon === true,
-      stateAttribute: this._config?.state_attribute || "",
-      showName: this._config?.show_name !== false,
-      showValue: this._config?.show_value !== false,
-      tintColor: this._config?.tint_color || "",
-      state: String(state?.state || ""),
-      iconAttr: String(attrs.icon || ""),
-      imageAttr: String(attrs.entity_picture || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      attrValue: this._config?.state_attribute ? attrs[this._config.state_attribute] : "",
-    });
-  }
-
-  _getTitle(state) {
-    const customName = String(this._config?.name || "").trim();
-    if (customName) {
-      return customName;
-    }
-
-    const friendlyName = String(state?.attributes?.friendly_name || "").trim();
-    return friendlyName || "";
-  }
-
-  _getValue(state) {
-    const staticValue = String(this._config?.value || "").trim();
-    if (staticValue) {
-      return staticValue;
-    }
-
-    const attrName = String(this._config?.state_attribute || "").trim();
-    if (attrName && state?.attributes && state.attributes[attrName] !== undefined && state.attributes[attrName] !== null) {
-      const attributeValue = state.attributes[attrName];
-      return typeof attributeValue === "number"
-        ? formatNumber(attributeValue) || String(attributeValue)
-        : String(attributeValue);
-    }
-
-    return state ? translateStateValue(state) : "";
-  }
-
-  _getImage(state) {
-    const customImage = String(this._config?.image || "").trim();
-    if (customImage) {
-      return customImage;
-    }
-
-    const entityPicture = String(state?.attributes?.entity_picture || "").trim();
-    return entityPicture || "";
-  }
-
-  _getIcon(state) {
-    const customIcon = String(this._config?.icon || "").trim();
-    if (customIcon) {
-      return customIcon;
-    }
-
-    if (this._config?.use_entity_icon === true) {
-      const entityIcon = String(state?.attributes?.icon || "").trim();
-      if (entityIcon) {
-        return entityIcon;
-      }
-    }
-
-    const domain = getDomain(state?.entity_id);
-    switch (domain) {
-      case "light":
-        return normalizeTextKey(state?.state) === "on" ? "mdi:lightbulb-on-outline" : "mdi:lightbulb-outline";
-      case "fan":
-        return "mdi:fan";
-      case "humidifier":
-        return "mdi:air-humidifier";
-      case "climate":
-        return "mdi:home-thermometer-outline";
-      case "person":
-        return "mdi:account";
-      case "alarm_control_panel":
-        return "mdi:shield-home-outline";
-      case "weather":
-        return "mdi:weather-partly-cloudy";
-      case "calendar":
-        return "mdi:calendar-month-outline";
-      default:
-        return "mdi:star-four-points-circle-outline";
-    }
-  }
-
-  _canRunPrimaryAction(state) {
-    const action = String(this._config?.tap_action || "auto");
-
-    if (action === "none") {
-      return false;
-    }
-
-    if (action === "auto") {
-      return Boolean(state?.entity_id);
-    }
-
-    return true;
-  }
-
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
-    if (haptics.enabled !== true) {
-      return;
-    }
-
-    const style = styleOverride || haptics.style || "selection";
-    fireEvent(this, "haptic", style, {
-      bubbles: true,
-      cancelable: false,
-      composed: true,
-    });
-
-    if (haptics.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
-    }
-  }
-
-  _toggleEntity(entityId) {
-    if (!entityId || !this._hass?.callService) {
-      return;
-    }
-
-    const domain = getDomain(entityId);
-    const toggleDomains = new Set(["light", "switch", "fan", "humidifier", "input_boolean"]);
-
-    if (!toggleDomains.has(domain)) {
-      fireEvent(this, "hass-more-info", { entityId });
-      return;
-    }
-
-    this._hass.callService(domain, "toggle", { entity_id: entityId });
-  }
-
-  _performPrimaryAction(state) {
-    const action = String(this._config?.tap_action || "auto");
-    const entityId = state?.entity_id || this._config?.entity || "";
-
-    switch (action) {
-      case "none":
-        return;
-      case "more-info":
-        if (entityId) {
-          fireEvent(this, "hass-more-info", { entityId });
-        }
-        return;
-      case "toggle":
-        this._toggleEntity(entityId);
-        return;
-      case "service":
-        if (this._config?.service) {
-          this._hass?.callService?.(
-            this._config.service.split(".")[0],
-            this._config.service.split(".").slice(1).join("."),
-            parseServiceData(this._config.service_data),
-          );
-        }
-        return;
-      case "url": {
-        const url = String(this._config?.tap_url || "").trim();
-        if (!url) {
-          return;
-        }
-        if (this._config?.tap_new_tab === true) {
-          window.open(url, "_blank", "noopener");
-        } else {
-          window.location.assign(url);
-        }
-        return;
-      }
-      case "auto":
-      default:
-        if (!entityId) {
-          return;
-        }
-        fireEvent(this, "hass-more-info", { entityId });
-    }
-  }
-
-  _onShadowClick(event) {
-    const root = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.insigniaAction === "primary");
-    if (!root) {
-      return;
-    }
-
-    const state = this._getState();
-    if (!this._canRunPrimaryAction(state)) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    this._triggerHaptic();
-    this._performPrimaryAction(state);
-  }
-
-  _renderEmptyState() {
-    return `
-      <ha-card class="insignia-card insignia-card--empty">
-        <div class="insignia-card__empty-title">Nodalia Insignia Card</div>
-        <div class="insignia-card__empty-text">Configura \`entity\` o contenido estático para mostrar la insignia.</div>
-      </ha-card>
-    `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const state = this._getState();
-    const hasStaticContent = Boolean(
-      String(this._config?.name || "").trim()
-      || String(this._config?.value || "").trim()
-      || String(this._config?.icon || "").trim()
-      || String(this._config?.image || "").trim(),
-    );
-
-    if (!state && !hasStaticContent) {
-      this.shadowRoot.innerHTML = this._renderEmptyState();
-      return;
-    }
-
-    const config = this._config;
-    const styles = config.styles || DEFAULT_CONFIG.styles;
-    const title = this._getTitle(state);
-    const value = this._getValue(state);
-    const icon = this._getIcon(state);
-    const image = this._getImage(state);
-    const showName = config.show_name !== false && Boolean(title);
-    const showValue = config.show_value !== false && Boolean(value);
-    const showUnavailableBadge = isUnavailableState(state);
-    const accentColor = getAccentColorForState(state, config);
-    const isLightTheme = this._hass?.themes?.darkMode === false;
-    const iconSizePx = Math.max(30, Math.min(parseSizeToPixels(styles.icon.size, 42), 48));
-    const cardBackground = isLightTheme
-      ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 5%, rgba(255, 255, 255, 0.98)) 0%, rgba(255, 255, 255, 0.95) 100%)`
-      : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
-    const cardBorder = isLightTheme
-      ? `1px solid color-mix(in srgb, ${accentColor} 16%, rgba(15, 23, 42, 0.1))`
-      : `1px solid color-mix(in srgb, ${accentColor} 24%, rgba(255, 255, 255, 0.08))`;
-    const cardShadow = isLightTheme
-      ? `${styles.card.box_shadow}, 0 10px 22px color-mix(in srgb, ${accentColor} 2%, rgba(15, 23, 42, 0.12)), 0 2px 5px rgba(15, 23, 42, 0.05)`
-      : `${styles.card.box_shadow}, 0 12px 26px color-mix(in srgb, ${accentColor} 12%, rgba(0, 0, 0, 0.18))`;
-    const surfaceBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
-      : "linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%)";
-    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
-    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.06)";
-    const surfaceShadow = isLightTheme
-      ? "0 8px 18px rgba(15, 23, 42, 0.08), 0 2px 5px rgba(15, 23, 42, 0.05)"
-      : "0 10px 22px rgba(0, 0, 0, 0.18)";
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        ha-card {
-          background: ${cardBackground};
-          border: ${cardBorder};
-          border-radius: ${styles.card.border_radius};
-          box-shadow: ${cardShadow};
-          color: var(--primary-text-color);
-          overflow: hidden;
-          position: relative;
-        }
-
-        .insignia-card::before {
-          background: linear-gradient(180deg, ${isLightTheme ? "rgba(255, 255, 255, 0.12)" : "rgba(255, 255, 255, 0.04)"}, rgba(255, 255, 255, 0));
-          content: "";
-          inset: 0;
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
-        }
-
-        .insignia-card__content {
-          align-items: center;
-          cursor: ${this._canRunPrimaryAction(state) ? "pointer" : "default"};
-          display: grid;
-          gap: ${styles.card.gap};
-          grid-template-columns: ${iconSizePx}px minmax(0, 1fr);
-          min-height: 58px;
-          min-width: 0;
-          padding: ${styles.card.padding};
-          position: relative;
-          z-index: 1;
-        }
-
-        .insignia-card__icon {
-          align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
-          border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${surfaceShadow};
-          color: ${accentColor};
-          display: inline-flex;
-          height: ${iconSizePx}px;
-          justify-content: center;
-          position: relative;
-          width: ${iconSizePx}px;
-        }
-
-        .insignia-card__icon ha-icon {
-          --mdc-icon-size: calc(${iconSizePx}px * 0.46);
-        }
-
-        .insignia-card__icon img {
-          border-radius: inherit;
-          display: block;
-          height: 100%;
-          object-fit: cover;
-          width: 100%;
-        }
-
-        .insignia-card__unavailable-badge {
-          align-items: center;
-          background: #ff9b4a;
-          border: 2px solid ${isLightTheme ? "rgba(255, 255, 255, 0.94)" : styles.card.background};
-          border-radius: 999px;
-          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
-          color: #ffffff;
-          display: inline-flex;
-          height: 16px;
-          justify-content: center;
-          position: absolute;
-          right: -2px;
-          top: -2px;
-          width: 16px;
-        }
-
-        .insignia-card__unavailable-badge ha-icon {
-          --mdc-icon-size: 10px;
-          height: 10px;
-          width: 10px;
-        }
-
-        .insignia-card__copy {
-          align-items: center;
-          display: flex;
-          gap: 8px;
-          min-width: 0;
-        }
-
-        .insignia-card__title,
-        .insignia-card__value {
-          line-height: 1.1;
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .insignia-card__title {
-          color: var(--primary-text-color);
-          font-size: ${styles.title_size};
-          font-weight: 700;
-        }
-
-        .insignia-card__value {
-          color: var(--secondary-text-color);
-          font-size: ${styles.value_size};
-          font-weight: 700;
-        }
-
-        .insignia-card__empty-title {
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .insignia-card__empty-text {
-          color: var(--secondary-text-color);
-          font-size: 13px;
-          line-height: 1.5;
-        }
-
-        .insignia-card--empty {
-          display: grid;
-          gap: 8px;
-          padding: 16px;
-        }
-      </style>
-      <ha-card class="insignia-card">
-        <div class="insignia-card__content" data-insignia-action="primary">
-          <div class="insignia-card__icon">
-            ${image
-              ? `<img src="${escapeHtml(image)}" alt="">`
-              : `<ha-icon icon="${escapeHtml(icon)}"></ha-icon>`}
-            ${showUnavailableBadge ? `<span class="insignia-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
-          </div>
-          <div class="insignia-card__copy">
-            ${showName ? `<div class="insignia-card__title">${escapeHtml(title)}</div>` : ""}
-            ${showValue ? `<div class="insignia-card__value">${escapeHtml(value)}</div>` : ""}
-          </div>
-        </div>
-      </ha-card>
-    `;
-  }
-}
-
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaInsigniaCard);
-}
-
-class NodaliaInsigniaCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    this._render();
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    this._render();
-  }
-
-  _emitConfig() {
-    const nextConfig = deepClone(this._config);
-    this._config = normalizeConfig(compactConfig(nextConfig));
-    this._render();
-    fireEvent(this, "config-changed", {
-      config: compactConfig(nextConfig),
-    });
-  }
-
-  _setFieldValue(path, value) {
-    if (value === undefined || value === null || value === "") {
-      deleteByPath(this._config, path);
-      return;
-    }
-
-    setByPath(this._config, path, value);
-  }
-
-  _readFieldValue(input) {
-    const valueType = input.dataset.valueType || "string";
-    if (valueType === "boolean") {
-      return Boolean(input.checked);
-    }
-    return input.value;
-  }
-
-  _onShadowInput(event) {
-    const input = event.composedPath().find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement);
-    if (!input?.dataset?.field) {
-      return;
-    }
-
-    event.stopPropagation();
-    this._setFieldValue(input.dataset.field, this._readFieldValue(input));
-    this._config = normalizeConfig(compactConfig(this._config));
-
-    if (event.type === "change") {
-      this._emitConfig();
-    }
-  }
-
-  _renderTextField(label, field, value, options = {}) {
-    const inputValue = value === undefined || value === null ? "" : String(value);
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-
-    return `
-      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
-        <input
-          type="${escapeHtml(options.type || "text")}"
-          data-field="${escapeHtml(field)}"
-          value="${escapeHtml(inputValue)}"
-          ${placeholder}
-        />
-      </label>
-    `;
-  }
-
-  _renderCheckboxField(label, field, checked) {
-    return `
-      <label class="editor-toggle">
-        <input
-          type="checkbox"
-          data-field="${escapeHtml(field)}"
-          data-value-type="boolean"
-          ${checked ? "checked" : ""}
-        />
-        <span>${escapeHtml(label)}</span>
-      </label>
-    `;
-  }
-
-  _renderSelectField(label, field, value, options) {
-    return `
-      <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
-        <select data-field="${escapeHtml(field)}">
-          ${options.map(option => `
-            <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-              ${escapeHtml(option.label)}
-            </option>
-          `).join("")}
-        </select>
-      </label>
-    `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        .editor {
-          color: var(--primary-text-color);
-          display: grid;
-          gap: 16px;
-        }
-
-        .editor-section {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 18px;
-          display: grid;
-          gap: 14px;
-          padding: 16px;
-        }
-
-        .editor-section__header {
-          display: grid;
-          gap: 4px;
-        }
-
-        .editor-section__title {
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .editor-section__hint {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-        }
-
-        .editor-grid {
-          display: grid;
-          gap: 12px;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .editor-field,
-        .editor-toggle {
-          display: grid;
-          gap: 6px;
-        }
-
-        .editor-field--full {
-          grid-column: 1 / -1;
-        }
-
-        .editor-field span,
-        .editor-toggle span {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .editor-field input,
-        .editor-field select {
-          appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 14px;
-          color: var(--primary-text-color);
-          font: inherit;
-          min-width: 0;
-          outline: none;
-          padding: 10px 12px;
-          width: 100%;
-        }
-
-        .editor-toggle {
-          align-items: center;
-          grid-auto-flow: column;
-          justify-content: start;
-        }
-
-        .editor-toggle input {
-          accent-color: var(--primary-color);
-        }
-
-        @media (max-width: 720px) {
-          .editor-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      </style>
-      <div class="editor">
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Insignia compacta con icono o imagen, valor y tinte Nodalia.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Entidad", "entity", config.entity, { placeholder: "sensor.temperatura_salon" })}
-            ${this._renderTextField("Nombre", "name", config.name, { placeholder: "Temperatura" })}
-            ${this._renderTextField("Valor fijo", "value", config.value, { placeholder: "21,4 °C" })}
-            ${this._renderTextField("Atributo de estado", "state_attribute", config.state_attribute, { placeholder: "temperature" })}
-            ${this._renderTextField("Icono", "icon", config.icon, { placeholder: "mdi:home-thermometer-outline" })}
-            ${this._renderTextField("Imagen", "image", config.image, { placeholder: "/local/avatar.png" })}
-            ${this._renderTextField("Tinte", "tint_color", config.tint_color, { placeholder: "#ff6d7a" })}
-            ${this._renderSelectField(
-              "Acción al tocar",
-              "tap_action",
-              config.tap_action || "auto",
-              [
-                { value: "auto", label: "Auto" },
-                { value: "more-info", label: "More info" },
-                { value: "toggle", label: "Toggle" },
-                { value: "service", label: "Servicio" },
-                { value: "url", label: "Abrir URL" },
-                { value: "none", label: "Sin acción" },
-              ],
-            )}
-            ${this._renderCheckboxField("Usar icono de la entidad", "use_entity_icon", config.use_entity_icon === true)}
-            ${this._renderCheckboxField("Mostrar nombre", "show_name", config.show_name !== false)}
-            ${this._renderCheckboxField("Mostrar valor", "show_value", config.show_value !== false)}
-            ${this._renderCheckboxField("Abrir URL en pestaña nueva", "tap_new_tab", config.tap_new_tab === true)}
-            ${this._renderTextField("URL", "tap_url", config.tap_url, { fullWidth: true, placeholder: "https://..." })}
-            ${this._renderTextField("Servicio", "service", config.service, { placeholder: "light.toggle" })}
-            ${this._renderTextField("Datos servicio (JSON)", "service_data", config.service_data, { fullWidth: true, placeholder: "{\"entity_id\":\"light.salon\"}" })}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta háptica al tocar la insignia.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibración", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
-            ${this._renderSelectField(
-              "Estilo háptico",
-              "haptics.style",
-              hapticStyle,
-              [
-                { value: "selection", label: "Selection" },
-                { value: "light", label: "Light" },
-                { value: "medium", label: "Medium" },
-                { value: "heavy", label: "Heavy" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "failure", label: "Failure" },
-              ],
-            )}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales de la insignia.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
-            ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
-            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
-            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-            ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamaño icono", "styles.icon.size", config.styles.icon.size)}
-            ${this._renderTextField("Color icono activo", "styles.icon.on_color", config.styles.icon.on_color)}
-            ${this._renderTextField("Color icono inactivo", "styles.icon.off_color", config.styles.icon.off_color)}
-            ${this._renderTextField("Tamaño nombre", "styles.title_size", config.styles.title_size)}
-            ${this._renderTextField("Tamaño valor", "styles.value_size", config.styles.value_size)}
-          </div>
-        </section>
-      </div>
-    `;
-  }
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaInsigniaCardEditor);
-}
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: CARD_TAG,
-  name: "Nodalia Insignia Card",
-  description: "Insignia compacta estilo chip burbuja para Home Assistant",
-  preview: true,
-});
-
 }
 {
 const CARD_TAG = "nodalia-vacuum-card";
@@ -41576,5 +38980,4 @@ window.customCards.push({
   description: "Tarjeta de aspirador con look Nodalia, acciones rapidas y editor visual.",
   preview: true,
 });
-
 }

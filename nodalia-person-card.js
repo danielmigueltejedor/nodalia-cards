@@ -529,39 +529,15 @@ class NodaliaPersonCard extends HTMLElement {
     const effectiveCardHeightPx = singleRowLayout ? Math.max(54, avatarSizePx + (singleRowPaddingY * 2)) : avatarSizePx + (singleRowPaddingY * 2);
     const effectiveContentMinHeight = `${Math.max(avatarSizePx, effectiveCardHeightPx - (singleRowPaddingY * 2))}px`;
     const isUnavailable = isUnavailableState(state);
-    const isLightTheme = this._hass?.themes?.darkMode === false;
     const cardBackground = isUnavailable
-      ? isLightTheme
-        ? "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.94) 100%)"
-        : styles.card.background
-      : isLightTheme
-        ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, rgba(255, 255, 255, 0.98)) 0%, color-mix(in srgb, ${accentColor} 6%, rgba(255, 255, 255, 0.94)) 56%, rgba(255, 255, 255, 0.94) 100%)`
-        : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
+      ? styles.card.background
+      : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
     const cardBorder = isUnavailable
-      ? isLightTheme
-        ? "1px solid rgba(15, 23, 42, 0.08)"
-        : styles.card.border
-      : isLightTheme
-        ? `1px solid color-mix(in srgb, ${accentColor} 18%, rgba(15, 23, 42, 0.1))`
-        : `1px solid color-mix(in srgb, ${accentColor} 22%, var(--divider-color))`;
+      ? styles.card.border
+      : `1px solid color-mix(in srgb, ${accentColor} 22%, var(--divider-color))`;
     const cardShadow = isUnavailable
-      ? isLightTheme
-        ? `${styles.card.box_shadow}, 0 14px 26px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)`
-        : styles.card.box_shadow
-      : isLightTheme
-        ? `${styles.card.box_shadow}, 0 16px 30px color-mix(in srgb, ${accentColor} 5%, rgba(15, 23, 42, 0.14)), 0 3px 8px rgba(15, 23, 42, 0.06)`
-        : `${styles.card.box_shadow}, 0 12px 28px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
-    const surfaceBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.84) 100%)"
-      : styles.avatar.background;
-    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : `color-mix(in srgb, ${accentColor} 16%, rgba(255, 255, 255, 0.08))`;
-    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.08)";
-    const surfaceShadow = isLightTheme
-      ? "0 10px 22px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)"
-      : "0 10px 24px rgba(0, 0, 0, 0.16)";
-    const chipBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.82) 100%)"
-      : "rgba(255, 255, 255, 0.08)";
+      ? styles.card.box_shadow
+      : `${styles.card.box_shadow}, 0 12px 28px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -588,9 +564,7 @@ class NodaliaPersonCard extends HTMLElement {
         }
 
         ha-card::before {
-          background: ${isLightTheme
-            ? "linear-gradient(180deg, rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0))"
-            : "linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0))"};
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
           content: "";
           inset: 0;
           pointer-events: none;
@@ -628,12 +602,12 @@ class NodaliaPersonCard extends HTMLElement {
         .person-card__avatar {
           align-self: center;
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: ${styles.avatar.background};
+          border: 1px solid color-mix(in srgb, ${accentColor} 16%, rgba(255, 255, 255, 0.08));
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${surfaceShadow};
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            0 10px 24px rgba(0, 0, 0, 0.16);
           color: ${styles.avatar.color};
           display: inline-flex;
           height: ${avatarSize};
@@ -661,7 +635,7 @@ class NodaliaPersonCard extends HTMLElement {
           border-radius: 999px;
           box-shadow:
             0 6px 14px rgba(0, 0, 0, 0.14),
-            0 0 0 2px ${isLightTheme ? "rgba(255, 255, 255, 0.9)" : "rgba(255, 255, 255, 0.08)"};
+            0 0 0 2px rgba(255, 255, 255, 0.08);
           color: #ffffff;
           display: inline-flex;
           height: ${badgeSize};
@@ -717,12 +691,12 @@ class NodaliaPersonCard extends HTMLElement {
 
         .person-card__state-chip {
           align-items: center;
-          background: ${chipBackground};
-          border: 1px solid ${isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.1)"};
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 ${isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.06)"},
-            0 6px 14px ${isLightTheme ? "rgba(15, 23, 42, 0.06)" : "rgba(0, 0, 0, 0.06)"};
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 1px 1px rgba(0, 0, 0, 0.06);
           color: var(--primary-text-color);
           display: inline-flex;
           font-size: ${effectiveSubtitleSize};

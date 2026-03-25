@@ -1283,16 +1283,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
     const titleText = this._config?.title || this._config?.name || (layoutPreset === "simple" ? "" : "Flujo");
     const hasHeader = this._config?.show_header !== false && (Boolean(titleText) || (showDashboardButton && layoutPreset !== "simple"));
-    const isLightTheme = this._hass?.themes?.darkMode === false;
-    const darkCardBase = "linear-gradient(180deg, rgba(31, 33, 42, 0.98) 0%, rgba(20, 22, 29, 0.98) 100%)";
-    const surfaceBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.9) 100%)"
-      : "linear-gradient(180deg, rgba(44, 47, 58, 0.88) 0%, rgba(30, 32, 41, 0.9) 100%)";
-    const surfaceBorder = isLightTheme ? "rgba(15,23,42,0.08)" : "rgba(255,255,255,0.08)";
-    const surfaceInset = isLightTheme ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.06)";
-    const surfaceShadow = isLightTheme
-      ? "0 8px 18px rgba(15,23,42,0.08), 0 2px 5px rgba(15,23,42,0.05)"
-      : "0 10px 20px rgba(0,0,0,0.14)";
     const surfaceMinHeight = layoutPreset === "simple"
       ? 162
       : layoutPreset === "compact"
@@ -1319,14 +1309,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card {
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${dominantColor} ${isLightTheme ? "4%" : "12%"}%, transparent) 0%, transparent 40%),
-            linear-gradient(180deg, ${isLightTheme ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.018)"} 0%, ${isLightTheme ? "rgba(255,255,255,0)" : "rgba(0,0,0,0.03)"} 100%),
-            ${isLightTheme ? "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.95) 100%)" : darkCardBase};
-          border: 1px solid color-mix(in srgb, ${dominantColor} ${isLightTheme ? "14%" : "18%"}%, ${isLightTheme ? "rgba(15,23,42,0.1)" : "var(--divider-color)"});
+            radial-gradient(circle at top left, color-mix(in srgb, ${dominantColor} 12%, transparent) 0%, transparent 42%),
+            linear-gradient(180deg, rgba(255,255,255,0.018) 0%, rgba(0,0,0,0.03) 100%),
+            ${styles.card.background};
+          border: 1px solid color-mix(in srgb, ${dominantColor} 18%, var(--divider-color));
           border-radius: ${styles.card.border_radius};
-          box-shadow: ${styles.card.box_shadow}, ${isLightTheme
-            ? `0 12px 24px color-mix(in srgb, ${dominantColor} 2%, rgba(15,23,42,0.12)), 0 2px 6px rgba(15,23,42,0.06)`
-            : `0 14px 28px color-mix(in srgb, ${dominantColor} 7%, rgba(0,0,0,0.14))`};
+          box-shadow: ${styles.card.box_shadow}, 0 14px 28px color-mix(in srgb, ${dominantColor} 7%, rgba(0,0,0,0.14));
           color: var(--primary-text-color);
           display: flex;
           flex-direction: column;
@@ -1357,12 +1345,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__dashboard-button {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%);
+          border: 1px solid rgba(255,255,255,0.08);
           border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${isLightTheme ? "0 10px 22px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.05)" : "0 10px 20px rgba(0,0,0,0.12)"};
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
@@ -1545,9 +1530,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__simple-rail-node::before {
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${dominantColor} ${isLightTheme ? "8%" : "9%"}%, transparent) 0%, transparent 58%),
-            linear-gradient(180deg, ${isLightTheme ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.018)"} 0%, ${isLightTheme ? "rgba(255,255,255,0)" : "rgba(0,0,0,0.03)"} 100%),
-            ${isLightTheme ? "rgba(255,255,255,0.96)" : styles.card.background};
+            radial-gradient(circle at top left, color-mix(in srgb, ${dominantColor} 9%, transparent) 0%, transparent 58%),
+            linear-gradient(180deg, rgba(255,255,255,0.018) 0%, rgba(0,0,0,0.03) 100%),
+            ${styles.card.background};
           border-radius: 999px;
           content: "";
           height: calc(var(--simple-node-cover-size, 48px) + 12px);
@@ -1699,13 +1684,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
           align-items: center;
           appearance: none;
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, var(--node-tint) ${isLightTheme ? "10%" : "12%"}%, transparent) 0%, transparent 48%),
-            ${surfaceBackground};
-          border: 1px solid color-mix(in srgb, var(--node-tint) ${isLightTheme ? "14%" : "24%"}%, ${isLightTheme ? "rgba(15,23,42,0.08)" : "rgba(255,255,255,0.09)"});
+            radial-gradient(circle at top left, color-mix(in srgb, var(--node-tint) 12%, transparent) 0%, transparent 48%),
+            linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%);
+          border: 1px solid color-mix(in srgb, var(--node-tint) 24%, rgba(255,255,255,0.09));
           border-radius: 999px;
-          box-shadow: ${isLightTheme
-            ? "0 12px 24px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.05)"
-            : "0 10px 20px color-mix(in srgb, var(--node-tint) 7%, rgba(0,0,0,0.14))"};
+          box-shadow: 0 10px 20px color-mix(in srgb, var(--node-tint) 7%, rgba(0,0,0,0.14));
           color: ${styles.icon.color || "var(--primary-text-color)"};
           cursor: default;
           display: inline-flex;
@@ -1763,8 +1746,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__home-icon-wrap {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.08);
           border-radius: 999px;
           display: inline-flex;
           height: 31px;
@@ -1821,12 +1804,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__chip {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.03) 100%);
+          border: 1px solid rgba(255,255,255,0.08);
           border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${isLightTheme ? "0 8px 18px rgba(15,23,42,0.05)" : "none"};
           color: var(--primary-text-color);
           display: inline-flex;
           font-size: var(--chip-font-size, 10px);

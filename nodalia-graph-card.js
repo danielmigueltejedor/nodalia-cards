@@ -1147,22 +1147,9 @@ class NodaliaGraphCard extends HTMLElement {
     const lineWidth = `${Math.max(2, Math.min(parseSizeToPixels(styles.line_width, 3), compactLayout ? 2.4 : 3))}`;
     const cardPaddingPx = Math.max(12, parseSizeToPixels(styles.card.padding, 16));
     const chartBleed = Math.round(cardPaddingPx * 0.95);
-    const isLightTheme = this._hass?.themes?.darkMode === false;
-    const darkCardBase = "linear-gradient(180deg, rgba(31, 33, 42, 0.98) 0%, rgba(20, 22, 29, 0.98) 100%)";
-    const cardBackground = isLightTheme
-      ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 3%, rgba(255, 255, 255, 0.98)) 0%, rgba(255, 255, 255, 0.95) 100%)`
-      : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 12%, rgba(33, 35, 44, 0.98)) 0%, rgba(20, 22, 29, 0.98) 100%)`;
-    const cardBorder = isLightTheme
-      ? `1px solid color-mix(in srgb, ${accentColor} 16%, rgba(15, 23, 42, 0.1))`
-      : `1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color))`;
-    const cardShadow = isLightTheme
-      ? `${styles.card.box_shadow}, 0 12px 24px color-mix(in srgb, ${accentColor} 2%, rgba(15, 23, 42, 0.12)), 0 2px 6px rgba(15, 23, 42, 0.06)`
-      : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 8%, rgba(0, 0, 0, 0.16))`;
-    const surfaceBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
-      : "linear-gradient(180deg, rgba(44, 47, 58, 0.88) 0%, rgba(30, 32, 41, 0.9) 100%)";
-    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
-    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.04)";
+    const cardBackground = `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
+    const cardBorder = `1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color))`;
+    const cardShadow = `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 8%, rgba(0, 0, 0, 0.16))`;
     const tooltipTint = hover?.values?.[0]?.color || accentColor;
 
     this.shadowRoot.innerHTML = `
@@ -1185,9 +1172,9 @@ class NodaliaGraphCard extends HTMLElement {
 
         .graph-card {
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} ${isLightTheme ? "4%" : "12%"}%, transparent) 0%, transparent 42%),
-            linear-gradient(180deg, ${isLightTheme ? "rgba(255, 255, 255, 0.12)" : "rgba(255, 255, 255, 0.018)"} 0%, ${isLightTheme ? "rgba(255, 255, 255, 0)" : "rgba(0, 0, 0, 0.02)"} 100%),
-            ${isLightTheme ? cardBackground : darkCardBase},
+            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 12%, transparent) 0%, transparent 44%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0%, rgba(0, 0, 0, 0.02) 100%),
+            ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
@@ -1228,8 +1215,8 @@ class NodaliaGraphCard extends HTMLElement {
 
         .graph-card__icon {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.03) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 20px;
           color: ${styles.icon.color};
           display: inline-flex;
@@ -1238,9 +1225,6 @@ class NodaliaGraphCard extends HTMLElement {
           opacity: 0.9;
           padding: 0 12px;
           position: relative;
-          box-shadow:
-            inset 0 1px 0 ${surfaceInset},
-            ${isLightTheme ? "0 10px 22px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)" : "0 10px 22px rgba(0, 0, 0, 0.14)"};
         }
 
         .graph-card__icon ha-icon {
@@ -1252,7 +1236,7 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__unavailable-badge {
           align-items: center;
           background: #ff9b4a;
-          border: 2px solid ${isLightTheme ? "rgba(255, 255, 255, 0.94)" : styles.card.background};
+          border: 2px solid ${styles.card.background};
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
           color: #ffffff;
@@ -1309,8 +1293,8 @@ class NodaliaGraphCard extends HTMLElement {
 
         .graph-card__legend-item {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.03) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 999px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -1330,11 +1314,9 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__legend-item--active {
-          background: ${isLightTheme
-            ? "linear-gradient(180deg, color-mix(in srgb, var(--legend-color) 10%, rgba(255,255,255,0.96)) 0%, rgba(255,255,255,0.84) 100%)"
-            : "linear-gradient(180deg, color-mix(in srgb, var(--legend-color) 14%, rgba(255,255,255,0.05)) 0%, rgba(255,255,255,0.035) 100%)"};
-          border-color: color-mix(in srgb, var(--legend-color) ${isLightTheme ? "22%" : "34%"}%, ${isLightTheme ? "rgba(15,23,42,0.1)" : "rgba(255,255,255,0.08)"});
-          box-shadow: 0 12px 24px color-mix(in srgb, var(--legend-color) 8%, ${isLightTheme ? "rgba(15, 23, 42, 0.14)" : "rgba(0, 0, 0, 0.14)"});
+          background: linear-gradient(180deg, color-mix(in srgb, var(--legend-color) 14%, rgba(255,255,255,0.05)) 0%, rgba(255,255,255,0.035) 100%);
+          border-color: color-mix(in srgb, var(--legend-color) 34%, rgba(255,255,255,0.08));
+          box-shadow: 0 12px 24px color-mix(in srgb, var(--legend-color) 10%, rgba(0, 0, 0, 0.14));
         }
 
         .graph-card__legend-item--muted {
@@ -1400,47 +1382,47 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__hover-point-halo {
-          background: color-mix(in srgb, var(--hover-color) ${isLightTheme ? "12%" : "10%"}%, transparent);
+          background: color-mix(in srgb, var(--hover-color) 10%, transparent);
           border-radius: 999px;
-          inset: -3px;
+          inset: -4px;
           opacity: 0.82;
           position: absolute;
         }
 
         .graph-card__hover-point-outer {
           background:
-            radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.98) 0 24%, color-mix(in srgb, var(--hover-color) ${isLightTheme ? "16%" : "24%"}%, rgba(255, 255, 255, 0.82)) 25% 100%);
-          border: 1px solid color-mix(in srgb, var(--hover-color) ${isLightTheme ? "14%" : "24%"}%, ${isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.42)"});
+            radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.92) 0 26%, color-mix(in srgb, var(--hover-color) 24%, rgba(255, 255, 255, 0.76)) 27% 100%);
+          border: 1px solid color-mix(in srgb, var(--hover-color) 24%, rgba(255, 255, 255, 0.42));
           border-radius: 999px;
           box-shadow:
-            ${isLightTheme ? "0 8px 16px rgba(15, 23, 42, 0.10)" : "0 6px 12px rgba(0, 0, 0, 0.12)"},
-            0 0 0 1px color-mix(in srgb, var(--hover-color) 8%, transparent) inset;
+            0 6px 12px rgba(0, 0, 0, 0.12),
+            0 0 0 1px color-mix(in srgb, var(--hover-color) 10%, transparent) inset;
           inset: 0;
           position: absolute;
         }
 
         .graph-card__hover-point-ring {
-          background: color-mix(in srgb, var(--hover-color) 72%, rgba(255, 255, 255, 0.9));
+          background: color-mix(in srgb, var(--hover-color) 82%, rgba(255, 255, 255, 0.86));
           border-radius: 999px;
-          height: 3px;
+          height: 4px;
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: 3px;
+          width: 4px;
         }
 
         .graph-card__tooltip {
           backdrop-filter: blur(18px);
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, var(--tooltip-tint) ${isLightTheme ? "10%" : "18%"}%, transparent) 0%, transparent 48%),
-            linear-gradient(180deg, ${isLightTheme ? "rgba(255, 255, 255, 0.9)" : "rgba(255, 255, 255, 0.055)"} 0%, ${isLightTheme ? "rgba(255, 255, 255, 0.8)" : "rgba(255, 255, 255, 0.02)"} 100%),
-            ${isLightTheme ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 254, 0.94) 100%)" : "linear-gradient(180deg, rgba(42, 43, 53, 0.96) 0%, rgba(31, 32, 41, 0.97) 100%)"};
-          border: 1px solid color-mix(in srgb, var(--tooltip-tint) ${isLightTheme ? "18%" : "26%"}%, ${isLightTheme ? "rgba(15, 23, 42, 0.1)" : "rgba(255, 255, 255, 0.12)"});
+            radial-gradient(circle at top left, color-mix(in srgb, var(--tooltip-tint) 18%, transparent) 0%, transparent 48%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.02) 100%),
+            linear-gradient(180deg, rgba(42, 43, 53, 0.96) 0%, rgba(31, 32, 41, 0.97) 100%);
+          border: 1px solid color-mix(in srgb, var(--tooltip-tint) 26%, rgba(255, 255, 255, 0.12));
           border-radius: 22px;
           box-shadow:
-            ${isLightTheme ? "0 20px 34px rgba(15, 23, 42, 0.12)" : "0 22px 38px rgba(0, 0, 0, 0.28)"},
-            0 10px 26px color-mix(in srgb, var(--tooltip-tint) 10%, ${isLightTheme ? "rgba(15, 23, 42, 0.14)" : "rgba(0, 0, 0, 0.18)"});
+            0 22px 38px rgba(0, 0, 0, 0.28),
+            0 10px 26px color-mix(in srgb, var(--tooltip-tint) 12%, rgba(0, 0, 0, 0.18));
           color: var(--primary-text-color);
           max-width: min(320px, calc(100% - 20px));
           min-width: 210px;

@@ -2895,33 +2895,6 @@ class NodaliaMediaPlayer extends HTMLElement {
     const playerStyles = config.styles.player;
     const browserStyles = config.styles.browser;
     const tvArtworkSize = playerStyles.tv_artwork_size || playerStyles.artwork_size;
-    const isLightTheme = this._hass?.themes?.darkMode === false;
-    const cardBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%)"
-      : playerStyles.background;
-    const cardBorder = isLightTheme ? "1px solid rgba(15, 23, 42, 0.08)" : playerStyles.border;
-    const cardShadow = isLightTheme
-      ? `${playerStyles.box_shadow}, 0 12px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)`
-      : playerStyles.box_shadow;
-    const activeCardBackground = isLightTheme
-      ? "linear-gradient(180deg, color-mix(in srgb, var(--info-color, #71c0ff) 4%, rgba(255, 255, 255, 0.98)) 0%, rgba(255, 255, 255, 0.95) 100%)"
-      : null;
-    const surfaceBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%)"
-      : "rgba(255, 255, 255, 0.05)";
-    const artworkSurfaceBackground = isLightTheme
-      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 255, 255, 0.92) 100%)"
-      : "rgba(255, 255, 255, 0.08)";
-    const surfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.06)";
-    const artworkSurfaceBorder = isLightTheme ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
-    const surfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.9)" : "rgba(255, 255, 255, 0.04)";
-    const artworkSurfaceInset = isLightTheme ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.06)";
-    const surfaceShadow = isLightTheme
-      ? "0 8px 18px rgba(15, 23, 42, 0.08), 0 2px 5px rgba(15, 23, 42, 0.05)"
-      : "none";
-    const artworkSurfaceShadow = isLightTheme
-      ? "0 10px 22px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.06)"
-      : "0 10px 24px rgba(0, 0, 0, 0.18)";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -2984,10 +2957,10 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .empty-card,
         .media-player-card {
-          background: ${cardBackground};
-          border: ${cardBorder};
+          background: ${playerStyles.background};
+          border: ${playerStyles.border};
           border-radius: ${playerStyles.border_radius};
-          box-shadow: ${cardShadow};
+          box-shadow: ${playerStyles.box_shadow};
           isolation: isolate;
           min-height: ${playerStyles.min_height};
           overflow: hidden;
@@ -2996,14 +2969,14 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--active {
-          background: ${isLightTheme
-            ? activeCardBackground
-            : `linear-gradient(180deg, rgba(42, 88, 180, 0.22), rgba(18, 34, 74, 0.28)), ${playerStyles.background}`};
-          border-color: ${isLightTheme ? "rgba(109, 163, 255, 0.18)" : "rgba(109, 163, 255, 0.24)"};
+          background:
+            linear-gradient(180deg, rgba(42, 88, 180, 0.22), rgba(18, 34, 74, 0.28)),
+            ${playerStyles.background};
+          border-color: rgba(109, 163, 255, 0.24);
           box-shadow:
-            ${cardShadow},
-            0 0 0 1px ${isLightTheme ? "rgba(109, 163, 255, 0.06)" : "rgba(109, 163, 255, 0.08)"},
-            ${isLightTheme ? "0 12px 24px rgba(16, 34, 82, 0.08)" : "0 18px 38px rgba(16, 34, 82, 0.18)"};
+            ${playerStyles.box_shadow},
+            0 0 0 1px rgba(109, 163, 255, 0.08),
+            0 18px 38px rgba(16, 34, 82, 0.18);
         }
 
         .empty-card {
@@ -3025,7 +2998,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card::before {
-          background: linear-gradient(180deg, ${isLightTheme ? "rgba(255, 255, 255, 0.12)" : "rgba(255, 255, 255, 0.06)"}, rgba(255, 255, 255, 0));
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
           content: "";
           inset: 0;
           pointer-events: none;
@@ -3162,10 +3135,10 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__artwork {
           align-items: center;
           appearance: none;
-          background: ${artworkSurfaceBackground};
-          border: 1px solid ${artworkSurfaceBorder};
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 22px;
-          box-shadow: inset 0 1px 0 ${artworkSurfaceInset}, ${artworkSurfaceShadow};
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 24px rgba(0, 0, 0, 0.18);
           color: inherit;
           cursor: default;
           display: flex;
@@ -3209,7 +3182,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__unavailable-badge {
           align-items: center;
           background: #ff9b4a;
-          border: 2px solid ${isLightTheme ? "rgba(255, 255, 255, 0.94)" : "var(--ha-card-background, rgba(28, 28, 32, 1))"};
+          border: 2px solid var(--ha-card-background, rgba(28, 28, 32, 1));
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
           color: #ffffff;
@@ -3361,10 +3334,10 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__transport {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 ${surfaceInset}, ${surfaceShadow};
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
           display: inline-flex;
           gap: 6px;
           margin: 0 auto;
@@ -3646,8 +3619,8 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__tv-volume-wrap {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
           display: grid;
           min-height: ${playerStyles.slider_wrap_height};
@@ -3710,8 +3683,8 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__chip {
           align-items: center;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
           color: var(--secondary-text-color);
           display: inline-flex;
@@ -3771,8 +3744,8 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__source-button {
           align-items: center;
           appearance: none;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
           color: var(--secondary-text-color);
           cursor: pointer;
@@ -3800,8 +3773,8 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__volume-button {
           align-items: center;
           appearance: none;
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -3812,7 +3785,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__control {
-          box-shadow: inset 0 1px 0 ${surfaceInset}, ${surfaceShadow};
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
           height: ${playerStyles.control_size};
           width: ${playerStyles.control_size};
         }
@@ -3867,10 +3840,10 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__dots {
-          background: ${surfaceBackground};
-          border: 1px solid ${surfaceBorder};
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 ${surfaceInset}, ${surfaceShadow};
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
           display: inline-flex;
           gap: 4px;
           justify-content: center;
