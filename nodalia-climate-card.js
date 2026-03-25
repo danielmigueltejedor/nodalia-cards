@@ -1202,7 +1202,6 @@ class NodaliaClimateCard extends HTMLElement {
       20,
       Math.min(parseSizeToPixels(styles.dial.thumb_size, 24), tightLayout ? 21 : compactLayout ? 22 : 24),
     );
-    const dialRadiusPx = Number(((DIAL_CIRCLE_RADIUS * dialSizePx) / DIAL_VIEWBOX_SIZE).toFixed(3));
     const stepControlSize = Math.max(
       40,
       Math.min(parseSizeToPixels(styles.step_control.size, 50), tightLayout ? 42 : compactLayout ? 46 : 50),
@@ -1227,6 +1226,16 @@ class NodaliaClimateCard extends HTMLElement {
     const currentAngle = currentRatio === null
       ? null
       : DIAL_START_ANGLE + (currentRatio * DIAL_SWEEP);
+    const markerRadiusPercent = (DIAL_CIRCLE_RADIUS / DIAL_VIEWBOX_SIZE) * 100;
+    const getMarkerPosition = angle => {
+      const radians = (angle * Math.PI) / 180;
+      return {
+        left: Number((50 + (Math.cos(radians) * markerRadiusPercent)).toFixed(3)),
+        top: Number((50 + (Math.sin(radians) * markerRadiusPercent)).toFixed(3)),
+      };
+    };
+    const thumbPosition = getMarkerPosition(dialAngle);
+    const currentMarkerPosition = currentAngle === null ? null : getMarkerPosition(currentAngle);
 
     if (config.show_state_chip !== false) {
       chips.push(`<div class="climate-card__chip climate-card__chip--state">${escapeHtml(this._getStateLabel(state))}</div>`);
@@ -1433,9 +1442,6 @@ class NodaliaClimateCard extends HTMLElement {
           --climate-angle: ${dialAngle}deg;
           --climate-progress-length: ${progressLength};
           --climate-dial-size: ${dialSizePx}px;
-          --climate-dial-radius: calc(var(--climate-dial-size) * ${(DIAL_CIRCLE_RADIUS / DIAL_VIEWBOX_SIZE).toFixed(6)});
-          --climate-marker-inset: 0px;
-          --climate-marker-radius: calc(var(--climate-dial-radius) - var(--climate-marker-inset));
           --climate-thumb-size: ${thumbSizePx}px;
           background: ${styles.dial.background};
           border-radius: 50%;
@@ -1493,11 +1499,11 @@ class NodaliaClimateCard extends HTMLElement {
           border-radius: 50%;
           box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.12);
           height: var(--climate-thumb-size);
-          left: 50%;
+          left: var(--climate-thumb-left, 50%);
           pointer-events: auto;
           position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%) rotate(calc(var(--climate-angle) + 90deg)) translateY(calc(-1 * var(--climate-marker-radius)));
+          top: var(--climate-thumb-top, 50%);
+          transform: translate(-50%, -50%);
           width: var(--climate-thumb-size);
           z-index: 2;
         }
@@ -1508,12 +1514,12 @@ class NodaliaClimateCard extends HTMLElement {
           border-radius: 50%;
           box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.08);
           height: calc(var(--climate-thumb-size) * 0.58);
-          left: 50%;
+          left: var(--climate-current-left, 50%);
           opacity: ${currentAngle === null ? "0" : "1"};
           pointer-events: none;
           position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%) rotate(calc(var(--climate-current-angle, 0deg) + 90deg)) translateY(calc(-1 * var(--climate-marker-radius)));
+          top: var(--climate-current-top, 50%);
+          transform: translate(-50%, -50%);
           width: calc(var(--climate-thumb-size) * 0.58);
           z-index: 1;
         }
@@ -1702,7 +1708,6 @@ class NodaliaClimateCard extends HTMLElement {
 
           .climate-card__dial {
             --climate-dial-size: min(${dialSizePx}px, 100%);
-            --climate-marker-inset: 2px;
             --climate-thumb-size: min(${thumbSizePx}px, calc(var(--climate-dial-size) * 0.082));
           }
         }
@@ -1736,7 +1741,7 @@ class NodaliaClimateCard extends HTMLElement {
               aria-valuemin="${temperatureRange.min}"
               aria-valuemax="${temperatureRange.max}"
               aria-valuenow="${Number.isFinite(targetTemperature) ? targetTemperature : temperatureRange.min}"
-              style="${currentAngle === null ? "" : `--climate-current-angle:${currentAngle}deg;`}"
+              style="--climate-thumb-left:${thumbPosition.left}%;--climate-thumb-top:${thumbPosition.top}%;${currentMarkerPosition ? `--climate-current-left:${currentMarkerPosition.left}%;--climate-current-top:${currentMarkerPosition.top}%;` : ""}"
             >
               <svg class="climate-card__dial-svg" viewBox="0 0 ${DIAL_VIEWBOX_SIZE} ${DIAL_VIEWBOX_SIZE}" aria-hidden="true">
                 <circle
