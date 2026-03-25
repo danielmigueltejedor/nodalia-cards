@@ -23307,7 +23307,7 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   _getCurrentMode(state) {
-    return String(state?.state || state?.attributes?.hvac_mode || "").trim();
+    return String(state?.attributes?.hvac_mode || state?.state || "").trim();
   }
 
   _getCurrentAction(state) {
