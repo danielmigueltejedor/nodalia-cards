@@ -909,9 +909,11 @@ if (!customElements.get(EDITOR_TAG)) {
   customElements.define(EDITOR_TAG, NodaliaInsigniaCardEditor);
 }
 
-window.customCards = window.customCards || [];
-window.customCards.push({
+window.customBadges = window.customBadges || [];
+window.customBadges.push({
   type: CARD_TAG,
-  name: "Nodalia Insignia Card",
-  description: "Insignia compacta estilo chip burbuja para entidad o estado breve.",
+  name: "Nodalia Insignia",
+  preview: true,
+  description: "Insignia compacta estilo chip burbuja para usar en la zona de badges.",
+  documentationURL: "https://developers.home-assistant.io/docs/frontend/custom-ui/custom-badge/",
 });
