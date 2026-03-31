@@ -674,6 +674,9 @@ class NodaliaInsigniaCard extends HTMLElement {
 
         .insignia-card--icon-only {
           border-radius: 999px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           height: var(--icon-only-size);
           width: var(--icon-only-size);
         }
@@ -729,7 +732,9 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         .insignia-card--icon-only .insignia-card__icon {
+          height: calc(var(--icon-only-size) - 8px);
           margin: 0 auto;
+          width: calc(var(--icon-only-size) - 8px);
         }
 
         .insignia-card__icon img {
