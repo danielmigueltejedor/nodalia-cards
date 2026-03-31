@@ -34324,17 +34324,17 @@ const DEFAULT_CONFIG = {
       border: "1px solid rgba(255, 255, 255, 0.06)",
       border_radius: "999px",
       box_shadow: "var(--ha-card-box-shadow)",
-      padding: "8px 12px",
-      gap: "10px",
+      padding: "4px 8px",
+      gap: "8px",
     },
     icon: {
-      size: "34px",
+      size: "26px",
       background: "rgba(255, 255, 255, 0.05)",
       on_color: "var(--info-color, #71c0ff)",
       off_color: "var(--state-inactive-color, rgba(255, 255, 255, 0.55))",
     },
-    title_size: "13px",
-    value_size: "13px",
+    title_size: "12px",
+    value_size: "12px",
   },
 };
 
@@ -34816,7 +34816,8 @@ class NodaliaInsigniaCard extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
-          display: block;
+          display: inline-block;
+          line-height: 1;
         }
 
         * {
@@ -34832,6 +34833,9 @@ class NodaliaInsigniaCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${styles.card.box_shadow};
           color: var(--primary-text-color);
+          display: inline-flex;
+          height: auto;
+          min-height: 0;
           overflow: hidden;
         }
 
