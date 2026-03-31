@@ -711,6 +711,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           display: flex;
           flex: 1 1 auto;
           justify-content: center;
+          margin: 0;
           padding: 0;
           width: 100%;
           height: 100%;
@@ -735,6 +736,7 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         .insignia-card--icon-only .insignia-card__icon {
+          align-self: center;
           height: calc(var(--icon-only-size) - 8px);
           margin: 0;
           width: calc(var(--icon-only-size) - 8px);
