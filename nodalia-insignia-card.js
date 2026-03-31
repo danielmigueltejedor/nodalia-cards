@@ -264,6 +264,26 @@ function getDynamicEntityIcon(state) {
   return state.attributes?.icon || "";
 }
 
+function formatNumericString(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return "";
+  }
+
+  const numeric = Number(raw.replace(",", "."));
+  if (!Number.isFinite(numeric)) {
+    return raw;
+  }
+
+  if (Number.isInteger(numeric)) {
+    return String(numeric);
+  }
+
+  return raw
+    .replace(/(\.\d*?[1-9])0+$/g, "$1")
+    .replace(/\.0+$/g, "");
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -383,7 +403,7 @@ class NodaliaInsigniaCard extends HTMLElement {
   _getResolvedValue(state) {
     if (this._config.state_attribute) {
       const attrValue = state?.attributes?.[this._config.state_attribute];
-      return attrValue === undefined || attrValue === null ? "" : String(attrValue);
+      return attrValue === undefined || attrValue === null ? "" : formatNumericString(attrValue);
     }
 
     if (!state) {
@@ -391,7 +411,8 @@ class NodaliaInsigniaCard extends HTMLElement {
     }
 
     const unit = String(state.attributes?.unit_of_measurement || "").trim();
-    return unit ? `${state.state} ${unit}` : String(state.state ?? "");
+    const formatted = formatNumericString(state.state);
+    return unit ? `${formatted} ${unit}` : formatted;
   }
 
   _getResolvedIcon(state) {
@@ -418,6 +439,33 @@ class NodaliaInsigniaCard extends HTMLElement {
     }
 
     return ["on", "home", "playing", "heat", "cool", "dry", "fan_only", "open", "unlocked"].includes(stateKey);
+  }
+
+  _shouldDimIcon(state) {
+    if (!state) {
+      return false;
+    }
+
+    const domain = getEntityDomain(state);
+    if (["sensor", "input_number", "input_datetime", "input_text", "number"].includes(domain)) {
+      return false;
+    }
+
+    return [
+      "light",
+      "switch",
+      "fan",
+      "humidifier",
+      "binary_sensor",
+      "alarm_control_panel",
+      "lock",
+      "cover",
+      "media_player",
+      "vacuum",
+      "input_boolean",
+      "device_tracker",
+      "person",
+    ].includes(domain);
   }
 
   _getTintColor(state) {
@@ -587,6 +635,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     const value = this._getResolvedValue(state);
     const icon = this._getResolvedIcon(state);
     const active = this._isActive(state);
+    const dimIcon = this._shouldDimIcon(state);
     const tint = this._getTintColor(state);
     const unavailable = config.entity && isUnavailableState(state);
     const showName = config.show_name !== false;
@@ -653,8 +702,12 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         .insignia-card--icon-only .insignia-card__content {
-          grid-template-columns: 1fr;
-          padding: 4px;
+          align-items: center;
+          display: flex;
+          justify-content: center;
+          padding: 0;
+          width: 100%;
+          height: 100%;
         }
 
         .insignia-card__icon {
@@ -667,7 +720,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.05),
             0 8px 20px rgba(0, 0, 0, 0.14);
-          color: ${active ? styles.icon.on_color : styles.icon.off_color};
+          color: ${active ? styles.icon.on_color : (dimIcon ? styles.icon.off_color : "var(--primary-text-color)")};
           display: inline-flex;
           height: ${iconSizePx}px;
           justify-content: center;
@@ -716,7 +769,7 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         .insignia-card__value {
-          color: var(--secondary-text-color);
+          color: var(--primary-text-color);
           font-size: ${valueSize};
           font-weight: 600;
         }

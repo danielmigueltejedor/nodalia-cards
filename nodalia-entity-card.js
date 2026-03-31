@@ -537,9 +537,34 @@ class NodaliaEntityCard extends HTMLElement {
     const rawState = String(state.state ?? "").trim();
     const unit = String(state.attributes?.unit_of_measurement || "").trim();
     const key = normalizeTextKey(rawState);
+    const domain = getEntityDomain(state);
+    const deviceClass = normalizeTextKey(state.attributes?.device_class);
 
     if (rawState && unit && /^-?\d+([.,]\d+)?$/.test(rawState)) {
       return `${rawState} ${unit}`;
+    }
+
+    if (domain === "binary_sensor") {
+      const isOpenState = ["on", "open", "opening"].includes(key);
+      const isClosedState = ["off", "closed", "closing"].includes(key);
+
+      if (["door", "opening", "window", "garage_door"].includes(deviceClass)) {
+        if (isOpenState) {
+          return "Abierta";
+        }
+        if (isClosedState) {
+          return "Cerrada";
+        }
+      }
+
+      if (["motion", "occupancy", "presence", "moving"].includes(deviceClass)) {
+        if (isOpenState) {
+          return "Detectado";
+        }
+        if (isClosedState) {
+          return "No detectado";
+        }
+      }
     }
 
     switch (key) {
