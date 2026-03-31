@@ -40001,6 +40001,10 @@ class NodaliaInsigniaCard extends HTMLElement {
           --mdc-icon-size: var(--icon-only-icon-size);
           height: var(--icon-only-icon-size);
           width: var(--icon-only-icon-size);
+          line-height: var(--icon-only-icon-size);
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .insignia-card__copy {
