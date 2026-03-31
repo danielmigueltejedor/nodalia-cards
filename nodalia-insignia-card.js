@@ -679,6 +679,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           height: var(--icon-only-size);
           min-height: var(--icon-only-size);
           min-width: var(--icon-only-size);
+          margin: 0 auto;
           width: var(--icon-only-size);
         }
 
