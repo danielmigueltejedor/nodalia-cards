@@ -645,11 +645,19 @@ class NodaliaInsigniaCard extends HTMLElement {
     const pictureUrl = this._getResolvedPicture(state);
     const showPicture = Boolean(pictureUrl);
 
+    this.toggleAttribute("data-icon-only", iconOnly);
+
     this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: inline-block;
           line-height: 1;
+        }
+
+        :host([data-icon-only]) {
+          display: flex;
+          justify-content: center;
+          width: 100%;
         }
 
         * {
@@ -712,6 +720,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           place-items: center;
           margin: 0;
           padding: 0;
+          grid-template-columns: 1fr;
           width: 100%;
           height: 100%;
         }
@@ -736,6 +745,7 @@ class NodaliaInsigniaCard extends HTMLElement {
 
         .insignia-card--icon-only .insignia-card__icon {
           align-self: center;
+          justify-self: center;
           height: 100%;
           margin: 0;
           width: 100%;
