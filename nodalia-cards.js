@@ -34943,7 +34943,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           width: 10px;
         }
       </style>
-      <ha-card class="insignia-card">
+      <div class="insignia-card">
         <div class="insignia-card__content" data-insignia-action="primary">
           <div class="insignia-card__icon">
             <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
@@ -34955,7 +34955,7 @@ class NodaliaInsigniaCard extends HTMLElement {
             ${showValue ? `<div class="insignia-card__value">${escapeHtml(value)}</div>` : ""}
           </div>
         </div>
-      </ha-card>
+      </div>
     `;
   }
 }
