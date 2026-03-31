@@ -678,6 +678,8 @@ class NodaliaInsigniaCard extends HTMLElement {
           align-items: center;
           justify-content: center;
           height: var(--icon-only-size);
+          min-height: var(--icon-only-size);
+          min-width: var(--icon-only-size);
           width: var(--icon-only-size);
         }
 
@@ -707,6 +709,7 @@ class NodaliaInsigniaCard extends HTMLElement {
         .insignia-card--icon-only .insignia-card__content {
           align-items: center;
           display: flex;
+          flex: 1 1 auto;
           justify-content: center;
           padding: 0;
           width: 100%;
@@ -733,7 +736,7 @@ class NodaliaInsigniaCard extends HTMLElement {
 
         .insignia-card--icon-only .insignia-card__icon {
           height: calc(var(--icon-only-size) - 8px);
-          margin: 0 auto;
+          margin: 0;
           width: calc(var(--icon-only-size) - 8px);
         }
 
@@ -854,7 +857,9 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
     }
     this._config = normalizeConfig(nextConfig);
     this._emitConfig(compactConfig(this._config));
-    this._render();
+    if (options.rerender !== false) {
+      this._render();
+    }
   }
 
   _handleInput(event) {
@@ -868,14 +873,23 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
       return;
     }
 
+    if (target instanceof HTMLSelectElement && event.type === "input") {
+      return;
+    }
+
     if (target instanceof HTMLInputElement && target.type === "checkbox") {
-      this._updateValue(path, target.checked);
+      this._updateValue(path, target.checked, { rerender: true });
       return;
     }
 
     if (target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement) {
+      const isTextInput = (target instanceof HTMLInputElement && target.type === "text")
+        || target instanceof HTMLTextAreaElement;
+      const rerender = !(isTextInput && event.type === "input");
+
       this._updateValue(path, target.value, {
         removeIfEmpty: target.dataset?.removeIfEmpty === "true",
+        rerender,
       });
     }
   }
