@@ -16,6 +16,7 @@ const DEFAULT_CONFIG = {
   name: "",
   icon: "",
   use_entity_icon: false,
+  use_entity_picture: false,
   state_attribute: "",
   tap_action: "auto",
   tap_service: "",
@@ -370,6 +371,15 @@ class NodaliaInsigniaCard extends HTMLElement {
     return this._config.icon || state?.attributes?.icon || "mdi:star-four-points-circle";
   }
 
+  _getResolvedPicture(state) {
+    if (!this._config.use_entity_picture) {
+      return "";
+    }
+
+    const picture = state?.attributes?.entity_picture;
+    return picture ? String(picture) : "";
+  }
+
   _isActive(state) {
     const stateKey = normalizeTextKey(state?.state);
     if (!state) {
@@ -523,6 +533,8 @@ class NodaliaInsigniaCard extends HTMLElement {
     const unavailable = config.entity && isUnavailableState(state);
     const showName = config.show_name !== false;
     const showValue = config.show_value !== false && Boolean(value);
+    const pictureUrl = this._getResolvedPicture(state);
+    const showPicture = Boolean(pictureUrl);
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -544,16 +556,8 @@ class NodaliaInsigniaCard extends HTMLElement {
           display: inline-flex;
           height: auto;
           min-height: 0;
+          position: relative;
           overflow: hidden;
-        }
-
-        .insignia-card::before {
-          background: linear-gradient(90deg, color-mix(in srgb, ${tint} 18%, transparent), transparent 62%);
-          content: "";
-          inset: 0;
-          opacity: ${active ? "0.35" : "0.18"};
-          pointer-events: none;
-          position: absolute;
         }
 
         .insignia-card__content {
@@ -583,6 +587,13 @@ class NodaliaInsigniaCard extends HTMLElement {
           justify-content: center;
           position: relative;
           width: ${iconSizePx}px;
+        }
+
+        .insignia-card__icon img {
+          border-radius: 999px;
+          height: 100%;
+          object-fit: cover;
+          width: 100%;
         }
 
         .insignia-card__icon ha-icon {
@@ -654,7 +665,10 @@ class NodaliaInsigniaCard extends HTMLElement {
       <div class="insignia-card">
         <div class="insignia-card__content" data-insignia-action="primary">
           <div class="insignia-card__icon">
-            <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+            ${showPicture
+              ? `<img src="${escapeHtml(pictureUrl)}" alt="${escapeHtml(title)}" />`
+              : `<ha-icon icon="${escapeHtml(icon)}"></ha-icon>`
+            }
             ${unavailable ? '<span class="insignia-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>' : ""}
           </div>
           <div class="insignia-card__copy">
@@ -847,6 +861,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Usar icono de la entidad", "use_entity_icon", config.use_entity_icon === true)}
+            ${this._renderCheckboxField("Usar foto de la entidad", "use_entity_picture", config.use_entity_picture === true)}
             ${this._renderCheckboxField("Mostrar nombre", "show_name", config.show_name !== false)}
             ${this._renderCheckboxField("Mostrar valor", "show_value", config.show_value !== false)}
           </div>
