@@ -39879,9 +39879,9 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         :host([data-icon-only]) {
-          display: flex;
+          display: inline-flex;
           justify-content: center;
-          width: 100%;
+          width: auto;
         }
 
         * {
@@ -39911,7 +39911,6 @@ class NodaliaInsigniaCard extends HTMLElement {
           height: var(--icon-only-size);
           min-height: var(--icon-only-size);
           min-width: var(--icon-only-size);
-          margin: 0 auto;
           width: var(--icon-only-size);
         }
 
