@@ -39247,6 +39247,7 @@ const DEFAULT_CONFIG = {
     title_size: "12px",
     value_size: "12px",
   },
+  tint_preset: "auto",
 };
 
 const STUB_CONFIG = {
@@ -39589,6 +39590,22 @@ class NodaliaInsigniaCard extends HTMLElement {
   }
 
   _getTintColor(state) {
+    const preset = normalizeTextKey(this._config?.tint_preset || "auto");
+    if (preset && preset !== "auto") {
+      const presets = {
+        red: "#ff6b6b",
+        orange: "#f6b04d",
+        yellow: "#f2c94c",
+        green: "#83d39c",
+        blue: "#4da3ff",
+        purple: "#b59dff",
+        pink: "#ff8fd1",
+        teal: "#7fd0c8",
+        gray: "var(--state-inactive-color, rgba(255, 255, 255, 0.55))",
+      };
+      return presets[preset] || presets.blue;
+    }
+
     const domain = getEntityDomain(state);
     const stateKey = normalizeTextKey(state?.state);
     const deviceClass = normalizeTextKey(state?.attributes?.device_class);
@@ -40133,6 +40150,18 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
             ${this._renderTextField("Tamano nombre", "styles.title_size", config.styles?.title_size || DEFAULT_CONFIG.styles.title_size)}
             ${this._renderTextField("Tamano valor", "styles.value_size", config.styles?.value_size || DEFAULT_CONFIG.styles.value_size)}
             ${this._renderTextField("Padding tarjeta", "styles.card.padding", config.styles?.card?.padding || DEFAULT_CONFIG.styles.card.padding)}
+            ${this._renderSelectField("Tinte", "tint_preset", config.tint_preset || "auto", [
+              { value: "auto", label: "Auto" },
+              { value: "red", label: "Rojo" },
+              { value: "orange", label: "Naranja" },
+              { value: "yellow", label: "Amarillo" },
+              { value: "green", label: "Verde" },
+              { value: "blue", label: "Azul" },
+              { value: "purple", label: "Morado" },
+              { value: "pink", label: "Rosa" },
+              { value: "teal", label: "Turquesa" },
+              { value: "gray", label: "Gris" },
+            ])}
           </div>
         </div>
       </div>
