@@ -39866,6 +39866,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     const showValue = config.show_value !== false && Boolean(value);
     const iconOnly = !showName && !showValue;
     const iconOnlySize = Math.max(36, Math.min(iconSizePx + 12, 46));
+    const iconOnlyIconSize = Math.round(iconOnlySize * 0.56);
     const pictureUrl = this._getResolvedPicture(state);
     const showPicture = Boolean(pictureUrl);
 
@@ -39906,8 +39907,9 @@ class NodaliaInsigniaCard extends HTMLElement {
 
         .insignia-card--icon-only {
           border-radius: 999px;
-          display: grid;
-          place-items: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           height: var(--icon-only-size);
           min-height: var(--icon-only-size);
           min-width: var(--icon-only-size);
@@ -39996,9 +39998,9 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         .insignia-card--icon-only .insignia-card__icon ha-icon {
-          --mdc-icon-size: 56%;
-          height: 56%;
-          width: 56%;
+          --mdc-icon-size: var(--icon-only-icon-size);
+          height: var(--icon-only-icon-size);
+          width: var(--icon-only-icon-size);
         }
 
         .insignia-card__copy {
@@ -40061,7 +40063,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           width: 10px;
         }
       </style>
-      <div class="insignia-card ${iconOnly ? "insignia-card--icon-only" : ""}" style="--icon-only-size: ${iconOnlySize}px;">
+      <div class="insignia-card ${iconOnly ? "insignia-card--icon-only" : ""}" style="--icon-only-size: ${iconOnlySize}px; --icon-only-icon-size: ${iconOnlyIconSize}px;">
         <div class="insignia-card__content" data-insignia-action="primary">
           <div class="insignia-card__icon">
             ${showPicture
