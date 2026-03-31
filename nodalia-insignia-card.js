@@ -536,10 +536,7 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         .insignia-card {
-          background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${tint} 14%, transparent) 0%, transparent 58%),
-            linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0%, rgba(0, 0, 0, 0.02) 100%),
-            ${styles.card.background};
+          background: ${styles.card.background};
           border: ${styles.card.border};
           border-radius: ${styles.card.border_radius};
           box-shadow: ${styles.card.box_shadow};
@@ -551,10 +548,10 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         .insignia-card::before {
-          background: linear-gradient(90deg, color-mix(in srgb, ${tint} 28%, transparent), transparent 58%);
+          background: linear-gradient(90deg, color-mix(in srgb, ${tint} 18%, transparent), transparent 62%);
           content: "";
           inset: 0;
-          opacity: ${active ? "0.8" : "0.45"};
+          opacity: ${active ? "0.35" : "0.18"};
           pointer-events: none;
           position: absolute;
         }
