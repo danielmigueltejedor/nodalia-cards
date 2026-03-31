@@ -674,9 +674,8 @@ class NodaliaInsigniaCard extends HTMLElement {
 
         .insignia-card--icon-only {
           border-radius: 999px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          display: grid;
+          place-items: center;
           height: var(--icon-only-size);
           min-height: var(--icon-only-size);
           min-width: var(--icon-only-size);
@@ -708,9 +707,8 @@ class NodaliaInsigniaCard extends HTMLElement {
 
         .insignia-card--icon-only .insignia-card__content {
           align-items: center;
-          display: flex;
-          flex: 1 1 auto;
-          justify-content: center;
+          display: grid;
+          place-items: center;
           margin: 0;
           padding: 0;
           width: 100%;
@@ -737,9 +735,9 @@ class NodaliaInsigniaCard extends HTMLElement {
 
         .insignia-card--icon-only .insignia-card__icon {
           align-self: center;
-          height: calc(var(--icon-only-size) - 8px);
+          height: 100%;
           margin: 0;
-          width: calc(var(--icon-only-size) - 8px);
+          width: 100%;
         }
 
         .insignia-card__icon img {
