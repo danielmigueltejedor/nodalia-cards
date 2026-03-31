@@ -39373,6 +39373,31 @@ function normalizeTextKey(value) {
     .replace(/^_+|_+$/g, "");
 }
 
+function normalizeTintPreset(value) {
+  const key = normalizeTextKey(value);
+  if (!key) {
+    return "";
+  }
+
+  const map = {
+    grey: "gray",
+    light_grey: "gray",
+    light_gray: "gray",
+    red: "red",
+    orange: "orange",
+    yellow: "yellow",
+    green: "green",
+    blue: "blue",
+    purple: "purple",
+    pink: "pink",
+    teal: "teal",
+    gray: "gray",
+    auto: "auto",
+  };
+
+  return map[key] || key;
+}
+
 function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
@@ -39459,7 +39484,12 @@ function fireEvent(node, type, detail, options) {
 }
 
 function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const merged = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const legacyColor = normalizeTintPreset(rawConfig?.color);
+  if (legacyColor && legacyColor !== "auto" && (!merged.tint_preset || merged.tint_preset === "auto")) {
+    merged.tint_preset = legacyColor;
+  }
+  return merged;
 }
 
 class NodaliaInsigniaCard extends HTMLElement {
@@ -39590,7 +39620,7 @@ class NodaliaInsigniaCard extends HTMLElement {
   }
 
   _getTintColor(state) {
-    const preset = normalizeTextKey(this._config?.tint_preset || "auto");
+    const preset = normalizeTintPreset(this._config?.tint_preset || this._config?.color || "auto");
     if (preset && preset !== "auto") {
       const presets = {
         red: "#ff6b6b",
@@ -39609,7 +39639,8 @@ class NodaliaInsigniaCard extends HTMLElement {
     const domain = getEntityDomain(state);
     const stateKey = normalizeTextKey(state?.state);
     const deviceClass = normalizeTextKey(state?.attributes?.device_class);
-    const unit = normalizeTextKey(state?.attributes?.unit_of_measurement);
+    const rawUnit = String(state?.attributes?.unit_of_measurement || "").trim().toLowerCase();
+    const unit = normalizeTextKey(rawUnit);
 
     if (domain === "light") {
       return stateKey === "on" ? "var(--warning-color, #f6b04d)" : "var(--state-inactive-color, rgba(255, 255, 255, 0.5))";
@@ -39630,10 +39661,10 @@ class NodaliaInsigniaCard extends HTMLElement {
       return "#8fc9ff";
     }
     if (domain === "sensor") {
-      if (deviceClass === "temperature" || unit === "c" || unit === "°c" || unit === "degc") {
+      if (deviceClass === "temperature" || unit === "c" || rawUnit.includes("°c") || rawUnit.includes("degc")) {
         return "#ff6b6b";
       }
-      if (deviceClass === "humidity" || unit === "%" || unit === "percent") {
+      if (deviceClass === "humidity" || rawUnit.includes("%") || unit === "percent") {
         return "#4da3ff";
       }
     }
