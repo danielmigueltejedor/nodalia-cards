@@ -896,6 +896,14 @@ if (!customElements.get(EDITOR_TAG)) {
   customElements.define(EDITOR_TAG, NodaliaInsigniaCardEditor);
 }
 
+if (Array.isArray(window.customCards)) {
+  for (let index = window.customCards.length - 1; index >= 0; index -= 1) {
+    if (window.customCards[index]?.type === CARD_TAG) {
+      window.customCards.splice(index, 1);
+    }
+  }
+}
+
 window.customBadges = window.customBadges || [];
 if (!window.customBadges.some(item => item?.type === CARD_TAG)) {
   window.customBadges.push({

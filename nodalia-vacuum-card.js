@@ -723,6 +723,12 @@ class NodaliaVacuumCard extends HTMLElement {
       return "Autovaciando";
     }
 
+    const roomMappings = this._getRoomMappings(state);
+    const cleaningAreaLabel = this._getCleaningAreaLabel(state, roomMappings);
+    if (cleaningAreaLabel) {
+      return `Limpiando: ${cleaningAreaLabel}`;
+    }
+
     switch (normalizeTextKey(this._getReportedStateValue(state))) {
       case "cleaning":
       case "vacuuming":
@@ -796,6 +802,35 @@ class NodaliaVacuumCard extends HTMLElement {
       .filter(Boolean)
       .map(value => normalizeTextKey(value))
       .join(" ");
+  }
+
+  _getActiveTaskTokens(state) {
+    const attributes = state?.attributes || {};
+    const auxiliaryState = this._getAuxiliaryState();
+    const auxiliaryAttributes = auxiliaryState?.attributes || {};
+
+    return [
+      auxiliaryState?.state,
+      auxiliaryAttributes.activity,
+      auxiliaryAttributes.phase,
+      auxiliaryAttributes.job,
+      auxiliaryAttributes.job_state,
+      auxiliaryAttributes.task_status,
+      auxiliaryAttributes.current_task,
+      auxiliaryAttributes.cleaning_state,
+      auxiliaryAttributes.operation,
+      state?.state,
+      attributes.activity,
+      attributes.phase,
+      attributes.job,
+      attributes.job_state,
+      attributes.task_status,
+      attributes.current_task,
+      attributes.cleaning_state,
+      attributes.operation,
+    ]
+      .filter(Boolean)
+      .map(value => normalizeTextKey(value));
   }
 
   _matchesActivity(state, keywords) {
@@ -876,7 +911,9 @@ class NodaliaVacuumCard extends HTMLElement {
           return null;
         }
 
-        const cleaningAreaId = room.cleaning_area_id ? String(room.cleaning_area_id) : "";
+        const cleaningAreaId = this._normalizeCleaningAreaId(
+          room.cleaning_area_id ?? room.cleaningAreaId ?? room.area_id ?? room.areaId,
+        );
         const fallbackId = room.id !== undefined && room.id !== null ? String(room.id) : "";
         const uniqueId = cleaningAreaId || fallbackId;
         if (!uniqueId || seen.has(uniqueId)) {
@@ -884,13 +921,72 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         seen.add(uniqueId);
+        const rawName = room.name ? String(room.name) : "";
+        const normalizedName = this._humanizeRoomLabel(rawName || uniqueId);
         return {
           cleaningAreaId: uniqueId,
           id: fallbackId,
-          name: room.name ? String(room.name) : uniqueId,
+          name: normalizedName,
         };
       })
       .filter(Boolean);
+  }
+
+  _normalizeCleaningAreaId(value) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+
+    const cleaned = raw
+      .replace(/[\[\]\(\)"']/g, " ")
+      .replace(/cleaning_area_id[:=]/gi, " ")
+      .replace(/,+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (!cleaned) {
+      return "";
+    }
+
+    return cleaned.split(" ")[0] || cleaned;
+  }
+
+  _humanizeRoomLabel(value) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+
+    const normalized = raw.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!normalized) {
+      return raw;
+    }
+
+    if (/^\d+$/.test(normalized)) {
+      return `Area ${normalized}`;
+    }
+
+    return normalized
+      .split(" ")
+      .map(token => (token ? token[0].toUpperCase() + token.slice(1) : token))
+      .join(" ");
+  }
+
+  _getCleaningAreaIdFromState(state) {
+    const reported = this._getReportedStateValue(state);
+    const match = String(reported || "").match(/cleaning_area_id:\s*([^\s,]+)/i);
+    return match ? this._normalizeCleaningAreaId(match[1]) : "";
+  }
+
+  _getCleaningAreaLabel(state, roomMappings) {
+    const id = this._getCleaningAreaIdFromState(state);
+    if (!id) {
+      return "";
+    }
+
+    const room = roomMappings.find(item => item.cleaningAreaId === id || item.id === id);
+    return room?.name || "";
   }
 
   _sanitizeSelectedCleaningAreas(roomMappings) {
@@ -1100,7 +1196,7 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _isAutoEmptying(state) {
-    return this._matchesActivity(state, [
+    const keywords = [
       "emptying",
       "self_emptying",
       "selfemptying",
@@ -1112,7 +1208,15 @@ class NodaliaVacuumCard extends HTMLElement {
       "autovaciando",
       "auto_vaciado",
       "vaciando",
-    ]);
+    ];
+
+    const reportedKey = this._getReportedStateKey(state);
+    if (keywords.some(keyword => reportedKey.includes(normalizeTextKey(keyword)))) {
+      return true;
+    }
+
+    const activeTokens = this._getActiveTaskTokens(state);
+    return keywords.some(keyword => activeTokens.includes(normalizeTextKey(keyword)));
   }
 
   _isPaused(state) {

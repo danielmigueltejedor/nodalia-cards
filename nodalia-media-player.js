@@ -1239,7 +1239,11 @@ class NodaliaMediaPlayer extends HTMLElement {
           this._pendingRenderAfterDrag = true;
           return;
         }
-        this._render();
+
+        const updated = this._updateProgressTick(players);
+        if (!updated) {
+          this._render();
+        }
       }, 1000);
       return;
     }
@@ -1260,6 +1264,46 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     this._render();
+  }
+
+  _updateProgressTick(players) {
+    if (!this.shadowRoot || !Array.isArray(players) || players.length === 0) {
+      return false;
+    }
+
+    const activeIndex = clamp(this._activePlayerIndex ?? 0, 0, players.length - 1);
+    const player = players[activeIndex];
+    if (!player?.entity) {
+      return false;
+    }
+
+    const state = this._hass?.states?.[player.entity];
+    const progress = state ? this._getPlayerProgress(state) : null;
+    if (!progress) {
+      return false;
+    }
+
+    const card = this.shadowRoot.querySelector(
+      `.media-player-card[data-media-card-index="${activeIndex}"]`,
+    );
+    if (!card) {
+      return false;
+    }
+
+    let updated = false;
+    const fill = card.querySelector(".media-player__progress-fill");
+    if (fill) {
+      fill.style.width = `${progress.percent}%`;
+      updated = true;
+    }
+
+    const timeChip = card.querySelector(".media-player__chip--time");
+    if (timeChip) {
+      timeChip.textContent = `${formatDuration(progress.position)} / ${formatDuration(progress.duration)}`;
+      updated = true;
+    }
+
+    return updated;
   }
 
   _callService(action) {
