@@ -39591,6 +39591,8 @@ class NodaliaInsigniaCard extends HTMLElement {
   _getTintColor(state) {
     const domain = getEntityDomain(state);
     const stateKey = normalizeTextKey(state?.state);
+    const deviceClass = normalizeTextKey(state?.attributes?.device_class);
+    const unit = normalizeTextKey(state?.attributes?.unit_of_measurement);
 
     if (domain === "light") {
       return stateKey === "on" ? "var(--warning-color, #f6b04d)" : "var(--state-inactive-color, rgba(255, 255, 255, 0.5))";
@@ -39609,6 +39611,14 @@ class NodaliaInsigniaCard extends HTMLElement {
     }
     if (domain === "weather") {
       return "#8fc9ff";
+    }
+    if (domain === "sensor") {
+      if (deviceClass === "temperature" || unit === "c" || unit === "°c" || unit === "degc") {
+        return "#ff6b6b";
+      }
+      if (deviceClass === "humidity" || unit === "%" || unit === "percent") {
+        return "#4da3ff";
+      }
     }
 
     return "var(--info-color, #71c0ff)";
@@ -39732,6 +39742,8 @@ class NodaliaInsigniaCard extends HTMLElement {
     const unavailable = config.entity && isUnavailableState(state);
     const showName = config.show_name !== false;
     const showValue = config.show_value !== false && Boolean(value);
+    const iconOnly = !showName && !showValue;
+    const iconOnlySize = Math.max(36, Math.min(iconSizePx + 12, 46));
     const pictureUrl = this._getResolvedPicture(state);
     const showPicture = Boolean(pictureUrl);
 
@@ -39762,6 +39774,12 @@ class NodaliaInsigniaCard extends HTMLElement {
           contain: paint;
         }
 
+        .insignia-card--icon-only {
+          border-radius: 999px;
+          height: var(--icon-only-size);
+          width: var(--icon-only-size);
+        }
+
         .insignia-card::before {
           background:
             radial-gradient(circle at 8% 10%, color-mix(in srgb, ${tint} 22%, transparent) 0%, transparent 55%),
@@ -39785,6 +39803,11 @@ class NodaliaInsigniaCard extends HTMLElement {
           z-index: 1;
         }
 
+        .insignia-card--icon-only .insignia-card__content {
+          grid-template-columns: 1fr;
+          padding: 4px;
+        }
+
         .insignia-card__icon {
           align-items: center;
           background:
@@ -39801,6 +39824,10 @@ class NodaliaInsigniaCard extends HTMLElement {
           justify-content: center;
           position: relative;
           width: ${iconSizePx}px;
+        }
+
+        .insignia-card--icon-only .insignia-card__icon {
+          margin: 0 auto;
         }
 
         .insignia-card__icon img {
@@ -39876,7 +39903,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           width: 10px;
         }
       </style>
-      <div class="insignia-card">
+      <div class="insignia-card ${iconOnly ? "insignia-card--icon-only" : ""}" style="--icon-only-size: ${iconOnlySize}px;">
         <div class="insignia-card__content" data-insignia-action="primary">
           <div class="insignia-card__icon">
             ${showPicture
