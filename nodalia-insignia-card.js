@@ -200,14 +200,6 @@ function normalizeTintPreset(value) {
   return map[key] || key;
 }
 
-function extractTemplateBody(value) {
-  const raw = String(value ?? "").trim();
-  if (!raw.startsWith("[[[") || !raw.endsWith("]]]")) {
-    return "";
-  }
-  return raw.slice(3, -3);
-}
-
 function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
@@ -452,17 +444,26 @@ class NodaliaInsigniaCard extends HTMLElement {
         continue;
       }
       const rawValue = String(rule.value ?? "").trim();
-      const body = extractTemplateBody(rawValue);
-      try {
-        const hasWrapper = body.length > 0;
-        const expression = hasWrapper ? body : rawValue;
-        const fn = new Function("hass", "states", "user", `return (function(){${expression}})();`);
-        const ok = Boolean(fn(this._hass, this._hass?.states || {}, this._hass?.user));
-        if (!ok) {
+      const hasDrawerLogic = rawValue.includes("drawer")
+        || rawValue.includes("mdc-drawer")
+        || rawValue.includes("hass-toggle-menu");
+      if (hasDrawerLogic) {
+        const main = document
+          .querySelector("body > home-assistant")
+          ?.shadowRoot?.querySelector("home-assistant-main");
+        const drawer =
+          main?.shadowRoot?.querySelector("ha-drawer") ||
+          main?.shadowRoot?.querySelector("[drawer]") ||
+          main?.shadowRoot?.querySelector(".mdc-drawer");
+        const isOpen =
+          drawer?.opened === true ||
+          drawer?.open === true ||
+          drawer?.hasAttribute?.("open") ||
+          drawer?.classList?.contains("mdc-drawer--open");
+        if (isOpen) {
           return false;
         }
-      } catch (_error) {
-        return false;
+        continue;
       }
     }
 
