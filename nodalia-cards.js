@@ -40005,6 +40005,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           display: flex;
           align-items: center;
           justify-content: center;
+          transform: translateY(1px);
         }
 
         .insignia-card__copy {
