@@ -39867,7 +39867,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     const showValue = config.show_value !== false && Boolean(value);
     const iconOnly = !showName && !showValue;
     const iconOnlySize = Math.max(36, Math.min(iconSizePx + 12, 46));
-    const iconOnlyIconSize = Math.round(iconOnlySize * 0.56);
+    const iconOnlyIconSize = Math.round(iconOnlySize * 0.52);
     const iconOnlyOffsetY = String(styles.icon?.icon_only_offset_y ?? DEFAULT_CONFIG.styles.icon.icon_only_offset_y);
     const pictureUrl = this._getResolvedPicture(state);
     const showPicture = Boolean(pictureUrl);
@@ -40117,7 +40117,9 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
       setByPath(nextConfig, path, value);
     }
     this._config = normalizeConfig(nextConfig);
-    this._emitConfig(compactConfig(this._config));
+    if (options.emit !== false) {
+      this._emitConfig(compactConfig(this._config));
+    }
     if (options.rerender !== false) {
       this._render();
     }
@@ -40146,11 +40148,13 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
     if (target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement) {
       const isTextInput = (target instanceof HTMLInputElement && target.type === "text")
         || target instanceof HTMLTextAreaElement;
-      const rerender = !(isTextInput && event.type === "input");
+      const isLiveInput = isTextInput && event.type === "input";
+      const rerender = !isLiveInput;
 
       this._updateValue(path, target.value, {
         removeIfEmpty: target.dataset?.removeIfEmpty === "true",
         rerender,
+        emit: !isLiveInput,
       });
     }
   }
@@ -40315,6 +40319,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
             ${this._renderTextField("Tamano nombre", "styles.title_size", config.styles?.title_size || DEFAULT_CONFIG.styles.title_size)}
             ${this._renderTextField("Tamano valor", "styles.value_size", config.styles?.value_size || DEFAULT_CONFIG.styles.value_size)}
             ${this._renderTextField("Padding tarjeta", "styles.card.padding", config.styles?.card?.padding || DEFAULT_CONFIG.styles.card.padding)}
+            ${this._renderTextField("Ajuste icono (solo icono)", "styles.icon.icon_only_offset_y", config.styles?.icon?.icon_only_offset_y || DEFAULT_CONFIG.styles.icon.icon_only_offset_y)}
             ${this._renderSelectField("Tinte", "tint_preset", config.tint_preset || "auto", [
               { value: "auto", label: "Auto" },
               { value: "red", label: "Rojo" },
