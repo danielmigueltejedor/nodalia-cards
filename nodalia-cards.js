@@ -39867,7 +39867,8 @@ class NodaliaInsigniaCard extends HTMLElement {
     const showValue = config.show_value !== false && Boolean(value);
     const iconOnly = !showName && !showValue;
     const iconOnlySize = Math.max(36, Math.min(iconSizePx + 12, 46));
-    const iconOnlyIconSize = Math.round(iconOnlySize * 0.52);
+    const iconOnlyIconBase = parseSizeToPixels(styles.icon?.size, iconSizePx);
+    const iconOnlyIconSize = Math.max(18, Math.min(Math.round(iconOnlyIconBase), iconOnlySize - 8));
     const iconOnlyOffsetY = String(styles.icon?.icon_only_offset_y ?? DEFAULT_CONFIG.styles.icon.icon_only_offset_y);
     const pictureUrl = this._getResolvedPicture(state);
     const showPicture = Boolean(pictureUrl);
@@ -40102,11 +40103,24 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    if (this._hasActiveInput()) {
+      return;
+    }
     this._render();
   }
 
   _emitConfig(config) {
     fireEvent(this, "config-changed", { config });
+  }
+
+  _hasActiveInput() {
+    const active = this.shadowRoot?.activeElement;
+    if (!active) {
+      return false;
+    }
+    return active instanceof HTMLInputElement
+      || active instanceof HTMLTextAreaElement
+      || active instanceof HTMLSelectElement;
   }
 
   _updateValue(path, value, options = {}) {
