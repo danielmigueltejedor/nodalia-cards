@@ -44,6 +44,7 @@ const DEFAULT_CONFIG = {
       background: "rgba(255, 255, 255, 0.05)",
       on_color: "var(--info-color, #71c0ff)",
       off_color: "var(--state-inactive-color, rgba(255, 255, 255, 0.55))",
+      icon_only_offset_y: "2px",
     },
     title_size: "12px",
     value_size: "12px",
@@ -643,6 +644,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     const iconOnly = !showName && !showValue;
     const iconOnlySize = Math.max(36, Math.min(iconSizePx + 12, 46));
     const iconOnlyIconSize = Math.round(iconOnlySize * 0.56);
+    const iconOnlyOffsetY = String(styles.icon?.icon_only_offset_y ?? DEFAULT_CONFIG.styles.icon.icon_only_offset_y);
     const pictureUrl = this._getResolvedPicture(state);
     const showPicture = Boolean(pictureUrl);
 
@@ -784,7 +786,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           align-items: center;
           justify-content: center;
           position: relative;
-          top: 2px;
+          top: var(--icon-only-offset-y);
           transform: translateY(0) !important;
         }
 
@@ -848,7 +850,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           width: 10px;
         }
       </style>
-      <div class="insignia-card ${iconOnly ? "insignia-card--icon-only" : ""}" style="--icon-only-size: ${iconOnlySize}px; --icon-only-icon-size: ${iconOnlyIconSize}px;">
+      <div class="insignia-card ${iconOnly ? "insignia-card--icon-only" : ""}" style="--icon-only-size: ${iconOnlySize}px; --icon-only-icon-size: ${iconOnlyIconSize}px; --icon-only-offset-y: ${iconOnlyOffsetY};">
         <div class="insignia-card__content" data-insignia-action="primary">
           <div class="insignia-card__icon">
             ${showPicture
