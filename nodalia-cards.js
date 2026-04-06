@@ -39424,6 +39424,14 @@ function normalizeTintPreset(value) {
   return map[key] || key;
 }
 
+function extractTemplateBody(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw.startsWith("[[[") || !raw.endsWith("]]]")) {
+    return "";
+  }
+  return raw.slice(3, -3);
+}
+
 function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
@@ -39657,6 +39665,34 @@ class NodaliaInsigniaCard extends HTMLElement {
     return picture ? String(picture) : "";
   }
 
+  _evaluateVisibility() {
+    const rules = Array.isArray(this._config?.visibility) ? this._config.visibility : [];
+    if (!rules.length) {
+      return true;
+    }
+
+    for (const rule of rules) {
+      if (!rule || rule.condition !== "template") {
+        continue;
+      }
+      const body = extractTemplateBody(rule.value);
+      if (!body) {
+        continue;
+      }
+      try {
+        const fn = new Function("hass", "states", "user", `return (function(){${body}})();`);
+        const ok = Boolean(fn(this._hass, this._hass?.states || {}, this._hass?.user));
+        if (!ok) {
+          return false;
+        }
+      } catch (_error) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   _isActive(state) {
     const stateKey = normalizeTextKey(state?.state);
     if (!state) {
@@ -39872,6 +39908,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     const iconOnlyOffsetY = String(styles.icon?.icon_only_offset_y ?? DEFAULT_CONFIG.styles.icon.icon_only_offset_y);
     const pictureUrl = this._getResolvedPicture(state);
     const showPicture = Boolean(pictureUrl);
+    const isVisible = this._evaluateVisibility();
 
     this.toggleAttribute("data-icon-only", iconOnly);
 
@@ -40075,7 +40112,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           width: 10px;
         }
       </style>
-      <div class="insignia-card ${iconOnly ? "insignia-card--icon-only" : ""}" style="--icon-only-size: ${iconOnlySize}px; --icon-only-icon-size: ${iconOnlyIconSize}px; --icon-only-offset-y: ${iconOnlyOffsetY};">
+      <div class="insignia-card ${iconOnly ? "insignia-card--icon-only" : ""}" style="--icon-only-size: ${iconOnlySize}px; --icon-only-icon-size: ${iconOnlyIconSize}px; --icon-only-offset-y: ${iconOnlyOffsetY}; ${isVisible ? "" : "display:none;"}">
         <div class="insignia-card__content" data-insignia-action="primary">
           <div class="insignia-card__icon">
             ${showPicture
