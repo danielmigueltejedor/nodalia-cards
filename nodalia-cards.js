@@ -39675,12 +39675,12 @@ class NodaliaInsigniaCard extends HTMLElement {
       if (!rule || rule.condition !== "template") {
         continue;
       }
-      const body = extractTemplateBody(rule.value);
-      if (!body) {
-        continue;
-      }
+      const rawValue = String(rule.value ?? "").trim();
+      const body = extractTemplateBody(rawValue);
       try {
-        const fn = new Function("hass", "states", "user", `return (function(){${body}})();`);
+        const hasWrapper = body.length > 0;
+        const expression = hasWrapper ? body : rawValue;
+        const fn = new Function("hass", "states", "user", `return (function(){${expression}})();`);
         const ok = Boolean(fn(this._hass, this._hass?.states || {}, this._hass?.user));
         if (!ok) {
           return false;
