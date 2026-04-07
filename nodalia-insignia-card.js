@@ -22,6 +22,7 @@ const DEFAULT_CONFIG = {
   tap_service: "",
   tap_service_data: "",
   tap_url: "",
+  navigation_path: "",
   tap_new_tab: false,
   show_name: true,
   show_value: true,
@@ -578,7 +579,9 @@ class NodaliaInsigniaCard extends HTMLElement {
     const tapConfig = this._config.tap_action;
     const isObjectTap = isObject(tapConfig);
     const action = isObjectTap ? (tapConfig.action || "auto") : (tapConfig || "auto");
-    const navigationPath = isObjectTap ? tapConfig.navigation_path : this._config.tap_url;
+    const navigationPath = isObjectTap
+      ? tapConfig.navigation_path
+      : (this._config.navigation_path || this._config.tap_url);
 
     if (action === "none") {
       return;
@@ -1154,6 +1157,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
             ])}
             ${this._renderTextField("Servicio", "tap_service", config.tap_service, { removeIfEmpty: true })}
             ${this._renderTextField("Service data JSON", "tap_service_data", config.tap_service_data, { removeIfEmpty: true })}
+            ${this._renderTextField("Ruta navegacion", "navigation_path", config.navigation_path, { removeIfEmpty: true })}
             ${this._renderTextField("URL", "tap_url", config.tap_url, { removeIfEmpty: true })}
             ${this._renderCheckboxField("Abrir URL en nueva pestana", "tap_new_tab", config.tap_new_tab === true)}
           </div>
