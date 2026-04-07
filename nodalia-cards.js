@@ -39833,6 +39833,11 @@ class NodaliaInsigniaCard extends HTMLElement {
       return;
     }
 
+    if (action === "navigate" && this._config.tap_url) {
+      fireEvent(this, "hass-navigate", { path: this._config.tap_url });
+      return;
+    }
+
     if (action === "url" && this._config.tap_url) {
       if (this._config.tap_new_tab) {
         window.open(this._config.tap_url, "_blank", "noopener");
@@ -40354,6 +40359,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
               { value: "more-info", label: "More info" },
               { value: "toggle", label: "Toggle" },
               { value: "service", label: "Servicio" },
+              { value: "navigate", label: "Navegar" },
               { value: "url", label: "Abrir URL" },
               { value: "none", label: "Sin accion" },
             ])}
