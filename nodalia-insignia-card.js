@@ -575,7 +575,10 @@ class NodaliaInsigniaCard extends HTMLElement {
 
   _handlePrimaryAction() {
     const state = this._getState();
-    const action = this._config.tap_action || "auto";
+    const tapConfig = this._config.tap_action;
+    const isObjectTap = isObject(tapConfig);
+    const action = isObjectTap ? (tapConfig.action || "auto") : (tapConfig || "auto");
+    const navigationPath = isObjectTap ? tapConfig.navigation_path : this._config.tap_url;
 
     if (action === "none") {
       return;
@@ -609,8 +612,8 @@ class NodaliaInsigniaCard extends HTMLElement {
       return;
     }
 
-    if (action === "navigate" && this._config.tap_url) {
-      const path = this._config.tap_url;
+    if (action === "navigate" && navigationPath) {
+      const path = navigationPath;
       if (this._hass?.navigate) {
         this._hass.navigate(path);
         return;

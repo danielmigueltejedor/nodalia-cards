@@ -567,6 +567,15 @@ class NodaliaEntityCard extends HTMLElement {
       }
     }
 
+    if (domain === "lock") {
+      if (key === "locking") {
+        return "Bloqueando";
+      }
+      if (key === "unlocking") {
+        return "Desbloqueando";
+      }
+    }
+
     switch (key) {
       case "on":
         return "Encendido";
