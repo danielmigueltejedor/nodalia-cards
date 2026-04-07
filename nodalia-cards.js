@@ -39873,6 +39873,11 @@ class NodaliaInsigniaCard extends HTMLElement {
         this._hass.navigate(path);
         return;
       }
+      if (window?.history?.pushState) {
+        window.history.pushState(null, "", path);
+        fireEvent(this, "location-changed", { replace: false });
+        return;
+      }
       fireEvent(this, "hass-navigate", { path });
       return;
     }
