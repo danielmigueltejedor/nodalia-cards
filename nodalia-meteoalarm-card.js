@@ -188,18 +188,11 @@ function normalizeTextKey(value) {
 
 function getAlertLevel(alert = {}, fallback = "") {
   const level = alert.awareness_level || alert.level || alert.severity || fallback;
-  const parsed = parseMeteoCode(level);
-  if (parsed?.color) return parsed.color;
   return normalizeTextKey(level);
 }
 
 function getAlertColor(level) {
-  const key = normalizeTextKey(level);
-  if (key.includes("red")) return "#ff6b6b";
-  if (key.includes("orange")) return "#f6b04d";
-  if (key.includes("yellow")) return "#f2c94c";
-  if (key.includes("green")) return "#83d39c";
-  switch (key) {
+  switch (level) {
     case "red":
     case "extreme":
     case "severe":
@@ -228,56 +221,6 @@ function getAlertIcon(alert = {}) {
   if (key.includes("heat")) return "mdi:weather-sunny-alert";
   if (key.includes("cold")) return "mdi:snowflake-alert";
   return "mdi:alert-circle";
-}
-
-function parseMeteoCode(value) {
-  const key = normalizeTextKey(value);
-  if (!key) return null;
-  const parts = key.split("_");
-  const colors = ["green", "yellow", "orange", "red"];
-  let color = parts.find(part => colors.includes(part));
-  const severityMap = {
-    minor: "leve",
-    moderate: "moderado",
-    severe: "severo",
-    extreme: "extremo",
-    high: "alto",
-  };
-  const severityKey = parts.find(part => Object.keys(severityMap).includes(part));
-  const levelNum = parts.find(part => /^\d+$/.test(part));
-  if (!color && levelNum) {
-    const byNum = { "1": "green", "2": "yellow", "3": "orange", "4": "red" };
-    color = byNum[levelNum] || "";
-  }
-
-  const colorLabelMap = {
-    green: "verde",
-    yellow: "amarillo",
-    orange: "naranja",
-    red: "rojo",
-  };
-  const colorLabel = colorLabelMap[color] || "";
-  const severityLabel = severityKey ? severityMap[severityKey] : "";
-  const label = colorLabel
-    ? `Nivel ${colorLabel}${severityLabel ? ` · ${severityLabel}` : ""}`
-    : "";
-
-  return { color, colorLabel, severityKey, severityLabel, label };
-}
-
-function translateAlertType(alert = {}) {
-  const key = normalizeTextKey(alert.event || alert.type || alert.awareness_type || "");
-  if (!key) return "";
-  if (key.includes("storm") || key.includes("thunder")) return "tormentas";
-  if (key.includes("wind")) return "viento";
-  if (key.includes("rain")) return "lluvias";
-  if (key.includes("snow")) return "nieve";
-  if (key.includes("fog")) return "niebla";
-  if (key.includes("heat")) return "calor";
-  if (key.includes("cold")) return "frio";
-  if (key.includes("coastal")) return "fenomeno costero";
-  if (key.includes("fire")) return "incendios";
-  return "";
 }
 
 function formatDateTime(value) {
@@ -380,21 +323,12 @@ class NodaliaMeteoalarmCard extends HTMLElement {
   }
 
   _renderAlert(alert, level, accent, styles) {
-    const levelCode = alert.awareness_level || alert.level || alert.severity || alert.event || "";
-    const parsed = parseMeteoCode(levelCode);
-    const typeLabel = translateAlertType(alert);
-    const rawHeadline = alert.headline || alert.event || "Aviso";
-    const normalizedHeadline = normalizeTextKey(rawHeadline);
-    const normalizedCode = normalizeTextKey(levelCode);
-    const headline = (parsed?.colorLabel && typeLabel && (normalizedHeadline === "aviso" || normalizedHeadline === normalizedCode))
-      ? `Aviso de ${typeLabel} de nivel ${parsed.colorLabel}`
-      : rawHeadline;
+    const headline = alert.headline || alert.event || "Aviso";
     const description = alert.description || alert.detail || "";
     const icon = getAlertIcon(alert);
     const effective = formatDateTime(alert.onset || alert.effective || alert.start);
     const expires = formatDateTime(alert.expires || alert.end);
     const timeframe = effective && expires ? `${effective} · ${expires}` : effective || expires;
-    const levelLabel = parsed?.label || (level ? `Nivel ${level}` : "sin nivel");
 
     return `
       <div class="meteoalarm__alert">
@@ -409,7 +343,7 @@ class NodaliaMeteoalarmCard extends HTMLElement {
         ${description && this._config.show_details ? `<div class="meteoalarm__body">${escapeHtml(description)}</div>` : ""}
         <div class="meteoalarm__chips">
           <span class="meteoalarm__chip" style="background: color-mix(in srgb, ${accent} 22%, transparent);">
-            ${escapeHtml(levelLabel)}
+            ${escapeHtml(level || "sin nivel")}
           </span>
           ${timeframe ? `<span class="meteoalarm__chip">${escapeHtml(timeframe)}</span>` : ""}
         </div>

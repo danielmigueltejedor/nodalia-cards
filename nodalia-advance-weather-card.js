@@ -6,9 +6,6 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   num_segments: 12,
-  show_hourly: true,
-  show_daily: true,
-  daily_segments: 6,
   show_wind: true,
   show_precipitation: true,
   show_precipitation_probability: false,
@@ -42,9 +39,6 @@ const STUB_CONFIG = {
   entity: "weather.openweathermap",
   name: "Tiempo",
   num_segments: 12,
-  show_hourly: true,
-  show_daily: true,
-  daily_segments: 6,
 };
 
 const HAPTIC_PATTERNS = {
@@ -281,48 +275,6 @@ function formatTime(value) {
   return date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 }
 
-function formatDay(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString("es-ES", { weekday: "short", day: "2-digit" });
-}
-
-function buildDailyForecast(forecast = []) {
-  const grouped = new Map();
-  forecast.forEach(item => {
-    const date = new Date(item.datetime || item.date);
-    if (Number.isNaN(date.getTime())) return;
-    const key = date.toISOString().split("T")[0];
-    if (!grouped.has(key)) grouped.set(key, []);
-    grouped.get(key).push(item);
-  });
-
-  const days = [];
-  grouped.forEach(items => {
-    const temps = items
-      .flatMap(item => [
-        item.temperature,
-        item.templow,
-        item.temperature_low,
-        item.temp_min,
-        item.temp_max,
-      ])
-      .filter(value => Number.isFinite(Number(value)));
-    const max = temps.length ? Math.max(...temps.map(Number)) : undefined;
-    const min = temps.length ? Math.min(...temps.map(Number)) : undefined;
-    const representative = items.find(item => item.condition) || items[0];
-    days.push({
-      datetime: representative?.datetime || representative?.date || items[0]?.datetime,
-      condition: representative?.condition || "",
-      max,
-      min,
-    });
-  });
-
-  return days;
-}
-
 class NodaliaAdvanceWeatherCard extends HTMLElement {
   static getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -434,9 +386,7 @@ class NodaliaAdvanceWeatherCard extends HTMLElement {
     const windBearing = attrs.wind_bearing;
     const precip = attrs.precipitation || attrs.precipitation_intensity;
     const precipProb = attrs.forecast?.[0]?.precipitation_probability;
-    const rawForecast = Array.isArray(attrs.forecast) ? attrs.forecast : [];
-    const forecast = rawForecast.slice(0, Number(config.num_segments || 12));
-    const dailyForecast = buildDailyForecast(rawForecast).slice(0, Number(config.daily_segments || 6));
+    const forecast = Array.isArray(attrs.forecast) ? attrs.forecast.slice(0, Number(config.num_segments || 12)) : [];
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -526,16 +476,6 @@ class NodaliaAdvanceWeatherCard extends HTMLElement {
           position: relative;
           z-index:1;
         }
-        .weather__daily {
-          display: grid;
-          grid-auto-flow: column;
-          grid-auto-columns: minmax(70px, 1fr);
-          gap: 10px;
-          overflow-x: auto;
-          padding-bottom: 4px;
-          position: relative;
-          z-index: 1;
-        }
         .forecast__item {
           display: grid;
           gap: 6px;
@@ -547,16 +487,6 @@ class NodaliaAdvanceWeatherCard extends HTMLElement {
           font-weight: 700;
           color: var(--primary-text-color);
           font-size: 12px;
-        }
-        .daily__temps {
-          display: flex;
-          gap: 6px;
-          font-size: 11px;
-          color: var(--secondary-text-color);
-        }
-        .daily__max {
-          font-weight: 700;
-          color: var(--primary-text-color);
         }
       </style>
       <div class="weather">
@@ -578,28 +508,13 @@ class NodaliaAdvanceWeatherCard extends HTMLElement {
           ${config.show_precipitation && precip != null ? this._renderChip("Lluvia", `${precip} mm`) : ""}
           ${config.show_precipitation_probability && precipProb != null ? this._renderChip("Prob.", `${precipProb}%`) : ""}
         </div>
-        ${config.show_hourly !== false && forecast.length
+        ${forecast.length
           ? `<div class="weather__forecast">
               ${forecast.map(item => `
                 <div class="forecast__item">
                   <div>${escapeHtml(formatTime(item.datetime))}</div>
                   <ha-icon icon="${conditionIcon(item.condition)}"></ha-icon>
                   <div class="forecast__temp">${escapeHtml(formatNumber(item.temperature))}°</div>
-                </div>
-              `).join("")}
-            </div>`
-          : ""
-        }
-        ${config.show_daily !== false && dailyForecast.length
-          ? `<div class="weather__daily">
-              ${dailyForecast.map(item => `
-                <div class="forecast__item">
-                  <div>${escapeHtml(formatDay(item.datetime))}</div>
-                  <ha-icon icon="${conditionIcon(item.condition)}"></ha-icon>
-                  <div class="daily__temps">
-                    ${item.max != null ? `<span class="daily__max">${escapeHtml(formatNumber(item.max))}°</span>` : ""}
-                    ${item.min != null ? `<span>${escapeHtml(formatNumber(item.min))}°</span>` : ""}
-                  </div>
                 </div>
               `).join("")}
             </div>`
@@ -725,7 +640,6 @@ class NodaliaAdvanceWeatherCardEditor extends HTMLElement {
             </label>
             ${this._renderTextField("Nombre", "name", config.name, { removeIfEmpty: true })}
             ${this._renderTextField("Segmentos horario", "num_segments", config.num_segments)}
-            ${this._renderTextField("Dias pronostico", "daily_segments", config.daily_segments)}
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Mostrar humedad", "show_humidity", config.show_humidity !== false)}
@@ -733,8 +647,6 @@ class NodaliaAdvanceWeatherCardEditor extends HTMLElement {
             ${this._renderCheckboxField("Mostrar viento", "show_wind", config.show_wind !== false)}
             ${this._renderCheckboxField("Mostrar lluvia", "show_precipitation", config.show_precipitation !== false)}
             ${this._renderCheckboxField("Mostrar prob. lluvia", "show_precipitation_probability", config.show_precipitation_probability === true)}
-            ${this._renderCheckboxField("Mostrar pronostico horario", "show_hourly", config.show_hourly !== false)}
-            ${this._renderCheckboxField("Mostrar pronostico dias", "show_daily", config.show_daily !== false)}
           </div>
         </div>
       </div>
