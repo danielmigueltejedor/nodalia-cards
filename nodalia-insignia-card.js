@@ -610,7 +610,12 @@ class NodaliaInsigniaCard extends HTMLElement {
     }
 
     if (action === "navigate" && this._config.tap_url) {
-      fireEvent(this, "hass-navigate", { path: this._config.tap_url });
+      const path = this._config.tap_url;
+      if (this._hass?.navigate) {
+        this._hass.navigate(path);
+        return;
+      }
+      fireEvent(this, "hass-navigate", { path });
       return;
     }
 

@@ -604,6 +604,28 @@ class NodaliaEntityCard extends HTMLElement {
         return "Bloqueado";
       case "unlocked":
         return "Desbloqueado";
+      case "locking":
+        return "Bloqueando";
+      case "unlocking":
+        return "Desbloqueando";
+      case "locking_failed":
+        return "Bloqueo fallido";
+      case "unlocking_failed":
+        return "Desbloqueo fallido";
+      case "jammed":
+        return "Atascado";
+      case "pending":
+        return "Pendiente";
+      case "opening":
+        return "Abriendo";
+      case "closing":
+        return "Cerrando";
+      case "stopped":
+        return "Detenido";
+      case "paused":
+        return "En pausa";
+      case "unavailable":
+        return "No disponible";
       case "armed_away":
         return "Armado fuera";
       case "armed_home":
