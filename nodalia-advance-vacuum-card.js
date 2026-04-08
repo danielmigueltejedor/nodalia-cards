@@ -2587,9 +2587,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         }
 
         .advance-vacuum-card__footer {
-          display: grid;
+          align-items: center;
+          display: flex;
+          flex-direction: column;
           gap: 12px;
-          justify-items: center;
+          width: 100%;
         }
 
         .advance-vacuum-card__header {
@@ -2768,9 +2770,19 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         }
 
         .advance-vacuum-card__utility-panel {
+          animation: advance-vacuum-utility-panel-in 180ms ease forwards;
           display: grid;
           gap: 10px;
           justify-items: center;
+          opacity: 0;
+          transform: translateY(-8px);
+          transform-origin: top center;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__utility-panel-slot {
+          display: flex;
+          justify-content: center;
           width: 100%;
         }
 
@@ -3011,6 +3023,18 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         .advance-vacuum-card__selection-chip strong {
           color: var(--primary-text-color);
         }
+
+        @keyframes advance-vacuum-utility-panel-in {
+          from {
+            opacity: 0;
+            transform: translateY(-8px);
+          }
+
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
       </style>
       <ha-card class="advance-vacuum-card">
         <div class="advance-vacuum-card__map">
@@ -3150,7 +3174,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           </div>
         </div>
 
-        ${utilityPanelMarkup}
+        ${
+          utilityPanelMarkup
+            ? `<div class="advance-vacuum-card__utility-panel-slot">${utilityPanelMarkup}</div>`
+            : ""
+        }
         </div>
       </ha-card>
     `;
