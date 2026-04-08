@@ -1330,6 +1330,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       suction: "",
       mop: "",
     };
+    this._lastResolvedModePanelPreset = "";
     this._converter = new CoordinatesConverter([]);
     this._mapScale = 1;
     this._mapOffset = { x: 0, y: 0 };
@@ -1392,6 +1393,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._activeUtilityPanel = null;
     this._activeModePanelPreset = "";
     this._activeDockPanelSection = DOCK_PANEL_SECTIONS[0]?.id || "control";
+    this._lastResolvedModePanelPreset = "";
     this._mapScale = 1;
     this._mapOffset = { x: 0, y: 0 };
     this._activeMapPointers = new Map();
@@ -2657,6 +2659,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _syncRememberedModeSelections(state) {
+    if (this._isDocked(state) || this._isReturning(state)) {
+      return;
+    }
+
     ["suction", "mop"].forEach(kind => {
       const descriptor = this._getModeDescriptor(kind, state);
       if (descriptor?.current && !this._isSharedSmartMode(descriptor.current)) {
@@ -2926,7 +2932,23 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getActiveModePanelPreset(state = this._getVacuumState()) {
-    return this._activeModePanelPreset || this._detectModePanelPreset(state) || "vacuum_mop";
+    const detectedPreset = this._detectModePanelPreset(state);
+    const manualPreset = this._activeModePanelPreset;
+
+    if (
+      detectedPreset &&
+      detectedPreset !== "custom" &&
+      !this._isDocked(state) &&
+      !this._isReturning(state)
+    ) {
+      this._lastResolvedModePanelPreset = detectedPreset;
+    }
+
+    if (this._isDocked(state) || this._isReturning(state)) {
+      return manualPreset || this._lastResolvedModePanelPreset || detectedPreset || "vacuum_mop";
+    }
+
+    return manualPreset || detectedPreset || this._lastResolvedModePanelPreset || "vacuum_mop";
   }
 
   _getActiveModePanelPresetConfig(state = this._getVacuumState()) {
@@ -2936,6 +2958,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   _selectModePanelPreset(presetId, state = this._getVacuumState()) {
     this._activeModePanelPreset = presetId;
+    this._lastResolvedModePanelPreset = presetId;
 
     const selection = this._getModePanelPresetSelection(presetId, state);
     if (!selection) {
