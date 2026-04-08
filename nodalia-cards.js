@@ -33990,6 +33990,24 @@ function humanizeModeLabel(value, kind = "generic") {
     .replace(/\b\w/g, match => match.toUpperCase());
 }
 
+function humanizeSelectOptionLabel(value, kind = "generic") {
+  const baseLabel = humanizeModeLabel(value, kind);
+  if (!baseLabel) {
+    return "";
+  }
+
+  const normalized = baseLabel
+    .replaceAll("_", " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) {
+    return "";
+  }
+
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase();
+}
+
 function normalizeCustomMenuItems(items) {
   return arrayFromMaybe(items)
     .filter(isObject)
@@ -36810,7 +36828,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         <select class="advance-vacuum-card__utility-select" data-dock-setting-id="${escapeHtml(descriptor.id)}">
           ${descriptor.options.map(option => `
             <option value="${escapeHtml(option)}" ${normalizeTextKey(descriptor.current) === normalizeTextKey(option) ? "selected" : ""}>
-              ${escapeHtml(humanizeModeLabel(option, descriptor.id === "mop_mode" ? "mop_mode" : "generic"))}
+              ${escapeHtml(humanizeSelectOptionLabel(option, descriptor.id === "mop_mode" ? "mop_mode" : "generic"))}
             </option>
           `).join("")}
         </select>
