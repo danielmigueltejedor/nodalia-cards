@@ -34652,6 +34652,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._activeUtilityPanel = null;
     this._selectedRoomIds = [];
     this._activeCleaningRoomIds = [];
+    this._activeCleaningZones = [];
     this._selectedPredefinedZoneIds = [];
     this._manualZones = [];
     this._selectedManualZoneIndex = -1;
@@ -34717,6 +34718,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._repeats = clamp(Number(this._config.max_repeats || 1), 1, 9);
     this._selectedRoomIds = [];
     this._activeCleaningRoomIds = [];
+    this._activeCleaningZones = [];
     this._selectedPredefinedZoneIds = [];
     this._manualZones = [];
     this._selectedManualZoneIndex = -1;
@@ -35019,6 +35021,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     if (!this._isActive(state)) {
       this._activeCleaningRoomIds = [];
+      this._activeCleaningZones = [];
     }
   }
 
@@ -35095,6 +35098,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       activeDockPanelSection: String(this._activeDockPanelSection || ""),
       selectedRooms: this._selectedRoomIds.join("|"),
       activeCleaningRooms: this._activeCleaningRoomIds.join("|"),
+      activeCleaningZones: this._activeCleaningZones.map(zone => `${zone.x1}:${zone.y1}:${zone.x2}:${zone.y2}`).join("|"),
       currentRoom: currentRoomId,
       selectedZones: this._selectedPredefinedZoneIds.join("|"),
       manualZones: this._manualZones.length,
@@ -36248,6 +36252,19 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       .join(", ");
   }
 
+  _vacuumZoneToCssPolygon(zone) {
+    if (!zone) {
+      return "";
+    }
+
+    return this._vacuumOutlineToCssPolygon([
+      { x: zone.x1, y: zone.y1 },
+      { x: zone.x2, y: zone.y1 },
+      { x: zone.x2, y: zone.y2 },
+      { x: zone.x1, y: zone.y2 },
+    ]);
+  }
+
   _zoneToSvgRect(zone) {
     const first = this._converter.vacuumToMap(zone.x1, zone.y1);
     const second = this._converter.vacuumToMap(zone.x2, zone.y2);
@@ -36826,6 +36843,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
       if (segments.length) {
         this._activeCleaningRoomIds = segments.map(item => String(item));
+        this._activeCleaningZones = [];
         await this._callNamedService("vacuum.send_command", {
           entity_id: this._config.entity,
           command: "app_segment_clean",
@@ -36851,6 +36869,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         if (!this._isRoomCleaningSessionActive(state)) {
           this._activeCleaningRoomIds = [];
         }
+        this._activeCleaningZones = selectedZones.map(zone => ({
+          x1: Number(zone[0]),
+          y1: Number(zone[1]),
+          x2: Number(zone[2]),
+          y2: Number(zone[3]),
+        }));
 
         if (isTransientZoneAddition && this._isCleaning(state)) {
           await this._callVacuumService("pause");
@@ -36871,6 +36895,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     if (this._activeMode === "goto" && this._gotoPoint) {
       this._activeCleaningRoomIds = [];
+      this._activeCleaningZones = [];
       await this._callNamedService("roborock.set_vacuum_goto_position", {
         entity_id: this._config.entity,
         x: Math.round(this._gotoPoint.x),
@@ -36881,6 +36906,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     this._activeCleaningRoomIds = [];
+    this._activeCleaningZones = [];
     await this._callVacuumService("start");
     this._triggerHaptic("selection");
   }
@@ -37571,6 +37597,43 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     `;
   }
 
+  _renderZoneSelectionHighlights(zones, mapImageUrl) {
+    if (
+      this._activeMode !== "rooms" ||
+      !Array.isArray(zones) ||
+      !zones.length ||
+      !mapImageUrl
+    ) {
+      return "";
+    }
+
+    const highlights = zones
+      .map((zone, index) => ({
+        clipPath: this._vacuumZoneToCssPolygon(zone),
+        key: `zone-${index}`,
+      }))
+      .filter(item => item.clipPath);
+
+    if (!highlights.length) {
+      return "";
+    }
+
+    return `
+      <div class="advance-vacuum-card__room-highlight-layer advance-vacuum-card__room-highlight-layer--zones" aria-hidden="true">
+        ${highlights.map(highlight => `
+          <img
+            class="advance-vacuum-card__room-highlight-image"
+            src="${escapeHtml(mapImageUrl)}"
+            alt=""
+            draggable="false"
+            style="clip-path: polygon(${escapeHtml(highlight.clipPath)});"
+            data-zone-highlight-id="${escapeHtml(highlight.key)}"
+          />
+        `).join("")}
+      </div>
+    `;
+  }
+
   _renderRoomFallbackList(rooms) {
     if (this._activeMode !== "rooms" || !rooms.length) {
       return "";
@@ -37729,6 +37792,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   _renderModePanel(state) {
     const activePreset = this._getActiveModePanelPreset(state);
     const descriptors = this._getVisibleModePanelDescriptors(state, activePreset);
+    const highlightedRoomIds = new Set(this._getHighlightedRoomIds(state));
     if (!PANEL_MODE_PRESETS.length && !descriptors.length && this._activeMode === "all") {
       return "";
     }
@@ -37934,8 +37998,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const gotoColor = styles.map.goto_color || "#f6b73c";
     const isCleaningSessionActive = this._isCleaning(state) || this._isPaused(state) || this._isReturning(state);
     const isRoomSelectionMode = currentMode.id === "rooms";
+    const activeCleaningZones = isRoomSelectionMode ? this._activeCleaningZones : [];
     const showRoomSelectionDim = isRoomSelectionMode;
-    const showRealRoomSelectionColors = isRoomSelectionMode && highlightedRoomIds.size > 0;
+    const showRealRoomSelectionColors = isRoomSelectionMode && (highlightedRoomIds.size > 0 || activeCleaningZones.length > 0);
     const hasPendingZoneSelection = currentMode.id === "zone" && (
       this._selectedPredefinedZoneIds.length > 0 ||
       this._manualZones.length > 0
@@ -38323,6 +38388,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           opacity: 0.72;
         }
 
+        .advance-vacuum-card__zone-rect--room-overlay {
+          fill: rgba(255, 255, 255, 0.04);
+          stroke: rgba(255, 255, 255, 0.42);
+        }
+
         .advance-vacuum-card__goto-line {
           stroke: color-mix(in srgb, ${gotoColor} 72%, rgba(255,255,255,0.8));
           stroke-dasharray: 10 10;
@@ -38617,6 +38687,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                 }
                 ${showRoomSelectionDim ? `<div class="advance-vacuum-card__map-room-dim"></div>` : ""}
                 ${showRealRoomSelectionColors ? this._renderRoomSelectionHighlights(rooms, highlightedRoomIds, mapImageUrl) : ""}
+                ${showRealRoomSelectionColors ? this._renderZoneSelectionHighlights(activeCleaningZones, mapImageUrl) : ""}
                 <svg class="advance-vacuum-card__map-svg" viewBox="0 0 ${this._mapImageWidth} ${this._mapImageHeight}" preserveAspectRatio="none">
                   ${currentMode.id === "rooms" ? rooms.map(room => room.outlines.map(outline => `
                     <polygon
@@ -38625,6 +38696,21 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                       points="${escapeHtml(this._vacuumOutlineToSvgPoints(outline))}"
                     ></polygon>
                   `).join("")).join("") : ""}
+
+                  ${currentMode.id === "rooms" ? activeCleaningZones.map(zone => {
+                    const rect = this._zoneToSvgRect(zone);
+                    return `
+                      <rect
+                        class="advance-vacuum-card__zone-rect advance-vacuum-card__zone-rect--room-overlay"
+                        x="${rect.x.toFixed(1)}"
+                        y="${rect.y.toFixed(1)}"
+                        width="${rect.width.toFixed(1)}"
+                        height="${rect.height.toFixed(1)}"
+                        rx="18"
+                        ry="18"
+                      ></rect>
+                    `;
+                  }).join("") : ""}
 
                   ${currentMode.id === "zone" ? allZoneRects.map(zone => {
                     const rect = this._zoneToSvgRect(zone);
