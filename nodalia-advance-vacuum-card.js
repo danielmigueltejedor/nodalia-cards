@@ -4355,10 +4355,25 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const image = event.currentTarget;
     const width = Number(image?.naturalWidth || image?.width || 0);
     const height = Number(image?.naturalHeight || image?.height || 0);
+    const staleImages = this.shadowRoot?.querySelectorAll("[data-map-image-previous='true']") || [];
+
+    image?.classList?.remove("is-pending");
+    image?.classList?.add("is-loaded");
+
+    staleImages.forEach(staleImage => {
+      staleImage.classList.add("is-fading-out");
+      window.setTimeout(() => {
+        staleImage.remove();
+      }, 260);
+    });
+
     if (width > 0 && height > 0) {
+      const dimensionsChanged = width !== this._mapImageWidth || height !== this._mapImageHeight;
       this._mapImageWidth = width;
       this._mapImageHeight = height;
-      this._render();
+      if (dimensionsChanged) {
+        this._render();
+      }
     }
   }
 
@@ -5303,8 +5318,18 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         .advance-vacuum-card__map-image {
           display: block;
           height: 100%;
+          inset: 0;
           object-fit: cover;
+          opacity: 1;
+          position: absolute;
+          transition: opacity 220ms ease-out;
+          will-change: opacity;
           width: 100%;
+        }
+
+        .advance-vacuum-card__map-image.is-pending,
+        .advance-vacuum-card__map-image.is-fading-out {
+          opacity: 0;
         }
 
         .advance-vacuum-card__map-room-dim,
@@ -5833,14 +5858,32 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     `;
 
     let image = this.shadowRoot.querySelector("[data-map-image]");
-    if (previousImage && image && previousImageSrc && previousImageSrc === image.getAttribute("src")) {
+    const imageSrc = image?.getAttribute("src") || "";
+    const canvas = this.shadowRoot.querySelector(".advance-vacuum-card__map-canvas");
+    if (previousImage && image && previousImageSrc && previousImageSrc === imageSrc) {
       image.replaceWith(previousImage);
       image = previousImage;
+      image.classList.remove("is-pending", "is-fading-out");
+      image.classList.add("is-loaded");
+    } else if (previousImage && image && previousImageSrc && imageSrc && canvas) {
+      previousImage.removeEventListener("load", this._onMapImageLoad);
+      previousImage.removeAttribute("data-map-image");
+      previousImage.setAttribute("data-map-image-previous", "true");
+      previousImage.classList.remove("is-pending", "is-fading-out");
+      previousImage.classList.add("is-loaded");
+      image.classList.add("is-pending");
+      canvas.insertBefore(previousImage, image);
+    } else if (image) {
+      image.classList.remove("is-pending", "is-fading-out");
+      image.classList.add("is-loaded");
     }
 
     if (image) {
       image.removeEventListener("load", this._onMapImageLoad);
       image.addEventListener("load", this._onMapImageLoad);
+      if (image.complete && Number(image.naturalWidth || 0) > 0) {
+        this._onMapImageLoad({ currentTarget: image });
+      }
     }
 
     this._lastRenderSignature = this._getRenderSignature();
