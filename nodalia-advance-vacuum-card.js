@@ -18,6 +18,14 @@ const MODE_LABELS = {
   goto: "Ir a punto",
 };
 
+const PANEL_MODE_PRESETS = [
+  { id: "smart", label: "Inteligente" },
+  { id: "vacuum_mop", label: "Aspirado y fregado" },
+  { id: "vacuum", label: "Aspirado" },
+  { id: "mop", label: "Fregado" },
+  { id: "custom", label: "Personalizado" },
+];
+
 const SUCTION_MODE_PATTERNS = [
   "quiet",
   "silent",
@@ -112,6 +120,7 @@ const DEFAULT_CONFIG = {
   max_repeats: 3,
   suction_select_entity: "",
   mop_select_entity: "",
+  mop_mode_select_entity: "",
   custom_menu: {
     label: "Base",
     icon: "mdi:home-import-outline",
@@ -745,6 +754,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._gotoPoint = null;
     this._repeats = 1;
     this._activeSeries = "";
+    this._activeModePanelPreset = "";
     this._lastNonSmartModeSelection = {
       suction: "",
       mop: "",
@@ -789,6 +799,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._draftZone = null;
     this._gotoPoint = null;
     this._activeUtilityPanel = null;
+    this._activeModePanelPreset = "";
     this._activeMode = this._getAvailableModes()[0]?.id || "all";
     this._updateCalibration();
     this._render();
@@ -1014,6 +1025,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const mapPicture = String(mapState?.attributes?.entity_picture || "");
     const suctionDescriptor = this._getModeDescriptor("suction", state);
     const mopDescriptor = this._getModeDescriptor("mop", state);
+    const mopModeDescriptor = this._getMopModeDescriptor(state);
 
     return JSON.stringify({
       vacuum: {
@@ -1036,6 +1048,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         points: parseCalibrationPoints(this._config, this._hass).length,
       },
       activeMode: String(this._activeMode || ""),
+      activeModePanelPreset: String(this._activeModePanelPreset || ""),
       selectedRooms: this._selectedRoomIds.join("|"),
       selectedZones: this._selectedPredefinedZoneIds.join("|"),
       manualZones: this._manualZones.length,
@@ -1048,6 +1061,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           : "",
         mop: mopDescriptor
           ? `${mopDescriptor.service}:${mopDescriptor.target}:${mopDescriptor.current}:${mopDescriptor.options.join("|")}`
+          : "",
+        mopMode: mopModeDescriptor
+          ? `${mopModeDescriptor.service}:${mopModeDescriptor.target}:${mopModeDescriptor.current}:${mopModeDescriptor.options.join("|")}`
           : "",
       },
     });
@@ -1109,28 +1125,44 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   _getModeEntityPatterns(kind) {
     return kind === "mop"
       ? [
-        "mop_mode",
         "mop_intensity",
+        "intensidad_mopa",
+        "mop_level",
         "mop",
         "water_level",
         "water_volume",
         "water_flow",
         "water_box_mode",
         "water_grade",
+        "nivel_agua",
+        "caudal_agua",
         "water",
-        "scrub",
       ]
       : [
         "vacuum_cleaner_mode",
         "vacuum_mode",
+        "modo_aspirado",
         "suction_level",
         "suction_mode",
+        "intensidad_aspirado",
         "fan_speed",
         "fan_power",
         "suction",
         "clean_mode",
         "cleaning_mode",
       ];
+  }
+
+  _getMopModeEntityPatterns() {
+    return [
+      "modo_mopa",
+      "mop_mode",
+      "scrub_mode",
+      "scrub",
+      "mop_route",
+      "patron_mopa",
+      "trayectoria_mopa",
+    ];
   }
 
   _getSelectEntityMatchScore(entityId, patterns) {
@@ -1145,7 +1177,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }, 0);
   }
 
-  _guessRelatedSelectEntity(kind) {
+  _guessRelatedSelectEntityByPatterns(patterns, excludedEntities = []) {
     if (!this._hass?.states || !this._config?.entity) {
       return "";
     }
@@ -1155,11 +1187,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return "";
     }
 
-    const patterns = this._getModeEntityPatterns(kind);
-
     const candidates = Object.keys(this._hass.states)
       .filter(entityId => entityId.startsWith("select."))
       .filter(entityId => entityId.includes(objectId))
+      .filter(entityId => !excludedEntities.includes(entityId))
       .map(entityId => ({
         entityId,
         score: this._getSelectEntityMatchScore(entityId, patterns),
@@ -1168,6 +1199,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       .sort((left, right) => right.score - left.score || left.entityId.localeCompare(right.entityId, "es"));
 
     return candidates[0]?.entityId || "";
+  }
+
+  _guessRelatedSelectEntity(kind) {
+    return this._guessRelatedSelectEntityByPatterns(this._getModeEntityPatterns(kind));
   }
 
   _categorizeModeOption(value) {
@@ -1189,6 +1224,37 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return SHARED_SMART_MODE_PATTERNS.some(pattern => key.includes(pattern));
   }
 
+  _isOffModeValue(value) {
+    return ["off", "apagado", "disabled", "none", "sin_fregado"].includes(normalizeTextKey(value));
+  }
+
+  _isCustomModeValue(value) {
+    const key = normalizeTextKey(value);
+    return key === "custom" || key.startsWith("custom_");
+  }
+
+  _isMopIntensityDescriptor(descriptor) {
+    if (!descriptor?.options?.length) {
+      return false;
+    }
+
+    return descriptor.options.some(option => {
+      const key = normalizeTextKey(option);
+      return [
+        "off",
+        "apagado",
+        "sin_fregado",
+        "low",
+        "medium",
+        "media",
+        "high",
+        "alta",
+        "intense",
+        "deep",
+      ].includes(key);
+    });
+  }
+
   _getFanPresets(state) {
     if (Array.isArray(state?.attributes?.fan_speed_list)) {
       return state.attributes.fan_speed_list
@@ -1208,8 +1274,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const explicitEntity = kind === "mop"
       ? this._config?.mop_select_entity
       : this._config?.suction_select_entity;
-    const selectEntity = explicitEntity || this._guessRelatedSelectEntity(kind);
-    const descriptor = this._getSelectOptions(selectEntity);
+    const explicitDescriptor = explicitEntity ? this._getSelectOptions(explicitEntity) : null;
+    const shouldUseExplicitDescriptor = kind !== "mop" || this._isMopIntensityDescriptor(explicitDescriptor);
+    const selectEntity = shouldUseExplicitDescriptor && explicitDescriptor?.entityId
+      ? explicitDescriptor.entityId
+      : this._guessRelatedSelectEntity(kind);
+    const descriptor = explicitDescriptor?.entityId === selectEntity
+      ? explicitDescriptor
+      : this._getSelectOptions(selectEntity);
 
     if (descriptor.entityId && descriptor.options.length) {
       return {
@@ -1230,12 +1302,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const options = rawPresets.filter(option => {
       const optionKind = this._categorizeModeOption(option);
       const isSharedSmartMode = this._isSharedSmartMode(option);
+      const isOffOption = normalizeTextKey(option) === "off";
 
       if (kind === "mop") {
         return optionKind === "mop" || isSharedSmartMode;
       }
 
-      return optionKind !== "mop" || isSharedSmartMode;
+      return optionKind !== "mop" || isSharedSmartMode || isOffOption;
     });
 
     if (!options.length) {
@@ -1253,9 +1326,46 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getModeDescriptors(state = this._getVacuumState()) {
-    return ["suction", "mop"]
-      .map(kind => this._getModeDescriptor(kind, state))
+    return ["suction", "mop", "mop_mode"]
+      .map(kind => this._getModeDescriptorById(kind, state))
       .filter(Boolean);
+  }
+
+  _getMopModeDescriptor(state = this._getVacuumState()) {
+    const explicitEntity = this._config?.mop_mode_select_entity || (
+      this._config?.mop_select_entity && !this._isMopIntensityDescriptor(this._getSelectOptions(this._config?.mop_select_entity))
+        ? this._config.mop_select_entity
+        : ""
+    );
+    const explicitDescriptor = explicitEntity ? this._getSelectOptions(explicitEntity) : null;
+    const excludedEntities = [this._getModeDescriptor("mop", state)?.target].filter(Boolean);
+    const guessedEntity = explicitDescriptor?.entityId
+      ? explicitDescriptor.entityId
+      : this._guessRelatedSelectEntityByPatterns(this._getMopModeEntityPatterns(), excludedEntities);
+    const descriptor = explicitDescriptor?.entityId === guessedEntity
+      ? explicitDescriptor
+      : this._getSelectOptions(guessedEntity);
+
+    if (!descriptor?.entityId || !descriptor.options?.length) {
+      return null;
+    }
+
+    return {
+      kind: "mop_mode",
+      label: "Modo de mopa",
+      target: descriptor.entityId,
+      options: descriptor.options,
+      current: descriptor.value,
+      service: "select",
+    };
+  }
+
+  _getModeDescriptorById(descriptorId, state = this._getVacuumState()) {
+    if (descriptorId === "mop_mode") {
+      return this._getMopModeDescriptor(state);
+    }
+
+    return this._getModeDescriptor(descriptorId, state);
   }
 
   _findMatchingModeOption(options, value) {
@@ -1380,8 +1490,26 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
   }
 
-  _setModeOption(kind, value, state = this._getVacuumState()) {
+  _setModeOption(kind, value, state = this._getVacuumState(), options = {}) {
+    const triggerHaptic = options.triggerHaptic !== false;
     if (!this._hass || !value) {
+      return;
+    }
+
+    if (kind === "mop_mode") {
+      const descriptor = this._getMopModeDescriptor(state);
+      if (!descriptor?.target) {
+        return;
+      }
+
+      this._hass.callService("select", "select_option", {
+        entity_id: descriptor.target,
+        option: value,
+      });
+
+      if (triggerHaptic) {
+        this._triggerHaptic("selection");
+      }
       return;
     }
 
@@ -1392,7 +1520,215 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     this._rememberNonSmartModeSelection(kind, value);
     this._applyLinkedSmartModeSelection(kind, value, state);
+    if (triggerHaptic) {
+      this._triggerHaptic("selection");
+    }
+  }
+
+  _findOptionByCandidates(options, candidates) {
+    if (!Array.isArray(options) || !options.length || !Array.isArray(candidates) || !candidates.length) {
+      return "";
+    }
+
+    const normalizedOptions = options.map(option => ({
+      key: normalizeTextKey(option),
+      value: option,
+    }));
+
+    for (const candidate of candidates) {
+      const key = normalizeTextKey(candidate);
+      const exactMatch = normalizedOptions.find(option => option.key === key);
+      if (exactMatch) {
+        return exactMatch.value;
+      }
+    }
+
+    for (const candidate of candidates) {
+      const key = normalizeTextKey(candidate);
+      const partialMatch = normalizedOptions.find(option => option.key.includes(key) || key.includes(option.key));
+      if (partialMatch) {
+        return partialMatch.value;
+      }
+    }
+
+    return "";
+  }
+
+  _getPresetDefaultOption(descriptor, candidates, { excludeOff = false } = {}) {
+    if (!descriptor?.options?.length) {
+      return "";
+    }
+
+    const preferred = this._findOptionByCandidates(descriptor.options, candidates);
+    if (preferred) {
+      return preferred;
+    }
+
+    return descriptor.options.find(option => {
+      if (this._isSharedSmartMode(option) || this._isCustomModeValue(option)) {
+        return false;
+      }
+
+      if (excludeOff && this._isOffModeValue(option)) {
+        return false;
+      }
+
+      return true;
+    }) || "";
+  }
+
+  _getModePanelPresetSelection(presetId, state = this._getVacuumState()) {
+    const suctionDescriptor = this._getModeDescriptor("suction", state);
+    const mopDescriptor = this._getModeDescriptor("mop", state);
+
+    switch (presetId) {
+      case "smart":
+        return {
+          suction: this._findSharedSmartOption(suctionDescriptor?.options),
+          mop: this._findSharedSmartOption(mopDescriptor?.options),
+        };
+      case "vacuum_mop":
+        return {
+          suction: this._getPresetDefaultOption(suctionDescriptor, ["balanced", "equilibrado", "standard", "normal"], {
+            excludeOff: true,
+          }),
+          mop: this._getPresetDefaultOption(mopDescriptor, ["medium", "media", "normal", "standard"], {
+            excludeOff: true,
+          }),
+        };
+      case "vacuum":
+        return {
+          suction: this._getPresetDefaultOption(suctionDescriptor, ["balanced", "equilibrado", "standard", "normal"], {
+            excludeOff: true,
+          }),
+          mop: this._findOptionByCandidates(mopDescriptor?.options, ["off", "sin_fregado", "apagado", "none"]),
+        };
+      case "mop":
+        return {
+          suction: this._findOptionByCandidates(suctionDescriptor?.options, ["off", "apagado", "none"]),
+          mop: this._getPresetDefaultOption(mopDescriptor, ["medium", "media", "normal", "standard"], {
+            excludeOff: true,
+          }),
+        };
+      default:
+        return null;
+    }
+  }
+
+  _detectModePanelPreset(state = this._getVacuumState()) {
+    const suctionDescriptor = this._getModeDescriptor("suction", state);
+    const mopDescriptor = this._getModeDescriptor("mop", state);
+    const suctionCurrent = suctionDescriptor?.current || "";
+    const mopCurrent = mopDescriptor?.current || "";
+
+    if (this._isSharedSmartMode(suctionCurrent) && this._isSharedSmartMode(mopCurrent)) {
+      return "smart";
+    }
+
+    if (this._isCustomModeValue(suctionCurrent) || this._isCustomModeValue(mopCurrent)) {
+      return "custom";
+    }
+
+    const suctionEnabled = Boolean(suctionCurrent) && !this._isOffModeValue(suctionCurrent) && !this._isSharedSmartMode(suctionCurrent);
+    const mopEnabled = Boolean(mopCurrent) && !this._isOffModeValue(mopCurrent) && !this._isSharedSmartMode(mopCurrent);
+
+    if (suctionEnabled && mopEnabled) {
+      return "vacuum_mop";
+    }
+
+    if (suctionEnabled) {
+      return "vacuum";
+    }
+
+    if (mopEnabled) {
+      return "mop";
+    }
+
+    return "custom";
+  }
+
+  _getActiveModePanelPreset(state = this._getVacuumState()) {
+    return this._activeModePanelPreset || this._detectModePanelPreset(state) || "vacuum_mop";
+  }
+
+  _selectModePanelPreset(presetId, state = this._getVacuumState()) {
+    this._activeModePanelPreset = presetId;
+
+    const selection = this._getModePanelPresetSelection(presetId, state);
+    if (!selection) {
+      this._triggerHaptic("selection");
+      this._render();
+      return;
+    }
+
+    if (
+      selection.suction &&
+      normalizeTextKey(selection.suction) !== normalizeTextKey(this._getModeDescriptor("suction", state)?.current)
+    ) {
+      this._setModeOption("suction", selection.suction, state, { triggerHaptic: false });
+    }
+
+    if (
+      selection.mop &&
+      normalizeTextKey(selection.mop) !== normalizeTextKey(this._getModeDescriptor("mop", state)?.current)
+    ) {
+      this._setModeOption("mop", selection.mop, state, { triggerHaptic: false });
+    }
+
     this._triggerHaptic("selection");
+    this._render();
+  }
+
+  _filterModePanelOptions(descriptor, presetId) {
+    if (!descriptor?.options?.length) {
+      return [];
+    }
+
+    return descriptor.options.filter(option => {
+      const isSmart = this._isSharedSmartMode(option);
+      const isOff = this._isOffModeValue(option);
+      const isCustom = this._isCustomModeValue(option);
+
+      switch (presetId) {
+        case "smart":
+          return false;
+        case "vacuum_mop":
+          if (descriptor.kind === "suction" || descriptor.kind === "mop") {
+            return !isSmart && !isOff && !isCustom;
+          }
+          return !isSmart;
+        case "vacuum":
+          if (descriptor.kind === "suction") {
+            return !isSmart && !isOff && !isCustom;
+          }
+          return false;
+        case "mop":
+          if (descriptor.kind === "mop") {
+            return !isSmart && !isOff && !isCustom;
+          }
+          if (descriptor.kind === "mop_mode") {
+            return !isSmart;
+          }
+          return false;
+        case "custom":
+        default:
+          return !isSmart;
+      }
+    });
+  }
+
+  _getVisibleModePanelDescriptors(state = this._getVacuumState(), presetId = this._getActiveModePanelPreset(state)) {
+    return [
+      this._getModeDescriptor("suction", state),
+      this._getModeDescriptor("mop", state),
+      this._getMopModeDescriptor(state),
+    ]
+      .filter(Boolean)
+      .map(descriptor => ({
+        ...descriptor,
+        options: this._filterModePanelOptions(descriptor, presetId),
+      }))
+      .filter(descriptor => descriptor.options.length > 0);
   }
 
   _getDefaultCustomMenuItems(state) {
@@ -1787,6 +2123,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
+    const modePresetTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.modePresetId);
+    if (modePresetTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._selectModePanelPreset(modePresetTarget.dataset.modePresetId, this._getVacuumState());
+      return;
+    }
+
     const modeOptionTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.modeOptionKind && node.dataset?.modeOptionValue);
     if (modeOptionTarget) {
       event.preventDefault();
@@ -2019,13 +2363,27 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _renderModePanel(state) {
-    const descriptors = this._getModeDescriptors(state);
-    if (!descriptors.length && this._activeMode === "all") {
+    const activePreset = this._getActiveModePanelPreset(state);
+    const descriptors = this._getVisibleModePanelDescriptors(state, activePreset);
+    if (!PANEL_MODE_PRESETS.length && !descriptors.length && this._activeMode === "all") {
       return "";
     }
 
     return `
       <div class="advance-vacuum-card__utility-panel">
+        <div class="advance-vacuum-card__utility-group">
+          <div class="advance-vacuum-card__utility-label">Modo de limpieza</div>
+          <div class="advance-vacuum-card__utility-options advance-vacuum-card__utility-options--presets">
+            ${PANEL_MODE_PRESETS.map(preset => `
+              <button
+                class="advance-vacuum-card__utility-option ${preset.id === activePreset ? "is-active" : ""}"
+                data-mode-preset-id="${escapeHtml(preset.id)}"
+              >
+                ${escapeHtml(preset.label)}
+              </button>
+            `).join("")}
+          </div>
+        </div>
         ${descriptors.map(descriptor => `
           <div class="advance-vacuum-card__utility-group">
             <div class="advance-vacuum-card__utility-label">${escapeHtml(descriptor.label)}</div>
@@ -2392,6 +2750,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__utility-options--menu {
           max-width: 100%;
+        }
+
+        .advance-vacuum-card__utility-options--presets {
+          justify-content: flex-start;
         }
 
         .advance-vacuum-card__utility-option {
@@ -3173,6 +3535,9 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
             ${this._renderTextField("Select fregado", "mop_select_entity", config.mop_select_entity, {
               placeholder: "select.robot_salon_mop_mode",
             })}
+            ${this._renderTextField("Select modo mopa", "mop_mode_select_entity", config.mop_mode_select_entity, {
+              placeholder: "select.roborock_qrevo_s_modo_mopa",
+            })}
             ${this._renderTextField("Etiqueta menu derecho", "custom_menu.label", config.custom_menu?.label, {
               placeholder: "Base",
             })}
@@ -3262,7 +3627,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     this.shadowRoot.querySelectorAll('input[data-field="entity"]').forEach(input => input.setAttribute("list", "advance-vacuum-card-vacuum-entities"));
     this.shadowRoot.querySelectorAll('input[data-field="map_source.camera"]').forEach(input => input.setAttribute("list", "advance-vacuum-card-map-entities"));
     this.shadowRoot.querySelectorAll('input[data-field="calibration_source.entity"]').forEach(input => input.setAttribute("list", "advance-vacuum-card-helper-entities"));
-    this.shadowRoot.querySelectorAll('input[data-field="suction_select_entity"], input[data-field="mop_select_entity"]').forEach(input => input.setAttribute("list", "advance-vacuum-card-select-entities"));
+    this.shadowRoot.querySelectorAll('input[data-field="suction_select_entity"], input[data-field="mop_select_entity"], input[data-field="mop_mode_select_entity"]').forEach(input => input.setAttribute("list", "advance-vacuum-card-select-entities"));
   }
 }
 
