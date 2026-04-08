@@ -36146,6 +36146,17 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       .join(" ");
   }
 
+  _vacuumOutlineToCssPolygon(points) {
+    return points
+      .map(point => this._converter.vacuumToMap(point.x, point.y))
+      .map(point => {
+        const left = clamp((point.x / this._mapImageWidth) * 100, 0, 100);
+        const top = clamp((point.y / this._mapImageHeight) * 100, 0, 100);
+        return `${left.toFixed(3)}% ${top.toFixed(3)}%`;
+      })
+      .join(", ");
+  }
+
   _zoneToSvgRect(zone) {
     const first = this._converter.vacuumToMap(zone.x1, zone.y1);
     const second = this._converter.vacuumToMap(zone.x2, zone.y2);
@@ -37215,6 +37226,43 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }).join("");
   }
 
+  _renderRoomSelectionHighlights(rooms, highlightedRoomIds, mapImageUrl) {
+    if (
+      this._activeMode !== "rooms" ||
+      this._isRoomCleaningSessionActive() ||
+      !mapImageUrl
+    ) {
+      return "";
+    }
+
+    const highlights = rooms
+      .filter(room => highlightedRoomIds.has(String(room.id)))
+      .flatMap(room => room.outlines.map((outline, index) => ({
+        clipPath: this._vacuumOutlineToCssPolygon(outline),
+        key: `${room.id}-${index}`,
+      })))
+      .filter(item => item.clipPath);
+
+    if (!highlights.length) {
+      return "";
+    }
+
+    return `
+      <div class="advance-vacuum-card__room-highlight-layer" aria-hidden="true">
+        ${highlights.map(highlight => `
+          <img
+            class="advance-vacuum-card__room-highlight-image"
+            src="${escapeHtml(mapImageUrl)}"
+            alt=""
+            draggable="false"
+            style="clip-path: polygon(${escapeHtml(highlight.clipPath)});"
+            data-room-highlight-id="${escapeHtml(highlight.key)}"
+          />
+        `).join("")}
+      </div>
+    `;
+  }
+
   _renderRoomFallbackList(rooms) {
     if (this._activeMode !== "rooms" || !rooms.length) {
       return "";
@@ -37575,6 +37623,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const gotoColor = styles.map.goto_color || "#f6b73c";
     const primaryButtonIcon = this._isCleaning(state) ? "mdi:pause" : "mdi:play";
     const isCleaningSessionActive = this._isCleaning(state) || this._isPaused(state) || this._isReturning(state);
+    const isRoomSelectionMode = currentMode.id === "rooms";
+    const showRoomSelectionDim = isRoomSelectionMode;
+    const showRealRoomSelectionColors = isRoomSelectionMode && !isCleaningSessionActive;
     const modeDescriptors = this._getModeDescriptors(state);
     const dockControlDescriptors = this._getDockControlDescriptors(state);
     const dockSettingDescriptors = this._getDockSettingDescriptors(state);
@@ -37872,6 +37923,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           width: 100%;
         }
 
+        .advance-vacuum-card__map-room-dim,
+        .advance-vacuum-card__room-highlight-layer,
         .advance-vacuum-card__map-svg,
         .advance-vacuum-card__map-markers,
         .advance-vacuum-card__map-overlays {
@@ -37879,10 +37932,32 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           position: absolute;
         }
 
+        .advance-vacuum-card__map-room-dim {
+          background: rgba(8, 12, 20, 0.5);
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        .advance-vacuum-card__room-highlight-layer {
+          pointer-events: none;
+          z-index: 2;
+        }
+
+        .advance-vacuum-card__room-highlight-image {
+          display: block;
+          height: 100%;
+          inset: 0;
+          object-fit: cover;
+          pointer-events: none;
+          position: absolute;
+          width: 100%;
+        }
+
         .advance-vacuum-card__map-svg {
           height: 100%;
           pointer-events: none;
           width: 100%;
+          z-index: 3;
         }
 
         .advance-vacuum-card__map-markers {
@@ -37891,7 +37966,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__map-overlays {
           pointer-events: none;
-          z-index: 2;
+          z-index: 4;
         }
 
         .advance-vacuum-card__room-polygon {
@@ -37907,6 +37982,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         .advance-vacuum-card__room-polygon.is-selected {
           fill: ${roomColor};
           stroke: ${roomBorder};
+        }
+
+        .advance-vacuum-card__room-polygon.is-revealed {
+          fill: rgba(255, 255, 255, 0.05);
+          stroke: rgba(255, 255, 255, 0.42);
         }
 
         .advance-vacuum-card__zone-rect {
@@ -38213,11 +38293,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                     ? `<img class="advance-vacuum-card__map-image" data-map-image src="${escapeHtml(mapImageUrl)}" alt="Mapa del robot" />`
                     : `<div class="advance-vacuum-card__map-image" style="display:flex;align-items:center;justify-content:center;color:var(--secondary-text-color);">Mapa no disponible</div>`
                 }
+                ${showRoomSelectionDim ? `<div class="advance-vacuum-card__map-room-dim"></div>` : ""}
+                ${showRealRoomSelectionColors ? this._renderRoomSelectionHighlights(rooms, highlightedRoomIds, mapImageUrl) : ""}
 
                 <svg class="advance-vacuum-card__map-svg" viewBox="0 0 ${this._mapImageWidth} ${this._mapImageHeight}" preserveAspectRatio="none">
                   ${currentMode.id === "rooms" ? rooms.map(room => room.outlines.map(outline => `
                     <polygon
-                      class="advance-vacuum-card__room-polygon ${highlightedRoomIds.has(String(room.id)) ? "is-selected" : ""}"
+                      class="advance-vacuum-card__room-polygon ${highlightedRoomIds.has(String(room.id)) ? (showRealRoomSelectionColors ? "is-revealed" : "is-selected") : ""}"
                       data-room-id="${escapeHtml(room.id)}"
                       points="${escapeHtml(this._vacuumOutlineToSvgPoints(outline))}"
                     ></polygon>
