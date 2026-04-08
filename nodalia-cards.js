@@ -33945,6 +33945,71 @@ function parseOutline(value) {
     .filter(Boolean);
 }
 
+function isFiniteScalar(value) {
+  return Number.isFinite(Number(value));
+}
+
+function isRectangleOutline(value) {
+  return Array.isArray(value) && value.length === 4 && value.every(isFiniteScalar);
+}
+
+function parsePolygon(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  if (isRectangleOutline(value)) {
+    const [x1, y1, x2, y2] = value.map(Number);
+    return [
+      { x: x1, y: y1 },
+      { x: x2, y: y1 },
+      { x: x2, y: y2 },
+      { x: x1, y: y2 },
+    ];
+  }
+
+  const scalarPolygon = value.every(isFiniteScalar);
+  if (scalarPolygon && value.length >= 6 && value.length % 2 === 0) {
+    const points = [];
+    for (let index = 0; index < value.length; index += 2) {
+      points.push({
+        x: Number(value[index]),
+        y: Number(value[index + 1]),
+      });
+    }
+    return points;
+  }
+
+  return value
+    .map(point => parsePoint(point))
+    .filter(Boolean);
+}
+
+function parseOutlines(value) {
+  if (!Array.isArray(value) || !value.length) {
+    return [];
+  }
+
+  const first = value[0];
+  const looksNestedCollection = (
+    (Array.isArray(first) && (Array.isArray(first[0]) || isObject(first[0]))) ||
+    value.every(isRectangleOutline)
+  );
+
+  if (looksNestedCollection) {
+    return value
+      .map(polygon => parsePolygon(polygon))
+      .filter(polygon => polygon.length >= 3);
+  }
+
+  const polygon = parsePolygon(value);
+  return polygon.length >= 3 ? [polygon] : [];
+}
+
+function flattenPolygons(polygons) {
+  return arrayFromMaybe(polygons).flatMap(polygon => arrayFromMaybe(polygon));
+}
+
 function centroid(points) {
   if (!Array.isArray(points) || !points.length) {
     return { x: 0, y: 0 };
@@ -34245,27 +34310,35 @@ function resolveLegacyMode(config, templateName) {
 function resolveRoomSegments(config) {
   const directRooms = arrayFromMaybe(config?.room_segments);
   if (directRooms.length) {
-    return directRooms.map(room => ({
-      id: String(room.id ?? ""),
-      label: room.label || room.name || room?.label?.text || "",
-      icon: room.icon || room?.icon?.name || "mdi:broom",
-      outline: parseOutline(room.outline),
-      iconPoint: parsePoint(room.iconPoint || room.icon || room.position),
-      labelPoint: parsePoint(room.labelPoint || room.label || room.position),
-      labelOffsetY: Number(room.labelOffsetY ?? room?.label?.offset_y ?? 0) || 0,
-    })).filter(room => room.id && room.outline.length);
+    return directRooms.map(room => {
+      const outlines = parseOutlines(room.outline);
+      return {
+        id: String(room.id ?? ""),
+        label: room.label || room.name || room?.label?.text || "",
+        icon: room.icon || room?.icon?.name || "mdi:broom",
+        outlines,
+        outline: flattenPolygons(outlines),
+        iconPoint: parsePoint(room.iconPoint || room.icon || room.position),
+        labelPoint: parsePoint(room.labelPoint || room.label || room.position),
+        labelOffsetY: Number(room.labelOffsetY ?? room?.label?.offset_y ?? 0) || 0,
+      };
+    }).filter(room => room.id && room.outlines.length);
   }
 
   const segmentMode = resolveLegacyMode(config, "vacuum_clean_segment");
-  return arrayFromMaybe(segmentMode?.predefined_selections).map(selection => ({
-    id: String(selection.id ?? ""),
-    label: String(selection?.label?.text || selection?.label || selection?.text || selection.id || "").trim(),
-    icon: String(selection?.icon?.name || selection?.icon || "mdi:broom").trim(),
-    outline: parseOutline(selection?.outline),
-    iconPoint: parsePoint(selection?.icon),
-    labelPoint: parsePoint(selection?.label),
-    labelOffsetY: Number(selection?.label?.offset_y ?? 0) || 0,
-  })).filter(room => room.id && room.outline.length);
+  return arrayFromMaybe(segmentMode?.predefined_selections).map(selection => {
+    const outlines = parseOutlines(selection?.outline);
+    return {
+      id: String(selection.id ?? ""),
+      label: String(selection?.label?.text || selection?.label || selection?.text || selection.id || "").trim(),
+      icon: String(selection?.icon?.name || selection?.icon || "mdi:broom").trim(),
+      outlines,
+      outline: flattenPolygons(outlines),
+      iconPoint: parsePoint(selection?.icon),
+      labelPoint: parsePoint(selection?.label),
+      labelOffsetY: Number(selection?.label?.offset_y ?? 0) || 0,
+    };
+  }).filter(room => room.id && room.outlines.length);
 }
 
 function resolveGotoPoints(config) {
@@ -36817,6 +36890,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     const markerSize = Math.max(28, parseSizeToPixels(this._config?.styles?.map?.marker_size, 34));
+    const markerScale = this._mapScale > 1 ? (1 / this._mapScale) : 1;
 
     return rooms.map(room => {
       const anchor = room.iconPoint || room.labelPoint || centroid(room.outline);
@@ -36825,7 +36899,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return `
         <button
           class="advance-vacuum-card__room-marker ${selected ? "is-selected" : ""} ${this._config?.show_room_labels === false ? "is-icon-only" : ""}"
-          style="left:${percent.left}%; top:${percent.top}%; --marker-size:${markerSize}px;"
+          style="left:${percent.left}%; top:${percent.top}%; --marker-size:${markerSize}px; --marker-scale:${markerScale.toFixed(3)};"
           data-room-id="${escapeHtml(room.id)}"
           title="${escapeHtml(room.label || room.id)}"
         >
@@ -37614,7 +37688,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           pointer-events: auto;
           position: absolute;
           top: 0;
-          transform: translate(-50%, -50%);
+          transform: translate(-50%, -50%) scale(var(--marker-scale, 1));
+          transform-origin: center center;
           white-space: nowrap;
           z-index: 2;
         }
@@ -37732,13 +37807,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                 }
 
                 <svg class="advance-vacuum-card__map-svg" viewBox="0 0 ${this._mapImageWidth} ${this._mapImageHeight}" preserveAspectRatio="none">
-                  ${currentMode.id === "rooms" ? rooms.map(room => `
+                  ${currentMode.id === "rooms" ? rooms.map(room => room.outlines.map(outline => `
                     <polygon
                       class="advance-vacuum-card__room-polygon ${this._selectedRoomIds.includes(room.id) ? "is-selected" : ""}"
                       data-room-id="${escapeHtml(room.id)}"
-                      points="${escapeHtml(this._vacuumOutlineToSvgPoints(room.outline))}"
+                      points="${escapeHtml(this._vacuumOutlineToSvgPoints(outline))}"
                     ></polygon>
-                  `).join("") : ""}
+                  `).join("")).join("") : ""}
 
                   ${currentMode.id === "zone" ? allZoneRects.map(zone => {
                     const rect = this._zoneToSvgRect(zone);
