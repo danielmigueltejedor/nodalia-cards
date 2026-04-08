@@ -35278,14 +35278,23 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       });
   }
 
+  _isCleaningSessionActive(state = this._getVacuumState()) {
+    return this._isCleaning(state) || this._isPaused(state) || this._isReturning(state);
+  }
+
   _isRoomCleaningSessionActive(state = this._getVacuumState()) {
+    const persistedSession = this._readStoredCleaningSession();
     return this._matchesActivity(state, ["segment_cleaning", "room_cleaning"]) || (
-      this._activeCleaningRoomIds.length > 0 && (this._isPaused(state) || this._isReturning(state))
+      this._isCleaningSessionActive(state) && (
+        this._activeCleaningSessionMode === "rooms" ||
+        persistedSession?.mode === "rooms" ||
+        this._activeCleaningRoomIds.length > 0
+      )
     );
   }
 
   _resolveActiveCleaningSessionMode(state = this._getVacuumState(), persistedSession = this._readStoredCleaningSession()) {
-    if (!state || (!this._isCleaning(state) && !this._isPaused(state) && !this._isReturning(state))) {
+    if (!state || !this._isCleaningSessionActive(state)) {
       return "";
     }
 
@@ -35293,16 +35302,16 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return "rooms";
     }
 
+    if (this._activeCleaningRoomIds.length || persistedSession?.mode === "rooms") {
+      return "rooms";
+    }
+
     if (this._matchesActivity(state, ["zone_cleaning"])) {
       return "zone";
     }
 
-    if (this._activeCleaningRoomIds.length && (this._isPaused(state) || this._isReturning(state))) {
-      return "rooms";
-    }
-
-    if (this._activeCleaningZones.length && (this._isPaused(state) || this._isReturning(state))) {
-      return "zone";
+    if (this._activeCleaningZones.length) {
+      return persistedSession?.mode === "rooms" ? "rooms" : "zone";
     }
 
     return persistedSession?.mode || "";
@@ -35314,7 +35323,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const reportedZones = this._getReportedCleaningZones(state);
     const currentRoomId = this._getCurrentVacuumRoomId(state);
     const isRoomCleaning = this._matchesActivity(state, ["segment_cleaning", "room_cleaning"]);
-    const isCleaningSessionActive = this._isCleaning(state) || this._isPaused(state) || this._isReturning(state);
+    const isCleaningSessionActive = this._isCleaningSessionActive(state);
 
     if (reportedRoomIds.length) {
       this._activeCleaningRoomIds = reportedRoomIds;
@@ -37117,7 +37126,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _isRoomSelectionLocked(state = this._getVacuumState()) {
-    return this._activeMode === "rooms" && (this._isCleaning(state) || this._isPaused(state) || this._isReturning(state));
+    const persistedSession = this._readStoredCleaningSession();
+    return this._isCleaningSessionActive(state) && (
+      this._activeMode === "rooms" ||
+      this._activeCleaningSessionMode === "rooms" ||
+      persistedSession?.mode === "rooms"
+    );
   }
 
   _togglePredefinedZone(zoneId) {
@@ -38025,9 +38039,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }).join("");
   }
 
-  _renderRoomSelectionHighlights(rooms, highlightedRoomIds, mapImageUrl) {
+  _renderRoomSelectionHighlights(rooms, highlightedRoomIds, mapImageUrl, modeId = this._activeMode) {
     if (
-      this._activeMode !== "rooms" ||
+      modeId !== "rooms" ||
       !mapImageUrl
     ) {
       return "";
@@ -38061,9 +38075,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     `;
   }
 
-  _renderZoneSelectionHighlights(zones, mapImageUrl) {
+  _renderZoneSelectionHighlights(zones, mapImageUrl, modeId = this._activeMode) {
     if (
-      this._activeMode !== "rooms" ||
+      modeId !== "rooms" ||
       !Array.isArray(zones) ||
       !zones.length ||
       !mapImageUrl
@@ -38098,13 +38112,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     `;
   }
 
-  _renderRoomFallbackList(rooms) {
-    if (this._activeMode !== "rooms" || !rooms.length) {
+  _renderRoomFallbackList(rooms, modeId = this._activeMode) {
+    if (modeId !== "rooms" || !rooms.length) {
       return "";
     }
 
-    const isRoomSelectionLocked = this._isRoomSelectionLocked();
-    const highlightedRoomIds = new Set(this._getHighlightedRoomIds());
+    const state = this._getVacuumState();
+    const isRoomSelectionLocked = this._isRoomSelectionLocked(state);
+    const highlightedRoomIds = new Set(this._getHighlightedRoomIds(state));
     const fallbackRooms = rooms.filter(room => room.outlines.length === 0);
     if (!fallbackRooms.length) {
       return "";
@@ -39181,8 +39196,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                     : `<div class="advance-vacuum-card__map-image" style="display:flex;align-items:center;justify-content:center;color:var(--secondary-text-color);">Mapa no disponible</div>`
                 }
                 ${showRoomSelectionDim ? `<div class="advance-vacuum-card__map-room-dim"></div>` : ""}
-                ${showRealRoomSelectionColors ? this._renderRoomSelectionHighlights(rooms, highlightedRoomIds, mapImageUrl) : ""}
-                ${showRealRoomSelectionColors ? this._renderZoneSelectionHighlights(roomModeCleaningZones, mapImageUrl) : ""}
+                ${showRealRoomSelectionColors ? this._renderRoomSelectionHighlights(rooms, highlightedRoomIds, mapImageUrl, currentMode.id) : ""}
+                ${showRealRoomSelectionColors ? this._renderZoneSelectionHighlights(roomModeCleaningZones, mapImageUrl, currentMode.id) : ""}
                 <svg class="advance-vacuum-card__map-svg" viewBox="0 0 ${this._mapImageWidth} ${this._mapImageHeight}" preserveAspectRatio="none">
                   ${currentMode.id === "rooms" ? rooms.map(room => room.outlines.map(outline => `
                     <polygon
@@ -39263,7 +39278,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           </div>
         </div>
 
-        ${this._renderRoomFallbackList(rooms)}
+        ${this._renderRoomFallbackList(rooms, currentMode.id)}
 
         <div class="advance-vacuum-card__footer">
 
