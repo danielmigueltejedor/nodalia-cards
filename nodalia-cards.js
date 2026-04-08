@@ -11158,7 +11158,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
+    this._config = normalizeConfig(DEFAULT_CONFIG);
     this._hass = null;
     this._entityOptionsSignature = "";
     this._onShadowInput = this._onShadowInput.bind(this);
@@ -13728,7 +13728,7 @@ class NodaliaFavCardEditor extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
+    this._config = normalizeConfig(DEFAULT_CONFIG);
     this._hass = null;
     this._entityOptionsSignature = "";
     this._onShadowInput = this._onShadowInput.bind(this);
@@ -34768,7 +34768,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
+    this._config = normalizeConfig(DEFAULT_CONFIG);
     this._hass = null;
     this._mapImageWidth = 1024;
     this._mapImageHeight = 1024;
