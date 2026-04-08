@@ -1339,6 +1339,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._pinchGesture = null;
     this._touchPinchGesture = null;
     this._zoneHandleDrag = null;
+    this._pendingTouchZoneStart = null;
     this._pointerStart = null;
     this._pointerSurfaceRect = null;
     this._lastRenderSignature = "";
@@ -1402,6 +1403,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._pinchGesture = null;
     this._touchPinchGesture = null;
     this._zoneHandleDrag = null;
+    this._pendingTouchZoneStart = null;
     this._activeMode = this._getAvailableModes()[0]?.id || "all";
     this._restorePersistedCleaningSessionState();
     this._updateCalibration();
@@ -4235,10 +4237,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         clientX: event.clientX,
         clientY: event.clientY,
       });
-      try {
-        surface.setPointerCapture(event.pointerId);
-      } catch (_error) {
-        // Ignore unsupported pointer capture.
+      if (event.pointerType !== "touch") {
+        try {
+          surface.setPointerCapture(event.pointerId);
+        } catch (_error) {
+          // Ignore unsupported pointer capture.
+        }
       }
     }
 
@@ -4331,6 +4335,20 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     this._pointerStart = vacuumPoint;
     this._pointerSurfaceRect = this._getMapSurfaceRect();
+
+    if (event.pointerType === "touch") {
+      this._pendingTouchZoneStart = {
+        pointerId: event.pointerId,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        vacuumPoint: {
+          x: Math.round(vacuumPoint.x),
+          y: Math.round(vacuumPoint.y),
+        },
+      };
+      return;
+    }
+
     this._draftZone = {
       x1: Math.round(vacuumPoint.x),
       y1: Math.round(vacuumPoint.y),
@@ -4369,6 +4387,37 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
+    if (
+      this._pendingTouchZoneStart &&
+      event.pointerType === "touch" &&
+      event.pointerId === this._pendingTouchZoneStart.pointerId
+    ) {
+      const deltaX = event.clientX - this._pendingTouchZoneStart.clientX;
+      const deltaY = event.clientY - this._pendingTouchZoneStart.clientY;
+      const distance = Math.hypot(deltaX, deltaY);
+
+      if (distance < 12) {
+        return;
+      }
+
+      if (Math.abs(deltaY) > Math.abs(deltaX) * 1.1) {
+        this._pendingTouchZoneStart = null;
+        this._pointerStart = null;
+        this._pointerSurfaceRect = null;
+        return;
+      }
+
+      this._pointerStart = this._pendingTouchZoneStart.vacuumPoint;
+      this._pointerSurfaceRect = this._getMapSurfaceRect();
+      this._draftZone = {
+        x1: Math.round(this._pointerStart.x),
+        y1: Math.round(this._pointerStart.y),
+        x2: Math.round(this._pointerStart.x),
+        y2: Math.round(this._pointerStart.y),
+      };
+      this._pendingTouchZoneStart = null;
+    }
+
     if (!this._draftZone || this._activeMode !== "zone") {
       return;
     }
@@ -4385,6 +4434,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       y2: Math.round(vacuumPoint.y),
     };
     this._render();
+    event.preventDefault();
+    event.stopPropagation();
   }
 
   _onShadowPointerUp(event) {
@@ -4410,6 +4461,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._zoneHandleDrag = null;
       this._triggerHaptic("selection");
       this._render();
+      return;
+    }
+
+    if (this._pendingTouchZoneStart?.pointerId === event.pointerId) {
+      this._pendingTouchZoneStart = null;
+      this._pointerStart = null;
+      this._pointerSurfaceRect = null;
       return;
     }
 
@@ -4451,6 +4509,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const zone = this._draftZone;
     this._draftZone = null;
+    this._pointerStart = null;
+    this._pointerSurfaceRect = null;
 
     const width = Math.abs(zone.x2 - zone.x1);
     const height = Math.abs(zone.y2 - zone.y1);
@@ -5416,7 +5476,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           min-height: 280px;
           overflow: hidden;
           position: relative;
-          touch-action: none;
+          touch-action: pan-y;
           user-select: none;
         }
 
