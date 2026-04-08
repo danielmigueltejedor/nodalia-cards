@@ -19,11 +19,11 @@ const MODE_LABELS = {
 };
 
 const PANEL_MODE_PRESETS = [
-  { id: "smart", label: "Inteligente" },
-  { id: "vacuum_mop", label: "Aspirado y fregado" },
-  { id: "vacuum", label: "Aspirado" },
-  { id: "mop", label: "Fregado" },
-  { id: "custom", label: "Personalizado" },
+  { id: "smart", label: "Inteligente", icon: "mdi:brain" },
+  { id: "vacuum_mop", label: "Aspirado y fregado", icon: "mdi:robot-vacuum-variant" },
+  { id: "vacuum", label: "Aspirado", icon: "mdi:vacuum-outline" },
+  { id: "mop", label: "Fregado", icon: "mdi:water" },
+  { id: "custom", label: "Personalizado", icon: "mdi:tune-variant" },
 ];
 
 const SUCTION_MODE_PATTERNS = [
@@ -1677,6 +1677,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return this._activeModePanelPreset || this._detectModePanelPreset(state) || "vacuum_mop";
   }
 
+  _getActiveModePanelPresetConfig(state = this._getVacuumState()) {
+    const activePreset = this._getActiveModePanelPreset(state);
+    return PANEL_MODE_PRESETS.find(preset => preset.id === activePreset) || PANEL_MODE_PRESETS[0];
+  }
+
   _selectModePanelPreset(presetId, state = this._getVacuumState()) {
     this._activeModePanelPreset = presetId;
 
@@ -2435,10 +2440,16 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           </div>
         `).join("")}
         <div class="advance-vacuum-card__utility-meta">
-          <button class="advance-vacuum-card__selection-chip" data-control-action="repeats">
-            <ha-icon icon="mdi:repeat"></ha-icon>
-            <strong>x${this._repeats}</strong>
-          </button>
+          ${
+            ["smart", "custom"].includes(activePreset)
+              ? ""
+              : `
+                <button class="advance-vacuum-card__selection-chip" data-control-action="repeats">
+                  <ha-icon icon="mdi:repeat"></ha-icon>
+                  <strong>x${this._repeats}</strong>
+                </button>
+              `
+          }
           ${
             this._activeMode === "rooms"
               ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._selectedRoomIds.length}</strong><span>habitaciones</span></div>`
@@ -2517,6 +2528,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const gotoColor = styles.map.goto_color || "#f6b73c";
     const primaryButtonIcon = this._isCleaning(state) ? "mdi:pause" : "mdi:play";
     const modeDescriptors = this._getModeDescriptors(state);
+    const activeModePanelPresetConfig = this._getActiveModePanelPresetConfig(state);
     const customMenuItems = this._getVisibleCustomMenuItems(state);
     const customMenuLabel = config.custom_menu?.label || "Base";
     const customMenuIcon = config.custom_menu?.icon || "mdi:home-import-outline";
@@ -3110,8 +3122,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
             ${
               showModeMenuButton
                 ? `
-                  <button class="advance-vacuum-card__control ${this._activeUtilityPanel === "modes" ? "is-primary" : ""}" data-control-action="toggle_modes" title="Modos de aspirado y fregado">
-                    <ha-icon icon="mdi:tune-variant"></ha-icon>
+                  <button class="advance-vacuum-card__control ${this._activeUtilityPanel === "modes" ? "is-primary" : ""}" data-control-action="toggle_modes" title="${escapeHtml(activeModePanelPresetConfig?.label || "Modos de aspirado y fregado")}">
+                    <ha-icon icon="${escapeHtml(activeModePanelPresetConfig?.icon || "mdi:tune-variant")}"></ha-icon>
                   </button>
                 `
                 : ""
