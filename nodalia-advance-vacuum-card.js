@@ -3457,12 +3457,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           }
           ${
             this._activeMode !== "all"
-              ? `
-                <button class="advance-vacuum-card__selection-chip" data-control-action="clear">
-                  <ha-icon icon="mdi:close"></ha-icon>
-                  <span>Limpiar seleccion</span>
-                </button>
-              `
+              ? ""
               : ""
           }
         </div>
@@ -4191,16 +4186,31 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           width: 100%;
         }
 
+        .advance-vacuum-card__controls-row {
+          align-items: center;
+          column-gap: 10px;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+          width: 100%;
+        }
+
         .advance-vacuum-card__controls-main,
         .advance-vacuum-card__controls-side {
           display: flex;
           flex-wrap: wrap;
           gap: 10px;
-          justify-content: center;
         }
 
         .advance-vacuum-card__controls-main {
           align-items: center;
+          grid-column: 2;
+          justify-content: center;
+        }
+
+        .advance-vacuum-card__controls-side {
+          align-items: center;
+          grid-column: 3;
+          justify-content: flex-start;
         }
 
         .advance-vacuum-card__control.is-primary {
@@ -4319,36 +4329,23 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         </div>
 
         <div class="advance-vacuum-card__footer">
-        <div class="advance-vacuum-card__header">
-          <div class="advance-vacuum-card__icon">
-            <ha-icon icon="${escapeHtml(this._getIcon())}"></ha-icon>
-            ${unavailable ? `<span class="advance-vacuum-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
-          </div>
-
-          <div class="advance-vacuum-card__header-main">
-            <div class="advance-vacuum-card__title">${escapeHtml(this._getName())}</div>
-            <div class="advance-vacuum-card__chips">
-              ${this._renderStateChip(state)}
-              ${this._renderBatteryChip(state)}
-            </div>
-          </div>
-
-          <div class="advance-vacuum-card__header-actions">
-            ${
-              config.show_header_icons === false
-                ? ""
-                : this._getHeaderIcons().map((action, index) => `
-                    <button
-                      class="advance-vacuum-card__header-action"
-                      data-header-action-index="${index}"
-                      title="${escapeHtml(action.tooltip || "")}"
-                    >
-                      <ha-icon icon="${escapeHtml(action.icon)}"></ha-icon>
-                    </button>
-                  `).join("")
-            }
-          </div>
-        </div>
+        ${
+          config.show_header_icons === false || !this._getHeaderIcons().length
+            ? ""
+            : `
+              <div class="advance-vacuum-card__header-actions">
+                ${this._getHeaderIcons().map((action, index) => `
+                  <button
+                    class="advance-vacuum-card__header-action"
+                    data-header-action-index="${index}"
+                    title="${escapeHtml(action.tooltip || "")}"
+                  >
+                    <ha-icon icon="${escapeHtml(action.icon)}"></ha-icon>
+                  </button>
+                `).join("")}
+              </div>
+            `
+        }
 
         <div class="advance-vacuum-card__modes">
           ${modes.map(mode => `
@@ -4360,26 +4357,39 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         </div>
 
         <div class="advance-vacuum-card__controls">
-          <div class="advance-vacuum-card__controls-main">
-            ${
-              showModeMenuButton
-                ? `
-                  <button class="advance-vacuum-card__control ${this._activeUtilityPanel === "modes" ? "is-primary" : ""}" data-control-action="toggle_modes" title="${escapeHtml(activeModePanelPresetConfig?.label || "Modos de aspirado y fregado")}">
-                    <ha-icon icon="${escapeHtml(activeModePanelPresetConfig?.icon || "mdi:tune-variant")}"></ha-icon>
-                  </button>
+          <div class="advance-vacuum-card__controls-row">
+            <div class="advance-vacuum-card__controls-main">
+              ${
+                showModeMenuButton
+                  ? `
+                    <button class="advance-vacuum-card__control ${this._activeUtilityPanel === "modes" ? "is-primary" : ""}" data-control-action="toggle_modes" title="${escapeHtml(activeModePanelPresetConfig?.label || "Modos de aspirado y fregado")}">
+                      <ha-icon icon="${escapeHtml(activeModePanelPresetConfig?.icon || "mdi:tune-variant")}"></ha-icon>
+                    </button>
+                  `
+                  : ""
+              }
+              <button class="advance-vacuum-card__control is-primary" data-control-action="primary" title="Ejecutar">
+                <ha-icon icon="${primaryButtonIcon}"></ha-icon>
+              </button>
+              ${
+                showDockMenuButton
+                  ? `
+                    <button class="advance-vacuum-card__control ${this._activeUtilityPanel === "dock" ? "is-primary" : ""}" data-control-action="toggle_dock_panel" title="${escapeHtml(activeDockPanelSectionConfig?.label || "Base de carga")}">
+                      <ha-icon icon="${escapeHtml(activeDockPanelSectionConfig?.icon || "mdi:home-import-outline")}"></ha-icon>
+                    </button>
                 `
-                : ""
-            }
-            <button class="advance-vacuum-card__control is-primary" data-control-action="primary" title="Ejecutar">
-              <ha-icon icon="${primaryButtonIcon}"></ha-icon>
-            </button>
+                  : ""
+              }
+            </div>
             ${
-              showDockMenuButton
+              this._activeMode !== "all"
                 ? `
-                  <button class="advance-vacuum-card__control ${this._activeUtilityPanel === "dock" ? "is-primary" : ""}" data-control-action="toggle_dock_panel" title="${escapeHtml(activeDockPanelSectionConfig?.label || "Base de carga")}">
-                    <ha-icon icon="${escapeHtml(activeDockPanelSectionConfig?.icon || "mdi:home-import-outline")}"></ha-icon>
-                  </button>
-              `
+                  <div class="advance-vacuum-card__controls-side">
+                    <button class="advance-vacuum-card__control" data-control-action="clear" title="Volver atrás">
+                      <ha-icon icon="mdi:arrow-left"></ha-icon>
+                    </button>
+                  </div>
+                `
                 : ""
             }
           </div>
