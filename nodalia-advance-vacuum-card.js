@@ -904,6 +904,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._mapOffset = { x: 0, y: 0 };
     this._activeMapPointers = new Map();
     this._pinchGesture = null;
+    this._touchPinchGesture = null;
     this._zoneHandleDrag = null;
     this._pointerStart = null;
     this._pointerSurfaceRect = null;
@@ -914,6 +915,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
     this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
     this._onShadowPointerUp = this._onShadowPointerUp.bind(this);
+    this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
+    this._onShadowTouchMove = this._onShadowTouchMove.bind(this);
+    this._onShadowTouchEnd = this._onShadowTouchEnd.bind(this);
     this._onMapImageLoad = this._onMapImageLoad.bind(this);
 
     this.shadowRoot.addEventListener("click", this._onShadowClick);
@@ -923,6 +927,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this.shadowRoot.addEventListener("pointerup", this._onShadowPointerUp);
     this.shadowRoot.addEventListener("pointercancel", this._onShadowPointerUp);
     this.shadowRoot.addEventListener("pointerleave", this._onShadowPointerUp);
+    this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    this.shadowRoot.addEventListener("touchmove", this._onShadowTouchMove, { passive: false });
+    this.shadowRoot.addEventListener("touchend", this._onShadowTouchEnd, { passive: false });
+    this.shadowRoot.addEventListener("touchcancel", this._onShadowTouchEnd, { passive: false });
   }
 
   connectedCallback() {
@@ -953,6 +961,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._mapOffset = { x: 0, y: 0 };
     this._activeMapPointers = new Map();
     this._pinchGesture = null;
+    this._touchPinchGesture = null;
     this._zoneHandleDrag = null;
     this._activeMode = this._getAvailableModes()[0]?.id || "all";
     this._updateCalibration();
@@ -2278,6 +2287,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._mapScale = 1;
     this._mapOffset = { x: 0, y: 0 };
     this._pinchGesture = null;
+    this._touchPinchGesture = null;
+    this._activeMapPointers.clear();
   }
 
   _eventToMapPoint(event) {
@@ -2519,6 +2530,114 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._setMapTransform(scale, offset);
     this._render();
     return true;
+  }
+
+  _getTouchDistance(touches) {
+    if (!touches || touches.length < 2) {
+      return 0;
+    }
+
+    const [first, second] = Array.from(touches);
+    return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
+  }
+
+  _getTouchMidpoint(touches, rect = this._getMapSurfaceRect()) {
+    if (!rect || !touches || touches.length < 2) {
+      return null;
+    }
+
+    const [first, second] = Array.from(touches);
+    return {
+      x: clamp(((first.clientX + second.clientX) / 2) - rect.left, 0, rect.width),
+      y: clamp(((first.clientY + second.clientY) / 2) - rect.top, 0, rect.height),
+    };
+  }
+
+  _beginTouchPinchGesture(touches) {
+    const rect = this._getMapSurfaceRect();
+    if (!rect || !touches || touches.length < 2) {
+      this._touchPinchGesture = null;
+      return false;
+    }
+
+    const midpoint = this._getTouchMidpoint(touches, rect);
+    const distance = this._getTouchDistance(touches);
+    if (!midpoint || distance <= 0) {
+      this._touchPinchGesture = null;
+      return false;
+    }
+
+    this._activeMapPointers.clear();
+    this._pinchGesture = null;
+    this._draftZone = null;
+    this._zoneHandleDrag = null;
+    this._pointerStart = null;
+    this._touchPinchGesture = {
+      startDistance: Math.max(distance, 1),
+      startScale: this._mapScale,
+      anchor: {
+        x: (midpoint.x - this._mapOffset.x) / this._mapScale,
+        y: (midpoint.y - this._mapOffset.y) / this._mapScale,
+      },
+    };
+    return true;
+  }
+
+  _onShadowTouchStart(event) {
+    const surface = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.mapSurface === "main");
+    if (!surface || event.touches.length < 2) {
+      return;
+    }
+
+    if (this._beginTouchPinchGesture(event.touches)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }
+
+  _onShadowTouchMove(event) {
+    if (!this._touchPinchGesture) {
+      return;
+    }
+
+    if (event.touches.length < 2) {
+      this._touchPinchGesture = null;
+      return;
+    }
+
+    const rect = this._getMapSurfaceRect();
+    const midpoint = this._getTouchMidpoint(event.touches, rect);
+    if (!rect || !midpoint) {
+      return;
+    }
+
+    const distance = Math.max(this._getTouchDistance(event.touches), 1);
+    const scale = this._touchPinchGesture.startScale * (distance / this._touchPinchGesture.startDistance);
+    const offset = {
+      x: midpoint.x - (this._touchPinchGesture.anchor.x * scale),
+      y: midpoint.y - (this._touchPinchGesture.anchor.y * scale),
+    };
+
+    this._setMapTransform(scale, offset);
+    this._render();
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  _onShadowTouchEnd(event) {
+    if (!this._touchPinchGesture) {
+      return;
+    }
+
+    if (event.touches.length < 2) {
+      this._touchPinchGesture = null;
+      return;
+    }
+
+    if (this._beginTouchPinchGesture(event.touches)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
   }
 
   _navigate(path) {
@@ -2890,6 +3009,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _onShadowPointerDown(event) {
+    if (this._touchPinchGesture && event.pointerType === "touch") {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
     const surface = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.mapSurface === "main");
     if (!surface) {
       return;
@@ -2998,6 +3123,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _onShadowPointerMove(event) {
+    if (this._touchPinchGesture && event.pointerType === "touch") {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
     if (this._activeMapPointers.has(event.pointerId)) {
       this._activeMapPointers.set(event.pointerId, {
         clientX: event.clientX,
@@ -3036,6 +3167,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _onShadowPointerUp(event) {
+    if (this._touchPinchGesture && event.pointerType === "touch") {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
     const wasPinching = Boolean(this._pinchGesture);
     if (this._activeMapPointers.has(event.pointerId)) {
       this._activeMapPointers.delete(event.pointerId);
@@ -3221,12 +3358,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return `
       <div class="advance-vacuum-card__map-tools">
         <button
-          class="advance-vacuum-card__map-tool ${!canAddZone ? "is-disabled" : ""}"
+          class="advance-vacuum-card__map-tool advance-vacuum-card__map-tool--add ${!canAddZone ? "is-disabled" : ""}"
           data-control-action="add_zone"
-          title="Anadir zona"
+          title="Añadir zona"
           ${!canAddZone ? "disabled" : ""}
         >
           <ha-icon icon="mdi:plus"></ha-icon>
+          <span class="advance-vacuum-card__map-tool-label">Zona</span>
         </button>
       </div>
     `;
@@ -3971,10 +4109,23 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           box-shadow: 0 12px 26px rgba(0,0,0,0.18);
           color: var(--primary-text-color);
           display: inline-flex;
-          height: 38px;
+          gap: 6px;
           justify-content: center;
+          min-height: 44px;
+          min-width: 44px;
+          padding: 0 14px;
           pointer-events: auto;
-          width: 38px;
+        }
+
+        .advance-vacuum-card__map-tool--add {
+          background: linear-gradient(180deg, color-mix(in srgb, ${accentColor} 18%, rgba(255,255,255,0.08)) 0%, rgba(255,255,255,0.06) 100%);
+          border-color: color-mix(in srgb, ${accentColor} 32%, rgba(255,255,255,0.12));
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .advance-vacuum-card__map-tool-label {
+          line-height: 1;
         }
 
         .advance-vacuum-card__map-tool.is-disabled {
