@@ -530,6 +530,24 @@ function humanizeModeLabel(value, kind = "generic") {
     .replace(/\b\w/g, match => match.toUpperCase());
 }
 
+function humanizeSelectOptionLabel(value, kind = "generic") {
+  const baseLabel = humanizeModeLabel(value, kind);
+  if (!baseLabel) {
+    return "";
+  }
+
+  const normalized = baseLabel
+    .replaceAll("_", " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) {
+    return "";
+  }
+
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase();
+}
+
 function normalizeCustomMenuItems(items) {
   return arrayFromMaybe(items)
     .filter(isObject)
@@ -870,6 +888,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._selectedRoomIds = [];
     this._selectedPredefinedZoneIds = [];
     this._manualZones = [];
+    this._selectedManualZoneIndex = -1;
     this._draftZone = null;
     this._gotoPoint = null;
     this._repeats = 1;
@@ -881,6 +900,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       mop: "",
     };
     this._converter = new CoordinatesConverter([]);
+    this._mapScale = 1;
+    this._mapOffset = { x: 0, y: 0 };
+    this._activeMapPointers = new Map();
+    this._pinchGesture = null;
+    this._zoneHandleDrag = null;
     this._pointerStart = null;
     this._pointerSurfaceRect = null;
     this._lastRenderSignature = "";
@@ -919,11 +943,17 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._selectedRoomIds = [];
     this._selectedPredefinedZoneIds = [];
     this._manualZones = [];
+    this._selectedManualZoneIndex = -1;
     this._draftZone = null;
     this._gotoPoint = null;
     this._activeUtilityPanel = null;
     this._activeModePanelPreset = "";
     this._activeDockPanelSection = DOCK_PANEL_SECTIONS[0]?.id || "control";
+    this._mapScale = 1;
+    this._mapOffset = { x: 0, y: 0 };
+    this._activeMapPointers = new Map();
+    this._pinchGesture = null;
+    this._zoneHandleDrag = null;
     this._activeMode = this._getAvailableModes()[0]?.id || "all";
     this._updateCalibration();
     this._render();
@@ -2206,14 +2236,65 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return this.shadowRoot?.querySelector("[data-map-surface]")?.getBoundingClientRect() || null;
   }
 
+  _getMapViewportPoint(event, rect = this._getMapSurfaceRect()) {
+    if (!rect) {
+      return null;
+    }
+
+    return {
+      x: clamp(event.clientX - rect.left, 0, rect.width),
+      y: clamp(event.clientY - rect.top, 0, rect.height),
+    };
+  }
+
+  _clampMapTransform(scale = this._mapScale, offset = this._mapOffset, rect = this._getMapSurfaceRect()) {
+    const safeScale = clamp(Number(scale || 1), 1, 3);
+    if (!rect || safeScale <= 1) {
+      return {
+        scale: 1,
+        offset: { x: 0, y: 0 },
+      };
+    }
+
+    const minOffsetX = rect.width * (1 - safeScale);
+    const minOffsetY = rect.height * (1 - safeScale);
+
+    return {
+      scale: safeScale,
+      offset: {
+        x: clamp(Number(offset?.x || 0), minOffsetX, 0),
+        y: clamp(Number(offset?.y || 0), minOffsetY, 0),
+      },
+    };
+  }
+
+  _setMapTransform(scale = this._mapScale, offset = this._mapOffset) {
+    const nextTransform = this._clampMapTransform(scale, offset);
+    this._mapScale = nextTransform.scale;
+    this._mapOffset = nextTransform.offset;
+  }
+
+  _resetMapTransform() {
+    this._mapScale = 1;
+    this._mapOffset = { x: 0, y: 0 };
+    this._pinchGesture = null;
+  }
+
   _eventToMapPoint(event) {
     const rect = this._getMapSurfaceRect();
     if (!rect) {
       return null;
     }
 
-    const x = clamp(((event.clientX - rect.left) / rect.width) * this._mapImageWidth, 0, this._mapImageWidth);
-    const y = clamp(((event.clientY - rect.top) / rect.height) * this._mapImageHeight, 0, this._mapImageHeight);
+    const viewportPoint = this._getMapViewportPoint(event, rect);
+    if (!viewportPoint) {
+      return null;
+    }
+
+    const localX = clamp((viewportPoint.x - this._mapOffset.x) / this._mapScale, 0, rect.width);
+    const localY = clamp((viewportPoint.y - this._mapOffset.y) / this._mapScale, 0, rect.height);
+    const x = clamp((localX / rect.width) * this._mapImageWidth, 0, this._mapImageWidth);
+    const y = clamp((localY / rect.height) * this._mapImageHeight, 0, this._mapImageHeight);
     return { x, y };
   }
 
@@ -2246,6 +2327,198 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       width: Math.abs(second.x - first.x),
       height: Math.abs(second.y - first.y),
     };
+  }
+
+  _mapRectToVacuumZone(rect) {
+    if (!rect) {
+      return null;
+    }
+
+    const first = this._converter.mapToVacuum(rect.x1, rect.y1);
+    const second = this._converter.mapToVacuum(rect.x2, rect.y2);
+    return {
+      x1: Math.round(Math.min(first.x, second.x)),
+      y1: Math.round(Math.min(first.y, second.y)),
+      x2: Math.round(Math.max(first.x, second.x)),
+      y2: Math.round(Math.max(first.y, second.y)),
+    };
+  }
+
+  _getManualZoneCountLimit() {
+    return clamp(Number(this._config?.max_zone_selections || 5), 1, 10);
+  }
+
+  _sanitizeSelectedManualZoneIndex() {
+    if (this._selectedManualZoneIndex >= this._manualZones.length) {
+      this._selectedManualZoneIndex = this._manualZones.length - 1;
+    }
+
+    if (this._manualZones.length <= 0) {
+      this._selectedManualZoneIndex = -1;
+    }
+  }
+
+  _selectManualZone(index, { triggerHaptic = false } = {}) {
+    const normalizedIndex = Number(index);
+    if (!Number.isInteger(normalizedIndex) || normalizedIndex < 0 || normalizedIndex >= this._manualZones.length) {
+      return;
+    }
+
+    this._selectedManualZoneIndex = normalizedIndex;
+    if (triggerHaptic) {
+      this._triggerHaptic("selection");
+    }
+    this._render();
+  }
+
+  _updateManualZone(index, nextZone) {
+    if (!Number.isInteger(index) || index < 0 || index >= this._manualZones.length || !nextZone) {
+      return;
+    }
+
+    this._manualZones = this._manualZones.map((zone, zoneIndex) => (zoneIndex === index ? nextZone : zone));
+    this._selectedManualZoneIndex = index;
+  }
+
+  _getVisibleMapCenter() {
+    const rect = this._getMapSurfaceRect();
+    if (!rect) {
+      return {
+        x: this._mapImageWidth / 2,
+        y: this._mapImageHeight / 2,
+      };
+    }
+
+    return {
+      x: clamp(((rect.width / 2) - this._mapOffset.x) / this._mapScale / rect.width * this._mapImageWidth, 0, this._mapImageWidth),
+      y: clamp(((rect.height / 2) - this._mapOffset.y) / this._mapScale / rect.height * this._mapImageHeight, 0, this._mapImageHeight),
+    };
+  }
+
+  _createDefaultManualZone() {
+    const center = this._getVisibleMapCenter();
+    const size = Math.max(120, Math.round(Math.min(this._mapImageWidth, this._mapImageHeight) * 0.18));
+    const halfSize = size / 2;
+    const rect = {
+      x1: clamp(center.x - halfSize, 0, this._mapImageWidth),
+      y1: clamp(center.y - halfSize, 0, this._mapImageHeight),
+      x2: clamp(center.x + halfSize, 0, this._mapImageWidth),
+      y2: clamp(center.y + halfSize, 0, this._mapImageHeight),
+    };
+
+    return this._mapRectToVacuumZone(rect);
+  }
+
+  _addManualZone() {
+    if (this._manualZones.length >= this._getManualZoneCountLimit()) {
+      return;
+    }
+
+    const zone = this._createDefaultManualZone();
+    if (!zone) {
+      return;
+    }
+
+    this._manualZones = [...this._manualZones, zone];
+    this._selectedManualZoneIndex = this._manualZones.length - 1;
+    this._draftZone = null;
+    this._triggerHaptic("selection");
+    this._render();
+  }
+
+  _getZoneHandlePoints(zone) {
+    const rect = this._zoneToSvgRect(zone);
+    return {
+      rect,
+      corners: [
+        { id: "nw", icon: "mdi:arrow-top-left", x: rect.x, y: rect.y },
+        { id: "ne", icon: "mdi:arrow-top-right", x: rect.x + rect.width, y: rect.y },
+        { id: "se", icon: "mdi:arrow-bottom-right", x: rect.x + rect.width, y: rect.y + rect.height },
+        { id: "sw", icon: "mdi:arrow-bottom-left", x: rect.x, y: rect.y + rect.height },
+      ],
+    };
+  }
+
+  _updateManualZoneFromHandleDrag(event) {
+    if (!this._zoneHandleDrag || event.pointerId !== this._zoneHandleDrag.pointerId) {
+      return false;
+    }
+
+    const mapPoint = this._eventToMapPoint(event);
+    if (!mapPoint) {
+      return false;
+    }
+
+    const nextZone = this._mapRectToVacuumZone({
+      x1: this._zoneHandleDrag.fixedPoint.x,
+      y1: this._zoneHandleDrag.fixedPoint.y,
+      x2: mapPoint.x,
+      y2: mapPoint.y,
+    });
+
+    if (!nextZone) {
+      return false;
+    }
+
+    this._updateManualZone(this._zoneHandleDrag.index, nextZone);
+    this._render();
+    return true;
+  }
+
+  _startPinchGesture() {
+    if (this._activeMapPointers.size < 2) {
+      return;
+    }
+
+    const rect = this._getMapSurfaceRect();
+    if (!rect) {
+      return;
+    }
+
+    const [first, second] = [...this._activeMapPointers.values()];
+    const midpoint = {
+      x: ((first.clientX + second.clientX) / 2) - rect.left,
+      y: ((first.clientY + second.clientY) / 2) - rect.top,
+    };
+    const distance = Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
+
+    this._pinchGesture = {
+      startDistance: Math.max(distance, 1),
+      startScale: this._mapScale,
+      anchor: {
+        x: (midpoint.x - this._mapOffset.x) / this._mapScale,
+        y: (midpoint.y - this._mapOffset.y) / this._mapScale,
+      },
+    };
+    this._draftZone = null;
+    this._zoneHandleDrag = null;
+  }
+
+  _updatePinchGesture() {
+    if (!this._pinchGesture || this._activeMapPointers.size < 2) {
+      return false;
+    }
+
+    const rect = this._getMapSurfaceRect();
+    if (!rect) {
+      return false;
+    }
+
+    const [first, second] = [...this._activeMapPointers.values()];
+    const midpoint = {
+      x: ((first.clientX + second.clientX) / 2) - rect.left,
+      y: ((first.clientY + second.clientY) / 2) - rect.top,
+    };
+    const distance = Math.max(Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY), 1);
+    const scale = this._pinchGesture.startScale * (distance / this._pinchGesture.startDistance);
+    const offset = {
+      x: midpoint.x - (this._pinchGesture.anchor.x * scale),
+      y: midpoint.y - (this._pinchGesture.anchor.y * scale),
+    };
+
+    this._setMapTransform(scale, offset);
+    this._render();
+    return true;
   }
 
   _navigate(path) {
@@ -2330,6 +2603,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._selectedPredefinedZoneIds = this._selectedPredefinedZoneIds.includes(zoneId)
       ? this._selectedPredefinedZoneIds.filter(id => id !== zoneId)
       : [...this._selectedPredefinedZoneIds, zoneId];
+    this._selectedManualZoneIndex = -1;
     this._triggerHaptic("selection");
     this._render();
   }
@@ -2341,6 +2615,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._activeMode = modeId;
     this._activeUtilityPanel = null;
     this._manualZones = [];
+    this._selectedManualZoneIndex = -1;
     this._draftZone = null;
     this._gotoPoint = null;
     this._selectedPredefinedZoneIds = [];
@@ -2365,6 +2640,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._selectedRoomIds = [];
     this._selectedPredefinedZoneIds = [];
     this._manualZones = [];
+    this._selectedManualZoneIndex = -1;
     this._draftZone = null;
     this._gotoPoint = null;
     this._triggerHaptic("selection");
@@ -2477,6 +2753,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       case "clear":
         this._clearSelection();
         break;
+      case "add_zone":
+        this._addManualZone();
+        break;
       case "repeats":
         this._cycleRepeats();
         break;
@@ -2532,6 +2811,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._triggerHaptic("selection");
         this._runExternalAction(action.tap_action);
       }
+      return;
+    }
+
+    const manualZoneTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.manualZoneIndex);
+    if (manualZoneTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._selectManualZone(Number(manualZoneTarget.dataset.manualZoneIndex), { triggerHaptic: true });
       return;
     }
 
@@ -2603,11 +2890,68 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _onShadowPointerDown(event) {
+    const surface = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.mapSurface === "main");
+    if (!surface) {
+      return;
+    }
+
+    if (event.pointerId !== undefined) {
+      this._activeMapPointers.set(event.pointerId, {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
+      try {
+        surface.setPointerCapture(event.pointerId);
+      } catch (_error) {
+        // Ignore unsupported pointer capture.
+      }
+    }
+
+    if (this._activeMapPointers.size >= 2) {
+      this._startPinchGesture();
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
     if (this._activeMode !== "zone") {
       return;
     }
 
     if (event.button !== 0) {
+      return;
+    }
+
+    const zoneHandleTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.zoneHandleIndex && node.dataset?.zoneHandleCorner);
+    if (zoneHandleTarget) {
+      const index = Number(zoneHandleTarget.dataset.zoneHandleIndex);
+      const zone = this._manualZones[index];
+      const handlePoints = zone ? this._getZoneHandlePoints(zone) : null;
+      const selectedCorner = handlePoints?.corners?.find(corner => corner.id === zoneHandleTarget.dataset.zoneHandleCorner);
+      const oppositeCorner = handlePoints?.corners?.find(corner => ({
+        nw: "se",
+        ne: "sw",
+        se: "nw",
+        sw: "ne",
+      }[zoneHandleTarget.dataset.zoneHandleCorner] === corner.id));
+
+      if (!zone || !selectedCorner || !oppositeCorner) {
+        return;
+      }
+
+      this._selectedManualZoneIndex = index;
+      this._zoneHandleDrag = {
+        pointerId: event.pointerId,
+        index,
+        corner: selectedCorner.id,
+        fixedPoint: {
+          x: oppositeCorner.x,
+          y: oppositeCorner.y,
+        },
+      };
+      event.preventDefault();
+      event.stopPropagation();
+      this._render();
       return;
     }
 
@@ -2622,15 +2966,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       node.dataset?.customMenuIndex ||
       node.dataset?.dockSectionId ||
       node.dataset?.dockActionId ||
-      node.dataset?.dockSettingId
+      node.dataset?.dockSettingId ||
+      node.dataset?.manualZoneIndex
     ));
 
     if (skip) {
-      return;
-    }
-
-    const surface = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.mapSurface === "main");
-    if (!surface) {
       return;
     }
 
@@ -2639,8 +2979,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
-    const maxZones = clamp(Number(this._config?.max_zone_selections || 5), 1, 10);
-    if (this._manualZones.length >= maxZones) {
+    if (this._manualZones.length >= this._getManualZoneCountLimit()) {
       return;
     }
 
@@ -2659,6 +2998,25 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _onShadowPointerMove(event) {
+    if (this._activeMapPointers.has(event.pointerId)) {
+      this._activeMapPointers.set(event.pointerId, {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
+    }
+
+    if (this._updatePinchGesture()) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    if (this._updateManualZoneFromHandleDrag(event)) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
     if (!this._draftZone || this._activeMode !== "zone") {
       return;
     }
@@ -2678,6 +3036,25 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _onShadowPointerUp(event) {
+    const wasPinching = Boolean(this._pinchGesture);
+    if (this._activeMapPointers.has(event.pointerId)) {
+      this._activeMapPointers.delete(event.pointerId);
+    }
+
+    if (wasPinching) {
+      if (this._activeMapPointers.size < 2) {
+        this._pinchGesture = null;
+      }
+      return;
+    }
+
+    if (this._zoneHandleDrag?.pointerId === event.pointerId) {
+      this._zoneHandleDrag = null;
+      this._triggerHaptic("selection");
+      this._render();
+      return;
+    }
+
     if (this._activeMode === "goto") {
       const skip = event.composedPath().find(node => node instanceof HTMLElement && (
         node.dataset?.roomId ||
@@ -2690,7 +3067,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         node.dataset?.customMenuIndex ||
         node.dataset?.dockSectionId ||
         node.dataset?.dockActionId ||
-        node.dataset?.dockSettingId
+        node.dataset?.dockSettingId ||
+        node.dataset?.manualZoneIndex ||
+        node.dataset?.zoneHandleIndex
       ));
 
       const surface = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.mapSurface === "main");
@@ -2724,6 +3103,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         x2: Math.max(zone.x1, zone.x2),
         y2: Math.max(zone.y1, zone.y2),
       }];
+      this._selectedManualZoneIndex = this._manualZones.length - 1;
       this._triggerHaptic("selection");
     }
 
@@ -2789,6 +3169,67 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         </button>
       `;
     }).join("");
+  }
+
+  _renderManualZoneEditors() {
+    if (this._activeMode !== "zone" || !this._manualZones.length) {
+      return "";
+    }
+
+    this._sanitizeSelectedManualZoneIndex();
+
+    return this._manualZones.map((zone, index) => {
+      const { rect, corners } = this._getZoneHandlePoints(zone);
+      const selected = index === this._selectedManualZoneIndex;
+      const left = (rect.x / this._mapImageWidth) * 100;
+      const top = (rect.y / this._mapImageHeight) * 100;
+      const width = (rect.width / this._mapImageWidth) * 100;
+      const height = (rect.height / this._mapImageHeight) * 100;
+
+      return `
+        <button
+          class="advance-vacuum-card__zone-hitbox ${selected ? "is-selected" : ""}"
+          style="left:${left}%; top:${top}%; width:${width}%; height:${height}%;"
+          data-manual-zone-index="${index}"
+          title="Editar zona ${index + 1}"
+        ></button>
+        ${
+          selected
+            ? corners.map(corner => `
+                <button
+                  class="advance-vacuum-card__zone-handle"
+                  style="left:${(corner.x / this._mapImageWidth) * 100}%; top:${(corner.y / this._mapImageHeight) * 100}%;"
+                  data-zone-handle-index="${index}"
+                  data-zone-handle-corner="${escapeHtml(corner.id)}"
+                  title="Ajustar zona"
+                >
+                  <ha-icon icon="${escapeHtml(corner.icon)}"></ha-icon>
+                </button>
+              `).join("")
+            : ""
+        }
+      `;
+    }).join("");
+  }
+
+  _renderMapTools() {
+    if (this._activeMode !== "zone") {
+      return "";
+    }
+
+    const canAddZone = this._manualZones.length < this._getManualZoneCountLimit();
+    return `
+      <div class="advance-vacuum-card__map-tools">
+        <button
+          class="advance-vacuum-card__map-tool ${!canAddZone ? "is-disabled" : ""}"
+          data-control-action="add_zone"
+          title="Anadir zona"
+          ${!canAddZone ? "disabled" : ""}
+        >
+          <ha-icon icon="mdi:plus"></ha-icon>
+        </button>
+      </div>
+    `;
   }
 
   _renderStateChip(state) {
@@ -2927,7 +3368,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         <select class="advance-vacuum-card__utility-select" data-dock-setting-id="${escapeHtml(descriptor.id)}">
           ${descriptor.options.map(option => `
             <option value="${escapeHtml(option)}" ${normalizeTextKey(descriptor.current) === normalizeTextKey(option) ? "selected" : ""}>
-              ${escapeHtml(humanizeModeLabel(option, descriptor.id === "mop_mode" ? "mop_mode" : "generic"))}
+              ${escapeHtml(humanizeSelectOptionLabel(option, descriptor.id === "mop_mode" ? "mop_mode" : "generic"))}
             </option>
           `).join("")}
         </select>
@@ -3018,6 +3459,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const mapImageUrl = this._getMapImageUrl();
     const unavailable = isUnavailableState(state) || !mapImageUrl;
     this._syncRememberedModeSelections(state);
+    this._sanitizeSelectedManualZoneIndex();
     const roomColor = styles.map.room_color || "rgba(97, 201, 122, 0.18)";
     const roomBorder = styles.map.room_border || "rgba(97, 201, 122, 0.55)";
     const zoneColor = styles.map.zone_color || "rgba(90, 167, 255, 0.18)";
@@ -3036,6 +3478,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       : this._activeUtilityPanel === "dock"
         ? this._renderDockPanel(state)
         : "";
+    const mapTransformStyle = `transform: translate(${this._mapOffset.x.toFixed(1)}px, ${this._mapOffset.y.toFixed(1)}px) scale(${this._mapScale.toFixed(3)});`;
 
     const selectedPredefinedZones = predefinedZones.filter(zone => this._selectedPredefinedZoneIds.includes(zone.id));
     const allZoneRects = [
@@ -3386,10 +3829,25 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__map-surface {
           aspect-ratio: ${this._mapImageWidth} / ${this._mapImageHeight};
-          cursor: ${this._activeMode === "goto" ? "crosshair" : this._activeMode === "zone" ? "crosshair" : "default"};
           min-height: 280px;
+          overflow: hidden;
           position: relative;
+          touch-action: none;
           user-select: none;
+        }
+
+        .advance-vacuum-card__map-viewport {
+          inset: 0;
+          overflow: hidden;
+          position: absolute;
+        }
+
+        .advance-vacuum-card__map-canvas {
+          height: 100%;
+          inset: 0;
+          position: absolute;
+          transform-origin: top left;
+          width: 100%;
         }
 
         .advance-vacuum-card__map-image {
@@ -3402,13 +3860,17 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         .advance-vacuum-card__map-svg,
         .advance-vacuum-card__map-markers {
           inset: 0;
-          pointer-events: none;
           position: absolute;
         }
 
         .advance-vacuum-card__map-svg {
           height: 100%;
+          pointer-events: none;
           width: 100%;
+        }
+
+        .advance-vacuum-card__map-markers {
+          pointer-events: none;
         }
 
         .advance-vacuum-card__room-polygon {
@@ -3441,6 +3903,82 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           stroke: color-mix(in srgb, ${gotoColor} 72%, rgba(255,255,255,0.8));
           stroke-dasharray: 10 10;
           stroke-width: 8;
+        }
+
+        .advance-vacuum-card__zone-hitbox,
+        .advance-vacuum-card__zone-handle,
+        .advance-vacuum-card__map-tool {
+          appearance: none;
+          background: none;
+          border: none;
+          color: inherit;
+          cursor: pointer;
+          font: inherit;
+          margin: 0;
+          padding: 0;
+        }
+
+        .advance-vacuum-card__zone-hitbox {
+          background: rgba(255,255,255,0.01);
+          border: 2px dashed transparent;
+          border-radius: 16px;
+          pointer-events: auto;
+          position: absolute;
+          z-index: 2;
+        }
+
+        .advance-vacuum-card__zone-hitbox.is-selected {
+          border-color: color-mix(in srgb, ${accentColor} 46%, rgba(255,255,255,0.18));
+        }
+
+        .advance-vacuum-card__zone-handle {
+          align-items: center;
+          background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%);
+          border: 1px solid rgba(255,255,255,0.14);
+          border-radius: 999px;
+          box-shadow: 0 12px 26px rgba(0,0,0,0.18);
+          color: var(--primary-text-color);
+          display: inline-flex;
+          height: 34px;
+          justify-content: center;
+          pointer-events: auto;
+          position: absolute;
+          transform: translate(-50%, -50%);
+          width: 34px;
+          z-index: 3;
+        }
+
+        .advance-vacuum-card__zone-handle ha-icon,
+        .advance-vacuum-card__map-tool ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
+        .advance-vacuum-card__map-tools {
+          display: flex;
+          gap: 8px;
+          pointer-events: none;
+          position: absolute;
+          right: 12px;
+          top: 12px;
+          z-index: 4;
+        }
+
+        .advance-vacuum-card__map-tool {
+          align-items: center;
+          background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.05) 100%);
+          border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 999px;
+          box-shadow: 0 12px 26px rgba(0,0,0,0.18);
+          color: var(--primary-text-color);
+          display: inline-flex;
+          height: 38px;
+          justify-content: center;
+          pointer-events: auto;
+          width: 38px;
+        }
+
+        .advance-vacuum-card__map-tool.is-disabled {
+          opacity: 0.45;
         }
 
         .advance-vacuum-card__room-marker,
@@ -3555,71 +4093,77 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       <ha-card class="advance-vacuum-card">
         <div class="advance-vacuum-card__map">
           <div class="advance-vacuum-card__map-surface" data-map-surface="main">
-            ${
-              mapImageUrl
-                ? `<img class="advance-vacuum-card__map-image" data-map-image src="${escapeHtml(mapImageUrl)}" alt="Mapa del robot" />`
-                : `<div class="advance-vacuum-card__map-image" style="display:flex;align-items:center;justify-content:center;color:var(--secondary-text-color);">Mapa no disponible</div>`
-            }
+            <div class="advance-vacuum-card__map-viewport">
+              <div class="advance-vacuum-card__map-canvas" style="${mapTransformStyle}">
+                ${
+                  mapImageUrl
+                    ? `<img class="advance-vacuum-card__map-image" data-map-image src="${escapeHtml(mapImageUrl)}" alt="Mapa del robot" />`
+                    : `<div class="advance-vacuum-card__map-image" style="display:flex;align-items:center;justify-content:center;color:var(--secondary-text-color);">Mapa no disponible</div>`
+                }
 
-            <svg class="advance-vacuum-card__map-svg" viewBox="0 0 ${this._mapImageWidth} ${this._mapImageHeight}" preserveAspectRatio="none">
-              ${currentMode.id === "rooms" ? rooms.map(room => `
-                <polygon
-                  class="advance-vacuum-card__room-polygon ${this._selectedRoomIds.includes(room.id) ? "is-selected" : ""}"
-                  data-room-id="${escapeHtml(room.id)}"
-                  points="${escapeHtml(this._vacuumOutlineToSvgPoints(room.outline))}"
-                ></polygon>
-              `).join("") : ""}
+                <svg class="advance-vacuum-card__map-svg" viewBox="0 0 ${this._mapImageWidth} ${this._mapImageHeight}" preserveAspectRatio="none">
+                  ${currentMode.id === "rooms" ? rooms.map(room => `
+                    <polygon
+                      class="advance-vacuum-card__room-polygon ${this._selectedRoomIds.includes(room.id) ? "is-selected" : ""}"
+                      data-room-id="${escapeHtml(room.id)}"
+                      points="${escapeHtml(this._vacuumOutlineToSvgPoints(room.outline))}"
+                    ></polygon>
+                  `).join("") : ""}
 
-              ${currentMode.id === "zone" ? allZoneRects.map(zone => {
-                const rect = this._zoneToSvgRect(zone);
-                return `
-                  <rect
-                    class="advance-vacuum-card__zone-rect ${zone.draft ? "is-draft" : ""}"
-                    x="${rect.x.toFixed(1)}"
-                    y="${rect.y.toFixed(1)}"
-                    width="${rect.width.toFixed(1)}"
-                    height="${rect.height.toFixed(1)}"
-                    rx="18"
-                    ry="18"
-                  ></rect>
-                `;
-              }).join("") : ""}
+                  ${currentMode.id === "zone" ? allZoneRects.map(zone => {
+                    const rect = this._zoneToSvgRect(zone);
+                    return `
+                      <rect
+                        class="advance-vacuum-card__zone-rect ${zone.draft ? "is-draft" : ""}"
+                        x="${rect.x.toFixed(1)}"
+                        y="${rect.y.toFixed(1)}"
+                        width="${rect.width.toFixed(1)}"
+                        height="${rect.height.toFixed(1)}"
+                        rx="18"
+                        ry="18"
+                      ></rect>
+                    `;
+                  }).join("") : ""}
 
-              ${
-                currentMode.id === "goto" && this._gotoPoint
-                  ? (() => {
-                      const mapped = this._converter.vacuumToMap(this._gotoPoint.x, this._gotoPoint.y);
+                  ${
+                    currentMode.id === "goto" && this._gotoPoint
+                      ? (() => {
+                          const mapped = this._converter.vacuumToMap(this._gotoPoint.x, this._gotoPoint.y);
+                          return `
+                            <circle cx="${mapped.x.toFixed(1)}" cy="${mapped.y.toFixed(1)}" r="22" fill="color-mix(in srgb, ${gotoColor} 22%, rgba(255,255,255,0.08))"></circle>
+                            <circle cx="${mapped.x.toFixed(1)}" cy="${mapped.y.toFixed(1)}" r="10" fill="${gotoColor}" stroke="rgba(255,255,255,0.94)" stroke-width="5"></circle>
+                          `;
+                        })()
+                      : ""
+                  }
+                </svg>
+
+                <div class="advance-vacuum-card__map-markers">
+                  ${currentMode.id === "rooms" ? this._renderRoomMarkers(rooms) : ""}
+                  ${currentMode.id === "goto" ? this._renderGotoMarkers(gotoPoints) : ""}
+                  ${
+                    currentMode.id === "zone" ? predefinedZones.map(zone => {
+                      const position = zone.position || centroid(zone.zones.map(item => ({ x: Number(item[0]), y: Number(item[1]) })));
+                      const percent = this._vacuumToPercent(position);
+                      const selected = this._selectedPredefinedZoneIds.includes(zone.id);
                       return `
-                        <circle cx="${mapped.x.toFixed(1)}" cy="${mapped.y.toFixed(1)}" r="22" fill="color-mix(in srgb, ${gotoColor} 22%, rgba(255,255,255,0.08))"></circle>
-                        <circle cx="${mapped.x.toFixed(1)}" cy="${mapped.y.toFixed(1)}" r="10" fill="${gotoColor}" stroke="rgba(255,255,255,0.94)" stroke-width="5"></circle>
+                        <button
+                          class="advance-vacuum-card__room-marker ${selected ? "is-selected" : ""}"
+                          style="left:${percent.left}%; top:${percent.top}%;"
+                          data-zone-id="${escapeHtml(zone.id)}"
+                          title="${escapeHtml(zone.label || zone.id)}"
+                        >
+                          <ha-icon icon="${escapeHtml(zone.icon || "mdi:vector-rectangle")}"></ha-icon>
+                          <span>${escapeHtml(zone.label || zone.id)}</span>
+                        </button>
                       `;
-                    })()
-                  : ""
-              }
-            </svg>
-
-            <div class="advance-vacuum-card__map-markers">
-              ${currentMode.id === "rooms" ? this._renderRoomMarkers(rooms) : ""}
-              ${currentMode.id === "goto" ? this._renderGotoMarkers(gotoPoints) : ""}
-              ${
-                currentMode.id === "zone" ? predefinedZones.map(zone => {
-                  const position = zone.position || centroid(zone.zones.map(item => ({ x: Number(item[0]), y: Number(item[1]) })));
-                  const percent = this._vacuumToPercent(position);
-                  const selected = this._selectedPredefinedZoneIds.includes(zone.id);
-                  return `
-                    <button
-                      class="advance-vacuum-card__room-marker ${selected ? "is-selected" : ""}"
-                      style="left:${percent.left}%; top:${percent.top}%;"
-                      data-zone-id="${escapeHtml(zone.id)}"
-                      title="${escapeHtml(zone.label || zone.id)}"
-                    >
-                      <ha-icon icon="${escapeHtml(zone.icon || "mdi:vector-rectangle")}"></ha-icon>
-                      <span>${escapeHtml(zone.label || zone.id)}</span>
-                    </button>
-                  `;
-                }).join("") : ""
-              }
+                    }).join("") : ""
+                  }
+                  ${this._renderManualZoneEditors()}
+                </div>
+              </div>
             </div>
+            ${this._renderMapTools()}
           </div>
         </div>
 
