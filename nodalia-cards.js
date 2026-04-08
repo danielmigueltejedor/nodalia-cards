@@ -33545,6 +33545,10 @@ const VACUUM_MODE_LABELS = {
   high: "Alta",
   intense: "Intenso",
   deep: "Profundo",
+  deep_plus: "Profundo+",
+  deepplus: "Profundo+",
+  fast: "Rapido",
+  rapido: "Rapido",
 };
 
 const DEFAULT_CONFIG = {
@@ -33867,6 +33871,7 @@ function humanizeModeLabel(value, kind = "generic") {
 
   return raw
     .replaceAll("_", " ")
+    .replace(/\bplus\b/gi, "+")
     .replace(/\b\w/g, match => match.toUpperCase());
 }
 
@@ -35040,12 +35045,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   _getModePanelPresetSelection(presetId, state = this._getVacuumState()) {
     const suctionDescriptor = this._getModeDescriptor("suction", state);
     const mopDescriptor = this._getModeDescriptor("mop", state);
+    const mopModeDescriptor = this._getMopModeDescriptor(state);
 
     switch (presetId) {
       case "smart":
         return {
           suction: this._findSharedSmartOption(suctionDescriptor?.options),
           mop: this._findSharedSmartOption(mopDescriptor?.options),
+          mopMode: this._findSharedSmartOption(mopModeDescriptor?.options),
         };
       case "vacuum_mop":
         return {
@@ -35055,6 +35062,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           mop: this._getPresetDefaultOption(mopDescriptor, ["medium", "media", "normal", "standard"], {
             excludeOff: true,
           }),
+          mopMode: this._getPresetDefaultOption(mopModeDescriptor, ["standard", "estandar", "normal", "default"]),
         };
       case "vacuum":
         return {
@@ -35062,6 +35070,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
             excludeOff: true,
           }),
           mop: this._findOptionByCandidates(mopDescriptor?.options, ["off", "sin_fregado", "apagado", "none"]),
+          mopMode: this._getPresetDefaultOption(mopModeDescriptor, ["standard", "estandar", "normal", "default"]),
         };
       case "mop":
         return {
@@ -35069,6 +35078,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           mop: this._getPresetDefaultOption(mopDescriptor, ["medium", "media", "normal", "standard"], {
             excludeOff: true,
           }),
+          mopMode: this._getPresetDefaultOption(mopModeDescriptor, ["standard", "estandar", "normal", "default"]),
+        };
+      case "custom":
+        return {
+          suction: this._findOptionByCandidates(suctionDescriptor?.options, ["custom", "custom_mode", "custommode", "personalizado"]),
+          mop: this._findOptionByCandidates(mopDescriptor?.options, ["custom", "custom_mode", "custommode", "custom_water_flow", "personalizado"]),
+          mopMode: this._findOptionByCandidates(mopModeDescriptor?.options, ["custom", "custom_mode", "custommode", "personalizado"]),
         };
       default:
         return null;
@@ -35078,14 +35094,24 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   _detectModePanelPreset(state = this._getVacuumState()) {
     const suctionDescriptor = this._getModeDescriptor("suction", state);
     const mopDescriptor = this._getModeDescriptor("mop", state);
+    const mopModeDescriptor = this._getMopModeDescriptor(state);
     const suctionCurrent = suctionDescriptor?.current || "";
     const mopCurrent = mopDescriptor?.current || "";
+    const mopModeCurrent = mopModeDescriptor?.current || "";
 
-    if (this._isSharedSmartMode(suctionCurrent) && this._isSharedSmartMode(mopCurrent)) {
+    if (
+      this._isSharedSmartMode(suctionCurrent) &&
+      this._isSharedSmartMode(mopCurrent) &&
+      (!mopModeCurrent || this._isSharedSmartMode(mopModeCurrent))
+    ) {
       return "smart";
     }
 
-    if (this._isCustomModeValue(suctionCurrent) || this._isCustomModeValue(mopCurrent)) {
+    if (
+      this._isCustomModeValue(suctionCurrent) ||
+      this._isCustomModeValue(mopCurrent) ||
+      this._isCustomModeValue(mopModeCurrent)
+    ) {
       return "custom";
     }
 
@@ -35135,6 +35161,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._setModeOption("mop", selection.mop, state, { triggerHaptic: false });
     }
 
+    if (
+      selection.mopMode &&
+      normalizeTextKey(selection.mopMode) !== normalizeTextKey(this._getMopModeDescriptor(state)?.current)
+    ) {
+      this._setModeOption("mop_mode", selection.mopMode, state, { triggerHaptic: false });
+    }
+
     this._triggerHaptic("selection");
     this._render();
   }
@@ -35171,6 +35204,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           }
           return false;
         case "custom":
+          return false;
         default:
           return !isSmart;
       }
@@ -36213,7 +36247,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         }
 
         .advance-vacuum-card__utility-options--presets {
-          justify-content: flex-start;
+          justify-content: center;
         }
 
         .advance-vacuum-card__utility-option {
