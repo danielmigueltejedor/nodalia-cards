@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.12.2";
+const CARD_VERSION = "0.12.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -3118,7 +3118,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       event.stopPropagation();
 
       if (selectedHandle.id === "delete") {
-        this._render();
+        this._deleteManualZone(index);
         return;
       }
 
@@ -3730,109 +3730,18 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           width: 100%;
         }
 
-        .advance-vacuum-card__header {
-          align-items: center;
-          display: grid;
-          gap: 14px;
-          grid-template-columns: ${iconSize}px minmax(0, auto) auto;
-          justify-content: center;
-          width: 100%;
+        .advance-vacuum-card__header,
+        .advance-vacuum-card__icon,
+        .advance-vacuum-card__unavailable,
+        .advance-vacuum-card__header-main,
+        .advance-vacuum-card__title,
+        .advance-vacuum-card__chips,
+        .advance-vacuum-card__chip,
+        .advance-vacuum-card__header-actions,
+        .advance-vacuum-card__header-action {
+          display: none !important;
         }
 
-        .advance-vacuum-card__icon {
-          align-items: center;
-          background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%);
-          border: 1px solid rgba(255,255,255,0.09);
-          border-radius: 26px;
-          display: inline-flex;
-          height: ${iconSize}px;
-          justify-content: center;
-          position: relative;
-          width: ${iconSize}px;
-        }
-
-        .advance-vacuum-card__icon ha-icon {
-          --mdc-icon-size: ${Math.round(iconSize * 0.52)}px;
-          color: ${styles.icon.color};
-        }
-
-        .advance-vacuum-card__unavailable {
-          align-items: center;
-          background: #ff9b4a;
-          border: 2px solid ${styles.card.background};
-          border-radius: 999px;
-          color: #fff;
-          display: inline-flex;
-          height: 18px;
-          justify-content: center;
-          position: absolute;
-          right: -4px;
-          top: -4px;
-          width: 18px;
-        }
-
-        .advance-vacuum-card__unavailable ha-icon {
-          --mdc-icon-size: 11px;
-        }
-
-        .advance-vacuum-card__header-main {
-          display: grid;
-          gap: 8px;
-          min-width: 0;
-          padding-top: 0;
-        }
-
-        .advance-vacuum-card__title {
-          font-size: ${titleSize}px;
-          font-weight: 700;
-          line-height: 1.15;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .advance-vacuum-card__chips {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          justify-content: flex-start;
-        }
-
-        .advance-vacuum-card__chip {
-          align-items: center;
-          background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.03) 100%);
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 999px;
-          color: var(--primary-text-color);
-          display: inline-flex;
-          font-size: ${chipFontSize}px;
-          font-weight: 600;
-          gap: 6px;
-          height: ${chipHeight}px;
-          max-width: 100%;
-          padding: ${chipPadding};
-          white-space: nowrap;
-        }
-
-        .advance-vacuum-card__chip--battery {
-          background: color-mix(in srgb, var(--battery-color) 16%, rgba(255,255,255,0.04));
-          border-color: color-mix(in srgb, var(--battery-color) 34%, rgba(255,255,255,0.08));
-          color: var(--battery-color);
-        }
-
-        .advance-vacuum-card__chip--battery ha-icon {
-          --mdc-icon-size: 13px;
-        }
-
-        .advance-vacuum-card__header-actions {
-          align-items: center;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          justify-content: center;
-        }
-
-        .advance-vacuum-card__header-action,
         .advance-vacuum-card__control,
         .advance-vacuum-card__mode-button,
         .advance-vacuum-card__goto-marker,
@@ -3847,7 +3756,6 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           padding: 0;
         }
 
-        .advance-vacuum-card__header-action,
         .advance-vacuum-card__control {
           align-items: center;
           background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.035) 100%);
@@ -3861,13 +3769,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           width: ${controlSize}px;
         }
 
-        .advance-vacuum-card__header-action:hover,
         .advance-vacuum-card__control:hover,
         .advance-vacuum-card__mode-button:hover {
           transform: translateY(-1px);
         }
 
-        .advance-vacuum-card__header-action ha-icon,
         .advance-vacuum-card__control ha-icon {
           --mdc-icon-size: ${Math.round(controlSize * 0.48)}px;
         }
@@ -4405,23 +4311,6 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         </div>
 
         <div class="advance-vacuum-card__footer">
-        ${
-          config.show_header_icons === false || !this._getHeaderIcons().length
-            ? ""
-            : `
-              <div class="advance-vacuum-card__header-actions">
-                ${this._getHeaderIcons().map((action, index) => `
-                  <button
-                    class="advance-vacuum-card__header-action"
-                    data-header-action-index="${index}"
-                    title="${escapeHtml(action.tooltip || "")}"
-                  >
-                    <ha-icon icon="${escapeHtml(action.icon)}"></ha-icon>
-                  </button>
-                `).join("")}
-              </div>
-            `
-        }
 
         <div class="advance-vacuum-card__modes">
           ${modes.map(mode => `
