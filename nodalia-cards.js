@@ -33940,10 +33940,11 @@ function parseRectangleLike(value) {
     return [];
   }
 
-  const x1 = Number(value.x1 ?? value.left ?? value.min_x ?? value.start_x);
-  const y1 = Number(value.y1 ?? value.top ?? value.min_y ?? value.start_y);
-  const x2 = Number(value.x2 ?? value.right ?? value.max_x ?? value.end_x);
-  const y2 = Number(value.y2 ?? value.bottom ?? value.max_y ?? value.end_y);
+  const hasLegacyBounds = [value.x0, value.y0, value.x1, value.y1].every(item => Number.isFinite(Number(item)));
+  const x1 = Number(hasLegacyBounds ? value.x0 : (value.x1 ?? value.left ?? value.min_x ?? value.start_x));
+  const y1 = Number(hasLegacyBounds ? value.y0 : (value.y1 ?? value.top ?? value.min_y ?? value.start_y));
+  const x2 = Number(hasLegacyBounds ? value.x1 : (value.x2 ?? value.right ?? value.max_x ?? value.end_x));
+  const y2 = Number(hasLegacyBounds ? value.y1 : (value.y2 ?? value.bottom ?? value.max_y ?? value.end_y));
   if (![x1, y1, x2, y2].every(Number.isFinite)) {
     return [];
   }
@@ -34357,7 +34358,73 @@ function resolveLegacyMode(config, templateName) {
   return arrayFromMaybe(config?.map_modes).find(mode => normalizeTextKey(mode?.template) === normalizeTextKey(templateName));
 }
 
-function resolveRoomSegments(config) {
+function resolveRoomsFromVacuumState(hass, entityId) {
+  const vacuumState = entityId ? hass?.states?.[entityId] || null : null;
+  const maps = arrayFromMaybe(vacuumState?.attributes?.maps);
+  const mapWithRooms = maps.find(map => isObject(map?.rooms) && Object.keys(map.rooms).length > 0);
+  if (!mapWithRooms) {
+    return [];
+  }
+
+  return Object.entries(mapWithRooms.rooms).map(([id, label]) => ({
+    id: String(id ?? ""),
+    label: String(label || id || "").trim(),
+    icon: "mdi:broom",
+    outlines: [],
+    outline: [],
+    iconPoint: null,
+    labelPoint: null,
+    labelOffsetY: 0,
+  })).filter(room => room.id);
+}
+
+function resolveRoomsFromMapState(hass, entityId) {
+  const mapState = entityId ? hass?.states?.[entityId] || null : null;
+  const rooms = mapState?.attributes?.rooms;
+  if (!isObject(rooms) || !Object.keys(rooms).length) {
+    return [];
+  }
+
+  return Object.entries(rooms).map(([id, room]) => {
+    const shapeSource = pickShapeSource(
+      room?.outlines,
+      room?.outline,
+      room?.zones,
+      room?.rectangles,
+      room?.segments,
+      room?.areas,
+      room?.polygons,
+      room,
+    );
+    const outlines = Array.isArray(shapeSource)
+      ? parseOutlines(shapeSource)
+      : (() => {
+          const polygon = parsePolygon(shapeSource);
+          return polygon.length >= 3 ? [polygon] : [];
+        })();
+    const outline = flattenPolygons(outlines);
+    const centerX = parseNumber(room?.pos_x);
+    const centerY = parseNumber(room?.pos_y);
+    const fallbackCenter = outline.length ? centroid(outline) : null;
+
+    return {
+      id: String(room?.number ?? id ?? ""),
+      label: String(room?.name || room?.label || id || "").trim(),
+      icon: "mdi:broom",
+      outlines,
+      outline,
+      iconPoint: Number.isFinite(centerX) && Number.isFinite(centerY)
+        ? { x: centerX, y: centerY }
+        : fallbackCenter,
+      labelPoint: Number.isFinite(centerX) && Number.isFinite(centerY)
+        ? { x: centerX, y: centerY }
+        : fallbackCenter,
+      labelOffsetY: 0,
+    };
+  }).filter(room => room.id);
+}
+
+function resolveRoomSegments(config, hass = null, entityId = "", mapEntityId = "") {
   const directRooms = arrayFromMaybe(config?.room_segments);
   if (directRooms.length) {
     return directRooms.map(room => {
@@ -34384,7 +34451,7 @@ function resolveRoomSegments(config) {
   }
 
   const segmentMode = resolveLegacyMode(config, "vacuum_clean_segment");
-  return arrayFromMaybe(segmentMode?.predefined_selections).map(selection => {
+  const legacyRooms = arrayFromMaybe(segmentMode?.predefined_selections).map(selection => {
     const outlines = parseOutlines(pickShapeSource(
       selection?.outlines,
       selection?.outline,
@@ -34405,6 +34472,17 @@ function resolveRoomSegments(config) {
       labelOffsetY: Number(selection?.label?.offset_y ?? 0) || 0,
     };
   }).filter(room => room.id && room.outlines.length);
+
+  if (legacyRooms.length) {
+    return legacyRooms;
+  }
+
+  const mapRooms = resolveRoomsFromMapState(hass, mapEntityId);
+  if (mapRooms.length) {
+    return mapRooms;
+  }
+
+  return resolveRoomsFromVacuumState(hass, entityId);
 }
 
 function resolveGotoPoints(config) {
@@ -34857,7 +34935,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getRoomSegments() {
-    return resolveRoomSegments(this._config);
+    return resolveRoomSegments(this._config, this._hass, this._config?.entity, this._getMapEntityId());
   }
 
   _getPredefinedZones() {
@@ -36991,7 +37069,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const markerSize = Math.max(28, parseSizeToPixels(this._config?.styles?.map?.marker_size, 34));
 
-    return rooms.map(room => {
+    return rooms
+      .filter(room => room.outlines.length > 0)
+      .map(room => {
       const anchor = room.iconPoint || room.labelPoint || centroid(room.outline);
       const percent = this._vacuumToViewportPercent(anchor);
       const selected = this._selectedRoomIds.includes(room.id);
@@ -37011,6 +37091,32 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         </button>
       `;
     }).join("");
+  }
+
+  _renderRoomFallbackList(rooms) {
+    if (this._activeMode !== "rooms" || !rooms.length) {
+      return "";
+    }
+
+    const fallbackRooms = rooms.filter(room => room.outlines.length === 0);
+    if (!fallbackRooms.length) {
+      return "";
+    }
+
+    return `
+      <div class="advance-vacuum-card__room-list">
+        ${fallbackRooms.map(room => `
+          <button
+            class="advance-vacuum-card__room-chip ${this._selectedRoomIds.includes(room.id) ? "is-selected" : ""}"
+            data-room-id="${escapeHtml(room.id)}"
+            title="${escapeHtml(room.label || room.id)}"
+          >
+            <ha-icon icon="${escapeHtml(room.icon || "mdi:broom")}"></ha-icon>
+            <span>${escapeHtml(room.label || room.id)}</span>
+          </button>
+        `).join("")}
+      </div>
+    `;
   }
 
   _renderGotoMarkers(points) {
@@ -37826,6 +37932,42 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           width: 38px;
         }
 
+        .advance-vacuum-card__room-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: center;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__room-chip {
+          align-items: center;
+          background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.03) 100%);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 999px;
+          color: var(--secondary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          gap: 8px;
+          min-height: 36px;
+          padding: 0 14px;
+        }
+
+        .advance-vacuum-card__room-chip.is-selected {
+          background: linear-gradient(180deg, color-mix(in srgb, ${accentColor} 16%, rgba(255,255,255,0.06)) 0%, rgba(255,255,255,0.04) 100%);
+          border-color: color-mix(in srgb, ${accentColor} 40%, rgba(255,255,255,0.08));
+          color: var(--primary-text-color);
+        }
+
+        .advance-vacuum-card__room-chip ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
+        .advance-vacuum-card__room-chip span {
+          font-size: 12px;
+          font-weight: 600;
+        }
+
         .advance-vacuum-card__controls {
           align-items: center;
           display: grid;
@@ -37977,6 +38119,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
             ${this._renderMapTools()}
           </div>
         </div>
+
+        ${this._renderRoomFallbackList(rooms)}
 
         <div class="advance-vacuum-card__footer">
 
