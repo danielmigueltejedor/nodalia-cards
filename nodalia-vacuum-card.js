@@ -73,6 +73,8 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  tap_action: "default",
+  tap_navigation_path: "",
   compact_layout_mode: "auto",
   show_state_chip: true,
   show_battery_chip: true,
@@ -482,6 +484,65 @@ class NodaliaVacuumCard extends HTMLElement {
     }
 
     navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
+  }
+
+  _openMoreInfo(entityId = this._config?.entity) {
+    if (!entityId) {
+      return;
+    }
+
+    fireEvent(this, "hass-more-info", {
+      entityId,
+    });
+  }
+
+  _navigate(path) {
+    const navigationPath = String(path || "").trim();
+    if (!navigationPath) {
+      return;
+    }
+
+    window.history.pushState(null, "", navigationPath);
+    window.dispatchEvent(new CustomEvent("location-changed", {
+      detail: { replace: false },
+    }));
+  }
+
+  _runConfiguredCardTapAction(state = this._getState()) {
+    const action = normalizeTextKey(this._config?.tap_action || "default");
+
+    switch (action) {
+      case "none":
+        break;
+      case "more_info":
+        this._openMoreInfo(this._config?.entity);
+        break;
+      case "navigate":
+        this._navigate(this._config?.tap_navigation_path);
+        break;
+      case "default":
+      default:
+        this._runPrimaryAction(state);
+        break;
+    }
+  }
+
+  _canRunConfiguredCardTapAction() {
+    const action = normalizeTextKey(this._config?.tap_action || "default");
+
+    if (action === "none") {
+      return false;
+    }
+
+    if (action === "navigate") {
+      return Boolean(String(this._config?.tap_navigation_path || "").trim());
+    }
+
+    if (action === "more_info") {
+      return Boolean(this._config?.entity);
+    }
+
+    return true;
   }
 
   _getState() {
@@ -1552,6 +1613,9 @@ class NodaliaVacuumCard extends HTMLElement {
     this._syncRememberedModeSelections(state);
 
     switch (button.dataset.vacuumAction) {
+      case "card_tap":
+        this._runConfiguredCardTapAction(state);
+        break;
       case "primary":
         this._runPrimaryAction(state);
         break;
@@ -1712,7 +1776,15 @@ class NodaliaVacuumCard extends HTMLElement {
     const activeModeDescriptor = availableModeDescriptors.find(mode => mode.kind === this._activeModePanel) || null;
 
     const showCopyBlock = !isCompactLayout || chips.length > 0;
-    const iconButtonLabel = this._isCleaning(state) ? "Pausar limpieza" : "Iniciar limpieza";
+    const cardTapAction = normalizeTextKey(config.tap_action || "default");
+    const canRunCardTapAction = this._canRunConfiguredCardTapAction();
+    const iconButtonLabel = cardTapAction === "navigate"
+      ? "Abrir vista del robot"
+      : cardTapAction === "more_info"
+        ? "Mostrar mas informacion"
+        : this._isCleaning(state)
+          ? "Pausar limpieza"
+          : "Iniciar limpieza";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -2065,13 +2137,13 @@ class NodaliaVacuumCard extends HTMLElement {
         }
       </style>
 
-      <ha-card>
+      <ha-card ${canRunCardTapAction ? 'data-vacuum-action="card_tap"' : ""}>
         <div class="vacuum-card ${isCompactLayout ? "vacuum-card--compact" : ""}">
           <div class="vacuum-card__header">
             <button
               class="vacuum-card__icon-button"
               type="button"
-              data-vacuum-action="primary"
+              ${canRunCardTapAction ? 'data-vacuum-action="card_tap"' : ""}
               aria-label="${escapeHtml(iconButtonLabel)}"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
@@ -2563,6 +2635,24 @@ class NodaliaVacuumCardEditor extends HTMLElement {
             ${this._renderTextField("Icono", "icon", config.icon, {
               placeholder: "mdi:robot-vacuum",
             })}
+            ${this._renderSelectField(
+              "Accion al tocar",
+              "tap_action",
+              config.tap_action || "default",
+              [
+                { value: "default", label: "Predeterminada (iniciar o pausar)" },
+                { value: "more-info", label: "More info" },
+                { value: "navigate", label: "Navegar a una vista" },
+                { value: "none", label: "Sin accion" },
+              ],
+            )}
+            ${
+              (config.tap_action || "default") === "navigate"
+                ? this._renderTextField("Ruta de navegacion", "tap_navigation_path", config.tap_navigation_path, {
+                    placeholder: "/lovelace/robot",
+                  })
+                : ""
+            }
             ${this._renderTextField(
               "Presets de potencia",
               "fan_presets",

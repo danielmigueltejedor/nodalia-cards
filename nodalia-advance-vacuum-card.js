@@ -26,6 +26,114 @@ const PANEL_MODE_PRESETS = [
   { id: "custom", label: "Personalizado", icon: "mdi:tune-variant" },
 ];
 
+const DOCK_PANEL_SECTIONS = [
+  { id: "control", label: "Control de base", icon: "mdi:home-import-outline" },
+  { id: "settings", label: "Ajuste de base de carga", icon: "mdi:cog-outline" },
+];
+
+const DOCK_SETTING_DEFINITIONS = [
+  {
+    id: "mop_wash_frequency",
+    label: "Frecuencia de lavado de la mopa",
+    patterns: ["mop_wash_frequency", "wash_frequency", "washing_frequency", "frecuencia_lavado", "mop_wash"],
+  },
+  {
+    id: "mop_mode",
+    label: "Modo de fregado",
+    patterns: [],
+  },
+  {
+    id: "auto_empty_frequency",
+    label: "Frecuencia de vaciado automático",
+    patterns: ["auto_empty_frequency", "empty_frequency", "dust_collection_frequency", "frecuencia_vaciado"],
+  },
+  {
+    id: "empty_mode",
+    label: "Modo de vaciado",
+    patterns: ["empty_mode", "dock_dust_collection_mode", "dust_collection_mode", "modo_vaciado"],
+  },
+  {
+    id: "drying_duration",
+    label: "Duración de secado",
+    patterns: ["drying_duration", "dry_duration", "mop_dry_duration", "duracion_secado", "drying_time"],
+  },
+];
+
+const DOCK_CONTROL_DEFINITIONS = [
+  {
+    id: "empty",
+    label: "Vaciar depósito",
+    active_label: "Parar vaciado",
+    icon: "mdi:delete-empty-outline",
+    active_icon: "mdi:stop-circle-outline",
+    start_patterns: [
+      "start_emptying",
+      "start_empty",
+      "start_dust_collection",
+      "dust_collection",
+      "collect_dust",
+      "dock_empty",
+      "auto_empty",
+      "empty_dock",
+    ],
+    stop_patterns: [
+      "stop_emptying",
+      "stop_empty",
+      "stop_dust_collection",
+      "stop_collect_dust",
+      "end_emptying",
+    ],
+  },
+  {
+    id: "wash",
+    label: "Lavar el paño",
+    active_label: "Parar lavado de paño",
+    icon: "mdi:washing-machine",
+    active_icon: "mdi:stop-circle-outline",
+    start_patterns: [
+      "start_wash",
+      "start_washing",
+      "start_wash_mop",
+      "wash_mop",
+      "mop_wash",
+      "clean_mop",
+      "clean_mopping_pad",
+      "self_clean",
+    ],
+    stop_patterns: [
+      "stop_wash",
+      "stop_washing",
+      "stop_wash_mop",
+      "stop_mop_wash",
+      "stop_clean_mop",
+      "stop_self_clean",
+    ],
+  },
+  {
+    id: "dry",
+    label: "Secar la mopa",
+    active_label: "Detener el secado",
+    icon: "mdi:hair-dryer",
+    active_icon: "mdi:stop-circle-outline",
+    start_patterns: [
+      "start_dry",
+      "start_drying",
+      "start_dry_mop",
+      "mop_dry",
+      "dry_mop",
+      "air_dry",
+      "drying",
+    ],
+    stop_patterns: [
+      "stop_dry",
+      "stop_drying",
+      "stop_dry_mop",
+      "stop_mop_dry",
+      "stop_air_dry",
+    ],
+  },
+];
+
 const SUCTION_MODE_PATTERNS = [
   "quiet",
   "silent",
@@ -760,6 +868,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._repeats = 1;
     this._activeSeries = "";
     this._activeModePanelPreset = "";
+    this._activeDockPanelSection = DOCK_PANEL_SECTIONS[0]?.id || "control";
     this._lastNonSmartModeSelection = {
       suction: "",
       mop: "",
@@ -770,12 +879,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._lastRenderSignature = "";
 
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowChange = this._onShadowChange.bind(this);
     this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
     this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
     this._onShadowPointerUp = this._onShadowPointerUp.bind(this);
     this._onMapImageLoad = this._onMapImageLoad.bind(this);
 
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this.shadowRoot.addEventListener("change", this._onShadowChange);
     this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
     this.shadowRoot.addEventListener("pointermove", this._onShadowPointerMove);
     this.shadowRoot.addEventListener("pointerup", this._onShadowPointerUp);
@@ -805,6 +916,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._gotoPoint = null;
     this._activeUtilityPanel = null;
     this._activeModePanelPreset = "";
+    this._activeDockPanelSection = DOCK_PANEL_SECTIONS[0]?.id || "control";
     this._activeMode = this._getAvailableModes()[0]?.id || "all";
     this._updateCalibration();
     this._render();
@@ -875,7 +987,16 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _isCleaning(state) {
-    return this._matchesActivity(state, ["cleaning", "spot_cleaning", "vacuuming", "limpiando"]);
+    return this._matchesActivity(state, [
+      "cleaning",
+      "spot_cleaning",
+      "segment_cleaning",
+      "room_cleaning",
+      "zone_cleaning",
+      "clean_area",
+      "vacuuming",
+      "limpiando",
+    ]);
   }
 
   _isPaused(state) {
@@ -929,6 +1050,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       charging_completed: "Cargando",
       cleaning: "Limpiando",
       spot_cleaning: "Limpiando",
+      segment_cleaning: "Limpiando",
+      room_cleaning: "Limpiando",
+      zone_cleaning: "Limpiando",
+      clean_area: "Limpiando",
       paused: "Pausado",
       returning: "Volviendo a la base",
       return_to_base: "Volviendo a la base",
@@ -1170,7 +1295,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     ];
   }
 
-  _getSelectEntityMatchScore(entityId, patterns) {
+  _getEntityMatchScore(entityId, patterns) {
     const normalizedEntityId = normalizeTextKey(entityId);
     return patterns.reduce((bestScore, pattern, index) => {
       const normalizedPattern = normalizeTextKey(pattern);
@@ -1182,7 +1307,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }, 0);
   }
 
-  _guessRelatedSelectEntityByPatterns(patterns, excludedEntities = []) {
+  _guessRelatedEntityByPatterns(domain, patterns, excludedEntities = []) {
     if (!this._hass?.states || !this._config?.entity) {
       return "";
     }
@@ -1193,17 +1318,25 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     const candidates = Object.keys(this._hass.states)
-      .filter(entityId => entityId.startsWith("select."))
+      .filter(entityId => entityId.startsWith(`${domain}.`))
       .filter(entityId => entityId.includes(objectId))
       .filter(entityId => !excludedEntities.includes(entityId))
       .map(entityId => ({
         entityId,
-        score: this._getSelectEntityMatchScore(entityId, patterns),
+        score: this._getEntityMatchScore(entityId, patterns),
       }))
       .filter(candidate => candidate.score > 0)
       .sort((left, right) => right.score - left.score || left.entityId.localeCompare(right.entityId, "es"));
 
     return candidates[0]?.entityId || "";
+  }
+
+  _guessRelatedSelectEntityByPatterns(patterns, excludedEntities = []) {
+    return this._guessRelatedEntityByPatterns("select", patterns, excludedEntities);
+  }
+
+  _guessRelatedButtonEntityByPatterns(patterns, excludedEntities = []) {
+    return this._guessRelatedEntityByPatterns("button", patterns, excludedEntities);
   }
 
   _guessRelatedSelectEntity(kind) {
@@ -1371,6 +1504,154 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     return this._getModeDescriptor(descriptorId, state);
+  }
+
+  _getDockPanelSectionConfig(sectionId = this._activeDockPanelSection) {
+    return DOCK_PANEL_SECTIONS.find(section => section.id === sectionId) || DOCK_PANEL_SECTIONS[0];
+  }
+
+  _setActiveDockPanelSection(sectionId) {
+    if (!sectionId || sectionId === this._activeDockPanelSection) {
+      return;
+    }
+
+    this._activeDockPanelSection = sectionId;
+    this._triggerHaptic("selection");
+    this._render();
+  }
+
+  _getDockControlState(definition, state) {
+    switch (definition?.id) {
+      case "empty":
+        return this._isAutoEmptying(state);
+      case "wash":
+        return this._isWashingMops(state);
+      case "dry":
+        return this._isDryingMops(state);
+      default:
+        return false;
+    }
+  }
+
+  _getDockControlDescriptor(definition, state = this._getVacuumState()) {
+    if (!definition) {
+      return null;
+    }
+
+    const startEntity = this._guessRelatedButtonEntityByPatterns(definition.start_patterns || []);
+    const stopEntity = this._guessRelatedButtonEntityByPatterns(definition.stop_patterns || [], [startEntity].filter(Boolean));
+    const isActive = this._getDockControlState(definition, state);
+    const target = isActive
+      ? stopEntity || startEntity
+      : startEntity || stopEntity;
+
+    if (!target) {
+      return null;
+    }
+
+    return {
+      id: definition.id,
+      label: isActive ? definition.active_label : definition.label,
+      icon: isActive ? definition.active_icon || definition.icon : definition.icon,
+      target,
+      active: isActive,
+    };
+  }
+
+  _getDockControlDescriptors(state = this._getVacuumState()) {
+    if (this._isCleaning(state)) {
+      return [{
+        id: "return_to_base",
+        label: "Volver a base",
+        icon: "mdi:home-import-outline",
+        builtin_action: "return_to_base",
+      }];
+    }
+
+    return DOCK_CONTROL_DEFINITIONS
+      .map(definition => this._getDockControlDescriptor(definition, state))
+      .filter(Boolean);
+  }
+
+  _getDockSettingDescriptor(definition, state = this._getVacuumState()) {
+    if (!definition) {
+      return null;
+    }
+
+    if (definition.id === "mop_mode") {
+      const descriptor = this._getMopModeDescriptor(state);
+      return descriptor
+        ? {
+            id: definition.id,
+            label: definition.label,
+            target: descriptor.target,
+            options: descriptor.options,
+            current: descriptor.current,
+          }
+        : null;
+    }
+
+    const entityId = this._guessRelatedSelectEntityByPatterns(definition.patterns || []);
+    const descriptor = this._getSelectOptions(entityId);
+    if (!descriptor?.entityId || !descriptor.options?.length) {
+      return null;
+    }
+
+    return {
+      id: definition.id,
+      label: definition.label,
+      target: descriptor.entityId,
+      options: descriptor.options,
+      current: descriptor.value,
+    };
+  }
+
+  _getDockSettingDescriptors(state = this._getVacuumState()) {
+    return DOCK_SETTING_DEFINITIONS
+      .map(definition => this._getDockSettingDescriptor(definition, state))
+      .filter(Boolean);
+  }
+
+  _pressButtonEntity(entityId) {
+    if (!this._hass || !entityId) {
+      return;
+    }
+
+    this._hass.callService("button", "press", {
+      entity_id: entityId,
+    });
+  }
+
+  _runDockControlAction(actionId, state = this._getVacuumState()) {
+    if (actionId === "return_to_base") {
+      this._handleControlAction("return_to_base");
+      return;
+    }
+
+    const descriptor = this._getDockControlDescriptors(state).find(item => item.id === actionId);
+    if (!descriptor?.target) {
+      return;
+    }
+
+    this._pressButtonEntity(descriptor.target);
+    this._triggerHaptic("selection");
+  }
+
+  _setDockSettingOption(settingId, value, state = this._getVacuumState()) {
+    if (!this._hass || !settingId || !value) {
+      return;
+    }
+
+    const descriptor = this._getDockSettingDescriptors(state).find(item => item.id === settingId);
+    if (!descriptor?.target) {
+      return;
+    }
+
+    this._hass.callService("select", "select_option", {
+      entity_id: descriptor.target,
+      option: value,
+    });
+    this._triggerHaptic("selection");
   }
 
   _findMatchingModeOption(options, value) {
