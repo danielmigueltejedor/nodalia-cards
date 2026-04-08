@@ -3706,10 +3706,28 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return this._manualZones.map((zone, index) => {
       const { rect, handles } = this._getZoneHandlePoints(zone);
       const selected = index === this._selectedManualZoneIndex;
-      const left = (rect.x / this._mapImageWidth) * 100;
-      const top = (rect.y / this._mapImageHeight) * 100;
-      const width = (rect.width / this._mapImageWidth) * 100;
-      const height = (rect.height / this._mapImageHeight) * 100;
+      const topLeft = this._mapToViewportPercent({ x: rect.x, y: rect.y });
+      const bottomRight = this._mapToViewportPercent({ x: rect.x + rect.width, y: rect.y + rect.height });
+      const left = Math.min(topLeft.left, bottomRight.left);
+      const top = Math.min(topLeft.top, bottomRight.top);
+      const width = Math.abs(bottomRight.left - topLeft.left);
+      const height = Math.abs(bottomRight.top - topLeft.top);
+      const handleMarkup = selected
+        ? handles.map(handle => {
+            const percent = this._mapToViewportPercent({ x: handle.x, y: handle.y });
+            return `
+              <button
+                class="advance-vacuum-card__zone-handle"
+                style="left:${percent.left}%; top:${percent.top}%;"
+                data-zone-handle-index="${index}"
+                data-zone-handle-action="${escapeHtml(handle.id)}"
+                title="${escapeHtml(handle.title)}"
+              >
+                <ha-icon icon="${escapeHtml(handle.icon)}"></ha-icon>
+              </button>
+            `;
+          }).join("")
+        : "";
 
       return `
         <button
@@ -3718,21 +3736,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           data-manual-zone-index="${index}"
           title="Editar zona ${index + 1}"
         ></button>
-        ${
-          selected
-            ? handles.map(handle => `
-                <button
-                  class="advance-vacuum-card__zone-handle"
-                  style="left:${(handle.x / this._mapImageWidth) * 100}%; top:${(handle.y / this._mapImageHeight) * 100}%;"
-                  data-zone-handle-index="${index}"
-                  data-zone-handle-action="${escapeHtml(handle.id)}"
-                  title="${escapeHtml(handle.title)}"
-                >
-                  <ha-icon icon="${escapeHtml(handle.icon)}"></ha-icon>
-                </button>
-              `).join("")
-            : ""
-        }
+        ${handleMarkup}
       `;
     }).join("");
   }
@@ -4676,13 +4680,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                       : ""
                   }
                 </svg>
-
-                <div class="advance-vacuum-card__map-markers">
-                  ${this._renderManualZoneEditors()}
-                </div>
               </div>
             </div>
             <div class="advance-vacuum-card__map-overlays">
+              ${this._renderManualZoneEditors()}
               ${currentMode.id === "rooms" ? this._renderRoomMarkers(rooms) : ""}
               ${currentMode.id === "goto" ? this._renderGotoMarkers(gotoPoints) : ""}
               ${
