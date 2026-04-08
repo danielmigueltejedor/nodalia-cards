@@ -44,7 +44,7 @@ const MODE_LABELS = {
   quiet: "Silencioso",
   silent: "Silencioso",
   balanced: "Equilibrado",
-  standard: "Estandar",
+  standard: "Estándar",
   normal: "Normal",
   turbo: "Turbo",
   max: "Max",

@@ -62,7 +62,7 @@ const VACUUM_MODE_LABELS = {
   quiet: "Silencioso",
   silent: "Silencioso",
   balanced: "Equilibrado",
-  standard: "Estandar",
+  standard: "Estándar",
   normal: "Normal",
   turbo: "Turbo",
   max: "Max",
@@ -87,8 +87,8 @@ const VACUUM_MODE_LABELS = {
   deep: "Profundo",
   deep_plus: "Profundo+",
   deepplus: "Profundo+",
-  fast: "Rapido",
-  rapido: "Rapido",
+  fast: "Rápido",
+  rapido: "Rápido",
 };
 
 const DEFAULT_CONFIG = {
@@ -2444,10 +2444,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
             ["smart", "custom"].includes(activePreset)
               ? ""
               : `
-                <button class="advance-vacuum-card__selection-chip" data-control-action="repeats">
-                  <ha-icon icon="mdi:repeat"></ha-icon>
-                  <strong>x${this._repeats}</strong>
-                </button>
+                <div class="advance-vacuum-card__utility-chip-group">
+                  <div class="advance-vacuum-card__utility-label">Contador de limpiezas</div>
+                  <button class="advance-vacuum-card__selection-chip" data-control-action="repeats">
+                    <ha-icon icon="mdi:repeat"></ha-icon>
+                    <strong>x${this._repeats}</strong>
+                  </button>
+                </div>
               `
           }
           ${
@@ -2835,6 +2838,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           gap: 8px;
           justify-content: center;
           width: 100%;
+        }
+
+        .advance-vacuum-card__utility-chip-group {
+          display: grid;
+          gap: 6px;
+          justify-items: center;
         }
 
         .advance-vacuum-card__map {
