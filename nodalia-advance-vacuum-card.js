@@ -1012,12 +1012,15 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const mapEntityId = this._getMapEntityId();
     const mapState = mapEntityId ? hass?.states?.[mapEntityId] || null : null;
     const mapPicture = String(mapState?.attributes?.entity_picture || "");
+    const suctionDescriptor = this._getModeDescriptor("suction", state);
+    const mopDescriptor = this._getModeDescriptor("mop", state);
 
     return JSON.stringify({
       vacuum: {
         state: String(state?.state || ""),
         lastUpdated: String(state?.last_updated || ""),
         battery: Number(state?.attributes?.battery_level ?? -1),
+        fanSpeed: String(state?.attributes?.fan_speed || ""),
         icon: String(this._getIcon() || ""),
         name: String(this._getName() || ""),
       },
@@ -1039,6 +1042,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       goto: this._gotoPoint ? `${Math.round(this._gotoPoint.x)}:${Math.round(this._gotoPoint.y)}` : "",
       repeats: Number(this._repeats || 1),
       dimensions: `${this._mapImageWidth}x${this._mapImageHeight}`,
+      modes: {
+        suction: suctionDescriptor
+          ? `${suctionDescriptor.service}:${suctionDescriptor.target}:${suctionDescriptor.current}:${suctionDescriptor.options.join("|")}`
+          : "",
+        mop: mopDescriptor
+          ? `${mopDescriptor.service}:${mopDescriptor.target}:${mopDescriptor.current}:${mopDescriptor.options.join("|")}`
+          : "",
+      },
     });
   }
 
@@ -1095,6 +1106,45 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     };
   }
 
+  _getModeEntityPatterns(kind) {
+    return kind === "mop"
+      ? [
+        "mop_mode",
+        "mop_intensity",
+        "mop",
+        "water_level",
+        "water_volume",
+        "water_flow",
+        "water_box_mode",
+        "water_grade",
+        "water",
+        "scrub",
+      ]
+      : [
+        "vacuum_cleaner_mode",
+        "vacuum_mode",
+        "suction_level",
+        "suction_mode",
+        "fan_speed",
+        "fan_power",
+        "suction",
+        "clean_mode",
+        "cleaning_mode",
+      ];
+  }
+
+  _getSelectEntityMatchScore(entityId, patterns) {
+    const normalizedEntityId = normalizeTextKey(entityId);
+    return patterns.reduce((bestScore, pattern, index) => {
+      const normalizedPattern = normalizeTextKey(pattern);
+      if (!normalizedPattern || !normalizedEntityId.includes(normalizedPattern)) {
+        return bestScore;
+      }
+
+      return Math.max(bestScore, patterns.length - index);
+    }, 0);
+  }
+
   _guessRelatedSelectEntity(kind) {
     if (!this._hass?.states || !this._config?.entity) {
       return "";
@@ -1105,17 +1155,19 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return "";
     }
 
-    const patterns = kind === "mop"
-      ? ["mop", "water", "water_level", "water_volume", "scrub"]
-      : ["fan_speed", "fan_power", "suction", "cleaning_mode"];
+    const patterns = this._getModeEntityPatterns(kind);
 
     const candidates = Object.keys(this._hass.states)
       .filter(entityId => entityId.startsWith("select."))
       .filter(entityId => entityId.includes(objectId))
-      .filter(entityId => patterns.some(pattern => entityId.includes(pattern)))
-      .sort((left, right) => left.localeCompare(right, "es"));
+      .map(entityId => ({
+        entityId,
+        score: this._getSelectEntityMatchScore(entityId, patterns),
+      }))
+      .filter(candidate => candidate.score > 0)
+      .sort((left, right) => right.score - left.score || left.entityId.localeCompare(right.entityId, "es"));
 
-    return candidates[0] || "";
+    return candidates[0]?.entityId || "";
   }
 
   _categorizeModeOption(value) {
@@ -1137,78 +1189,209 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return SHARED_SMART_MODE_PATTERNS.some(pattern => key.includes(pattern));
   }
 
-  _getModeDescriptor(kind) {
+  _getFanPresets(state) {
+    if (Array.isArray(state?.attributes?.fan_speed_list)) {
+      return state.attributes.fan_speed_list
+        .map(item => String(item || "").trim())
+        .filter(Boolean);
+    }
+
+    return [];
+  }
+
+  _getCurrentFanSpeed(state) {
+    const current = state?.attributes?.fan_speed;
+    return current ? String(current) : "";
+  }
+
+  _getModeDescriptor(kind, state = this._getVacuumState()) {
     const explicitEntity = kind === "mop"
       ? this._config?.mop_select_entity
       : this._config?.suction_select_entity;
     const selectEntity = explicitEntity || this._guessRelatedSelectEntity(kind);
     const descriptor = this._getSelectOptions(selectEntity);
-    if (!descriptor.entityId || !descriptor.options.length) {
+
+    if (descriptor.entityId && descriptor.options.length) {
+      return {
+        kind,
+        label: kind === "mop" ? "Fregado" : "Aspirado",
+        target: descriptor.entityId,
+        options: descriptor.options,
+        current: descriptor.value,
+        service: "select",
+      };
+    }
+
+    const rawPresets = this._getFanPresets(state);
+    if (!rawPresets.length) {
+      return null;
+    }
+
+    const options = rawPresets.filter(option => {
+      const optionKind = this._categorizeModeOption(option);
+      const isSharedSmartMode = this._isSharedSmartMode(option);
+
+      if (kind === "mop") {
+        return optionKind === "mop" || isSharedSmartMode;
+      }
+
+      return optionKind !== "mop" || isSharedSmartMode;
+    });
+
+    if (!options.length) {
       return null;
     }
 
     return {
       kind,
       label: kind === "mop" ? "Fregado" : "Aspirado",
-      target: descriptor.entityId,
-      options: descriptor.options,
-      current: descriptor.value,
+      target: this._config?.entity,
+      options,
+      current: this._getCurrentFanSpeed(state),
+      service: "fan",
     };
   }
 
-  _getModeDescriptors() {
+  _getModeDescriptors(state = this._getVacuumState()) {
     return ["suction", "mop"]
-      .map(kind => this._getModeDescriptor(kind))
+      .map(kind => this._getModeDescriptor(kind, state))
       .filter(Boolean);
   }
 
-  _setModeOption(kind, value) {
-    if (!this._hass || !value) {
+  _findMatchingModeOption(options, value) {
+    const expectedKey = normalizeTextKey(value);
+    if (!expectedKey || !Array.isArray(options)) {
+      return "";
+    }
+
+    return options.find(option => normalizeTextKey(option) === expectedKey) || "";
+  }
+
+  _findSharedSmartOption(options) {
+    return Array.isArray(options)
+      ? options.find(option => this._isSharedSmartMode(option)) || ""
+      : "";
+  }
+
+  _getModeFallbackCandidates(kind) {
+    return kind === "mop"
+      ? ["off", "low", "medium", "high", "deep", "standard", "normal", "custom"]
+      : ["balanced", "standard", "normal", "quiet", "silent", "gentle", "turbo", "max", "strong", "custom"];
+  }
+
+  _getModeFallbackOption(kind, descriptor) {
+    if (!descriptor?.options?.length) {
+      return "";
+    }
+
+    const remembered = this._findMatchingModeOption(
+      descriptor.options,
+      this._lastNonSmartModeSelection[kind],
+    );
+    if (remembered && !this._isSharedSmartMode(remembered)) {
+      return remembered;
+    }
+
+    const normalizedOptions = descriptor.options.map(option => ({
+      key: normalizeTextKey(option),
+      value: option,
+    }));
+
+    for (const candidate of this._getModeFallbackCandidates(kind)) {
+      const exactMatch = normalizedOptions.find(option => option.key === candidate);
+      if (exactMatch && !this._isSharedSmartMode(exactMatch.value)) {
+        return exactMatch.value;
+      }
+    }
+
+    const firstNonSmart = descriptor.options.find(option => !this._isSharedSmartMode(option));
+    return firstNonSmart || "";
+  }
+
+  _rememberNonSmartModeSelection(kind, value) {
+    if (!kind || !value || this._isSharedSmartMode(value)) {
       return;
     }
 
-    const descriptor = this._getModeDescriptor(kind);
-    if (!descriptor?.target) {
-      return;
-    }
+    this._lastNonSmartModeSelection[kind] = value;
+  }
 
-    if (!this._isSharedSmartMode(value)) {
-      this._lastNonSmartModeSelection[kind] = value;
-    }
-
-    this._hass.callService("select", "select_option", {
-      entity_id: descriptor.target,
-      option: value,
+  _syncRememberedModeSelections(state) {
+    ["suction", "mop"].forEach(kind => {
+      const descriptor = this._getModeDescriptor(kind, state);
+      if (descriptor?.current && !this._isSharedSmartMode(descriptor.current)) {
+        this._rememberNonSmartModeSelection(kind, descriptor.current);
+      }
     });
+  }
 
+  _applyLinkedSmartModeSelection(kind, value, state) {
+    const descriptor = this._getModeDescriptor(kind, state);
     const otherKind = kind === "mop" ? "suction" : "mop";
-    const otherDescriptor = this._getModeDescriptor(otherKind);
-    if (!otherDescriptor?.target) {
-      this._triggerHaptic("selection");
+    const otherDescriptor = this._getModeDescriptor(otherKind, state);
+
+    if (descriptor?.service === "select" && descriptor.target && value) {
+      this._hass.callService("select", "select_option", {
+        entity_id: descriptor.target,
+        option: value,
+      });
+    } else if (descriptor?.service === "fan" && value) {
+      this._callVacuumService("set_fan_speed", {
+        fan_speed: value,
+      });
+      return;
+    }
+
+    if (!descriptor || !otherDescriptor || otherDescriptor.service !== "select" || !otherDescriptor.target) {
+      return;
+    }
+
+    if (otherDescriptor.target === descriptor.target) {
       return;
     }
 
     if (this._isSharedSmartMode(value)) {
-      if (otherDescriptor.options.includes(value)) {
+      const sharedSmartOption = this._findSharedSmartOption(otherDescriptor.options);
+      if (
+        sharedSmartOption &&
+        normalizeTextKey(sharedSmartOption) !== normalizeTextKey(otherDescriptor.current)
+      ) {
         this._hass.callService("select", "select_option", {
           entity_id: otherDescriptor.target,
-          option: value,
+          option: sharedSmartOption,
         });
       }
-    } else if (this._isSharedSmartMode(otherDescriptor.current)) {
-      const rememberedOption = this._lastNonSmartModeSelection[otherKind];
-      const fallbackOption = rememberedOption && otherDescriptor.options.includes(rememberedOption)
-        ? rememberedOption
-        : otherDescriptor.options.find(option => !this._isSharedSmartMode(option)) || "";
-
-      if (fallbackOption) {
-        this._hass.callService("select", "select_option", {
-          entity_id: otherDescriptor.target,
-          option: fallbackOption,
-        });
-      }
+      return;
     }
 
+    if (!this._isSharedSmartMode(otherDescriptor.current)) {
+      return;
+    }
+
+    const fallbackOption = this._getModeFallbackOption(otherKind, otherDescriptor);
+    if (
+      fallbackOption &&
+      normalizeTextKey(fallbackOption) !== normalizeTextKey(otherDescriptor.current)
+    ) {
+      this._hass.callService("select", "select_option", {
+        entity_id: otherDescriptor.target,
+        option: fallbackOption,
+      });
+    }
+  }
+
+  _setModeOption(kind, value, state = this._getVacuumState()) {
+    if (!this._hass || !value) {
+      return;
+    }
+
+    const descriptor = this._getModeDescriptor(kind, state);
+    if (!descriptor?.target) {
+      return;
+    }
+
+    this._rememberNonSmartModeSelection(kind, value);
+    this._applyLinkedSmartModeSelection(kind, value, state);
     this._triggerHaptic("selection");
   }
 
@@ -1608,7 +1791,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (modeOptionTarget) {
       event.preventDefault();
       event.stopPropagation();
-      this._setModeOption(modeOptionTarget.dataset.modeOptionKind, modeOptionTarget.dataset.modeOptionValue);
+      this._setModeOption(
+        modeOptionTarget.dataset.modeOptionKind,
+        modeOptionTarget.dataset.modeOptionValue,
+        this._getVacuumState(),
+      );
       return;
     }
 
@@ -1832,7 +2019,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _renderModePanel(state) {
-    const descriptors = this._getModeDescriptors();
+    const descriptors = this._getModeDescriptors(state);
     if (!descriptors.length && this._activeMode === "all") {
       return "";
     }
@@ -1930,13 +2117,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const chipFontSize = Math.max(11, parseSizeToPixels(styles.chip_font_size, 11));
     const mapImageUrl = this._getMapImageUrl();
     const unavailable = isUnavailableState(state) || !mapImageUrl;
+    this._syncRememberedModeSelections(state);
     const roomColor = styles.map.room_color || "rgba(97, 201, 122, 0.18)";
     const roomBorder = styles.map.room_border || "rgba(97, 201, 122, 0.55)";
     const zoneColor = styles.map.zone_color || "rgba(90, 167, 255, 0.18)";
     const zoneBorder = styles.map.zone_border || "rgba(90, 167, 255, 0.72)";
     const gotoColor = styles.map.goto_color || "#f6b73c";
     const primaryButtonIcon = this._isCleaning(state) ? "mdi:pause" : "mdi:play";
-    const modeDescriptors = this._getModeDescriptors();
+    const modeDescriptors = this._getModeDescriptors(state);
     const customMenuItems = this._getVisibleCustomMenuItems(state);
     const customMenuLabel = config.custom_menu?.label || "Base";
     const customMenuIcon = config.custom_menu?.icon || "mdi:home-import-outline";
