@@ -34051,6 +34051,15 @@ function flattenPolygons(polygons) {
   return arrayFromMaybe(polygons).flatMap(polygon => arrayFromMaybe(polygon));
 }
 
+function pickShapeSource(...sources) {
+  return sources.find(source => {
+    if (Array.isArray(source)) {
+      return source.length > 0;
+    }
+    return isObject(source);
+  });
+}
+
 function centroid(points) {
   if (!Array.isArray(points) || !points.length) {
     return { x: 0, y: 0 };
@@ -34352,15 +34361,15 @@ function resolveRoomSegments(config) {
   const directRooms = arrayFromMaybe(config?.room_segments);
   if (directRooms.length) {
     return directRooms.map(room => {
-      const outlines = parseOutlines(
-        room.outlines
-        || room.outline
-        || room.zones
-        || room.rectangles
-        || room.segments
-        || room.areas
-        || room.polygons
-      );
+      const outlines = parseOutlines(pickShapeSource(
+        room.outlines,
+        room.outline,
+        room.zones,
+        room.rectangles,
+        room.segments,
+        room.areas,
+        room.polygons,
+      ));
       return {
         id: String(room.id ?? ""),
         label: room.label || room.name || room?.label?.text || "",
@@ -34376,15 +34385,15 @@ function resolveRoomSegments(config) {
 
   const segmentMode = resolveLegacyMode(config, "vacuum_clean_segment");
   return arrayFromMaybe(segmentMode?.predefined_selections).map(selection => {
-    const outlines = parseOutlines(
-      selection?.outlines
-      || selection?.outline
-      || selection?.zones
-      || selection?.rectangles
-      || selection?.segments
-      || selection?.areas
-      || selection?.polygons
-    );
+    const outlines = parseOutlines(pickShapeSource(
+      selection?.outlines,
+      selection?.outline,
+      selection?.zones,
+      selection?.rectangles,
+      selection?.segments,
+      selection?.areas,
+      selection?.polygons,
+    ));
     return {
       id: String(selection.id ?? ""),
       label: String(selection?.label?.text || selection?.label || selection?.text || selection.id || "").trim(),
