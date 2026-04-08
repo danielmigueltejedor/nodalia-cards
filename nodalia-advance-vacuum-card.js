@@ -1103,6 +1103,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._activeMode = "all";
     this._activeUtilityPanel = null;
     this._selectedRoomIds = [];
+    this._activeCleaningRoomIds = [];
     this._selectedPredefinedZoneIds = [];
     this._manualZones = [];
     this._selectedManualZoneIndex = -1;
@@ -1166,6 +1167,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._repeats = clamp(Number(this._config.max_repeats || 1), 1, 9);
     this._selectedRoomIds = [];
+    this._activeCleaningRoomIds = [];
     this._selectedPredefinedZoneIds = [];
     this._manualZones = [];
     this._selectedManualZoneIndex = -1;
@@ -1391,6 +1393,99 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return entityId ? this._hass?.states?.[entityId] || null : null;
   }
 
+  _extractRoomIdsFromValue(value) {
+    return arrayFromMaybe(value)
+      .flatMap(item => {
+        if (item === null || item === undefined) {
+          return [];
+        }
+
+        if (typeof item === "object") {
+          const candidate = item.id ?? item.room_id ?? item.segment_id ?? item.number;
+          return candidate === null || candidate === undefined ? [] : [String(candidate)];
+        }
+
+        return [String(item)];
+      })
+      .map(item => item.trim())
+      .filter(Boolean);
+  }
+
+  _getReportedCleaningRoomIds(state = this._getVacuumState()) {
+    const mapState = this._getMapState();
+    const candidates = [
+      state?.attributes?.segments,
+      state?.attributes?.segment_ids,
+      state?.attributes?.selected_segments,
+      state?.attributes?.selected_rooms,
+      state?.attributes?.room_ids,
+      state?.attributes?.rooms_to_clean,
+      state?.attributes?.cleaning_segments,
+      state?.attributes?.current_segments,
+      mapState?.attributes?.selected_rooms,
+      mapState?.attributes?.room_ids,
+      mapState?.attributes?.segments,
+    ];
+
+    return [...new Set(candidates.flatMap(value => this._extractRoomIdsFromValue(value)))];
+  }
+
+  _getCurrentVacuumRoomId(state = this._getVacuumState()) {
+    const mapState = this._getMapState();
+    const candidate = (
+      mapState?.attributes?.vacuum_room ??
+      state?.attributes?.vacuum_room ??
+      state?.attributes?.room_id ??
+      state?.attributes?.current_room_id
+    );
+
+    if (candidate === null || candidate === undefined || candidate === "") {
+      return "";
+    }
+
+    return String(candidate).trim();
+  }
+
+  _isRoomCleaningSessionActive(state = this._getVacuumState()) {
+    return this._matchesActivity(state, ["segment_cleaning", "room_cleaning"]) || (
+      this._activeCleaningRoomIds.length > 0 && (this._isPaused(state) || this._isReturning(state))
+    );
+  }
+
+  _syncActiveCleaningRoomIds(state = this._getVacuumState()) {
+    const reportedRoomIds = this._getReportedCleaningRoomIds(state);
+    const currentRoomId = this._getCurrentVacuumRoomId(state);
+    const isRoomCleaning = this._matchesActivity(state, ["segment_cleaning", "room_cleaning"]);
+
+    if (reportedRoomIds.length) {
+      this._activeCleaningRoomIds = reportedRoomIds;
+      return;
+    }
+
+    if (isRoomCleaning && currentRoomId) {
+      this._activeCleaningRoomIds = [...new Set([currentRoomId, ...this._activeCleaningRoomIds])];
+      return;
+    }
+
+    if (!this._isActive(state)) {
+      this._activeCleaningRoomIds = [];
+    }
+  }
+
+  _getHighlightedRoomIds(state = this._getVacuumState()) {
+    const highlighted = new Set(this._selectedRoomIds.map(id => String(id)));
+
+    if (this._isRoomCleaningSessionActive(state)) {
+      this._activeCleaningRoomIds.forEach(id => highlighted.add(String(id)));
+      const currentRoomId = this._getCurrentVacuumRoomId(state);
+      if (currentRoomId) {
+        highlighted.add(currentRoomId);
+      }
+    }
+
+    return [...highlighted];
+  }
+
   _getMapImageUrl() {
     const mapState = this._getMapState();
     const entityId = this._getMapEntityId();
@@ -1416,6 +1511,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const mapEntityId = this._getMapEntityId();
     const mapState = mapEntityId ? hass?.states?.[mapEntityId] || null : null;
     const mapPicture = String(mapState?.attributes?.entity_picture || "");
+    const currentRoomId = this._getCurrentVacuumRoomId(state);
     const suctionDescriptor = this._getModeDescriptor("suction", state);
     const mopDescriptor = this._getModeDescriptor("mop", state);
     const mopModeDescriptor = this._getMopModeDescriptor(state);
@@ -1447,6 +1543,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       activeModePanelPreset: String(this._activeModePanelPreset || ""),
       activeDockPanelSection: String(this._activeDockPanelSection || ""),
       selectedRooms: this._selectedRoomIds.join("|"),
+      activeCleaningRooms: this._activeCleaningRoomIds.join("|"),
+      currentRoom: currentRoomId,
       selectedZones: this._selectedPredefinedZoneIds.join("|"),
       manualZones: this._manualZones.length,
       goto: this._gotoPoint ? `${Math.round(this._gotoPoint.x)}:${Math.round(this._gotoPoint.y)}` : "",
@@ -3115,6 +3213,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         .filter(Number.isFinite);
 
       if (segments.length) {
+        this._activeCleaningRoomIds = segments.map(item => String(item));
         this._callNamedService("vacuum.send_command", {
           entity_id: this._config.entity,
           command: "app_segment_clean",
@@ -3124,6 +3223,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           }],
         });
         this._triggerHaptic("success");
+        this._render();
         return;
       }
     }
@@ -3137,6 +3237,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const zones = [...selectedPredefined, ...manual].slice(0, clamp(Number(this._config?.max_zone_selections || 5), 1, 10));
 
       if (zones.length) {
+        this._activeCleaningRoomIds = [];
         this._callNamedService("vacuum.send_command", {
           entity_id: this._config.entity,
           command: "app_zoned_clean",
@@ -3148,6 +3249,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     if (this._activeMode === "goto" && this._gotoPoint) {
+      this._activeCleaningRoomIds = [];
       this._callNamedService("roborock.set_vacuum_goto_position", {
         entity_id: this._config.entity,
         x: Math.round(this._gotoPoint.x),
@@ -3157,6 +3259,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
+    this._activeCleaningRoomIds = [];
     this._callVacuumService("start");
     this._triggerHaptic("selection");
   }
@@ -3233,11 +3336,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
-    const roomTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.roomId);
+    const roomTarget = event.composedPath().find(node => node instanceof Element && typeof node.getAttribute === "function" && node.getAttribute("data-room-id"));
     if (roomTarget) {
       event.preventDefault();
       event.stopPropagation();
-      this._toggleRoomSelection(roomTarget.dataset.roomId);
+      this._toggleRoomSelection(roomTarget.getAttribute("data-room-id"));
       return;
     }
 
@@ -3623,18 +3726,21 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return "";
     }
 
-    const markerSize = Math.max(28, parseSizeToPixels(this._config?.styles?.map?.marker_size, 34));
+    const highlightedRoomIds = new Set(this._getHighlightedRoomIds());
+    const markerSize = Math.max(24, Math.round(parseSizeToPixels(this._config?.styles?.map?.marker_size, 34) * 0.82));
+    const labelSize = Math.max(10, Math.round(parseSizeToPixels(this._config?.styles?.map?.label_size, 12) * 0.9));
+    const iconSize = Math.max(13, Math.round(markerSize * 0.44));
 
     return rooms
       .filter(room => room.outlines.length > 0)
       .map(room => {
       const anchor = room.iconPoint || room.labelPoint || centroid(room.outline);
       const percent = this._vacuumToViewportPercent(anchor);
-      const selected = this._selectedRoomIds.includes(room.id);
+      const selected = highlightedRoomIds.has(String(room.id));
       return `
         <button
           class="advance-vacuum-card__room-marker ${selected ? "is-selected" : ""} ${this._config?.show_room_labels === false ? "is-icon-only" : ""}"
-          style="left:${percent.left}%; top:${percent.top}%; --marker-size:${markerSize}px;"
+          style="left:${percent.left}%; top:${percent.top}%; --marker-size:${markerSize}px; --room-label-size:${labelSize}px; --room-icon-size:${iconSize}px; --room-marker-gap:6px; --room-marker-padding:0 10px;"
           data-room-id="${escapeHtml(room.id)}"
           title="${escapeHtml(room.label || room.id)}"
         >
@@ -3654,6 +3760,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return "";
     }
 
+    const highlightedRoomIds = new Set(this._getHighlightedRoomIds());
     const fallbackRooms = rooms.filter(room => room.outlines.length === 0);
     if (!fallbackRooms.length) {
       return "";
@@ -3663,7 +3770,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       <div class="advance-vacuum-card__room-list">
         ${fallbackRooms.map(room => `
           <button
-            class="advance-vacuum-card__room-chip ${this._selectedRoomIds.includes(room.id) ? "is-selected" : ""}"
+            class="advance-vacuum-card__room-chip ${highlightedRoomIds.has(String(room.id)) ? "is-selected" : ""}"
             data-room-id="${escapeHtml(room.id)}"
             title="${escapeHtml(room.label || room.id)}"
           >
@@ -3854,7 +3961,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           }
           ${
             this._activeMode === "rooms"
-              ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._selectedRoomIds.length}</strong><span>habitaciones</span></div>`
+              ? `<div class="advance-vacuum-card__selection-chip"><strong>${highlightedRoomIds.size}</strong><span>habitaciones</span></div>`
               : this._activeMode === "zone"
                 ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._manualZones.length + this._selectedPredefinedZoneIds.length}</strong><span>zonas</span></div>`
                 : this._activeMode === "goto"
@@ -3983,9 +4090,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const state = this._getVacuumState();
     const accentColor = this._getAccentColor(state);
     const styles = config.styles || DEFAULT_CONFIG.styles;
+    this._syncActiveCleaningRoomIds(state);
     const rooms = this._getRoomSegments();
     const gotoPoints = this._getGotoPoints();
     const predefinedZones = this._getPredefinedZones();
+    const highlightedRoomIds = new Set(this._getHighlightedRoomIds(state));
     const modes = this._getAvailableModes();
     const currentMode = modes.find(mode => mode.id === this._activeMode) || modes[0] || { id: "all", label: MODE_LABELS.all, icon: "mdi:home" };
     const iconSize = Math.max(54, parseSizeToPixels(styles.icon.size, 64));
@@ -4326,8 +4435,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         }
 
         .advance-vacuum-card__room-polygon {
+          cursor: pointer;
           fill: rgba(255, 255, 255, 0.01);
-          pointer-events: auto;
+          pointer-events: all;
           stroke: rgba(255,255,255,0.16);
           stroke-dasharray: 10 10;
           stroke-width: 10;
@@ -4482,12 +4592,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           box-shadow: 0 12px 26px rgba(0,0,0,0.18);
           color: var(--primary-text-color);
           display: inline-flex;
-          gap: 8px;
+          gap: var(--room-marker-gap, 8px);
           justify-content: center;
           left: 0;
           min-height: var(--marker-size, 34px);
           min-width: var(--marker-size, 34px);
-          padding: 0 12px;
+          padding: var(--room-marker-padding, 0 12px);
           pointer-events: auto;
           position: absolute;
           top: 0;
@@ -4511,11 +4621,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__room-marker ha-icon,
         .advance-vacuum-card__goto-marker ha-icon {
-          --mdc-icon-size: 16px;
+          --mdc-icon-size: var(--room-icon-size, 16px);
         }
 
         .advance-vacuum-card__room-marker span {
-          font-size: ${Math.max(11, parseSizeToPixels(styles.map.label_size, 12))}px;
+          font-size: var(--room-label-size, ${Math.max(11, parseSizeToPixels(styles.map.label_size, 12))}px);
           font-weight: 600;
         }
 
@@ -4647,7 +4757,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                 <svg class="advance-vacuum-card__map-svg" viewBox="0 0 ${this._mapImageWidth} ${this._mapImageHeight}" preserveAspectRatio="none">
                   ${currentMode.id === "rooms" ? rooms.map(room => room.outlines.map(outline => `
                     <polygon
-                      class="advance-vacuum-card__room-polygon ${this._selectedRoomIds.includes(room.id) ? "is-selected" : ""}"
+                      class="advance-vacuum-card__room-polygon ${highlightedRoomIds.has(String(room.id)) ? "is-selected" : ""}"
                       data-room-id="${escapeHtml(room.id)}"
                       points="${escapeHtml(this._vacuumOutlineToSvgPoints(outline))}"
                     ></polygon>
