@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.12.3";
+const CARD_VERSION = "0.12.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -475,6 +475,27 @@ function parsePoint(value) {
   return null;
 }
 
+function parseRectangleLike(value) {
+  if (!isObject(value)) {
+    return [];
+  }
+
+  const x1 = Number(value.x1 ?? value.left ?? value.min_x ?? value.start_x);
+  const y1 = Number(value.y1 ?? value.top ?? value.min_y ?? value.start_y);
+  const x2 = Number(value.x2 ?? value.right ?? value.max_x ?? value.end_x);
+  const y2 = Number(value.y2 ?? value.bottom ?? value.max_y ?? value.end_y);
+  if (![x1, y1, x2, y2].every(Number.isFinite)) {
+    return [];
+  }
+
+  return [
+    { x: x1, y: y1 },
+    { x: x2, y: y1 },
+    { x: x2, y: y2 },
+    { x: x1, y: y2 },
+  ];
+}
+
 function parseOutline(value) {
   if (!Array.isArray(value)) {
     return [];
@@ -494,6 +515,16 @@ function isRectangleOutline(value) {
 }
 
 function parsePolygon(value) {
+  if (isObject(value)) {
+    if (Array.isArray(value.points)) {
+      return parsePolygon(value.points);
+    }
+    if (Array.isArray(value.outline)) {
+      return parsePolygon(value.outline);
+    }
+    return parseRectangleLike(value);
+  }
+
   if (!Array.isArray(value)) {
     return [];
   }
@@ -531,10 +562,12 @@ function parseOutlines(value) {
   }
 
   const first = value[0];
-  const looksNestedCollection = (
-    (Array.isArray(first) && (Array.isArray(first[0]) || isObject(first[0]))) ||
-    value.every(isRectangleOutline)
-  );
+  const looksNestedCollection = value.every(item => Array.isArray(item) || isObject(item))
+    && (
+      isObject(first) ||
+      (Array.isArray(first) && (Array.isArray(first[0]) || isObject(first[0]) || isFiniteScalar(first[0]))) ||
+      value.every(isRectangleOutline)
+    );
 
   if (looksNestedCollection) {
     return value
@@ -851,7 +884,15 @@ function resolveRoomSegments(config) {
   const directRooms = arrayFromMaybe(config?.room_segments);
   if (directRooms.length) {
     return directRooms.map(room => {
-      const outlines = parseOutlines(room.outline);
+      const outlines = parseOutlines(
+        room.outlines
+        || room.outline
+        || room.zones
+        || room.rectangles
+        || room.segments
+        || room.areas
+        || room.polygons
+      );
       return {
         id: String(room.id ?? ""),
         label: room.label || room.name || room?.label?.text || "",
@@ -867,7 +908,15 @@ function resolveRoomSegments(config) {
 
   const segmentMode = resolveLegacyMode(config, "vacuum_clean_segment");
   return arrayFromMaybe(segmentMode?.predefined_selections).map(selection => {
-    const outlines = parseOutlines(selection?.outline);
+    const outlines = parseOutlines(
+      selection?.outlines
+      || selection?.outline
+      || selection?.zones
+      || selection?.rectangles
+      || selection?.segments
+      || selection?.areas
+      || selection?.polygons
+    );
     return {
       id: String(selection.id ?? ""),
       label: String(selection?.label?.text || selection?.label || selection?.text || selection.id || "").trim(),
@@ -2395,6 +2444,32 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     };
   }
 
+  _mapToViewportPercent(point) {
+    if (!point) {
+      return {
+        left: 50,
+        top: 50,
+      };
+    }
+
+    const rect = this._getMapSurfaceRect();
+    const width = rect?.width || this._mapImageWidth || 1;
+    const height = rect?.height || this._mapImageHeight || 1;
+    const offsetX = rect ? this._mapOffset.x : 0;
+    const offsetY = rect ? this._mapOffset.y : 0;
+    const x = ((point.x / this._mapImageWidth) * width * this._mapScale) + offsetX;
+    const y = ((point.y / this._mapImageHeight) * height * this._mapScale) + offsetY;
+    return {
+      left: clamp((x / width) * 100, 0, 100),
+      top: clamp((y / height) * 100, 0, 100),
+    };
+  }
+
+  _vacuumToViewportPercent(point) {
+    const mapped = this._converter.vacuumToMap(point.x, point.y);
+    return this._mapToViewportPercent(mapped);
+  }
+
   _vacuumOutlineToSvgPoints(points) {
     return points
       .map(point => this._converter.vacuumToMap(point.x, point.y))
@@ -2765,8 +2840,16 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (!path) {
       return;
     }
-    window.history.pushState(null, "", path);
-    window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
+    if (this._hass?.navigate) {
+      this._hass.navigate(path);
+      return;
+    }
+    if (window?.history?.pushState) {
+      window.history.pushState(null, "", path);
+      fireEvent(this, "location-changed", { replace: false });
+      return;
+    }
+    fireEvent(this, "hass-navigate", { path });
   }
 
   _runExternalAction(actionConfig = {}) {
@@ -3430,16 +3513,15 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     const markerSize = Math.max(28, parseSizeToPixels(this._config?.styles?.map?.marker_size, 34));
-    const markerScale = this._mapScale > 1 ? (1 / this._mapScale) : 1;
 
     return rooms.map(room => {
       const anchor = room.iconPoint || room.labelPoint || centroid(room.outline);
-      const percent = this._vacuumToPercent(anchor);
+      const percent = this._vacuumToViewportPercent(anchor);
       const selected = this._selectedRoomIds.includes(room.id);
       return `
         <button
           class="advance-vacuum-card__room-marker ${selected ? "is-selected" : ""} ${this._config?.show_room_labels === false ? "is-icon-only" : ""}"
-          style="left:${percent.left}%; top:${percent.top}%; --marker-size:${markerSize}px; --marker-scale:${markerScale.toFixed(3)};"
+          style="left:${percent.left}%; top:${percent.top}%; --marker-size:${markerSize}px;"
           data-room-id="${escapeHtml(room.id)}"
           title="${escapeHtml(room.label || room.id)}"
         >
@@ -3460,7 +3542,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     return points.map(point => {
-      const percent = this._vacuumToPercent(point.position);
+      const percent = this._vacuumToViewportPercent(point.position);
       const selected = this._gotoPoint && Math.round(this._gotoPoint.x) === Math.round(point.position.x) && Math.round(this._gotoPoint.y) === Math.round(point.position.y);
       return `
         <button
@@ -4064,7 +4146,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         }
 
         .advance-vacuum-card__map-svg,
-        .advance-vacuum-card__map-markers {
+        .advance-vacuum-card__map-markers,
+        .advance-vacuum-card__map-overlays {
           inset: 0;
           position: absolute;
         }
@@ -4077,6 +4160,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__map-markers {
           pointer-events: none;
+        }
+
+        .advance-vacuum-card__map-overlays {
+          pointer-events: none;
+          z-index: 2;
         }
 
         .advance-vacuum-card__room-polygon {
@@ -4228,8 +4316,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           pointer-events: auto;
           position: absolute;
           top: 0;
-          transform: translate(-50%, -50%) scale(var(--marker-scale, 1));
-          transform-origin: center center;
+          transform: translate(-50%, -50%);
           white-space: nowrap;
           z-index: 2;
         }
@@ -4384,29 +4471,31 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                 </svg>
 
                 <div class="advance-vacuum-card__map-markers">
-                  ${currentMode.id === "rooms" ? this._renderRoomMarkers(rooms) : ""}
-                  ${currentMode.id === "goto" ? this._renderGotoMarkers(gotoPoints) : ""}
-                  ${
-                    currentMode.id === "zone" ? predefinedZones.map(zone => {
-                      const position = zone.position || centroid(zone.zones.map(item => ({ x: Number(item[0]), y: Number(item[1]) })));
-                      const percent = this._vacuumToPercent(position);
-                      const selected = this._selectedPredefinedZoneIds.includes(zone.id);
-                      return `
-                        <button
-                          class="advance-vacuum-card__room-marker ${selected ? "is-selected" : ""}"
-                          style="left:${percent.left}%; top:${percent.top}%;"
-                          data-zone-id="${escapeHtml(zone.id)}"
-                          title="${escapeHtml(zone.label || zone.id)}"
-                        >
-                          <ha-icon icon="${escapeHtml(zone.icon || "mdi:vector-rectangle")}"></ha-icon>
-                          <span>${escapeHtml(zone.label || zone.id)}</span>
-                        </button>
-                      `;
-                    }).join("") : ""
-                  }
                   ${this._renderManualZoneEditors()}
                 </div>
               </div>
+            </div>
+            <div class="advance-vacuum-card__map-overlays">
+              ${currentMode.id === "rooms" ? this._renderRoomMarkers(rooms) : ""}
+              ${currentMode.id === "goto" ? this._renderGotoMarkers(gotoPoints) : ""}
+              ${
+                currentMode.id === "zone" ? predefinedZones.map(zone => {
+                  const position = zone.position || centroid(zone.zones.map(item => ({ x: Number(item[0]), y: Number(item[1]) })));
+                  const percent = this._vacuumToViewportPercent(position);
+                  const selected = this._selectedPredefinedZoneIds.includes(zone.id);
+                  return `
+                    <button
+                      class="advance-vacuum-card__room-marker ${selected ? "is-selected" : ""}"
+                      style="left:${percent.left}%; top:${percent.top}%;"
+                      data-zone-id="${escapeHtml(zone.id)}"
+                      title="${escapeHtml(zone.label || zone.id)}"
+                    >
+                      <ha-icon icon="${escapeHtml(zone.icon || "mdi:vector-rectangle")}"></ha-icon>
+                      <span>${escapeHtml(zone.label || zone.id)}</span>
+                    </button>
+                  `;
+                }).join("") : ""
+              }
             </div>
             ${this._renderMapTools()}
           </div>
@@ -4448,17 +4537,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                   : ""
               }
             </div>
-            ${
-              (this._activeMode !== "all" || this._activeUtilityPanel)
-                ? `
-                  <div class="advance-vacuum-card__controls-side">
-                    <button class="advance-vacuum-card__control" data-control-action="clear" title="Volver al panel principal">
-                      <ha-icon icon="mdi:arrow-left"></ha-icon>
-                    </button>
-                  </div>
-                `
-                : ""
-            }
+            <div class="advance-vacuum-card__controls-side">
+              <button class="advance-vacuum-card__control" data-control-action="clear" title="Volver al panel principal">
+                <ha-icon icon="mdi:arrow-left"></ha-icon>
+              </button>
+            </div>
           </div>
         </div>
 
