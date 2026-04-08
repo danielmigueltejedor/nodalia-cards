@@ -34561,7 +34561,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const hasZones = this._config?.allow_zone_mode !== false || this._getPredefinedZones().length > 0 || Boolean(resolveLegacyMode(this._config, "vacuum_clean_zone"));
 
     if (showAllMode) {
-      modes.push({ id: "all", label: MODE_LABELS.all, icon: "mdi:home-floor-0" });
+      modes.push({ id: "all", label: MODE_LABELS.all, icon: "mdi:home" });
     }
     if (hasRooms && this._config?.allow_segment_mode !== false) {
       modes.push({ id: "rooms", label: MODE_LABELS.rooms, icon: "mdi:floor-plan" });
@@ -35973,7 +35973,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const gotoPoints = this._getGotoPoints();
     const predefinedZones = this._getPredefinedZones();
     const modes = this._getAvailableModes();
-    const currentMode = modes.find(mode => mode.id === this._activeMode) || modes[0] || { id: "all", label: MODE_LABELS.all, icon: "mdi:home-floor-0" };
+    const currentMode = modes.find(mode => mode.id === this._activeMode) || modes[0] || { id: "all", label: MODE_LABELS.all, icon: "mdi:home" };
     const iconSize = Math.max(54, parseSizeToPixels(styles.icon.size, 64));
     const controlSize = Math.max(38, parseSizeToPixels(styles.control.size, 42));
     const titleSize = Math.max(15, parseSizeToPixels(styles.title_size, 16));
