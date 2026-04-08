@@ -1910,13 +1910,29 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getDockControlDescriptors(state = this._getVacuumState()) {
-    if (this._isCleaning(state)) {
-      return [{
-        id: "return_to_base",
-        label: "Volver a base",
-        icon: "mdi:home-import-outline",
-        builtin_action: "return_to_base",
-      }];
+    const isCleaningSessionActive = this._isCleaning(state) || this._isPaused(state) || this._isReturning(state);
+    if (isCleaningSessionActive) {
+      const descriptors = [];
+
+      if (this._config?.show_return_to_base !== false && !this._isDocked(state)) {
+        descriptors.push({
+          id: "return_to_base",
+          label: "Volver a base",
+          icon: "mdi:home-import-outline",
+          builtin_action: "return_to_base",
+        });
+      }
+
+      if (this._config?.show_locate !== false) {
+        descriptors.push({
+          id: "locate",
+          label: "Localizar",
+          icon: "mdi:crosshairs-gps",
+          builtin_action: "locate",
+        });
+      }
+
+      return descriptors;
     }
 
     return DOCK_CONTROL_DEFINITIONS
@@ -1975,8 +1991,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _runDockControlAction(actionId, state = this._getVacuumState()) {
-    if (actionId === "return_to_base") {
-      this._handleControlAction("return_to_base");
+    if (actionId === "return_to_base" || actionId === "locate") {
+      this._handleControlAction(actionId);
       return;
     }
 
@@ -3722,22 +3738,36 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _renderMapTools() {
-    if (this._activeMode !== "zone") {
-      return "";
-    }
-
+    const showAddZoneButton = this._activeMode === "zone";
     const canAddZone = this._manualZones.length < this._getManualZoneCountLimit();
     return `
       <div class="advance-vacuum-card__map-tools">
-        <button
-          class="advance-vacuum-card__map-tool advance-vacuum-card__map-tool--add ${!canAddZone ? "is-disabled" : ""}"
-          data-control-action="add_zone"
-          title="Añadir zona"
-          ${!canAddZone ? "disabled" : ""}
-        >
-          <ha-icon icon="mdi:plus"></ha-icon>
-          <span class="advance-vacuum-card__map-tool-label">Zona</span>
-        </button>
+        <div class="advance-vacuum-card__map-tools-group advance-vacuum-card__map-tools-group--left">
+          <button
+            class="advance-vacuum-card__map-tool advance-vacuum-card__map-tool--back"
+            data-control-action="clear"
+            title="Volver al panel principal"
+          >
+            <ha-icon icon="mdi:arrow-left"></ha-icon>
+          </button>
+        </div>
+        <div class="advance-vacuum-card__map-tools-group advance-vacuum-card__map-tools-group--right">
+          ${
+            showAddZoneButton
+              ? `
+                <button
+                  class="advance-vacuum-card__map-tool advance-vacuum-card__map-tool--add ${!canAddZone ? "is-disabled" : ""}"
+                  data-control-action="add_zone"
+                  title="Añadir zona"
+                  ${!canAddZone ? "disabled" : ""}
+                >
+                  <ha-icon icon="mdi:plus"></ha-icon>
+                  <span class="advance-vacuum-card__map-tool-label">Zona</span>
+                </button>
+              `
+              : ""
+          }
+        </div>
       </div>
     `;
   }
@@ -3971,6 +4001,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const zoneBorder = styles.map.zone_border || "rgba(90, 167, 255, 0.72)";
     const gotoColor = styles.map.goto_color || "#f6b73c";
     const primaryButtonIcon = this._isCleaning(state) ? "mdi:pause" : "mdi:play";
+    const isCleaningSessionActive = this._isCleaning(state) || this._isPaused(state) || this._isReturning(state);
     const modeDescriptors = this._getModeDescriptors(state);
     const dockControlDescriptors = this._getDockControlDescriptors(state);
     const dockSettingDescriptors = this._getDockSettingDescriptors(state);
@@ -4381,13 +4412,30 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         }
 
         .advance-vacuum-card__map-tools {
+          align-items: flex-start;
           display: flex;
           gap: 8px;
+          justify-content: space-between;
+          left: 12px;
           pointer-events: none;
           position: absolute;
           right: 12px;
           top: 12px;
           z-index: 4;
+        }
+
+        .advance-vacuum-card__map-tools-group {
+          display: flex;
+          gap: 8px;
+        }
+
+        .advance-vacuum-card__map-tools-group--right {
+          justify-content: flex-end;
+        }
+
+        .advance-vacuum-card__map-tool--back {
+          padding: 0;
+          width: 44px;
         }
 
         .advance-vacuum-card__map-tool {
@@ -4664,14 +4712,20 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         <div class="advance-vacuum-card__footer">
 
-        <div class="advance-vacuum-card__modes">
-          ${modes.map(mode => `
-            <button class="advance-vacuum-card__mode-button ${mode.id === currentMode.id ? "is-active" : ""}" data-mode-id="${escapeHtml(mode.id)}">
-              <ha-icon icon="${escapeHtml(mode.icon)}"></ha-icon>
-              <span>${escapeHtml(mode.label)}</span>
-            </button>
-          `).join("")}
-        </div>
+        ${
+          !isCleaningSessionActive
+            ? `
+              <div class="advance-vacuum-card__modes">
+                ${modes.map(mode => `
+                  <button class="advance-vacuum-card__mode-button ${mode.id === currentMode.id ? "is-active" : ""}" data-mode-id="${escapeHtml(mode.id)}">
+                    <ha-icon icon="${escapeHtml(mode.icon)}"></ha-icon>
+                    <span>${escapeHtml(mode.label)}</span>
+                  </button>
+                `).join("")}
+              </div>
+            `
+            : ""
+        }
 
         <div class="advance-vacuum-card__controls">
           <div class="advance-vacuum-card__controls-row">
@@ -4697,11 +4751,6 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                 `
                   : ""
               }
-            </div>
-            <div class="advance-vacuum-card__controls-side">
-              <button class="advance-vacuum-card__control" data-control-action="clear" title="Volver al panel principal">
-                <ha-icon icon="mdi:arrow-left"></ha-icon>
-              </button>
             </div>
           </div>
         </div>
