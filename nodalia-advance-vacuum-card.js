@@ -510,6 +510,10 @@ function isFiniteScalar(value) {
   return Number.isFinite(Number(value));
 }
 
+function isPointLike(value) {
+  return Boolean(parsePoint(value));
+}
+
 function isRectangleOutline(value) {
   return Array.isArray(value) && value.length === 4 && value.every(isFiniteScalar);
 }
@@ -561,13 +565,17 @@ function parseOutlines(value) {
     return [];
   }
 
-  const first = value[0];
-  const looksNestedCollection = value.every(item => Array.isArray(item) || isObject(item))
-    && (
-      isObject(first) ||
-      (Array.isArray(first) && (Array.isArray(first[0]) || isObject(first[0]) || isFiniteScalar(first[0]))) ||
-      value.every(isRectangleOutline)
-    );
+  const isSinglePolygon =
+    value.every(isPointLike)
+    || isRectangleOutline(value)
+    || (value.every(isFiniteScalar) && value.length >= 6 && value.length % 2 === 0);
+
+  if (isSinglePolygon) {
+    const polygon = parsePolygon(value);
+    return polygon.length >= 3 ? [polygon] : [];
+  }
+
+  const looksNestedCollection = value.every(item => Array.isArray(item) || isObject(item));
 
   if (looksNestedCollection) {
     return value
