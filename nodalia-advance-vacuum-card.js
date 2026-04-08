@@ -35,27 +35,31 @@ const DOCK_SETTING_DEFINITIONS = [
   {
     id: "mop_wash_frequency",
     label: "Frecuencia de lavado de la mopa",
+    entity_ids: ["input_select.frecuencia_lavado_mopa"],
     patterns: ["mop_wash_frequency", "wash_frequency", "washing_frequency", "frecuencia_lavado", "mop_wash"],
   },
   {
     id: "mop_mode",
     label: "Modo de fregado",
-    patterns: [],
+    entity_ids: ["input_select.modo_de_fregado"],
+    patterns: ["modo_de_fregado", "mop_mode", "wash_mode", "dock_mop_mode", "washing_mode"],
   },
   {
     id: "auto_empty_frequency",
     label: "Frecuencia de vaciado automático",
-    patterns: ["auto_empty_frequency", "empty_frequency", "dust_collection_frequency", "frecuencia_vaciado"],
+    patterns: ["auto_empty_frequency", "empty_frequency", "dust_collection_frequency", "frecuencia_vaciado", "frecuencia_vaciado_automatico"],
   },
   {
     id: "empty_mode",
     label: "Modo de vaciado",
+    entity_ids: ["input_select.modo_de_vaciado"],
     patterns: ["empty_mode", "dock_dust_collection_mode", "dust_collection_mode", "modo_vaciado"],
   },
   {
     id: "drying_duration",
     label: "Duración de secado",
-    patterns: ["drying_duration", "dry_duration", "mop_dry_duration", "duracion_secado", "drying_time"],
+    entity_ids: ["input_select.duracion_del_secado_de_la_mopa"],
+    patterns: ["drying_duration", "dry_duration", "mop_dry_duration", "duracion_secado", "drying_time", "duracion_del_secado_de_la_mopa"],
   },
 ];
 
@@ -66,6 +70,7 @@ const DOCK_CONTROL_DEFINITIONS = [
     active_label: "Parar vaciado",
     icon: "mdi:delete-empty-outline",
     active_icon: "mdi:stop-circle-outline",
+    entity_ids: ["input_boolean.vaciar_deposito"],
     start_patterns: [
       "start_emptying",
       "start_empty",
@@ -90,6 +95,7 @@ const DOCK_CONTROL_DEFINITIONS = [
     active_label: "Parar lavado de paño",
     icon: "mdi:washing-machine",
     active_icon: "mdi:stop-circle-outline",
+    entity_ids: ["input_boolean.lavar_mopa"],
     start_patterns: [
       "start_wash",
       "start_washing",
@@ -115,6 +121,7 @@ const DOCK_CONTROL_DEFINITIONS = [
     active_label: "Detener el secado",
     icon: "mdi:hair-dryer",
     active_icon: "mdi:stop-circle-outline",
+    entity_ids: ["input_boolean.secado_de_mopa"],
     start_patterns: [
       "start_dry",
       "start_drying",
@@ -1156,6 +1163,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const suctionDescriptor = this._getModeDescriptor("suction", state);
     const mopDescriptor = this._getModeDescriptor("mop", state);
     const mopModeDescriptor = this._getMopModeDescriptor(state);
+    const dockControlDescriptors = this._getDockControlDescriptors(state);
+    const dockSettingDescriptors = this._getDockSettingDescriptors(state);
 
     return JSON.stringify({
       vacuum: {
@@ -1178,7 +1187,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         points: parseCalibrationPoints(this._config, this._hass).length,
       },
       activeMode: String(this._activeMode || ""),
+      activeUtilityPanel: String(this._activeUtilityPanel || ""),
       activeModePanelPreset: String(this._activeModePanelPreset || ""),
+      activeDockPanelSection: String(this._activeDockPanelSection || ""),
       selectedRooms: this._selectedRoomIds.join("|"),
       selectedZones: this._selectedPredefinedZoneIds.join("|"),
       manualZones: this._manualZones.length,
@@ -1195,6 +1206,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         mopMode: mopModeDescriptor
           ? `${mopModeDescriptor.service}:${mopModeDescriptor.target}:${mopModeDescriptor.current}:${mopModeDescriptor.options.join("|")}`
           : "",
+      },
+      dock: {
+        controls: dockControlDescriptors.map(descriptor => `${descriptor.id}:${descriptor.target}:${descriptor.active ? "1" : "0"}`).join("|"),
+        settings: dockSettingDescriptors.map(descriptor => `${descriptor.id}:${descriptor.target}:${descriptor.current}:${descriptor.options.join("|")}`).join("|"),
       },
     });
   }
@@ -1337,6 +1352,74 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   _guessRelatedButtonEntityByPatterns(patterns, excludedEntities = []) {
     return this._guessRelatedEntityByPatterns("button", patterns, excludedEntities);
+  }
+
+  _guessGlobalEntityByPatterns(domains, patterns, excludedEntities = []) {
+    if (!this._hass?.states || !Array.isArray(patterns) || !patterns.length) {
+      return "";
+    }
+
+    const domainList = arrayFromMaybe(domains).map(domain => String(domain || "").trim()).filter(Boolean);
+    if (!domainList.length) {
+      return "";
+    }
+
+    const candidates = Object.keys(this._hass.states)
+      .filter(entityId => domainList.some(domain => entityId.startsWith(`${domain}.`)))
+      .filter(entityId => !excludedEntities.includes(entityId))
+      .map(entityId => ({
+        entityId,
+        score: this._getEntityMatchScore(entityId, patterns),
+      }))
+      .filter(candidate => candidate.score > 0)
+      .sort((left, right) => right.score - left.score || left.entityId.localeCompare(right.entityId, "es"));
+
+    return candidates[0]?.entityId || "";
+  }
+
+  _getEntityState(entityId) {
+    return entityId ? this._hass?.states?.[entityId] || null : null;
+  }
+
+  _getEntityDomain(entityId) {
+    return String(entityId || "").split(".")[0] || "";
+  }
+
+  _findFirstAvailableEntity(entityIds = [], excludedEntities = []) {
+    if (!this._hass?.states) {
+      return "";
+    }
+
+    return arrayFromMaybe(entityIds)
+      .map(entityId => String(entityId || "").trim())
+      .find(entityId => entityId && !excludedEntities.includes(entityId) && this._hass.states[entityId]) || "";
+  }
+
+  _isBooleanEntityOn(entityId) {
+    return normalizeTextKey(this._getEntityState(entityId)?.state) === "on";
+  }
+
+  _toggleBooleanEntity(entityId) {
+    if (!this._hass || !entityId) {
+      return;
+    }
+
+    this._hass.callService("homeassistant", this._isBooleanEntityOn(entityId) ? "turn_off" : "turn_on", {
+      entity_id: entityId,
+    });
+  }
+
+  _setEntityOption(entityId, value) {
+    if (!this._hass || !entityId || !value) {
+      return;
+    }
+
+    const domain = this._getEntityDomain(entityId);
+    const serviceName = domain === "input_select" ? "input_select.select_option" : "select.select_option";
+    this._callNamedService(serviceName, {
+      entity_id: entityId,
+      option: value,
+    });
   }
 
   _guessRelatedSelectEntity(kind) {
@@ -1538,12 +1621,23 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return null;
     }
 
-    const startEntity = this._guessRelatedButtonEntityByPatterns(definition.start_patterns || []);
-    const stopEntity = this._guessRelatedButtonEntityByPatterns(definition.stop_patterns || [], [startEntity].filter(Boolean));
+    const toggleEntity = this._findFirstAvailableEntity(definition.entity_ids || []);
+    if (toggleEntity) {
+      const isActive = this._isBooleanEntityOn(toggleEntity);
+      return {
+        id: definition.id,
+        label: isActive ? definition.active_label : definition.label,
+        icon: isActive ? definition.active_icon || definition.icon : definition.icon,
+        target: toggleEntity,
+        active: isActive,
+        type: "toggle",
+      };
+    }
+
+    const startEntity = this._guessGlobalEntityByPatterns(["button"], definition.start_patterns || []);
+    const stopEntity = this._guessGlobalEntityByPatterns(["button"], definition.stop_patterns || [], [startEntity].filter(Boolean));
     const isActive = this._getDockControlState(definition, state);
-    const target = isActive
-      ? stopEntity || startEntity
-      : startEntity || stopEntity;
+    const target = isActive ? stopEntity || startEntity : startEntity || stopEntity;
 
     if (!target) {
       return null;
@@ -1555,6 +1649,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       icon: isActive ? definition.active_icon || definition.icon : definition.icon,
       target,
       active: isActive,
+      type: "button",
     };
   }
 
@@ -1578,32 +1673,33 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return null;
     }
 
+    const explicitEntity = this._findFirstAvailableEntity(definition.entity_ids || []);
+    const entityId = explicitEntity || this._guessGlobalEntityByPatterns(["input_select", "select"], definition.patterns || []);
+    const descriptor = this._getSelectOptions(entityId);
+    if (descriptor?.entityId && descriptor.options?.length) {
+      return {
+        id: definition.id,
+        label: definition.label,
+        target: descriptor.entityId,
+        options: descriptor.options,
+        current: descriptor.value,
+      };
+    }
+
     if (definition.id === "mop_mode") {
-      const descriptor = this._getMopModeDescriptor(state);
-      return descriptor
+      const mopModeDescriptor = this._getMopModeDescriptor(state);
+      return mopModeDescriptor
         ? {
             id: definition.id,
             label: definition.label,
-            target: descriptor.target,
-            options: descriptor.options,
-            current: descriptor.current,
+            target: mopModeDescriptor.target,
+            options: mopModeDescriptor.options,
+            current: mopModeDescriptor.current,
           }
         : null;
     }
 
-    const entityId = this._guessRelatedSelectEntityByPatterns(definition.patterns || []);
-    const descriptor = this._getSelectOptions(entityId);
-    if (!descriptor?.entityId || !descriptor.options?.length) {
-      return null;
-    }
-
-    return {
-      id: definition.id,
-      label: definition.label,
-      target: descriptor.entityId,
-      options: descriptor.options,
-      current: descriptor.value,
-    };
+    return null;
   }
 
   _getDockSettingDescriptors(state = this._getVacuumState()) {
@@ -1633,7 +1729,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
-    this._pressButtonEntity(descriptor.target);
+    if (descriptor.type === "toggle") {
+      this._toggleBooleanEntity(descriptor.target);
+    } else {
+      this._pressButtonEntity(descriptor.target);
+    }
     this._triggerHaptic("selection");
   }
 
@@ -1647,10 +1747,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
-    this._hass.callService("select", "select_option", {
-      entity_id: descriptor.target,
-      option: value,
-    });
+    this._setEntityOption(descriptor.target, value);
     this._triggerHaptic("selection");
   }
 
@@ -2359,8 +2456,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       case "toggle_modes":
         this._toggleUtilityPanel("modes");
         break;
-      case "toggle_custom_menu":
-        this._toggleUtilityPanel("custom");
+      case "toggle_dock_panel":
+        if (this._activeUtilityPanel !== "dock") {
+          this._activeDockPanelSection = DOCK_PANEL_SECTIONS[0]?.id || "control";
+        }
+        this._toggleUtilityPanel("dock");
         break;
       case "return_to_base":
         this._callVacuumService("return_to_base");
@@ -2463,6 +2563,22 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
+    const dockSectionTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.dockSectionId);
+    if (dockSectionTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._setActiveDockPanelSection(dockSectionTarget.dataset.dockSectionId);
+      return;
+    }
+
+    const dockActionTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.dockActionId);
+    if (dockActionTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._runDockControlAction(dockActionTarget.dataset.dockActionId, this._getVacuumState());
+      return;
+    }
+
     const customMenuItemTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.customMenuIndex);
     if (customMenuItemTarget) {
       const items = this._getVisibleCustomMenuItems(this._getVacuumState());
@@ -2473,6 +2589,17 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._runCustomMenuItem(item);
       }
     }
+  }
+
+  _onShadowChange(event) {
+    const selectTarget = event.composedPath().find(node => node instanceof HTMLSelectElement && node.dataset?.dockSettingId);
+    if (!selectTarget) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this._setDockSettingOption(selectTarget.dataset.dockSettingId, selectTarget.value, this._getVacuumState());
   }
 
   _onShadowPointerDown(event) {
@@ -2492,7 +2619,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       node.dataset?.modeId ||
       node.dataset?.headerActionIndex ||
       node.dataset?.modeOptionKind ||
-      node.dataset?.customMenuIndex
+      node.dataset?.customMenuIndex ||
+      node.dataset?.dockSectionId ||
+      node.dataset?.dockActionId ||
+      node.dataset?.dockSettingId
     ));
 
     if (skip) {
@@ -2557,7 +2687,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         node.dataset?.modeId ||
         node.dataset?.headerActionIndex ||
         node.dataset?.modeOptionKind ||
-        node.dataset?.customMenuIndex
+        node.dataset?.customMenuIndex ||
+        node.dataset?.dockSectionId ||
+        node.dataset?.dockActionId ||
+        node.dataset?.dockSettingId
       ));
 
       const surface = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.mapSurface === "main");
@@ -2758,6 +2891,86 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     `;
   }
 
+  _renderDockControlSection(state) {
+    const descriptors = this._getDockControlDescriptors(state);
+    if (!descriptors.length) {
+      return "";
+    }
+
+    return `
+      <div class="advance-vacuum-card__utility-group">
+        <div class="advance-vacuum-card__utility-label">Acciones de base</div>
+        <div class="advance-vacuum-card__utility-options advance-vacuum-card__utility-options--menu">
+          ${descriptors.map(descriptor => `
+            <button
+              class="advance-vacuum-card__utility-option advance-vacuum-card__utility-option--menu ${descriptor.active ? "is-active" : ""}"
+              data-dock-action-id="${escapeHtml(descriptor.id)}"
+            >
+              <ha-icon icon="${escapeHtml(descriptor.icon || "mdi:flash")}"></ha-icon>
+              <span>${escapeHtml(descriptor.label)}</span>
+            </button>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  _renderDockSettingsSection(state) {
+    const descriptors = this._getDockSettingDescriptors(state);
+    if (!descriptors.length) {
+      return "";
+    }
+
+    return descriptors.map(descriptor => `
+      <label class="advance-vacuum-card__utility-field">
+        <span class="advance-vacuum-card__utility-label">${escapeHtml(descriptor.label)}</span>
+        <select class="advance-vacuum-card__utility-select" data-dock-setting-id="${escapeHtml(descriptor.id)}">
+          ${descriptor.options.map(option => `
+            <option value="${escapeHtml(option)}" ${normalizeTextKey(descriptor.current) === normalizeTextKey(option) ? "selected" : ""}>
+              ${escapeHtml(humanizeModeLabel(option, descriptor.id === "mop_mode" ? "mop_mode" : "generic"))}
+            </option>
+          `).join("")}
+        </select>
+      </label>
+    `).join("");
+  }
+
+  _renderDockPanel(state) {
+    const controlDescriptors = this._getDockControlDescriptors(state);
+    const settingDescriptors = this._getDockSettingDescriptors(state);
+    const availableSections = DOCK_PANEL_SECTIONS.filter(section => (
+      section.id === "control" ? controlDescriptors.length > 0 : settingDescriptors.length > 0
+    ));
+
+    if (!availableSections.length) {
+      return "";
+    }
+
+    const activeSection = availableSections.find(section => section.id === this._activeDockPanelSection) || availableSections[0];
+    if (activeSection.id !== this._activeDockPanelSection) {
+      this._activeDockPanelSection = activeSection.id;
+    }
+
+    return `
+      <div class="advance-vacuum-card__utility-panel">
+        <div class="advance-vacuum-card__utility-group">
+          <div class="advance-vacuum-card__utility-label">Base de carga</div>
+          <div class="advance-vacuum-card__utility-options advance-vacuum-card__utility-options--presets">
+            ${availableSections.map(section => `
+              <button
+                class="advance-vacuum-card__utility-option ${section.id === activeSection.id ? "is-active" : ""}"
+                data-dock-section-id="${escapeHtml(section.id)}"
+              >
+                ${escapeHtml(section.label)}
+              </button>
+            `).join("")}
+          </div>
+        </div>
+        ${activeSection.id === "control" ? this._renderDockControlSection(state) : this._renderDockSettingsSection(state)}
+      </div>
+    `;
+  }
+
   _renderCustomMenuPanel(state) {
     const items = this._getVisibleCustomMenuItems(state);
     if (!items.length) {
@@ -2812,16 +3025,16 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const gotoColor = styles.map.goto_color || "#f6b73c";
     const primaryButtonIcon = this._isCleaning(state) ? "mdi:pause" : "mdi:play";
     const modeDescriptors = this._getModeDescriptors(state);
+    const dockControlDescriptors = this._getDockControlDescriptors(state);
+    const dockSettingDescriptors = this._getDockSettingDescriptors(state);
     const activeModePanelPresetConfig = this._getActiveModePanelPresetConfig(state);
-    const customMenuItems = this._getVisibleCustomMenuItems(state);
-    const customMenuLabel = config.custom_menu?.label || "Base";
-    const customMenuIcon = config.custom_menu?.icon || "mdi:home-import-outline";
+    const activeDockPanelSectionConfig = this._getDockPanelSectionConfig();
     const showModeMenuButton = modeDescriptors.length > 0 || currentMode.id !== "all";
-    const showCustomMenuButton = customMenuItems.length > 0;
+    const showDockMenuButton = dockControlDescriptors.length > 0 || dockSettingDescriptors.length > 0;
     const utilityPanelMarkup = this._activeUtilityPanel === "modes"
       ? this._renderModePanel(state)
-      : this._activeUtilityPanel === "custom"
-        ? this._renderCustomMenuPanel(state)
+      : this._activeUtilityPanel === "dock"
+        ? this._renderDockPanel(state)
         : "";
 
     const selectedPredefinedZones = predefinedZones.filter(zone => this._selectedPredefinedZoneIds.includes(zone.id));
@@ -3123,6 +3336,28 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__utility-option--menu ha-icon {
           --mdc-icon-size: 16px;
+        }
+
+        .advance-vacuum-card__utility-field {
+          display: grid;
+          gap: 8px;
+          justify-items: center;
+          max-width: 340px;
+          width: min(100%, 340px);
+        }
+
+        .advance-vacuum-card__utility-select {
+          appearance: none;
+          background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 16px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          font: inherit;
+          min-height: 42px;
+          padding: 0 14px;
+          text-align: center;
+          width: 100%;
         }
 
         .advance-vacuum-card__utility-meta {
@@ -3444,10 +3679,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
               <ha-icon icon="${primaryButtonIcon}"></ha-icon>
             </button>
             ${
-              showCustomMenuButton
+              showDockMenuButton
                 ? `
-                  <button class="advance-vacuum-card__control ${this._activeUtilityPanel === "custom" ? "is-primary" : ""}" data-control-action="toggle_custom_menu" title="${escapeHtml(customMenuLabel)}">
-                    <ha-icon icon="${escapeHtml(customMenuIcon)}"></ha-icon>
+                  <button class="advance-vacuum-card__control ${this._activeUtilityPanel === "dock" ? "is-primary" : ""}" data-control-action="toggle_dock_panel" title="${escapeHtml(activeDockPanelSectionConfig?.label || "Base de carga")}">
+                    <ha-icon icon="${escapeHtml(activeDockPanelSectionConfig?.icon || "mdi:home-import-outline")}"></ha-icon>
                   </button>
               `
                 : ""
