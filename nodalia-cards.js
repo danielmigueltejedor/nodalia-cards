@@ -37285,6 +37285,10 @@ class NodaliaVacuumCard extends HTMLElement {
 
     switch (normalizeTextKey(this._getReportedStateValue(state))) {
       case "cleaning":
+      case "segment_cleaning":
+      case "room_cleaning":
+      case "zone_cleaning":
+      case "clean_area":
       case "vacuuming":
       case "limpiando":
         return "Limpiando";
@@ -37711,6 +37715,10 @@ class NodaliaVacuumCard extends HTMLElement {
   _isCleaning(state) {
     return this._matchesActivity(state, [
       "cleaning",
+      "segment_cleaning",
+      "room_cleaning",
+      "zone_cleaning",
+      "clean_area",
       "spot_cleaning",
       "vacuuming",
       "limpiando",
