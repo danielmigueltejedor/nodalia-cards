@@ -2437,15 +2437,37 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._render();
   }
 
+  _deleteManualZone(index) {
+    if (!Number.isInteger(index) || index < 0 || index >= this._manualZones.length) {
+      return;
+    }
+
+    this._manualZones = this._manualZones.filter((_zone, zoneIndex) => zoneIndex !== index);
+
+    if (this._selectedManualZoneIndex > index) {
+      this._selectedManualZoneIndex -= 1;
+    } else if (this._selectedManualZoneIndex === index) {
+      this._selectedManualZoneIndex = Math.min(index, this._manualZones.length - 1);
+    }
+
+    this._sanitizeSelectedManualZoneIndex();
+    this._zoneHandleDrag = null;
+    this._triggerHaptic("selection");
+    this._render();
+  }
+
+  _getMinimumManualZoneSize() {
+    return Math.max(72, Math.round(Math.min(this._mapImageWidth, this._mapImageHeight) * 0.06));
+  }
+
   _getZoneHandlePoints(zone) {
     const rect = this._zoneToSvgRect(zone);
     return {
       rect,
-      corners: [
-        { id: "nw", icon: "mdi:arrow-top-left", x: rect.x, y: rect.y },
-        { id: "ne", icon: "mdi:arrow-top-right", x: rect.x + rect.width, y: rect.y },
-        { id: "se", icon: "mdi:arrow-bottom-right", x: rect.x + rect.width, y: rect.y + rect.height },
-        { id: "sw", icon: "mdi:arrow-bottom-left", x: rect.x, y: rect.y + rect.height },
+      handles: [
+        { id: "move", icon: "mdi:arrow-all", x: rect.x, y: rect.y, title: "Mover zona" },
+        { id: "delete", icon: "mdi:trash-can-outline", x: rect.x, y: rect.y + rect.height, title: "Eliminar zona" },
+        { id: "resize", icon: "mdi:arrow-bottom-right", x: rect.x + rect.width, y: rect.y + rect.height, title: "Redimensionar zona" },
       ],
     };
   }
@@ -2460,12 +2482,30 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return false;
     }
 
-    const nextZone = this._mapRectToVacuumZone({
-      x1: this._zoneHandleDrag.fixedPoint.x,
-      y1: this._zoneHandleDrag.fixedPoint.y,
-      x2: mapPoint.x,
-      y2: mapPoint.y,
-    });
+    let nextZone = null;
+    if (this._zoneHandleDrag.action === "move") {
+      const deltaX = mapPoint.x - this._zoneHandleDrag.startPoint.x;
+      const deltaY = mapPoint.y - this._zoneHandleDrag.startPoint.y;
+      const width = this._zoneHandleDrag.startRect.width;
+      const height = this._zoneHandleDrag.startRect.height;
+      const nextX = clamp(this._zoneHandleDrag.startRect.x + deltaX, 0, this._mapImageWidth - width);
+      const nextY = clamp(this._zoneHandleDrag.startRect.y + deltaY, 0, this._mapImageHeight - height);
+
+      nextZone = this._mapRectToVacuumZone({
+        x1: nextX,
+        y1: nextY,
+        x2: nextX + width,
+        y2: nextY + height,
+      });
+    } else if (this._zoneHandleDrag.action === "resize") {
+      const minSize = this._getMinimumManualZoneSize();
+      nextZone = this._mapRectToVacuumZone({
+        x1: this._zoneHandleDrag.fixedPoint.x,
+        y1: this._zoneHandleDrag.fixedPoint.y,
+        x2: clamp(mapPoint.x, this._zoneHandleDrag.fixedPoint.x + minSize, this._mapImageWidth),
+        y2: clamp(mapPoint.y, this._zoneHandleDrag.fixedPoint.y + minSize, this._mapImageHeight),
+      });
+    }
 
     if (!nextZone) {
       return false;
@@ -2884,6 +2924,21 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _onShadowClick(event) {
+    const zoneHandleTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.zoneHandleIndex && node.dataset?.zoneHandleAction);
+    if (zoneHandleTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const index = Number(zoneHandleTarget.dataset.zoneHandleIndex);
+      const action = zoneHandleTarget.dataset.zoneHandleAction;
+      if (action === "delete") {
+        this._deleteManualZone(index);
+      } else {
+        this._selectManualZone(index, { triggerHaptic: true });
+      }
+      return;
+    }
+
     const roomTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.roomId);
     if (roomTarget) {
       event.preventDefault();
@@ -3047,35 +3102,46 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
-    const zoneHandleTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.zoneHandleIndex && node.dataset?.zoneHandleCorner);
+    const zoneHandleTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.zoneHandleIndex && node.dataset?.zoneHandleAction);
     if (zoneHandleTarget) {
       const index = Number(zoneHandleTarget.dataset.zoneHandleIndex);
       const zone = this._manualZones[index];
       const handlePoints = zone ? this._getZoneHandlePoints(zone) : null;
-      const selectedCorner = handlePoints?.corners?.find(corner => corner.id === zoneHandleTarget.dataset.zoneHandleCorner);
-      const oppositeCorner = handlePoints?.corners?.find(corner => ({
-        nw: "se",
-        ne: "sw",
-        se: "nw",
-        sw: "ne",
-      }[zoneHandleTarget.dataset.zoneHandleCorner] === corner.id));
+      const selectedHandle = handlePoints?.handles?.find(handle => handle.id === zoneHandleTarget.dataset.zoneHandleAction);
 
-      if (!zone || !selectedCorner || !oppositeCorner) {
+      if (!zone || !selectedHandle) {
         return;
       }
 
       this._selectedManualZoneIndex = index;
-      this._zoneHandleDrag = {
-        pointerId: event.pointerId,
-        index,
-        corner: selectedCorner.id,
-        fixedPoint: {
-          x: oppositeCorner.x,
-          y: oppositeCorner.y,
-        },
-      };
       event.preventDefault();
       event.stopPropagation();
+
+      if (selectedHandle.id === "delete") {
+        this._render();
+        return;
+      }
+
+      const rect = handlePoints.rect;
+      const mapPoint = this._eventToMapPoint(event);
+      this._zoneHandleDrag = selectedHandle.id === "move"
+        ? {
+            pointerId: event.pointerId,
+            index,
+            action: "move",
+            startPoint: mapPoint || { x: rect.x, y: rect.y },
+            startRect: rect,
+          }
+        : {
+            pointerId: event.pointerId,
+            index,
+            action: "resize",
+            fixedPoint: {
+              x: rect.x,
+              y: rect.y,
+            },
+          };
+
       this._render();
       return;
     }
@@ -3316,7 +3382,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._sanitizeSelectedManualZoneIndex();
 
     return this._manualZones.map((zone, index) => {
-      const { rect, corners } = this._getZoneHandlePoints(zone);
+      const { rect, handles } = this._getZoneHandlePoints(zone);
       const selected = index === this._selectedManualZoneIndex;
       const left = (rect.x / this._mapImageWidth) * 100;
       const top = (rect.y / this._mapImageHeight) * 100;
@@ -3332,15 +3398,15 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         ></button>
         ${
           selected
-            ? corners.map(corner => `
+            ? handles.map(handle => `
                 <button
                   class="advance-vacuum-card__zone-handle"
-                  style="left:${(corner.x / this._mapImageWidth) * 100}%; top:${(corner.y / this._mapImageHeight) * 100}%;"
+                  style="left:${(handle.x / this._mapImageWidth) * 100}%; top:${(handle.y / this._mapImageHeight) * 100}%;"
                   data-zone-handle-index="${index}"
-                  data-zone-handle-corner="${escapeHtml(corner.id)}"
-                  title="Ajustar zona"
+                  data-zone-handle-action="${escapeHtml(handle.id)}"
+                  title="${escapeHtml(handle.title)}"
                 >
-                  <ha-icon icon="${escapeHtml(corner.icon)}"></ha-icon>
+                  <ha-icon icon="${escapeHtml(handle.icon)}"></ha-icon>
                 </button>
               `).join("")
             : ""
@@ -4079,6 +4145,16 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           transform: translate(-50%, -50%);
           width: 34px;
           z-index: 3;
+        }
+
+        .advance-vacuum-card__zone-handle[data-zone-handle-action="move"] {
+          border-color: color-mix(in srgb, ${accentColor} 34%, rgba(255,255,255,0.14));
+          color: color-mix(in srgb, ${accentColor} 72%, #ffffff);
+        }
+
+        .advance-vacuum-card__zone-handle[data-zone-handle-action="delete"] {
+          border-color: rgba(255, 130, 130, 0.32);
+          color: #ffb3b3;
         }
 
         .advance-vacuum-card__zone-handle ha-icon,
