@@ -617,6 +617,94 @@ function centroid(points) {
   };
 }
 
+function polygonArea(points) {
+  if (!Array.isArray(points) || points.length < 3) {
+    return 0;
+  }
+
+  let area = 0;
+  for (let index = 0; index < points.length; index += 1) {
+    const current = points[index];
+    const next = points[(index + 1) % points.length];
+    area += (current.x * next.y) - (next.x * current.y);
+  }
+
+  return Math.abs(area) / 2;
+}
+
+function polygonBounds(points) {
+  if (!Array.isArray(points) || !points.length) {
+    return {
+      minX: 0,
+      maxX: 0,
+      minY: 0,
+      maxY: 0,
+      width: 0,
+      height: 0,
+    };
+  }
+
+  const bounds = points.reduce((acc, point) => ({
+    minX: Math.min(acc.minX, point.x),
+    maxX: Math.max(acc.maxX, point.x),
+    minY: Math.min(acc.minY, point.y),
+    maxY: Math.max(acc.maxY, point.y),
+  }), {
+    minX: Number.POSITIVE_INFINITY,
+    maxX: Number.NEGATIVE_INFINITY,
+    minY: Number.POSITIVE_INFINITY,
+    maxY: Number.NEGATIVE_INFINITY,
+  });
+
+  return {
+    ...bounds,
+    width: Math.max(0, bounds.maxX - bounds.minX),
+    height: Math.max(0, bounds.maxY - bounds.minY),
+  };
+}
+
+function pointInPolygon(point, polygon) {
+  if (!point || !Array.isArray(polygon) || polygon.length < 3) {
+    return false;
+  }
+
+  let inside = false;
+
+  for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index, index += 1) {
+    const currentPoint = polygon[index];
+    const previousPoint = polygon[previous];
+    const minX = Math.min(currentPoint.x, previousPoint.x);
+    const maxX = Math.max(currentPoint.x, previousPoint.x);
+    const minY = Math.min(currentPoint.y, previousPoint.y);
+    const maxY = Math.max(currentPoint.y, previousPoint.y);
+    const crossProduct = ((point.y - currentPoint.y) * (previousPoint.x - currentPoint.x))
+      - ((point.x - currentPoint.x) * (previousPoint.y - currentPoint.y));
+
+    if (Math.abs(crossProduct) < 0.001 && point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY) {
+      return true;
+    }
+
+    const intersects = ((currentPoint.y > point.y) !== (previousPoint.y > point.y))
+      && (point.x < (((previousPoint.x - currentPoint.x) * (point.y - currentPoint.y)) / ((previousPoint.y - currentPoint.y) || 1e-9)) + currentPoint.x);
+
+    if (intersects) {
+      inside = !inside;
+    }
+  }
+
+  return inside;
+}
+
+function rectIntersectionArea(firstRect, secondRect) {
+  if (!firstRect || !secondRect) {
+    return 0;
+  }
+
+  const width = Math.max(0, Math.min(firstRect.right, secondRect.right) - Math.max(firstRect.left, secondRect.left));
+  const height = Math.max(0, Math.min(firstRect.bottom, secondRect.bottom) - Math.max(firstRect.top, secondRect.top));
+  return width * height;
+}
+
 function arrayFromMaybe(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -1107,6 +1195,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._selectedPredefinedZoneIds = [];
     this._manualZones = [];
     this._selectedManualZoneIndex = -1;
+    this._transientZoneReturnMode = "";
     this._draftZone = null;
     this._gotoPoint = null;
     this._repeats = 1;
@@ -1171,6 +1260,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._selectedPredefinedZoneIds = [];
     this._manualZones = [];
     this._selectedManualZoneIndex = -1;
+    this._transientZoneReturnMode = "";
     this._draftZone = null;
     this._gotoPoint = null;
     this._activeUtilityPanel = null;
@@ -1539,6 +1629,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         points: parseCalibrationPoints(this._config, this._hass).length,
       },
       activeMode: String(this._activeMode || ""),
+      transientZoneReturnMode: String(this._transientZoneReturnMode || ""),
       activeUtilityPanel: String(this._activeUtilityPanel || ""),
       activeModePanelPreset: String(this._activeModePanelPreset || ""),
       activeDockPanelSection: String(this._activeDockPanelSection || ""),
@@ -3151,11 +3242,49 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._render();
   }
 
+  _restoreTransientZoneMode() {
+    if (!this._transientZoneReturnMode) {
+      return false;
+    }
+
+    this._selectedPredefinedZoneIds = [];
+    this._manualZones = [];
+    this._selectedManualZoneIndex = -1;
+    this._draftZone = null;
+    this._gotoPoint = null;
+    this._zoneHandleDrag = null;
+    this._activeUtilityPanel = null;
+    this._activeMode = this._transientZoneReturnMode;
+    this._transientZoneReturnMode = "";
+    return true;
+  }
+
+  _openTransientZoneMode() {
+    const hasZoneMode = this._getAvailableModes().some(mode => mode.id === "zone");
+    if (!hasZoneMode) {
+      return;
+    }
+
+    if (this._activeMode !== "zone") {
+      this._transientZoneReturnMode = this._activeMode || "all";
+      this._activeMode = "zone";
+      this._activeUtilityPanel = null;
+      this._selectedPredefinedZoneIds = [];
+      this._manualZones = [];
+      this._selectedManualZoneIndex = -1;
+      this._draftZone = null;
+      this._gotoPoint = null;
+    }
+
+    this._addManualZone();
+  }
+
   _setActiveMode(modeId) {
     if (!modeId || modeId === this._activeMode) {
       return;
     }
     this._activeMode = modeId;
+    this._transientZoneReturnMode = "";
     this._activeUtilityPanel = null;
     this._manualZones = [];
     this._selectedManualZoneIndex = -1;
@@ -3191,6 +3320,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _goBack() {
+    if (this._restoreTransientZoneMode()) {
+      this._triggerHaptic("selection");
+      this._render();
+      return;
+    }
+
     const shouldReturnToAll = this._activeMode !== "all";
     this._selectedRoomIds = [];
     this._selectedPredefinedZoneIds = [];
@@ -3211,8 +3346,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   _runMapAction() {
     const state = this._getVacuumState();
+    const selectedPredefinedZones = this._getPredefinedZones()
+      .filter(zone => this._selectedPredefinedZoneIds.includes(zone.id))
+      .flatMap(zone => zone.zones.map(item => [...item, this._repeats]));
+    const manualZones = this._manualZones.map(zone => [zone.x1, zone.y1, zone.x2, zone.y2, this._repeats]);
+    const selectedZones = [...selectedPredefinedZones, ...manualZones].slice(0, clamp(Number(this._config?.max_zone_selections || 5), 1, 10));
+    const canRunZoneAction = this._activeMode === "zone" && selectedZones.length > 0;
 
-    if (this._isCleaning(state) || this._isPaused(state)) {
+    if ((this._isCleaning(state) || this._isPaused(state)) && !canRunZoneAction) {
       this._callVacuumService(this._isCleaning(state) ? "pause" : "start");
       this._triggerHaptic("selection");
       return;
@@ -3240,21 +3381,18 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     if (this._activeMode === "zone") {
-      const selectedPredefined = this._getPredefinedZones()
-        .filter(zone => this._selectedPredefinedZoneIds.includes(zone.id))
-        .flatMap(zone => zone.zones.map(item => [...item, this._repeats]));
-
-      const manual = this._manualZones.map(zone => [zone.x1, zone.y1, zone.x2, zone.y2, this._repeats]);
-      const zones = [...selectedPredefined, ...manual].slice(0, clamp(Number(this._config?.max_zone_selections || 5), 1, 10));
-
-      if (zones.length) {
-        this._activeCleaningRoomIds = [];
+      if (selectedZones.length) {
+        if (!this._isRoomCleaningSessionActive(state)) {
+          this._activeCleaningRoomIds = [];
+        }
         this._callNamedService("vacuum.send_command", {
           entity_id: this._config.entity,
           command: "app_zoned_clean",
-          params: zones,
+          params: selectedZones,
         });
+        this._restoreTransientZoneMode();
         this._triggerHaptic("success");
+        this._render();
         return;
       }
     }
@@ -3318,10 +3456,19 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._triggerHaptic("selection");
         break;
       case "clear":
+        if (this._restoreTransientZoneMode()) {
+          this._triggerHaptic("selection");
+          this._render();
+          break;
+        }
         this._navigate("/lovelace/principal");
         break;
       case "add_zone":
-        this._addManualZone();
+        if ((this._isCleaning(this._getVacuumState()) || this._isPaused(this._getVacuumState()) || this._isReturning(this._getVacuumState())) && this._activeMode !== "zone") {
+          this._openTransientZoneMode();
+        } else {
+          this._addManualZone();
+        }
         break;
       case "repeats":
         this._cycleRepeats();
@@ -3732,26 +3879,176 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
   }
 
+  _estimateRoomMarkerFootprint(room, markerSize, labelSize, iconSize) {
+    if (this._config?.show_room_labels === false) {
+      return {
+        width: markerSize,
+        height: markerSize,
+      };
+    }
+
+    const label = String(room?.label || room?.id || "").trim();
+    const estimatedTextWidth = Math.max(labelSize * 2.6, label.length * labelSize * 0.57);
+    return {
+      width: Math.max(markerSize, estimatedTextWidth + iconSize + 24),
+      height: markerSize,
+    };
+  }
+
+  _isPointInsideRoom(point, room) {
+    return arrayFromMaybe(room?.outlines).some(outline => pointInPolygon(point, outline));
+  }
+
+  _getRoomMarkerCandidatePoints(room) {
+    const outlines = arrayFromMaybe(room?.outlines)
+      .filter(outline => outline.length >= 3)
+      .sort((left, right) => polygonArea(right) - polygonArea(left));
+    const primaryOutline = outlines[0] || arrayFromMaybe(room?.outline);
+    const bounds = polygonBounds(primaryOutline);
+    const overallCenter = room?.outline?.length ? centroid(room.outline) : centroid(primaryOutline);
+    const lowerCenter = {
+      x: bounds.minX + (bounds.width * 0.5),
+      y: bounds.minY + (bounds.height * 0.72),
+    };
+    const lowerDeepCenter = {
+      x: bounds.minX + (bounds.width * 0.5),
+      y: bounds.minY + (bounds.height * 0.84),
+    };
+    const upperCenter = {
+      x: bounds.minX + (bounds.width * 0.5),
+      y: bounds.minY + (bounds.height * 0.36),
+    };
+    const leftCenter = {
+      x: bounds.minX + (bounds.width * 0.34),
+      y: bounds.minY + (bounds.height * 0.56),
+    };
+    const rightCenter = {
+      x: bounds.minX + (bounds.width * 0.66),
+      y: bounds.minY + (bounds.height * 0.56),
+    };
+
+    const candidates = [
+      room?.labelPoint,
+      lowerCenter,
+      centroid(primaryOutline),
+      lowerDeepCenter,
+      upperCenter,
+      leftCenter,
+      rightCenter,
+      room?.iconPoint,
+      overallCenter,
+    ]
+      .filter(point => point && Number.isFinite(point.x) && Number.isFinite(point.y))
+      .filter((point, index, items) => items.findIndex(item => Math.abs(item.x - point.x) < 1 && Math.abs(item.y - point.y) < 1) === index);
+
+    return candidates.filter(point => this._isPointInsideRoom(point, room));
+  }
+
+  _getRoomMarkerPlacements(rooms, markerSize, labelSize, iconSize) {
+    const mapRect = this._getMapSurfaceRect();
+    const viewportWidth = mapRect?.width || this._mapImageWidth || 1;
+    const viewportHeight = mapRect?.height || this._mapImageHeight || 1;
+    const placements = new Map();
+    const placedRects = [];
+
+    const orderedRooms = rooms
+      .filter(room => room.outlines.length > 0)
+      .map(room => {
+        const primaryOutline = [...room.outlines].sort((left, right) => polygonArea(right) - polygonArea(left))[0] || room.outline;
+        return {
+          room,
+          area: polygonArea(primaryOutline) || polygonArea(room.outline),
+          preferredAnchor: room.labelPoint || room.iconPoint || centroid(room.outline),
+        };
+      })
+      .sort((left, right) => left.area - right.area);
+
+    orderedRooms.forEach(({ room, preferredAnchor }) => {
+      const footprint = this._estimateRoomMarkerFootprint(room, markerSize, labelSize, iconSize);
+      const candidates = this._getRoomMarkerCandidatePoints(room);
+      const fallbackAnchor = preferredAnchor && Number.isFinite(preferredAnchor.x) && Number.isFinite(preferredAnchor.y)
+        ? preferredAnchor
+        : centroid(room.outline);
+
+      if (!candidates.length && fallbackAnchor) {
+        candidates.push(fallbackAnchor);
+      }
+
+      let bestPlacement = null;
+      let bestScore = Number.POSITIVE_INFINITY;
+
+      candidates.forEach((candidate, index) => {
+        const percent = this._vacuumToViewportPercent(candidate);
+        const centerX = (percent.left / 100) * viewportWidth;
+        const centerY = ((percent.top / 100) * viewportHeight) + Number(room.labelOffsetY || 0);
+        const rect = {
+          left: centerX - (footprint.width / 2),
+          top: centerY - (footprint.height / 2),
+          right: centerX + (footprint.width / 2),
+          bottom: centerY + (footprint.height / 2),
+        };
+        const overflow = (
+          Math.max(0, 8 - rect.left) +
+          Math.max(0, 8 - rect.top) +
+          Math.max(0, rect.right - (viewportWidth - 8)) +
+          Math.max(0, rect.bottom - (viewportHeight - 8))
+        );
+        const overlap = placedRects.reduce((acc, placedRect) => acc + rectIntersectionArea(rect, placedRect), 0);
+        const distancePenalty = preferredAnchor
+          ? Math.hypot(candidate.x - preferredAnchor.x, candidate.y - preferredAnchor.y) * 0.01
+          : 0;
+        const score = (overlap * 1000) + (overflow * 100) + (index * 4) + distancePenalty;
+
+        if (score < bestScore) {
+          bestScore = score;
+          bestPlacement = {
+            left: clamp((centerX / viewportWidth) * 100, 0, 100),
+            top: clamp((centerY / viewportHeight) * 100, 0, 100),
+            rect,
+          };
+        }
+
+        if (overlap === 0 && overflow === 0 && index > 0) {
+          bestScore = score;
+          bestPlacement = {
+            left: clamp((centerX / viewportWidth) * 100, 0, 100),
+            top: clamp((centerY / viewportHeight) * 100, 0, 100),
+            rect,
+          };
+        }
+      });
+
+      if (bestPlacement) {
+        placements.set(String(room.id), bestPlacement);
+        placedRects.push(bestPlacement.rect);
+      }
+    });
+
+    return placements;
+  }
+
   _renderRoomMarkers(rooms) {
     if (this._config?.show_room_markers === false) {
       return "";
     }
 
     const highlightedRoomIds = new Set(this._getHighlightedRoomIds());
-    const markerSize = Math.max(24, Math.round(parseSizeToPixels(this._config?.styles?.map?.marker_size, 34) * 0.82));
-    const labelSize = Math.max(10, Math.round(parseSizeToPixels(this._config?.styles?.map?.label_size, 12) * 0.9));
-    const iconSize = Math.max(13, Math.round(markerSize * 0.44));
+    const markerSize = Math.max(22, Math.round(parseSizeToPixels(this._config?.styles?.map?.marker_size, 34) * 0.76));
+    const labelSize = Math.max(9, Math.round(parseSizeToPixels(this._config?.styles?.map?.label_size, 12) * 0.84));
+    const iconSize = Math.max(12, Math.round(markerSize * 0.42));
+    const placements = this._getRoomMarkerPlacements(rooms, markerSize, labelSize, iconSize);
 
     return rooms
       .filter(room => room.outlines.length > 0)
       .map(room => {
+      const placement = placements.get(String(room.id));
       const anchor = room.iconPoint || room.labelPoint || centroid(room.outline);
-      const percent = this._vacuumToViewportPercent(anchor);
+      const percent = placement || this._vacuumToViewportPercent(anchor);
       const selected = highlightedRoomIds.has(String(room.id));
       return `
         <button
           class="advance-vacuum-card__room-marker ${selected ? "is-selected" : ""} ${this._config?.show_room_labels === false ? "is-icon-only" : ""}"
-          style="left:${percent.left}%; top:${percent.top}%; --marker-size:${markerSize}px; --room-label-size:${labelSize}px; --room-icon-size:${iconSize}px; --room-marker-gap:6px; --room-marker-padding:0 10px;"
+          style="left:${percent.left}%; top:${percent.top}%; --marker-size:${markerSize}px; --room-label-size:${labelSize}px; --room-icon-size:${iconSize}px; --room-marker-gap:5px; --room-marker-padding:0 9px;"
           data-room-id="${escapeHtml(room.id)}"
           title="${escapeHtml(room.label || room.id)}"
         >
@@ -3897,7 +4194,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _renderMapTools() {
-    const showAddZoneButton = this._activeMode === "zone";
+    const state = this._getVacuumState();
+    const hasZoneMode = this._getAvailableModes().some(mode => mode.id === "zone");
+    const isCleaningSessionActive = this._isCleaning(state) || this._isPaused(state) || this._isReturning(state);
+    const showAddZoneButton = hasZoneMode && (this._activeMode === "zone" || isCleaningSessionActive);
     const canAddZone = this._manualZones.length < this._getManualZoneCountLimit();
     return `
       <div class="advance-vacuum-card__map-tools">
@@ -4161,11 +4461,22 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const zoneColor = styles.map.zone_color || "rgba(90, 167, 255, 0.18)";
     const zoneBorder = styles.map.zone_border || "rgba(90, 167, 255, 0.72)";
     const gotoColor = styles.map.goto_color || "#f6b73c";
-    const primaryButtonIcon = this._isCleaning(state) ? "mdi:pause" : "mdi:play";
     const isCleaningSessionActive = this._isCleaning(state) || this._isPaused(state) || this._isReturning(state);
     const isRoomSelectionMode = currentMode.id === "rooms";
     const showRoomSelectionDim = isRoomSelectionMode;
     const showRealRoomSelectionColors = isRoomSelectionMode && !isCleaningSessionActive;
+    const hasPendingZoneSelection = currentMode.id === "zone" && (
+      this._selectedPredefinedZoneIds.length > 0 ||
+      this._manualZones.length > 0
+    );
+    const primaryButtonIcon = hasPendingZoneSelection
+      ? "mdi:check"
+      : this._isCleaning(state)
+        ? "mdi:pause"
+        : "mdi:play";
+    const primaryButtonTitle = hasPendingZoneSelection
+      ? (isCleaningSessionActive ? "Añadir zona a la limpieza" : "Limpiar zona")
+      : "Ejecutar";
     const modeDescriptors = this._getModeDescriptors(state);
     const dockControlDescriptors = this._getDockControlDescriptors(state);
     const dockSettingDescriptors = this._getDockSettingDescriptors(state);
@@ -4932,7 +5243,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                   `
                   : ""
               }
-              <button class="advance-vacuum-card__control is-primary" data-control-action="primary" title="Ejecutar">
+              <button class="advance-vacuum-card__control is-primary" data-control-action="primary" title="${escapeHtml(primaryButtonTitle)}">
                 <ha-icon icon="${primaryButtonIcon}"></ha-icon>
               </button>
               ${
