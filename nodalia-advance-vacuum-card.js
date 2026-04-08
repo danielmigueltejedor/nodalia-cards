@@ -3010,7 +3010,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._triggerHaptic("selection");
         break;
       case "clear":
-        this._goBack();
+        this._navigate("/lovelace/principal");
         break;
       case "add_zone":
         this._addManualZone();
@@ -4452,7 +4452,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
               (this._activeMode !== "all" || this._activeUtilityPanel)
                 ? `
                   <div class="advance-vacuum-card__controls-side">
-                    <button class="advance-vacuum-card__control" data-control-action="clear" title="Volver atrás">
+                    <button class="advance-vacuum-card__control" data-control-action="clear" title="Volver al panel principal">
                       <ha-icon icon="mdi:arrow-left"></ha-icon>
                     </button>
                   </div>
