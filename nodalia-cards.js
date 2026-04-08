@@ -33482,7 +33482,7 @@ const MODE_LABELS = {
 const PANEL_MODE_PRESETS = [
   { id: "smart", label: "Inteligente", icon: "mdi:brain" },
   { id: "vacuum_mop", label: "Aspirado y fregado", icon: "mdi:robot-vacuum-variant" },
-  { id: "vacuum", label: "Aspirado", icon: "mdi:vacuum-outline" },
+  { id: "vacuum", label: "Aspirado", icon: "mdi:weather-windy" },
   { id: "mop", label: "Fregado", icon: "mdi:water" },
   { id: "custom", label: "Personalizado", icon: "mdi:tune-variant" },
 ];
@@ -34793,6 +34793,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       mop: "",
     };
     this._lastResolvedModePanelPreset = "";
+    this._dockedModePanelPreset = "";
     this._converter = new CoordinatesConverter([]);
     this._mapScale = 1;
     this._mapOffset = { x: 0, y: 0 };
@@ -34856,6 +34857,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._activeModePanelPreset = "";
     this._activeDockPanelSection = DOCK_PANEL_SECTIONS[0]?.id || "control";
     this._lastResolvedModePanelPreset = "";
+    this._dockedModePanelPreset = "";
     this._mapScale = 1;
     this._mapOffset = { x: 0, y: 0 };
     this._activeMapPointers = new Map();
@@ -34863,6 +34865,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._touchPinchGesture = null;
     this._zoneHandleDrag = null;
     this._activeMode = this._getAvailableModes()[0]?.id || "all";
+    this._restorePersistedCleaningSessionState();
     this._updateCalibration();
     this._render();
   }
@@ -35084,22 +35087,80 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     const mode = ["rooms", "zone"].includes(session.mode) ? session.mode : "";
+    const activeMode = ["all", "rooms", "zone", "goto"].includes(session.activeMode) ? session.activeMode : "";
     const activeRoomIds = arrayFromMaybe(session.activeRoomIds)
       .map(item => String(item || "").trim())
       .filter(Boolean);
     const activeZones = arrayFromMaybe(session.activeZones)
       .map(zone => parseZoneRect(zone))
       .filter(Boolean);
+    const selectedRoomIds = arrayFromMaybe(session.selectedRoomIds)
+      .map(item => String(item || "").trim())
+      .filter(Boolean);
+    const selectedPredefinedZoneIds = arrayFromMaybe(session.selectedPredefinedZoneIds)
+      .map(item => String(item || "").trim())
+      .filter(Boolean);
+    const manualZones = arrayFromMaybe(session.manualZones)
+      .map(zone => parseZoneRect(zone))
+      .filter(Boolean);
+    const repeats = clamp(Number(session.repeats || 1), 1, 9);
 
-    if (!mode && !activeRoomIds.length && !activeZones.length) {
+    if (
+      !mode &&
+      !activeRoomIds.length &&
+      !activeZones.length &&
+      !selectedRoomIds.length &&
+      !selectedPredefinedZoneIds.length &&
+      !manualZones.length
+    ) {
       return null;
     }
 
     return {
       mode,
+      activeMode,
       activeRoomIds,
       activeZones,
+      selectedRoomIds,
+      selectedPredefinedZoneIds,
+      manualZones,
+      repeats,
     };
+  }
+
+  _restorePersistedCleaningSessionState() {
+    const persistedSession = this._readStoredCleaningSession();
+    if (!persistedSession) {
+      return false;
+    }
+
+    this._selectedRoomIds = [...arrayFromMaybe(persistedSession.selectedRoomIds)];
+    this._selectedPredefinedZoneIds = [...arrayFromMaybe(persistedSession.selectedPredefinedZoneIds)];
+    this._manualZones = arrayFromMaybe(persistedSession.manualZones).map(zone => ({ ...zone }));
+    this._selectedManualZoneIndex = this._manualZones.length > 0
+      ? clamp(this._selectedManualZoneIndex, 0, this._manualZones.length - 1)
+      : -1;
+    this._activeCleaningRoomIds = [...arrayFromMaybe(persistedSession.activeRoomIds)];
+    this._activeCleaningZones = arrayFromMaybe(persistedSession.activeZones).map(zone => ({ ...zone }));
+    this._activeCleaningSessionMode = String(persistedSession.mode || "");
+    if (persistedSession.activeMode) {
+      this._activeMode = persistedSession.activeMode;
+    }
+    this._repeats = clamp(Number(persistedSession.repeats || this._repeats || 1), 1, 9);
+    return true;
+  }
+
+  _persistCurrentCleaningSessionState(activeMode = this._activeMode) {
+    this._persistCleaningSession({
+      mode: this._activeCleaningSessionMode || "",
+      activeMode,
+      activeRoomIds: this._activeCleaningRoomIds,
+      activeZones: this._activeCleaningZones,
+      selectedRoomIds: this._selectedRoomIds,
+      selectedPredefinedZoneIds: this._selectedPredefinedZoneIds,
+      manualZones: this._manualZones,
+      repeats: this._repeats,
+    });
   }
 
   _readStoredCleaningSession() {
@@ -35349,15 +35410,17 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     if (!isCleaningSessionActive) {
       this._activeCleaningSessionMode = "";
-      this._clearPersistedCleaningSession();
+      if (
+        !this._selectedRoomIds.length &&
+        !this._selectedPredefinedZoneIds.length &&
+        !this._manualZones.length
+      ) {
+        this._clearPersistedCleaningSession();
+      }
       return;
     }
 
-    this._persistCleaningSession({
-      mode: this._activeCleaningSessionMode,
-      activeRoomIds: this._activeCleaningRoomIds,
-      activeZones: this._activeCleaningZones,
-    });
+    this._persistCurrentCleaningSessionState(this._activeCleaningSessionMode || this._activeMode);
 
     if (!this._transientZoneReturnMode && !["rooms", "zone", "goto"].includes(this._activeMode) && this._activeCleaningSessionMode) {
       this._activeMode = this._activeCleaningSessionMode;
@@ -36396,21 +36459,37 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   _getActiveModePanelPreset(state = this._getVacuumState()) {
     const detectedPreset = this._detectModePanelPreset(state);
     const manualPreset = this._activeModePanelPreset;
+    const isDockContext = this._isDocked(state) || this._isReturning(state);
 
     if (
       detectedPreset &&
       detectedPreset !== "custom" &&
-      !this._isDocked(state) &&
-      !this._isReturning(state)
+      !isDockContext
     ) {
       this._lastResolvedModePanelPreset = detectedPreset;
     }
 
-    if (this._isDocked(state) || this._isReturning(state)) {
-      return manualPreset || this._lastResolvedModePanelPreset || detectedPreset || "vacuum_mop";
+    if (!isDockContext && this._dockedModePanelPreset) {
+      this._dockedModePanelPreset = "";
+    }
+
+    if (isDockContext) {
+      return manualPreset || this._dockedModePanelPreset || this._lastResolvedModePanelPreset || detectedPreset || "vacuum_mop";
     }
 
     return manualPreset || detectedPreset || this._lastResolvedModePanelPreset || "vacuum_mop";
+  }
+
+  _freezeCurrentModePanelPreset(state = this._getVacuumState()) {
+    const preset = this._activeModePanelPreset || this._lastResolvedModePanelPreset || this._detectModePanelPreset(state) || "";
+    if (!preset) {
+      return;
+    }
+
+    this._dockedModePanelPreset = preset;
+    if (preset !== "custom") {
+      this._lastResolvedModePanelPreset = preset;
+    }
   }
 
   _getActiveModePanelPresetConfig(state = this._getVacuumState()) {
@@ -37412,6 +37491,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._toggleUtilityPanel("dock");
         break;
       case "return_to_base":
+        this._freezeCurrentModePanelPreset(this._getVacuumState());
         this._callVacuumService("return_to_base");
         this._triggerHaptic("selection");
         break;
@@ -38489,6 +38569,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         : null)
       || modes[0]
       || { id: "all", label: MODE_LABELS.all, icon: "mdi:home" };
+    this._persistCurrentCleaningSessionState(currentMode.id);
     const iconSize = Math.max(54, parseSizeToPixels(styles.icon.size, 64));
     const controlSize = Math.max(38, parseSizeToPixels(styles.control.size, 42));
     const titleSize = Math.max(15, parseSizeToPixels(styles.title_size, 16));
