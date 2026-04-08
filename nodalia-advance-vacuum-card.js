@@ -3124,8 +3124,6 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           `).join("")}
         </div>
 
-        ${utilityPanelMarkup}
-
         <div class="advance-vacuum-card__controls">
           <div class="advance-vacuum-card__controls-main">
             ${
@@ -3146,11 +3144,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                   <button class="advance-vacuum-card__control ${this._activeUtilityPanel === "custom" ? "is-primary" : ""}" data-control-action="toggle_custom_menu" title="${escapeHtml(customMenuLabel)}">
                     <ha-icon icon="${escapeHtml(customMenuIcon)}"></ha-icon>
                   </button>
-                `
+              `
                 : ""
             }
           </div>
         </div>
+
+        ${utilityPanelMarkup}
         </div>
       </ha-card>
     `;
