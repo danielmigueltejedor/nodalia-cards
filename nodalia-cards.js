@@ -36084,6 +36084,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _onShadowTouchStart(event) {
+    const zoneHandleTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.zoneHandleIndex && node.dataset?.zoneHandleAction === "delete");
+    if (zoneHandleTarget && event.touches.length === 1) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._deleteManualZone(Number(zoneHandleTarget.dataset.zoneHandleIndex));
+      return;
+    }
+
     const surface = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.mapSurface === "main");
     if (!surface || event.touches.length < 2) {
       return;
@@ -36266,6 +36274,25 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._render();
   }
 
+  _goBack() {
+    const shouldReturnToAll = this._activeMode !== "all";
+    this._selectedRoomIds = [];
+    this._selectedPredefinedZoneIds = [];
+    this._manualZones = [];
+    this._selectedManualZoneIndex = -1;
+    this._draftZone = null;
+    this._gotoPoint = null;
+    this._zoneHandleDrag = null;
+    this._activeUtilityPanel = null;
+
+    if (shouldReturnToAll) {
+      this._activeMode = "all";
+    }
+
+    this._triggerHaptic("selection");
+    this._render();
+  }
+
   _runMapAction() {
     const state = this._getVacuumState();
 
@@ -36370,7 +36397,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._triggerHaptic("selection");
         break;
       case "clear":
-        this._clearSelection();
+        this._goBack();
         break;
       case "add_zone":
         this._addManualZone();
@@ -37807,7 +37834,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
               }
             </div>
             ${
-              this._activeMode !== "all"
+              (this._activeMode !== "all" || this._activeUtilityPanel)
                 ? `
                   <div class="advance-vacuum-card__controls-side">
                     <button class="advance-vacuum-card__control" data-control-action="clear" title="Volver atrás">
