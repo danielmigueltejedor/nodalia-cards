@@ -35073,7 +35073,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   _getCleaningSessionStorageKey() {
     const entityId = String(this._config?.entity || "").trim();
-    return entityId ? `${CLEANING_SESSION_STORAGE_PREFIX}:${entityId}` : "";
+    return entityId ? `nodalia-advance-vacuum-card:cleaning-session:${entityId}` : "";
   }
 
   _normalizeCleaningSession(session) {

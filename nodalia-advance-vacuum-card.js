@@ -10,8 +10,6 @@ const HAPTIC_PATTERNS = {
   warning: [20, 50, 12],
   failure: [12, 40, 12, 40, 18],
 };
-const CLEANING_SESSION_STORAGE_PREFIX = "nodalia-advance-vacuum-card:cleaning-session";
-
 const MODE_LABELS = {
   all: "Todo",
   rooms: "Habitaciones",
@@ -1613,7 +1611,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   _getCleaningSessionStorageKey() {
     const entityId = String(this._config?.entity || "").trim();
-    return entityId ? `${CLEANING_SESSION_STORAGE_PREFIX}:${entityId}` : "";
+    return entityId ? `nodalia-advance-vacuum-card:cleaning-session:${entityId}` : "";
   }
 
   _normalizeCleaningSession(session) {
