@@ -37105,11 +37105,19 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _toggleRoomSelection(roomId) {
+    if (this._isRoomSelectionLocked()) {
+      return;
+    }
+
     this._selectedRoomIds = this._selectedRoomIds.includes(roomId)
       ? this._selectedRoomIds.filter(id => id !== roomId)
       : [...this._selectedRoomIds, roomId];
     this._triggerHaptic("selection");
     this._render();
+  }
+
+  _isRoomSelectionLocked(state = this._getVacuumState()) {
+    return this._activeMode === "rooms" && (this._isCleaning(state) || this._isPaused(state) || this._isReturning(state));
   }
 
   _togglePredefinedZone(zoneId) {
@@ -37432,6 +37440,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (roomTarget) {
       event.preventDefault();
       event.stopPropagation();
+      if (this._isRoomSelectionLocked()) {
+        return;
+      }
       this._toggleRoomSelection(roomTarget.getAttribute("data-room-id"));
       return;
     }
@@ -37966,6 +37977,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return "";
     }
 
+    const isRoomSelectionLocked = this._isRoomSelectionLocked();
     const highlightedRoomIds = new Set(this._getHighlightedRoomIds());
     const markerSize = Math.max(22, Math.round(parseSizeToPixels(this._config?.styles?.map?.marker_size, 34) * 0.76));
     const labelSize = Math.max(9, Math.round(parseSizeToPixels(this._config?.styles?.map?.label_size, 12) * 0.84));
@@ -37981,10 +37993,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const selected = highlightedRoomIds.has(String(room.id));
       return `
         <button
-          class="advance-vacuum-card__room-marker ${selected ? "is-selected" : ""} ${this._config?.show_room_labels === false ? "is-icon-only" : ""}"
+          class="advance-vacuum-card__room-marker ${selected ? "is-selected" : ""} ${this._config?.show_room_labels === false ? "is-icon-only" : ""} ${isRoomSelectionLocked ? "is-readonly" : ""}"
           style="left:${percent.left}%; top:${percent.top}%; --marker-size:${markerSize}px; --room-label-size:${labelSize}px; --room-icon-size:${iconSize}px; --room-marker-gap:5px; --room-marker-padding:0 9px;"
           data-room-id="${escapeHtml(room.id)}"
           title="${escapeHtml(room.label || room.id)}"
+          ${isRoomSelectionLocked ? "disabled" : ""}
         >
           <ha-icon icon="${escapeHtml(room.icon || "mdi:broom")}"></ha-icon>
           ${
@@ -38075,6 +38088,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return "";
     }
 
+    const isRoomSelectionLocked = this._isRoomSelectionLocked();
     const highlightedRoomIds = new Set(this._getHighlightedRoomIds());
     const fallbackRooms = rooms.filter(room => room.outlines.length === 0);
     if (!fallbackRooms.length) {
@@ -38085,9 +38099,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       <div class="advance-vacuum-card__room-list">
         ${fallbackRooms.map(room => `
           <button
-            class="advance-vacuum-card__room-chip ${highlightedRoomIds.has(String(room.id)) ? "is-selected" : ""}"
+            class="advance-vacuum-card__room-chip ${highlightedRoomIds.has(String(room.id)) ? "is-selected" : ""} ${isRoomSelectionLocked ? "is-readonly" : ""}"
             data-room-id="${escapeHtml(room.id)}"
             title="${escapeHtml(room.label || room.id)}"
+            ${isRoomSelectionLocked ? "disabled" : ""}
           >
             <ha-icon icon="${escapeHtml(room.icon || "mdi:broom")}"></ha-icon>
             <span>${escapeHtml(room.label || room.id)}</span>
@@ -38439,6 +38454,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const gotoColor = styles.map.goto_color || "#f6b73c";
     const isCleaningSessionActive = this._isCleaning(state) || this._isPaused(state) || this._isReturning(state);
     const isRoomSelectionMode = currentMode.id === "rooms";
+    const isRoomSelectionLocked = this._isRoomSelectionLocked(state);
     const roomModeCleaningZones = isRoomSelectionMode ? this._activeCleaningZones : [];
     const zoneModeCleaningZones = currentMode.id === "zone" ? this._activeCleaningZones : [];
     const showRoomSelectionDim = isRoomSelectionMode;
@@ -38819,6 +38835,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           stroke: rgba(255, 255, 255, 0.42);
         }
 
+        .advance-vacuum-card__room-polygon.is-readonly {
+          cursor: default;
+          pointer-events: none;
+        }
+
         .advance-vacuum-card__zone-rect {
           fill: ${zoneColor};
           stroke: ${zoneBorder};
@@ -38987,6 +39008,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           width: var(--marker-size, 34px);
         }
 
+        .advance-vacuum-card__room-marker.is-readonly,
+        .advance-vacuum-card__room-chip.is-readonly {
+          cursor: default;
+          opacity: 0.96;
+        }
+
         .advance-vacuum-card__room-marker.is-selected,
         .advance-vacuum-card__goto-marker.is-selected {
           background: linear-gradient(180deg, color-mix(in srgb, ${accentColor} 16%, rgba(255,255,255,0.06)) 0%, rgba(255,255,255,0.04) 100%);
@@ -39134,7 +39161,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                 <svg class="advance-vacuum-card__map-svg" viewBox="0 0 ${this._mapImageWidth} ${this._mapImageHeight}" preserveAspectRatio="none">
                   ${currentMode.id === "rooms" ? rooms.map(room => room.outlines.map(outline => `
                     <polygon
-                      class="advance-vacuum-card__room-polygon ${highlightedRoomIds.has(String(room.id)) ? (showRealRoomSelectionColors ? "is-revealed" : "is-selected") : ""}"
+                      class="advance-vacuum-card__room-polygon ${highlightedRoomIds.has(String(room.id)) ? (showRealRoomSelectionColors ? "is-revealed" : "is-selected") : ""} ${isRoomSelectionLocked ? "is-readonly" : ""}"
                       data-room-id="${escapeHtml(room.id)}"
                       points="${escapeHtml(this._vacuumOutlineToSvgPoints(outline))}"
                     ></polygon>
