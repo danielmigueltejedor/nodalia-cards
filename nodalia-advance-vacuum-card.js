@@ -1332,6 +1332,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     };
     this._lastResolvedModePanelPreset = "";
     this._dockedModePanelPreset = "";
+    this._hasLoadedPersistedCleaningSessionState = false;
     this._converter = new CoordinatesConverter([]);
     this._mapScale = 1;
     this._mapOffset = { x: 0, y: 0 };
@@ -1397,6 +1398,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._activeDockPanelSection = DOCK_PANEL_SECTIONS[0]?.id || "control";
     this._lastResolvedModePanelPreset = "";
     this._dockedModePanelPreset = "";
+    this._hasLoadedPersistedCleaningSessionState = false;
     this._mapScale = 1;
     this._mapOffset = { x: 0, y: 0 };
     this._activeMapPointers = new Map();
@@ -1405,13 +1407,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._zoneHandleDrag = null;
     this._pendingTouchZoneStart = null;
     this._activeMode = this._getAvailableModes()[0]?.id || "all";
-    this._restorePersistedCleaningSessionState();
+    this._ensurePersistedCleaningSessionStateLoaded();
     this._updateCalibration();
     this._render();
   }
 
   set hass(hass) {
     this._hass = hass;
+    this._ensurePersistedCleaningSessionStateLoaded();
     const nextSignature = this._getRenderSignature(hass);
     if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
       return;
@@ -1688,6 +1691,20 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
     this._repeats = clamp(Number(persistedSession.repeats || this._repeats || 1), 1, 9);
     return true;
+  }
+
+  _ensurePersistedCleaningSessionStateLoaded() {
+    if (this._hasLoadedPersistedCleaningSessionState) {
+      return false;
+    }
+
+    const hasConfigEntity = Boolean(String(this._config?.entity || "").trim());
+    if (!hasConfigEntity) {
+      return false;
+    }
+
+    this._hasLoadedPersistedCleaningSessionState = true;
+    return this._restorePersistedCleaningSessionState();
   }
 
   _persistCurrentCleaningSessionState(activeMode = this._activeMode) {
@@ -3000,11 +3017,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const detectedPreset = this._detectModePanelPreset(state);
     const manualPreset = this._activeModePanelPreset;
     const isDockContext = this._isDocked(state) || this._isReturning(state);
+    const isCleaningContext = this._isCleaning(state) || this._isPaused(state);
+    const isFrozenPresetContext = isCleaningContext || isDockContext;
 
     if (
       detectedPreset &&
       detectedPreset !== "custom" &&
-      !isDockContext
+      !isFrozenPresetContext
     ) {
       this._lastResolvedModePanelPreset = detectedPreset;
     }
@@ -3013,7 +3032,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._dockedModePanelPreset = "";
     }
 
-    if (isDockContext) {
+    if (isFrozenPresetContext) {
       return manualPreset || this._dockedModePanelPreset || this._lastResolvedModePanelPreset || detectedPreset || "vacuum_mop";
     }
 
@@ -5136,6 +5155,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (!this.shadowRoot) {
       return;
     }
+
+    this._ensurePersistedCleaningSessionStateLoaded();
 
     const previousImage = this.shadowRoot.querySelector("[data-map-image]");
     const previousImageSrc = previousImage?.getAttribute("src") || "";
