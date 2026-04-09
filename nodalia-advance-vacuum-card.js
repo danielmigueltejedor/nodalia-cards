@@ -1613,6 +1613,43 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return "#ff8c69";
   }
 
+  _getMapStatusIndicator(state = this._getVacuumState()) {
+    if (this._isWashingMops(state)) {
+      return {
+        icon: "mdi:water",
+        title: "Lavando la mopa",
+        tone: "wash",
+      };
+    }
+
+    if (this._isDryingMops(state)) {
+      return {
+        icon: "mdi:white-balance-sunny",
+        title: "Secando la mopa",
+        tone: "dry",
+      };
+    }
+
+    if (this._isAutoEmptying(state)) {
+      return {
+        icon: "mdi:delete-empty-outline",
+        title: "Vaciando el polvo",
+        tone: "empty",
+      };
+    }
+
+    const batteryLevel = this._getBatteryLevel(state);
+    if (this._isDocked(state) && Number.isFinite(batteryLevel) && batteryLevel < 100) {
+      return {
+        icon: "mdi:lightning-bolt",
+        title: "Cargando",
+        tone: "charging",
+      };
+    }
+
+    return null;
+  }
+
   _getMapEntityId() {
     return this._config?.map_source?.camera || this._config?.map_source?.image || this._config?.map_camera || "";
   }
@@ -2638,7 +2675,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getDockControlDescriptors(state = this._getVacuumState()) {
-    const isCleaningSessionActive = this._isCleaning(state) || this._isPaused(state) || this._isReturning(state);
+    const isCleaningSessionActive = this._isCleaningSessionActive(state);
     if (isCleaningSessionActive) {
       const descriptors = [];
 
@@ -4100,11 +4137,20 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._render();
   }
 
+  _handleMapActionError(error) {
+    this._clearCleaningSessionPendingStart();
+    this._syncActiveCleaningSession(this._getVacuumState());
+    this._render();
+    if (typeof console !== "undefined" && typeof console.error === "function") {
+      console.error("Nodalia Advance Vacuum Card map action error", error);
+    }
+  }
+
   _handleControlAction(action) {
     switch (action) {
       case "primary":
         this._triggerHaptic("selection");
-        this._runMapAction();
+        this._runMapAction().catch(error => this._handleMapActionError(error));
         break;
       case "toggle_modes":
         this._toggleUtilityPanel("modes");
@@ -4318,24 +4364,22 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
-    if (event.pointerId !== undefined) {
-      this._activeMapPointers.set(event.pointerId, {
-        clientX: event.clientX,
-        clientY: event.clientY,
-      });
-      if (event.pointerType !== "touch") {
-        try {
-          surface.setPointerCapture(event.pointerId);
-        } catch (_error) {
-          // Ignore unsupported pointer capture.
-        }
-      }
-    }
+    const interactiveTarget = event.composedPath().find(node => node instanceof Element && typeof node.getAttribute === "function" && (
+      node.getAttribute("data-room-id") ||
+      node.getAttribute("data-zone-id") ||
+      node.getAttribute("data-goto-id") ||
+      node.getAttribute("data-control-action") ||
+      node.getAttribute("data-mode-id") ||
+      node.getAttribute("data-header-action-index") ||
+      node.getAttribute("data-mode-option-kind") ||
+      node.getAttribute("data-custom-menu-index") ||
+      node.getAttribute("data-dock-section-id") ||
+      node.getAttribute("data-dock-action-id") ||
+      node.getAttribute("data-dock-setting-id") ||
+      node.getAttribute("data-manual-zone-index")
+    ));
 
-    if (this._activeMapPointers.size >= 2) {
-      this._startPinchGesture();
-      event.preventDefault();
-      event.stopPropagation();
+    if (interactiveTarget) {
       return;
     }
 
@@ -4388,6 +4432,27 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           };
 
       this._render();
+      return;
+    }
+
+    if (event.pointerId !== undefined) {
+      this._activeMapPointers.set(event.pointerId, {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
+      if (event.pointerType !== "touch") {
+        try {
+          surface.setPointerCapture(event.pointerId);
+        } catch (_error) {
+          // Ignore unsupported pointer capture.
+        }
+      }
+    }
+
+    if (this._activeMapPointers.size >= 2) {
+      this._startPinchGesture();
+      event.preventDefault();
+      event.stopPropagation();
       return;
     }
 
@@ -4529,6 +4594,15 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       event.preventDefault();
       event.stopPropagation();
       return;
+    }
+
+    const surface = this.shadowRoot?.querySelector("[data-map-surface='main']");
+    if (surface && event.pointerId !== undefined && event.pointerType !== "touch") {
+      try {
+        surface.releasePointerCapture(event.pointerId);
+      } catch (_error) {
+        // Ignore unsupported pointer capture release.
+      }
     }
 
     const wasPinching = Boolean(this._pinchGesture);
@@ -4998,7 +5072,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   _renderMapTools() {
     const state = this._getVacuumState();
     const hasZoneMode = this._getAvailableModes().some(mode => mode.id === "zone");
-    const isCleaningSessionActive = this._isCleaning(state) || this._isPaused(state) || this._isReturning(state);
+    const isCleaningSessionActive = this._isCleaningSessionActive(state);
+    const mapStatusIndicator = this._getMapStatusIndicator(state);
     const showAddZoneButton = hasZoneMode && (this._activeMode === "zone" || isCleaningSessionActive);
     const canAddZone = this._manualZones.length < this._getManualZoneCountLimit();
     return `
@@ -5011,6 +5086,19 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           >
             <ha-icon icon="mdi:arrow-left"></ha-icon>
           </button>
+          ${
+            mapStatusIndicator
+              ? `
+                <div
+                  class="advance-vacuum-card__map-tool advance-vacuum-card__map-tool--status advance-vacuum-card__map-tool--status-${escapeHtml(mapStatusIndicator.tone)}"
+                  title="${escapeHtml(mapStatusIndicator.title)}"
+                  aria-label="${escapeHtml(mapStatusIndicator.title)}"
+                >
+                  <ha-icon icon="${escapeHtml(mapStatusIndicator.icon)}"></ha-icon>
+                </div>
+              `
+              : ""
+          }
         </div>
         <div class="advance-vacuum-card__map-tools-group advance-vacuum-card__map-tools-group--right">
           ${
@@ -5272,7 +5360,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const zoneColor = styles.map.zone_color || "rgba(90, 167, 255, 0.18)";
     const zoneBorder = styles.map.zone_border || "rgba(90, 167, 255, 0.72)";
     const gotoColor = styles.map.goto_color || "#f6b73c";
-    const isCleaningSessionActive = this._isCleaning(state) || this._isPaused(state) || this._isReturning(state);
+    const isCleaningSessionActive = this._isCleaningSessionActive(state);
     const isRoomSelectionMode = currentMode.id === "rooms";
     const isRoomSelectionLocked = this._isRoomSelectionLocked(state);
     const roomModeCleaningZones = isRoomSelectionMode ? this._activeCleaningZones : [];
@@ -5776,6 +5864,28 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         .advance-vacuum-card__map-tool--back {
           padding: 0;
           width: 44px;
+        }
+
+        .advance-vacuum-card__map-tool--status {
+          padding: 0;
+          pointer-events: none;
+          width: 44px;
+        }
+
+        .advance-vacuum-card__map-tool--status-charging {
+          color: #f6b73c;
+        }
+
+        .advance-vacuum-card__map-tool--status-wash {
+          color: ${styles.icon.washing_color || "#5aa7ff"};
+        }
+
+        .advance-vacuum-card__map-tool--status-dry {
+          color: ${styles.icon.drying_color || "#f1c24c"};
+        }
+
+        .advance-vacuum-card__map-tool--status-empty {
+          color: ${styles.icon.emptying_color || "#9b6b4a"};
         }
 
         .advance-vacuum-card__map-tool {
