@@ -33478,6 +33478,7 @@ const MODE_LABELS = {
   all: "Todo",
   rooms: "Habitaciones",
   zone: "Zona",
+  routines: "Rutinas",
   goto: "Ir a punto",
 };
 
@@ -33744,6 +33745,7 @@ const DEFAULT_CONFIG = {
     icon: "mdi:home-import-outline",
     items: [],
   },
+  routines: [],
   room_segments: [],
   goto_points: [],
   predefined_zones: [],
@@ -34399,6 +34401,26 @@ function normalizeCustomMenuItems(items) {
     .filter(item => item.label && (item.tap_action || item.builtin_action));
 }
 
+function normalizeRoutineItems(items) {
+  return sortByOrder(
+    arrayFromMaybe(items)
+      .map(item => (typeof item === "string" ? { entity: item } : item))
+      .filter(item => typeof item === "string" || isObject(item))
+      .map(item => ({
+        order: Number(item.order || 0),
+        label: String(item.label || item.name || "").trim(),
+        icon: String(item.icon || "").trim(),
+        entity: String(item.entity || item.entity_id || "").trim(),
+        service: String(item.service || item.perform_action || "").trim(),
+        service_data: isObject(item.service_data) ? deepClone(item.service_data) : {},
+        target: isObject(item.target) ? deepClone(item.target) : null,
+        visible_when: String(item.visible_when || "always").trim(),
+        tap_action: isObject(item.tap_action) ? deepClone(item.tap_action) : null,
+      }))
+      .filter(item => item.entity || item.service || item.tap_action)
+  );
+}
+
 function solveLinearSystem(matrix, vector) {
   const size = matrix.length;
   const augmented = matrix.map((row, index) => [...row, vector[index]]);
@@ -34803,6 +34825,7 @@ function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   config.custom_menu = mergeConfig(DEFAULT_CONFIG.custom_menu, config.custom_menu || {});
   config.custom_menu.items = normalizeCustomMenuItems(config.custom_menu.items);
+  config.routines = normalizeRoutineItems(config.routines);
   return config;
 }
 
@@ -36098,6 +36121,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const mopModeDescriptor = this._getMopModeDescriptor(state);
     const dockControlDescriptors = this._getDockControlDescriptors(state);
     const dockSettingDescriptors = this._getDockSettingDescriptors(state);
+    const routineSignature = this._getRoutineItems(state)
+      .map(item => {
+        const routineState = item.entity ? hass?.states?.[item.entity] || null : null;
+        return `${item.entity || item.service || item.label}:${String(routineState?.state || "")}:${String(routineState?.last_updated || "")}`;
+      })
+      .join("|");
 
     return JSON.stringify({
       vacuum: {
@@ -36154,6 +36183,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         controls: dockControlDescriptors.map(descriptor => `${descriptor.id}:${descriptor.target}:${descriptor.active ? "1" : "0"}`).join("|"),
         settings: dockSettingDescriptors.map(descriptor => `${descriptor.id}:${descriptor.target}:${descriptor.current}:${descriptor.options.join("|")}`).join("|"),
       },
+      routines: routineSignature,
     });
   }
 
@@ -36177,11 +36207,17 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return resolveHeaderIcons(this._config);
   }
 
+  _getRoutineItems(state = this._getVacuumState()) {
+    return normalizeRoutineItems(this._config?.routines)
+      .filter(item => this._isMenuItemVisible(item, state));
+  }
+
   _getAvailableModes() {
     const modes = [];
     const showAllMode = this._config?.show_all_mode !== false;
     const hasRooms = this._getRoomSegments().length > 0;
     const hasZones = this._config?.allow_zone_mode !== false || this._getPredefinedZones().length > 0 || Boolean(resolveLegacyMode(this._config, "vacuum_clean_zone"));
+    const hasRoutines = this._getRoutineItems().length > 0;
 
     if (showAllMode) {
       modes.push({ id: "all", label: MODE_LABELS.all, icon: "mdi:home" });
@@ -36191,6 +36227,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
     if (hasZones) {
       modes.push({ id: "zone", label: MODE_LABELS.zone, icon: "mdi:vector-rectangle" });
+    }
+    if (hasRoutines) {
+      modes.push({ id: "routines", label: MODE_LABELS.routines, icon: "mdi:play-box-multiple-outline" });
     }
 
     return modes;
@@ -36705,6 +36744,65 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       .filter(Boolean);
   }
 
+  _getRoutineEntityState(item) {
+    const entityId = String(item?.entity || "").trim();
+    return entityId ? this._hass?.states?.[entityId] || null : null;
+  }
+
+  _getRoutineLabel(item, entityState = this._getRoutineEntityState(item)) {
+    const explicitLabel = String(item?.label || "").trim();
+    if (explicitLabel) {
+      return explicitLabel;
+    }
+
+    const friendlyName = String(entityState?.attributes?.friendly_name || "").trim();
+    if (friendlyName) {
+      return friendlyName;
+    }
+
+    const entityId = String(item?.entity || "").trim();
+    const objectId = entityId.includes(".") ? entityId.split(".").slice(1).join(".") : entityId;
+    return humanizeModeLabel(objectId || "Rutina");
+  }
+
+  _getRoutineIcon(item, entityState = this._getRoutineEntityState(item)) {
+    const explicitIcon = String(item?.icon || "").trim();
+    if (explicitIcon) {
+      return explicitIcon;
+    }
+
+    const entityIcon = String(entityState?.attributes?.icon || "").trim();
+    if (entityIcon) {
+      return entityIcon;
+    }
+
+    const routineKey = normalizeTextKey([
+      this._getRoutineLabel(item, entityState),
+      String(item?.entity || ""),
+    ].filter(Boolean).join(" "));
+
+    if (routineKey.includes("comeder") || routineKey.includes("food")) {
+      return "mdi:food-variant";
+    }
+    if (routineKey.includes("profund") || routineKey.includes("deep")) {
+      return "mdi:layers-triple";
+    }
+    if (routineKey.includes("intensiv") || routineKey.includes("turbo")) {
+      return "mdi:weather-windy";
+    }
+    if (routineKey.includes("fregar") || routineKey.includes("mopa") || routineKey.includes("mop") || routineKey.includes("wash")) {
+      return "mdi:water";
+    }
+    if (routineKey.includes("completa") || routineKey.includes("complete") || routineKey.includes("full")) {
+      return "mdi:broom";
+    }
+    if (routineKey.includes("comida") || routineKey.includes("meal")) {
+      return "mdi:silverware-fork-knife";
+    }
+
+    return "mdi:play-box-outline";
+  }
+
   _pressButtonEntity(entityId) {
     if (!this._hass || !entityId) {
       return;
@@ -36731,6 +36829,63 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     } else {
       this._pressButtonEntity(descriptor.target);
     }
+    this._triggerHaptic("selection");
+  }
+
+  _runRoutineItem(item) {
+    if (!item) {
+      return;
+    }
+
+    const entityId = String(item.entity || "").trim();
+    const entityState = this._getRoutineEntityState(item);
+    if (entityId && isUnavailableState(entityState)) {
+      return;
+    }
+
+    if (item.tap_action) {
+      this._triggerHaptic("selection");
+      this._runExternalAction(item.tap_action);
+      return;
+    }
+
+    if (item.service) {
+      const serviceData = isObject(item.service_data) ? deepClone(item.service_data) : {};
+      if (entityId && !serviceData.entity_id) {
+        serviceData.entity_id = entityId;
+      }
+      this._callNamedService(item.service, serviceData, item.target || null);
+      this._triggerHaptic("selection");
+      return;
+    }
+
+    const domain = entityId.split(".")[0] || "";
+    if (domain === "button") {
+      this._pressButtonEntity(entityId);
+    } else if (domain === "input_button") {
+      this._callNamedService("input_button.press", {
+        entity_id: entityId,
+      });
+    } else if (domain === "script") {
+      this._callNamedService("script.turn_on", {
+        entity_id: entityId,
+      });
+    } else if (domain === "scene") {
+      this._callNamedService("scene.turn_on", {
+        entity_id: entityId,
+      });
+    } else if (domain === "automation") {
+      this._callNamedService("automation.trigger", {
+        entity_id: entityId,
+      });
+    } else {
+      this._runExternalAction({
+        action: "more-info",
+        entity: entityId,
+      });
+      return;
+    }
+
     this._triggerHaptic("selection");
   }
 
@@ -38454,6 +38609,18 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
+    const routineTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.routineIndex);
+    if (routineTarget) {
+      const items = this._getRoutineItems(this._getVacuumState());
+      const item = items[Number(routineTarget.dataset.routineIndex)];
+      if (item) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._runRoutineItem(item);
+      }
+      return;
+    }
+
     const customMenuItemTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.customMenuIndex);
     if (customMenuItemTarget) {
       const items = this._getVisibleCustomMenuItems(this._getVacuumState());
@@ -39518,6 +39685,38 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     `;
   }
 
+  _renderRoutinesPanel(state = this._getVacuumState()) {
+    const routines = this._getRoutineItems(state);
+    if (!routines.length || this._isCleaningSessionActive(state) || this._activeMode !== "routines") {
+      return "";
+    }
+
+    return `
+      <div class="advance-vacuum-card__routines">
+        ${routines.map((item, index) => {
+          const entityState = this._getRoutineEntityState(item);
+          const isDisabled = Boolean(item.entity) && isUnavailableState(entityState);
+          const label = this._getRoutineLabel(item, entityState);
+          const icon = this._getRoutineIcon(item, entityState);
+          return `
+            <button
+              type="button"
+              class="advance-vacuum-card__routine-button ${isDisabled ? "is-disabled" : ""}"
+              data-routine-index="${index}"
+              title="${escapeHtml(label)}"
+              ${isDisabled ? "disabled" : ""}
+            >
+              <span class="advance-vacuum-card__routine-icon">
+                <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              </span>
+              <span class="advance-vacuum-card__routine-label">${escapeHtml(label)}</span>
+            </button>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+
   _render() {
     if (!this.shadowRoot) {
       return;
@@ -39602,6 +39801,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const dockSettingDescriptors = this._getDockSettingDescriptors(state);
     const activeModePanelPresetConfig = this._getActiveModePanelPresetConfig(state);
     const activeDockPanelSectionConfig = this._getDockPanelSectionConfig();
+    const showPrimaryActionButton = currentMode.id !== "routines";
     const showModeMenuButton = modeDescriptors.length > 0 || currentMode.id !== "all";
     const showDockMenuButton = dockControlDescriptors.length > 0 || dockSettingDescriptors.length > 0;
     const utilityPanelMarkup = this._activeUtilityPanel === "modes"
@@ -40305,6 +40505,64 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           color: var(--primary-text-color);
         }
 
+        .advance-vacuum-card__routines {
+          display: grid;
+          gap: 10px;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          width: 100%;
+        }
+
+        .advance-vacuum-card__routine-button {
+          align-items: center;
+          appearance: none;
+          background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 18px;
+          box-shadow: 0 12px 26px rgba(0,0,0,0.14);
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: grid;
+          gap: 10px;
+          justify-items: center;
+          min-height: 118px;
+          padding: 16px 14px;
+          text-align: center;
+          transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__routine-button:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 16px 30px rgba(0,0,0,0.18);
+        }
+
+        .advance-vacuum-card__routine-button.is-disabled {
+          cursor: default;
+          opacity: 0.5;
+        }
+
+        .advance-vacuum-card__routine-icon {
+          align-items: center;
+          background: linear-gradient(180deg, color-mix(in srgb, ${accentColor} 16%, rgba(255,255,255,0.08)) 0%, rgba(255,255,255,0.04) 100%);
+          border: 1px solid color-mix(in srgb, ${accentColor} 26%, rgba(255,255,255,0.08));
+          border-radius: 999px;
+          display: inline-flex;
+          height: 46px;
+          justify-content: center;
+          width: 46px;
+        }
+
+        .advance-vacuum-card__routine-icon ha-icon {
+          --mdc-icon-size: 22px;
+        }
+
+        .advance-vacuum-card__routine-label {
+          font-size: 12px;
+          font-weight: 700;
+          line-height: 1.35;
+          text-wrap: balance;
+        }
+
         @keyframes advance-vacuum-utility-panel-in {
           from {
             opacity: 0;
@@ -40429,6 +40687,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
             : ""
         }
 
+        ${this._renderRoutinesPanel(state)}
+
         <div class="advance-vacuum-card__controls">
           <div class="advance-vacuum-card__controls-row">
             <div class="advance-vacuum-card__controls-main">
@@ -40441,9 +40701,15 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                   `
                   : ""
               }
-              <button class="advance-vacuum-card__control is-primary" data-control-action="primary" title="${escapeHtml(primaryButtonTitle)}">
-                <ha-icon icon="${primaryButtonIcon}"></ha-icon>
-              </button>
+              ${
+                showPrimaryActionButton
+                  ? `
+                    <button class="advance-vacuum-card__control is-primary" data-control-action="primary" title="${escapeHtml(primaryButtonTitle)}">
+                      <ha-icon icon="${primaryButtonIcon}"></ha-icon>
+                    </button>
+                  `
+                  : ""
+              }
               ${
                 showDockMenuButton
                   ? `
@@ -40923,7 +41189,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Controles avanzados</div>
-            <div class="editor-section__hint">Selector de aspirado/fregado y menu derecho configurable. En los items del menu usa JSON con \`label\`, \`icon\`, \`visible_when\`, \`builtin_action\` o \`tap_action\`.</div>
+            <div class="editor-section__hint">Selector de aspirado/fregado, menu derecho y rutinas configurables. En rutinas puedes usar \`entity\`, \`label\`, \`icon\`, \`service\`, \`service_data\` o \`tap_action\`.</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Modo todo", "show_all_mode", config.show_all_mode !== false)}
@@ -40947,6 +41213,12 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
               rows: 10,
               valueType: "json",
               placeholder: '[\n  {\n    "label": "Vaciar deposito",\n    "icon": "mdi:delete-empty",\n    "visible_when": "docked",\n    "tap_action": {\n      "action": "perform-action",\n      "perform_action": "vacuum.send_command",\n      "service_data": {\n        "entity_id": "vacuum.roborock_qrevo_s",\n        "command": "app_start_emptying"\n      }\n    }\n  },\n  {\n    "label": "Volver a base",\n    "icon": "mdi:home-import-outline",\n    "visible_when": "active",\n    "builtin_action": "return_to_base"\n  }\n]',
+            })}
+            ${this._renderTextareaField("Rutinas (JSON)", "routines", JSON.stringify(config.routines || [], null, 2), {
+              fullWidth: true,
+              rows: 12,
+              valueType: "json",
+              placeholder: '[\n  {\n    "entity": "button.roborock_qrevo_s_barrido_intensivo",\n    "label": "Barrido intensivo",\n    "icon": "mdi:weather-windy"\n  },\n  {\n    "entity": "button.roborock_qrevo_s_fregar_tras_aspirar",\n    "label": "Fregar tras aspirar",\n    "icon": "mdi:water"\n  },\n  {\n    "entity": "script.limpieza_rapida_cocina",\n    "label": "Cocina rapida",\n    "icon": "mdi:script-text-play"\n  }\n]',
             })}
           </div>
         </section>
