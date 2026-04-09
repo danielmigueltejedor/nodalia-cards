@@ -35076,7 +35076,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getMapStatusIndicator(state = this._getVacuumState()) {
-    if (this._isWashingMops(state)) {
+    const activeDockControlIds = DOCK_CONTROL_DEFINITIONS
+      .map(definition => this._getDockControlDescriptor(definition, state))
+      .filter(descriptor => descriptor?.active)
+      .map(descriptor => descriptor.id);
+
+    if (activeDockControlIds.includes("wash") || this._isWashingMops(state)) {
       return {
         icon: "mdi:water",
         title: "Lavando la mopa",
@@ -35084,7 +35089,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       };
     }
 
-    if (this._isDryingMops(state)) {
+    if (activeDockControlIds.includes("dry") || this._isDryingMops(state)) {
       return {
         icon: "mdi:white-balance-sunny",
         title: "Secando la mopa",
@@ -35092,7 +35097,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       };
     }
 
-    if (this._isAutoEmptying(state)) {
+    if (activeDockControlIds.includes("empty") || this._isAutoEmptying(state)) {
       return {
         icon: "mdi:delete-empty-outline",
         title: "Vaciando el polvo",
@@ -38196,13 +38201,27 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return arrayFromMaybe(room?.outlines).some(outline => pointInPolygon(point, outline));
   }
 
-  _getRoomMarkerCandidatePoints(room) {
+  _getPrimaryRoomOutline(room) {
     const outlines = arrayFromMaybe(room?.outlines)
-      .filter(outline => outline.length >= 3)
+      .filter(outline => Array.isArray(outline) && outline.length >= 3)
       .sort((left, right) => polygonArea(right) - polygonArea(left));
-    const primaryOutline = outlines[0] || arrayFromMaybe(room?.outline);
+
+    if (outlines.length) {
+      return outlines[0];
+    }
+
+    const legacyOutline = arrayFromMaybe(room?.outline);
+    return legacyOutline.length >= 3 ? legacyOutline : [];
+  }
+
+  _getRoomMarkerCandidatePoints(room) {
+    const primaryOutline = this._getPrimaryRoomOutline(room);
+    if (primaryOutline.length < 3) {
+      return [];
+    }
+
     const bounds = polygonBounds(primaryOutline);
-    const overallCenter = room?.outline?.length ? centroid(room.outline) : centroid(primaryOutline);
+    const overallCenter = centroid(primaryOutline);
     const lowerCenter = {
       x: bounds.minX + (bounds.width * 0.5),
       y: bounds.minY + (bounds.height * 0.72),
@@ -38249,15 +38268,16 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const placedRects = [];
 
     const orderedRooms = rooms
-      .filter(room => room.outlines.length > 0)
+      .filter(room => this._getPrimaryRoomOutline(room).length >= 3)
       .map(room => {
-        const primaryOutline = [...room.outlines].sort((left, right) => polygonArea(right) - polygonArea(left))[0] || room.outline;
+        const primaryOutline = this._getPrimaryRoomOutline(room);
         return {
           room,
-          area: polygonArea(primaryOutline) || polygonArea(room.outline),
-          preferredAnchor: room.labelPoint || room.iconPoint || centroid(room.outline),
+          area: polygonArea(primaryOutline),
+          preferredAnchor: room.labelPoint || room.iconPoint || centroid(primaryOutline),
         };
       })
+      .filter(item => item.area > 0)
       .sort((left, right) => left.area - right.area);
 
     orderedRooms.forEach(({ room, preferredAnchor }) => {
@@ -38265,7 +38285,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const candidates = this._getRoomMarkerCandidatePoints(room);
       const fallbackAnchor = preferredAnchor && Number.isFinite(preferredAnchor.x) && Number.isFinite(preferredAnchor.y)
         ? preferredAnchor
-        : centroid(room.outline);
+        : this._getPrimaryRoomOutline(room).length >= 3
+          ? centroid(this._getPrimaryRoomOutline(room))
+          : null;
 
       if (!candidates.length && fallbackAnchor) {
         candidates.push(fallbackAnchor);
@@ -38337,10 +38359,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const placements = this._getRoomMarkerPlacements(rooms, markerSize, labelSize, iconSize);
 
     return rooms
-      .filter(room => room.outlines.length > 0)
+      .filter(room => this._getPrimaryRoomOutline(room).length >= 3)
       .map(room => {
       const placement = placements.get(String(room.id));
-      const anchor = room.iconPoint || room.labelPoint || centroid(room.outline);
+      const primaryOutline = this._getPrimaryRoomOutline(room);
+      const anchor = room.iconPoint || room.labelPoint || centroid(primaryOutline);
       const percent = placement || this._vacuumToViewportPercent(anchor);
       const selected = highlightedRoomIds.has(String(room.id));
       return `
@@ -38548,9 +38571,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           >
             <ha-icon icon="mdi:arrow-left"></ha-icon>
           </button>
-          ${
-            mapStatusIndicator
-              ? `
+        </div>
+        ${
+          mapStatusIndicator
+            ? `
+              <div class="advance-vacuum-card__map-tools-group advance-vacuum-card__map-tools-group--center" aria-hidden="true">
                 <div
                   class="advance-vacuum-card__map-tool advance-vacuum-card__map-tool--status advance-vacuum-card__map-tool--status-${escapeHtml(mapStatusIndicator.tone)}"
                   title="${escapeHtml(mapStatusIndicator.title)}"
@@ -38558,10 +38583,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                 >
                   <ha-icon icon="${escapeHtml(mapStatusIndicator.icon)}"></ha-icon>
                 </div>
-              `
-              : ""
-          }
-        </div>
+              </div>
+            `
+            : ""
+        }
         <div class="advance-vacuum-card__map-tools-group advance-vacuum-card__map-tools-group--right">
           ${
             showAddZoneButton
@@ -39317,6 +39342,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         .advance-vacuum-card__map-tools-group {
           display: flex;
           gap: 8px;
+        }
+
+        .advance-vacuum-card__map-tools-group--center {
+          left: 50%;
+          pointer-events: none;
+          position: absolute;
+          top: 0;
+          transform: translateX(-50%);
         }
 
         .advance-vacuum-card__map-tools-group--right {
