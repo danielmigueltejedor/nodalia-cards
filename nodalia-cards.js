@@ -34857,8 +34857,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._touchPinchGesture = null;
     this._zoneHandleDrag = null;
     this._pendingTouchZoneStart = null;
+    this._pendingRoomSelectionTap = null;
     this._pointerStart = null;
     this._pointerSurfaceRect = null;
+    this._suppressedRoomSelectionClick = null;
+    this._lastSubmittedSharedCleaningSessionValue = null;
     this._lastRenderSignature = "";
 
     this._onShadowClick = this._onShadowClick.bind(this);
@@ -34926,6 +34929,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._touchPinchGesture = null;
     this._zoneHandleDrag = null;
     this._pendingTouchZoneStart = null;
+    this._pendingRoomSelectionTap = null;
+    this._suppressedRoomSelectionClick = null;
+    this._lastSubmittedSharedCleaningSessionValue = null;
     this._activeMode = this._getAvailableModes()[0]?.id || "all";
     this._ensurePersistedCleaningSessionStateLoaded();
     this._updateCalibration();
@@ -35322,6 +35328,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return null;
     }
 
+    this._lastSubmittedSharedCleaningSessionValue = rawValue;
     return this._deserializeSharedCleaningSession(rawValue);
   }
 
@@ -35346,10 +35353,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     const currentValue = String(this._getSharedCleaningSessionState()?.state || "");
-    if (serialized === currentValue) {
+    if (serialized === currentValue || serialized === this._lastSubmittedSharedCleaningSessionValue) {
       return;
     }
 
+    this._lastSubmittedSharedCleaningSessionValue = serialized;
     this._callNamedService("input_text.set_value", {
       entity_id: entityId,
       value: serialized,
@@ -35363,10 +35371,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     const currentValue = String(this._getSharedCleaningSessionState()?.state || "");
-    if (!currentValue || ["unknown", "unavailable"].includes(normalizeTextKey(currentValue))) {
+    if (
+      (!currentValue || ["unknown", "unavailable"].includes(normalizeTextKey(currentValue)))
+      && this._lastSubmittedSharedCleaningSessionValue === ""
+    ) {
       return;
     }
 
+    this._lastSubmittedSharedCleaningSessionValue = "";
     this._callNamedService("input_text.set_value", {
       entity_id: entityId,
       value: "",
@@ -37678,6 +37690,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
+    this._clearPendingRoomSelectionTap();
     if (this._beginTouchPinchGesture(event.touches)) {
       event.preventDefault();
       event.stopPropagation();
@@ -37808,6 +37821,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _toggleRoomSelection(roomId) {
+    roomId = String(roomId || "").trim();
+    if (!roomId) {
+      return;
+    }
+
     if (this._isRoomSelectionLocked()) {
       return;
     }
@@ -37815,6 +37833,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._selectedRoomIds = this._selectedRoomIds.includes(roomId)
       ? this._selectedRoomIds.filter(id => id !== roomId)
       : [...this._selectedRoomIds, roomId];
+    this._persistCurrentCleaningSessionState(this._activeMode === "rooms" ? "rooms" : this._activeMode);
     this._triggerHaptic("selection");
     this._render();
   }
@@ -38158,6 +38177,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           this._render();
           break;
         }
+        this._triggerHaptic("selection");
         this._navigate("/lovelace/principal");
         break;
       case "add_zone":
@@ -38173,6 +38193,46 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       default:
         break;
     }
+  }
+
+  _getRoomSelectionTarget(event) {
+    return event?.composedPath?.().find(node => node instanceof Element && typeof node.getAttribute === "function" && node.getAttribute("data-room-id")) || null;
+  }
+
+  _clearPendingRoomSelectionTap(pointerId = null) {
+    if (
+      pointerId === null
+      || pointerId === undefined
+      || this._pendingRoomSelectionTap?.pointerId === pointerId
+    ) {
+      this._pendingRoomSelectionTap = null;
+    }
+  }
+
+  _markSuppressedRoomSelectionClick(roomId) {
+    const normalizedRoomId = String(roomId || "").trim();
+    if (!normalizedRoomId) {
+      return;
+    }
+
+    this._suppressedRoomSelectionClick = {
+      roomId: normalizedRoomId,
+      expiresAt: Date.now() + 450,
+    };
+  }
+
+  _shouldSuppressRoomSelectionClick(roomId) {
+    const normalizedRoomId = String(roomId || "").trim();
+    const suppression = this._suppressedRoomSelectionClick;
+    if (!suppression || !normalizedRoomId) {
+      return false;
+    }
+
+    const isActive = suppression.roomId === normalizedRoomId && suppression.expiresAt > Date.now();
+    if (!isActive || suppression.roomId === normalizedRoomId) {
+      this._suppressedRoomSelectionClick = null;
+    }
+    return isActive;
   }
 
   _onShadowClick(event) {
@@ -38191,14 +38251,18 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
-    const roomTarget = event.composedPath().find(node => node instanceof Element && typeof node.getAttribute === "function" && node.getAttribute("data-room-id"));
+    const roomTarget = this._getRoomSelectionTarget(event);
     if (roomTarget) {
+      const roomId = String(roomTarget.getAttribute("data-room-id") || "").trim();
       event.preventDefault();
       event.stopPropagation();
+      if (this._shouldSuppressRoomSelectionClick(roomId)) {
+        return;
+      }
       if (this._isRoomSelectionLocked()) {
         return;
       }
-      this._toggleRoomSelection(roomTarget.getAttribute("data-room-id"));
+      this._toggleRoomSelection(roomId);
       return;
     }
 
@@ -38322,6 +38386,32 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (this._touchPinchGesture && event.pointerType === "touch") {
       event.preventDefault();
       event.stopPropagation();
+      return;
+    }
+
+    const roomTarget = this._getRoomSelectionTarget(event);
+    if (roomTarget) {
+      if (event.button !== undefined && event.button !== 0) {
+        return;
+      }
+
+      if (this._isRoomSelectionLocked()) {
+        this._clearPendingRoomSelectionTap();
+        return;
+      }
+
+      const roomId = String(roomTarget.getAttribute("data-room-id") || "").trim();
+      if (!roomId) {
+        this._clearPendingRoomSelectionTap();
+        return;
+      }
+
+      this._pendingRoomSelectionTap = {
+        pointerId: event.pointerId,
+        roomId,
+        clientX: Number(event.clientX || 0),
+        clientY: Number(event.clientY || 0),
+      };
       return;
     }
 
@@ -38485,6 +38575,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
+    if (this._pendingRoomSelectionTap?.pointerId === event.pointerId) {
+      const deltaX = Number(event.clientX || 0) - this._pendingRoomSelectionTap.clientX;
+      const deltaY = Number(event.clientY || 0) - this._pendingRoomSelectionTap.clientY;
+      if (Math.hypot(deltaX, deltaY) > 10) {
+        this._pendingRoomSelectionTap = null;
+      }
+    }
+
     if (this._activeMapPointers.has(event.pointerId)) {
       this._activeMapPointers.set(event.pointerId, {
         clientX: event.clientX,
@@ -38560,6 +38658,23 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       event.preventDefault();
       event.stopPropagation();
       return;
+    }
+
+    if (this._pendingRoomSelectionTap?.pointerId === event.pointerId) {
+      const pendingTap = this._pendingRoomSelectionTap;
+      this._pendingRoomSelectionTap = null;
+
+      if (!this._isRoomSelectionLocked()) {
+        const deltaX = Number(event.clientX || 0) - pendingTap.clientX;
+        const deltaY = Number(event.clientY || 0) - pendingTap.clientY;
+        if (Math.hypot(deltaX, deltaY) <= 10) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._markSuppressedRoomSelectionClick(pendingTap.roomId);
+          this._toggleRoomSelection(pendingTap.roomId);
+          return;
+        }
+      }
     }
 
     const surface = this.shadowRoot?.querySelector("[data-map-surface='main']");
@@ -39734,6 +39849,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           stroke: rgba(255,255,255,0.16);
           stroke-dasharray: 10 10;
           stroke-width: 10;
+          touch-action: manipulation;
           transition: fill 160ms ease, stroke 160ms ease;
         }
 
@@ -39939,6 +40055,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           pointer-events: auto;
           position: absolute;
           top: 0;
+          touch-action: manipulation;
           transform: translate(-50%, -50%);
           white-space: nowrap;
           z-index: 2;
@@ -39997,6 +40114,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           gap: 8px;
           min-height: 36px;
           padding: 0 14px;
+          touch-action: manipulation;
         }
 
         .advance-vacuum-card__room-chip.is-selected {
