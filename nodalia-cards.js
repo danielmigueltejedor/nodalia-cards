@@ -33472,6 +33472,7 @@ const HAPTIC_PATTERNS = {
   warning: [20, 50, 12],
   failure: [12, 40, 12, 40, 18],
 };
+const CLEANING_SESSION_PENDING_TIMEOUT_MS = 45000;
 
 const MODE_LABELS = {
   all: "Todo",
