@@ -6340,14 +6340,17 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const dockSettingDescriptors = this._getDockSettingDescriptors(state);
       const activeModePanelPresetConfig = this._getActiveModePanelPresetConfig(state);
       const activeDockPanelSectionConfig = this._getDockPanelSectionConfig();
-      const showPrimaryActionButton = currentMode.id !== "routines";
-      const showModeMenuButton = modeDescriptors.length > 0 || currentMode.id !== "all";
-      const showDockMenuButton = dockControlDescriptors.length > 0 || dockSettingDescriptors.length > 0;
-      const utilityPanelMarkup = this._activeUtilityPanel === "modes"
-        ? this._renderModePanel(state)
-        : this._activeUtilityPanel === "dock"
-          ? this._renderDockPanel(state)
-          : "";
+      const isRoutinesMode = currentMode.id === "routines";
+      const showPrimaryActionButton = !isRoutinesMode;
+      const showModeMenuButton = !isRoutinesMode && (modeDescriptors.length > 0 || currentMode.id !== "all");
+      const showDockMenuButton = !isRoutinesMode && (dockControlDescriptors.length > 0 || dockSettingDescriptors.length > 0);
+      const utilityPanelMarkup = isRoutinesMode
+        ? ""
+        : this._activeUtilityPanel === "modes"
+          ? this._renderModePanel(state)
+          : this._activeUtilityPanel === "dock"
+            ? this._renderDockPanel(state)
+            : "";
       const mapTransformStyle = `transform: translate(${this._mapOffset.x.toFixed(1)}px, ${this._mapOffset.y.toFixed(1)}px) scale(${this._mapScale.toFixed(3)});`;
 
       const selectedPredefinedZones = predefinedZones.filter(zone => this._selectedPredefinedZoneIds.includes(zone.id));
@@ -7217,7 +7220,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
               <div class="advance-vacuum-card__modes">
                 ${modes.map(mode => `
                   <button class="advance-vacuum-card__mode-button ${mode.id === currentMode.id ? "is-active" : ""}" data-mode-id="${escapeHtml(mode.id)}">
-                    ${["all", "rooms", "zone"].includes(mode.id) ? "" : `<ha-icon icon="${escapeHtml(mode.icon)}"></ha-icon>`}
+                    ${["all", "rooms", "zone", "routines"].includes(mode.id) ? "" : `<ha-icon icon="${escapeHtml(mode.icon)}"></ha-icon>`}
                     <span>${escapeHtml(mode.label)}</span>
                   </button>
                 `).join("")}
