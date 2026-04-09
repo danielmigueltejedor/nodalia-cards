@@ -1416,14 +1416,18 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   set hass(hass) {
-    this._hass = hass;
-    this._ensurePersistedCleaningSessionStateLoaded();
-    const nextSignature = this._getRenderSignature(hass);
-    if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
-      return;
+    try {
+      this._hass = hass;
+      this._ensurePersistedCleaningSessionStateLoaded();
+      const nextSignature = this._getRenderSignature(hass);
+      if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+        return;
+      }
+      this._updateCalibration();
+      this._render();
+    } catch (error) {
+      this._handleCardError(error, "set hass");
     }
-    this._updateCalibration();
-    this._render();
   }
 
   getCardSize() {
@@ -4151,6 +4155,26 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
   }
 
+  _handleCardError(error, context = "render") {
+    if (typeof console !== "undefined" && typeof console.error === "function") {
+      console.error(`Nodalia Advance Vacuum Card ${context} error`, error);
+    }
+
+    this._lastRenderSignature = "";
+
+    if (!this.shadowRoot || this.shadowRoot.innerHTML) {
+      return;
+    }
+
+    const message = error?.message ? escapeHtml(error.message) : "No se ha podido actualizar la tarjeta.";
+    this.shadowRoot.innerHTML = `
+      <ha-card style="padding:16px;border-radius:20px;">
+        <div style="color:var(--error-color);font-weight:700;margin-bottom:8px;">Nodalia Advance Vacuum Card</div>
+        <div style="color:var(--secondary-text-color);font-size:13px;line-height:1.4;">${message}</div>
+      </ha-card>
+    `;
+  }
+
   _handleControlAction(action) {
     switch (action) {
       case "primary":
@@ -5336,90 +5360,91 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
-    this._ensurePersistedCleaningSessionStateLoaded();
+    try {
+      this._ensurePersistedCleaningSessionStateLoaded();
 
-    const previousImage = this.shadowRoot.querySelector("[data-map-image]");
-    const previousImageSrc = previousImage?.getAttribute("src") || "";
+      const previousImage = this.shadowRoot.querySelector("[data-map-image]");
+      const previousImageSrc = previousImage?.getAttribute("src") || "";
 
-    const config = this._config || normalizeConfig({});
-    const state = this._getVacuumState();
-    const accentColor = this._getAccentColor(state);
-    const styles = config.styles || DEFAULT_CONFIG.styles;
-    this._syncActiveCleaningSession(state);
-    const rooms = this._getRoomSegments();
-    const gotoPoints = this._getGotoPoints();
-    const predefinedZones = this._getPredefinedZones();
-    const highlightedRoomIds = new Set(this._getHighlightedRoomIds(state));
-    const modes = this._getAvailableModes();
-    const preferredModeId = ["rooms", "zone", "goto"].includes(this._activeMode)
-      ? this._activeMode
-      : (this._activeCleaningSessionMode || this._activeMode || "all");
-    const currentMode = modes.find(mode => mode.id === preferredModeId)
-      || (["rooms", "zone", "goto"].includes(preferredModeId)
-        ? {
-            id: preferredModeId,
-            label: MODE_LABELS[preferredModeId],
-            icon: preferredModeId === "rooms"
-              ? "mdi:floor-plan"
-              : preferredModeId === "zone"
-                ? "mdi:vector-rectangle"
-                : "mdi:map-marker",
-          }
-        : null)
-      || modes[0]
-      || { id: "all", label: MODE_LABELS.all, icon: "mdi:home" };
-    this._persistCurrentCleaningSessionState(currentMode.id);
-    const iconSize = Math.max(54, parseSizeToPixels(styles.icon.size, 64));
-    const controlSize = Math.max(38, parseSizeToPixels(styles.control.size, 42));
-    const titleSize = Math.max(15, parseSizeToPixels(styles.title_size, 16));
-    const mapRadius = Math.max(22, parseSizeToPixels(styles.map.radius, 26));
-    const chipHeight = Math.max(24, parseSizeToPixels(styles.chip_height, 26));
-    const chipPadding = styles.chip_padding || "0 10px";
-    const chipFontSize = Math.max(11, parseSizeToPixels(styles.chip_font_size, 11));
-    const mapImageUrl = this._getMapImageUrl(state);
-    const unavailable = isUnavailableState(state) || !mapImageUrl;
-    this._syncRememberedModeSelections(state);
-    this._sanitizeSelectedManualZoneIndex();
-    const roomColor = styles.map.room_color || "rgba(97, 201, 122, 0.18)";
-    const roomBorder = styles.map.room_border || "rgba(97, 201, 122, 0.55)";
-    const zoneColor = styles.map.zone_color || "rgba(90, 167, 255, 0.18)";
-    const zoneBorder = styles.map.zone_border || "rgba(90, 167, 255, 0.72)";
-    const gotoColor = styles.map.goto_color || "#f6b73c";
-    const isCleaningSessionActive = this._isCleaningSessionActive(state);
-    const isRoomSelectionMode = currentMode.id === "rooms";
-    const isRoomSelectionLocked = this._isRoomSelectionLocked(state);
-    const roomModeCleaningZones = isRoomSelectionMode ? this._activeCleaningZones : [];
-    const zoneModeCleaningZones = currentMode.id === "zone" ? this._activeCleaningZones : [];
-    const showRoomSelectionDim = isRoomSelectionMode;
-    const showRealRoomSelectionColors = isRoomSelectionMode && (highlightedRoomIds.size > 0 || roomModeCleaningZones.length > 0);
-    const hasPendingZoneSelection = currentMode.id === "zone" && (
-      this._selectedPredefinedZoneIds.length > 0 ||
-      this._manualZones.length > 0
-    );
-    const primaryButtonIcon = hasPendingZoneSelection
-      ? "mdi:check"
-      : this._isCleaning(state)
-        ? "mdi:pause"
-        : "mdi:play";
-    const primaryButtonTitle = hasPendingZoneSelection
-      ? (isCleaningSessionActive ? "Añadir zona a la limpieza" : "Limpiar zona")
-      : "Ejecutar";
-    const modeDescriptors = this._getModeDescriptors(state);
-    const dockControlDescriptors = this._getDockControlDescriptors(state);
-    const dockSettingDescriptors = this._getDockSettingDescriptors(state);
-    const activeModePanelPresetConfig = this._getActiveModePanelPresetConfig(state);
-    const activeDockPanelSectionConfig = this._getDockPanelSectionConfig();
-    const showModeMenuButton = modeDescriptors.length > 0 || currentMode.id !== "all";
-    const showDockMenuButton = dockControlDescriptors.length > 0 || dockSettingDescriptors.length > 0;
-    const utilityPanelMarkup = this._activeUtilityPanel === "modes"
-      ? this._renderModePanel(state)
-      : this._activeUtilityPanel === "dock"
-        ? this._renderDockPanel(state)
-        : "";
-    const mapTransformStyle = `transform: translate(${this._mapOffset.x.toFixed(1)}px, ${this._mapOffset.y.toFixed(1)}px) scale(${this._mapScale.toFixed(3)});`;
+      const config = this._config || normalizeConfig({});
+      const state = this._getVacuumState();
+      const accentColor = this._getAccentColor(state);
+      const styles = config.styles || DEFAULT_CONFIG.styles;
+      this._syncActiveCleaningSession(state);
+      const rooms = this._getRoomSegments();
+      const gotoPoints = this._getGotoPoints();
+      const predefinedZones = this._getPredefinedZones();
+      const highlightedRoomIds = new Set(this._getHighlightedRoomIds(state));
+      const modes = this._getAvailableModes();
+      const preferredModeId = ["rooms", "zone", "goto"].includes(this._activeMode)
+        ? this._activeMode
+        : (this._activeCleaningSessionMode || this._activeMode || "all");
+      const currentMode = modes.find(mode => mode.id === preferredModeId)
+        || (["rooms", "zone", "goto"].includes(preferredModeId)
+          ? {
+              id: preferredModeId,
+              label: MODE_LABELS[preferredModeId],
+              icon: preferredModeId === "rooms"
+                ? "mdi:floor-plan"
+                : preferredModeId === "zone"
+                  ? "mdi:vector-rectangle"
+                  : "mdi:map-marker",
+            }
+          : null)
+        || modes[0]
+        || { id: "all", label: MODE_LABELS.all, icon: "mdi:home" };
+      this._persistCurrentCleaningSessionState(currentMode.id);
+      const iconSize = Math.max(54, parseSizeToPixels(styles.icon.size, 64));
+      const controlSize = Math.max(38, parseSizeToPixels(styles.control.size, 42));
+      const titleSize = Math.max(15, parseSizeToPixels(styles.title_size, 16));
+      const mapRadius = Math.max(22, parseSizeToPixels(styles.map.radius, 26));
+      const chipHeight = Math.max(24, parseSizeToPixels(styles.chip_height, 26));
+      const chipPadding = styles.chip_padding || "0 10px";
+      const chipFontSize = Math.max(11, parseSizeToPixels(styles.chip_font_size, 11));
+      const mapImageUrl = this._getMapImageUrl(state);
+      const unavailable = isUnavailableState(state) || !mapImageUrl;
+      this._syncRememberedModeSelections(state);
+      this._sanitizeSelectedManualZoneIndex();
+      const roomColor = styles.map.room_color || "rgba(97, 201, 122, 0.18)";
+      const roomBorder = styles.map.room_border || "rgba(97, 201, 122, 0.55)";
+      const zoneColor = styles.map.zone_color || "rgba(90, 167, 255, 0.18)";
+      const zoneBorder = styles.map.zone_border || "rgba(90, 167, 255, 0.72)";
+      const gotoColor = styles.map.goto_color || "#f6b73c";
+      const isCleaningSessionActive = this._isCleaningSessionActive(state);
+      const isRoomSelectionMode = currentMode.id === "rooms";
+      const isRoomSelectionLocked = this._isRoomSelectionLocked(state);
+      const roomModeCleaningZones = isRoomSelectionMode ? this._activeCleaningZones : [];
+      const zoneModeCleaningZones = currentMode.id === "zone" ? this._activeCleaningZones : [];
+      const showRoomSelectionDim = isRoomSelectionMode;
+      const showRealRoomSelectionColors = isRoomSelectionMode && (highlightedRoomIds.size > 0 || roomModeCleaningZones.length > 0);
+      const hasPendingZoneSelection = currentMode.id === "zone" && (
+        this._selectedPredefinedZoneIds.length > 0 ||
+        this._manualZones.length > 0
+      );
+      const primaryButtonIcon = hasPendingZoneSelection
+        ? "mdi:check"
+        : this._isCleaning(state)
+          ? "mdi:pause"
+          : "mdi:play";
+      const primaryButtonTitle = hasPendingZoneSelection
+        ? (isCleaningSessionActive ? "Añadir zona a la limpieza" : "Limpiar zona")
+        : "Ejecutar";
+      const modeDescriptors = this._getModeDescriptors(state);
+      const dockControlDescriptors = this._getDockControlDescriptors(state);
+      const dockSettingDescriptors = this._getDockSettingDescriptors(state);
+      const activeModePanelPresetConfig = this._getActiveModePanelPresetConfig(state);
+      const activeDockPanelSectionConfig = this._getDockPanelSectionConfig();
+      const showModeMenuButton = modeDescriptors.length > 0 || currentMode.id !== "all";
+      const showDockMenuButton = dockControlDescriptors.length > 0 || dockSettingDescriptors.length > 0;
+      const utilityPanelMarkup = this._activeUtilityPanel === "modes"
+        ? this._renderModePanel(state)
+        : this._activeUtilityPanel === "dock"
+          ? this._renderDockPanel(state)
+          : "";
+      const mapTransformStyle = `transform: translate(${this._mapOffset.x.toFixed(1)}px, ${this._mapOffset.y.toFixed(1)}px) scale(${this._mapScale.toFixed(3)});`;
 
-    const selectedPredefinedZones = predefinedZones.filter(zone => this._selectedPredefinedZoneIds.includes(zone.id));
-    const allZoneRects = [
+      const selectedPredefinedZones = predefinedZones.filter(zone => this._selectedPredefinedZoneIds.includes(zone.id));
+      const allZoneRects = [
       ...zoneModeCleaningZones.map(zone => ({ ...zone, predefined: false, active: true })),
       ...selectedPredefinedZones.flatMap(zone => zone.zones.map(item => ({
         x1: Number(item[0]),
@@ -5430,9 +5455,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       }))),
       ...this._manualZones.map(zone => ({ ...zone, predefined: false })),
       ...(this._draftZone ? [{ ...this._draftZone, predefined: false, draft: true }] : []),
-    ];
+      ];
 
-    this.shadowRoot.innerHTML = `
+      this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
@@ -6267,36 +6292,39 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       </ha-card>
     `;
 
-    let image = this.shadowRoot.querySelector("[data-map-image]");
-    const imageSrc = image?.getAttribute("src") || "";
-    const canvas = this.shadowRoot.querySelector(".advance-vacuum-card__map-canvas");
-    if (previousImage && image && previousImageSrc && previousImageSrc === imageSrc) {
-      image.replaceWith(previousImage);
-      image = previousImage;
-      image.classList.remove("is-pending", "is-fading-out");
-      image.classList.add("is-loaded");
-    } else if (previousImage && image && previousImageSrc && imageSrc && canvas) {
-      previousImage.removeEventListener("load", this._onMapImageLoad);
-      previousImage.removeAttribute("data-map-image");
-      previousImage.setAttribute("data-map-image-previous", "true");
-      previousImage.classList.remove("is-pending", "is-fading-out");
-      previousImage.classList.add("is-loaded");
-      image.classList.add("is-pending");
-      canvas.insertBefore(previousImage, image);
-    } else if (image) {
-      image.classList.remove("is-pending", "is-fading-out");
-      image.classList.add("is-loaded");
-    }
-
-    if (image) {
-      image.removeEventListener("load", this._onMapImageLoad);
-      image.addEventListener("load", this._onMapImageLoad);
-      if (image.complete && Number(image.naturalWidth || 0) > 0) {
-        this._onMapImageLoad({ currentTarget: image });
+      let image = this.shadowRoot.querySelector("[data-map-image]");
+      const imageSrc = image?.getAttribute("src") || "";
+      const canvas = this.shadowRoot.querySelector(".advance-vacuum-card__map-canvas");
+      if (previousImage && image && previousImageSrc && previousImageSrc === imageSrc) {
+        image.replaceWith(previousImage);
+        image = previousImage;
+        image.classList.remove("is-pending", "is-fading-out");
+        image.classList.add("is-loaded");
+      } else if (previousImage && image && previousImageSrc && imageSrc && canvas) {
+        previousImage.removeEventListener("load", this._onMapImageLoad);
+        previousImage.removeAttribute("data-map-image");
+        previousImage.setAttribute("data-map-image-previous", "true");
+        previousImage.classList.remove("is-pending", "is-fading-out");
+        previousImage.classList.add("is-loaded");
+        image.classList.add("is-pending");
+        canvas.insertBefore(previousImage, image);
+      } else if (image) {
+        image.classList.remove("is-pending", "is-fading-out");
+        image.classList.add("is-loaded");
       }
-    }
 
-    this._lastRenderSignature = this._getRenderSignature();
+      if (image) {
+        image.removeEventListener("load", this._onMapImageLoad);
+        image.addEventListener("load", this._onMapImageLoad);
+        if (image.complete && Number(image.naturalWidth || 0) > 0) {
+          this._onMapImageLoad({ currentTarget: image });
+        }
+      }
+
+      this._lastRenderSignature = this._getRenderSignature();
+    } catch (error) {
+      this._handleCardError(error, "_render");
+    }
   }
 }
 

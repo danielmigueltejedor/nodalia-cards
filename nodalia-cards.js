@@ -34878,14 +34878,18 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   set hass(hass) {
-    this._hass = hass;
-    this._ensurePersistedCleaningSessionStateLoaded();
-    const nextSignature = this._getRenderSignature(hass);
-    if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
-      return;
+    try {
+      this._hass = hass;
+      this._ensurePersistedCleaningSessionStateLoaded();
+      const nextSignature = this._getRenderSignature(hass);
+      if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+        return;
+      }
+      this._updateCalibration();
+      this._render();
+    } catch (error) {
+      this._handleCardError(error, "set hass");
     }
-    this._updateCalibration();
-    this._render();
   }
 
   getCardSize() {
@@ -37613,6 +37617,26 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
   }
 
+  _handleCardError(error, context = "render") {
+    if (typeof console !== "undefined" && typeof console.error === "function") {
+      console.error(`Nodalia Advance Vacuum Card ${context} error`, error);
+    }
+
+    this._lastRenderSignature = "";
+
+    if (!this.shadowRoot || this.shadowRoot.innerHTML) {
+      return;
+    }
+
+    const message = error?.message ? escapeHtml(error.message) : "No se ha podido actualizar la tarjeta.";
+    this.shadowRoot.innerHTML = `
+      <ha-card style="padding:16px;border-radius:20px;">
+        <div style="color:var(--error-color);font-weight:700;margin-bottom:8px;">Nodalia Advance Vacuum Card</div>
+        <div style="color:var(--secondary-text-color);font-size:13px;line-height:1.4;">${message}</div>
+      </ha-card>
+    `;
+  }
+
   _handleControlAction(action) {
     switch (action) {
       case "primary":
@@ -38798,6 +38822,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
+    try {
+
     this._ensurePersistedCleaningSessionStateLoaded();
 
     const previousImage = this.shadowRoot.querySelector("[data-map-image]");
@@ -39759,6 +39785,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     this._lastRenderSignature = this._getRenderSignature();
+    } catch (error) {
+      this._handleCardError(error, "_render");
+    }
   }
 }
 
