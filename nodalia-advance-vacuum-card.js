@@ -1960,6 +1960,31 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   _syncActiveCleaningSession(state = this._getVacuumState()) {
     const persistedSession = this._readStoredCleaningSession();
+    if ((!state || isUnavailableState(state)) && persistedSession) {
+      if (!this._selectedRoomIds.length && persistedSession.selectedRoomIds?.length) {
+        this._selectedRoomIds = [...persistedSession.selectedRoomIds];
+      }
+      if (!this._selectedPredefinedZoneIds.length && persistedSession.selectedPredefinedZoneIds?.length) {
+        this._selectedPredefinedZoneIds = [...persistedSession.selectedPredefinedZoneIds];
+      }
+      if (!this._manualZones.length && persistedSession.manualZones?.length) {
+        this._manualZones = persistedSession.manualZones.map(zone => ({ ...zone }));
+      }
+      if (!this._activeCleaningRoomIds.length && persistedSession.activeRoomIds?.length) {
+        this._activeCleaningRoomIds = [...persistedSession.activeRoomIds];
+      }
+      if (!this._activeCleaningZones.length && persistedSession.activeZones?.length) {
+        this._activeCleaningZones = persistedSession.activeZones.map(zone => ({ ...zone }));
+      }
+      if (!this._activeCleaningSessionMode && persistedSession.mode) {
+        this._activeCleaningSessionMode = String(persistedSession.mode);
+      }
+      if (persistedSession.activeMode) {
+        this._activeMode = persistedSession.activeMode;
+      }
+      return;
+    }
+
     const reportedRoomIds = this._getReportedCleaningRoomIds(state);
     const reportedZones = this._getReportedCleaningZones(state);
     const currentRoomId = this._getCurrentVacuumRoomId(state);
@@ -6053,7 +6078,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
               <div class="advance-vacuum-card__modes">
                 ${modes.map(mode => `
                   <button class="advance-vacuum-card__mode-button ${mode.id === currentMode.id ? "is-active" : ""}" data-mode-id="${escapeHtml(mode.id)}">
-                    <ha-icon icon="${escapeHtml(mode.icon)}"></ha-icon>
+                    ${["all", "rooms", "zone"].includes(mode.id) ? "" : `<ha-icon icon="${escapeHtml(mode.icon)}"></ha-icon>`}
                     <span>${escapeHtml(mode.label)}</span>
                   </button>
                 `).join("")}
