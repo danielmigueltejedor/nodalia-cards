@@ -33,6 +33,11 @@ url: /local/nodalia-cards.js
 type: module
 ```
 
+Si instalas la tarjeta desde HACS, Home Assistant servira este mismo bundle desde
+`/hacsfiles/nodalia-cards/nodalia-cards.js`. Tras publicar un release nuevo y actualizar
+desde HACS, conviene hacer una recarga fuerte del navegador para evitar quedarte con una
+version antigua en cache.
+
 Ese recurso carga automaticamente:
 
 - `nodalia-navigation-bar.js`
