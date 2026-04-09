@@ -2039,6 +2039,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _syncRemoteInteractiveSelectionState(persistedSession = this._readStoredCleaningSession()) {
+    if (this._zoneHandleDrag || this._draftZone || this._pendingTouchZoneStart) {
+      return false;
+    }
+
     const remoteSelectionUpdatedAt = Number(persistedSession?.selectionUpdatedAt || 0);
     if (!persistedSession || !remoteSelectionUpdatedAt || remoteSelectionUpdatedAt <= Number(this._selectionUpdatedAt || 0)) {
       return false;
@@ -5090,6 +5094,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       event.preventDefault();
       event.stopPropagation();
 
+      if (event.pointerId !== undefined) {
+        try {
+          surface.setPointerCapture(event.pointerId);
+        } catch (_error) {
+          // Ignore unsupported pointer capture.
+        }
+      }
+
       if (selectedHandle.id === "delete") {
         this._deleteManualZone(index);
         return;
@@ -5306,7 +5318,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     const surface = this.shadowRoot?.querySelector("[data-map-surface='main']");
-    if (surface && event.pointerId !== undefined && event.pointerType !== "touch") {
+    if (surface && event.pointerId !== undefined) {
       try {
         surface.releasePointerCapture(event.pointerId);
       } catch (_error) {
@@ -6544,6 +6556,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           border-radius: 16px;
           pointer-events: auto;
           position: absolute;
+          touch-action: none;
           z-index: 2;
         }
 
@@ -6563,6 +6576,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           justify-content: center;
           pointer-events: auto;
           position: absolute;
+          touch-action: none;
           transform: translate(-50%, -50%);
           width: 34px;
           z-index: 3;
