@@ -33735,6 +33735,7 @@ const DEFAULT_CONFIG = {
   allow_goto_mode: true,
   max_zone_selections: 5,
   max_repeats: 3,
+  shared_cleaning_session_entity: "",
   suction_select_entity: "",
   mop_select_entity: "",
   mop_mode_select_entity: "",
@@ -34293,6 +34294,46 @@ function rectIntersectionArea(firstRect, secondRect) {
 
 function arrayFromMaybe(value) {
   return Array.isArray(value) ? value : [];
+}
+
+function encodeSharedSessionList(values = []) {
+  return arrayFromMaybe(values)
+    .map(item => String(item || "").trim())
+    .filter(Boolean)
+    .map(item => encodeURIComponent(item))
+    .join(",");
+}
+
+function decodeSharedSessionList(value = "") {
+  return String(value || "")
+    .split(",")
+    .map(item => item.trim())
+    .filter(Boolean)
+    .map(item => {
+      try {
+        return decodeURIComponent(item);
+      } catch (_error) {
+        return item;
+      }
+    })
+    .filter(Boolean);
+}
+
+function encodeSharedSessionZones(zones = []) {
+  return arrayFromMaybe(zones)
+    .map(zone => parseZoneRect(zone))
+    .filter(Boolean)
+    .map(zone => `${Math.round(zone.x1)}:${Math.round(zone.y1)}:${Math.round(zone.x2)}:${Math.round(zone.y2)}`)
+    .join(";");
+}
+
+function decodeSharedSessionZones(value = "") {
+  return String(value || "")
+    .split(";")
+    .map(item => item.trim())
+    .filter(Boolean)
+    .map(item => parseZoneRect(item.split(":").map(part => Number(part))))
+    .filter(Boolean);
 }
 
 function sortByOrder(items) {
@@ -35142,6 +35183,189 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return entityId ? `nodalia-advance-vacuum-card:cleaning-session:${entityId}` : "";
   }
 
+  _getSharedCleaningSessionEntityId() {
+    const entityId = String(this._config?.shared_cleaning_session_entity || "").trim();
+    return entityId.startsWith("input_text.") ? entityId : "";
+  }
+
+  _getSharedCleaningSessionState() {
+    return this._getEntityState(this._getSharedCleaningSessionEntityId());
+  }
+
+  _getSharedCleaningSessionMaxLength() {
+    const maxLength = Number(this._getSharedCleaningSessionState()?.attributes?.max);
+    return Number.isFinite(maxLength) && maxLength > 0 ? maxLength : 255;
+  }
+
+  _buildSharedCleaningSessionSnapshot(session, { minimal = false } = {}) {
+    const normalizedSession = this._normalizeCleaningSession(session);
+    if (!normalizedSession) {
+      return null;
+    }
+
+    if (!minimal) {
+      return normalizedSession;
+    }
+
+    const essentialRoomIds = normalizedSession.activeRoomIds.length
+      ? normalizedSession.activeRoomIds
+      : normalizedSession.selectedRoomIds;
+    const essentialZones = normalizedSession.activeZones.length
+      ? normalizedSession.activeZones
+      : normalizedSession.manualZones;
+
+    return this._normalizeCleaningSession({
+      mode: normalizedSession.mode,
+      activeMode: normalizedSession.activeMode,
+      activeRoomIds: essentialRoomIds,
+      activeZones: essentialZones,
+      selectedRoomIds: essentialRoomIds,
+      selectedPredefinedZoneIds: [],
+      manualZones: [],
+      repeats: normalizedSession.repeats,
+      pendingStartAt: normalizedSession.pendingStartAt,
+      resumeRoomIdsAfterZone: normalizedSession.resumeRoomIdsAfterZone,
+      resumeRepeatsAfterZone: normalizedSession.resumeRepeatsAfterZone,
+    });
+  }
+
+  _serializeSharedCleaningSession(session, options = {}) {
+    const snapshot = this._buildSharedCleaningSessionSnapshot(session, options);
+    if (!snapshot) {
+      return "";
+    }
+
+    const parts = ["v=1"];
+
+    if (snapshot.mode) {
+      parts.push(`m=${encodeURIComponent(snapshot.mode)}`);
+    }
+    if (snapshot.activeMode) {
+      parts.push(`a=${encodeURIComponent(snapshot.activeMode)}`);
+    }
+    if (snapshot.activeRoomIds.length) {
+      parts.push(`ar=${encodeSharedSessionList(snapshot.activeRoomIds)}`);
+    }
+    if (snapshot.activeZones.length) {
+      parts.push(`az=${encodeSharedSessionZones(snapshot.activeZones)}`);
+    }
+    if (snapshot.selectedRoomIds.length) {
+      parts.push(`sr=${encodeSharedSessionList(snapshot.selectedRoomIds)}`);
+    }
+    if (snapshot.selectedPredefinedZoneIds.length) {
+      parts.push(`sz=${encodeSharedSessionList(snapshot.selectedPredefinedZoneIds)}`);
+    }
+    if (snapshot.manualZones.length) {
+      parts.push(`mz=${encodeSharedSessionZones(snapshot.manualZones)}`);
+    }
+    if (snapshot.repeats) {
+      parts.push(`r=${snapshot.repeats}`);
+    }
+    if (snapshot.pendingStartAt) {
+      parts.push(`p=${Math.round(snapshot.pendingStartAt)}`);
+    }
+    if (snapshot.resumeRoomIdsAfterZone?.length) {
+      parts.push(`rr=${encodeSharedSessionList(snapshot.resumeRoomIdsAfterZone)}`);
+    }
+    if (snapshot.resumeRepeatsAfterZone) {
+      parts.push(`rq=${snapshot.resumeRepeatsAfterZone}`);
+    }
+
+    return parts.join("&");
+  }
+
+  _deserializeSharedCleaningSession(rawValue) {
+    const value = String(rawValue || "").trim();
+    if (!value) {
+      return null;
+    }
+
+    if (value.startsWith("{")) {
+      try {
+        return this._normalizeCleaningSession(JSON.parse(value));
+      } catch (_error) {
+        return null;
+      }
+    }
+
+    const params = new URLSearchParams(value);
+    if ((params.get("v") || "") !== "1") {
+      return null;
+    }
+
+    return this._normalizeCleaningSession({
+      mode: params.get("m") || "",
+      activeMode: params.get("a") || "",
+      activeRoomIds: decodeSharedSessionList(params.get("ar")),
+      activeZones: decodeSharedSessionZones(params.get("az")),
+      selectedRoomIds: decodeSharedSessionList(params.get("sr")),
+      selectedPredefinedZoneIds: decodeSharedSessionList(params.get("sz")),
+      manualZones: decodeSharedSessionZones(params.get("mz")),
+      repeats: Number(params.get("r") || 1),
+      pendingStartAt: Number(params.get("p") || 0),
+      resumeRoomIdsAfterZone: decodeSharedSessionList(params.get("rr")),
+      resumeRepeatsAfterZone: Number(params.get("rq") || 1),
+    });
+  }
+
+  _readSharedCleaningSession() {
+    const helperState = this._getSharedCleaningSessionState();
+    const rawValue = String(helperState?.state || "").trim();
+    if (!rawValue || isUnavailableState(helperState)) {
+      return null;
+    }
+
+    return this._deserializeSharedCleaningSession(rawValue);
+  }
+
+  _persistSharedCleaningSession(session) {
+    const entityId = this._getSharedCleaningSessionEntityId();
+    if (!entityId) {
+      return;
+    }
+
+    const maxLength = this._getSharedCleaningSessionMaxLength();
+    let serialized = this._serializeSharedCleaningSession(session);
+
+    if (serialized.length > maxLength) {
+      serialized = this._serializeSharedCleaningSession(session, { minimal: true });
+    }
+
+    if (serialized.length > maxLength) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn("Nodalia Advance Vacuum Card shared cleaning session exceeds helper length limit");
+      }
+      serialized = "";
+    }
+
+    const currentValue = String(this._getSharedCleaningSessionState()?.state || "");
+    if (serialized === currentValue) {
+      return;
+    }
+
+    this._callNamedService("input_text.set_value", {
+      entity_id: entityId,
+      value: serialized,
+    });
+  }
+
+  _clearSharedCleaningSession() {
+    const entityId = this._getSharedCleaningSessionEntityId();
+    if (!entityId) {
+      return;
+    }
+
+    const currentValue = String(this._getSharedCleaningSessionState()?.state || "");
+    if (!currentValue || ["unknown", "unavailable"].includes(normalizeTextKey(currentValue))) {
+      return;
+    }
+
+    this._callNamedService("input_text.set_value", {
+      entity_id: entityId,
+      value: "",
+    });
+  }
+
   _normalizeCleaningSession(session) {
     if (!isObject(session)) {
       return null;
@@ -35325,6 +35549,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _readStoredCleaningSession() {
+    const sharedSession = this._readSharedCleaningSession();
+    if (sharedSession) {
+      return sharedSession;
+    }
+
     const key = this._getCleaningSessionStorageKey();
     if (!key || typeof window === "undefined" || !window.localStorage) {
       return null;
@@ -35343,6 +35572,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _persistCleaningSession(session) {
+    this._persistSharedCleaningSession(session);
+
     const key = this._getCleaningSessionStorageKey();
     if (!key || typeof window === "undefined" || !window.localStorage) {
       return;
@@ -35363,6 +35594,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _clearPersistedCleaningSession() {
+    this._clearSharedCleaningSession();
+
     const key = this._getCleaningSessionStorageKey();
     if (!key || typeof window === "undefined" || !window.localStorage) {
       return;
@@ -35786,6 +36019,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const mapEntityId = this._getMapEntityId();
     const mapState = mapEntityId ? hass?.states?.[mapEntityId] || null : null;
+    const sharedSessionEntityId = this._getSharedCleaningSessionEntityId();
+    const sharedSessionState = sharedSessionEntityId ? hass?.states?.[sharedSessionEntityId] || null : null;
     const mapPicture = String(mapState?.attributes?.entity_picture || "");
     const currentRoomId = this._getCurrentVacuumRoomId(state);
     const suctionDescriptor = this._getModeDescriptor("suction", state);
@@ -35808,6 +36043,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         state: String(mapState?.state || ""),
         lastUpdated: String(mapState?.last_updated || ""),
         picture: mapPicture,
+      },
+      sharedSession: {
+        entity: String(sharedSessionEntityId || ""),
+        state: String(sharedSessionState?.state || ""),
+        lastUpdated: String(sharedSessionState?.last_updated || ""),
       },
       calibration: {
         camera: this._config?.calibration_source?.camera === true,
@@ -39500,8 +39740,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         }
 
         .advance-vacuum-card__zone-rect--room-overlay {
-          fill: rgba(255, 255, 255, 0.04);
-          stroke: rgba(255, 255, 255, 0.42);
+          fill: ${roomColor};
+          stroke: ${roomBorder};
         }
 
         .advance-vacuum-card__goto-line {
@@ -40246,6 +40486,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     const mapEntities = allEntities.filter(entityId => entityId.startsWith("camera.") || entityId.startsWith("image."));
     const helperEntities = allEntities.filter(entityId => entityId.startsWith("sensor.") || entityId.startsWith("image.") || entityId.startsWith("camera."));
     const selectEntities = allEntities.filter(entityId => entityId.startsWith("select."));
+    const inputTextEntities = allEntities.filter(entityId => entityId.startsWith("input_text."));
 
     return `
       <datalist id="advance-vacuum-card-vacuum-entities">
@@ -40259,6 +40500,9 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
       </datalist>
       <datalist id="advance-vacuum-card-select-entities">
         ${selectEntities.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
+      </datalist>
+      <datalist id="advance-vacuum-card-input-text-entities">
+        ${inputTextEntities.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
       </datalist>
     `;
   }
@@ -40393,6 +40637,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
               { value: "send_command", label: "Send command" },
             ])}
             ${this._renderTextField("Entidad calibracion", "calibration_source.entity", config.calibration_source?.entity, { placeholder: "image.roborock_qrevo_s_custom" })}
+            ${this._renderTextField("Helper sesion compartida", "shared_cleaning_session_entity", config.shared_cleaning_session_entity, { placeholder: "input_text.roborock_qrevo_s_cleaning_session" })}
           </div>
         </section>
 
@@ -40519,6 +40764,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     this.shadowRoot.querySelectorAll('input[data-field="entity"]').forEach(input => input.setAttribute("list", "advance-vacuum-card-vacuum-entities"));
     this.shadowRoot.querySelectorAll('input[data-field="map_source.camera"]').forEach(input => input.setAttribute("list", "advance-vacuum-card-map-entities"));
     this.shadowRoot.querySelectorAll('input[data-field="calibration_source.entity"]').forEach(input => input.setAttribute("list", "advance-vacuum-card-helper-entities"));
+    this.shadowRoot.querySelectorAll('input[data-field="shared_cleaning_session_entity"]').forEach(input => input.setAttribute("list", "advance-vacuum-card-input-text-entities"));
     this.shadowRoot.querySelectorAll('input[data-field="suction_select_entity"], input[data-field="mop_select_entity"], input[data-field="mop_mode_select_entity"]').forEach(input => input.setAttribute("list", "advance-vacuum-card-select-entities"));
   }
 }
