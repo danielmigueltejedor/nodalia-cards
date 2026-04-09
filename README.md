@@ -213,6 +213,8 @@ code_entity: input_text.codigo_alarma
 
 ### Nodalia Advance Vacuum Card
 
+Configuracion minima:
+
 ```yaml
 type: custom:nodalia-advance-vacuum-card
 entity: vacuum.roborock_qrevo_s
@@ -223,6 +225,151 @@ calibration_source:
   camera: true
 vacuum_platform: Roborock
 ```
+
+Configuracion recomendada para Roborock con persistencia compartida entre dispositivos:
+
+```yaml
+type: custom:nodalia-advance-vacuum-card
+entity: vacuum.roborock_qrevo_s
+name: Roborock Qrevo S
+vacuum_platform: Roborock
+shared_cleaning_session_entity: input_text.roborock_qrevo_s_cleaning_session
+
+map_source:
+  camera: image.roborock_qrevo_s_calzada_de_los_molinos_custom
+
+calibration_source:
+  camera: true
+
+map_locked: true
+two_finger_pan: false
+language: es
+
+show_state_chip: true
+show_battery_chip: true
+show_room_labels: true
+show_room_markers: true
+show_header_icons: true
+show_return_to_base: true
+show_stop: true
+show_locate: true
+
+allow_segment_mode: true
+allow_zone_mode: true
+allow_goto_mode: true
+
+max_zone_selections: 5
+max_repeats: 3
+
+suction_select_entity: select.roborock_qrevo_s_nivel_de_aspirado
+mop_select_entity: select.roborock_qrevo_s_nivel_de_fregado
+mop_mode_select_entity: select.roborock_qrevo_s_modo_de_limpieza
+
+icons:
+  - icon: mdi:arrow-left
+    tooltip: Atras
+    order: 1
+    tap_action:
+      action: navigate
+      navigation_path: /lovelace/principal
+
+haptics:
+  enabled: true
+  style: medium
+  fallback_vibrate: false
+```
+
+Helper recomendado para compartir la seleccion activa de habitaciones y zonas entre PC, movil o tablet:
+
+```yaml
+input_text:
+  roborock_qrevo_s_cleaning_session:
+    name: Roborock Qrevo S Cleaning Session
+    max: 255
+```
+
+Campos principales:
+
+- `entity`: entidad principal del robot (`vacuum.*`).
+- `name`: nombre mostrado en la tarjeta.
+- `vacuum_platform`: usa `Roborock` en la mayoria de instalaciones Roborock. Si tu integracion depende de comandos manuales, puedes usar `send_command`.
+- `map_source.camera`: entidad `image.*` o `camera.*` que devuelve el mapa del robot.
+- `calibration_source.camera`: usa `true` si esa misma entidad del mapa ya expone `calibration_points`.
+- `shared_cleaning_session_entity`: helper `input_text.*` opcional pero recomendado si quieres que la persistencia de habitaciones y zonas funcione entre varios dispositivos.
+- `suction_select_entity`: selector explicito del nivel de aspirado. Ponlo si la autodeteccion no acierta.
+- `mop_select_entity`: selector explicito del nivel o intensidad de fregado.
+- `mop_mode_select_entity`: selector explicito del modo combinado de limpieza si tu robot distingue `aspirar`, `aspirar y fregar` o `fregar`.
+- `allow_segment_mode`, `allow_zone_mode`, `allow_goto_mode`: activan o desactivan los modos `Habitaciones`, `Zona` e `Ir a punto`.
+- `max_zone_selections`: numero maximo de zonas rectangulares activas a la vez.
+- `max_repeats`: repeticiones maximas permitidas en la UI.
+- `show_state_chip`, `show_battery_chip`, `show_room_labels`, `show_room_markers`, `show_header_icons`, `show_return_to_base`, `show_stop`, `show_locate`: controlan la visibilidad de cada parte de la tarjeta.
+- `icons`: accesos rapidos en la cabecera superior.
+- `styles`: personalizacion visual completa de tarjeta, mapa, chips y controles.
+
+Si tu entidad de mapa ya expone habitaciones, puntos o zonas, no hace falta rellenar `room_segments`, `goto_points` ni `predefined_zones`.
+
+Si tu mapa no expone habitaciones, puedes definirlas manualmente asi:
+
+```yaml
+room_segments:
+  - id: "16"
+    label: Salon
+    icon: mdi:sofa
+    outline:
+      - [24770, 25548]
+      - [27453, 25548]
+      - [27453, 28731]
+      - [24770, 28731]
+    labelPoint: [26100, 27100]
+  - id: "17"
+    label: Cocina
+    icon: mdi:silverware-fork-knife
+    outline:
+      - [27453, 25548]
+      - [29810, 25548]
+      - [29810, 28731]
+      - [27453, 28731]
+    labelPoint: [28600, 27100]
+```
+
+Tambien puedes definir puntos de destino:
+
+```yaml
+goto_points:
+  - id: mesa
+    label: Mesa
+    icon: mdi:table-furniture
+    position: [26500, 27000]
+  - id: entrada
+    label: Entrada
+    icon: mdi:door
+    position: [23000, 29200]
+```
+
+Y zonas predefinidas:
+
+```yaml
+predefined_zones:
+  - id: alfombra_salon
+    label: Alfombra salon
+    icon: mdi:rug
+    zones:
+      - [25200, 26000, 27000, 27800]
+  - id: bajo_mesa
+    label: Bajo la mesa
+    icon: mdi:table-chair
+    zones:
+      - [25900, 26600, 27200, 27900]
+      - [27200, 26600, 28500, 27900]
+```
+
+Notas utiles:
+
+- `room_segments` acepta `outline`, `outlines`, `zones`, `rectangles`, `segments`, `areas` o `polygons`, siempre que representen un poligono valido.
+- `goto_points.position` acepta `[x, y]` o `{ x: ..., y: ... }`.
+- `predefined_zones.zones` usa rectangulos en formato `[x1, y1, x2, y2]`.
+- Si el modo visual de aspirado/fregado no se detecta bien en tu robot, configura explicitamente `suction_select_entity`, `mop_select_entity` y `mop_mode_select_entity`.
+- Si usas HACS y acabas de actualizar, haz recarga fuerte del navegador para evitar que quede JS antiguo en cache.
 
 ### Nodalia Weather Card
 

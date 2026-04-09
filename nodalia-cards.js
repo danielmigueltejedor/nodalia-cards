@@ -37020,7 +37020,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return false;
     }
 
-    return this._isMopIntensityDescriptor(mopDescriptor);
+    return (
+      !mopDescriptor?.current ||
+      this._isSharedSmartMode(mopDescriptor.current) ||
+      this._isCustomModeValue(mopDescriptor.current) ||
+      this._isMopIntensityDescriptor(mopDescriptor)
+    );
   }
 
   _getActiveModePanelPreset(state = this._getVacuumState()) {
@@ -37030,7 +37035,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const isCleaningContext = this._isCleaning(state) || this._isPaused(state);
     const isFrozenPresetContext = isCleaningContext || isDockContext;
     const fallbackPreset = manualPreset || this._dockedModePanelPreset || this._lastResolvedModePanelPreset || "";
-    const stableDetectedPreset = this._isAmbiguousVacuumMopPreset(detectedPreset, state) && fallbackPreset
+    const isAmbiguousVacuumMopPreset = this._isAmbiguousVacuumMopPreset(detectedPreset, state);
+    const stableDetectedPreset = isAmbiguousVacuumMopPreset && fallbackPreset
       ? fallbackPreset
       : detectedPreset;
 
@@ -37042,11 +37048,19 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._lastResolvedModePanelPreset = stableDetectedPreset;
     }
 
-    if (!isDockContext && this._dockedModePanelPreset) {
+    const shouldKeepFrozenPreset = Boolean(this._dockedModePanelPreset) && (
+      isFrozenPresetContext ||
+      isAmbiguousVacuumMopPreset ||
+      !stableDetectedPreset ||
+      stableDetectedPreset === "custom" ||
+      stableDetectedPreset === this._dockedModePanelPreset
+    );
+
+    if (!shouldKeepFrozenPreset && this._dockedModePanelPreset) {
       this._dockedModePanelPreset = "";
     }
 
-    if (isFrozenPresetContext) {
+    if (isFrozenPresetContext || this._dockedModePanelPreset) {
       return manualPreset || this._dockedModePanelPreset || this._lastResolvedModePanelPreset || stableDetectedPreset || "vacuum_mop";
     }
 
@@ -37054,15 +37068,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _freezeCurrentModePanelPreset(state = this._getVacuumState()) {
-    const preset = this._activeModePanelPreset || this._lastResolvedModePanelPreset || this._detectModePanelPreset(state) || "";
-    if (!preset) {
+    const preset = this._getActiveModePanelPreset(state) || this._activeModePanelPreset || this._lastResolvedModePanelPreset || this._detectModePanelPreset(state) || "";
+    if (!preset || preset === "custom") {
       return;
     }
 
     this._dockedModePanelPreset = preset;
-    if (preset !== "custom") {
-      this._lastResolvedModePanelPreset = preset;
-    }
+    this._lastResolvedModePanelPreset = preset;
   }
 
   _getActiveModePanelPresetConfig(state = this._getVacuumState()) {
