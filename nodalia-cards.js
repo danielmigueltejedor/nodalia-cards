@@ -33556,7 +33556,7 @@ const DOCK_CONTROL_DEFINITIONS = [
     id: "wash",
     label: "Lavar el paño",
     active_label: "Parar lavado de paño",
-    icon: "mdi:washing-machine",
+    icon: "mdi:water",
     active_icon: "mdi:stop-circle-outline",
     entity_ids: ["input_boolean.lavar_mopa"],
     start_patterns: [
@@ -33582,7 +33582,7 @@ const DOCK_CONTROL_DEFINITIONS = [
     id: "dry",
     label: "Secar la mopa",
     active_label: "Detener el secado",
-    icon: "mdi:hair-dryer",
+    icon: "mdi:white-balance-sunny",
     active_icon: "mdi:stop-circle-outline",
     entity_ids: ["input_boolean.secado_de_mopa"],
     start_patterns: [
@@ -33978,6 +33978,9 @@ function parseZoneRect(value) {
   if (Array.isArray(value)) {
     if (value.length >= 4 && value.slice(0, 4).every(isFiniteScalar)) {
       const [rawX1, rawY1, rawX2, rawY2] = value.slice(0, 4).map(Number);
+      if (rawX1 === rawX2 || rawY1 === rawY2) {
+        return null;
+      }
       return {
         x1: Math.min(rawX1, rawX2),
         y1: Math.min(rawY1, rawY2),
@@ -34035,6 +34038,10 @@ function parseZoneRect(value) {
   const rawX2 = Number(x2Candidate);
   const rawY2 = Number(y2Candidate);
   if (![rawX1, rawY1, rawX2, rawY2].every(Number.isFinite)) {
+    return null;
+  }
+
+  if (rawX1 === rawX2 || rawY1 === rawY2) {
     return null;
   }
 
@@ -39325,13 +39332,18 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       || modes[0]
       || { id: "all", label: MODE_LABELS.all, icon: "mdi:home" };
     this._persistCurrentCleaningSessionState(currentMode.id);
-    const iconSize = Math.max(54, parseSizeToPixels(styles.icon.size, 64));
-    const controlSize = Math.max(38, parseSizeToPixels(styles.control.size, 42));
-    const titleSize = Math.max(15, parseSizeToPixels(styles.title_size, 16));
-    const mapRadius = Math.max(22, parseSizeToPixels(styles.map.radius, 26));
-    const chipHeight = Math.max(24, parseSizeToPixels(styles.chip_height, 26));
-    const chipPadding = styles.chip_padding || "0 10px";
-    const chipFontSize = Math.max(11, parseSizeToPixels(styles.chip_font_size, 11));
+      const iconSize = Math.max(54, parseSizeToPixels(styles.icon.size, 64));
+      const controlSize = Math.max(38, parseSizeToPixels(styles.control.size, 42));
+      const titleSize = Math.max(15, parseSizeToPixels(styles.title_size, 16));
+      const mapRadius = Math.max(22, parseSizeToPixels(styles.map.radius, 26));
+      const cardRadius = Math.max(mapRadius, parseSizeToPixels(styles.card.border_radius, 32));
+      const cardPaddingPx = Math.max(0, parseSizeToPixels(styles.card.padding, 16));
+      const mapHorizontalBleed = Math.max(0, Math.round(cardPaddingPx));
+      const mapTopBleed = Math.max(0, Math.round(cardPaddingPx));
+      const mapMinHeight = Math.max(320, Math.round(controlSize * 7.4));
+      const chipHeight = Math.max(24, parseSizeToPixels(styles.chip_height, 26));
+      const chipPadding = styles.chip_padding || "0 10px";
+      const chipFontSize = Math.max(11, parseSizeToPixels(styles.chip_font_size, 11));
     const mapImageUrl = this._getMapImageUrl(state);
     const unavailable = isUnavailableState(state) || !mapImageUrl;
     this._syncRememberedModeSelections(state);
@@ -39623,14 +39635,15 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
             linear-gradient(180deg, rgba(255,255,255,0.018) 0%, rgba(255,255,255,0.01) 100%),
             rgba(0, 0, 0, 0.12);
           border: 1px solid rgba(255,255,255,0.06);
-          border-radius: ${mapRadius}px;
+          border-radius: ${cardRadius}px;
+          margin: -${mapTopBleed}px -${mapHorizontalBleed}px 0;
           overflow: hidden;
           position: relative;
         }
 
         .advance-vacuum-card__map-surface {
           aspect-ratio: ${this._mapImageWidth} / ${this._mapImageHeight};
-          min-height: 280px;
+          min-height: ${mapMinHeight}px;
           overflow: hidden;
           position: relative;
           touch-action: pan-y;
