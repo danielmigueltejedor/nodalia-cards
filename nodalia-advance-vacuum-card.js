@@ -1776,7 +1776,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   _isCleaningSessionPendingStart(session = this._readStoredCleaningSession()) {
     const pendingStartAt = Number(session?.pendingStartAt || this._pendingCleaningSessionStartAt || 0);
-    return pendingStartAt > 0 && (Date.now() - pendingStartAt) < CLEANING_SESSION_PENDING_TIMEOUT_MS;
+    const timeoutMs = typeof CLEANING_SESSION_PENDING_TIMEOUT_MS === "number"
+      ? CLEANING_SESSION_PENDING_TIMEOUT_MS
+      : 45000;
+    return pendingStartAt > 0 && (Date.now() - pendingStartAt) < timeoutMs;
   }
 
   _markCleaningSessionPendingStart() {
