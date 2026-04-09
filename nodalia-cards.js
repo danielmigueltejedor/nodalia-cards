@@ -34794,6 +34794,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       suction: "",
       mop: "",
     };
+    this._pendingRoomCleaningResumeRoomIds = [];
+    this._pendingRoomCleaningResumeRepeats = 1;
+    this._roomCleaningResumeInFlight = false;
     this._lastResolvedModePanelPreset = "";
     this._dockedModePanelPreset = "";
     this._hasLoadedPersistedCleaningSessionState = false;
@@ -34861,6 +34864,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._activeUtilityPanel = null;
     this._activeModePanelPreset = "";
     this._activeDockPanelSection = DOCK_PANEL_SECTIONS[0]?.id || "control";
+    this._pendingRoomCleaningResumeRoomIds = [];
+    this._pendingRoomCleaningResumeRepeats = this._repeats;
+    this._roomCleaningResumeInFlight = false;
     this._lastResolvedModePanelPreset = "";
     this._dockedModePanelPreset = "";
     this._hasLoadedPersistedCleaningSessionState = false;
@@ -35160,6 +35166,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       .filter(Boolean);
     const repeats = clamp(Number(session.repeats || 1), 1, 9);
     const pendingStartAt = Number(session.pendingStartAt || 0);
+    const resumeRoomIdsAfterZone = arrayFromMaybe(session.resumeRoomIdsAfterZone)
+      .map(item => String(item || "").trim())
+      .filter(Boolean);
+    const resumeRepeatsAfterZone = clamp(Number(session.resumeRepeatsAfterZone || repeats || 1), 1, 9);
 
     if (
       !mode &&
@@ -35168,7 +35178,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       !selectedRoomIds.length &&
       !selectedPredefinedZoneIds.length &&
       !manualZones.length &&
-      !pendingStartAt
+      !pendingStartAt &&
+      !resumeRoomIdsAfterZone.length
     ) {
       return null;
     }
@@ -35183,6 +35194,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       manualZones,
       repeats,
       pendingStartAt,
+      resumeRoomIdsAfterZone,
+      resumeRepeatsAfterZone,
     };
   }
 
@@ -35202,6 +35215,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._activeCleaningZones = arrayFromMaybe(persistedSession.activeZones).map(zone => ({ ...zone }));
     this._activeCleaningSessionMode = String(persistedSession.mode || "");
     this._pendingCleaningSessionStartAt = Number(persistedSession.pendingStartAt || 0);
+    this._pendingRoomCleaningResumeRoomIds = [...arrayFromMaybe(persistedSession.resumeRoomIdsAfterZone)];
+    this._pendingRoomCleaningResumeRepeats = clamp(Number(persistedSession.resumeRepeatsAfterZone || this._repeats || 1), 1, 9);
+    this._roomCleaningResumeInFlight = false;
     if (persistedSession.activeMode) {
       this._activeMode = persistedSession.activeMode;
     }
@@ -35234,7 +35250,62 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       manualZones: this._manualZones,
       repeats: this._repeats,
       pendingStartAt: this._pendingCleaningSessionStartAt,
+      resumeRoomIdsAfterZone: this._pendingRoomCleaningResumeRoomIds,
+      resumeRepeatsAfterZone: this._pendingRoomCleaningResumeRepeats,
     });
+  }
+
+  _setPendingRoomCleaningResume(roomIds = [], repeats = this._repeats) {
+    this._pendingRoomCleaningResumeRoomIds = [...new Set(arrayFromMaybe(roomIds)
+      .map(item => String(item || "").trim())
+      .filter(Boolean))];
+    this._pendingRoomCleaningResumeRepeats = clamp(Number(repeats || this._repeats || 1), 1, 9);
+  }
+
+  _clearPendingRoomCleaningResume() {
+    this._pendingRoomCleaningResumeRoomIds = [];
+    this._pendingRoomCleaningResumeRepeats = clamp(Number(this._repeats || 1), 1, 9);
+  }
+
+  _getPendingRoomCleaningResumeState(persistedSession = this._readStoredCleaningSession()) {
+    const hasInMemoryPendingResume = this._pendingRoomCleaningResumeRoomIds.length > 0;
+    const roomIds = [...new Set([
+      ...this._pendingRoomCleaningResumeRoomIds,
+      ...arrayFromMaybe(persistedSession?.resumeRoomIdsAfterZone),
+    ].map(item => String(item || "").trim()).filter(Boolean))];
+
+    return {
+      roomIds,
+      repeats: clamp(
+        Number(
+          (hasInMemoryPendingResume ? this._pendingRoomCleaningResumeRepeats : 0)
+          || persistedSession?.resumeRepeatsAfterZone
+          || this._repeats
+          || 1
+        ),
+        1,
+        9,
+      ),
+    };
+  }
+
+  _getRoomCleaningResumeIds(state = this._getVacuumState(), persistedSession = this._readStoredCleaningSession()) {
+    const orderedRoomIds = [...new Set([
+      ...this._selectedRoomIds,
+      ...arrayFromMaybe(persistedSession?.selectedRoomIds),
+      ...this._getTrackedActiveCleaningRoomIds(persistedSession),
+    ].map(item => String(item || "").trim()).filter(Boolean))];
+
+    if (!orderedRoomIds.length) {
+      return [];
+    }
+
+    const currentRoomId = this._getCurrentVacuumRoomId(state);
+    if (currentRoomId && orderedRoomIds.includes(currentRoomId)) {
+      return orderedRoomIds.slice(orderedRoomIds.indexOf(currentRoomId));
+    }
+
+    return orderedRoomIds;
   }
 
   _isCleaningSessionPendingStart(session = this._readStoredCleaningSession()) {
@@ -35446,6 +35517,94 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     );
   }
 
+  _getTrackedActiveCleaningRoomIds(persistedSession = this._readStoredCleaningSession()) {
+    return [...new Set([
+      ...this._activeCleaningRoomIds,
+      ...arrayFromMaybe(persistedSession?.activeRoomIds),
+      ...this._selectedRoomIds,
+      ...arrayFromMaybe(persistedSession?.selectedRoomIds),
+    ].map(item => String(item || "").trim()).filter(Boolean))];
+  }
+
+  _hasMixedRoomZoneCleaningSession(persistedSession = this._readStoredCleaningSession(), reportedZones = []) {
+    const sessionMode = String(this._activeCleaningSessionMode || persistedSession?.mode || "");
+    if (sessionMode !== "rooms") {
+      return false;
+    }
+
+    return Boolean(
+      (Array.isArray(reportedZones) ? reportedZones.length : 0) ||
+      this._activeCleaningZones.length ||
+      arrayFromMaybe(persistedSession?.activeZones).length
+    );
+  }
+
+  _attemptPendingRoomCleaningResume(state = this._getVacuumState(), persistedSession = this._readStoredCleaningSession()) {
+    const pendingResume = this._getPendingRoomCleaningResumeState(persistedSession);
+    if (!pendingResume.roomIds.length || this._roomCleaningResumeInFlight) {
+      return false;
+    }
+
+    if (!state || isUnavailableState(state) || this._isCleaningSessionPendingStart(persistedSession)) {
+      return false;
+    }
+
+    if (this._isCleaning(state) || this._isPaused(state)) {
+      return false;
+    }
+
+    if (
+      !this._isReturning(state) &&
+      !this._isDocked(state) &&
+      !this._matchesActivity(state, ["idle", "stopped", "ready"])
+    ) {
+      return false;
+    }
+
+    const segments = pendingResume.roomIds
+      .map(id => parseInteger(id))
+      .filter(Number.isFinite);
+    if (!segments.length) {
+      this._clearPendingRoomCleaningResume();
+      this._persistCurrentCleaningSessionState(this._activeMode);
+      return false;
+    }
+
+    this._roomCleaningResumeInFlight = true;
+    this._clearPendingRoomCleaningResume();
+    this._activeCleaningRoomIds = pendingResume.roomIds;
+    this._activeCleaningZones = [];
+    this._activeCleaningSessionMode = "rooms";
+    this._markCleaningSessionPendingStart();
+    this._persistCurrentCleaningSessionState("rooms");
+
+    Promise.resolve(this._callNamedService("vacuum.send_command", {
+      entity_id: this._config.entity,
+      command: "app_segment_clean",
+      params: [{
+        segments,
+        repeat: pendingResume.repeats,
+      }],
+    }))
+      .then(() => {
+        this._persistCurrentCleaningSessionState("rooms");
+      })
+      .catch(error => {
+        this._clearCleaningSessionPendingStart();
+        this._setPendingRoomCleaningResume(pendingResume.roomIds, pendingResume.repeats);
+        this._persistCurrentCleaningSessionState("rooms");
+        if (typeof console !== "undefined" && typeof console.error === "function") {
+          console.error("Nodalia Advance Vacuum Card room resume error", error);
+        }
+      })
+      .finally(() => {
+        this._roomCleaningResumeInFlight = false;
+        this._render();
+      });
+
+    return true;
+  }
+
   _resolveActiveCleaningSessionMode(state = this._getVacuumState(), persistedSession = this._readStoredCleaningSession()) {
     if (!state || !this._isCleaningSessionActive(state, persistedSession)) {
       return "";
@@ -35491,6 +35650,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       if (!this._activeCleaningSessionMode && persistedSession.mode) {
         this._activeCleaningSessionMode = String(persistedSession.mode);
       }
+      if (!this._pendingRoomCleaningResumeRoomIds.length && persistedSession.resumeRoomIdsAfterZone?.length) {
+        this._pendingRoomCleaningResumeRoomIds = [...persistedSession.resumeRoomIdsAfterZone];
+        this._pendingRoomCleaningResumeRepeats = clamp(Number(persistedSession.resumeRepeatsAfterZone || 1), 1, 9);
+      }
       if (persistedSession.activeMode) {
         this._activeMode = persistedSession.activeMode;
       }
@@ -35499,6 +35662,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const reportedRoomIds = this._getReportedCleaningRoomIds(state);
     const reportedZones = this._getReportedCleaningZones(state);
+    const trackedRoomIds = this._getTrackedActiveCleaningRoomIds(persistedSession);
+    const hasMixedRoomZoneCleaningSession = this._hasMixedRoomZoneCleaningSession(persistedSession, reportedZones);
     const currentRoomId = this._getCurrentVacuumRoomId(state);
     const isRoomCleaning = this._matchesActivity(state, ["segment_cleaning", "room_cleaning"]);
     const isReportedCleaningSessionActive = this._isCleaning(state) || this._isPaused(state) || this._isReturning(state);
@@ -35511,13 +35676,20 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       persistedSession?.activeRoomIds?.length ||
       persistedSession?.activeZones?.length ||
       this._pendingCleaningSessionStartAt ||
-      persistedSession?.pendingStartAt
+      persistedSession?.pendingStartAt ||
+      this._getPendingRoomCleaningResumeState(persistedSession).roomIds.length
     );
 
+    if (this._attemptPendingRoomCleaningResume(state, persistedSession)) {
+      return;
+    }
+
     if (reportedRoomIds.length) {
-      this._activeCleaningRoomIds = reportedRoomIds;
-    } else if (isRoomCleaning && currentRoomId) {
-      this._activeCleaningRoomIds = [...new Set([currentRoomId, ...this._activeCleaningRoomIds])];
+      this._activeCleaningRoomIds = hasMixedRoomZoneCleaningSession && trackedRoomIds.length
+        ? trackedRoomIds
+        : reportedRoomIds;
+    } else if (isRoomCleaning && currentRoomId && !hasMixedRoomZoneCleaningSession) {
+      this._activeCleaningRoomIds = [...new Set([currentRoomId, ...trackedRoomIds])];
     } else if (isCleaningSessionActive && persistedSession?.activeRoomIds?.length) {
       this._activeCleaningRoomIds = [...persistedSession.activeRoomIds];
     } else if (!isCleaningSessionActive) {
@@ -35541,6 +35713,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (!isCleaningSessionActive) {
       this._activeCleaningSessionMode = "";
       this._clearCleaningSessionPendingStart();
+      this._clearPendingRoomCleaningResume();
+      this._roomCleaningResumeInFlight = false;
       if (hadTrackedCleaningSession) {
         this._selectedRoomIds = [];
         this._selectedPredefinedZoneIds = [];
@@ -35567,11 +35741,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   _getHighlightedRoomIds(state = this._getVacuumState()) {
     const highlighted = new Set(this._selectedRoomIds.map(id => String(id)));
+    const hasMixedRoomZoneCleaningSession = this._hasMixedRoomZoneCleaningSession();
 
     if (this._isRoomCleaningSessionActive(state)) {
       this._activeCleaningRoomIds.forEach(id => highlighted.add(String(id)));
       const currentRoomId = this._getCurrentVacuumRoomId(state);
-      if (currentRoomId) {
+      if (currentRoomId && !hasMixedRoomZoneCleaningSession) {
         highlighted.add(currentRoomId);
       }
     }
@@ -36594,19 +36769,37 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return "custom";
   }
 
+  _isAmbiguousVacuumMopPreset(detectedPreset, state = this._getVacuumState()) {
+    if (detectedPreset !== "vacuum_mop") {
+      return false;
+    }
+
+    const mopDescriptor = this._getModeDescriptor("mop", state);
+    const mopModeDescriptor = this._getMopModeDescriptor(state);
+    if (this._descriptorSupportsCleaningCombo(mopDescriptor) || this._descriptorSupportsCleaningCombo(mopModeDescriptor)) {
+      return false;
+    }
+
+    return this._isMopIntensityDescriptor(mopDescriptor);
+  }
+
   _getActiveModePanelPreset(state = this._getVacuumState()) {
     const detectedPreset = this._detectModePanelPreset(state);
     const manualPreset = this._activeModePanelPreset;
     const isDockContext = this._isDocked(state) || this._isReturning(state);
     const isCleaningContext = this._isCleaning(state) || this._isPaused(state);
     const isFrozenPresetContext = isCleaningContext || isDockContext;
+    const fallbackPreset = manualPreset || this._dockedModePanelPreset || this._lastResolvedModePanelPreset || "";
+    const stableDetectedPreset = this._isAmbiguousVacuumMopPreset(detectedPreset, state) && fallbackPreset
+      ? fallbackPreset
+      : detectedPreset;
 
     if (
-      detectedPreset &&
-      detectedPreset !== "custom" &&
+      stableDetectedPreset &&
+      stableDetectedPreset !== "custom" &&
       !isFrozenPresetContext
     ) {
-      this._lastResolvedModePanelPreset = detectedPreset;
+      this._lastResolvedModePanelPreset = stableDetectedPreset;
     }
 
     if (!isDockContext && this._dockedModePanelPreset) {
@@ -36614,10 +36807,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     if (isFrozenPresetContext) {
-      return manualPreset || this._dockedModePanelPreset || this._lastResolvedModePanelPreset || detectedPreset || "vacuum_mop";
+      return manualPreset || this._dockedModePanelPreset || this._lastResolvedModePanelPreset || stableDetectedPreset || "vacuum_mop";
     }
 
-    return manualPreset || detectedPreset || this._lastResolvedModePanelPreset || "vacuum_mop";
+    return manualPreset || stableDetectedPreset || this._lastResolvedModePanelPreset || "vacuum_mop";
   }
 
   _freezeCurrentModePanelPreset(state = this._getVacuumState()) {
@@ -37508,6 +37701,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         .filter(Number.isFinite);
 
       if (segments.length) {
+        this._freezeCurrentModePanelPreset(state);
+        this._clearPendingRoomCleaningResume();
         this._activeCleaningRoomIds = segments.map(item => String(item));
         this._activeCleaningZones = [];
         this._activeCleaningSessionMode = "rooms";
@@ -37536,6 +37731,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           this._isReturning(state) ||
           this._isRoomCleaningSessionActive(state)
         );
+        this._freezeCurrentModePanelPreset(state);
+        if (isTransientZoneAddition && this._isRoomCleaningSessionActive(state)) {
+          this._setPendingRoomCleaningResume(this._getRoomCleaningResumeIds(state), this._repeats);
+        } else {
+          this._clearPendingRoomCleaningResume();
+        }
         if (!this._isRoomCleaningSessionActive(state)) {
           this._activeCleaningRoomIds = [];
         }
@@ -37573,6 +37774,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     if (this._activeMode === "goto" && this._gotoPoint) {
+      this._freezeCurrentModePanelPreset(state);
+      this._clearPendingRoomCleaningResume();
       this._activeCleaningRoomIds = [];
       this._activeCleaningZones = [];
       this._activeCleaningSessionMode = "";
@@ -37587,6 +37790,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
+    this._freezeCurrentModePanelPreset(state);
+    this._clearPendingRoomCleaningResume();
     this._activeCleaningRoomIds = [];
     this._activeCleaningZones = [];
     this._activeCleaningSessionMode = "";
@@ -37614,6 +37819,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   _handleMapActionError(error) {
     this._clearCleaningSessionPendingStart();
+    this._clearPendingRoomCleaningResume();
+    this._roomCleaningResumeInFlight = false;
     this._syncActiveCleaningSession(this._getVacuumState());
     this._render();
     if (typeof console !== "undefined" && typeof console.error === "function") {
@@ -37658,10 +37865,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         break;
       case "return_to_base":
         this._freezeCurrentModePanelPreset(this._getVacuumState());
+        this._clearPendingRoomCleaningResume();
+        this._persistCurrentCleaningSessionState(this._activeMode);
         this._callVacuumService("return_to_base");
         this._triggerHaptic("selection");
         break;
       case "stop":
+        this._freezeCurrentModePanelPreset(this._getVacuumState());
         this._selectedRoomIds = [];
         this._selectedPredefinedZoneIds = [];
         this._manualZones = [];
@@ -37672,6 +37882,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._activeCleaningZones = [];
         this._activeCleaningSessionMode = "";
         this._clearCleaningSessionPendingStart();
+        this._clearPendingRoomCleaningResume();
+        this._roomCleaningResumeInFlight = false;
         this._clearPersistedCleaningSession();
         this._callVacuumService("stop");
         this._triggerHaptic("selection");
