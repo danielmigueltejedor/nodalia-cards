@@ -16566,8 +16566,8 @@ class NodaliaLightCardEditor extends HTMLElement {
   }
 
   _renderLightEntityField(label, field, value, options = {}) {
-    const useEntityPicker = Boolean(customElements.get("ha-entity-picker"));
-    if (!useEntityPicker) {
+    const useSelector = Boolean(customElements.get("ha-selector"));
+    if (!useSelector) {
       const entityOptions = this._getLightEntityOptions();
       if (!entityOptions.length) {
         return this._renderTextField(label, field, value, options);
@@ -16593,30 +16593,31 @@ class NodaliaLightCardEditor extends HTMLElement {
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(label)}</span>
-        <ha-entity-picker
+        <ha-selector
           data-field="${escapeHtml(field)}"
+          data-selector-kind="entity"
           data-value="${escapeHtml(value === undefined || value === null ? "" : String(value))}"
-        ></ha-entity-picker>
+        ></ha-selector>
       </label>
     `;
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
-    const useIconPicker = Boolean(customElements.get("ha-icon-picker"));
+    const useSelector = Boolean(customElements.get("ha-selector"));
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(label)}</span>
         ${
-          useIconPicker
+          useSelector
             ? `
-              <ha-icon-picker
+              <ha-selector
                 data-field="${escapeHtml(field)}"
+                data-selector-kind="icon"
                 data-value="${escapeHtml(inputValue)}"
-                value="${escapeHtml(inputValue)}"
                 ${placeholder}
-              ></ha-icon-picker>
+              ></ha-selector>
             `
             : `
               <input
@@ -16733,8 +16734,7 @@ class NodaliaLightCardEditor extends HTMLElement {
           width: 100%;
         }
 
-        .editor-field ha-icon-picker,
-        .editor-field ha-entity-picker {
+        .editor-field ha-selector {
           display: block;
           width: 100%;
         }
@@ -16873,15 +16873,13 @@ class NodaliaLightCardEditor extends HTMLElement {
     `;
 
     this.shadowRoot
-      .querySelectorAll("ha-icon-picker[data-field], ha-entity-picker[data-field]")
-      .forEach(picker => {
-        picker.hass = this._hass;
-        picker.value = picker.dataset.value || "";
-        if (picker.tagName === "HA-ENTITY-PICKER") {
-          picker.includeDomains = ["light"];
-          picker.allowCustomEntity = true;
-          picker.entityFilter = stateObj => String(stateObj?.entity_id || "").startsWith("light.");
-        }
+      .querySelectorAll("ha-selector[data-field]")
+      .forEach(selector => {
+        selector.hass = this._hass;
+        selector.value = selector.dataset.value || "";
+        selector.selector = selector.dataset.selectorKind === "entity"
+          ? { entity: { domain: "light" } }
+          : { icon: {} };
       });
   }
 }
