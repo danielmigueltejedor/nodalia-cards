@@ -2298,26 +2298,15 @@ class NodaliaLightCardEditor extends HTMLElement {
 
   _renderLightEntityField(label, field, value, options = {}) {
     const inputValue = value === undefined || value === null ? "" : String(value);
-    const useEntityPicker = Boolean(customElements.get("ha-entity-picker"));
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(label)}</span>
-        ${
-          useEntityPicker
-            ? `
-              <ha-entity-picker
-                data-field="${escapeHtml(field)}"
-                data-value="${escapeHtml(inputValue)}"
-              ></ha-entity-picker>
-            `
-            : `
-              <ha-selector
-                data-field="${escapeHtml(field)}"
-                data-selector-kind="light-entity"
-                data-value="${escapeHtml(inputValue)}"
-              ></ha-selector>
-            `
-        }
+        <div
+          class="editor-control-host"
+          data-mounted-control="light-entity"
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+        ></div>
       </div>
     `;
   }
@@ -2352,6 +2341,56 @@ class NodaliaLightCardEditor extends HTMLElement {
         ${entityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
       </datalist>
     `;
+  }
+
+  _mountLightEntityPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const field = host.dataset.field || "entity";
+    const nextValue = host.dataset.value || "";
+    let control = null;
+
+    if (customElements.get("ha-entity-picker")) {
+      control = document.createElement("ha-entity-picker");
+      control.includeDomains = ["light"];
+      control.allowCustomEntity = true;
+      control.entityFilter = stateObj => String(stateObj?.entity_id || "").startsWith("light.");
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = {
+        entity: {
+          domain: "light",
+        },
+      };
+    } else {
+      control = document.createElement("select");
+      this._getLightEntityOptions().forEach(option => {
+        const optionElement = document.createElement("option");
+        optionElement.value = option.value;
+        optionElement.textContent = option.displayLabel;
+        control.appendChild(optionElement);
+      });
+      control.addEventListener("change", this._onShadowInput);
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+
+    if (control.tagName !== "SELECT") {
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    }
+
+    host.replaceChildren(control);
   }
 
   _render() {
@@ -2474,7 +2513,9 @@ class NodaliaLightCardEditor extends HTMLElement {
 
         .editor-field ha-icon-picker,
         .editor-field ha-entity-picker,
-        .editor-field ha-selector {
+        .editor-field ha-selector,
+        .editor-control-host,
+        .editor-control-host > * {
           display: block;
           width: 100%;
         }
@@ -2634,33 +2675,15 @@ class NodaliaLightCardEditor extends HTMLElement {
     `;
 
     this.shadowRoot
-      .querySelectorAll("ha-icon-picker[data-field], ha-entity-picker[data-field], ha-selector[data-field]")
+      .querySelectorAll('[data-mounted-control="light-entity"]')
+      .forEach(host => this._mountLightEntityPicker(host));
+
+    this.shadowRoot
+      .querySelectorAll("ha-icon-picker[data-field]")
       .forEach(control => {
         control.hass = this._hass;
-        const nextValue = control.dataset.value || "";
+        control.value = control.dataset.value || "";
         control.addEventListener("value-changed", this._onShadowValueChanged);
-
-        if (control.tagName === "HA-ICON-PICKER") {
-          control.value = nextValue;
-          return;
-        }
-
-        if (control.tagName === "HA-ENTITY-PICKER") {
-          control.value = nextValue;
-          control.includeDomains = ["light"];
-          control.allowCustomEntity = true;
-          control.entityFilter = stateObj => String(stateObj?.entity_id || "").startsWith("light.");
-          return;
-        }
-
-        if (control.tagName === "HA-SELECTOR" && control.dataset.selectorKind === "light-entity") {
-          control.selector = {
-            entity: {
-              domain: "light",
-            },
-          };
-          control.value = nextValue;
-        }
       });
   }
 }
