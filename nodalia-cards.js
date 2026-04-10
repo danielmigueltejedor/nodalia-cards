@@ -9443,10 +9443,43 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           line-height: 1.45;
         }
 
+        .editor-section__actions {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 2px;
+        }
+
+        .editor-section__toggle-button {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        .editor-section__toggle-button ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
         .editor-grid {
           display: grid;
           gap: 12px;
           grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .editor-grid--stacked {
+          grid-template-columns: 1fr;
         }
 
         .editor-field,
@@ -16281,6 +16314,7 @@ class NodaliaLightCardEditor extends HTMLElement {
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._entityOptionsSignature = "";
+    this._showStyleSection = false;
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
@@ -16512,7 +16546,23 @@ class NodaliaLightCardEditor extends HTMLElement {
     this._emitConfig();
   }
 
-  _onShadowClick() {}
+  _onShadowClick(event) {
+    const toggleButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+
+    if (!toggleButton) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (toggleButton.dataset.editorToggle === "styles") {
+      this._showStyleSection = !this._showStyleSection;
+      this._render();
+    }
+  }
 
   _renderTextField(label, field, value, options = {}) {
     const inputType = options.type || "text";
@@ -16729,16 +16779,19 @@ class NodaliaLightCardEditor extends HTMLElement {
             <div class="editor-section__title">General</div>
             <div class="editor-section__hint">Entidad principal, nombre visible e icono de la tarjeta.</div>
           </div>
-          <div class="editor-grid">
+          <div class="editor-grid editor-grid--stacked">
             ${this._renderLightEntityField("Entidad de luz", "entity", config.entity, {
               placeholder: "light.salon",
-            })}
-            ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Salón",
+              fullWidth: true,
             })}
             ${this._renderIconPickerField("Icono", "icon", config.icon, {
               placeholder: "mdi:lightbulb",
               fallbackIcon: "mdi:lightbulb",
+              fullWidth: true,
+            })}
+            ${this._renderTextField("Nombre", "name", config.name, {
+              placeholder: "Salón",
+              fullWidth: true,
             })}
             ${this._renderTextField(
               "Presets de brillo",
@@ -16747,6 +16800,7 @@ class NodaliaLightCardEditor extends HTMLElement {
               {
                 valueType: "csv",
                 placeholder: "10, 35, 65, 100",
+                fullWidth: true,
               },
             )}
           </div>
@@ -16806,29 +16860,46 @@ class NodaliaLightCardEditor extends HTMLElement {
           <div class="editor-section__header">
             <div class="editor-section__title">Estilos</div>
             <div class="editor-section__hint">Ajustes visuales básicos del look Nodalia.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="styles"
+                aria-expanded="${this._showStyleSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+              </button>
+            </div>
           </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
-            ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
-            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
-            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-            ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamaño botón principal", "styles.icon.size", config.styles.icon.size)}
-            ${this._renderTextField("Color icono encendida", "styles.icon.on_color", config.styles.icon.on_color)}
-            ${this._renderTextField("Color icono apagada", "styles.icon.off_color", config.styles.icon.off_color)}
-            ${this._renderTextField("Tamaño botón", "styles.control.size", config.styles.control.size)}
-            ${this._renderTextField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background)}
-            ${this._renderTextField("Color acento", "styles.control.accent_color", config.styles.control.accent_color)}
-            ${this._renderTextField("Alto burbuja info", "styles.chip_height", config.styles.chip_height)}
-            ${this._renderTextField("Texto burbuja info", "styles.chip_font_size", config.styles.chip_font_size)}
-            ${this._renderTextField("Padding burbuja info", "styles.chip_padding", config.styles.chip_padding)}
-            ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
-            ${this._renderTextField("Alto contenedor slider", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
-            ${this._renderTextField("Grosor slider", "styles.slider_height", config.styles.slider_height)}
-            ${this._renderTextField("Tamaño thumb slider", "styles.slider_thumb_size", config.styles.slider_thumb_size)}
-            ${this._renderTextField("Color slider", "styles.slider_color", config.styles.slider_color)}
-          </div>
+          ${
+            this._showStyleSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
+                  ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
+                  ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
+                  ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
+                  ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
+                  ${this._renderTextField("Tamaño botón principal", "styles.icon.size", config.styles.icon.size)}
+                  ${this._renderTextField("Color icono encendida", "styles.icon.on_color", config.styles.icon.on_color)}
+                  ${this._renderTextField("Color icono apagada", "styles.icon.off_color", config.styles.icon.off_color)}
+                  ${this._renderTextField("Tamaño botón", "styles.control.size", config.styles.control.size)}
+                  ${this._renderTextField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background)}
+                  ${this._renderTextField("Color acento", "styles.control.accent_color", config.styles.control.accent_color)}
+                  ${this._renderTextField("Alto burbuja info", "styles.chip_height", config.styles.chip_height)}
+                  ${this._renderTextField("Texto burbuja info", "styles.chip_font_size", config.styles.chip_font_size)}
+                  ${this._renderTextField("Padding burbuja info", "styles.chip_padding", config.styles.chip_padding)}
+                  ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
+                  ${this._renderTextField("Alto contenedor slider", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
+                  ${this._renderTextField("Grosor slider", "styles.slider_height", config.styles.slider_height)}
+                  ${this._renderTextField("Tamaño thumb slider", "styles.slider_thumb_size", config.styles.slider_thumb_size)}
+                  ${this._renderTextField("Color slider", "styles.slider_color", config.styles.slider_color)}
+                </div>
+              `
+              : ""
+          }
         </section>
       </div>
     `;
