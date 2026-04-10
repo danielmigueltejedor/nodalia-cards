@@ -16503,6 +16503,9 @@ class NodaliaLightCardEditor extends HTMLElement {
     const nextValue = typeof event.detail?.value === "string"
       ? event.detail.value
       : control.value;
+    if (typeof control.dataset?.value === "string") {
+      control.dataset.value = String(nextValue || "");
+    }
 
     this._setFieldValue(control.dataset.field, nextValue);
     this._setEditorConfig();
@@ -16563,24 +16566,37 @@ class NodaliaLightCardEditor extends HTMLElement {
   }
 
   _renderLightEntityField(label, field, value, options = {}) {
-    const entityOptions = this._getLightEntityOptions();
-    if (!entityOptions.length) {
-      return this._renderTextField(label, field, value, options);
+    const useEntityPicker = Boolean(customElements.get("ha-entity-picker"));
+    if (!useEntityPicker) {
+      const entityOptions = this._getLightEntityOptions();
+      if (!entityOptions.length) {
+        return this._renderTextField(label, field, value, options);
+      }
+
+      return `
+        <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+          <span>${escapeHtml(label)}</span>
+          <select data-field="${escapeHtml(field)}">
+            <option value="">Selecciona una luz</option>
+            ${entityOptions
+              .map(option => `
+                <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
+                  ${escapeHtml(option.displayLabel)}
+                </option>
+              `)
+              .join("")}
+          </select>
+        </label>
+      `;
     }
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(label)}</span>
-        <select data-field="${escapeHtml(field)}">
-          <option value="">Selecciona una luz</option>
-          ${entityOptions
-            .map(option => `
-              <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.displayLabel)}
-              </option>
-            `)
-            .join("")}
-        </select>
+        <ha-entity-picker
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(value === undefined || value === null ? "" : String(value))}"
+        ></ha-entity-picker>
       </label>
     `;
   }
@@ -16589,36 +16605,29 @@ class NodaliaLightCardEditor extends HTMLElement {
     const useIconPicker = Boolean(customElements.get("ha-icon-picker"));
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
-    const previewIcon = inputValue || options.fallbackIcon || "mdi:lightbulb";
-
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(label)}</span>
-        <div class="editor-icon-field">
-          <span class="editor-icon-preview" title="${escapeHtml(previewIcon)}">
-            <ha-icon icon="${escapeHtml(previewIcon)}"></ha-icon>
-          </span>
-          ${
-            useIconPicker
-              ? `
-                <ha-icon-picker
-                  data-field="${escapeHtml(field)}"
-                  data-value="${escapeHtml(inputValue)}"
-                  value="${escapeHtml(inputValue)}"
-                  ${placeholder}
-                ></ha-icon-picker>
-              `
-              : `
-                <input
-                  type="text"
-                  data-field="${escapeHtml(field)}"
-                  data-value-type="string"
-                  value="${escapeHtml(inputValue)}"
-                  ${placeholder}
-                />
-              `
-          }
-        </div>
+        ${
+          useIconPicker
+            ? `
+              <ha-icon-picker
+                data-field="${escapeHtml(field)}"
+                data-value="${escapeHtml(inputValue)}"
+                value="${escapeHtml(inputValue)}"
+                ${placeholder}
+              ></ha-icon-picker>
+            `
+            : `
+              <input
+                type="text"
+                data-field="${escapeHtml(field)}"
+                data-value-type="string"
+                value="${escapeHtml(inputValue)}"
+                ${placeholder}
+              />
+            `
+        }
       </label>
     `;
   }
@@ -16724,31 +16733,10 @@ class NodaliaLightCardEditor extends HTMLElement {
           width: 100%;
         }
 
-        .editor-field ha-icon-picker {
+        .editor-field ha-icon-picker,
+        .editor-field ha-entity-picker {
           display: block;
           width: 100%;
-        }
-
-        .editor-icon-field {
-          align-items: center;
-          display: grid;
-          gap: 10px;
-          grid-template-columns: auto minmax(0, 1fr);
-        }
-
-        .editor-icon-preview {
-          align-items: center;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 12px;
-          display: inline-flex;
-          height: 40px;
-          justify-content: center;
-          width: 40px;
-        }
-
-        .editor-icon-preview ha-icon {
-          --mdc-icon-size: 20px;
         }
 
         .editor-toggle {
@@ -16885,10 +16873,15 @@ class NodaliaLightCardEditor extends HTMLElement {
     `;
 
     this.shadowRoot
-      .querySelectorAll("ha-icon-picker[data-field]")
+      .querySelectorAll("ha-icon-picker[data-field], ha-entity-picker[data-field]")
       .forEach(picker => {
         picker.hass = this._hass;
         picker.value = picker.dataset.value || "";
+        if (picker.tagName === "HA-ENTITY-PICKER") {
+          picker.includeDomains = ["light"];
+          picker.allowCustomEntity = true;
+          picker.entityFilter = stateObj => String(stateObj?.entity_id || "").startsWith("light.");
+        }
       });
   }
 }
