@@ -16282,9 +16282,11 @@ class NodaliaLightCardEditor extends HTMLElement {
     this._hass = null;
     this._entityOptionsSignature = "";
     this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
+    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
   }
 
@@ -16315,10 +16317,41 @@ class NodaliaLightCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    return Object.keys(hass?.states || {})
-      .filter(entityId => entityId.startsWith("light."))
-      .sort((left, right) => left.localeCompare(right, "es"))
+    return Object.entries(hass?.states || {})
+      .filter(([entityId]) => entityId.startsWith("light."))
+      .map(([entityId, state]) => `${entityId}:${String(state?.attributes?.friendly_name || "")}:${String(state?.attributes?.icon || "")}`)
+      .sort((left, right) => left.localeCompare(right, "es", { sensitivity: "base" }))
       .join("|");
+  }
+
+  _getLightEntityOptions() {
+    const options = Object.entries(this._hass?.states || {})
+      .filter(([entityId]) => entityId.startsWith("light."))
+      .map(([entityId, state]) => {
+        const friendlyName = String(state?.attributes?.friendly_name || "").trim();
+        return {
+          value: entityId,
+          label: friendlyName || entityId,
+          displayLabel: friendlyName && friendlyName !== entityId
+            ? `${friendlyName} (${entityId})`
+            : entityId,
+        };
+      })
+      .sort((left, right) => (
+        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
+        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+      ));
+
+    const currentValue = String(this._config?.entity || "").trim();
+    if (currentValue && !options.some(option => option.value === currentValue)) {
+      options.unshift({
+        value: currentValue,
+        label: currentValue,
+        displayLabel: currentValue,
+      });
+    }
+
+    return options;
   }
 
   _captureFocusState() {
@@ -16456,6 +16489,26 @@ class NodaliaLightCardEditor extends HTMLElement {
     }
   }
 
+  _onShadowValueChanged(event) {
+    const control = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.field);
+
+    if (!control?.dataset?.field) {
+      return;
+    }
+
+    event.stopPropagation();
+
+    const nextValue = typeof event.detail?.value === "string"
+      ? event.detail.value
+      : control.value;
+
+    this._setFieldValue(control.dataset.field, nextValue);
+    this._setEditorConfig();
+    this._emitConfig();
+  }
+
   _onShadowClick() {}
 
   _renderTextField(label, field, value, options = {}) {
@@ -16505,6 +16558,67 @@ class NodaliaLightCardEditor extends HTMLElement {
             `)
             .join("")}
         </select>
+      </label>
+    `;
+  }
+
+  _renderLightEntityField(label, field, value, options = {}) {
+    const entityOptions = this._getLightEntityOptions();
+    if (!entityOptions.length) {
+      return this._renderTextField(label, field, value, options);
+    }
+
+    return `
+      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <select data-field="${escapeHtml(field)}">
+          <option value="">Selecciona una luz</option>
+          ${entityOptions
+            .map(option => `
+              <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
+                ${escapeHtml(option.displayLabel)}
+              </option>
+            `)
+            .join("")}
+        </select>
+      </label>
+    `;
+  }
+
+  _renderIconPickerField(label, field, value, options = {}) {
+    const useIconPicker = Boolean(customElements.get("ha-icon-picker"));
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    const previewIcon = inputValue || options.fallbackIcon || "mdi:lightbulb";
+
+    return `
+      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div class="editor-icon-field">
+          <span class="editor-icon-preview" title="${escapeHtml(previewIcon)}">
+            <ha-icon icon="${escapeHtml(previewIcon)}"></ha-icon>
+          </span>
+          ${
+            useIconPicker
+              ? `
+                <ha-icon-picker
+                  data-field="${escapeHtml(field)}"
+                  data-value="${escapeHtml(inputValue)}"
+                  value="${escapeHtml(inputValue)}"
+                  ${placeholder}
+                ></ha-icon-picker>
+              `
+              : `
+                <input
+                  type="text"
+                  data-field="${escapeHtml(field)}"
+                  data-value-type="string"
+                  value="${escapeHtml(inputValue)}"
+                  ${placeholder}
+                />
+              `
+          }
+        </div>
       </label>
     `;
   }
@@ -16610,6 +16724,33 @@ class NodaliaLightCardEditor extends HTMLElement {
           width: 100%;
         }
 
+        .editor-field ha-icon-picker {
+          display: block;
+          width: 100%;
+        }
+
+        .editor-icon-field {
+          align-items: center;
+          display: grid;
+          gap: 10px;
+          grid-template-columns: auto minmax(0, 1fr);
+        }
+
+        .editor-icon-preview {
+          align-items: center;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          display: inline-flex;
+          height: 40px;
+          justify-content: center;
+          width: 40px;
+        }
+
+        .editor-icon-preview ha-icon {
+          --mdc-icon-size: 20px;
+        }
+
         .editor-toggle {
           align-items: center;
           grid-template-columns: auto 1fr;
@@ -16637,17 +16778,18 @@ class NodaliaLightCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal y textos visibles de la tarjeta.</div>
+            <div class="editor-section__hint">Entidad principal, nombre visible e icono de la tarjeta.</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("Entidad", "entity", config.entity, {
+            ${this._renderLightEntityField("Entidad de luz", "entity", config.entity, {
               placeholder: "light.salon",
             })}
             ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Salon",
+              placeholder: "Salón",
             })}
-            ${this._renderTextField("Icono", "icon", config.icon, {
+            ${this._renderIconPickerField("Icono", "icon", config.icon, {
               placeholder: "mdi:lightbulb",
+              fallbackIcon: "mdi:lightbulb",
             })}
             ${this._renderTextField(
               "Presets de brillo",
@@ -16664,7 +16806,7 @@ class NodaliaLightCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Que bloques quieres mostrar dentro de la tarjeta.</div>
+            <div class="editor-section__hint">Qué bloques quieres mostrar dentro de la tarjeta.</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -16672,7 +16814,7 @@ class NodaliaLightCardEditor extends HTMLElement {
               "compact_layout_mode",
               config.compact_layout_mode || "auto",
               [
-                { value: "auto", label: "Automatico (<4 columnas)" },
+                { value: "auto", label: "Automático (<4 columnas)" },
                 { value: "always", label: "Centrado siempre" },
                 { value: "never", label: "Nunca centrar" },
               ],
@@ -16689,23 +16831,23 @@ class NodaliaLightCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica opcional para los controles.</div>
+            <div class="editor-section__hint">Respuesta háptica opcional para los controles.</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("Fallback con vibración", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
               "Estilo",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Selection" },
-                { value: "light", label: "Light" },
-                { value: "medium", label: "Medium" },
-                { value: "heavy", label: "Heavy" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "failure", label: "Failure" },
+                { value: "selection", label: "Selección" },
+                { value: "light", label: "Ligero" },
+                { value: "medium", label: "Medio" },
+                { value: "heavy", label: "Intenso" },
+                { value: "success", label: "Éxito" },
+                { value: "warning", label: "Aviso" },
+                { value: "failure", label: "Fallo" },
               ],
             )}
           </div>
@@ -16714,7 +16856,7 @@ class NodaliaLightCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales basicos del look Nodalia.</div>
+            <div class="editor-section__hint">Ajustes visuales básicos del look Nodalia.</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
@@ -16722,31 +16864,31 @@ class NodaliaLightCardEditor extends HTMLElement {
             ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
             ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
             ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-            ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamano boton principal", "styles.icon.size", config.styles.icon.size)}
+            ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
+            ${this._renderTextField("Tamaño botón principal", "styles.icon.size", config.styles.icon.size)}
             ${this._renderTextField("Color icono encendida", "styles.icon.on_color", config.styles.icon.on_color)}
             ${this._renderTextField("Color icono apagada", "styles.icon.off_color", config.styles.icon.off_color)}
-            ${this._renderTextField("Tamano boton", "styles.control.size", config.styles.control.size)}
+            ${this._renderTextField("Tamaño botón", "styles.control.size", config.styles.control.size)}
             ${this._renderTextField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background)}
             ${this._renderTextField("Color acento", "styles.control.accent_color", config.styles.control.accent_color)}
             ${this._renderTextField("Alto burbuja info", "styles.chip_height", config.styles.chip_height)}
             ${this._renderTextField("Texto burbuja info", "styles.chip_font_size", config.styles.chip_font_size)}
             ${this._renderTextField("Padding burbuja info", "styles.chip_padding", config.styles.chip_padding)}
-            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
+            ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
             ${this._renderTextField("Alto contenedor slider", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
             ${this._renderTextField("Grosor slider", "styles.slider_height", config.styles.slider_height)}
-            ${this._renderTextField("Tamano thumb slider", "styles.slider_thumb_size", config.styles.slider_thumb_size)}
+            ${this._renderTextField("Tamaño thumb slider", "styles.slider_thumb_size", config.styles.slider_thumb_size)}
             ${this._renderTextField("Color slider", "styles.slider_color", config.styles.slider_color)}
           </div>
         </section>
-        ${this._getEntityOptionsMarkup()}
       </div>
     `;
 
     this.shadowRoot
-      .querySelectorAll('input[data-field="entity"]')
-      .forEach(input => {
-        input.setAttribute("list", "light-card-entities");
+      .querySelectorAll("ha-icon-picker[data-field]")
+      .forEach(picker => {
+        picker.hass = this._hass;
+        picker.value = picker.dataset.value || "";
       });
   }
 }
