@@ -16616,14 +16616,28 @@ class NodaliaLightCardEditor extends HTMLElement {
   }
 
   _renderLightEntityField(label, field, value, options = {}) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    const useEntityPicker = Boolean(customElements.get("ha-entity-picker"));
     return `
-      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(label)}</span>
-        <ha-entity-picker
-          data-field="${escapeHtml(field)}"
-          data-value="${escapeHtml(value === undefined || value === null ? "" : String(value))}"
-        ></ha-entity-picker>
-      </label>
+        ${
+          useEntityPicker
+            ? `
+              <ha-entity-picker
+                data-field="${escapeHtml(field)}"
+                data-value="${escapeHtml(inputValue)}"
+              ></ha-entity-picker>
+            `
+            : `
+              <ha-selector
+                data-field="${escapeHtml(field)}"
+                data-selector-kind="light-entity"
+                data-value="${escapeHtml(inputValue)}"
+              ></ha-selector>
+            `
+        }
+      </div>
     `;
   }
 
@@ -16631,7 +16645,7 @@ class NodaliaLightCardEditor extends HTMLElement {
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
-      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(label)}</span>
         <ha-icon-picker
           data-field="${escapeHtml(field)}"
@@ -16639,7 +16653,7 @@ class NodaliaLightCardEditor extends HTMLElement {
           value="${escapeHtml(inputValue)}"
           ${placeholder}
         ></ha-icon-picker>
-      </label>
+      </div>
     `;
   }
 
@@ -16745,7 +16759,8 @@ class NodaliaLightCardEditor extends HTMLElement {
         }
 
         .editor-field ha-icon-picker,
-        .editor-field ha-entity-picker {
+        .editor-field ha-entity-picker,
+        .editor-field ha-selector {
           display: block;
           width: 100%;
         }
@@ -16905,15 +16920,32 @@ class NodaliaLightCardEditor extends HTMLElement {
     `;
 
     this.shadowRoot
-      .querySelectorAll("ha-icon-picker[data-field], ha-entity-picker[data-field]")
-      .forEach(picker => {
-        picker.hass = this._hass;
-        picker.value = picker.dataset.value || "";
-        picker.addEventListener("value-changed", this._onShadowValueChanged);
-        if (picker.tagName === "HA-ENTITY-PICKER") {
-          picker.includeDomains = ["light"];
-          picker.allowCustomEntity = true;
-          picker.entityFilter = stateObj => String(stateObj?.entity_id || "").startsWith("light.");
+      .querySelectorAll("ha-icon-picker[data-field], ha-entity-picker[data-field], ha-selector[data-field]")
+      .forEach(control => {
+        control.hass = this._hass;
+        const nextValue = control.dataset.value || "";
+        control.addEventListener("value-changed", this._onShadowValueChanged);
+
+        if (control.tagName === "HA-ICON-PICKER") {
+          control.value = nextValue;
+          return;
+        }
+
+        if (control.tagName === "HA-ENTITY-PICKER") {
+          control.value = nextValue;
+          control.includeDomains = ["light"];
+          control.allowCustomEntity = true;
+          control.entityFilter = stateObj => String(stateObj?.entity_id || "").startsWith("light.");
+          return;
+        }
+
+        if (control.tagName === "HA-SELECTOR" && control.dataset.selectorKind === "light-entity") {
+          control.selector = {
+            entity: {
+              domain: "light",
+            },
+          };
+          control.value = nextValue;
         }
       });
   }
