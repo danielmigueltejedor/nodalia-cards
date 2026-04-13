@@ -1,30 +1,44 @@
-# Nodalia Cards
+# 🎨 Nodalia Cards
 
-Coleccion de tarjetas personalizadas de Home Assistant para el ecosistema Nodalia.
+![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Status](https://img.shields.io/badge/status-stable-success.svg)
+![GitHub](https://img.shields.io/badge/hosted%20on-GitHub-black?logo=github)
 
-Ahora mismo incluye:
+Colección de tarjetas personalizadas de Home Assistant para el ecosistema Nodalia. Diseñadas para ofrecer una experiencia visual elegante y funcional en tus dashboards.
 
-- `custom:nodalia-navigation-bar`
-- `custom:nodalia-media-player`
-- `custom:nodalia-light-card`
-- `custom:nodalia-fan-card`
-- `custom:nodalia-humidifier-card`
-- `custom:nodalia-circular-gauge-card`
-- `custom:nodalia-graph-card`
-- `custom:nodalia-power-flow-card`
-- `custom:nodalia-climate-card`
-- `custom:nodalia-alarm-panel-card`
-- `custom:nodalia-advance-vacuum-card`
-- `custom:nodalia-entity-card`
-- `custom:nodalia-fav-card`
-- `custom:nodalia-insignia-card`
-- `custom:nodalia-person-card`
-- `custom:nodalia-weather-card`
-- `custom:nodalia-vacuum-card`
+> 🟡 Proyecto no afiliado a Home Assistant.  
+> Uso personal y educativo.
 
-## Instalacion
+---
 
-### Opcion 1: un solo recurso
+## ✨ Características
+
+Incluye una amplia variedad de tarjetas personalizadas:
+
+- `custom:nodalia-navigation-bar` - Barra de navegación elegante
+- `custom:nodalia-media-player` - Reproductor multimedia avanzado
+- `custom:nodalia-light-card` - Control de iluminación intuitivo
+- `custom:nodalia-fan-card` - Gestión de ventiladores
+- `custom:nodalia-humidifier-card` - Control de humidificadores/deshumidificadores
+- `custom:nodalia-circular-gauge-card` - Indicadores circulares para sensores
+- `custom:nodalia-graph-card` - Gráficos elegantes para entidades
+- `custom:nodalia-power-flow-card` - Flujo energético con solar, batería y consumos
+- `custom:nodalia-climate-card` - Control climático con dial circular
+- `custom:nodalia-alarm-panel-card` - Panel de alarma elegante
+- `custom:nodalia-advance-vacuum-card` - Mapa avanzado para robots aspiradores
+- `custom:nodalia-entity-card` - Tarjeta todoterreno para cualquier entidad
+- `custom:nodalia-fav-card` - Controles rápidos y favoritos
+- `custom:nodalia-insignia-card` - Insignias compactas estilo chip
+- `custom:nodalia-person-card` - Tarjetas para personas con foto y zona
+- `custom:nodalia-weather-card` - Información meteorológica elegante
+- `custom:nodalia-vacuum-card` - Control básico de aspiradores
+
+---
+
+## 🧩 Instalación
+
+### 🔹 Opción 1: Un solo recurso (Recomendada)
 
 Usa el bundle principal:
 
@@ -33,16 +47,13 @@ url: /local/nodalia-cards.js
 type: module
 ```
 
-Si instalas la tarjeta desde HACS, Home Assistant servira este mismo bundle desde
-`/hacsfiles/nodalia-cards/nodalia-cards.js`. Tras publicar un release nuevo y actualizar
-desde HACS, conviene hacer una recarga fuerte del navegador para evitar quedarte con una
-version antigua en cache.
+Si instalas la tarjeta desde HACS, Home Assistant servirá este mismo bundle desde `/hacsfiles/nodalia-cards/nodalia-cards.js`. Tras publicar un release nuevo y actualizar desde HACS, conviene hacer una recarga fuerte del navegador para evitar quedarte con una versión antigua en caché.
 
-Ese recurso carga automaticamente:
+Ese recurso carga automáticamente todas las tarjetas listadas arriba.
 
-- `nodalia-navigation-bar.js`
-- `nodalia-media-player.js`
-- `nodalia-light-card.js`
+### 🔹 Opción 2: Recursos individuales
+
+Si prefieres cargarlas por separado:
 - `nodalia-fan-card.js`
 - `nodalia-humidifier-card.js`
 - `nodalia-circular-gauge-card.js`
@@ -450,6 +461,24 @@ show_zone_badge: true
 - `nodalia-weather-card.js`: tarjeta meteorologica elegante
 - `nodalia-vacuum-card.js`: tarjeta de aspirador
 
+---
+
+## 🧑‍💻 Autor
+
+- **[@danielmigueltejedor](https://github.com/danielmigueltejedor)**  
+- Repositorio: https://github.com/danielmigueltejedor/nodalia-cards  
+- Licencia: MIT
+
+---
+
 ## Siguiente paso recomendado
 
 Cuando quieras, el siguiente refactor natural es extraer helpers compartidos a un modulo comun para evitar duplicidades entre ambas tarjetas sin cambiar su API publica.
+
+---
+
+## 💰 Donaciones
+
+Si te gusta este proyecto y quieres apoyar su desarrollo, considera hacer una donación:
+
+[![PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://paypal.me/DanielMiguelTejedor)
