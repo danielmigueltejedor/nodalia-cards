@@ -14372,7 +14372,7 @@ class NodaliaFanCard extends HTMLElement {
           display: grid;
           gap: 14px;
           grid-template-columns: minmax(0, 1fr) auto;
-          margin-top: 4px;
+          margin-top: 8px;
         }
 
         .fan-card__slider-wrap {
