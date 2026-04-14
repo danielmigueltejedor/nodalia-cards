@@ -646,6 +646,7 @@ class NodaliaFanCard extends HTMLElement {
 
     if (slider instanceof HTMLInputElement) {
       slider.style.setProperty("--percentage", String(nextValue));
+      slider.closest(".fan-card__slider-shell")?.style.setProperty("--percentage", String(nextValue));
     }
   }
 
@@ -1292,6 +1293,8 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card__slider-wrap {
+          --fan-card-slider-thumb-size: calc(${styles.slider_thumb_size} + 12px);
+          --fan-card-slider-thumb-half: calc(var(--fan-card-slider-thumb-size) / 2);
           align-items: center;
           background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.06);
@@ -1300,6 +1303,29 @@ class NodaliaFanCard extends HTMLElement {
           display: flex;
           min-height: ${styles.slider_wrap_height};
           padding: 0 14px;
+        }
+
+        .fan-card__slider-shell {
+          flex: 1;
+          min-width: 0;
+          position: relative;
+        }
+
+        .fan-card__slider-track {
+          background:
+            linear-gradient(
+              90deg,
+              ${styles.slider_color} calc(var(--percentage, ${currentPercentage}) * 1%),
+              rgba(255, 255, 255, 0.08) calc(var(--percentage, ${currentPercentage}) * 1%)
+            );
+          border-radius: 999px;
+          height: ${styles.slider_height};
+          left: var(--fan-card-slider-thumb-half);
+          pointer-events: none;
+          position: absolute;
+          right: var(--fan-card-slider-thumb-half);
+          top: 50%;
+          transform: translateY(-50%);
         }
 
         .fan-card__slider-row--solo {
@@ -1312,39 +1338,32 @@ class NodaliaFanCard extends HTMLElement {
           background: transparent;
           cursor: pointer;
           flex: 1;
-          height: max(44px, calc(${styles.slider_thumb_size} + 12px));
+          height: max(44px, var(--fan-card-slider-thumb-size));
           margin: 0;
+          position: relative;
           touch-action: pan-y;
           user-select: none;
           -webkit-user-select: none;
           width: 100%;
+          z-index: 1;
         }
 
         .fan-card__slider::-webkit-slider-runnable-track {
-          background:
-            linear-gradient(
-              90deg,
-              ${styles.slider_color} calc(var(--percentage, ${currentPercentage}) * 1%),
-              rgba(255, 255, 255, 0.08) calc(var(--percentage, ${currentPercentage}) * 1%)
-            );
-          background-position: center;
-          background-repeat: no-repeat;
-          background-size: calc(100% - 12px) 100%;
+          background: transparent;
           border-radius: 999px;
           height: ${styles.slider_height};
         }
 
+        .fan-card__slider::-moz-range-progress {
+          background: transparent;
+          border: 0;
+          height: ${styles.slider_height};
+        }
+
         .fan-card__slider::-moz-range-track {
-          background:
-            linear-gradient(
-              90deg,
-              ${styles.slider_color} calc(var(--percentage, ${currentPercentage}) * 1%),
-              rgba(255, 255, 255, 0.08) calc(var(--percentage, ${currentPercentage}) * 1%)
-            );
-          background-position: center;
-          background-repeat: no-repeat;
-          background-size: calc(100% - 12px) 100%;
+          background: transparent;
           border-radius: 999px;
+          border: 0;
           height: ${styles.slider_height};
         }
 
@@ -1469,17 +1488,20 @@ class NodaliaFanCard extends HTMLElement {
               ? `
                 <div class="fan-card__slider-row ${hasSecondaryControls ? "" : "fan-card__slider-row--solo"}">
                   <div class="fan-card__slider-wrap">
-                    <input
-                      type="range"
-                      class="fan-card__slider"
-                      data-fan-control="percentage"
-                      min="0"
-                      max="100"
-                      step="any"
-                      value="${currentPercentage}"
-                      style="--percentage:${currentPercentage};"
-                      aria-label="Velocidad"
-                    />
+                    <div class="fan-card__slider-shell" style="--percentage:${currentPercentage};">
+                      <div class="fan-card__slider-track"></div>
+                      <input
+                        type="range"
+                        class="fan-card__slider"
+                        data-fan-control="percentage"
+                        min="0"
+                        max="100"
+                        step="any"
+                        value="${currentPercentage}"
+                        style="--percentage:${currentPercentage};"
+                        aria-label="Velocidad"
+                      />
+                    </div>
                   </div>
                   ${
                     hasSecondaryControls

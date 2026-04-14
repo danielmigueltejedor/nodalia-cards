@@ -1067,6 +1067,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     if (slider instanceof HTMLInputElement) {
       slider.style.setProperty("--media-volume", String(nextValue));
+      slider.closest(".media-player__volume-slider-shell")?.style.setProperty("--media-volume", String(nextValue));
     }
   }
 
@@ -2597,18 +2598,21 @@ class NodaliaMediaPlayer extends HTMLElement {
     const tvVolumeSliderMarkup = volumeSupported && !isTvOff && this._tvVolumePickerEntity === player.entity
       ? `
         <div class="media-player__tv-volume-wrap">
-          <input
-            type="range"
-            class="media-player__volume-slider"
-            data-media-slider="volume"
-            data-entity="${escapeHtml(player.entity)}"
-            min="0"
-            max="100"
-            step="any"
-            value="${currentVolumePercent}"
-            style="--media-volume:${currentVolumePercent};"
-            aria-label="Volumen"
-          />
+          <div class="media-player__volume-slider-shell" style="--media-volume:${currentVolumePercent};">
+            <div class="media-player__volume-track"></div>
+            <input
+              type="range"
+              class="media-player__volume-slider"
+              data-media-slider="volume"
+              data-entity="${escapeHtml(player.entity)}"
+              min="0"
+              max="100"
+              step="any"
+              value="${currentVolumePercent}"
+              style="--media-volume:${currentVolumePercent};"
+              aria-label="Volumen"
+            />
+          </div>
         </div>
       `
       : "";
@@ -3662,6 +3666,8 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__tv-volume-wrap {
+          --media-player-slider-thumb-size: calc(${playerStyles.slider_thumb_size} + 12px);
+          --media-player-slider-thumb-half: calc(var(--media-player-slider-thumb-size) / 2);
           align-items: center;
           background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.06);
@@ -3672,49 +3678,62 @@ class NodaliaMediaPlayer extends HTMLElement {
           width: min(100%, 320px);
         }
 
+        .media-player__volume-slider-shell {
+          min-width: 0;
+          position: relative;
+          width: 100%;
+        }
+
+        .media-player__volume-track {
+          background:
+            linear-gradient(
+              90deg,
+              ${playerStyles.progress_color} 0%,
+              ${playerStyles.progress_color} calc(var(--media-volume, 0) * 1%),
+              rgba(255, 255, 255, 0.08) calc(var(--media-volume, 0) * 1%),
+              rgba(255, 255, 255, 0.08) 100%
+            );
+          border-radius: 999px;
+          height: ${playerStyles.slider_height};
+          left: var(--media-player-slider-thumb-half);
+          pointer-events: none;
+          position: absolute;
+          right: var(--media-player-slider-thumb-half);
+          top: 50%;
+          transform: translateY(-50%);
+        }
+
         .media-player__volume-slider {
           -webkit-appearance: none;
           appearance: none;
           background: transparent;
           cursor: pointer;
           display: block;
-          height: max(44px, calc(${playerStyles.slider_thumb_size} + 12px));
+          height: max(44px, var(--media-player-slider-thumb-size));
           margin: 0;
           outline: none;
+          position: relative;
           touch-action: pan-y;
           user-select: none;
           -webkit-user-select: none;
           width: 100%;
+          z-index: 1;
         }
 
         .media-player__volume-slider::-webkit-slider-runnable-track {
-          background:
-            linear-gradient(
-              90deg,
-              ${playerStyles.progress_color} 0%,
-              ${playerStyles.progress_color} calc(var(--media-volume, 0) * 1%),
-              rgba(255, 255, 255, 0.08) calc(var(--media-volume, 0) * 1%),
-              rgba(255, 255, 255, 0.08) 100%
-            );
-          background-position: center;
-          background-repeat: no-repeat;
-          background-size: calc(100% - 12px) 100%;
+          background: transparent;
           border-radius: 999px;
           height: ${playerStyles.slider_height};
         }
 
+        .media-player__volume-slider::-moz-range-progress {
+          background: transparent;
+          border: 0;
+          height: ${playerStyles.slider_height};
+        }
+
         .media-player__volume-slider::-moz-range-track {
-          background:
-            linear-gradient(
-              90deg,
-              ${playerStyles.progress_color} 0%,
-              ${playerStyles.progress_color} calc(var(--media-volume, 0) * 1%),
-              rgba(255, 255, 255, 0.08) calc(var(--media-volume, 0) * 1%),
-              rgba(255, 255, 255, 0.08) 100%
-            );
-          background-position: center;
-          background-repeat: no-repeat;
-          background-size: calc(100% - 12px) 100%;
+          background: transparent;
           border: 0;
           border-radius: 999px;
           height: ${playerStyles.slider_height};
