@@ -8493,19 +8493,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__volume-thumb {
-          background: var(--primary-text-color);
-          border-radius: 50%;
-          box-shadow:
-            0 0 0 6px rgba(0, 0, 0, 0.12),
-            0 0 0 12px rgba(255, 255, 255, 0.12);
-          height: ${playerStyles.slider_thumb_size};
-          left: calc(var(--media-volume, 0) * 1%);
-          pointer-events: none;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: ${playerStyles.slider_thumb_size};
-          z-index: 2;
+          display: none;
         }
 
         .media-player__volume-slider {
@@ -16008,6 +15996,7 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__slider-shell {
           min-width: 0;
+          overflow: visible;
           position: relative;
           width: 100%;
         }
@@ -16024,30 +16013,70 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         .light-card__slider-thumb {
-          background: var(--primary-text-color);
-          border-radius: 50%;
-          box-shadow:
-            0 0 0 6px rgba(0, 0, 0, 0.12),
-            0 0 0 12px rgba(255, 255, 255, 0.12);
-          height: ${styles.slider_thumb_size};
+          display: none;
           pointer-events: none;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: ${styles.slider_thumb_size};
           z-index: 2;
         }
 
-        .light-card__slider-thumb[data-light-control="brightness"] {
-          left: calc(var(--brightness, ${brightnessPercent}) * 1%);
+        .light-card__slider-thumb[data-light-control="temperature"],
+        .light-card__slider-thumb[data-light-control="color"] {
+          background:
+            linear-gradient(
+              180deg,
+              rgba(255, 255, 255, 0.84) 0%,
+              rgba(255, 255, 255, 0.62) 100%
+            );
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          border-radius: 999px;
+          box-shadow:
+            0 10px 24px rgba(0, 0, 0, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.24);
+          display: block;
+          height: calc(${styles.slider_height} + 10px);
+          -webkit-backdrop-filter: blur(12px);
+          backdrop-filter: blur(12px);
+          width: calc(${styles.slider_thumb_size} - 4px);
         }
 
         .light-card__slider-thumb[data-light-control="temperature"] {
-          left: calc(var(--temperature-progress, ${clamp(temperatureProgress, 0, 100)}) * 1%);
+          left: clamp(
+            calc((${styles.slider_thumb_size} - 4px) / 2),
+            calc(var(--temperature-progress, ${clamp(temperatureProgress, 0, 100)}) * 1%),
+            calc(100% - ((${styles.slider_thumb_size} - 4px) / 2))
+          );
         }
 
         .light-card__slider-thumb[data-light-control="color"] {
-          left: calc(var(--color-progress, ${clamp(colorProgress, 0, 100)}) * 1%);
+          left: clamp(
+            calc((${styles.slider_thumb_size} - 4px) / 2),
+            calc(var(--color-progress, ${clamp(colorProgress, 0, 100)}) * 1%),
+            calc(100% - ((${styles.slider_thumb_size} - 4px) / 2))
+          );
+        }
+
+        .light-card__slider-thumb[data-light-control="temperature"]::before,
+        .light-card__slider-thumb[data-light-control="color"]::before {
+          background: rgba(255, 255, 255, 0.95);
+          border-radius: 999px;
+          content: "";
+          height: calc(100% - 12px);
+          left: 50%;
+          position: absolute;
+          top: 6px;
+          transform: translateX(-50%);
+          width: 3px;
+        }
+
+        .light-card__slider-thumb[data-light-control="temperature"]::after,
+        .light-card__slider-thumb[data-light-control="color"]::after {
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          position: absolute;
         }
 
         .light-card__slider-track[data-light-control="brightness"] {
@@ -18502,19 +18531,7 @@ class NodaliaHumidifierCard extends HTMLElement {
         }
 
         .humidifier-card__slider-thumb {
-          background: #f5f7fb;
-          border-radius: 50%;
-          box-shadow:
-            0 0 0 6px rgba(0, 0, 0, 0.12),
-            0 0 0 12px rgba(255, 255, 255, 0.12);
-          height: ${styles.slider_thumb_size};
-          left: calc(var(--humidity, ${clamp(humidityProgress, 0, 100)}) * 1%);
-          pointer-events: none;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: ${styles.slider_thumb_size};
-          z-index: 2;
+          display: none;
         }
 
         .humidifier-card__slider-actions {
@@ -20690,19 +20707,7 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card__slider-thumb {
-          background: #f5f7fb;
-          border-radius: 50%;
-          box-shadow:
-            0 0 0 6px rgba(0, 0, 0, 0.12),
-            0 0 0 12px rgba(255, 255, 255, 0.12);
-          height: ${styles.slider_thumb_size};
-          left: calc(var(--percentage, ${currentPercentage}) * 1%);
-          pointer-events: none;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: ${styles.slider_thumb_size};
-          z-index: 2;
+          display: none;
         }
 
         .fan-card__slider-row--solo {

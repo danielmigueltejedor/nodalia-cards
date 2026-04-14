@@ -1371,19 +1371,7 @@ class NodaliaHumidifierCard extends HTMLElement {
         }
 
         .humidifier-card__slider-thumb {
-          background: #f5f7fb;
-          border-radius: 50%;
-          box-shadow:
-            0 0 0 6px rgba(0, 0, 0, 0.12),
-            0 0 0 12px rgba(255, 255, 255, 0.12);
-          height: ${styles.slider_thumb_size};
-          left: calc(var(--humidity, ${clamp(humidityProgress, 0, 100)}) * 1%);
-          pointer-events: none;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: ${styles.slider_thumb_size};
-          z-index: 2;
+          display: none;
         }
 
         .humidifier-card__slider-actions {

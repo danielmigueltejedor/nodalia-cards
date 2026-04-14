@@ -3706,19 +3706,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__volume-thumb {
-          background: var(--primary-text-color);
-          border-radius: 50%;
-          box-shadow:
-            0 0 0 6px rgba(0, 0, 0, 0.12),
-            0 0 0 12px rgba(255, 255, 255, 0.12);
-          height: ${playerStyles.slider_thumb_size};
-          left: calc(var(--media-volume, 0) * 1%);
-          pointer-events: none;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: ${playerStyles.slider_thumb_size};
-          z-index: 2;
+          display: none;
         }
 
         .media-player__volume-slider {
