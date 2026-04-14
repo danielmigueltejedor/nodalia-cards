@@ -1329,6 +1329,22 @@ class NodaliaFanCard extends HTMLElement {
           transform: translateY(-50%);
         }
 
+        .fan-card__slider-thumb {
+          background: #f5f7fb;
+          border-radius: 50%;
+          box-shadow:
+            0 0 0 6px rgba(0, 0, 0, 0.12),
+            0 0 0 12px rgba(255, 255, 255, 0.12);
+          height: ${styles.slider_thumb_size};
+          left: calc(var(--percentage, ${currentPercentage}) * 1%);
+          pointer-events: none;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: ${styles.slider_thumb_size};
+          z-index: 2;
+        }
+
         .fan-card__slider-row--solo {
           grid-template-columns: minmax(0, 1fr);
         }
@@ -1374,25 +1390,21 @@ class NodaliaFanCard extends HTMLElement {
         .fan-card__slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          background: #f5f7fb;
+          background: transparent;
           border: 0;
           border-radius: 50%;
-          box-shadow:
-            0 0 0 6px rgba(0, 0, 0, 0.12),
-            0 0 0 12px rgba(255, 255, 255, 0.12);
+          box-shadow: none;
           box-sizing: border-box;
           height: ${styles.slider_thumb_size};
-          margin-top: calc(((${styles.slider_height} - ${styles.slider_thumb_size}) / 2) + ((var(--fan-card-slider-input-height) - ${styles.slider_height}) / 4));
+          margin-top: calc((${styles.slider_height} - ${styles.slider_thumb_size}) / 2);
           width: ${styles.slider_thumb_size};
         }
 
         .fan-card__slider::-moz-range-thumb {
-          background: #f5f7fb;
+          background: transparent;
           border: 0;
           border-radius: 50%;
-          box-shadow:
-            0 0 0 6px rgba(0, 0, 0, 0.12),
-            0 0 0 12px rgba(255, 255, 255, 0.12);
+          box-shadow: none;
           box-sizing: border-box;
           height: ${styles.slider_thumb_size};
           width: ${styles.slider_thumb_size};
@@ -1507,6 +1519,7 @@ class NodaliaFanCard extends HTMLElement {
                         style="--percentage:${currentPercentage};"
                         aria-label="Velocidad"
                       />
+                      <div class="fan-card__slider-thumb"></div>
                     </div>
                   </div>
                   ${
