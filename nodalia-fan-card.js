@@ -1327,6 +1327,9 @@ class NodaliaFanCard extends HTMLElement {
               ${styles.slider_color} calc(var(--percentage, ${currentPercentage}) * 1%),
               rgba(255, 255, 255, 0.08) calc(var(--percentage, ${currentPercentage}) * 1%)
             );
+          background-position: center;
+          background-repeat: no-repeat;
+          background-size: calc(100% - 12px) 100%;
           border-radius: 999px;
           height: ${styles.slider_height};
         }
@@ -1338,6 +1341,9 @@ class NodaliaFanCard extends HTMLElement {
               ${styles.slider_color} calc(var(--percentage, ${currentPercentage}) * 1%),
               rgba(255, 255, 255, 0.08) calc(var(--percentage, ${currentPercentage}) * 1%)
             );
+          background-position: center;
+          background-repeat: no-repeat;
+          background-size: calc(100% - 12px) 100%;
           border-radius: 999px;
           height: ${styles.slider_height};
         }

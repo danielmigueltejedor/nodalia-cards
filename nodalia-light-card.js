@@ -1709,12 +1709,18 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__slider::-webkit-slider-runnable-track {
           background: var(--slider-track-background);
+          background-position: center;
+          background-repeat: no-repeat;
+          background-size: calc(100% - 12px) 100%;
           border-radius: 999px;
           height: ${styles.slider_height};
         }
 
         .light-card__slider::-moz-range-track {
           background: var(--slider-track-background);
+          background-position: center;
+          background-repeat: no-repeat;
+          background-size: calc(100% - 12px) 100%;
           border: 0;
           border-radius: 999px;
           height: ${styles.slider_height};

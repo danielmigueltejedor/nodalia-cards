@@ -8462,6 +8462,19 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__volume-slider {
           -webkit-appearance: none;
           appearance: none;
+          background: transparent;
+          cursor: pointer;
+          display: block;
+          height: max(44px, calc(${playerStyles.slider_thumb_size} + 12px));
+          margin: 0;
+          outline: none;
+          touch-action: pan-y;
+          user-select: none;
+          -webkit-user-select: none;
+          width: 100%;
+        }
+
+        .media-player__volume-slider::-webkit-slider-runnable-track {
           background:
             linear-gradient(
               90deg,
@@ -8470,15 +8483,28 @@ class NodaliaMediaPlayer extends HTMLElement {
               rgba(255, 255, 255, 0.08) calc(var(--media-volume, 0) * 1%),
               rgba(255, 255, 255, 0.08) 100%
             );
+          background-position: center;
+          background-repeat: no-repeat;
+          background-size: calc(100% - 12px) 100%;
           border-radius: 999px;
-          cursor: pointer;
-          display: block;
-          height: max(44px, calc(${playerStyles.slider_height} + 18px));
-          outline: none;
-          touch-action: pan-y;
-          user-select: none;
-          -webkit-user-select: none;
-          width: 100%;
+          height: ${playerStyles.slider_height};
+        }
+
+        .media-player__volume-slider::-moz-range-track {
+          background:
+            linear-gradient(
+              90deg,
+              ${playerStyles.progress_color} 0%,
+              ${playerStyles.progress_color} calc(var(--media-volume, 0) * 1%),
+              rgba(255, 255, 255, 0.08) calc(var(--media-volume, 0) * 1%),
+              rgba(255, 255, 255, 0.08) 100%
+            );
+          background-position: center;
+          background-repeat: no-repeat;
+          background-size: calc(100% - 12px) 100%;
+          border: 0;
+          border-radius: 999px;
+          height: ${playerStyles.slider_height};
         }
 
         .media-player__volume-slider::-webkit-slider-thumb {
@@ -8492,6 +8518,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           box-sizing: border-box;
           cursor: pointer;
           height: calc(${playerStyles.slider_thumb_size} + 12px);
+          margin-top: calc((${playerStyles.slider_height} - (${playerStyles.slider_thumb_size} + 12px)) / 2);
           width: calc(${playerStyles.slider_thumb_size} + 12px);
         }
 
@@ -8505,11 +8532,6 @@ class NodaliaMediaPlayer extends HTMLElement {
           cursor: pointer;
           height: calc(${playerStyles.slider_thumb_size} + 12px);
           width: calc(${playerStyles.slider_thumb_size} + 12px);
-        }
-
-        .media-player__volume-slider::-moz-range-track {
-          background: transparent;
-          border: 0;
         }
 
         .media-player__chip {
@@ -16028,12 +16050,18 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__slider::-webkit-slider-runnable-track {
           background: var(--slider-track-background);
+          background-position: center;
+          background-repeat: no-repeat;
+          background-size: calc(100% - 12px) 100%;
           border-radius: 999px;
           height: ${styles.slider_height};
         }
 
         .light-card__slider::-moz-range-track {
           background: var(--slider-track-background);
+          background-position: center;
+          background-repeat: no-repeat;
+          background-size: calc(100% - 12px) 100%;
           border: 0;
           border-radius: 999px;
           height: ${styles.slider_height};
@@ -18371,6 +18399,9 @@ class NodaliaHumidifierCard extends HTMLElement {
               ${styles.slider_color} calc(var(--humidity, ${clamp(humidityProgress, 0, 100)}) * 1%),
               rgba(255, 255, 255, 0.08) calc(var(--humidity, ${clamp(humidityProgress, 0, 100)}) * 1%)
             );
+          background-position: center;
+          background-repeat: no-repeat;
+          background-size: calc(100% - 12px) 100%;
           border-radius: 999px;
           height: ${styles.slider_height};
         }
@@ -18382,6 +18413,9 @@ class NodaliaHumidifierCard extends HTMLElement {
               ${styles.slider_color} calc(var(--humidity, ${clamp(humidityProgress, 0, 100)}) * 1%),
               rgba(255, 255, 255, 0.08) calc(var(--humidity, ${clamp(humidityProgress, 0, 100)}) * 1%)
             );
+          background-position: center;
+          background-repeat: no-repeat;
+          background-size: calc(100% - 12px) 100%;
           border-radius: 999px;
           height: ${styles.slider_height};
         }
@@ -20513,6 +20547,9 @@ class NodaliaFanCard extends HTMLElement {
               ${styles.slider_color} calc(var(--percentage, ${currentPercentage}) * 1%),
               rgba(255, 255, 255, 0.08) calc(var(--percentage, ${currentPercentage}) * 1%)
             );
+          background-position: center;
+          background-repeat: no-repeat;
+          background-size: calc(100% - 12px) 100%;
           border-radius: 999px;
           height: ${styles.slider_height};
         }
@@ -20524,6 +20561,9 @@ class NodaliaFanCard extends HTMLElement {
               ${styles.slider_color} calc(var(--percentage, ${currentPercentage}) * 1%),
               rgba(255, 255, 255, 0.08) calc(var(--percentage, ${currentPercentage}) * 1%)
             );
+          background-position: center;
+          background-repeat: no-repeat;
+          background-size: calc(100% - 12px) 100%;
           border-radius: 999px;
           height: ${styles.slider_height};
         }

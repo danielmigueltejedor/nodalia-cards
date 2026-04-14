@@ -1371,6 +1371,9 @@ class NodaliaHumidifierCard extends HTMLElement {
               ${styles.slider_color} calc(var(--humidity, ${clamp(humidityProgress, 0, 100)}) * 1%),
               rgba(255, 255, 255, 0.08) calc(var(--humidity, ${clamp(humidityProgress, 0, 100)}) * 1%)
             );
+          background-position: center;
+          background-repeat: no-repeat;
+          background-size: calc(100% - 12px) 100%;
           border-radius: 999px;
           height: ${styles.slider_height};
         }
@@ -1382,6 +1385,9 @@ class NodaliaHumidifierCard extends HTMLElement {
               ${styles.slider_color} calc(var(--humidity, ${clamp(humidityProgress, 0, 100)}) * 1%),
               rgba(255, 255, 255, 0.08) calc(var(--humidity, ${clamp(humidityProgress, 0, 100)}) * 1%)
             );
+          background-position: center;
+          background-repeat: no-repeat;
+          background-size: calc(100% - 12px) 100%;
           border-radius: 999px;
           height: ${styles.slider_height};
         }
