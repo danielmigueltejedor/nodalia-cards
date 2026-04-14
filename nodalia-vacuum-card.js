@@ -270,6 +270,90 @@ function escapeSelectorValue(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
+function resolveEditorColorValue(value) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || typeof document === "undefined") {
+    return "";
+  }
+
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.color = "";
+  probe.style.color = rawValue;
+  if (!probe.style.color) {
+    return rawValue;
+  }
+
+  (document.body || document.documentElement).appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved || rawValue;
+}
+
+function formatEditorHexChannel(value) {
+  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+}
+
+function formatEditorColorFromHex(hex, alpha = 1) {
+  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+    return String(hex ?? "");
+  }
+
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+  const safeAlpha = clamp(Number(alpha), 0, 1);
+  if (safeAlpha >= 0.999) {
+    return `#${normalizedHex}`;
+  }
+
+  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+}
+
+function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const channels = resolvedValue.match(/[\d.]+/g) || [];
+  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+
+  return {
+    alpha,
+    hex,
+    resolved: resolvedValue,
+    source: sourceValue,
+    value: formatEditorColorFromHex(hex, alpha),
+  };
+}
+
+function getEditorColorFallbackValue(field) {
+  const normalizedField = String(field ?? "");
+
+  if (normalizedField.endsWith("off_color") || normalizedField.endsWith("docked_color")) {
+    return "var(--state-inactive-color, rgba(255, 255, 255, 0.55))";
+  }
+
+  if (normalizedField.endsWith("accent_background")) {
+    return "rgba(var(--rgb-primary-color), 0.18)";
+  }
+
+  if (normalizedField.endsWith("background")) {
+    return "var(--ha-card-background)";
+  }
+
+  if (normalizedField.endsWith("error_color")) {
+    return "var(--error-color, #ff6b6b)";
+  }
+
+  return "var(--info-color, #71c0ff)";
+}
+
 function fireEvent(node, type, detail, options) {
   const event = new CustomEvent(type, {
     bubbles: options?.bubbles ?? true,
@@ -2256,10 +2340,13 @@ class NodaliaVacuumCardEditor extends HTMLElement {
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._entityOptionsSignature = "";
+    this._showStyleSection = false;
     this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
+    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
   }
 
@@ -2290,14 +2377,65 @@ class NodaliaVacuumCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    return Object.keys(hass?.states || {})
-      .filter(entityId =>
-        entityId.startsWith("vacuum.") ||
-        entityId.startsWith("select.") ||
-        entityId.startsWith("sensor."),
-      )
-      .sort((left, right) => left.localeCompare(right, "es"))
+    return Object.entries(hass?.states || {})
+      .filter(([entityId]) => (
+        entityId.startsWith("vacuum.")
+        || entityId.startsWith("select.")
+        || entityId.startsWith("sensor.")
+      ))
+      .map(([entityId, state]) => `${entityId}:${String(state?.attributes?.friendly_name || "")}:${String(state?.attributes?.icon || "")}`)
+      .sort((left, right) => left.localeCompare(right, "es", { sensitivity: "base" }))
       .join("|");
+  }
+
+  _buildEntityOptions(filterFn, currentValue = "") {
+    const options = Object.entries(this._hass?.states || {})
+      .filter(([entityId, state]) => filterFn(entityId, state))
+      .map(([entityId, state]) => {
+        const friendlyName = String(state?.attributes?.friendly_name || "").trim();
+        return {
+          value: entityId,
+          label: friendlyName || entityId,
+          displayLabel: friendlyName && friendlyName !== entityId
+            ? `${friendlyName} (${entityId})`
+            : entityId,
+        };
+      })
+      .sort((left, right) => (
+        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
+        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+      ));
+
+    if (currentValue && !options.some(option => option.value === currentValue)) {
+      options.unshift({
+        value: currentValue,
+        label: currentValue,
+        displayLabel: currentValue,
+      });
+    }
+
+    return options;
+  }
+
+  _getVacuumEntityOptions() {
+    return this._buildEntityOptions(
+      entityId => entityId.startsWith("vacuum."),
+      String(this._config?.entity || "").trim(),
+    );
+  }
+
+  _getSelectEntityOptions(field) {
+    return this._buildEntityOptions(
+      entityId => entityId.startsWith("select."),
+      String(this._config?.[field] || "").trim(),
+    );
+  }
+
+  _getSensorEntityOptions(field) {
+    return this._buildEntityOptions(
+      entityId => entityId.startsWith("sensor."),
+      String(this._config?.[field] || "").trim(),
+    );
   }
 
   _captureFocusState() {
@@ -2403,6 +2541,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
     switch (valueType) {
       case "boolean":
         return Boolean(input.checked);
+      case "color":
+        return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
       case "csv":
         return arrayFromCsv(input.value);
       default:
@@ -2430,7 +2570,46 @@ class NodaliaVacuumCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowClick() {}
+  _onShadowValueChanged(event) {
+    const control = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.field);
+
+    if (!control?.dataset?.field) {
+      return;
+    }
+
+    event.stopPropagation();
+
+    const nextValue = typeof event.detail?.value === "string"
+      ? event.detail.value
+      : control.value;
+    if (typeof control.dataset?.value === "string") {
+      control.dataset.value = String(nextValue || "");
+    }
+
+    this._setFieldValue(control.dataset.field, nextValue);
+    this._setEditorConfig();
+    this._emitConfig();
+  }
+
+  _onShadowClick(event) {
+    const toggleButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+
+    if (!toggleButton) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (toggleButton.dataset.editorToggle === "styles") {
+      this._showStyleSection = !this._showStyleSection;
+      this._render();
+    }
+  }
 
   _renderTextField(label, field, value, options = {}) {
     const inputType = options.type || "text";
@@ -2452,6 +2631,33 @@ class NodaliaVacuumCardEditor extends HTMLElement {
     `;
   }
 
+  _renderColorField(label, field, value, options = {}) {
+    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+    const currentValue = value === undefined || value === null || value === ""
+      ? fallbackValue
+      : String(value);
+    const colorModel = getEditorColorModel(currentValue, fallbackValue);
+
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="Color personalizado">
+            <input
+              type="color"
+              data-field="${escapeHtml(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml(String(colorModel.alpha))}"
+              value="${escapeHtml(colorModel.hex)}"
+              aria-label="${escapeHtml(label)}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
+          </label>
+        </div>
+      </div>
+    `;
+  }
+
   _renderCheckboxField(label, field, checked) {
     return `
       <label class="editor-toggle">
@@ -2466,9 +2672,9 @@ class NodaliaVacuumCardEditor extends HTMLElement {
     `;
   }
 
-  _renderSelectField(label, field, value, options) {
+  _renderSelectField(label, field, value, options, renderOptions = {}) {
     return `
-      <label class="editor-field">
+      <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(label)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options
@@ -2483,32 +2689,102 @@ class NodaliaVacuumCardEditor extends HTMLElement {
     `;
   }
 
-  _getEntityOptionsMarkup() {
-    const entityIds = Object.keys(this._hass?.states || {})
-      .filter(entityId => entityId.startsWith("vacuum."))
-      .sort((left, right) => left.localeCompare(right, "es"));
-    const selectEntityIds = Object.keys(this._hass?.states || {})
-      .filter(entityId => entityId.startsWith("select."))
-      .sort((left, right) => left.localeCompare(right, "es"));
-    const sensorEntityIds = Object.keys(this._hass?.states || {})
-      .filter(entityId => entityId.startsWith("sensor."))
-      .sort((left, right) => left.localeCompare(right, "es"));
+  _renderEntityPickerField(label, field, value, options = {}) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div
+          class="editor-control-host"
+          data-mounted-control="${escapeHtml(options.controlType || "entity")}"
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+        ></div>
+      </div>
+    `;
+  }
 
-    if (!entityIds.length && !selectEntityIds.length && !sensorEntityIds.length) {
-      return "";
+  _renderIconPickerField(label, field, value, options = {}) {
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <ha-icon-picker
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+          value="${escapeHtml(inputValue)}"
+          ${placeholder}
+        ></ha-icon-picker>
+      </div>
+    `;
+  }
+
+  _mountEntityPicker(host, pickerOptions) {
+    if (!(host instanceof HTMLElement)) {
+      return;
     }
 
-    return `
-      <datalist id="vacuum-card-entities">
-        ${entityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-      <datalist id="vacuum-card-select-entities">
-        ${selectEntityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-      <datalist id="vacuum-card-sensor-entities">
-        ${sensorEntityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-    `;
+    const field = host.dataset.field || pickerOptions.field || "entity";
+    const nextValue = host.dataset.value || "";
+    let control = null;
+
+    if (customElements.get("ha-entity-picker")) {
+      control = document.createElement("ha-entity-picker");
+      control.includeDomains = pickerOptions.includeDomains || [];
+      control.allowCustomEntity = true;
+      control.entityFilter = pickerOptions.entityFilter;
+    } else {
+      control = document.createElement("select");
+      pickerOptions.getOptions(field).forEach(option => {
+        const optionElement = document.createElement("option");
+        optionElement.value = option.value;
+        optionElement.textContent = option.displayLabel;
+        control.appendChild(optionElement);
+      });
+      control.addEventListener("change", this._onShadowInput);
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+
+    if (control.tagName !== "SELECT") {
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    }
+
+    host.replaceChildren(control);
+  }
+
+  _mountVacuumEntityPicker(host) {
+    this._mountEntityPicker(host, {
+      includeDomains: ["vacuum"],
+      entityFilter: stateObj => String(stateObj?.entity_id || "").startsWith("vacuum."),
+      getOptions: () => this._getVacuumEntityOptions(),
+    });
+  }
+
+  _mountSelectEntityPicker(host) {
+    this._mountEntityPicker(host, {
+      includeDomains: ["select"],
+      entityFilter: stateObj => String(stateObj?.entity_id || "").startsWith("select."),
+      getOptions: field => this._getSelectEntityOptions(field),
+    });
+  }
+
+  _mountSensorEntityPicker(host) {
+    this._mountEntityPicker(host, {
+      includeDomains: ["sensor"],
+      entityFilter: stateObj => String(stateObj?.entity_id || "").startsWith("sensor."),
+      getOptions: field => this._getSensorEntityOptions(field),
+    });
   }
 
   _render() {
@@ -2560,10 +2836,43 @@ class NodaliaVacuumCardEditor extends HTMLElement {
           line-height: 1.45;
         }
 
+        .editor-section__actions {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 2px;
+        }
+
+        .editor-section__toggle-button {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        .editor-section__toggle-button ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
         .editor-grid {
           display: grid;
           gap: 12px;
           grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .editor-grid--stacked {
+          grid-template-columns: 1fr;
         }
 
         .editor-field,
@@ -2596,6 +2905,64 @@ class NodaliaVacuumCardEditor extends HTMLElement {
           width: 100%;
         }
 
+        .editor-color-field {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          min-height: 40px;
+        }
+
+        .editor-color-picker {
+          align-items: center;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 40px;
+          justify-content: center;
+          position: relative;
+          width: 40px;
+        }
+
+        .editor-color-picker input {
+          cursor: pointer;
+          inset: 0;
+          opacity: 0;
+          position: absolute;
+        }
+
+        .editor-color-picker:hover,
+        .editor-color-picker:focus-within {
+          border-color: rgba(255, 255, 255, 0.22);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .editor-color-swatch {
+          --editor-swatch: #71c0ff;
+          background:
+            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+            conic-gradient(from 90deg, rgba(255, 255, 255, 0.06) 25%, rgba(0, 0, 0, 0.12) 0 50%, rgba(255, 255, 255, 0.06) 0 75%, rgba(0, 0, 0, 0.12) 0);
+          background-position: center;
+          background-size: cover, 10px 10px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 999px;
+          display: block;
+          height: 22px;
+          width: 22px;
+        }
+
+        .editor-field ha-icon-picker,
+        .editor-field ha-entity-picker,
+        .editor-field ha-selector,
+        .editor-control-host,
+        .editor-control-host > * {
+          display: block;
+          width: 100%;
+        }
+
         .editor-toggle {
           align-items: center;
           grid-template-columns: auto 1fr;
@@ -2623,59 +2990,74 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal y textos visibles de la tarjeta.</div>
+            <div class="editor-section__hint">Entidad principal, nombre visible y comportamiento al tocar la tarjeta.</div>
           </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Entidad", "entity", config.entity, {
-              placeholder: "vacuum.salon",
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderEntityPickerField("Entidad del robot", "entity", config.entity, {
+              controlType: "vacuum-entity",
+              fullWidth: true,
+            })}
+            ${this._renderIconPickerField("Icono", "icon", config.icon, {
+              placeholder: "mdi:robot-vacuum",
+              fullWidth: true,
             })}
             ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Robot salon",
-            })}
-            ${this._renderTextField("Icono", "icon", config.icon, {
-              placeholder: "mdi:robot-vacuum",
+              placeholder: "Robot salón",
+              fullWidth: true,
             })}
             ${this._renderSelectField(
-              "Accion al tocar",
+              "Acción al tocar",
               "tap_action",
               config.tap_action || "default",
               [
                 { value: "default", label: "Predeterminada (iniciar o pausar)" },
-                { value: "more-info", label: "More info" },
+                { value: "more-info", label: "Más información" },
                 { value: "navigate", label: "Navegar a una vista" },
-                { value: "none", label: "Sin accion" },
+                { value: "none", label: "Sin acción" },
               ],
+              { fullWidth: true },
             )}
             ${
               (config.tap_action || "default") === "navigate"
-                ? this._renderTextField("Ruta de navegacion", "tap_navigation_path", config.tap_navigation_path, {
+                ? this._renderTextField("Ruta de navegación", "tap_navigation_path", config.tap_navigation_path, {
                     placeholder: "/lovelace/robot",
+                    fullWidth: true,
                   })
                 : ""
             }
             ${this._renderTextField(
-              "Presets de potencia",
+              "Modos rápidos de potencia",
               "fan_presets",
               Array.isArray(config.fan_presets) ? config.fan_presets.join(", ") : "",
               {
                 valueType: "csv",
-                placeholder: "Quiet, Balanced, Turbo, Max",
+                placeholder: "Silencioso, Equilibrado, Turbo, Max",
+                fullWidth: true,
               },
             )}
-            ${this._renderTextField("Sensor estado", "state_entity", config.state_entity, {
-              placeholder: "sensor.roborock_qrevo_s_estado",
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Entidades auxiliares</div>
+            <div class="editor-section__hint">Sensores y selectores opcionales para enriquecer el estado y los controles.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderEntityPickerField("Sensor de estado", "state_entity", config.state_entity, {
+              controlType: "sensor-entity",
             })}
-            ${this._renderTextField("Sensor bateria", "battery_entity", config.battery_entity, {
-              placeholder: "sensor.roborock_qrevo_s_battery",
+            ${this._renderEntityPickerField("Sensor de batería", "battery_entity", config.battery_entity, {
+              controlType: "sensor-entity",
             })}
-            ${this._renderTextField("Sensor habitaciones", "room_mapping_entity", config.room_mapping_entity, {
-              placeholder: "sensor.roborock_qrevo_s_room_mapping",
+            ${this._renderEntityPickerField("Sensor de habitaciones", "room_mapping_entity", config.room_mapping_entity, {
+              controlType: "sensor-entity",
             })}
-            ${this._renderTextField("Select aspirado", "suction_select_entity", config.suction_select_entity, {
-              placeholder: "select.robot_salon_suction",
+            ${this._renderEntityPickerField("Selector de aspirado", "suction_select_entity", config.suction_select_entity, {
+              controlType: "select-entity",
             })}
-            ${this._renderTextField("Select fregado", "mop_select_entity", config.mop_select_entity, {
-              placeholder: "select.robot_salon_mop_mode",
+            ${this._renderEntityPickerField("Selector de fregado", "mop_select_entity", config.mop_select_entity, {
+              controlType: "select-entity",
             })}
           </div>
         </section>
@@ -2683,7 +3065,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Que bloques quieres mostrar dentro de la tarjeta.</div>
+            <div class="editor-section__hint">Qué elementos quieres mostrar dentro de la tarjeta.</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -2691,41 +3073,41 @@ class NodaliaVacuumCardEditor extends HTMLElement {
               "compact_layout_mode",
               config.compact_layout_mode || "auto",
               [
-                { value: "auto", label: "Automatico (<4 columnas)" },
+                { value: "auto", label: "Automático (<4 columnas)" },
                 { value: "always", label: "Centrado siempre" },
                 { value: "never", label: "Nunca centrar" },
               ],
             )}
             ${this._renderCheckboxField("Chip de estado", "show_state_chip", config.show_state_chip !== false)}
-            ${this._renderCheckboxField("Chip de bateria", "show_battery_chip", config.show_battery_chip !== false)}
+            ${this._renderCheckboxField("Chip de batería", "show_battery_chip", config.show_battery_chip !== false)}
             ${this._renderCheckboxField("Controles de modo", "show_mode_controls", config.show_mode_controls !== false)}
-            ${this._renderCheckboxField("Presets de potencia", "show_fan_presets", config.show_fan_presets !== false)}
-            ${this._renderCheckboxField("Boton volver a base", "show_return_to_base", config.show_return_to_base !== false)}
-            ${this._renderCheckboxField("Boton parar", "show_stop", config.show_stop !== false)}
-            ${this._renderCheckboxField("Boton localizar", "show_locate", config.show_locate !== false)}
+            ${this._renderCheckboxField("Modos rápidos de potencia", "show_fan_presets", config.show_fan_presets !== false)}
+            ${this._renderCheckboxField("Botón volver a base", "show_return_to_base", config.show_return_to_base !== false)}
+            ${this._renderCheckboxField("Botón parar", "show_stop", config.show_stop !== false)}
+            ${this._renderCheckboxField("Botón localizar", "show_locate", config.show_locate !== false)}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica opcional para los controles.</div>
+            <div class="editor-section__hint">Respuesta háptica opcional para los controles.</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("Fallback con vibración", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
               "Estilo",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Selection" },
-                { value: "light", label: "Light" },
-                { value: "medium", label: "Medium" },
-                { value: "heavy", label: "Heavy" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "failure", label: "Failure" },
+                { value: "selection", label: "Selección" },
+                { value: "light", label: "Ligero" },
+                { value: "medium", label: "Medio" },
+                { value: "heavy", label: "Intenso" },
+                { value: "success", label: "Éxito" },
+                { value: "warning", label: "Aviso" },
+                { value: "failure", label: "Fallo" },
               ],
             )}
           </div>
@@ -2734,51 +3116,94 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales basicos del look Nodalia.</div>
+            <div class="editor-section__hint">Ajustes visuales básicos del look Nodalia.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="styles"
+                aria-expanded="${this._showStyleSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+              </button>
+            </div>
           </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
-            ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
-            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
-            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-            ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamano burbuja principal", "styles.icon.size", config.styles.icon.size)}
-            ${this._renderTextField("Color activa", "styles.icon.active_color", config.styles.icon.active_color)}
-            ${this._renderTextField("Color lavado mopas", "styles.icon.washing_color", config.styles.icon.washing_color)}
-            ${this._renderTextField("Color secado", "styles.icon.drying_color", config.styles.icon.drying_color)}
-            ${this._renderTextField("Color autovaciado", "styles.icon.emptying_color", config.styles.icon.emptying_color)}
-            ${this._renderTextField("Color volviendo", "styles.icon.returning_color", config.styles.icon.returning_color)}
-            ${this._renderTextField("Color error", "styles.icon.error_color", config.styles.icon.error_color)}
-            ${this._renderTextField("Tamano botones", "styles.control.size", config.styles.control.size)}
-            ${this._renderTextField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background)}
-            ${this._renderTextField("Color acento", "styles.control.accent_color", config.styles.control.accent_color)}
-            ${this._renderTextField("Alto chip", "styles.chip_height", config.styles.chip_height)}
-            ${this._renderTextField("Texto chip", "styles.chip_font_size", config.styles.chip_font_size)}
-            ${this._renderTextField("Padding chip", "styles.chip_padding", config.styles.chip_padding)}
-            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-          </div>
+          ${
+            this._showStyleSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderColorField("Fondo", "styles.card.background", config.styles.card.background)}
+                  ${this._renderTextField("Borde", "styles.card.border", config.styles.card.border)}
+                  ${this._renderTextField("Radio", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${this._renderTextField("Sombra", "styles.card.box_shadow", config.styles.card.box_shadow)}
+                  ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
+                  ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
+                  ${this._renderTextField("Tamaño burbuja principal", "styles.icon.size", config.styles.icon.size)}
+                  ${this._renderColorField("Fondo burbuja principal", "styles.icon.background", config.styles.icon.background, {
+                    fallbackValue: "rgba(255, 255, 255, 0.06)",
+                  })}
+                  ${this._renderColorField("Color icono base", "styles.icon.color", config.styles.icon.color, {
+                    fallbackValue: "var(--primary-text-color)",
+                  })}
+                  ${this._renderColorField("Color aspirando", "styles.icon.active_color", config.styles.icon.active_color, {
+                    fallbackValue: "#61c97a",
+                  })}
+                  ${this._renderColorField("Color lavado de mopas", "styles.icon.washing_color", config.styles.icon.washing_color, {
+                    fallbackValue: "#5aa7ff",
+                  })}
+                  ${this._renderColorField("Color secado", "styles.icon.drying_color", config.styles.icon.drying_color, {
+                    fallbackValue: "#f1c24c",
+                  })}
+                  ${this._renderColorField("Color autovaciado", "styles.icon.emptying_color", config.styles.icon.emptying_color, {
+                    fallbackValue: "#9b6b4a",
+                  })}
+                  ${this._renderColorField("Color volviendo", "styles.icon.returning_color", config.styles.icon.returning_color, {
+                    fallbackValue: "#f6b73c",
+                  })}
+                  ${this._renderColorField("Color en base", "styles.icon.docked_color", config.styles.icon.docked_color, {
+                    fallbackValue: "var(--state-inactive-color, rgba(255, 255, 255, 0.55))",
+                  })}
+                  ${this._renderColorField("Color error", "styles.icon.error_color", config.styles.icon.error_color, {
+                    fallbackValue: "var(--error-color, #ff6b6b)",
+                  })}
+                  ${this._renderTextField("Tamaño botones", "styles.control.size", config.styles.control.size)}
+                  ${this._renderColorField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background, {
+                    fallbackValue: "rgba(var(--rgb-primary-color), 0.18)",
+                  })}
+                  ${this._renderColorField("Color acento", "styles.control.accent_color", config.styles.control.accent_color, {
+                    fallbackValue: "var(--primary-text-color)",
+                  })}
+                  ${this._renderTextField("Alto chip", "styles.chip_height", config.styles.chip_height)}
+                  ${this._renderTextField("Texto chip", "styles.chip_font_size", config.styles.chip_font_size)}
+                  ${this._renderTextField("Padding chip", "styles.chip_padding", config.styles.chip_padding)}
+                  ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
+                </div>
+              `
+              : ""
+          }
         </section>
-        ${this._getEntityOptionsMarkup()}
       </div>
     `;
 
     this.shadowRoot
-      .querySelectorAll('input[data-field="entity"]')
-      .forEach(input => {
-        input.setAttribute("list", "vacuum-card-entities");
-      });
+      .querySelectorAll('[data-mounted-control="vacuum-entity"]')
+      .forEach(host => this._mountVacuumEntityPicker(host));
 
     this.shadowRoot
-      .querySelectorAll('input[data-field="suction_select_entity"], input[data-field="mop_select_entity"]')
-      .forEach(input => {
-        input.setAttribute("list", "vacuum-card-select-entities");
-      });
+      .querySelectorAll('[data-mounted-control="select-entity"]')
+      .forEach(host => this._mountSelectEntityPicker(host));
 
     this.shadowRoot
-      .querySelectorAll('input[data-field="state_entity"], input[data-field="battery_entity"], input[data-field="room_mapping_entity"]')
-      .forEach(input => {
-        input.setAttribute("list", "vacuum-card-sensor-entities");
+      .querySelectorAll('[data-mounted-control="sensor-entity"]')
+      .forEach(host => this._mountSensorEntityPicker(host));
+
+    this.shadowRoot
+      .querySelectorAll("ha-icon-picker[data-field]")
+      .forEach(control => {
+        control.hass = this._hass;
+        control.value = control.dataset.value || "";
+        control.addEventListener("value-changed", this._onShadowValueChanged);
       });
   }
 }
@@ -2791,6 +3216,6 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: CARD_TAG,
   name: "Nodalia Vacuum Card",
-  description: "Tarjeta de aspirador con look Nodalia, acciones rapidas y editor visual.",
+  description: "Tarjeta de aspirador con look Nodalia, acciones rápidas y editor visual.",
   preview: true,
 });

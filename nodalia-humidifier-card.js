@@ -2517,7 +2517,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
             <div class="editor-section__hint">Entidad principal, nombre visible e icono de la tarjeta.</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderHumidifierEntityField("Entidad de humidificador", "entity", config.entity, {
+            ${this._renderHumidifierEntityField("Entidad principal", "entity", config.entity, {
               placeholder: "humidifier.deshumidificador",
               fullWidth: true,
             })}
@@ -2529,11 +2529,20 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
               placeholder: "Deshumidificador",
               fullWidth: true,
             })}
-            ${this._renderSelectEntityField("Select modo", "mode_entity", config.mode_entity, {
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Entidades auxiliares</div>
+            <div class="editor-section__hint">Selectores opcionales para el modo principal y la ventilación.</div>
+          </div>
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderSelectEntityField("Selector de modo", "mode_entity", config.mode_entity, {
               placeholder: "select.deshumidificador_modo",
               fullWidth: true,
             })}
-            ${this._renderSelectEntityField("Select ventilación", "fan_mode_entity", config.fan_mode_entity, {
+            ${this._renderSelectEntityField("Selector de ventilación", "fan_mode_entity", config.fan_mode_entity, {
               placeholder: "select.deshumidificador_ventilador",
               fullWidth: true,
             })}
@@ -2543,37 +2552,37 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Qué bloques quieres mostrar dentro de la tarjeta.</div>
+            <div class="editor-section__hint">Activa u oculta cada bloque de la tarjeta.</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
-              "Layout estrecho",
+              "Modo compacto",
               "compact_layout_mode",
               config.compact_layout_mode || "auto",
               [
                 { value: "auto", label: "Automático (<4 columnas)" },
-                { value: "always", label: "Centrado siempre" },
-                { value: "never", label: "Nunca centrar" },
+                { value: "always", label: "Compacto siempre" },
+                { value: "never", label: "Nunca compacto" },
               ],
             )}
-            ${this._renderCheckboxField("Mostrar estado en burbuja", "show_state", config.show_state === true)}
-            ${this._renderCheckboxField("Mostrar chip de humedad", "show_target_humidity_chip", config.show_target_humidity_chip !== false)}
+            ${this._renderCheckboxField("Mostrar estado actual", "show_state", config.show_state === true)}
+            ${this._renderCheckboxField("Mostrar chip de humedad objetivo", "show_target_humidity_chip", config.show_target_humidity_chip !== false)}
             ${this._renderCheckboxField("Mostrar chip de modo", "show_mode_chip", config.show_mode_chip !== false)}
             ${this._renderCheckboxField("Mostrar chip de ventilación", "show_fan_mode_chip", config.show_fan_mode_chip !== false)}
-            ${this._renderCheckboxField("Mostrar slider", "show_slider", config.show_slider !== false)}
-            ${this._renderCheckboxField("Mostrar botón modo", "show_mode_button", config.show_mode_button !== false)}
-            ${this._renderCheckboxField("Mostrar botón ventilación", "show_fan_mode_button", config.show_fan_mode_button !== false)}
+            ${this._renderCheckboxField("Mostrar control deslizante", "show_slider", config.show_slider !== false)}
+            ${this._renderCheckboxField("Mostrar botón de modo", "show_mode_button", config.show_mode_button !== false)}
+            ${this._renderCheckboxField("Mostrar botón de ventilación", "show_fan_mode_button", config.show_fan_mode_button !== false)}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta háptica opcional para los controles.</div>
+            <div class="editor-section__title">Respuesta háptica</div>
+            <div class="editor-section__hint">Respuesta táctil opcional al usar los controles.</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibración", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("Activar respuesta háptica", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("Usar vibración si no hay háptica", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
               "Estilo",
               "haptics.style",
@@ -2594,7 +2603,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales básicos del look Nodalia.</div>
+            <div class="editor-section__hint">Ajustes visuales principales de la tarjeta.</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -2611,25 +2620,25 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
             this._showStyleSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderColorField("Background", "styles.card.background", config.styles.card.background)}
-                  ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
-                  ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
-                  ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-                  ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-                  ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
+                  ${this._renderColorField("Fondo de la tarjeta", "styles.card.background", config.styles.card.background)}
+                  ${this._renderTextField("Borde de la tarjeta", "styles.card.border", config.styles.card.border)}
+                  ${this._renderTextField("Radio del borde", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${this._renderTextField("Sombra", "styles.card.box_shadow", config.styles.card.box_shadow)}
+                  ${this._renderTextField("Relleno interior", "styles.card.padding", config.styles.card.padding)}
+                  ${this._renderTextField("Separación interna", "styles.card.gap", config.styles.card.gap)}
                   ${this._renderTextField("Tamaño botón principal", "styles.icon.size", config.styles.icon.size)}
-                  ${this._renderColorField("Color icono encendido", "styles.icon.on_color", config.styles.icon.on_color)}
-                  ${this._renderColorField("Color icono apagado", "styles.icon.off_color", config.styles.icon.off_color)}
-                  ${this._renderTextField("Tamaño botón", "styles.control.size", config.styles.control.size)}
-                  ${this._renderColorField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background)}
-                  ${this._renderColorField("Color acento", "styles.control.accent_color", config.styles.control.accent_color)}
-                  ${this._renderTextField("Alto burbuja info", "styles.chip_height", config.styles.chip_height)}
-                  ${this._renderTextField("Texto burbuja info", "styles.chip_font_size", config.styles.chip_font_size)}
-                  ${this._renderTextField("Padding burbuja info", "styles.chip_padding", config.styles.chip_padding)}
-                  ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
-                  ${this._renderTextField("Alto contenedor slider", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
-                  ${this._renderTextField("Grosor slider", "styles.slider_height", config.styles.slider_height)}
-                  ${this._renderColorField("Color slider", "styles.slider_color", config.styles.slider_color)}
+                  ${this._renderColorField("Color icono activo", "styles.icon.on_color", config.styles.icon.on_color)}
+                  ${this._renderColorField("Color icono inactivo", "styles.icon.off_color", config.styles.icon.off_color)}
+                  ${this._renderTextField("Tamaño botones auxiliares", "styles.control.size", config.styles.control.size)}
+                  ${this._renderColorField("Fondo de acento", "styles.control.accent_background", config.styles.control.accent_background)}
+                  ${this._renderColorField("Color de acento", "styles.control.accent_color", config.styles.control.accent_color)}
+                  ${this._renderTextField("Alto burbuja informativa", "styles.chip_height", config.styles.chip_height)}
+                  ${this._renderTextField("Texto burbuja informativa", "styles.chip_font_size", config.styles.chip_font_size)}
+                  ${this._renderTextField("Relleno burbuja informativa", "styles.chip_padding", config.styles.chip_padding)}
+                  ${this._renderTextField("Tamaño del título", "styles.title_size", config.styles.title_size)}
+                  ${this._renderTextField("Alto del contenedor del slider", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
+                  ${this._renderTextField("Grosor del slider", "styles.slider_height", config.styles.slider_height)}
+                  ${this._renderColorField("Color del slider", "styles.slider_color", config.styles.slider_color)}
                 </div>
               `
               : ""
@@ -2664,6 +2673,6 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: CARD_TAG,
   name: "Nodalia Humidifier Card",
-  description: "Tarjeta de humidificador/deshumidificador con slider de humedad y modos.",
+  description: "Tarjeta de humidificador o deshumidificador con control visual de humedad y modos.",
   preview: true,
 });
