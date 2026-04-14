@@ -15600,6 +15600,25 @@ function deleteByPath(target, path) {
   delete cursor[parts[parts.length - 1]];
 }
 
+function getByPath(target, path) {
+  const parts = String(path || "").split(".");
+  let cursor = target;
+
+  for (const key of parts) {
+    if (!key) {
+      return undefined;
+    }
+
+    if (!isObject(cursor) && !Array.isArray(cursor)) {
+      return undefined;
+    }
+
+    cursor = cursor[key];
+  }
+
+  return cursor;
+}
+
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
