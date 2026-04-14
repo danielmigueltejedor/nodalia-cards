@@ -17674,6 +17674,13 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
       control.includeDomains = ["humidifier"];
       control.allowCustomEntity = true;
       control.entityFilter = stateObj => String(stateObj?.entity_id || "").startsWith("humidifier.");
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = {
+        entity: {
+          domain: "humidifier",
+        },
+      };
     } else {
       control = document.createElement("select");
       this._getHumidifierEntityOptions().forEach(option => {
