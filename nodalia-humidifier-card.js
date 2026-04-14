@@ -198,49 +198,6 @@ function escapeSelectorValue(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
-const EDITOR_COLOR_PRESETS = Object.freeze({
-  standard: Object.freeze([
-    { label: "Tema", value: "var(--primary-color)" },
-    { label: "Info", value: "var(--info-color, #71c0ff)" },
-    { label: "Ambar", value: "var(--warning-color, #f6b73c)" },
-    { label: "Verde", value: "#38d9a9" },
-    { label: "Rojo", value: "#ff6b6b" },
-    { label: "Blanco", value: "#f5f7fb" },
-  ]),
-  muted: Object.freeze([
-    { label: "Inactivo", value: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))" },
-    { label: "Suave", value: "rgba(255, 255, 255, 0.72)" },
-    { label: "Gris", value: "rgba(255, 255, 255, 0.36)" },
-    { label: "Oscuro", value: "rgba(0, 0, 0, 0.38)" },
-  ]),
-  accentBackground: Object.freeze([
-    { label: "Tema", value: "rgba(var(--rgb-primary-color), 0.18)" },
-    { label: "Info", value: "rgba(113, 192, 255, 0.2)" },
-    { label: "Ambar", value: "rgba(246, 183, 60, 0.2)" },
-    { label: "Verde", value: "rgba(56, 217, 169, 0.18)" },
-    { label: "Claro", value: "rgba(255, 255, 255, 0.12)" },
-  ]),
-  surface: Object.freeze([
-    { label: "Tarjeta", value: "var(--ha-card-background)" },
-    { label: "Cristal", value: "rgba(255, 255, 255, 0.04)" },
-    { label: "Bruma", value: "rgba(255, 255, 255, 0.08)" },
-    { label: "Noche", value: "rgba(0, 0, 0, 0.18)" },
-    { label: "Info", value: "rgba(113, 192, 255, 0.14)" },
-  ]),
-  overlay: Object.freeze([
-    { label: "Ligero", value: "rgba(0, 0, 0, 0.18)" },
-    { label: "Medio", value: "rgba(0, 0, 0, 0.32)" },
-    { label: "Intenso", value: "rgba(0, 0, 0, 0.48)" },
-    { label: "Claro", value: "rgba(255, 255, 255, 0.14)" },
-  ]),
-  track: Object.freeze([
-    { label: "Suave", value: "rgba(255, 255, 255, 0.08)" },
-    { label: "Medio", value: "rgba(255, 255, 255, 0.14)" },
-    { label: "Fuerte", value: "rgba(255, 255, 255, 0.22)" },
-    { label: "Oscuro", value: "rgba(0, 0, 0, 0.16)" },
-  ]),
-});
-
 function resolveEditorColorValue(value) {
   const rawValue = String(value ?? "").trim();
   if (!rawValue || typeof document === "undefined") {
@@ -303,59 +260,30 @@ function getEditorColorModel(value, fallbackValue = "#71c0ff") {
   };
 }
 
-function getEditorColorFieldOptions(field) {
+function getEditorColorFallbackValue(field) {
   const normalizedField = String(field ?? "");
 
   if (normalizedField.endsWith("off_color")) {
-    return {
-      fallbackValue: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))",
-      presets: EDITOR_COLOR_PRESETS.muted,
-    };
+    return "var(--state-inactive-color, rgba(255, 255, 255, 0.5))";
   }
 
   if (normalizedField.endsWith("accent_background")) {
-    return {
-      fallbackValue: "rgba(113, 192, 255, 0.2)",
-      presets: EDITOR_COLOR_PRESETS.accentBackground,
-    };
+    return "rgba(113, 192, 255, 0.2)";
   }
 
   if (normalizedField.endsWith("progress_background")) {
-    return {
-      fallbackValue: "rgba(255, 255, 255, 0.12)",
-      presets: EDITOR_COLOR_PRESETS.track,
-    };
+    return "rgba(255, 255, 255, 0.12)";
   }
 
   if (normalizedField.endsWith("overlay_color")) {
-    return {
-      fallbackValue: "rgba(0, 0, 0, 0.32)",
-      presets: EDITOR_COLOR_PRESETS.overlay,
-    };
+    return "rgba(0, 0, 0, 0.32)";
   }
 
   if (normalizedField.endsWith("background")) {
-    return {
-      fallbackValue: "var(--ha-card-background)",
-      presets: EDITOR_COLOR_PRESETS.surface,
-    };
+    return "var(--ha-card-background)";
   }
 
-  return {
-    fallbackValue: "var(--info-color, #71c0ff)",
-    presets: EDITOR_COLOR_PRESETS.standard,
-  };
-}
-
-function isSameEditorColor(left, right) {
-  const leftResolved = resolveEditorColorValue(left);
-  const rightResolved = resolveEditorColorValue(right);
-
-  if (leftResolved && rightResolved) {
-    return leftResolved === rightResolved;
-  }
-
-  return String(left ?? "").trim() === String(right ?? "").trim();
+  return "var(--info-color, #71c0ff)";
 }
 
 function getRangeValueFromClientX(slider, clientX) {
@@ -2148,19 +2076,6 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
   }
 
   _onShadowClick(event) {
-    const colorButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.colorField && node.dataset?.colorValue);
-
-    if (colorButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._setFieldValue(colorButton.dataset.colorField, colorButton.dataset.colorValue);
-      this._setEditorConfig();
-      this._emitConfig();
-      return;
-    }
-
     const toggleButton = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
@@ -2199,15 +2114,14 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
-    const colorOptions = { ...getEditorColorFieldOptions(field), ...options };
+    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
-      ? colorOptions.fallbackValue
+      ? fallbackValue
       : String(value);
-    const colorModel = getEditorColorModel(currentValue, colorOptions.fallbackValue);
-    const presets = Array.isArray(colorOptions.presets) ? colorOptions.presets : [];
+    const colorModel = getEditorColorModel(currentValue, fallbackValue);
 
     return `
-      <div class="editor-field ${colorOptions.fullWidth ? "editor-field--full" : ""}">
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(label)}</span>
         <div class="editor-color-field">
           <label class="editor-color-picker" title="Color personalizado">
@@ -2221,20 +2135,6 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
-          <div class="editor-color-presets">
-            ${presets.map(preset => `
-              <button
-                type="button"
-                class="editor-color-preset ${isSameEditorColor(currentValue, preset.value) ? "is-active" : ""}"
-                data-color-field="${escapeHtml(field)}"
-                data-color-value="${escapeHtml(preset.value)}"
-                title="${escapeHtml(preset.label)}"
-                aria-label="${escapeHtml(`${label}: ${preset.label}`)}"
-              >
-                <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(preset.value)};"></span>
-              </button>
-            `).join("")}
-          </div>
         </div>
       </div>
     `;
@@ -2553,34 +2453,8 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
           position: absolute;
         }
 
-        .editor-color-presets {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        button.editor-color-preset {
-          align-items: center;
-          appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 999px;
-          cursor: pointer;
-          display: inline-flex;
-          height: 34px;
-          justify-content: center;
-          min-height: 0;
-          padding: 0;
-          width: 34px;
-        }
-
         .editor-color-picker:hover,
-        button.editor-color-preset:hover {
-          border-color: rgba(255, 255, 255, 0.18);
-        }
-
-        .editor-color-picker:focus-within,
-        button.editor-color-preset.is-active {
+        .editor-color-picker:focus-within {
           border-color: rgba(255, 255, 255, 0.22);
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
