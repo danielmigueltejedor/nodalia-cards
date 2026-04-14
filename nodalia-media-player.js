@@ -2612,6 +2612,7 @@ class NodaliaMediaPlayer extends HTMLElement {
               style="--media-volume:${currentVolumePercent};"
               aria-label="Volumen"
             />
+            <div class="media-player__volume-thumb"></div>
           </div>
         </div>
       `
@@ -3704,6 +3705,22 @@ class NodaliaMediaPlayer extends HTMLElement {
           transform: translateY(-50%);
         }
 
+        .media-player__volume-thumb {
+          background: var(--primary-text-color);
+          border-radius: 50%;
+          box-shadow:
+            0 0 0 6px rgba(0, 0, 0, 0.12),
+            0 0 0 12px rgba(255, 255, 255, 0.12);
+          height: ${playerStyles.slider_thumb_size};
+          left: calc(var(--media-volume, 0) * 1%);
+          pointer-events: none;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: ${playerStyles.slider_thumb_size};
+          z-index: 2;
+        }
+
         .media-player__volume-slider {
           -webkit-appearance: none;
           appearance: none;
@@ -3746,26 +3763,22 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__volume-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          background: var(--primary-text-color);
+          background: transparent;
           border: 0;
           border-radius: 50%;
-          box-shadow:
-            0 0 0 6px rgba(0, 0, 0, 0.12),
-            0 0 0 12px rgba(255, 255, 255, 0.12);
+          box-shadow: none;
           box-sizing: border-box;
           cursor: pointer;
           height: ${playerStyles.slider_thumb_size};
-          margin-top: calc(((${playerStyles.slider_height} - ${playerStyles.slider_thumb_size}) / 2) + ((var(--media-player-slider-input-height) - ${playerStyles.slider_height}) / 4));
+          margin-top: calc((${playerStyles.slider_height} - ${playerStyles.slider_thumb_size}) / 2);
           width: ${playerStyles.slider_thumb_size};
         }
 
         .media-player__volume-slider::-moz-range-thumb {
-          background: var(--primary-text-color);
+          background: transparent;
           border: 0;
           border-radius: 50%;
-          box-shadow:
-            0 0 0 6px rgba(0, 0, 0, 0.12),
-            0 0 0 12px rgba(255, 255, 255, 0.12);
+          box-shadow: none;
           box-sizing: border-box;
           cursor: pointer;
           height: ${playerStyles.slider_thumb_size};

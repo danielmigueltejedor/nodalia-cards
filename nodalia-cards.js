@@ -7399,6 +7399,7 @@ class NodaliaMediaPlayer extends HTMLElement {
               style="--media-volume:${currentVolumePercent};"
               aria-label="Volumen"
             />
+            <div class="media-player__volume-thumb"></div>
           </div>
         </div>
       `
@@ -8491,6 +8492,22 @@ class NodaliaMediaPlayer extends HTMLElement {
           transform: translateY(-50%);
         }
 
+        .media-player__volume-thumb {
+          background: var(--primary-text-color);
+          border-radius: 50%;
+          box-shadow:
+            0 0 0 6px rgba(0, 0, 0, 0.12),
+            0 0 0 12px rgba(255, 255, 255, 0.12);
+          height: ${playerStyles.slider_thumb_size};
+          left: calc(var(--media-volume, 0) * 1%);
+          pointer-events: none;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: ${playerStyles.slider_thumb_size};
+          z-index: 2;
+        }
+
         .media-player__volume-slider {
           -webkit-appearance: none;
           appearance: none;
@@ -8533,26 +8550,22 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__volume-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          background: var(--primary-text-color);
+          background: transparent;
           border: 0;
           border-radius: 50%;
-          box-shadow:
-            0 0 0 6px rgba(0, 0, 0, 0.12),
-            0 0 0 12px rgba(255, 255, 255, 0.12);
+          box-shadow: none;
           box-sizing: border-box;
           cursor: pointer;
           height: ${playerStyles.slider_thumb_size};
-          margin-top: calc(((${playerStyles.slider_height} - ${playerStyles.slider_thumb_size}) / 2) + ((var(--media-player-slider-input-height) - ${playerStyles.slider_height}) / 4));
+          margin-top: calc((${playerStyles.slider_height} - ${playerStyles.slider_thumb_size}) / 2);
           width: ${playerStyles.slider_thumb_size};
         }
 
         .media-player__volume-slider::-moz-range-thumb {
-          background: var(--primary-text-color);
+          background: transparent;
           border: 0;
           border-radius: 50%;
-          box-shadow:
-            0 0 0 6px rgba(0, 0, 0, 0.12),
-            0 0 0 12px rgba(255, 255, 255, 0.12);
+          box-shadow: none;
           box-sizing: border-box;
           cursor: pointer;
           height: ${playerStyles.slider_thumb_size};
@@ -16010,6 +16023,33 @@ class NodaliaLightCard extends HTMLElement {
           transform: translateY(-50%);
         }
 
+        .light-card__slider-thumb {
+          background: var(--primary-text-color);
+          border-radius: 50%;
+          box-shadow:
+            0 0 0 6px rgba(0, 0, 0, 0.12),
+            0 0 0 12px rgba(255, 255, 255, 0.12);
+          height: ${styles.slider_thumb_size};
+          pointer-events: none;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: ${styles.slider_thumb_size};
+          z-index: 2;
+        }
+
+        .light-card__slider-thumb[data-light-control="brightness"] {
+          left: calc(var(--brightness, ${brightnessPercent}) * 1%);
+        }
+
+        .light-card__slider-thumb[data-light-control="temperature"] {
+          left: calc(var(--temperature-progress, ${clamp(temperatureProgress, 0, 100)}) * 1%);
+        }
+
+        .light-card__slider-thumb[data-light-control="color"] {
+          left: calc(var(--color-progress, ${clamp(colorProgress, 0, 100)}) * 1%);
+        }
+
         .light-card__slider-track[data-light-control="brightness"] {
           background:
             linear-gradient(
@@ -16123,26 +16163,22 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          background: var(--primary-text-color);
+          background: transparent;
           border: 0;
           border-radius: 50%;
-          box-shadow:
-            0 0 0 6px rgba(0, 0, 0, 0.12),
-            0 0 0 12px rgba(255, 255, 255, 0.12);
+          box-shadow: none;
           box-sizing: border-box;
           cursor: pointer;
           height: ${styles.slider_thumb_size};
-          margin-top: calc(((${styles.slider_height} - ${styles.slider_thumb_size}) / 2) + ((var(--light-card-slider-input-height) - ${styles.slider_height}) / 4));
+          margin-top: calc((${styles.slider_height} - ${styles.slider_thumb_size}) / 2);
           width: ${styles.slider_thumb_size};
         }
 
         .light-card__slider::-moz-range-thumb {
-          background: var(--primary-text-color);
+          background: transparent;
           border: 0;
           border-radius: 50%;
-          box-shadow:
-            0 0 0 6px rgba(0, 0, 0, 0.12),
-            0 0 0 12px rgba(255, 255, 255, 0.12);
+          box-shadow: none;
           box-sizing: border-box;
           cursor: pointer;
           height: ${styles.slider_thumb_size};
@@ -16246,6 +16282,7 @@ class NodaliaLightCard extends HTMLElement {
                                 style="--temperature-progress:${clamp(temperatureProgress, 0, 100)};"
                                 aria-label="Temperatura"
                               />
+                              <div class="light-card__slider-thumb" data-light-control="temperature"></div>
                             </div>
                           `
                           : activeControlMode === "color"
@@ -16263,6 +16300,7 @@ class NodaliaLightCard extends HTMLElement {
                                   style="--color-progress:${clamp(colorProgress, 0, 100)};"
                                   aria-label="Color"
                                 />
+                                <div class="light-card__slider-thumb" data-light-control="color"></div>
                               </div>
                             `
                             : `
@@ -16279,6 +16317,7 @@ class NodaliaLightCard extends HTMLElement {
                                   style="--brightness:${brightnessPercent};"
                                   aria-label="Brillo"
                                 />
+                                <div class="light-card__slider-thumb" data-light-control="brightness"></div>
                               </div>
                             `
                       }
@@ -18462,6 +18501,22 @@ class NodaliaHumidifierCard extends HTMLElement {
           transform: translateY(-50%);
         }
 
+        .humidifier-card__slider-thumb {
+          background: #f5f7fb;
+          border-radius: 50%;
+          box-shadow:
+            0 0 0 6px rgba(0, 0, 0, 0.12),
+            0 0 0 12px rgba(255, 255, 255, 0.12);
+          height: ${styles.slider_thumb_size};
+          left: calc(var(--humidity, ${clamp(humidityProgress, 0, 100)}) * 1%);
+          pointer-events: none;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: ${styles.slider_thumb_size};
+          z-index: 2;
+        }
+
         .humidifier-card__slider-actions {
           display: inline-flex;
           flex: 0 0 auto;
@@ -18510,25 +18565,21 @@ class NodaliaHumidifierCard extends HTMLElement {
         .humidifier-card__slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          background: #f5f7fb;
+          background: transparent;
           border: 0;
           border-radius: 50%;
-          box-shadow:
-            0 0 0 6px rgba(0, 0, 0, 0.12),
-            0 0 0 12px rgba(255, 255, 255, 0.12);
+          box-shadow: none;
           box-sizing: border-box;
           height: ${styles.slider_thumb_size};
-          margin-top: calc(((${styles.slider_height} - ${styles.slider_thumb_size}) / 2) + ((var(--humidifier-card-slider-input-height) - ${styles.slider_height}) / 4));
+          margin-top: calc((${styles.slider_height} - ${styles.slider_thumb_size}) / 2);
           width: ${styles.slider_thumb_size};
         }
 
         .humidifier-card__slider::-moz-range-thumb {
-          background: #f5f7fb;
+          background: transparent;
           border: 0;
           border-radius: 50%;
-          box-shadow:
-            0 0 0 6px rgba(0, 0, 0, 0.12),
-            0 0 0 12px rgba(255, 255, 255, 0.12);
+          box-shadow: none;
           box-sizing: border-box;
           height: ${styles.slider_thumb_size};
           width: ${styles.slider_thumb_size};
@@ -18689,6 +18740,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                         style="--humidity:${clamp(humidityProgress, 0, 100)};"
                         aria-label="Humedad objetivo"
                       />
+                      <div class="humidifier-card__slider-thumb"></div>
                     </div>
                   </div>
                   ${

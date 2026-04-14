@@ -1370,6 +1370,22 @@ class NodaliaHumidifierCard extends HTMLElement {
           transform: translateY(-50%);
         }
 
+        .humidifier-card__slider-thumb {
+          background: #f5f7fb;
+          border-radius: 50%;
+          box-shadow:
+            0 0 0 6px rgba(0, 0, 0, 0.12),
+            0 0 0 12px rgba(255, 255, 255, 0.12);
+          height: ${styles.slider_thumb_size};
+          left: calc(var(--humidity, ${clamp(humidityProgress, 0, 100)}) * 1%);
+          pointer-events: none;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: ${styles.slider_thumb_size};
+          z-index: 2;
+        }
+
         .humidifier-card__slider-actions {
           display: inline-flex;
           flex: 0 0 auto;
@@ -1418,25 +1434,21 @@ class NodaliaHumidifierCard extends HTMLElement {
         .humidifier-card__slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          background: #f5f7fb;
+          background: transparent;
           border: 0;
           border-radius: 50%;
-          box-shadow:
-            0 0 0 6px rgba(0, 0, 0, 0.12),
-            0 0 0 12px rgba(255, 255, 255, 0.12);
+          box-shadow: none;
           box-sizing: border-box;
           height: ${styles.slider_thumb_size};
-          margin-top: calc(((${styles.slider_height} - ${styles.slider_thumb_size}) / 2) + ((var(--humidifier-card-slider-input-height) - ${styles.slider_height}) / 4));
+          margin-top: calc((${styles.slider_height} - ${styles.slider_thumb_size}) / 2);
           width: ${styles.slider_thumb_size};
         }
 
         .humidifier-card__slider::-moz-range-thumb {
-          background: #f5f7fb;
+          background: transparent;
           border: 0;
           border-radius: 50%;
-          box-shadow:
-            0 0 0 6px rgba(0, 0, 0, 0.12),
-            0 0 0 12px rgba(255, 255, 255, 0.12);
+          box-shadow: none;
           box-sizing: border-box;
           height: ${styles.slider_thumb_size};
           width: ${styles.slider_thumb_size};
@@ -1597,6 +1609,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                         style="--humidity:${clamp(humidityProgress, 0, 100)};"
                         aria-label="Humedad objetivo"
                       />
+                      <div class="humidifier-card__slider-thumb"></div>
                     </div>
                   </div>
                   ${
