@@ -16747,6 +16747,15 @@ class NodaliaHumidifierCard extends HTMLElement {
 
     const showCopyBlock = !isCompactLayout || chips.length > 0;
     const hasSecondaryControls = (modeOptions.length > 0) || (fanModeOptions.length > 0);
+    const cardBackground = isOn
+      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`
+      : styles.card.background;
+    const cardBorder = isOn
+      ? `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`
+      : styles.card.border;
+    const cardShadow = isOn
+      ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.18))`
+      : styles.card.box_shadow;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -16759,23 +16768,44 @@ class NodaliaHumidifierCard extends HTMLElement {
         }
 
         ha-card {
+          background: ${cardBackground};
+          border: ${cardBorder};
+          border-radius: ${styles.card.border_radius};
+          box-shadow: ${cardShadow};
+          min-width: 0;
           overflow: hidden;
+          padding: ${styles.card.padding};
+          position: relative;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        .humidifier-card.is-off {
+          cursor: pointer;
+        }
+
+        ha-card::before {
+          background: ${isOn
+            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.06)), rgba(255, 255, 255, 0))`
+            : "linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0))"};
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
         }
 
         .humidifier-card {
-          background:
-            radial-gradient(circle at top left, color-mix(in srgb, var(--accent-color) 16%, transparent) 0%, transparent 52%),
-            linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0%, rgba(0, 0, 0, 0.02) 100%),
-            ${styles.card.background};
-          border: ${styles.card.border};
-          border-radius: ${styles.card.border_radius};
-          box-shadow: ${styles.card.box_shadow};
+          color: var(--primary-text-color);
+          display: grid;
+          gap: ${styles.card.gap};
+          min-width: 0;
+          position: relative;
+          z-index: 1;
         }
 
         .humidifier-card__content {
           display: grid;
           gap: ${styles.card.gap};
-          padding: ${styles.card.padding};
         }
 
         .humidifier-card__hero {
@@ -16794,19 +16824,20 @@ class NodaliaHumidifierCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background:
-            radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 60%),
-            ${styles.icon.background};
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: calc(${styles.icon.size} * 0.5);
+          background: ${isOn
+            ? `color-mix(in srgb, ${accentColor} 24%, ${styles.icon.background})`
+            : styles.icon.background};
+          border: 1px solid color-mix(in srgb, ${accentColor} 22%, rgba(255, 255, 255, 0.08));
+          border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
-            0 10px 26px rgba(0, 0, 0, 0.16);
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 10px 24px rgba(0, 0, 0, 0.16);
           color: ${isOn ? styles.icon.on_color : styles.icon.off_color};
           cursor: pointer;
           display: inline-flex;
           height: ${styles.icon.size};
           justify-content: center;
+          line-height: 0;
           margin: 0;
           outline: none;
           padding: 0;
@@ -16815,14 +16846,14 @@ class NodaliaHumidifierCard extends HTMLElement {
         }
 
         .humidifier-card__icon ha-icon {
-          --mdc-icon-size: calc(${styles.icon.size} * 0.44);
+          --mdc-icon-size: calc(${styles.icon.size} * 0.46);
           display: inline-flex;
-          height: calc(${styles.icon.size} * 0.44);
+          height: calc(${styles.icon.size} * 0.46);
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: calc(${styles.icon.size} * 0.44);
+          width: calc(${styles.icon.size} * 0.46);
         }
 
         .humidifier-card__unavailable-badge {
