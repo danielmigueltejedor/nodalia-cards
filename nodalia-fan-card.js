@@ -1708,6 +1708,7 @@ class NodaliaFanCardEditor extends HTMLElement {
     this._hass = null;
     this._entityOptionsSignature = "";
     this._showStyleSection = false;
+    this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
@@ -1741,6 +1742,39 @@ class NodaliaFanCardEditor extends HTMLElement {
     this._config = normalizeConfig(config || {});
     this._render();
     this._restoreFocusState(focusState);
+  }
+
+  _watchEditorControlTag(tagName) {
+    if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+      return;
+    }
+
+    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+      return;
+    }
+
+    this._pendingEditorControlTags.add(tagName);
+    customElements.whenDefined(tagName)
+      .then(() => {
+        this._pendingEditorControlTags.delete(tagName);
+
+        if (!this._hass || !this.shadowRoot) {
+          return;
+        }
+
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+      })
+      .catch(() => {
+        this._pendingEditorControlTags.delete(tagName);
+      });
+  }
+
+  _ensureEditorControlsReady() {
+    this._watchEditorControlTag("ha-entity-picker");
+    this._watchEditorControlTag("ha-selector");
+    this._watchEditorControlTag("ha-icon-picker");
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
@@ -2445,6 +2479,8 @@ class NodaliaFanCardEditor extends HTMLElement {
         control.value = control.dataset.value || "";
         control.addEventListener("value-changed", this._onShadowValueChanged);
       });
+
+    this._ensureEditorControlsReady();
   }
 }
 
