@@ -2612,7 +2612,6 @@ class NodaliaMediaPlayer extends HTMLElement {
               style="--media-volume:${currentVolumePercent};"
               aria-label="Volumen"
             />
-            <div class="media-player__volume-thumb"></div>
           </div>
         </div>
       `
@@ -3669,7 +3668,6 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__tv-volume-wrap {
           --media-player-slider-input-height: max(44px, var(--media-player-slider-thumb-size));
           --media-player-slider-thumb-size: calc(${playerStyles.slider_thumb_size} + 12px);
-          --media-player-slider-thumb-half: calc(var(--media-player-slider-thumb-size) / 2);
           align-items: center;
           background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.06);
@@ -3703,10 +3701,6 @@ class NodaliaMediaPlayer extends HTMLElement {
           right: 0;
           top: 50%;
           transform: translateY(-50%);
-        }
-
-        .media-player__volume-thumb {
-          display: none;
         }
 
         .media-player__volume-slider {
@@ -4977,7 +4971,6 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             ${this._renderTextField("Tamano subtitulo", "styles.player.subtitle_size", config.styles.player.subtitle_size)}
             ${this._renderTextField("Alto base slider", "styles.player.slider_wrap_height", config.styles.player.slider_wrap_height)}
             ${this._renderTextField("Grosor slider", "styles.player.slider_height", config.styles.player.slider_height)}
-            ${this._renderTextField("Tamano thumb slider", "styles.player.slider_thumb_size", config.styles.player.slider_thumb_size)}
             ${this._renderTextField("Color progreso", "styles.player.progress_color", config.styles.player.progress_color)}
             ${this._renderTextField("Fondo progreso", "styles.player.progress_background", config.styles.player.progress_background)}
             ${this._renderTextField("Overlay portada", "styles.player.overlay_color", config.styles.player.overlay_color)}

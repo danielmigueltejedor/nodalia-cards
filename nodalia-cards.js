@@ -7399,7 +7399,6 @@ class NodaliaMediaPlayer extends HTMLElement {
               style="--media-volume:${currentVolumePercent};"
               aria-label="Volumen"
             />
-            <div class="media-player__volume-thumb"></div>
           </div>
         </div>
       `
@@ -8456,7 +8455,6 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__tv-volume-wrap {
           --media-player-slider-input-height: max(44px, var(--media-player-slider-thumb-size));
           --media-player-slider-thumb-size: calc(${playerStyles.slider_thumb_size} + 12px);
-          --media-player-slider-thumb-half: calc(var(--media-player-slider-thumb-size) / 2);
           align-items: center;
           background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.06);
@@ -8490,10 +8488,6 @@ class NodaliaMediaPlayer extends HTMLElement {
           right: 0;
           top: 50%;
           transform: translateY(-50%);
-        }
-
-        .media-player__volume-thumb {
-          display: none;
         }
 
         .media-player__volume-slider {
@@ -9797,7 +9791,6 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             ${this._renderTextField("Tamano subtitulo", "styles.player.subtitle_size", config.styles.player.subtitle_size)}
             ${this._renderTextField("Alto base slider", "styles.player.slider_wrap_height", config.styles.player.slider_wrap_height)}
             ${this._renderTextField("Grosor slider", "styles.player.slider_height", config.styles.player.slider_height)}
-            ${this._renderTextField("Tamano thumb slider", "styles.player.slider_thumb_size", config.styles.player.slider_thumb_size)}
             ${this._renderTextField("Color progreso", "styles.player.progress_color", config.styles.player.progress_color)}
             ${this._renderTextField("Fondo progreso", "styles.player.progress_background", config.styles.player.progress_background)}
             ${this._renderTextField("Overlay portada", "styles.player.overlay_color", config.styles.player.overlay_color)}
@@ -11670,6 +11663,35 @@ class NodaliaEntityCardEditor extends HTMLElement {
           color: var(--secondary-text-color);
           font-size: 12px;
           line-height: 1.45;
+        }
+
+        .editor-section__actions {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 2px;
+        }
+
+        .editor-section__toggle-button {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        .editor-section__toggle-button ha-icon {
+          --mdc-icon-size: 16px;
         }
 
         .editor-grid {
@@ -14122,6 +14144,35 @@ class NodaliaFavCardEditor extends HTMLElement {
           line-height: 1.45;
         }
 
+        .editor-section__actions {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 2px;
+        }
+
+        .editor-section__toggle-button {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        .editor-section__toggle-button ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
         .editor-grid {
           display: grid;
           gap: 12px;
@@ -15984,7 +16035,6 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__slider-wrap {
           --light-card-slider-input-height: max(44px, var(--light-card-slider-thumb-size));
           --light-card-slider-thumb-size: calc(${styles.slider_thumb_size} + 12px);
-          --light-card-slider-thumb-half: calc(var(--light-card-slider-thumb-size) / 2);
           align-items: center;
           background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.06);
@@ -16342,11 +16392,10 @@ class NodaliaLightCard extends HTMLElement {
                                   min="1"
                                   max="100"
                                   step="any"
-                                  value="${brightnessPercent}"
-                                  style="--brightness:${brightnessPercent};"
-                                  aria-label="Brillo"
-                                />
-                                <div class="light-card__slider-thumb" data-light-control="brightness"></div>
+                                value="${brightnessPercent}"
+                                style="--brightness:${brightnessPercent};"
+                                aria-label="Brillo"
+                              />
                               </div>
                             `
                       }
@@ -16931,6 +16980,35 @@ class NodaliaLightCardEditor extends HTMLElement {
           line-height: 1.45;
         }
 
+        .editor-section__actions {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 2px;
+        }
+
+        .editor-section__toggle-button {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        .editor-section__toggle-button ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
         .editor-grid {
           display: grid;
           gap: 12px;
@@ -17120,7 +17198,7 @@ class NodaliaLightCardEditor extends HTMLElement {
                   ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
                   ${this._renderTextField("Alto contenedor slider", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
                   ${this._renderTextField("Grosor slider", "styles.slider_height", config.styles.slider_height)}
-                  ${this._renderTextField("Tamaño thumb slider", "styles.slider_thumb_size", config.styles.slider_thumb_size)}
+                  ${this._renderTextField("Ancho burbuja slider", "styles.slider_thumb_size", config.styles.slider_thumb_size)}
                   ${this._renderTextField("Color slider", "styles.slider_color", config.styles.slider_color)}
                 </div>
               `
@@ -18496,7 +18574,6 @@ class NodaliaHumidifierCard extends HTMLElement {
         .humidifier-card__slider-wrap {
           --humidifier-card-slider-input-height: max(44px, var(--humidifier-card-slider-thumb-size));
           --humidifier-card-slider-thumb-size: calc(${styles.slider_thumb_size} + 12px);
-          --humidifier-card-slider-thumb-half: calc(var(--humidifier-card-slider-thumb-size) / 2);
           align-items: center;
           background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.06);
@@ -18528,10 +18605,6 @@ class NodaliaHumidifierCard extends HTMLElement {
           right: 0;
           top: 50%;
           transform: translateY(-50%);
-        }
-
-        .humidifier-card__slider-thumb {
-          display: none;
         }
 
         .humidifier-card__slider-actions {
@@ -18757,7 +18830,6 @@ class NodaliaHumidifierCard extends HTMLElement {
                         style="--humidity:${clamp(humidityProgress, 0, 100)};"
                         aria-label="Humedad objetivo"
                       />
-                      <div class="humidifier-card__slider-thumb"></div>
                     </div>
                   </div>
                   ${
@@ -19343,7 +19415,6 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
             ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
             ${this._renderTextField("Alto contenedor slider", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
             ${this._renderTextField("Grosor slider", "styles.slider_height", config.styles.slider_height)}
-            ${this._renderTextField("Tamano thumb slider", "styles.slider_thumb_size", config.styles.slider_thumb_size)}
             ${this._renderTextField("Color slider", "styles.slider_color", config.styles.slider_color)}
           </div>
         </section>
@@ -20672,7 +20743,6 @@ class NodaliaFanCard extends HTMLElement {
         .fan-card__slider-wrap {
           --fan-card-slider-input-height: max(44px, var(--fan-card-slider-thumb-size));
           --fan-card-slider-thumb-size: calc(${styles.slider_thumb_size} + 12px);
-          --fan-card-slider-thumb-half: calc(var(--fan-card-slider-thumb-size) / 2);
           align-items: center;
           background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.06);
@@ -20704,10 +20774,6 @@ class NodaliaFanCard extends HTMLElement {
           right: 0;
           top: 50%;
           transform: translateY(-50%);
-        }
-
-        .fan-card__slider-thumb {
-          display: none;
         }
 
         .fan-card__slider-row--solo {
@@ -20884,7 +20950,6 @@ class NodaliaFanCard extends HTMLElement {
                         style="--percentage:${currentPercentage};"
                         aria-label="Velocidad"
                       />
-                      <div class="fan-card__slider-thumb"></div>
                     </div>
                   </div>
                   ${
@@ -21637,7 +21702,6 @@ class NodaliaFanCardEditor extends HTMLElement {
                   ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
                   ${this._renderTextField("Alto contenedor slider", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
                   ${this._renderTextField("Grosor slider", "styles.slider_height", config.styles.slider_height)}
-                  ${this._renderTextField("Tamaño thumb slider", "styles.slider_thumb_size", config.styles.slider_thumb_size)}
                   ${this._renderTextField("Color slider", "styles.slider_color", config.styles.slider_color)}
                 </div>
               `

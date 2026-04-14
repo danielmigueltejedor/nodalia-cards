@@ -1295,7 +1295,6 @@ class NodaliaFanCard extends HTMLElement {
         .fan-card__slider-wrap {
           --fan-card-slider-input-height: max(44px, var(--fan-card-slider-thumb-size));
           --fan-card-slider-thumb-size: calc(${styles.slider_thumb_size} + 12px);
-          --fan-card-slider-thumb-half: calc(var(--fan-card-slider-thumb-size) / 2);
           align-items: center;
           background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.06);
@@ -1327,10 +1326,6 @@ class NodaliaFanCard extends HTMLElement {
           right: 0;
           top: 50%;
           transform: translateY(-50%);
-        }
-
-        .fan-card__slider-thumb {
-          display: none;
         }
 
         .fan-card__slider-row--solo {
@@ -1507,7 +1502,6 @@ class NodaliaFanCard extends HTMLElement {
                         style="--percentage:${currentPercentage};"
                         aria-label="Velocidad"
                       />
-                      <div class="fan-card__slider-thumb"></div>
                     </div>
                   </div>
                   ${
@@ -2260,7 +2254,6 @@ class NodaliaFanCardEditor extends HTMLElement {
                   ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
                   ${this._renderTextField("Alto contenedor slider", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
                   ${this._renderTextField("Grosor slider", "styles.slider_height", config.styles.slider_height)}
-                  ${this._renderTextField("Tamaño thumb slider", "styles.slider_thumb_size", config.styles.slider_thumb_size)}
                   ${this._renderTextField("Color slider", "styles.slider_color", config.styles.slider_color)}
                 </div>
               `

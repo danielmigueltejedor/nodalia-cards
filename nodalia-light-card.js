@@ -1617,7 +1617,6 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__slider-wrap {
           --light-card-slider-input-height: max(44px, var(--light-card-slider-thumb-size));
           --light-card-slider-thumb-size: calc(${styles.slider_thumb_size} + 12px);
-          --light-card-slider-thumb-half: calc(var(--light-card-slider-thumb-size) / 2);
           align-items: center;
           background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.06);
@@ -1975,11 +1974,10 @@ class NodaliaLightCard extends HTMLElement {
                                   min="1"
                                   max="100"
                                   step="any"
-                                  value="${brightnessPercent}"
-                                  style="--brightness:${brightnessPercent};"
-                                  aria-label="Brillo"
-                                />
-                                <div class="light-card__slider-thumb" data-light-control="brightness"></div>
+                                value="${brightnessPercent}"
+                                style="--brightness:${brightnessPercent};"
+                                aria-label="Brillo"
+                              />
                               </div>
                             `
                       }
@@ -2786,7 +2784,7 @@ class NodaliaLightCardEditor extends HTMLElement {
                   ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
                   ${this._renderTextField("Alto contenedor slider", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
                   ${this._renderTextField("Grosor slider", "styles.slider_height", config.styles.slider_height)}
-                  ${this._renderTextField("Tamaño thumb slider", "styles.slider_thumb_size", config.styles.slider_thumb_size)}
+                  ${this._renderTextField("Ancho burbuja slider", "styles.slider_thumb_size", config.styles.slider_thumb_size)}
                   ${this._renderTextField("Color slider", "styles.slider_color", config.styles.slider_color)}
                 </div>
               `

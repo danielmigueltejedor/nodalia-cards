@@ -1336,7 +1336,6 @@ class NodaliaHumidifierCard extends HTMLElement {
         .humidifier-card__slider-wrap {
           --humidifier-card-slider-input-height: max(44px, var(--humidifier-card-slider-thumb-size));
           --humidifier-card-slider-thumb-size: calc(${styles.slider_thumb_size} + 12px);
-          --humidifier-card-slider-thumb-half: calc(var(--humidifier-card-slider-thumb-size) / 2);
           align-items: center;
           background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.06);
@@ -1368,10 +1367,6 @@ class NodaliaHumidifierCard extends HTMLElement {
           right: 0;
           top: 50%;
           transform: translateY(-50%);
-        }
-
-        .humidifier-card__slider-thumb {
-          display: none;
         }
 
         .humidifier-card__slider-actions {
@@ -1597,7 +1592,6 @@ class NodaliaHumidifierCard extends HTMLElement {
                         style="--humidity:${clamp(humidityProgress, 0, 100)};"
                         aria-label="Humedad objetivo"
                       />
-                      <div class="humidifier-card__slider-thumb"></div>
                     </div>
                   </div>
                   ${
@@ -2183,7 +2177,6 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
             ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
             ${this._renderTextField("Alto contenedor slider", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
             ${this._renderTextField("Grosor slider", "styles.slider_height", config.styles.slider_height)}
-            ${this._renderTextField("Tamano thumb slider", "styles.slider_thumb_size", config.styles.slider_thumb_size)}
             ${this._renderTextField("Color slider", "styles.slider_color", config.styles.slider_color)}
           </div>
         </section>
