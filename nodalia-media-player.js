@@ -3746,27 +3746,29 @@ class NodaliaMediaPlayer extends HTMLElement {
           -webkit-appearance: none;
           appearance: none;
           background: var(--primary-text-color);
-          background-clip: padding-box;
-          border: 6px solid transparent;
+          border: 0;
           border-radius: 50%;
-          box-shadow: 0 0 0 calc(${playerStyles.slider_thumb_size} * 0.25) rgba(255, 255, 255, 0.12);
+          box-shadow:
+            0 0 0 6px rgba(0, 0, 0, 0.12),
+            0 0 0 12px rgba(255, 255, 255, 0.12);
           box-sizing: border-box;
           cursor: pointer;
-          height: calc(${playerStyles.slider_thumb_size} + 12px);
-          margin-top: calc((${playerStyles.slider_height} - (${playerStyles.slider_thumb_size} + 12px)) / 2);
-          width: calc(${playerStyles.slider_thumb_size} + 12px);
+          height: ${playerStyles.slider_thumb_size};
+          margin-top: calc((${playerStyles.slider_height} - ${playerStyles.slider_thumb_size}) / 2);
+          width: ${playerStyles.slider_thumb_size};
         }
 
         .media-player__volume-slider::-moz-range-thumb {
           background: var(--primary-text-color);
-          background-clip: padding-box;
-          border: 6px solid transparent;
+          border: 0;
           border-radius: 50%;
-          box-shadow: 0 0 0 calc(${playerStyles.slider_thumb_size} * 0.25) rgba(255, 255, 255, 0.12);
+          box-shadow:
+            0 0 0 6px rgba(0, 0, 0, 0.12),
+            0 0 0 12px rgba(255, 255, 255, 0.12);
           box-sizing: border-box;
           cursor: pointer;
-          height: calc(${playerStyles.slider_thumb_size} + 12px);
-          width: calc(${playerStyles.slider_thumb_size} + 12px);
+          height: ${playerStyles.slider_thumb_size};
+          width: ${playerStyles.slider_thumb_size};
         }
 
         .media-player__chip {

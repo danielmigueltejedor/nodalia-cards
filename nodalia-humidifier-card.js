@@ -1418,25 +1418,27 @@ class NodaliaHumidifierCard extends HTMLElement {
           -webkit-appearance: none;
           appearance: none;
           background: #f5f7fb;
-          background-clip: padding-box;
-          border: 6px solid transparent;
+          border: 0;
           border-radius: 50%;
-          box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12);
+          box-shadow:
+            0 0 0 6px rgba(0, 0, 0, 0.12),
+            0 0 0 12px rgba(255, 255, 255, 0.12);
           box-sizing: border-box;
-          height: calc(${styles.slider_thumb_size} + 12px);
-          margin-top: calc((${styles.slider_height} - (${styles.slider_thumb_size} + 12px)) / 2);
-          width: calc(${styles.slider_thumb_size} + 12px);
+          height: ${styles.slider_thumb_size};
+          margin-top: calc((${styles.slider_height} - ${styles.slider_thumb_size}) / 2);
+          width: ${styles.slider_thumb_size};
         }
 
         .humidifier-card__slider::-moz-range-thumb {
           background: #f5f7fb;
-          background-clip: padding-box;
-          border: 6px solid transparent;
+          border: 0;
           border-radius: 50%;
-          box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12);
+          box-shadow:
+            0 0 0 6px rgba(0, 0, 0, 0.12),
+            0 0 0 12px rgba(255, 255, 255, 0.12);
           box-sizing: border-box;
-          height: calc(${styles.slider_thumb_size} + 12px);
-          width: calc(${styles.slider_thumb_size} + 12px);
+          height: ${styles.slider_thumb_size};
+          width: ${styles.slider_thumb_size};
         }
 
         .humidifier-card__controls {
