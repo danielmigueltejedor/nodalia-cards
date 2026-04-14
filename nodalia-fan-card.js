@@ -1172,6 +1172,11 @@ class NodaliaFanCard extends HTMLElement {
           z-index: 1;
         }
 
+        .fan-card__content {
+          display: grid;
+          gap: ${styles.card.gap};
+        }
+
         .fan-card__hero {
           align-items: center;
           display: grid;
@@ -1377,7 +1382,7 @@ class NodaliaFanCard extends HTMLElement {
           display: grid;
           gap: 14px;
           grid-template-columns: minmax(0, 1fr) auto;
-          margin-top: 8px;
+          margin-top: 4px;
         }
 
         .fan-card__slider-wrap {
@@ -2042,7 +2047,8 @@ class NodaliaFanCardEditor extends HTMLElement {
           data-value-type="boolean"
           ${checked ? "checked" : ""}
         />
-        <span>${escapeHtml(label)}</span>
+        <span class="editor-toggle__switch" aria-hidden="true"></span>
+        <span class="editor-toggle__label">${escapeHtml(label)}</span>
       </label>
     `;
   }
@@ -2348,7 +2354,74 @@ class NodaliaFanCardEditor extends HTMLElement {
             padding-top: 0;
           }
         }
-      </style>
+      
+        :is(.editor-toggle, .editor-checkbox) {
+          align-items: center;
+          column-gap: 10px;
+          cursor: pointer;
+          grid-auto-flow: row;
+          grid-template-columns: auto minmax(0, 1fr);
+          justify-content: stretch;
+          min-height: 40px;
+          padding-top: 0;
+          position: relative;
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input {
+          block-size: 1px;
+          inline-size: 1px;
+          margin: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: absolute;
+        }
+
+        .editor-toggle__switch {
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+          display: inline-flex;
+          font-size: 0;
+          height: 22px;
+          line-height: 0;
+          position: relative;
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+          width: 40px;
+        }
+
+        .editor-toggle__switch::before {
+          background: rgba(255, 255, 255, 0.92);
+          border-radius: 999px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+          content: "";
+          height: 18px;
+          left: 1px;
+          position: absolute;
+          top: 1px;
+          transition: transform 160ms ease;
+          width: 18px;
+        }
+
+        .editor-toggle__label {
+          min-width: 0;
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch {
+          background: var(--primary-color);
+          border-color: var(--primary-color);
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch::before {
+          transform: translateX(18px);
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input:focus-visible + .editor-toggle__switch {
+          box-shadow:
+            0 0 0 3px rgba(255, 255, 255, 0.14),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+</style>
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
