@@ -3755,7 +3755,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           box-sizing: border-box;
           cursor: pointer;
           height: ${playerStyles.slider_thumb_size};
-          margin-top: calc((var(--media-player-slider-input-height) - ${playerStyles.slider_thumb_size}) / 2);
+          margin-top: calc(((${playerStyles.slider_height} - ${playerStyles.slider_thumb_size}) / 2) + ((var(--media-player-slider-input-height) - ${playerStyles.slider_height}) / 4));
           width: ${playerStyles.slider_thumb_size};
         }
 

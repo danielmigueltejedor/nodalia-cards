@@ -1766,7 +1766,7 @@ class NodaliaLightCard extends HTMLElement {
           box-sizing: border-box;
           cursor: pointer;
           height: ${styles.slider_thumb_size};
-          margin-top: calc((var(--light-card-slider-input-height) - ${styles.slider_thumb_size}) / 2);
+          margin-top: calc(((${styles.slider_height} - ${styles.slider_thumb_size}) / 2) + ((var(--light-card-slider-input-height) - ${styles.slider_height}) / 4));
           width: ${styles.slider_thumb_size};
         }
 

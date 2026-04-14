@@ -1382,7 +1382,7 @@ class NodaliaFanCard extends HTMLElement {
             0 0 0 12px rgba(255, 255, 255, 0.12);
           box-sizing: border-box;
           height: ${styles.slider_thumb_size};
-          margin-top: calc((var(--fan-card-slider-input-height) - ${styles.slider_thumb_size}) / 2);
+          margin-top: calc(((${styles.slider_height} - ${styles.slider_thumb_size}) / 2) + ((var(--fan-card-slider-input-height) - ${styles.slider_height}) / 4));
           width: ${styles.slider_thumb_size};
         }
 

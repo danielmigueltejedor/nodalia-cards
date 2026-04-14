@@ -8542,7 +8542,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           box-sizing: border-box;
           cursor: pointer;
           height: ${playerStyles.slider_thumb_size};
-          margin-top: calc((var(--media-player-slider-input-height) - ${playerStyles.slider_thumb_size}) / 2);
+          margin-top: calc(((${playerStyles.slider_height} - ${playerStyles.slider_thumb_size}) / 2) + ((var(--media-player-slider-input-height) - ${playerStyles.slider_height}) / 4));
           width: ${playerStyles.slider_thumb_size};
         }
 
@@ -16132,7 +16132,7 @@ class NodaliaLightCard extends HTMLElement {
           box-sizing: border-box;
           cursor: pointer;
           height: ${styles.slider_thumb_size};
-          margin-top: calc((var(--light-card-slider-input-height) - ${styles.slider_thumb_size}) / 2);
+          margin-top: calc(((${styles.slider_height} - ${styles.slider_thumb_size}) / 2) + ((var(--light-card-slider-input-height) - ${styles.slider_height}) / 4));
           width: ${styles.slider_thumb_size};
         }
 
@@ -18518,7 +18518,7 @@ class NodaliaHumidifierCard extends HTMLElement {
             0 0 0 12px rgba(255, 255, 255, 0.12);
           box-sizing: border-box;
           height: ${styles.slider_thumb_size};
-          margin-top: calc((var(--humidifier-card-slider-input-height) - ${styles.slider_thumb_size}) / 2);
+          margin-top: calc(((${styles.slider_height} - ${styles.slider_thumb_size}) / 2) + ((var(--humidifier-card-slider-input-height) - ${styles.slider_height}) / 4));
           width: ${styles.slider_thumb_size};
         }
 
@@ -20690,7 +20690,7 @@ class NodaliaFanCard extends HTMLElement {
             0 0 0 12px rgba(255, 255, 255, 0.12);
           box-sizing: border-box;
           height: ${styles.slider_thumb_size};
-          margin-top: calc((var(--fan-card-slider-input-height) - ${styles.slider_thumb_size}) / 2);
+          margin-top: calc(((${styles.slider_height} - ${styles.slider_thumb_size}) / 2) + ((var(--fan-card-slider-input-height) - ${styles.slider_height}) / 4));
           width: ${styles.slider_thumb_size};
         }
 
