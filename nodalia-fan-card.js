@@ -1320,10 +1320,10 @@ class NodaliaFanCard extends HTMLElement {
             );
           border-radius: 999px;
           height: ${styles.slider_height};
-          left: var(--fan-card-slider-thumb-half);
+          left: 0;
           pointer-events: none;
           position: absolute;
-          right: var(--fan-card-slider-thumb-half);
+          right: 0;
           top: 50%;
           transform: translateY(-50%);
         }
@@ -1336,10 +1336,13 @@ class NodaliaFanCard extends HTMLElement {
           -webkit-appearance: none;
           appearance: none;
           background: transparent;
+          border: 0;
+          box-sizing: border-box;
           cursor: pointer;
           flex: 1;
           height: max(44px, var(--fan-card-slider-thumb-size));
           margin: 0;
+          padding: 0;
           position: relative;
           touch-action: pan-y;
           user-select: none;

@@ -1635,10 +1635,10 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__slider-track {
           border-radius: 999px;
           height: ${styles.slider_height};
-          left: var(--light-card-slider-thumb-half);
+          left: 0;
           pointer-events: none;
           position: absolute;
-          right: var(--light-card-slider-thumb-half);
+          right: 0;
           top: 50%;
           transform: translateY(-50%);
         }
@@ -1718,11 +1718,14 @@ class NodaliaLightCard extends HTMLElement {
           -webkit-appearance: none;
           appearance: none;
           background: transparent;
+          border: 0;
+          box-sizing: border-box;
           cursor: pointer;
           display: block;
           height: max(44px, var(--light-card-slider-thumb-size));
           margin: 0;
           outline: none;
+          padding: 0;
           position: relative;
           touch-action: pan-y;
           user-select: none;
