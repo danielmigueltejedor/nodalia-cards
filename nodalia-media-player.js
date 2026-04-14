@@ -281,6 +281,166 @@ function escapeSelectorValue(value) {
   return String(value).replaceAll('"', '\\"');
 }
 
+const EDITOR_COLOR_PRESETS = Object.freeze({
+  standard: Object.freeze([
+    { label: "Tema", value: "var(--primary-color)" },
+    { label: "Info", value: "var(--info-color, #71c0ff)" },
+    { label: "Ambar", value: "var(--warning-color, #f6b73c)" },
+    { label: "Verde", value: "#38d9a9" },
+    { label: "Rojo", value: "#ff6b6b" },
+    { label: "Blanco", value: "#f5f7fb" },
+  ]),
+  muted: Object.freeze([
+    { label: "Inactivo", value: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))" },
+    { label: "Suave", value: "rgba(255, 255, 255, 0.72)" },
+    { label: "Gris", value: "rgba(255, 255, 255, 0.36)" },
+    { label: "Oscuro", value: "rgba(0, 0, 0, 0.38)" },
+  ]),
+  accentBackground: Object.freeze([
+    { label: "Tema", value: "rgba(var(--rgb-primary-color), 0.18)" },
+    { label: "Info", value: "rgba(113, 192, 255, 0.2)" },
+    { label: "Ambar", value: "rgba(246, 183, 60, 0.2)" },
+    { label: "Verde", value: "rgba(56, 217, 169, 0.18)" },
+    { label: "Claro", value: "rgba(255, 255, 255, 0.12)" },
+  ]),
+  surface: Object.freeze([
+    { label: "Tarjeta", value: "var(--ha-card-background)" },
+    { label: "Cristal", value: "rgba(255, 255, 255, 0.04)" },
+    { label: "Bruma", value: "rgba(255, 255, 255, 0.08)" },
+    { label: "Noche", value: "rgba(0, 0, 0, 0.18)" },
+    { label: "Info", value: "rgba(113, 192, 255, 0.14)" },
+  ]),
+  overlay: Object.freeze([
+    { label: "Ligero", value: "rgba(0, 0, 0, 0.18)" },
+    { label: "Medio", value: "rgba(0, 0, 0, 0.32)" },
+    { label: "Intenso", value: "rgba(0, 0, 0, 0.48)" },
+    { label: "Claro", value: "rgba(255, 255, 255, 0.14)" },
+  ]),
+  track: Object.freeze([
+    { label: "Suave", value: "rgba(255, 255, 255, 0.08)" },
+    { label: "Medio", value: "rgba(255, 255, 255, 0.14)" },
+    { label: "Fuerte", value: "rgba(255, 255, 255, 0.22)" },
+    { label: "Oscuro", value: "rgba(0, 0, 0, 0.16)" },
+  ]),
+});
+
+function resolveEditorColorValue(value) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || typeof document === "undefined") {
+    return "";
+  }
+
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.color = "";
+  probe.style.color = rawValue;
+  if (!probe.style.color) {
+    return rawValue;
+  }
+
+  (document.body || document.documentElement).appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved || rawValue;
+}
+
+function formatEditorHexChannel(value) {
+  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+}
+
+function formatEditorColorFromHex(hex, alpha = 1) {
+  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+    return String(hex ?? "");
+  }
+
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+  const safeAlpha = clamp(Number(alpha), 0, 1);
+  if (safeAlpha >= 0.999) {
+    return `#${normalizedHex}`;
+  }
+
+  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+}
+
+function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const channels = resolvedValue.match(/[\d.]+/g) || [];
+  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+
+  return {
+    alpha,
+    hex,
+    resolved: resolvedValue,
+    source: sourceValue,
+    value: formatEditorColorFromHex(hex, alpha),
+  };
+}
+
+function getEditorColorFieldOptions(field) {
+  const normalizedField = String(field ?? "");
+
+  if (normalizedField.endsWith("off_color")) {
+    return {
+      fallbackValue: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))",
+      presets: EDITOR_COLOR_PRESETS.muted,
+    };
+  }
+
+  if (normalizedField.endsWith("accent_background")) {
+    return {
+      fallbackValue: "rgba(113, 192, 255, 0.2)",
+      presets: EDITOR_COLOR_PRESETS.accentBackground,
+    };
+  }
+
+  if (normalizedField.endsWith("progress_background")) {
+    return {
+      fallbackValue: "rgba(255, 255, 255, 0.12)",
+      presets: EDITOR_COLOR_PRESETS.track,
+    };
+  }
+
+  if (normalizedField.endsWith("overlay_color")) {
+    return {
+      fallbackValue: "rgba(0, 0, 0, 0.32)",
+      presets: EDITOR_COLOR_PRESETS.overlay,
+    };
+  }
+
+  if (normalizedField.endsWith("background")) {
+    return {
+      fallbackValue: "var(--ha-card-background)",
+      presets: EDITOR_COLOR_PRESETS.surface,
+    };
+  }
+
+  return {
+    fallbackValue: "var(--info-color, #71c0ff)",
+    presets: EDITOR_COLOR_PRESETS.standard,
+  };
+}
+
+function isSameEditorColor(left, right) {
+  const leftResolved = resolveEditorColorValue(left);
+  const rightResolved = resolveEditorColorValue(right);
+
+  if (leftResolved && rightResolved) {
+    return leftResolved === rightResolved;
+  }
+
+  return String(left ?? "").trim() === String(right ?? "").trim();
+}
+
 function moveItem(array, fromIndex, toIndex) {
   if (!Array.isArray(array)) {
     return array;
@@ -4338,6 +4498,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
         const values = arrayFromCsv(input.value);
         return values.length ? values : undefined;
       }
+      case "color":
+        return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
       case "tristate":
         if (input.value === "true") {
           return true;
@@ -4374,6 +4536,19 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _onShadowClick(event) {
+    const colorButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.colorField && node.dataset?.colorValue);
+
+    if (colorButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._setFieldValue(colorButton.dataset.colorField, colorButton.dataset.colorValue);
+      this._setEditorConfig();
+      this._emitConfig();
+      return;
+    }
+
     const button = event
       .composedPath()
       .find(node => node instanceof HTMLButtonElement && node.dataset?.action);
@@ -4458,6 +4633,48 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           ${placeholder}
         />
       </label>
+    `;
+  }
+
+  _renderColorField(label, field, value, options = {}) {
+    const colorOptions = { ...getEditorColorFieldOptions(field), ...options };
+    const currentValue = value === undefined || value === null || value === ""
+      ? colorOptions.fallbackValue
+      : String(value);
+    const colorModel = getEditorColorModel(currentValue, colorOptions.fallbackValue);
+    const presets = Array.isArray(colorOptions.presets) ? colorOptions.presets : [];
+
+    return `
+      <div class="editor-field ${colorOptions.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="Color personalizado">
+            <input
+              type="color"
+              data-field="${escapeHtml(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml(String(colorModel.alpha))}"
+              value="${escapeHtml(colorModel.hex)}"
+              aria-label="${escapeHtml(label)}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
+          </label>
+          <div class="editor-color-presets">
+            ${presets.map(preset => `
+              <button
+                type="button"
+                class="editor-color-preset ${isSameEditorColor(currentValue, preset.value) ? "is-active" : ""}"
+                data-color-field="${escapeHtml(field)}"
+                data-color-value="${escapeHtml(preset.value)}"
+                title="${escapeHtml(preset.label)}"
+                aria-label="${escapeHtml(`${label}: ${preset.label}`)}"
+              >
+                <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(preset.value)};"></span>
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      </div>
     `;
   }
 
@@ -4735,6 +4952,86 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           width: 100%;
         }
 
+        .editor-color-field {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          min-height: 40px;
+        }
+
+        .editor-color-picker {
+          align-items: center;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 40px;
+          justify-content: center;
+          position: relative;
+          width: 40px;
+        }
+
+        .editor-color-picker input {
+          cursor: pointer;
+          inset: 0;
+          opacity: 0;
+          position: absolute;
+        }
+
+        .editor-color-presets {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        button.editor-color-preset {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          height: 34px;
+          justify-content: center;
+          min-height: 0;
+          padding: 0;
+          width: 34px;
+        }
+
+        .editor-color-picker:hover,
+        button.editor-color-preset:hover {
+          border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .editor-color-picker:focus-within,
+        button.editor-color-preset.is-active {
+          border-color: rgba(255, 255, 255, 0.22);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .editor-color-swatch {
+          --editor-swatch: #71c0ff;
+          background:
+            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+            conic-gradient(from 90deg, rgba(255, 255, 255, 0.06) 25%, rgba(0, 0, 0, 0.12) 0 50%, rgba(255, 255, 255, 0.06) 0 75%, rgba(0, 0, 0, 0.12) 0);
+          background-position: center;
+          background-size: cover, 10px 10px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 999px;
+          display: block;
+          height: 18px;
+          width: 18px;
+        }
+
+        .editor-color-picker .editor-color-swatch {
+          height: 22px;
+          width: 22px;
+        }
+
         .editor-field textarea {
           min-height: 72px;
           resize: vertical;
@@ -4958,7 +5255,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             <div class="editor-section__hint">Ajustes visuales del reproductor grande y del navegador de medios.</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.player.background", config.styles.player.background)}
+            ${this._renderColorField("Background", "styles.player.background", config.styles.player.background)}
             ${this._renderTextField("Border", "styles.player.border", config.styles.player.border)}
             ${this._renderTextField("Radius", "styles.player.border_radius", config.styles.player.border_radius)}
             ${this._renderTextField("Shadow", "styles.player.box_shadow", config.styles.player.box_shadow)}
@@ -4971,14 +5268,14 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             ${this._renderTextField("Tamano subtitulo", "styles.player.subtitle_size", config.styles.player.subtitle_size)}
             ${this._renderTextField("Alto base slider", "styles.player.slider_wrap_height", config.styles.player.slider_wrap_height)}
             ${this._renderTextField("Grosor slider", "styles.player.slider_height", config.styles.player.slider_height)}
-            ${this._renderTextField("Color progreso", "styles.player.progress_color", config.styles.player.progress_color)}
-            ${this._renderTextField("Fondo progreso", "styles.player.progress_background", config.styles.player.progress_background)}
-            ${this._renderTextField("Overlay portada", "styles.player.overlay_color", config.styles.player.overlay_color)}
+            ${this._renderColorField("Color progreso", "styles.player.progress_color", config.styles.player.progress_color)}
+            ${this._renderColorField("Fondo progreso", "styles.player.progress_background", config.styles.player.progress_background)}
+            ${this._renderColorField("Overlay portada", "styles.player.overlay_color", config.styles.player.overlay_color)}
             ${this._renderTextField("Tamano dots", "styles.player.dot_size", config.styles.player.dot_size)}
-            ${this._renderTextField("Color acento", "styles.player.accent_color", config.styles.player.accent_color)}
-            ${this._renderTextField("Fondo acento", "styles.player.accent_background", config.styles.player.accent_background)}
+            ${this._renderColorField("Color acento", "styles.player.accent_color", config.styles.player.accent_color)}
+            ${this._renderColorField("Fondo acento", "styles.player.accent_background", config.styles.player.accent_background)}
             ${this._renderTextField("Radius browser", "styles.browser.border_radius", config.styles.browser.border_radius)}
-            ${this._renderTextField("Background browser", "styles.browser.background", config.styles.browser.background)}
+            ${this._renderColorField("Background browser", "styles.browser.background", config.styles.browser.background)}
           </div>
         </section>
         ${this._getEntityOptionsMarkup()}

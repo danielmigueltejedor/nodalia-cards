@@ -5068,6 +5068,166 @@ function escapeSelectorValue(value) {
   return String(value).replaceAll('"', '\\"');
 }
 
+const EDITOR_COLOR_PRESETS = Object.freeze({
+  standard: Object.freeze([
+    { label: "Tema", value: "var(--primary-color)" },
+    { label: "Info", value: "var(--info-color, #71c0ff)" },
+    { label: "Ambar", value: "var(--warning-color, #f6b73c)" },
+    { label: "Verde", value: "#38d9a9" },
+    { label: "Rojo", value: "#ff6b6b" },
+    { label: "Blanco", value: "#f5f7fb" },
+  ]),
+  muted: Object.freeze([
+    { label: "Inactivo", value: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))" },
+    { label: "Suave", value: "rgba(255, 255, 255, 0.72)" },
+    { label: "Gris", value: "rgba(255, 255, 255, 0.36)" },
+    { label: "Oscuro", value: "rgba(0, 0, 0, 0.38)" },
+  ]),
+  accentBackground: Object.freeze([
+    { label: "Tema", value: "rgba(var(--rgb-primary-color), 0.18)" },
+    { label: "Info", value: "rgba(113, 192, 255, 0.2)" },
+    { label: "Ambar", value: "rgba(246, 183, 60, 0.2)" },
+    { label: "Verde", value: "rgba(56, 217, 169, 0.18)" },
+    { label: "Claro", value: "rgba(255, 255, 255, 0.12)" },
+  ]),
+  surface: Object.freeze([
+    { label: "Tarjeta", value: "var(--ha-card-background)" },
+    { label: "Cristal", value: "rgba(255, 255, 255, 0.04)" },
+    { label: "Bruma", value: "rgba(255, 255, 255, 0.08)" },
+    { label: "Noche", value: "rgba(0, 0, 0, 0.18)" },
+    { label: "Info", value: "rgba(113, 192, 255, 0.14)" },
+  ]),
+  overlay: Object.freeze([
+    { label: "Ligero", value: "rgba(0, 0, 0, 0.18)" },
+    { label: "Medio", value: "rgba(0, 0, 0, 0.32)" },
+    { label: "Intenso", value: "rgba(0, 0, 0, 0.48)" },
+    { label: "Claro", value: "rgba(255, 255, 255, 0.14)" },
+  ]),
+  track: Object.freeze([
+    { label: "Suave", value: "rgba(255, 255, 255, 0.08)" },
+    { label: "Medio", value: "rgba(255, 255, 255, 0.14)" },
+    { label: "Fuerte", value: "rgba(255, 255, 255, 0.22)" },
+    { label: "Oscuro", value: "rgba(0, 0, 0, 0.16)" },
+  ]),
+});
+
+function resolveEditorColorValue(value) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || typeof document === "undefined") {
+    return "";
+  }
+
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.color = "";
+  probe.style.color = rawValue;
+  if (!probe.style.color) {
+    return rawValue;
+  }
+
+  (document.body || document.documentElement).appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved || rawValue;
+}
+
+function formatEditorHexChannel(value) {
+  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+}
+
+function formatEditorColorFromHex(hex, alpha = 1) {
+  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+    return String(hex ?? "");
+  }
+
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+  const safeAlpha = clamp(Number(alpha), 0, 1);
+  if (safeAlpha >= 0.999) {
+    return `#${normalizedHex}`;
+  }
+
+  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+}
+
+function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const channels = resolvedValue.match(/[\d.]+/g) || [];
+  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+
+  return {
+    alpha,
+    hex,
+    resolved: resolvedValue,
+    source: sourceValue,
+    value: formatEditorColorFromHex(hex, alpha),
+  };
+}
+
+function getEditorColorFieldOptions(field) {
+  const normalizedField = String(field ?? "");
+
+  if (normalizedField.endsWith("off_color")) {
+    return {
+      fallbackValue: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))",
+      presets: EDITOR_COLOR_PRESETS.muted,
+    };
+  }
+
+  if (normalizedField.endsWith("accent_background")) {
+    return {
+      fallbackValue: "rgba(113, 192, 255, 0.2)",
+      presets: EDITOR_COLOR_PRESETS.accentBackground,
+    };
+  }
+
+  if (normalizedField.endsWith("progress_background")) {
+    return {
+      fallbackValue: "rgba(255, 255, 255, 0.12)",
+      presets: EDITOR_COLOR_PRESETS.track,
+    };
+  }
+
+  if (normalizedField.endsWith("overlay_color")) {
+    return {
+      fallbackValue: "rgba(0, 0, 0, 0.32)",
+      presets: EDITOR_COLOR_PRESETS.overlay,
+    };
+  }
+
+  if (normalizedField.endsWith("background")) {
+    return {
+      fallbackValue: "var(--ha-card-background)",
+      presets: EDITOR_COLOR_PRESETS.surface,
+    };
+  }
+
+  return {
+    fallbackValue: "var(--info-color, #71c0ff)",
+    presets: EDITOR_COLOR_PRESETS.standard,
+  };
+}
+
+function isSameEditorColor(left, right) {
+  const leftResolved = resolveEditorColorValue(left);
+  const rightResolved = resolveEditorColorValue(right);
+
+  if (leftResolved && rightResolved) {
+    return leftResolved === rightResolved;
+  }
+
+  return String(left ?? "").trim() === String(right ?? "").trim();
+}
+
 function moveItem(array, fromIndex, toIndex) {
   if (!Array.isArray(array)) {
     return array;
@@ -9125,6 +9285,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
         const values = arrayFromCsv(input.value);
         return values.length ? values : undefined;
       }
+      case "color":
+        return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
       case "tristate":
         if (input.value === "true") {
           return true;
@@ -9161,6 +9323,19 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _onShadowClick(event) {
+    const colorButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.colorField && node.dataset?.colorValue);
+
+    if (colorButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._setFieldValue(colorButton.dataset.colorField, colorButton.dataset.colorValue);
+      this._setEditorConfig();
+      this._emitConfig();
+      return;
+    }
+
     const button = event
       .composedPath()
       .find(node => node instanceof HTMLButtonElement && node.dataset?.action);
@@ -9245,6 +9420,48 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           ${placeholder}
         />
       </label>
+    `;
+  }
+
+  _renderColorField(label, field, value, options = {}) {
+    const colorOptions = { ...getEditorColorFieldOptions(field), ...options };
+    const currentValue = value === undefined || value === null || value === ""
+      ? colorOptions.fallbackValue
+      : String(value);
+    const colorModel = getEditorColorModel(currentValue, colorOptions.fallbackValue);
+    const presets = Array.isArray(colorOptions.presets) ? colorOptions.presets : [];
+
+    return `
+      <div class="editor-field ${colorOptions.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="Color personalizado">
+            <input
+              type="color"
+              data-field="${escapeHtml(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml(String(colorModel.alpha))}"
+              value="${escapeHtml(colorModel.hex)}"
+              aria-label="${escapeHtml(label)}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
+          </label>
+          <div class="editor-color-presets">
+            ${presets.map(preset => `
+              <button
+                type="button"
+                class="editor-color-preset ${isSameEditorColor(currentValue, preset.value) ? "is-active" : ""}"
+                data-color-field="${escapeHtml(field)}"
+                data-color-value="${escapeHtml(preset.value)}"
+                title="${escapeHtml(preset.label)}"
+                aria-label="${escapeHtml(`${label}: ${preset.label}`)}"
+              >
+                <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(preset.value)};"></span>
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      </div>
     `;
   }
 
@@ -9485,43 +9702,10 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           line-height: 1.45;
         }
 
-        .editor-section__actions {
-          align-items: center;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          margin-top: 2px;
-        }
-
-        .editor-section__toggle-button {
-          align-items: center;
-          appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 999px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          font: inherit;
-          font-size: 12px;
-          font-weight: 600;
-          gap: 8px;
-          min-height: 34px;
-          padding: 0 12px;
-        }
-
-        .editor-section__toggle-button ha-icon {
-          --mdc-icon-size: 16px;
-        }
-
         .editor-grid {
           display: grid;
           gap: 12px;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .editor-grid--stacked {
-          grid-template-columns: 1fr;
         }
 
         .editor-field,
@@ -9553,6 +9737,86 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           min-height: 40px;
           padding: 10px 12px;
           width: 100%;
+        }
+
+        .editor-color-field {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          min-height: 40px;
+        }
+
+        .editor-color-picker {
+          align-items: center;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 40px;
+          justify-content: center;
+          position: relative;
+          width: 40px;
+        }
+
+        .editor-color-picker input {
+          cursor: pointer;
+          inset: 0;
+          opacity: 0;
+          position: absolute;
+        }
+
+        .editor-color-presets {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        button.editor-color-preset {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          height: 34px;
+          justify-content: center;
+          min-height: 0;
+          padding: 0;
+          width: 34px;
+        }
+
+        .editor-color-picker:hover,
+        button.editor-color-preset:hover {
+          border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .editor-color-picker:focus-within,
+        button.editor-color-preset.is-active {
+          border-color: rgba(255, 255, 255, 0.22);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .editor-color-swatch {
+          --editor-swatch: #71c0ff;
+          background:
+            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+            conic-gradient(from 90deg, rgba(255, 255, 255, 0.06) 25%, rgba(0, 0, 0, 0.12) 0 50%, rgba(255, 255, 255, 0.06) 0 75%, rgba(0, 0, 0, 0.12) 0);
+          background-position: center;
+          background-size: cover, 10px 10px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 999px;
+          display: block;
+          height: 18px;
+          width: 18px;
+        }
+
+        .editor-color-picker .editor-color-swatch {
+          height: 22px;
+          width: 22px;
         }
 
         .editor-field textarea {
@@ -9778,7 +10042,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             <div class="editor-section__hint">Ajustes visuales del reproductor grande y del navegador de medios.</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.player.background", config.styles.player.background)}
+            ${this._renderColorField("Background", "styles.player.background", config.styles.player.background)}
             ${this._renderTextField("Border", "styles.player.border", config.styles.player.border)}
             ${this._renderTextField("Radius", "styles.player.border_radius", config.styles.player.border_radius)}
             ${this._renderTextField("Shadow", "styles.player.box_shadow", config.styles.player.box_shadow)}
@@ -9791,14 +10055,14 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             ${this._renderTextField("Tamano subtitulo", "styles.player.subtitle_size", config.styles.player.subtitle_size)}
             ${this._renderTextField("Alto base slider", "styles.player.slider_wrap_height", config.styles.player.slider_wrap_height)}
             ${this._renderTextField("Grosor slider", "styles.player.slider_height", config.styles.player.slider_height)}
-            ${this._renderTextField("Color progreso", "styles.player.progress_color", config.styles.player.progress_color)}
-            ${this._renderTextField("Fondo progreso", "styles.player.progress_background", config.styles.player.progress_background)}
-            ${this._renderTextField("Overlay portada", "styles.player.overlay_color", config.styles.player.overlay_color)}
+            ${this._renderColorField("Color progreso", "styles.player.progress_color", config.styles.player.progress_color)}
+            ${this._renderColorField("Fondo progreso", "styles.player.progress_background", config.styles.player.progress_background)}
+            ${this._renderColorField("Overlay portada", "styles.player.overlay_color", config.styles.player.overlay_color)}
             ${this._renderTextField("Tamano dots", "styles.player.dot_size", config.styles.player.dot_size)}
-            ${this._renderTextField("Color acento", "styles.player.accent_color", config.styles.player.accent_color)}
-            ${this._renderTextField("Fondo acento", "styles.player.accent_background", config.styles.player.accent_background)}
+            ${this._renderColorField("Color acento", "styles.player.accent_color", config.styles.player.accent_color)}
+            ${this._renderColorField("Fondo acento", "styles.player.accent_background", config.styles.player.accent_background)}
             ${this._renderTextField("Radius browser", "styles.browser.border_radius", config.styles.browser.border_radius)}
-            ${this._renderTextField("Background browser", "styles.browser.background", config.styles.browser.background)}
+            ${this._renderColorField("Background browser", "styles.browser.background", config.styles.browser.background)}
           </div>
         </section>
         ${this._getEntityOptionsMarkup()}
@@ -9822,4595 +10086,6 @@ window.customCards.push({
   type: CARD_TAG,
   name: "Nodalia Media Player",
   description: "Media player fijo con estetica Nodalia y editor visual.",
-  preview: true,
-});
-
-}
-{
-const CARD_TAG = "nodalia-entity-card";
-const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "0.6.0";
-const HAPTIC_PATTERNS = {
-  selection: 8,
-  light: 10,
-  medium: 16,
-  heavy: 24,
-  success: [10, 40, 10],
-  warning: [20, 50, 12],
-  failure: [12, 40, 12, 40, 18],
-};
-const COMPACT_LAYOUT_THRESHOLD = 150;
-
-const DEFAULT_CONFIG = {
-  entity: "",
-  name: "",
-  icon: "",
-  use_entity_icon: false,
-  tap_action: "auto",
-  tap_service: "",
-  tap_service_data: "",
-  tap_url: "",
-  tap_new_tab: false,
-  show_state: true,
-  primary_attribute: "",
-  secondary_attribute: "",
-  show_primary_chip: true,
-  show_secondary_chip: true,
-  compact_layout_mode: "auto",
-  quick_actions: [],
-  haptics: {
-    enabled: false,
-    style: "selection",
-    fallback_vibrate: false,
-  },
-  styles: {
-    card: {
-      background: "var(--ha-card-background)",
-      border: "1px solid var(--divider-color)",
-      border_radius: "28px",
-      box_shadow: "var(--ha-card-box-shadow)",
-      padding: "14px",
-      gap: "12px",
-    },
-    icon: {
-      size: "58px",
-      background: "rgba(255, 255, 255, 0.06)",
-      color: "var(--primary-text-color)",
-      on_color: "var(--info-color, #71c0ff)",
-      off_color: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))",
-    },
-    control: {
-      size: "40px",
-      accent_color: "var(--primary-text-color)",
-      accent_background: "rgba(113, 192, 255, 0.18)",
-    },
-    chip_height: "24px",
-    chip_font_size: "11px",
-    chip_padding: "0 9px",
-    title_size: "14px",
-  },
-};
-
-const STUB_CONFIG = {
-  entity: "switch.lampara",
-  name: "Lampara",
-  tap_action: "auto",
-  show_state: true,
-  quick_actions: [
-    {
-      icon: "mdi:power",
-      type: "toggle",
-      label: "Toggle",
-    },
-    {
-      icon: "mdi:cog",
-      type: "more-info",
-      label: "Detalles",
-    },
-  ],
-};
-
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function deepClone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  return JSON.parse(JSON.stringify(value));
-}
-
-function mergeConfig(base, override) {
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
-  }
-
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-
-  keys.forEach(key => {
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-
-    if (overrideValue === undefined) {
-      result[key] = deepClone(baseValue);
-      return;
-    }
-
-    if (Array.isArray(overrideValue)) {
-      result[key] = deepClone(overrideValue);
-      return;
-    }
-
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      result[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-
-    result[key] = overrideValue;
-  });
-
-  return result;
-}
-
-function compactConfig(value) {
-  if (Array.isArray(value)) {
-    return value
-      .map(item => compactConfig(item))
-      .filter(item => item !== undefined);
-  }
-
-  if (isObject(value)) {
-    const compacted = {};
-
-    Object.entries(value).forEach(([key, item]) => {
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-
-    return compacted;
-  }
-
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
-}
-
-function setByPath(target, path, value) {
-  const parts = path.split(".");
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
-    }
-    cursor = cursor[key];
-  }
-
-  cursor[parts[parts.length - 1]] = value;
-}
-
-function deleteByPath(target, path) {
-  const parts = path.split(".");
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      return;
-    }
-    cursor = cursor[key];
-  }
-
-  delete cursor[parts[parts.length - 1]];
-}
-
-function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function escapeSelectorValue(value) {
-  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-}
-
-function fireEvent(node, type, detail, options) {
-  const event = new CustomEvent(type, {
-    bubbles: options?.bubbles ?? true,
-    cancelable: Boolean(options?.cancelable),
-    composed: options?.composed ?? true,
-    detail,
-  });
-  node.dispatchEvent(event);
-  return event;
-}
-
-function normalizeTextKey(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
-function isUnavailableState(state) {
-  return normalizeTextKey(state?.state) === "unavailable";
-}
-
-function getEntityDomain(state) {
-  const entityId = String(state?.entity_id || "");
-  return entityId.includes(".") ? entityId.split(".")[0] : "";
-}
-
-function getDynamicEntityIcon(state) {
-  if (!state) {
-    return "";
-  }
-
-  const domain = getEntityDomain(state);
-  const stateKey = normalizeTextKey(state.state);
-  const deviceClass = normalizeTextKey(state.attributes?.device_class);
-
-  if (domain === "binary_sensor") {
-    switch (deviceClass) {
-      case "door":
-      case "opening":
-        return stateKey === "on" ? "mdi:door-open" : "mdi:door-closed";
-      case "garage_door":
-        return stateKey === "on" ? "mdi:garage-open" : "mdi:garage";
-      case "window":
-        return stateKey === "on" ? "mdi:window-open-variant" : "mdi:window-closed-variant";
-      case "motion":
-        return stateKey === "on" ? "mdi:motion-sensor" : "mdi:motion-sensor-off";
-      case "occupancy":
-      case "presence":
-      case "person":
-        return stateKey === "on" ? "mdi:account" : "mdi:account-off-outline";
-      case "smoke":
-        return stateKey === "on" ? "mdi:smoke-detector-alert" : "mdi:smoke-detector-variant";
-      case "moisture":
-        return stateKey === "on" ? "mdi:water-alert" : "mdi:water-check";
-      case "gas":
-        return stateKey === "on" ? "mdi:gas-cylinder" : "mdi:check-circle-outline";
-      case "tamper":
-      case "safety":
-      case "problem":
-        return stateKey === "on" ? "mdi:alert-circle" : "mdi:check-circle-outline";
-      case "plug":
-      case "power":
-        return stateKey === "on" ? "mdi:power-plug" : "mdi:power-plug-off";
-      case "sound":
-        return stateKey === "on" ? "mdi:volume-high" : "mdi:volume-mute";
-      case "vibration":
-        return stateKey === "on" ? "mdi:vibrate" : "mdi:vibrate-off";
-      case "heat":
-        return stateKey === "on" ? "mdi:fire" : "mdi:fire-off";
-      case "cold":
-        return stateKey === "on" ? "mdi:snowflake-alert" : "mdi:snowflake";
-      case "light":
-        return stateKey === "on" ? "mdi:brightness-7" : "mdi:brightness-5";
-      default:
-        break;
-    }
-  }
-
-  if (domain === "light") {
-    return stateKey === "on" ? "mdi:lightbulb" : "mdi:lightbulb-off";
-  }
-
-  if (domain === "switch") {
-    return stateKey === "on" ? "mdi:toggle-switch-variant" : "mdi:toggle-switch-variant-off";
-  }
-
-  if (domain === "fan") {
-    return stateKey === "on" ? "mdi:fan" : "mdi:fan-off";
-  }
-
-  if (domain === "lock") {
-    switch (stateKey) {
-      case "unlocked":
-      case "open":
-        return "mdi:lock-open-variant";
-      case "jammed":
-        return "mdi:lock-alert";
-      case "locking":
-      case "unlocking":
-        return "mdi:lock-clock";
-      default:
-        return "mdi:lock";
-    }
-  }
-
-  if (domain === "cover") {
-    if (deviceClass === "garage") {
-      return stateKey === "open" ? "mdi:garage-open" : "mdi:garage";
-    }
-
-    if (deviceClass === "door") {
-      return stateKey === "open" ? "mdi:door-open" : "mdi:door-closed";
-    }
-
-    if (deviceClass === "window") {
-      return stateKey === "open" ? "mdi:window-open-variant" : "mdi:window-closed-variant";
-    }
-  }
-
-  if (domain === "person") {
-    switch (stateKey) {
-      case "home":
-      case "casa":
-      case "en_casa":
-        return "mdi:home-account";
-      case "not_home":
-      case "away":
-      case "fuera":
-        return "mdi:account-arrow-right";
-      default:
-        return "mdi:account";
-    }
-  }
-
-  return "";
-}
-
-function normalizeConfig(rawConfig) {
-  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-
-  config.quick_actions = Array.isArray(config.quick_actions)
-    ? config.quick_actions
-      .filter(action => isObject(action))
-      .map(action => ({
-        icon: action.icon || "mdi:flash",
-        type: action.type || "toggle",
-        label: action.label || "",
-        entity: action.entity || "",
-        service: action.service || "",
-        service_data: action.service_data || "",
-      }))
-    : [];
-
-  return config;
-}
-
-class NodaliaEntityCard extends HTMLElement {
-  static async getConfigElement() {
-    return document.createElement(EDITOR_TAG);
-  }
-
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
-  }
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = null;
-    this._hass = null;
-    this._cardWidth = 0;
-    this._isCompactLayout = false;
-    this._lastRenderSignature = "";
-    this._resizeObserver = new ResizeObserver(entries => {
-      const entry = entries[0];
-      if (!entry) {
-        return;
-      }
-
-      const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
-      const nextCompact = this._shouldUseCompactLayout(nextWidth);
-
-      if (nextWidth === this._cardWidth && nextCompact === this._isCompactLayout) {
-        return;
-      }
-
-      this._cardWidth = nextWidth;
-      this._isCompactLayout = nextCompact;
-      this._render();
-    });
-    this._onShadowClick = this._onShadowClick.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-  }
-
-  connectedCallback() {
-    this._resizeObserver?.observe(this);
-  }
-
-  disconnectedCallback() {
-    this._resizeObserver?.disconnect();
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    this._isCompactLayout = this._shouldUseCompactLayout(
-      Math.round(this._cardWidth || this.clientWidth || 0),
-    );
-    this._lastRenderSignature = "";
-    this._render();
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getRenderSignature(hass);
-    this._hass = hass;
-
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
-      return;
-    }
-
-    this._lastRenderSignature = nextSignature;
-    this._render();
-  }
-
-  getCardSize() {
-    return 1;
-  }
-
-  getGridOptions() {
-    return {
-      rows: 1,
-      columns: 6,
-      min_rows: 1,
-      min_columns: 2,
-    };
-  }
-
-  _getRenderSignature(hass = this._hass) {
-    const entityId = this._config?.entity || "";
-    const state = entityId ? hass?.states?.[entityId] || null : null;
-    const attrs = state?.attributes || {};
-    const configuredStateAttribute = String(this._config?.state_attribute || "").trim();
-    return JSON.stringify({
-      entityId,
-      state: String(state?.state || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      deviceClass: String(attrs.device_class || ""),
-      unit: String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || ""),
-      configuredStateAttribute,
-      configuredStateValue: configuredStateAttribute ? String(attrs[configuredStateAttribute] ?? "") : "",
-      useEntityIcon: Boolean(this._config?.use_entity_icon),
-      compact: Boolean(this._isCompactLayout),
-      quickActions: Array.isArray(this._config?.quick_actions) ? this._config.quick_actions.length : 0,
-    });
-  }
-
-  _getConfiguredGridColumns() {
-    const numericColumns = Number(this._config?.grid_options?.columns);
-    return Number.isFinite(numericColumns) ? numericColumns : null;
-  }
-
-  _getConfiguredGridRows() {
-    const numericRows = Number(this._config?.grid_options?.rows);
-    return Number.isFinite(numericRows) ? numericRows : null;
-  }
-
-  _shouldUseCompactLayout(width) {
-    const mode = this._config?.compact_layout_mode || "auto";
-
-    if (mode === "always") {
-      return true;
-    }
-
-    if (mode === "never") {
-      return false;
-    }
-
-    const configuredColumns = this._getConfiguredGridColumns();
-    if (configuredColumns !== null) {
-      return configuredColumns < 4;
-    }
-
-    return width > 0 && width <= COMPACT_LAYOUT_THRESHOLD;
-  }
-
-  _getState() {
-    return this._hass?.states?.[this._config?.entity] || null;
-  }
-
-  _getDomain(entityId = this._config?.entity) {
-    return String(entityId || "").split(".")[0] || "";
-  }
-
-  _isBinaryOnOff(state) {
-    const stateKey = normalizeTextKey(state?.state);
-    return stateKey === "on" || stateKey === "off";
-  }
-
-  _isActiveState(state) {
-    const stateKey = normalizeTextKey(state?.state);
-
-    if (!stateKey || ["off", "closed", "locked", "unavailable", "unknown", "none", "idle", "standby"].includes(stateKey)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  _getAccentColor(state) {
-    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
-    return this._isActiveState(state)
-      ? styles?.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color
-      : styles?.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color;
-  }
-
-  _translateStateValue(state) {
-    if (!state) {
-      return null;
-    }
-
-    const rawState = String(state.state ?? "").trim();
-    const unit = String(state.attributes?.unit_of_measurement || "").trim();
-    const key = normalizeTextKey(rawState);
-    const domain = getEntityDomain(state);
-    const deviceClass = normalizeTextKey(state.attributes?.device_class);
-
-    if (rawState && unit && /^-?\d+([.,]\d+)?$/.test(rawState)) {
-      return `${rawState} ${unit}`;
-    }
-
-    if (domain === "binary_sensor") {
-      const isOpenState = ["on", "open", "opening"].includes(key);
-      const isClosedState = ["off", "closed", "closing"].includes(key);
-
-      if (["door", "opening", "window", "garage_door"].includes(deviceClass)) {
-        if (isOpenState) {
-          return "Abierta";
-        }
-        if (isClosedState) {
-          return "Cerrada";
-        }
-      }
-
-      if (["motion", "occupancy", "presence", "moving"].includes(deviceClass)) {
-        if (isOpenState) {
-          return "Detectado";
-        }
-        if (isClosedState) {
-          return "No detectado";
-        }
-      }
-    }
-
-    if (domain === "lock") {
-      if (key === "locking") {
-        return "Bloqueando";
-      }
-      if (key === "unlocking") {
-        return "Desbloqueando";
-      }
-    }
-
-    switch (key) {
-      case "on":
-        return "Encendido";
-      case "off":
-        return "Apagado";
-      case "open":
-        return "Abierto";
-      case "opening":
-        return "Abriendo";
-      case "closed":
-        return "Cerrado";
-      case "closing":
-        return "Cerrando";
-      case "playing":
-        return "Reproduciendo";
-      case "paused":
-        return "En pausa";
-      case "idle":
-        return "En espera";
-      case "standby":
-        return "Standby";
-      case "home":
-        return "En casa";
-      case "not_home":
-        return "Fuera";
-      case "detected":
-        return "Detectado";
-      case "clear":
-        return "Libre";
-      case "unavailable":
-        return "No disponible";
-      case "unknown":
-        return "Desconocido";
-      case "locked":
-        return "Bloqueado";
-      case "unlocked":
-        return "Desbloqueado";
-      case "locking":
-        return "Bloqueando";
-      case "unlocking":
-        return "Desbloqueando";
-      case "locking_failed":
-        return "Bloqueo fallido";
-      case "unlocking_failed":
-        return "Desbloqueo fallido";
-      case "jammed":
-        return "Atascado";
-      case "pending":
-        return "Pendiente";
-      case "opening":
-        return "Abriendo";
-      case "closing":
-        return "Cerrando";
-      case "stopped":
-        return "Detenido";
-      case "paused":
-        return "En pausa";
-      case "unavailable":
-        return "No disponible";
-      case "armed_away":
-        return "Armado fuera";
-      case "armed_home":
-        return "Armado en casa";
-      case "disarmed":
-        return "Desarmado";
-      case "triggered":
-        return "Disparado";
-      case "comfortable":
-        return "Comodo";
-      case "very_comfortable":
-        return "Muy comodo";
-      case "slightly_uncomfortable":
-        return "Ligeramente incomodo";
-      case "somewhat_uncomfortable":
-        return "Algo incomodo";
-      case "quite_uncomfortable":
-        return "Bastante incomodo";
-      case "extremely_uncomfortable":
-        return "Muy incomodo";
-      case "ok_but_humid":
-        return "Bien, pero humedo";
-      case "little_or_no_discomfort":
-        return "Poco o ningun malestar";
-      case "some_discomfort":
-        return "Algo de malestar";
-      case "great_discomfort_avoid_exertion":
-        return "Gran malestar";
-      case "dangerous_discomfort":
-        return "Malestar peligroso";
-      case "heat_stroke_imminent":
-        return "Golpe de calor inminente";
-      case "dry":
-        return "Seco";
-      case "very_dry":
-        return "Muy seco";
-      case "too_dry":
-        return "Demasiado seco";
-      case "humid":
-        return "Humedo";
-      case "very_humid":
-        return "Muy humedo";
-      case "too_humid":
-        return "Demasiado humedo";
-      case "wet":
-        return "Mojado";
-      case "low":
-        return "Bajo";
-      case "medium":
-        return "Medio";
-      case "moderate":
-        return "Moderado";
-      case "high":
-        return "Alto";
-      case "very_high":
-        return "Muy alto";
-      case "severely_high":
-        return "Extremadamente alto";
-      case "critical":
-        return "Critico";
-      case "excellent":
-        return "Excelente";
-      case "good":
-        return "Bueno";
-      case "fair":
-        return "Aceptable";
-      case "poor":
-        return "Malo";
-      default:
-        return rawState || null;
-    }
-  }
-
-  _formatAttributeValue(state, attributeName) {
-    if (!state || !attributeName) {
-      return null;
-    }
-
-    const value = state.attributes?.[attributeName];
-
-    if (value === undefined || value === null || value === "") {
-      return null;
-    }
-
-    const key = normalizeTextKey(attributeName);
-
-    if (typeof value === "boolean") {
-      return value ? "Si" : "No";
-    }
-
-    if (Array.isArray(value)) {
-      return value
-        .map(item => {
-          if (isObject(item) && item.name) {
-            return item.name;
-          }
-          return String(item ?? "").trim();
-        })
-        .filter(Boolean)
-        .join(", ");
-    }
-
-    if (isObject(value)) {
-      if (value.name) {
-        return String(value.name);
-      }
-
-      try {
-        return JSON.stringify(value);
-      } catch (_error) {
-        return String(value);
-      }
-    }
-
-    if (typeof value === "number") {
-      if (["battery", "battery_level", "humidity", "current_humidity"].includes(key)) {
-        return `${Math.round(value)}%`;
-      }
-
-      if (key === "brightness") {
-        return `${Math.round((value / 255) * 100)}%`;
-      }
-
-      if (key === "volume_level") {
-        return `${Math.round(value * 100)}%`;
-      }
-
-      if (key.includes("temperature")) {
-        const unit = state.attributes?.temperature_unit || "°C";
-        return `${value}${unit.startsWith("°") ? "" : " "}${unit}`;
-      }
-    }
-
-    return String(value);
-  }
-
-  _getTitle(state) {
-    return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Entidad";
-  }
-
-  _getIcon(state) {
-    if (this._config?.use_entity_icon === true) {
-      const resolvedEntityIcon = state?.attributes?.icon || getDynamicEntityIcon(state);
-      if (resolvedEntityIcon) {
-        return resolvedEntityIcon;
-      }
-    }
-
-    return this._config?.icon || state?.attributes?.icon || "mdi:tune";
-  }
-
-  _canRunTapAction(state) {
-    const tapAction = this._config?.tap_action || "auto";
-    if (tapAction === "none") {
-      return false;
-    }
-
-    if (tapAction === "service") {
-      return Boolean(this._config?.tap_service);
-    }
-
-    if (tapAction === "url") {
-      return Boolean(this._config?.tap_url);
-    }
-
-    if (tapAction === "toggle") {
-      return this._isBinaryOnOff(state);
-    }
-
-    if (tapAction === "more-info") {
-      return Boolean(this._config?.entity);
-    }
-
-    if (tapAction === "auto") {
-      return Boolean(this._config?.entity);
-    }
-
-    return false;
-  }
-
-  _toggleEntity(entityId = this._config?.entity) {
-    const state = this._hass?.states?.[entityId];
-    if (!this._hass || !entityId || !state || !this._isBinaryOnOff(state)) {
-      return;
-    }
-
-    const service = normalizeTextKey(state.state) === "on" ? "turn_off" : "turn_on";
-    this._hass.callService("homeassistant", service, {
-      entity_id: entityId,
-    });
-  }
-
-  _openMoreInfo(entityId = this._config?.entity) {
-    if (!entityId) {
-      return;
-    }
-
-    fireEvent(this, "hass-more-info", {
-      entityId,
-    });
-  }
-
-  _parseServiceData(rawValue) {
-    if (!rawValue) {
-      return {};
-    }
-
-    try {
-      const parsed = JSON.parse(rawValue);
-      return isObject(parsed) ? parsed : {};
-    } catch (_error) {
-      return {};
-    }
-  }
-
-  _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "") {
-    if (!this._hass || !serviceValue) {
-      return;
-    }
-
-    const [domain, service] = String(serviceValue).split(".");
-    if (!domain || !service) {
-      return;
-    }
-
-    const payload = this._parseServiceData(rawData);
-    if (entityId && payload.entity_id === undefined) {
-      payload.entity_id = entityId;
-    }
-
-    this._hass.callService(domain, service, payload);
-  }
-
-  _openConfiguredUrl(urlValue = this._config?.tap_url, newTab = this._config?.tap_new_tab === true) {
-    const url = String(urlValue || "").trim();
-    if (!url) {
-      return;
-    }
-
-    if (newTab) {
-      window.open(url, "_blank", "noopener,noreferrer");
-      return;
-    }
-
-    window.location.href = url;
-  }
-
-  _performPrimaryAction(state) {
-    const tapAction = this._config?.tap_action || "auto";
-
-    switch (tapAction) {
-      case "toggle":
-        this._toggleEntity(this._config?.entity);
-        break;
-      case "more-info":
-        this._openMoreInfo(this._config?.entity);
-        break;
-      case "service":
-        this._callConfiguredService(this._config?.tap_service, this._config?.entity, this._config?.tap_service_data);
-        break;
-      case "url":
-        this._openConfiguredUrl(this._config?.tap_url, this._config?.tap_new_tab);
-        break;
-      case "auto":
-      default:
-        if (this._isBinaryOnOff(state)) {
-          this._toggleEntity(this._config?.entity);
-          return;
-        }
-
-        this._openMoreInfo(this._config?.entity);
-        break;
-    }
-  }
-
-  _performQuickAction(action) {
-    const targetEntity = action?.entity || this._config?.entity;
-
-    switch (action?.type) {
-      case "toggle":
-        this._toggleEntity(targetEntity);
-        break;
-      case "more-info":
-        this._openMoreInfo(targetEntity);
-        break;
-      case "service":
-        this._callConfiguredService(action?.service, targetEntity, action?.service_data);
-        break;
-      default:
-        break;
-    }
-  }
-
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
-    if (haptics.enabled !== true) {
-      return;
-    }
-
-    const style = styleOverride || haptics.style || "selection";
-    fireEvent(this, "haptic", style, {
-      bubbles: true,
-      cancelable: false,
-      composed: true,
-    });
-
-    if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
-    }
-  }
-
-  _onShadowClick(event) {
-    const actionTarget = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.entityAction);
-
-    if (!actionTarget) {
-      return;
-    }
-
-    const state = this._getState();
-    const action = actionTarget.dataset.entityAction;
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (action === "primary") {
-      if (!this._canRunTapAction(state)) {
-        return;
-      }
-
-      this._triggerHaptic();
-      this._performPrimaryAction(state);
-      return;
-    }
-
-    if (action === "quick") {
-      const index = Number(actionTarget.dataset.index);
-      const quickAction = this._config?.quick_actions?.[index];
-
-      if (!quickAction) {
-        return;
-      }
-
-      this._triggerHaptic();
-      this._performQuickAction(quickAction);
-    }
-  }
-
-  _renderChip(label, tone = "default") {
-    if (!label) {
-      return "";
-    }
-
-    return `<div class="entity-card__chip entity-card__chip--${tone}">${escapeHtml(label)}</div>`;
-  }
-
-  _renderEmptyState() {
-    return `
-      <ha-card class="entity-card entity-card--empty">
-        <div class="entity-card__empty-title">Nodalia Entity Card</div>
-        <div class="entity-card__empty-text">Configura \`entity\` para mostrar la tarjeta.</div>
-      </ha-card>
-    `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    if (!this._config?.entity) {
-      this.shadowRoot.innerHTML = this._renderEmptyState();
-      return;
-    }
-
-    const state = this._getState();
-    if (!state) {
-      this.shadowRoot.innerHTML = this._renderEmptyState();
-      return;
-    }
-
-    const config = this._config;
-    const styles = config.styles || DEFAULT_CONFIG.styles;
-    const quickActions = Array.isArray(config.quick_actions) ? config.quick_actions.filter(action => action?.icon) : [];
-    const configuredColumns = this._getConfiguredGridColumns();
-    const configuredRows = this._getConfiguredGridRows();
-    const singleRowLayout = configuredRows !== null ? configuredRows <= 1 : quickActions.length === 0;
-    const narrowCard = configuredColumns !== null ? configuredColumns <= 6 : (this._cardWidth || this.clientWidth || 0) <= 300;
-    const compactMetrics = narrowCard || singleRowLayout;
-    const singleRowPaddingY = singleRowLayout ? 4 : 0;
-    const singleRowPaddingX = singleRowLayout ? 9 : 0;
-    const effectivePadding = singleRowLayout ? `${singleRowPaddingY}px ${singleRowPaddingX}px` : compactMetrics ? "10px 12px" : styles.card.padding;
-    const effectiveGap = singleRowLayout ? "2px" : compactMetrics ? "8px" : styles.card.gap;
-    const effectiveIconSizePx = Math.max(30, Math.min(parseSizeToPixels(styles.icon.size, 58), singleRowLayout ? 32 : compactMetrics ? 46 : 58));
-    const effectiveIconSize = `${effectiveIconSizePx}px`;
-    const effectiveIconTrackSize = `${effectiveIconSizePx + (singleRowLayout ? 7 : 10)}px`;
-    const effectiveControlSize = `${Math.max(34, Math.min(parseSizeToPixels(styles.control.size, 40), compactMetrics ? 36 : 40))}px`;
-    const effectiveTitleSize = `${Math.max(9.5, Math.min(parseSizeToPixels(styles.title_size, 14), singleRowLayout ? 10 : compactMetrics ? 12 : 14))}px`;
-    const effectiveChipHeight = `${Math.max(15, Math.min(parseSizeToPixels(styles.chip_height, 24), singleRowLayout ? 16 : compactMetrics ? 22 : 24))}px`;
-    const effectiveChipFontSize = `${Math.max(8, Math.min(parseSizeToPixels(styles.chip_font_size, 11), singleRowLayout ? 8.5 : compactMetrics ? 10 : 11))}px`;
-    const effectiveChipPadding = singleRowLayout ? "0 6px" : compactMetrics ? "0 8px" : styles.chip_padding;
-    const effectiveCardHeightPx = singleRowLayout ? Math.max(54, effectiveIconSizePx + (singleRowPaddingY * 2)) : 0;
-    const effectiveCardMinHeight = singleRowLayout ? `${effectiveCardHeightPx}px` : "0px";
-    const effectiveContentMinHeight = singleRowLayout ? `${Math.max(effectiveIconSizePx, effectiveCardHeightPx - (singleRowPaddingY * 2))}px` : "0px";
-    const title = this._getTitle(state);
-    const icon = this._getIcon(state);
-    const isCompactLayout = this._isCompactLayout;
-    const accentColor = this._getAccentColor(state);
-    const showUnavailableBadge = isUnavailableState(state);
-    const stateLabel = config.show_state ? this._translateStateValue(state) : null;
-    const primaryValue = config.show_primary_chip !== false
-      ? this._formatAttributeValue(state, config.primary_attribute)
-      : null;
-    const secondaryValue = config.show_secondary_chip !== false
-      ? this._formatAttributeValue(state, config.secondary_attribute)
-      : null;
-    const chips = [
-      this._renderChip(stateLabel, "state"),
-      this._renderChip(primaryValue, "value"),
-      this._renderChip(secondaryValue, "value"),
-    ].filter(Boolean);
-    const showTitle = !isCompactLayout;
-    const showCopyBlock = showTitle || chips.length > 0;
-    const canRunPrimaryAction = this._canRunTapAction(state);
-    const isActive = this._isActiveState(state);
-    const cardBackground = isActive
-      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`
-      : styles.card.background;
-    const cardBorder = isActive
-      ? `1px solid color-mix(in srgb, ${accentColor} 24%, var(--divider-color))`
-      : "1px solid rgba(255, 255, 255, 0.06)";
-    const cardShadow = isActive
-      ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`
-      : styles.card.box_shadow;
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        ha-card {
-          background: ${cardBackground};
-          border: ${cardBorder};
-          border-radius: ${styles.card.border_radius};
-          box-shadow: ${cardShadow};
-          color: var(--primary-text-color);
-          overflow: hidden;
-          position: relative;
-        }
-
-        .entity-card--single-row {
-          min-height: ${effectiveCardMinHeight};
-        }
-
-        ha-card::before {
-          background: ${isActive
-            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, rgba(255, 255, 255, 0.05)), rgba(255, 255, 255, 0))`
-            : "linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0))"};
-          content: "";
-          inset: 0;
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
-        }
-
-        .entity-card--clickable {
-          cursor: pointer;
-        }
-
-        .entity-card__content {
-          display: grid;
-          gap: ${effectiveGap};
-          min-width: 0;
-          padding: ${effectivePadding};
-          position: relative;
-          z-index: 1;
-        }
-
-        .entity-card--single-row .entity-card__content {
-          align-content: center;
-          min-height: ${effectiveContentMinHeight};
-        }
-
-        .entity-card__hero {
-          align-items: center;
-          display: grid;
-          gap: ${singleRowLayout ? "6px" : narrowCard ? "10px" : "12px"};
-          grid-template-columns: ${effectiveIconTrackSize} minmax(0, 1fr);
-          min-height: ${singleRowLayout ? effectiveContentMinHeight : "0px"};
-          min-width: 0;
-        }
-
-        .entity-card__icon {
-          -webkit-tap-highlight-color: transparent;
-          align-items: center;
-          appearance: none;
-          background: ${styles.icon.background};
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: ${singleRowLayout ? "18px" : "24px"};
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.08),
-            0 12px 30px rgba(0, 0, 0, 0.18);
-          color: ${isActive ? styles.icon.on_color : styles.icon.off_color};
-          cursor: ${canRunPrimaryAction ? "pointer" : "default"};
-          display: inline-flex;
-          flex: 0 0 auto;
-          height: ${effectiveIconSize};
-          justify-content: center;
-          line-height: 0;
-          margin: 0;
-          outline: none;
-          padding: 0;
-          position: relative;
-          justify-self: start;
-          width: ${effectiveIconSize};
-        }
-
-        .entity-card__icon ha-icon {
-          --mdc-icon-size: calc(${effectiveIconSize} * 0.44);
-          display: inline-flex;
-          height: calc(${effectiveIconSize} * 0.44);
-          left: 50%;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: calc(${effectiveIconSize} * 0.44);
-        }
-
-        .entity-card__unavailable-badge {
-          align-items: center;
-          background: #ff9b4a;
-          border: 2px solid ${styles.card.background};
-          border-radius: 999px;
-          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
-          color: #ffffff;
-          display: inline-flex;
-          height: 18px;
-          justify-content: center;
-          position: absolute;
-          right: 0;
-          top: 0;
-          transform: translate(28%, -28%);
-          width: 18px;
-          z-index: 2;
-        }
-
-        .entity-card__unavailable-badge ha-icon {
-          --mdc-icon-size: 11px;
-          height: 11px;
-          left: auto;
-          position: static;
-          top: auto;
-          transform: none;
-          width: 11px;
-        }
-
-        .entity-card__copy {
-          display: grid;
-          gap: ${singleRowLayout ? "0" : narrowCard ? "6px" : "10px"};
-          min-width: 0;
-        }
-
-        .entity-card--single-row .entity-card__copy {
-          align-content: center;
-          display: grid;
-          gap: 3px;
-          min-width: 0;
-        }
-
-        .entity-card--compact:not(.entity-card--with-copy) .entity-card__hero {
-          justify-items: center;
-          grid-template-columns: 1fr;
-        }
-
-        .entity-card__title {
-          font-size: ${effectiveTitleSize};
-          font-weight: 700;
-          letter-spacing: -0.02em;
-          line-height: ${singleRowLayout ? "1.02" : narrowCard ? "1.1" : "1.15"};
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .entity-card__chips {
-          align-items: center;
-          display: flex;
-          flex-wrap: wrap;
-          gap: ${singleRowLayout ? "0" : narrowCard ? "6px" : "8px"};
-          min-width: 0;
-        }
-
-        .entity-card--single-row .entity-card__chips {
-          flex-wrap: nowrap;
-          gap: 3px;
-          justify-content: flex-start;
-          margin-left: 0;
-        }
-
-        .entity-card__chip {
-          align-items: center;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-          color: var(--secondary-text-color);
-          display: inline-flex;
-          flex: 0 0 auto;
-          font-size: ${effectiveChipFontSize};
-          font-weight: 700;
-          height: ${effectiveChipHeight};
-          line-height: 1;
-          max-width: 100%;
-          min-width: 0;
-          overflow: hidden;
-          padding: ${effectiveChipPadding};
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .entity-card--single-row .entity-card__title {
-          min-width: 0;
-        }
-
-        .entity-card__chip--state {
-          color: var(--primary-text-color);
-        }
-
-        .entity-card__actions {
-          display: flex;
-          flex-wrap: wrap;
-          gap: ${narrowCard ? "8px" : "10px"};
-          justify-content: center;
-        }
-
-        .entity-card__control {
-          -webkit-tap-highlight-color: transparent;
-          align-items: center;
-          appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.06),
-            0 10px 24px rgba(0, 0, 0, 0.16);
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          flex: 0 0 auto;
-          height: ${effectiveControlSize};
-          justify-content: center;
-          line-height: 0;
-          margin: 0;
-          min-width: ${effectiveControlSize};
-          outline: none;
-          padding: 0;
-          position: relative;
-          width: ${effectiveControlSize};
-        }
-
-        .entity-card__control ha-icon {
-          --mdc-icon-size: calc(${effectiveControlSize} * 0.46);
-          display: inline-flex;
-          height: calc(${effectiveControlSize} * 0.46);
-          left: 50%;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: calc(${effectiveControlSize} * 0.46);
-        }
-
-        .entity-card__empty-title {
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .entity-card__empty-text {
-          color: var(--secondary-text-color);
-          font-size: 13px;
-          line-height: 1.5;
-        }
-
-        .entity-card--empty {
-          display: grid;
-          gap: 8px;
-          padding: 16px;
-        }
-
-        @media (max-width: 420px) {
-          .entity-card__hero {
-            gap: 10px;
-            grid-template-columns: min(${effectiveIconSize}, 52px) minmax(0, 1fr);
-          }
-
-          .entity-card__icon {
-            height: min(${effectiveIconSize}, 52px);
-            width: min(${effectiveIconSize}, 52px);
-          }
-        }
-      </style>
-      <ha-card
-        class="entity-card ${isActive ? "is-on" : "is-off"} ${isCompactLayout ? "entity-card--compact" : ""} ${showCopyBlock ? "entity-card--with-copy" : ""} ${singleRowLayout ? "entity-card--single-row" : ""} ${canRunPrimaryAction ? "entity-card--clickable" : ""}"
-        style="--accent-color:${escapeHtml(accentColor)};"
-        ${canRunPrimaryAction ? 'data-entity-action="primary"' : ""}
-      >
-        <div class="entity-card__content">
-          <div class="entity-card__hero">
-            <button
-              type="button"
-              class="entity-card__icon"
-              ${canRunPrimaryAction ? 'data-entity-action="primary"' : ""}
-              aria-label="${escapeHtml(canRunPrimaryAction ? "Accion principal" : title)}"
-            >
-              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
-              ${showUnavailableBadge ? `<span class="entity-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
-            </button>
-            ${showCopyBlock
-              ? `
-                <div class="entity-card__copy">
-                  ${showTitle ? `<div class="entity-card__title">${escapeHtml(title)}</div>` : ""}
-                  ${chips.length ? `<div class="entity-card__chips">${chips.join("")}</div>` : ""}
-                </div>
-              `
-              : ""}
-          </div>
-
-          ${
-            quickActions.length
-              ? `
-                <div class="entity-card__actions">
-                  ${quickActions
-                    .map((action, index) => `
-                      <button
-                        type="button"
-                        class="entity-card__control"
-                        data-entity-action="quick"
-                        data-index="${index}"
-                        aria-label="${escapeHtml(action.label || action.type || "Accion")}"
-                        title="${escapeHtml(action.label || action.type || "Accion")}"
-                      >
-                        <ha-icon icon="${escapeHtml(action.icon || "mdi:flash")}"></ha-icon>
-                      </button>
-                    `)
-                    .join("")}
-                </div>
-              `
-              : ""
-          }
-        </div>
-      </ha-card>
-    `;
-  }
-}
-
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaEntityCard);
-}
-
-class NodaliaEntityCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(DEFAULT_CONFIG);
-    this._hass = null;
-    this._entityOptionsSignature = "";
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this._onShadowClick = this._onShadowClick.bind(this);
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getEntityOptionsSignature(hass);
-    const shouldRender =
-      !this._hass ||
-      nextSignature !== this._entityOptionsSignature ||
-      !this.shadowRoot?.innerHTML;
-
-    this._hass = hass;
-    this._entityOptionsSignature = nextSignature;
-
-    if (!shouldRender) {
-      return;
-    }
-
-    const focusState = this._captureFocusState();
-    this._render();
-    this._restoreFocusState(focusState);
-  }
-
-  setConfig(config) {
-    const focusState = this._captureFocusState();
-    this._config = normalizeConfig(config || {});
-    this._render();
-    this._restoreFocusState(focusState);
-  }
-
-  _getEntityOptionsSignature(hass = this._hass) {
-    return Object.keys(hass?.states || {})
-      .sort((left, right) => left.localeCompare(right, "es"))
-      .join("|");
-  }
-
-  _captureFocusState() {
-    const activeElement = this.shadowRoot?.activeElement;
-
-    if (
-      !(
-        activeElement instanceof HTMLInputElement ||
-        activeElement instanceof HTMLTextAreaElement ||
-        activeElement instanceof HTMLSelectElement
-      )
-    ) {
-      return null;
-    }
-
-    const dataset = activeElement.dataset || {};
-    const selector = dataset.field
-      ? `[data-field="${escapeSelectorValue(dataset.field)}"]`
-      : null;
-
-    if (!selector) {
-      return null;
-    }
-
-    const supportsSelection =
-      typeof activeElement.selectionStart === "number" &&
-      typeof activeElement.selectionEnd === "number";
-
-    return {
-      selector,
-      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
-      selectionStart: supportsSelection ? activeElement.selectionStart : null,
-      type: activeElement.type,
-    };
-  }
-
-  _restoreFocusState(focusState) {
-    if (!focusState?.selector || !this.shadowRoot) {
-      return;
-    }
-
-    const target = this.shadowRoot.querySelector(focusState.selector);
-    if (
-      !(
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement
-      )
-    ) {
-      return;
-    }
-
-    try {
-      target.focus({ preventScroll: true });
-    } catch (_error) {
-      target.focus();
-    }
-
-    const canRestoreSelection =
-      focusState.type !== "checkbox" &&
-      typeof focusState.selectionStart === "number" &&
-      typeof focusState.selectionEnd === "number" &&
-      typeof target.setSelectionRange === "function";
-
-    if (!canRestoreSelection) {
-      return;
-    }
-
-    try {
-      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
-    } catch (_error) {
-      // Ignore unsupported inputs.
-    }
-  }
-
-  _emitConfig() {
-    const focusState = this._captureFocusState();
-    const nextConfig = deepClone(this._config);
-    this._config = normalizeConfig(compactConfig(nextConfig));
-    this._render();
-    this._restoreFocusState(focusState);
-    fireEvent(this, "config-changed", {
-      config: compactConfig(nextConfig),
-    });
-  }
-
-  _setEditorConfig() {
-    this._config = normalizeConfig(compactConfig(this._config));
-  }
-
-  _setFieldValue(path, value) {
-    if (value === undefined || value === null || value === "") {
-      deleteByPath(this._config, path);
-      return;
-    }
-
-    setByPath(this._config, path, value);
-  }
-
-  _readFieldValue(input) {
-    const valueType = input.dataset.valueType || "string";
-
-    switch (valueType) {
-      case "boolean":
-        return Boolean(input.checked);
-      default:
-        return input.value;
-    }
-  }
-
-  _moveAction(index, direction) {
-    const nextIndex = index + direction;
-    if (
-      !Array.isArray(this._config.quick_actions) ||
-      nextIndex < 0 ||
-      nextIndex >= this._config.quick_actions.length
-    ) {
-      return;
-    }
-
-    const [action] = this._config.quick_actions.splice(index, 1);
-    this._config.quick_actions.splice(nextIndex, 0, action);
-  }
-
-  _onShadowInput(event) {
-    const input = event
-      .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
-
-    if (!input?.dataset?.field) {
-      return;
-    }
-
-    event.stopPropagation();
-
-    if (input.dataset.field === "__info_only") {
-      const isInfoOnly = this._readFieldValue(input) === true;
-
-      if (isInfoOnly) {
-        this._config.tap_action = "none";
-      } else if ((this._config.tap_action || "auto") === "none") {
-        this._config.tap_action = "auto";
-      }
-
-      this._setEditorConfig();
-
-      if (event.type === "change") {
-        this._emitConfig();
-      }
-      return;
-    }
-
-    const nextValue = this._readFieldValue(input);
-    this._setFieldValue(input.dataset.field, nextValue);
-    this._setEditorConfig();
-
-    if (event.type === "change") {
-      this._emitConfig();
-    }
-  }
-
-  _onShadowClick(event) {
-    const button = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.editorAction);
-
-    if (!button) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const action = button.dataset.editorAction;
-    const index = Number(button.dataset.index);
-
-    if (!Array.isArray(this._config.quick_actions)) {
-      this._config.quick_actions = [];
-    }
-
-    switch (action) {
-      case "add-action":
-        this._config.quick_actions.push({
-          icon: "mdi:flash",
-          type: "toggle",
-          label: "",
-          entity: "",
-          service: "",
-          service_data: "",
-        });
-        this._emitConfig();
-        break;
-      case "remove-action":
-        if (Number.isInteger(index)) {
-          this._config.quick_actions.splice(index, 1);
-          this._emitConfig();
-        }
-        break;
-      case "move-action-up":
-        if (Number.isInteger(index)) {
-          this._moveAction(index, -1);
-          this._emitConfig();
-        }
-        break;
-      case "move-action-down":
-        if (Number.isInteger(index)) {
-          this._moveAction(index, 1);
-          this._emitConfig();
-        }
-        break;
-      default:
-        break;
-    }
-  }
-
-  _renderTextField(label, field, value, options = {}) {
-    const inputType = options.type || "text";
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-    const valueType = options.valueType || "string";
-    const inputValue = value === undefined || value === null ? "" : String(value);
-
-    return `
-      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
-        <input
-          type="${escapeHtml(inputType)}"
-          data-field="${escapeHtml(field)}"
-          data-value-type="${escapeHtml(valueType)}"
-          value="${escapeHtml(inputValue)}"
-          ${placeholder}
-        />
-      </label>
-    `;
-  }
-
-  _renderTextareaField(label, field, value, options = {}) {
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-    const inputValue = value === undefined || value === null ? "" : String(value);
-
-    return `
-      <label class="editor-field editor-field--full">
-        <span>${escapeHtml(label)}</span>
-        <textarea data-field="${escapeHtml(field)}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
-      </label>
-    `;
-  }
-
-  _renderCheckboxField(label, field, checked) {
-    return `
-      <label class="editor-toggle">
-        <input
-          type="checkbox"
-          data-field="${escapeHtml(field)}"
-          data-value-type="boolean"
-          ${checked ? "checked" : ""}
-        />
-        <span>${escapeHtml(label)}</span>
-      </label>
-    `;
-  }
-
-  _renderSelectField(label, field, value, options) {
-    return `
-      <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
-        <select data-field="${escapeHtml(field)}">
-          ${options
-            .map(option => `
-              <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
-              </option>
-            `)
-            .join("")}
-        </select>
-      </label>
-    `;
-  }
-
-  _getEntityOptionsMarkup() {
-    const entityIds = Object.keys(this._hass?.states || {})
-      .sort((left, right) => left.localeCompare(right, "es"));
-
-    if (!entityIds.length) {
-      return "";
-    }
-
-    return `
-      <datalist id="entity-card-entities">
-        ${entityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-    `;
-  }
-
-  _renderQuickActions(config) {
-    if (!Array.isArray(config.quick_actions) || !config.quick_actions.length) {
-      return `
-        <div class="editor-empty">No hay acciones rapidas aun.</div>
-      `;
-    }
-
-    return config.quick_actions
-      .map((action, index) => `
-        <div class="editor-action">
-          <div class="editor-action__header">
-            <div class="editor-action__title">Accion ${index + 1}</div>
-            <div class="editor-action__buttons">
-              <button type="button" data-editor-action="move-action-up" data-index="${index}" aria-label="Subir">↑</button>
-              <button type="button" data-editor-action="move-action-down" data-index="${index}" aria-label="Bajar">↓</button>
-              <button type="button" data-editor-action="remove-action" data-index="${index}" aria-label="Eliminar">Eliminar</button>
-            </div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Icono", `quick_actions.${index}.icon`, action.icon, {
-              placeholder: "mdi:power",
-            })}
-            ${this._renderTextField("Etiqueta", `quick_actions.${index}.label`, action.label, {
-              placeholder: "Accion",
-            })}
-            ${this._renderSelectField(
-              "Tipo",
-              `quick_actions.${index}.type`,
-              action.type || "toggle",
-              [
-                { value: "toggle", label: "Toggle" },
-                { value: "more-info", label: "More info" },
-                { value: "service", label: "Servicio" },
-              ],
-            )}
-            ${this._renderTextField("Entidad", `quick_actions.${index}.entity`, action.entity, {
-              placeholder: "Usa la principal si lo dejas vacio",
-            })}
-            ${this._renderTextField("Servicio", `quick_actions.${index}.service`, action.service, {
-              placeholder: "light.turn_on",
-            })}
-            ${this._renderTextareaField("Datos servicio (JSON)", `quick_actions.${index}.service_data`, action.service_data, {
-              placeholder: '{"brightness_pct": 50}',
-            })}
-          </div>
-        </div>
-      `)
-      .join("");
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        .editor {
-          color: var(--primary-text-color);
-          display: grid;
-          gap: 16px;
-        }
-
-        .editor-section {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 18px;
-          display: grid;
-          gap: 14px;
-          padding: 16px;
-        }
-
-        .editor-section__header {
-          display: grid;
-          gap: 4px;
-        }
-
-        .editor-section__title {
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .editor-section__hint {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          line-height: 1.45;
-        }
-
-        .editor-section__actions {
-          align-items: center;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          margin-top: 2px;
-        }
-
-        .editor-section__toggle-button {
-          align-items: center;
-          appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 999px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          font: inherit;
-          font-size: 12px;
-          font-weight: 600;
-          gap: 8px;
-          min-height: 34px;
-          padding: 0 12px;
-        }
-
-        .editor-section__toggle-button ha-icon {
-          --mdc-icon-size: 16px;
-        }
-
-        .editor-grid {
-          display: grid;
-          gap: 12px;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .editor-field,
-        .editor-toggle {
-          display: grid;
-          gap: 6px;
-          min-width: 0;
-        }
-
-        .editor-field--full {
-          grid-column: 1 / -1;
-        }
-
-        .editor-field > span,
-        .editor-toggle > span {
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .editor-field input,
-        .editor-field select,
-        .editor-field textarea {
-          appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 12px;
-          color: var(--primary-text-color);
-          font: inherit;
-          min-height: 40px;
-          padding: 10px 12px;
-          width: 100%;
-        }
-
-        .editor-field textarea {
-          min-height: 86px;
-          resize: vertical;
-        }
-
-        .editor-toggle {
-          align-items: center;
-          grid-template-columns: auto 1fr;
-          padding-top: 20px;
-        }
-
-        .editor-toggle input {
-          accent-color: var(--primary-color);
-          height: 18px;
-          margin: 0;
-          width: 18px;
-        }
-
-        .editor-actions-toolbar {
-          display: flex;
-          justify-content: flex-end;
-        }
-
-        .editor-actions-toolbar button,
-        .editor-action__buttons button {
-          appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 10px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          font: inherit;
-          min-height: 34px;
-          padding: 6px 10px;
-        }
-
-        .editor-action {
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 16px;
-          display: grid;
-          gap: 12px;
-          padding: 12px;
-        }
-
-        .editor-action__header {
-          align-items: center;
-          display: flex;
-          gap: 10px;
-          justify-content: space-between;
-        }
-
-        .editor-action__title {
-          font-size: 13px;
-          font-weight: 700;
-        }
-
-        .editor-action__buttons {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .editor-empty {
-          color: var(--secondary-text-color);
-          font-size: 13px;
-        }
-
-        @media (max-width: 640px) {
-          .editor-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .editor-toggle {
-            padding-top: 0;
-          }
-        }
-      </style>
-      <div class="editor">
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal, texto e icono base de la tarjeta.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Entidad", "entity", config.entity, {
-              placeholder: "switch.lampara",
-            })}
-            ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Lampara",
-            })}
-            ${this._renderTextField("Icono", "icon", config.icon, {
-              placeholder: "mdi:lightbulb",
-            })}
-            ${this._renderCheckboxField("Usar icono de la entidad", "use_entity_icon", config.use_entity_icon === true)}
-            ${this._renderSelectField(
-              "Accion principal",
-              "tap_action",
-              config.tap_action || "auto",
-              [
-                { value: "auto", label: "Auto (toggle o info)" },
-                { value: "toggle", label: "Toggle" },
-                { value: "more-info", label: "More info" },
-                { value: "url", label: "Abrir URL" },
-                { value: "service", label: "Servicio" },
-                { value: "none", label: "Solo informacion" },
-              ],
-            )}
-            ${this._renderCheckboxField(
-              "Sin accion al tocar",
-              "__info_only",
-              (config.tap_action || "auto") === "none",
-            )}
-            ${this._renderTextField("Servicio al tocar", "tap_service", config.tap_service, {
-              placeholder: "light.turn_on",
-            })}
-            ${this._renderTextareaField("Datos del servicio al tocar (JSON)", "tap_service_data", config.tap_service_data, {
-              placeholder: '{"brightness_pct": 70}',
-            })}
-            ${this._renderTextField("URL al tocar", "tap_url", config.tap_url, {
-              placeholder: "https://example.com",
-            })}
-            ${this._renderCheckboxField("Abrir URL en pestana nueva", "tap_new_tab", config.tap_new_tab === true)}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Chips</div>
-            <div class="editor-section__hint">Estado visible y atributos extras en la cabecera.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderSelectField(
-              "Layout estrecho",
-              "compact_layout_mode",
-              config.compact_layout_mode || "auto",
-              [
-                { value: "auto", label: "Automatico (<4 columnas)" },
-                { value: "always", label: "Compacto siempre" },
-                { value: "never", label: "Nunca compactar" },
-              ],
-            )}
-            ${this._renderCheckboxField("Mostrar estado", "show_state", config.show_state !== false)}
-            ${this._renderTextField("Atributo chip 1", "primary_attribute", config.primary_attribute, {
-              placeholder: "battery_level",
-            })}
-            ${this._renderTextField("Atributo chip 2", "secondary_attribute", config.secondary_attribute, {
-              placeholder: "temperature",
-            })}
-            ${this._renderCheckboxField("Mostrar chip 1", "show_primary_chip", config.show_primary_chip !== false)}
-            ${this._renderCheckboxField("Mostrar chip 2", "show_secondary_chip", config.show_secondary_chip !== false)}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Acciones rapidas</div>
-            <div class="editor-section__hint">Botones icon-only para controles o accesos secundarios.</div>
-          </div>
-          <div class="editor-actions-toolbar">
-            <button type="button" data-editor-action="add-action">Anadir accion</button>
-          </div>
-          ${this._renderQuickActions(config)}
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica opcional para la tarjeta y sus botones.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
-            ${this._renderSelectField(
-              "Estilo",
-              "haptics.style",
-              hapticStyle,
-              [
-                { value: "selection", label: "Selection" },
-                { value: "light", label: "Light" },
-                { value: "medium", label: "Medium" },
-                { value: "heavy", label: "Heavy" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "failure", label: "Failure" },
-              ],
-            )}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales basicos del look Nodalia.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
-            ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
-            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
-            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-            ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamano boton principal", "styles.icon.size", config.styles.icon.size)}
-            ${this._renderTextField("Color icono activo", "styles.icon.on_color", config.styles.icon.on_color)}
-            ${this._renderTextField("Color icono inactivo", "styles.icon.off_color", config.styles.icon.off_color)}
-            ${this._renderTextField("Tamano botones", "styles.control.size", config.styles.control.size)}
-            ${this._renderTextField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background)}
-            ${this._renderTextField("Color acento", "styles.control.accent_color", config.styles.control.accent_color)}
-            ${this._renderTextField("Alto chips", "styles.chip_height", config.styles.chip_height)}
-            ${this._renderTextField("Texto chips", "styles.chip_font_size", config.styles.chip_font_size)}
-            ${this._renderTextField("Padding chips", "styles.chip_padding", config.styles.chip_padding)}
-            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-          </div>
-        </section>
-        ${this._getEntityOptionsMarkup()}
-      </div>
-    `;
-
-    this.shadowRoot
-      .querySelectorAll('input[data-field="entity"], input[data-field$=".entity"]')
-      .forEach(input => input.setAttribute("list", "entity-card-entities"));
-  }
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaEntityCardEditor);
-}
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: CARD_TAG,
-  name: "Nodalia Entity Card",
-  description: "Tarjeta todoterreno para entidades, informacion y botones rapidos.",
-  preview: true,
-});
-
-}
-{
-const CARD_TAG = "nodalia-fav-card";
-const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "0.8.0";
-const HAPTIC_PATTERNS = {
-  selection: 8,
-  light: 10,
-  medium: 16,
-  heavy: 24,
-  success: [10, 40, 10],
-  warning: [20, 50, 12],
-  failure: [12, 40, 12, 40, 18],
-};
-const MINI_LAYOUT_THRESHOLD = 126;
-const INLINE_LAYOUT_THRESHOLD = 340;
-const FEATURE_ARM_HOME = 1;
-const FEATURE_ARM_AWAY = 2;
-const FEATURE_ARM_NIGHT = 4;
-const FEATURE_ARM_CUSTOM_BYPASS = 16;
-const FEATURE_ARM_VACATION = 32;
-
-const DEFAULT_CONFIG = {
-  entity: "",
-  name: "",
-  icon: "",
-  use_entity_icon: false,
-  entity_mode: "auto",
-  tap_action: "auto",
-  tap_service: "",
-  tap_service_data: "",
-  tap_url: "",
-  tap_new_tab: false,
-  alarm_code: "",
-  alarm_code_entity: "",
-  alarm_show_code_input: true,
-  alarm_show_disarm: true,
-  alarm_show_arm_home: true,
-  alarm_show_arm_away: true,
-  alarm_show_arm_night: true,
-  alarm_show_arm_vacation: false,
-  alarm_show_custom_bypass: false,
-  show_name: true,
-  show_state: true,
-  state_attribute: "",
-  layout_mode: "auto",
-  haptics: {
-    enabled: false,
-    style: "selection",
-    fallback_vibrate: false,
-  },
-  styles: {
-    card: {
-      background: "var(--ha-card-background)",
-      border: "1px solid rgba(255, 255, 255, 0.06)",
-      border_radius: "26px",
-      box_shadow: "var(--ha-card-box-shadow)",
-      padding: "10px 12px",
-      gap: "10px",
-    },
-    icon: {
-      size: "52px",
-      background: "rgba(255, 255, 255, 0.05)",
-      on_color: "var(--info-color, #71c0ff)",
-      off_color: "var(--state-inactive-color, rgba(255, 255, 255, 0.55))",
-    },
-    chip_height: "22px",
-    chip_font_size: "11px",
-    chip_padding: "0 9px",
-    title_size: "13px",
-  },
-};
-
-const STUB_CONFIG = {
-  entity: "light.sofa",
-  name: "Sofa",
-  tap_action: "auto",
-  show_state: false,
-  layout_mode: "auto",
-};
-
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function deepClone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  return JSON.parse(JSON.stringify(value));
-}
-
-function mergeConfig(base, override) {
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
-  }
-
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-
-  keys.forEach(key => {
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-
-    if (overrideValue === undefined) {
-      result[key] = deepClone(baseValue);
-      return;
-    }
-
-    if (Array.isArray(overrideValue)) {
-      result[key] = deepClone(overrideValue);
-      return;
-    }
-
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      result[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-
-    result[key] = overrideValue;
-  });
-
-  return result;
-}
-
-function compactConfig(value) {
-  if (Array.isArray(value)) {
-    return value
-      .map(item => compactConfig(item))
-      .filter(item => item !== undefined);
-  }
-
-  if (isObject(value)) {
-    const compacted = {};
-
-    Object.entries(value).forEach(([key, item]) => {
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-
-    return compacted;
-  }
-
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
-}
-
-function setByPath(target, path, value) {
-  const parts = path.split(".");
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
-    }
-    cursor = cursor[key];
-  }
-
-  cursor[parts[parts.length - 1]] = value;
-}
-
-function deleteByPath(target, path) {
-  const parts = path.split(".");
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      return;
-    }
-    cursor = cursor[key];
-  }
-
-  delete cursor[parts[parts.length - 1]];
-}
-
-function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function miredToKelvin(mired) {
-  const numeric = Number(mired);
-  if (!Number.isFinite(numeric) || numeric <= 0) {
-    return 0;
-  }
-
-  return Math.round(1000000 / numeric);
-}
-
-function normalizeTextKey(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
-function isUnavailableState(state) {
-  return normalizeTextKey(state?.state) === "unavailable";
-}
-
-function getEntityDomain(state) {
-  const entityId = String(state?.entity_id || "");
-  return entityId.includes(".") ? entityId.split(".")[0] : "";
-}
-
-function getDynamicEntityIcon(state) {
-  if (!state) {
-    return "";
-  }
-
-  const domain = getEntityDomain(state);
-  const stateKey = normalizeTextKey(state.state);
-  const deviceClass = normalizeTextKey(state.attributes?.device_class);
-
-  if (domain === "binary_sensor") {
-    switch (deviceClass) {
-      case "door":
-      case "opening":
-        return stateKey === "on" ? "mdi:door-open" : "mdi:door-closed";
-      case "garage_door":
-        return stateKey === "on" ? "mdi:garage-open" : "mdi:garage";
-      case "window":
-        return stateKey === "on" ? "mdi:window-open-variant" : "mdi:window-closed-variant";
-      case "motion":
-        return stateKey === "on" ? "mdi:motion-sensor" : "mdi:motion-sensor-off";
-      case "occupancy":
-      case "presence":
-      case "person":
-        return stateKey === "on" ? "mdi:account" : "mdi:account-off-outline";
-      case "smoke":
-        return stateKey === "on" ? "mdi:smoke-detector-alert" : "mdi:smoke-detector-variant";
-      case "moisture":
-        return stateKey === "on" ? "mdi:water-alert" : "mdi:water-check";
-      case "gas":
-        return stateKey === "on" ? "mdi:gas-cylinder" : "mdi:check-circle-outline";
-      case "tamper":
-      case "safety":
-      case "problem":
-        return stateKey === "on" ? "mdi:alert-circle" : "mdi:check-circle-outline";
-      case "plug":
-      case "power":
-        return stateKey === "on" ? "mdi:power-plug" : "mdi:power-plug-off";
-      case "sound":
-        return stateKey === "on" ? "mdi:volume-high" : "mdi:volume-mute";
-      case "vibration":
-        return stateKey === "on" ? "mdi:vibrate" : "mdi:vibrate-off";
-      case "heat":
-        return stateKey === "on" ? "mdi:fire" : "mdi:fire-off";
-      case "cold":
-        return stateKey === "on" ? "mdi:snowflake-alert" : "mdi:snowflake";
-      case "light":
-        return stateKey === "on" ? "mdi:brightness-7" : "mdi:brightness-5";
-      default:
-        break;
-    }
-  }
-
-  if (domain === "light") {
-    return stateKey === "on" ? "mdi:lightbulb" : "mdi:lightbulb-off";
-  }
-
-  if (domain === "switch") {
-    return stateKey === "on" ? "mdi:toggle-switch-variant" : "mdi:toggle-switch-variant-off";
-  }
-
-  if (domain === "fan") {
-    return stateKey === "on" ? "mdi:fan" : "mdi:fan-off";
-  }
-
-  if (domain === "lock") {
-    switch (stateKey) {
-      case "unlocked":
-      case "open":
-        return "mdi:lock-open-variant";
-      case "jammed":
-        return "mdi:lock-alert";
-      case "locking":
-      case "unlocking":
-        return "mdi:lock-clock";
-      default:
-        return "mdi:lock";
-    }
-  }
-
-  if (domain === "cover") {
-    if (deviceClass === "garage") {
-      return stateKey === "open" ? "mdi:garage-open" : "mdi:garage";
-    }
-
-    if (deviceClass === "door") {
-      return stateKey === "open" ? "mdi:door-open" : "mdi:door-closed";
-    }
-
-    if (deviceClass === "window") {
-      return stateKey === "open" ? "mdi:window-open-variant" : "mdi:window-closed-variant";
-    }
-  }
-
-  if (domain === "person") {
-    switch (stateKey) {
-      case "home":
-      case "casa":
-      case "en_casa":
-        return "mdi:home-account";
-      case "not_home":
-      case "away":
-      case "fuera":
-        return "mdi:account-arrow-right";
-      default:
-        return "mdi:account";
-    }
-  }
-
-  if (domain === "camera") {
-    return "mdi:video";
-  }
-
-  if (domain === "climate") {
-    if (stateKey === "off") {
-      return "mdi:thermostat-off";
-    }
-    return "mdi:thermostat";
-  }
-
-  if (domain === "media_player") {
-    if (["off", "idle", "standby"].includes(stateKey)) {
-      return "mdi:speaker-off";
-    }
-    return "mdi:speaker";
-  }
-
-  if (domain === "humidifier") {
-    return stateKey === "on" ? "mdi:air-humidifier" : "mdi:air-humidifier-off";
-  }
-
-  if (domain === "vacuum") {
-    return "mdi:robot-vacuum";
-  }
-
-  if (domain === "alarm_control_panel") {
-    switch (stateKey) {
-      case "disarmed":
-        return "mdi:shield-off-outline";
-      case "armed_home":
-        return "mdi:home-lock";
-      case "armed_away":
-        return "mdi:shield-lock";
-      case "armed_night":
-        return "mdi:weather-night";
-      case "armed_vacation":
-        return "mdi:palm-tree";
-      case "armed_custom_bypass":
-        return "mdi:tune-variant";
-      case "triggered":
-        return "mdi:alarm-light";
-      default:
-        return "mdi:shield-outline";
-    }
-  }
-
-  if (domain === "automation") {
-    return stateKey === "on" ? "mdi:robot" : "mdi:robot-off";
-  }
-
-  if (domain === "script") {
-    return "mdi:script-text-outline";
-  }
-
-  if (domain === "scene") {
-    return "mdi:palette-outline";
-  }
-
-  if (domain === "input_boolean") {
-    return stateKey === "on" ? "mdi:check-circle" : "mdi:circle-off-outline";
-  }
-
-  if (domain === "sensor") {
-    switch (deviceClass) {
-      case "temperature":
-        return "mdi:thermometer";
-      case "humidity":
-        return "mdi:water-percent";
-      case "power":
-        return "mdi:flash";
-      case "current":
-        return "mdi:current-ac";
-      case "voltage":
-        return "mdi:sine-wave";
-      case "energy":
-        return "mdi:lightning-bolt";
-      case "battery":
-        return "mdi:battery";
-      case "signal_strength":
-        return "mdi:wifi";
-      case "pressure":
-        return "mdi:gauge";
-      case "illuminance":
-        return "mdi:brightness-6";
-      case "moisture":
-        return "mdi:water";
-      case "aqi":
-        return "mdi:air-filter";
-      case "speed":
-        return "mdi:speedometer";
-      case "distance":
-        return "mdi:map-marker-distance";
-      case "gas":
-        return "mdi:meter-gas";
-      case "water":
-        return "mdi:water";
-      default:
-        return "";
-    }
-  }
-
-  return "";
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function escapeSelectorValue(value) {
-  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-}
-
-function fireEvent(node, type, detail, options) {
-  const event = new CustomEvent(type, {
-    bubbles: options?.bubbles ?? true,
-    cancelable: Boolean(options?.cancelable),
-    composed: options?.composed ?? true,
-    detail,
-  });
-  node.dispatchEvent(event);
-  return event;
-}
-
-function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-}
-
-class NodaliaFavCard extends HTMLElement {
-  static async getConfigElement() {
-    return document.createElement(EDITOR_TAG);
-  }
-
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
-  }
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = null;
-    this._hass = null;
-    this._cardWidth = 0;
-    this._layout = "inline";
-    this._alarmMenuOpen = false;
-    this._alarmCodeInput = "";
-    this._ignoreNextPrimaryClickUntil = 0;
-    this._lastAlarmPanelRenderedOpen = null;
-    this._lastRenderSignature = "";
-    this._resizeObserver = new ResizeObserver(entries => {
-      const entry = entries[0];
-      if (!entry) {
-        return;
-      }
-
-      const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
-      const nextLayout = this._getResolvedLayout(nextWidth);
-
-      if (nextWidth === this._cardWidth && nextLayout === this._layout) {
-        return;
-      }
-
-      this._cardWidth = nextWidth;
-      this._layout = nextLayout;
-      this._render();
-    });
-    this._onShadowClick = this._onShadowClick.bind(this);
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-  }
-
-  connectedCallback() {
-    this._resizeObserver?.observe(this);
-  }
-
-  disconnectedCallback() {
-    this._resizeObserver?.disconnect();
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    this._layout = this._getResolvedLayout(Math.round(this._cardWidth || this.clientWidth || 0));
-    this._lastRenderSignature = "";
-    this._render();
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getRenderSignature(hass);
-    this._hass = hass;
-
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
-      return;
-    }
-
-    this._lastRenderSignature = nextSignature;
-    this._render();
-  }
-
-  getCardSize() {
-    if (this._alarmMenuOpen && this._isAlarmPanelMode(this._getState())) {
-      return this._getAlarmGridSpan();
-    }
-
-    return 1;
-  }
-
-  getGridOptions() {
-    return {
-      rows: "auto",
-      columns: 2,
-      min_rows: 1,
-      min_columns: 1,
-    };
-  }
-
-  _getRenderSignature(hass = this._hass) {
-    const entityId = this._config?.entity || "";
-    const helperEntityId = this._config?.alarm_code_entity || "";
-    const state = entityId ? hass?.states?.[entityId] || null : null;
-    const helperState = helperEntityId ? hass?.states?.[helperEntityId] || null : null;
-    const attrs = state?.attributes || {};
-    return JSON.stringify({
-      entityId,
-      state: String(state?.state || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      deviceClass: String(attrs.device_class || ""),
-      unit: String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || ""),
-      helperEntityId,
-      helperState: String(helperState?.state || ""),
-      layout: String(this._layout || ""),
-      alarmOpen: Boolean(this._alarmMenuOpen),
-    });
-  }
-
-  _getConfiguredGridColumns() {
-    const numericColumns = Number(this._config?.grid_options?.columns);
-    return Number.isFinite(numericColumns) ? numericColumns : null;
-  }
-
-  _getConfiguredGridRows() {
-    const numericRows = Number(this._config?.grid_options?.rows);
-    return Number.isFinite(numericRows) ? numericRows : null;
-  }
-
-  _getResolvedLayout(width) {
-    const mode = this._config?.layout_mode || "auto";
-
-    if (mode === "mini") {
-      return "mini";
-    }
-
-    if (mode === "inline") {
-      return "inline";
-    }
-
-    const columns = this._getConfiguredGridColumns();
-    const rows = this._getConfiguredGridRows();
-
-    if (columns !== null) {
-      if (columns <= 2) {
-        return "mini";
-      }
-
-      if (columns <= 6 || rows === 1) {
-        return "inline";
-      }
-    }
-
-    if (width > 0 && width <= MINI_LAYOUT_THRESHOLD) {
-      return "mini";
-    }
-
-    if (width > 0 && width <= INLINE_LAYOUT_THRESHOLD) {
-      return "inline";
-    }
-
-    return "inline";
-  }
-
-  _getState() {
-    return this._hass?.states?.[this._config?.entity] || null;
-  }
-
-  _getDomain(entityId = this._config?.entity) {
-    return String(entityId || "").split(".")[0] || "";
-  }
-
-  _isAlarmPanelMode(state = this._getState()) {
-    const mode = normalizeTextKey(this._config?.entity_mode || "auto");
-
-    if (mode === "alarm_control_panel") {
-      return true;
-    }
-
-    if (mode === "standard") {
-      return false;
-    }
-
-    return this._getDomain(state?.entity_id || this._config?.entity) === "alarm_control_panel";
-  }
-
-  _isBinaryOnOff(state) {
-    const stateKey = normalizeTextKey(state?.state);
-    return stateKey === "on" || stateKey === "off";
-  }
-
-  _isActiveState(state) {
-    const stateKey = normalizeTextKey(state?.state);
-
-    if (!stateKey || ["off", "closed", "locked", "unavailable", "unknown", "none", "idle", "standby", "disarmed"].includes(stateKey)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  _isDomainOn(state) {
-    const stateKey = normalizeTextKey(state?.state);
-    const domain = this._getDomain();
-
-    switch (domain) {
-      case "light":
-      case "fan":
-      case "humidifier":
-        return stateKey === "on";
-      default:
-        return this._isActiveState(state);
-    }
-  }
-
-  _usesCustomOnColor() {
-    const configuredColor = this._config?.styles?.icon?.on_color;
-    return Boolean(configuredColor) && configuredColor !== DEFAULT_CONFIG.styles.icon.on_color;
-  }
-
-  _usesCustomOffColor() {
-    const configuredColor = this._config?.styles?.icon?.off_color;
-    return Boolean(configuredColor) && configuredColor !== DEFAULT_CONFIG.styles.icon.off_color;
-  }
-
-  _getLightAccentColor(state) {
-    const rgbColor = Array.isArray(state?.attributes?.rgb_color) ? state.attributes.rgb_color : null;
-    if (this._isActiveState(state) && rgbColor?.length === 3) {
-      return `rgb(${rgbColor[0]}, ${rgbColor[1]}, ${rgbColor[2]})`;
-    }
-
-    if (this._isActiveState(state)) {
-      const kelvin = typeof state?.attributes?.color_temp_kelvin === "number"
-        ? Math.round(state.attributes.color_temp_kelvin)
-        : (typeof state?.attributes?.color_temp === "number" ? miredToKelvin(state.attributes.color_temp) : 0);
-
-      if (kelvin >= 5200) {
-        return "#8fd3ff";
-      }
-
-      if (kelvin > 0 && kelvin <= 3000) {
-        return "#f4b55f";
-      }
-
-      if (kelvin > 0) {
-        return "#ffe29a";
-      }
-    }
-
-    return "var(--warning-color, #f6b73c)";
-  }
-
-  _getDomainDefaultOnColor(state) {
-    switch (this._getDomain()) {
-      case "light":
-        return this._getLightAccentColor(state);
-      case "fan":
-        return "var(--info-color, #71c0ff)";
-      case "humidifier":
-        return "var(--info-color, #71c0ff)";
-      case "alarm_control_panel":
-        return this._getAlarmAccentColor(state);
-      case "switch":
-        return "var(--primary-color)";
-      case "media_player":
-        return "var(--info-color, #71c0ff)";
-      case "vacuum":
-        return "#82d18a";
-      default:
-        return DEFAULT_CONFIG.styles.icon.on_color;
-    }
-  }
-
-  _getAccentColor(state) {
-    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
-    if (!this._isDomainOn(state)) {
-      return this._usesCustomOffColor()
-        ? styles?.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color
-        : "var(--state-inactive-color, rgba(255, 255, 255, 0.5))";
-    }
-
-    if (this._usesCustomOnColor()) {
-      return styles?.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color;
-    }
-
-    return this._getDomainDefaultOnColor(state);
-  }
-
-  _getAlarmAccentColor(state) {
-    const key = normalizeTextKey(state?.state);
-
-    switch (key) {
-      case "armed_home":
-        return "#74c0ff";
-      case "armed_away":
-        return "#8aa7ff";
-      case "armed_night":
-        return "#9488ff";
-      case "armed_vacation":
-        return "#5fd7cf";
-      case "armed_custom_bypass":
-        return "#64d4a6";
-      case "arming":
-        return "#71c0ff";
-      case "pending":
-        return "#f2c46d";
-      case "triggered":
-        return "#ff7474";
-      default:
-        return "var(--info-color, #71c0ff)";
-    }
-  }
-
-  _translateStateValue(state) {
-    if (!state) {
-      return null;
-    }
-
-    const rawState = String(state.state ?? "").trim();
-    const unit = String(state.attributes?.unit_of_measurement || "").trim();
-    const key = normalizeTextKey(rawState);
-
-    if (rawState && unit && /^-?\d+([.,]\d+)?$/.test(rawState)) {
-      return `${rawState} ${unit}`;
-    }
-
-    switch (key) {
-      case "on":
-        return "Encendido";
-      case "off":
-        return "Apagado";
-      case "open":
-        return "Abierto";
-      case "closed":
-        return "Cerrado";
-      case "playing":
-        return "Reproduciendo";
-      case "paused":
-        return "En pausa";
-      case "idle":
-        return "En espera";
-      case "standby":
-        return "Standby";
-      case "home":
-        return "En casa";
-      case "not_home":
-        return "Fuera";
-      case "disarmed":
-        return "Desarmada";
-      case "armed_home":
-        return "En casa";
-      case "armed_away":
-        return "Ausente";
-      case "armed_night":
-        return "Noche";
-      case "armed_vacation":
-        return "Vacaciones";
-      case "armed_custom_bypass":
-        return "Personalizada";
-      case "arming":
-        return "Armando";
-      case "disarming":
-        return "Desarmando";
-      case "pending":
-        return "Retardo";
-      case "triggered":
-        return "Disparada";
-      case "detected":
-        return "Detectado";
-      case "clear":
-        return "Libre";
-      case "locked":
-        return "Bloqueado";
-      case "unlocked":
-        return "Desbloqueado";
-      case "unavailable":
-        return "No disponible";
-      case "unknown":
-        return "Desconocido";
-      default:
-        return rawState || null;
-    }
-  }
-
-  _formatAttributeValue(state, attributeName) {
-    if (!state || !attributeName) {
-      return null;
-    }
-
-    const value = state.attributes?.[attributeName];
-    if (value === undefined || value === null || value === "") {
-      return null;
-    }
-
-    const key = normalizeTextKey(attributeName);
-
-    if (typeof value === "boolean") {
-      return value ? "Si" : "No";
-    }
-
-    if (typeof value === "number") {
-      if (["battery", "battery_level", "humidity", "current_humidity"].includes(key)) {
-        return `${Math.round(value)}%`;
-      }
-
-      if (key === "brightness") {
-        return `${Math.round((value / 255) * 100)}%`;
-      }
-
-      if (key === "volume_level") {
-        return `${Math.round(value * 100)}%`;
-      }
-    }
-
-    return String(value);
-  }
-
-  _getTitle(state) {
-    return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Favorito";
-  }
-
-  _getIcon(state) {
-    if (this._config?.use_entity_icon === true) {
-      const resolvedEntityIcon = state?.attributes?.icon || getDynamicEntityIcon(state);
-      if (resolvedEntityIcon) {
-        return resolvedEntityIcon;
-      }
-    }
-
-    return this._config?.icon || state?.attributes?.icon || "mdi:star-four-points";
-  }
-
-  _canRunTapAction(state) {
-    if (this._isAlarmPanelMode(state)) {
-      return Boolean(this._config?.entity);
-    }
-
-    const tapAction = this._config?.tap_action || "auto";
-
-    if (tapAction === "none") {
-      return false;
-    }
-
-    if (tapAction === "service") {
-      return Boolean(this._config?.tap_service);
-    }
-
-    if (tapAction === "url") {
-      return Boolean(this._config?.tap_url);
-    }
-
-    if (tapAction === "toggle") {
-      return this._isBinaryOnOff(state);
-    }
-
-    if (tapAction === "more-info") {
-      return Boolean(this._config?.entity);
-    }
-
-    return Boolean(this._config?.entity);
-  }
-
-  _getAlarmSupportedFeatures(state) {
-    const value = Number(state?.attributes?.supported_features);
-    return Number.isFinite(value) ? value : 0;
-  }
-
-  _supportsAlarmMode(state, mode) {
-    const features = this._getAlarmSupportedFeatures(state);
-
-    if (!features) {
-      return true;
-    }
-
-    switch (mode) {
-      case "home":
-        return Boolean(features & FEATURE_ARM_HOME);
-      case "away":
-        return Boolean(features & FEATURE_ARM_AWAY);
-      case "night":
-        return Boolean(features & FEATURE_ARM_NIGHT);
-      case "vacation":
-        return Boolean(features & FEATURE_ARM_VACATION);
-      case "custom_bypass":
-        return Boolean(features & FEATURE_ARM_CUSTOM_BYPASS);
-      default:
-        return true;
-    }
-  }
-
-  _getAlarmStateCandidates(state) {
-    return [
-      state?.state,
-      state?.attributes?.next_state,
-      state?.attributes?.post_pending_state,
-      state?.attributes?.post_delay_state,
-      state?.attributes?.arm_mode,
-      state?.attributes?.arming_mode,
-    ]
-      .map(value => normalizeTextKey(value))
-      .filter(Boolean);
-  }
-
-  _getAlarmCurrentModeKey(state) {
-    switch (normalizeTextKey(state?.state)) {
-      case "disarmed":
-        return "disarm";
-      case "armed_home":
-        return "home";
-      case "armed_away":
-        return "away";
-      case "armed_night":
-        return "night";
-      case "armed_vacation":
-        return "vacation";
-      case "armed_custom_bypass":
-        return "custom_bypass";
-      default:
-        return "";
-    }
-  }
-
-  _matchesAlarmMode(state, ...keys) {
-    const candidates = this._getAlarmStateCandidates(state);
-    return keys.some(key => candidates.includes(normalizeTextKey(key)));
-  }
-
-  _getAlarmModeDefinitions(state) {
-    const currentModeKey = this._getAlarmCurrentModeKey(state);
-    const modes = [
-      {
-        key: "disarm",
-        label: "Desarmar",
-        icon: "mdi:shield-off-outline",
-        service: "alarm_disarm",
-        enabled: this._config?.alarm_show_disarm !== false && currentModeKey !== "disarm",
-      },
-      {
-        key: "home",
-        label: "Casa",
-        icon: "mdi:home-lock",
-        service: "alarm_arm_home",
-        enabled: this._config?.alarm_show_arm_home !== false
-          && this._supportsAlarmMode(state, "home")
-          && currentModeKey !== "home",
-      },
-      {
-        key: "away",
-        label: "Ausente",
-        icon: "mdi:shield-lock",
-        service: "alarm_arm_away",
-        enabled: this._config?.alarm_show_arm_away !== false
-          && this._supportsAlarmMode(state, "away")
-          && currentModeKey !== "away",
-      },
-      {
-        key: "night",
-        label: "Noche",
-        icon: "mdi:weather-night",
-        service: "alarm_arm_night",
-        enabled: this._config?.alarm_show_arm_night !== false
-          && this._supportsAlarmMode(state, "night")
-          && currentModeKey !== "night",
-      },
-      {
-        key: "vacation",
-        label: "Vacaciones",
-        icon: "mdi:palm-tree",
-        service: "alarm_arm_vacation",
-        enabled: this._config?.alarm_show_arm_vacation === true
-          && this._supportsAlarmMode(state, "vacation")
-          && currentModeKey !== "vacation",
-      },
-      {
-        key: "custom_bypass",
-        label: "Personalizada",
-        icon: "mdi:tune-variant",
-        service: "alarm_arm_custom_bypass",
-        enabled: this._config?.alarm_show_custom_bypass === true
-          && this._supportsAlarmMode(state, "custom_bypass")
-          && currentModeKey !== "custom_bypass",
-      },
-    ];
-
-    return modes.filter(mode => mode.enabled);
-  }
-
-  _getAlarmRenderedModes(state) {
-    const detectedModes = this._getAlarmModeDefinitions(state);
-    if (detectedModes.length) {
-      return detectedModes;
-    }
-
-    const currentModeKey = this._getAlarmCurrentModeKey(state);
-    const fallbackModes = [
-      {
-        key: "disarm",
-        label: "Desarmar",
-        icon: "mdi:shield-off-outline",
-        service: "alarm_disarm",
-        enabled: this._config?.alarm_show_disarm !== false && currentModeKey !== "disarm",
-      },
-      {
-        key: "home",
-        label: "Casa",
-        icon: "mdi:home-lock",
-        service: "alarm_arm_home",
-        enabled: this._config?.alarm_show_arm_home !== false && currentModeKey !== "home",
-      },
-      {
-        key: "away",
-        label: "Ausente",
-        icon: "mdi:shield-lock",
-        service: "alarm_arm_away",
-        enabled: this._config?.alarm_show_arm_away !== false && currentModeKey !== "away",
-      },
-      {
-        key: "night",
-        label: "Noche",
-        icon: "mdi:weather-night",
-        service: "alarm_arm_night",
-        enabled: this._config?.alarm_show_arm_night !== false && currentModeKey !== "night",
-      },
-    ];
-
-    return fallbackModes.filter(mode => mode.enabled);
-  }
-
-  _shouldShowAlarmCodeInput(state) {
-    if (this._config?.alarm_show_code_input === false) {
-      return false;
-    }
-
-    return Boolean(String(state?.attributes?.code_format || "").trim());
-  }
-
-  _getAlarmCodeValue(state) {
-    if (this._shouldShowAlarmCodeInput(state)) {
-      const manualCode = String(this._alarmCodeInput || "").trim();
-      if (manualCode) {
-        return manualCode;
-      }
-    }
-
-    const helperEntityId = String(this._config?.alarm_code_entity || "").trim();
-    if (helperEntityId) {
-      const helperState = this._hass?.states?.[helperEntityId];
-      const helperValue = String(helperState?.state || "").trim();
-      if (helperValue && !["unknown", "unavailable"].includes(normalizeTextKey(helperValue))) {
-        return helperValue;
-      }
-    }
-
-    const configuredCode = String(this._config?.alarm_code || "").trim();
-    if (configuredCode) {
-      return configuredCode;
-    }
-
-    return "";
-  }
-
-  _runAlarmAction(service) {
-    const state = this._getState();
-    if (!this._hass || !this._config?.entity || !service || !state) {
-      return;
-    }
-
-    const payload = {
-      entity_id: this._config.entity,
-    };
-    const code = this._getAlarmCodeValue(state);
-    if (code) {
-      payload.code = code;
-    }
-
-    this._triggerHaptic();
-    this._hass.callService("alarm_control_panel", service, payload);
-    this._alarmMenuOpen = false;
-    this._applyHostGridSpan(false);
-    this._render();
-    this._notifyLayoutChange();
-  }
-
-  _toggleEntity(entityId = this._config?.entity) {
-    const state = this._hass?.states?.[entityId];
-    if (!this._hass || !entityId || !state || !this._isBinaryOnOff(state)) {
-      return;
-    }
-
-    const service = normalizeTextKey(state.state) === "on" ? "turn_off" : "turn_on";
-    this._hass.callService("homeassistant", service, {
-      entity_id: entityId,
-    });
-  }
-
-  _openMoreInfo(entityId = this._config?.entity) {
-    if (!entityId) {
-      return;
-    }
-
-    fireEvent(this, "hass-more-info", {
-      entityId,
-    });
-  }
-
-  _parseServiceData(rawValue) {
-    if (!rawValue) {
-      return {};
-    }
-
-    try {
-      const parsed = JSON.parse(rawValue);
-      return isObject(parsed) ? parsed : {};
-    } catch (_error) {
-      return {};
-    }
-  }
-
-  _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "") {
-    if (!this._hass || !serviceValue) {
-      return;
-    }
-
-    const [domain, service] = String(serviceValue).split(".");
-    if (!domain || !service) {
-      return;
-    }
-
-    const payload = this._parseServiceData(rawData);
-    if (entityId && payload.entity_id === undefined) {
-      payload.entity_id = entityId;
-    }
-
-    this._hass.callService(domain, service, payload);
-  }
-
-  _openConfiguredUrl(urlValue = this._config?.tap_url, newTab = this._config?.tap_new_tab === true) {
-    const url = String(urlValue || "").trim();
-    if (!url) {
-      return;
-    }
-
-    if (newTab) {
-      window.open(url, "_blank", "noopener,noreferrer");
-      return;
-    }
-
-    window.location.href = url;
-  }
-
-  _notifyLayoutChange() {
-    fireEvent(this, "iron-resize", {});
-
-    if (typeof window !== "undefined") {
-      requestAnimationFrame(() => {
-        window.dispatchEvent(new Event("resize"));
-      });
-    }
-  }
-
-  _getAlarmGridSpan() {
-    const state = this._getState();
-    const showCodeInput = this._shouldShowAlarmCodeInput(state);
-    return showCodeInput ? 4 : 3;
-  }
-
-  _applyHostGridSpan(showAlarmPanel = false) {
-    const hostCard = this.closest("hui-card");
-    if (!(hostCard instanceof HTMLElement)) {
-      return;
-    }
-
-    if (showAlarmPanel) {
-      hostCard.setAttribute("data-fav-alarm-open", "true");
-    } else {
-      hostCard.removeAttribute("data-fav-alarm-open");
-    }
-  }
-
-  _getPrimaryActionTarget(event) {
-    const path = event.composedPath();
-    const alarmInput = path.find(node => node instanceof HTMLElement && node.dataset?.favAlarmIgnore === "true");
-    if (alarmInput) {
-      return null;
-    }
-
-    const alarmButton = path.find(node => node instanceof HTMLButtonElement && node.dataset?.favAlarmAction);
-    if (alarmButton) {
-      return null;
-    }
-
-    const actionTarget = path.find(node => node instanceof HTMLElement && node.dataset?.favAction === "primary");
-    return actionTarget || null;
-  }
-
-  _activatePrimaryFromEvent(event) {
-    const actionTarget = this._getPrimaryActionTarget(event);
-    if (!actionTarget) {
-      return false;
-    }
-
-    const state = this._getState();
-    if (!this._canRunTapAction(state)) {
-      return false;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    this._triggerHaptic();
-    this._performPrimaryAction(state);
-    return true;
-  }
-
-  _performPrimaryAction(state) {
-    if (this._isAlarmPanelMode(state)) {
-      this._alarmMenuOpen = !this._alarmMenuOpen;
-      this._applyHostGridSpan(this._alarmMenuOpen);
-      this._render();
-      this._notifyLayoutChange();
-      return;
-    }
-
-    const tapAction = this._config?.tap_action || "auto";
-
-    switch (tapAction) {
-      case "toggle":
-        this._toggleEntity(this._config?.entity);
-        break;
-      case "more-info":
-        this._openMoreInfo(this._config?.entity);
-        break;
-      case "service":
-        this._callConfiguredService(this._config?.tap_service, this._config?.entity, this._config?.tap_service_data);
-        break;
-      case "url":
-        this._openConfiguredUrl(this._config?.tap_url, this._config?.tap_new_tab);
-        break;
-      case "auto":
-      default:
-        if (this._isBinaryOnOff(state)) {
-          this._toggleEntity(this._config?.entity);
-          return;
-        }
-
-        this._openMoreInfo(this._config?.entity);
-        break;
-    }
-  }
-
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
-    if (haptics.enabled !== true) {
-      return;
-    }
-
-    const style = styleOverride || haptics.style || "selection";
-    fireEvent(this, "haptic", style, {
-      bubbles: true,
-      cancelable: false,
-      composed: true,
-    });
-
-    if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
-    }
-  }
-
-  _onShadowClick(event) {
-    if (Date.now() < this._ignoreNextPrimaryClickUntil) {
-      const actionTarget = this._getPrimaryActionTarget(event);
-      if (actionTarget) {
-        event.preventDefault();
-        event.stopPropagation();
-        return;
-      }
-    }
-
-    const alarmInput = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.favAlarmIgnore === "true");
-
-    if (alarmInput) {
-      return;
-    }
-
-    const alarmButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLButtonElement && node.dataset?.favAlarmAction);
-
-    if (alarmButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._runAlarmAction(alarmButton.dataset.favAlarmAction);
-      return;
-    }
-
-    this._activatePrimaryFromEvent(event);
-  }
-
-  _onShadowInput(event) {
-    const input = event
-      .composedPath()
-      .find(node => node instanceof HTMLInputElement && node.dataset?.favAlarmField === "alarm-code");
-
-    if (!input) {
-      return;
-    }
-
-    event.stopPropagation();
-    this._alarmCodeInput = input.value;
-  }
-
-  _renderChip(label) {
-    if (!label) {
-      return "";
-    }
-
-    return `<div class="fav-card__chip">${escapeHtml(label)}</div>`;
-  }
-
-  _isSingleRowLayout() {
-    return this._getConfiguredGridRows() === 1;
-  }
-
-  _renderEmptyState() {
-    return `
-      <ha-card class="fav-card fav-card--empty">
-        <div class="fav-card__empty-title">Nodalia Fav Card</div>
-        <div class="fav-card__empty-text">Configura \`entity\` para mostrar el favorito.</div>
-      </ha-card>
-    `;
-  }
-
-  _renderAlarmActionButton(mode, accentColor) {
-    return `
-      <button
-        type="button"
-        class="fav-card__alarm-button"
-        data-fav-alarm-action="${escapeHtml(mode.service)}"
-        style="
-          --fav-alarm-accent:${escapeHtml(accentColor)};
-        "
-        aria-label="${escapeHtml(mode.label)}"
-      >
-        <ha-icon icon="${escapeHtml(mode.icon)}"></ha-icon>
-        <span>${escapeHtml(mode.label)}</span>
-      </button>
-    `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    if (!this._config?.entity) {
-      this.shadowRoot.innerHTML = this._renderEmptyState();
-      return;
-    }
-
-    const state = this._getState();
-    if (!state) {
-      this.shadowRoot.innerHTML = this._renderEmptyState();
-      return;
-    }
-
-    const config = this._config;
-    const styles = config.styles || DEFAULT_CONFIG.styles;
-    const layout = this._layout || "inline";
-    const isMini = layout === "mini";
-    const configuredColumns = this._getConfiguredGridColumns();
-    const configuredRows = this._getConfiguredGridRows();
-    const isSingleRow = this._isSingleRowLayout();
-    const usesCompactRowMetrics =
-      isMini ||
-      isSingleRow ||
-      (configuredRows !== null && configuredRows <= 1) ||
-      (configuredColumns !== null && configuredColumns <= 6);
-    const isCompactInline = !isMini && usesCompactRowMetrics;
-    const isCompactMini = isMini && usesCompactRowMetrics;
-    const isTightInline = isCompactInline && (configuredColumns === null || configuredColumns >= 4);
-    const singleRowHeightPx = usesCompactRowMetrics ? 68 : 0;
-    const icon = this._getIcon(state);
-    const title = this._getTitle(state);
-    const accentColor = this._getAccentColor(state);
-    const showUnavailableBadge = isUnavailableState(state);
-    const displayValue = config.show_state !== false
-      ? (config.state_attribute ? this._formatAttributeValue(state, config.state_attribute) : this._translateStateValue(state))
-      : null;
-    const isAlarmPanel = this._isAlarmPanelMode(state);
-    const alarmModes = isAlarmPanel ? this._getAlarmRenderedModes(state) : [];
-    const showAlarmPanel = isAlarmPanel && this._alarmMenuOpen;
-    const showAlarmCodeInput = showAlarmPanel && this._shouldShowAlarmCodeInput(state);
-    const canRunPrimaryAction = this._canRunTapAction(state);
-    const isActive = this._isDomainOn(state);
-    const iconSizePx = Math.max(32, Math.min(parseSizeToPixels(styles.icon.size, 52), isMini ? (isCompactMini ? 34 : 40) : (isCompactInline ? 36 : 56)));
-    const titleSizePx = Math.max(10, Math.min(parseSizeToPixels(styles.title_size, 13), isMini ? 0 : (isCompactInline ? 11 : 14)));
-    const chipHeightPx = Math.max(16, Math.min(parseSizeToPixels(styles.chip_height, 22), isCompactInline ? 18 : 24));
-    const chipFontSizePx = Math.max(8.5, Math.min(parseSizeToPixels(styles.chip_font_size, 11), isCompactInline ? 9.5 : 12));
-    const iconColor = isActive
-      ? accentColor
-      : (this._usesCustomOffColor()
-        ? styles.icon.off_color
-        : "var(--state-inactive-color, rgba(255, 255, 255, 0.55))");
-    const cardBackground = isActive
-      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`
-      : styles.card.background;
-    const cardBorder = isActive
-      ? `1px solid color-mix(in srgb, ${accentColor} 32%, rgba(255, 255, 255, 0.08))`
-      : styles.card.border;
-    const cardShadow = isActive
-      ? `${styles.card.box_shadow}, 0 16px 30px color-mix(in srgb, ${accentColor} 16%, rgba(0, 0, 0, 0.18))`
-      : styles.card.box_shadow;
-    const showTitle = config.show_name !== false && !isMini && !showAlarmPanel;
-    const showValue = Boolean(displayValue) && !isMini;
-    const showCopy = showTitle || showValue;
-
-    this._applyHostGridSpan(showAlarmPanel);
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-          overflow: visible;
-          position: relative;
-          isolation: isolate;
-          z-index: ${showAlarmPanel ? 4 : "auto"};
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        ha-card {
-          background: ${cardBackground};
-          border: ${cardBorder};
-          border-radius: ${styles.card.border_radius};
-          box-shadow: ${cardShadow};
-          color: var(--primary-text-color);
-          height: ${showAlarmPanel ? "auto" : (usesCompactRowMetrics ? `${singleRowHeightPx}px` : "100%")};
-          min-height: ${usesCompactRowMetrics ? `${singleRowHeightPx}px` : "0"};
-          overflow: hidden;
-          position: relative;
-          z-index: ${showAlarmPanel ? 2 : 1};
-        }
-
-        ha-card::before {
-          background: ${isActive
-            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, rgba(255, 255, 255, 0.04)), rgba(255, 255, 255, 0))`
-            : "linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0))"};
-          content: "";
-          inset: 0;
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
-        }
-
-        .fav-card {
-          cursor: ${canRunPrimaryAction ? "pointer" : "default"};
-          min-width: 0;
-          position: relative;
-          touch-action: manipulation;
-        }
-
-        .fav-card__content {
-          align-content: ${showAlarmPanel ? "start" : "center"};
-          display: grid;
-          gap: ${showAlarmPanel ? "10px" : (isCompactInline ? "6px" : (isMini ? "0" : styles.card.gap))};
-          height: ${showAlarmPanel ? "auto" : (usesCompactRowMetrics ? "100%" : "auto")};
-          min-width: 0;
-          padding: ${showAlarmPanel ? "8px 10px 10px" : (isCompactInline ? "6px 10px" : (isMini ? "6px" : styles.card.padding))};
-          position: relative;
-          overflow: hidden;
-          z-index: 1;
-        }
-
-        .fav-card--mini .fav-card__content {
-          justify-items: center;
-        }
-
-        .fav-card--single-row .fav-card__content {
-          align-content: center;
-        }
-
-        .fav-card--alarm-open .fav-card__content {
-          align-items: start;
-          min-height: 0;
-        }
-
-        .fav-card--alarm-open {
-          overflow: hidden;
-          position: relative;
-          z-index: 3;
-        }
-
-        .fav-card--alarm-open .fav-card__hero {
-          align-items: center;
-          height: auto;
-        }
-
-        .fav-card__hero {
-          align-items: center;
-          display: grid;
-          gap: ${isMini ? "0" : (isCompactInline ? "10px" : "12px")};
-          grid-template-columns: ${isMini ? "1fr" : `${iconSizePx}px minmax(0, 1fr)`};
-          height: ${showAlarmPanel ? "auto" : (usesCompactRowMetrics ? "100%" : "auto")};
-          min-width: 0;
-          width: ${(isCompactInline || isMini) ? "100%" : "auto"};
-        }
-
-        .fav-card__icon {
-          -webkit-tap-highlight-color: transparent;
-          align-items: center;
-          appearance: none;
-          background: ${styles.icon.background};
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: ${isSingleRow ? "18px" : (isMini ? "22px" : "24px")};
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.08),
-            0 12px 30px rgba(0, 0, 0, 0.18);
-          color: ${iconColor};
-          cursor: ${canRunPrimaryAction ? "pointer" : "default"};
-          display: inline-flex;
-          height: ${iconSizePx}px;
-          justify-content: center;
-          line-height: 0;
-          margin: 0;
-          min-width: ${iconSizePx}px;
-          outline: none;
-          padding: 0;
-          position: relative;
-          width: ${iconSizePx}px;
-          touch-action: manipulation;
-        }
-
-        .fav-card--mini .fav-card__hero {
-          align-content: center;
-          justify-items: center;
-        }
-
-        .fav-card__icon ha-icon {
-          --mdc-icon-size: calc(${iconSizePx}px * 0.45);
-          display: inline-flex;
-          height: calc(${iconSizePx}px * 0.45);
-          left: 50%;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: calc(${iconSizePx}px * 0.45);
-        }
-
-        .fav-card__unavailable-badge {
-          align-items: center;
-          background: #ff9b4a;
-          border: 2px solid ${styles.card.background};
-          border-radius: 999px;
-          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
-          color: #ffffff;
-          display: inline-flex;
-          height: 18px;
-          justify-content: center;
-          position: absolute;
-          right: -2px;
-          top: -2px;
-          width: 18px;
-          z-index: 2;
-        }
-
-        .fav-card__unavailable-badge ha-icon {
-          --mdc-icon-size: 11px;
-          height: 11px;
-          left: auto;
-          position: static;
-          top: auto;
-          transform: none;
-          width: 11px;
-        }
-
-        .fav-card__copy {
-          align-content: center;
-          display: grid;
-          gap: ${isCompactInline ? "4px" : "6px"};
-          min-width: 0;
-        }
-
-        .fav-card__alarm-panel {
-          background:
-            linear-gradient(
-              135deg,
-              color-mix(in srgb, ${accentColor} 12%, rgba(255, 255, 255, 0.06)),
-              rgba(255, 255, 255, 0.04)
-            );
-          border: 1px solid color-mix(in srgb, ${accentColor} 24%, rgba(255, 255, 255, 0.08));
-          border-radius: 20px;
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.06),
-            0 18px 36px rgba(0, 0, 0, 0.24);
-          display: grid;
-          gap: 10px;
-          margin-top: 2px;
-          min-width: 0;
-          padding: 10px;
-          pointer-events: auto;
-          position: static;
-          width: 100%;
-          z-index: 1;
-        }
-
-        .fav-card__alarm-actions {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          justify-content: center;
-          min-width: 0;
-        }
-
-        .fav-card__alarm-button {
-          align-items: center;
-          appearance: none;
-          background:
-            linear-gradient(
-              135deg,
-              color-mix(in srgb, var(--fav-alarm-accent) 14%, rgba(255, 255, 255, 0.05)),
-              rgba(255, 255, 255, 0.05)
-            );
-          border: 1px solid color-mix(in srgb, var(--fav-alarm-accent) 28%, rgba(255, 255, 255, 0.08));
-          border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.07),
-            0 10px 24px rgba(0, 0, 0, 0.14);
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          font: inherit;
-          font-size: ${Math.max(11, chipFontSizePx)}px;
-          font-weight: 700;
-          gap: 6px;
-          min-height: ${Math.max(28, chipHeightPx + 6)}px;
-          padding: 0 11px;
-          touch-action: manipulation;
-        }
-
-        .fav-card__alarm-button ha-icon {
-          --mdc-icon-size: 14px;
-          height: 14px;
-          width: 14px;
-        }
-
-        .fav-card__alarm-code {
-          min-width: 0;
-        }
-
-        .fav-card__alarm-code input {
-          appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 14px;
-          color: var(--primary-text-color);
-          font: inherit;
-          min-height: 38px;
-          padding: 0 12px;
-          width: 100%;
-        }
-
-        .fav-card__title {
-          font-size: ${titleSizePx}px;
-          font-weight: 700;
-          letter-spacing: -0.02em;
-          line-height: ${isCompactInline ? "1.08" : "1.12"};
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .fav-card__chips {
-          align-items: center;
-          display: flex;
-          gap: ${isCompactInline ? "6px" : "8px"};
-          min-width: 0;
-        }
-
-        .fav-card__chip {
-          align-items: center;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-          color: var(--primary-text-color);
-          display: inline-flex;
-          font-size: ${chipFontSizePx}px;
-          font-weight: 700;
-          height: ${chipHeightPx}px;
-          line-height: 1;
-          max-width: 100%;
-          min-width: 0;
-          padding: ${styles.chip_padding};
-          white-space: nowrap;
-        }
-
-        .fav-card__empty-title {
-          font-size: 14px;
-          font-weight: 700;
-        }
-
-        .fav-card__empty-text {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          line-height: 1.45;
-        }
-
-        .fav-card--single-row .fav-card__chip {
-          max-width: 100%;
-        }
-
-        .fav-card--tight-inline:not(.fav-card--alarm-open) .fav-card__copy {
-          align-items: center;
-          display: flex;
-          gap: 6px;
-          min-width: 0;
-        }
-
-        .fav-card--tight-inline:not(.fav-card--alarm-open) .fav-card__title {
-          flex: 1 1 auto;
-          min-width: 0;
-        }
-
-        .fav-card--tight-inline:not(.fav-card--alarm-open) .fav-card__chips {
-          flex: 0 0 auto;
-          gap: 4px;
-        }
-
-        .fav-card--empty {
-          display: grid;
-          gap: 8px;
-          padding: 14px;
-        }
-      </style>
-      <ha-card
-        class="fav-card ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${showAlarmPanel ? "fav-card--alarm-open" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
-        ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}
-      >
-        <div class="fav-card__content" ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}>
-          <div class="fav-card__hero" ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}>
-            <button
-              type="button"
-              class="fav-card__icon"
-              ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}
-              aria-label="${escapeHtml(canRunPrimaryAction ? "Accion principal" : title)}"
-            >
-              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
-              ${showUnavailableBadge ? `<span class="fav-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
-            </button>
-            ${showCopy
-              ? `
-                <div class="fav-card__copy">
-                  ${showTitle ? `<div class="fav-card__title">${escapeHtml(title)}</div>` : ""}
-                  ${showValue ? `<div class="fav-card__chips">${this._renderChip(displayValue)}</div>` : ""}
-                </div>
-              `
-              : ""}
-          </div>
-          ${showAlarmPanel
-            ? `
-              <div class="fav-card__alarm-panel">
-                <div class="fav-card__alarm-actions">
-                  ${alarmModes.map(mode => this._renderAlarmActionButton(mode, accentColor)).join("")}
-                </div>
-                ${showAlarmCodeInput
-                  ? `
-                    <label class="fav-card__alarm-code" data-fav-alarm-ignore="true">
-                      <input
-                        type="password"
-                        inputmode="numeric"
-                        autocomplete="one-time-code"
-                        data-fav-alarm-ignore="true"
-                        data-fav-alarm-field="alarm-code"
-                        placeholder="PIN"
-                        value="${escapeHtml(this._alarmCodeInput)}"
-                      />
-                    </label>
-                  `
-                  : ""}
-              </div>
-            `
-            : ""}
-        </div>
-      </ha-card>
-    `;
-
-    if (isAlarmPanel && this._lastAlarmPanelRenderedOpen !== showAlarmPanel) {
-      this._lastAlarmPanelRenderedOpen = showAlarmPanel;
-      requestAnimationFrame(() => {
-        this._applyHostGridSpan(showAlarmPanel);
-        this._notifyLayoutChange();
-      });
-    } else if (!isAlarmPanel) {
-      this._lastAlarmPanelRenderedOpen = false;
-    }
-  }
-}
-
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaFavCard);
-}
-
-class NodaliaFavCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(DEFAULT_CONFIG);
-    this._hass = null;
-    this._entityOptionsSignature = "";
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getEntityOptionsSignature(hass);
-    const shouldRender =
-      !this._hass ||
-      nextSignature !== this._entityOptionsSignature ||
-      !this.shadowRoot?.innerHTML;
-
-    this._hass = hass;
-    this._entityOptionsSignature = nextSignature;
-
-    if (!shouldRender) {
-      return;
-    }
-
-    const focusState = this._captureFocusState();
-    this._render();
-    this._restoreFocusState(focusState);
-  }
-
-  setConfig(config) {
-    const focusState = this._captureFocusState();
-    this._config = normalizeConfig(config || {});
-    this._render();
-    this._restoreFocusState(focusState);
-  }
-
-  _getEntityOptionsSignature(hass = this._hass) {
-    return Object.keys(hass?.states || {})
-      .sort((left, right) => left.localeCompare(right, "es"))
-      .join("|");
-  }
-
-  _captureFocusState() {
-    const activeElement = this.shadowRoot?.activeElement;
-
-    if (
-      !(
-        activeElement instanceof HTMLInputElement ||
-        activeElement instanceof HTMLTextAreaElement ||
-        activeElement instanceof HTMLSelectElement
-      )
-    ) {
-      return null;
-    }
-
-    const dataset = activeElement.dataset || {};
-    const selector = dataset.field
-      ? `[data-field="${escapeSelectorValue(dataset.field)}"]`
-      : null;
-
-    if (!selector) {
-      return null;
-    }
-
-    const supportsSelection =
-      typeof activeElement.selectionStart === "number" &&
-      typeof activeElement.selectionEnd === "number";
-
-    return {
-      selector,
-      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
-      selectionStart: supportsSelection ? activeElement.selectionStart : null,
-      type: activeElement.type,
-    };
-  }
-
-  _restoreFocusState(focusState) {
-    if (!focusState?.selector || !this.shadowRoot) {
-      return;
-    }
-
-    const target = this.shadowRoot.querySelector(focusState.selector);
-    if (
-      !(
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement
-      )
-    ) {
-      return;
-    }
-
-    try {
-      target.focus({ preventScroll: true });
-    } catch (_error) {
-      target.focus();
-    }
-
-    const canRestoreSelection =
-      focusState.type !== "checkbox" &&
-      typeof focusState.selectionStart === "number" &&
-      typeof focusState.selectionEnd === "number" &&
-      typeof target.setSelectionRange === "function";
-
-    if (!canRestoreSelection) {
-      return;
-    }
-
-    try {
-      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
-    } catch (_error) {
-      // Ignore unsupported inputs.
-    }
-  }
-
-  _emitConfig() {
-    const focusState = this._captureFocusState();
-    const nextConfig = deepClone(this._config);
-    this._config = normalizeConfig(compactConfig(nextConfig));
-    this._render();
-    this._restoreFocusState(focusState);
-    fireEvent(this, "config-changed", {
-      config: compactConfig(nextConfig),
-    });
-  }
-
-  _setEditorConfig() {
-    this._config = normalizeConfig(compactConfig(this._config));
-  }
-
-  _setFieldValue(path, value) {
-    if (value === undefined || value === null || value === "") {
-      deleteByPath(this._config, path);
-      return;
-    }
-
-    setByPath(this._config, path, value);
-  }
-
-  _readFieldValue(input) {
-    const valueType = input.dataset.valueType || "string";
-
-    switch (valueType) {
-      case "boolean":
-        return Boolean(input.checked);
-      default:
-        return input.value;
-    }
-  }
-
-  _onShadowInput(event) {
-    const input = event
-      .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
-
-    if (!input?.dataset?.field) {
-      return;
-    }
-
-    event.stopPropagation();
-
-    if (input.dataset.field === "__info_only") {
-      const isInfoOnly = this._readFieldValue(input) === true;
-
-      if (isInfoOnly) {
-        this._config.tap_action = "none";
-      } else if ((this._config.tap_action || "auto") === "none") {
-        this._config.tap_action = "auto";
-      }
-
-      this._setEditorConfig();
-
-      if (event.type === "change") {
-        this._emitConfig();
-      }
-      return;
-    }
-
-    const nextValue = this._readFieldValue(input);
-    this._setFieldValue(input.dataset.field, nextValue);
-    this._setEditorConfig();
-
-    if (event.type === "change") {
-      this._emitConfig();
-    }
-  }
-
-  _renderTextField(label, field, value, options = {}) {
-    const inputType = options.type || "text";
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-    const valueType = options.valueType || "string";
-    const inputValue = value === undefined || value === null ? "" : String(value);
-
-    return `
-      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
-        <input
-          type="${escapeHtml(inputType)}"
-          data-field="${escapeHtml(field)}"
-          data-value-type="${escapeHtml(valueType)}"
-          value="${escapeHtml(inputValue)}"
-          ${placeholder}
-        />
-      </label>
-    `;
-  }
-
-  _renderTextareaField(label, field, value, options = {}) {
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-    const inputValue = value === undefined || value === null ? "" : String(value);
-
-    return `
-      <label class="editor-field editor-field--full">
-        <span>${escapeHtml(label)}</span>
-        <textarea data-field="${escapeHtml(field)}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
-      </label>
-    `;
-  }
-
-  _renderCheckboxField(label, field, checked) {
-    return `
-      <label class="editor-toggle">
-        <input
-          type="checkbox"
-          data-field="${escapeHtml(field)}"
-          data-value-type="boolean"
-          ${checked ? "checked" : ""}
-        />
-        <span>${escapeHtml(label)}</span>
-      </label>
-    `;
-  }
-
-  _renderSelectField(label, field, value, options) {
-    return `
-      <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
-        <select data-field="${escapeHtml(field)}">
-          ${options
-            .map(option => `
-              <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
-              </option>
-            `)
-            .join("")}
-        </select>
-      </label>
-    `;
-  }
-
-  _getEntityOptionsMarkup() {
-    const entityIds = Object.keys(this._hass?.states || {})
-      .sort((left, right) => left.localeCompare(right, "es"));
-
-    if (!entityIds.length) {
-      return "";
-    }
-
-    return `
-      <datalist id="fav-card-entities">
-        ${entityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-    `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        .editor {
-          color: var(--primary-text-color);
-          display: grid;
-          gap: 16px;
-        }
-
-        .editor-section {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 18px;
-          display: grid;
-          gap: 14px;
-          padding: 16px;
-        }
-
-        .editor-section__header {
-          display: grid;
-          gap: 4px;
-        }
-
-        .editor-section__title {
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .editor-section__hint {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          line-height: 1.45;
-        }
-
-        .editor-section__actions {
-          align-items: center;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          margin-top: 2px;
-        }
-
-        .editor-section__toggle-button {
-          align-items: center;
-          appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 999px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          font: inherit;
-          font-size: 12px;
-          font-weight: 600;
-          gap: 8px;
-          min-height: 34px;
-          padding: 0 12px;
-        }
-
-        .editor-section__toggle-button ha-icon {
-          --mdc-icon-size: 16px;
-        }
-
-        .editor-grid {
-          display: grid;
-          gap: 12px;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .editor-field,
-        .editor-toggle {
-          display: grid;
-          gap: 6px;
-          min-width: 0;
-        }
-
-        .editor-field--full {
-          grid-column: 1 / -1;
-        }
-
-        .editor-field > span,
-        .editor-toggle > span {
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .editor-field input,
-        .editor-field select,
-        .editor-field textarea {
-          appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 12px;
-          color: var(--primary-text-color);
-          font: inherit;
-          min-height: 40px;
-          padding: 10px 12px;
-          width: 100%;
-        }
-
-        .editor-field textarea {
-          min-height: 86px;
-          resize: vertical;
-        }
-
-        .editor-toggle {
-          align-items: center;
-          grid-template-columns: auto 1fr;
-          padding-top: 20px;
-        }
-
-        .editor-toggle input {
-          accent-color: var(--primary-color);
-          height: 18px;
-          margin: 0;
-          width: 18px;
-        }
-
-        @media (max-width: 640px) {
-          .editor-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .editor-toggle {
-            padding-top: 0;
-          }
-        }
-      </style>
-      <div class="editor">
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad favorita, icono y accion principal.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Entidad", "entity", config.entity, {
-              placeholder: "light.sofa",
-            })}
-            ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Sofa",
-            })}
-            ${this._renderTextField("Icono", "icon", config.icon, {
-              placeholder: "mdi:lightbulb",
-            })}
-            ${this._renderCheckboxField("Usar icono de la entidad", "use_entity_icon", config.use_entity_icon === true)}
-            ${this._renderSelectField(
-              "Modo de tarjeta",
-              "entity_mode",
-              config.entity_mode || "auto",
-              [
-                { value: "auto", label: "Automatico" },
-                { value: "standard", label: "Normal" },
-                { value: "alarm_control_panel", label: "Alarm control panel" },
-              ],
-            )}
-            ${this._renderSelectField(
-              "Accion principal",
-              "tap_action",
-              config.tap_action || "auto",
-              [
-                { value: "auto", label: "Auto (toggle o info)" },
-                { value: "toggle", label: "Toggle" },
-                { value: "more-info", label: "More info" },
-                { value: "url", label: "Abrir URL" },
-                { value: "service", label: "Servicio" },
-                { value: "none", label: "Solo informacion" },
-              ],
-            )}
-            ${this._renderCheckboxField(
-              "Sin accion al tocar",
-              "__info_only",
-              (config.tap_action || "auto") === "none",
-            )}
-            ${this._renderTextField("Servicio al tocar", "tap_service", config.tap_service, {
-              placeholder: "light.turn_on",
-            })}
-            ${this._renderTextareaField("Datos del servicio (JSON)", "tap_service_data", config.tap_service_data, {
-              placeholder: '{"brightness_pct": 70}',
-            })}
-            ${this._renderTextField("URL al tocar", "tap_url", config.tap_url, {
-              placeholder: "https://example.com",
-            })}
-            ${this._renderCheckboxField("Abrir URL en pestana nueva", "tap_new_tab", config.tap_new_tab === true)}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Layout</div>
-            <div class="editor-section__hint">Version mini para 1x1 o inline para favoritos alargados.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderSelectField(
-              "Layout",
-              "layout_mode",
-              config.layout_mode || "auto",
-              [
-                { value: "auto", label: "Automatico" },
-                { value: "mini", label: "Mini" },
-                { value: "inline", label: "Inline" },
-              ],
-            )}
-            ${this._renderCheckboxField("Mostrar nombre", "show_name", config.show_name !== false)}
-            ${this._renderCheckboxField("Mostrar estado", "show_state", config.show_state !== false)}
-            ${this._renderTextField("Atributo a mostrar", "state_attribute", config.state_attribute, {
-              placeholder: "battery_level",
-            })}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Alarma</div>
-            <div class="editor-section__hint">Si la entidad es una alarma, al tocar la tarjeta puede desplegar los modos de armado y usar PIN fijo o helper.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("PIN fijo", "alarm_code", config.alarm_code, {
-              placeholder: "1234",
-            })}
-            ${this._renderTextField("Helper codigo", "alarm_code_entity", config.alarm_code_entity, {
-              placeholder: "input_text.alarm_pin",
-            })}
-            ${this._renderCheckboxField("Mostrar cuadro de texto del PIN", "alarm_show_code_input", config.alarm_show_code_input !== false)}
-            ${this._renderCheckboxField("Mostrar desarmar", "alarm_show_disarm", config.alarm_show_disarm !== false)}
-            ${this._renderCheckboxField("Mostrar en casa", "alarm_show_arm_home", config.alarm_show_arm_home !== false)}
-            ${this._renderCheckboxField("Mostrar ausente", "alarm_show_arm_away", config.alarm_show_arm_away !== false)}
-            ${this._renderCheckboxField("Mostrar noche", "alarm_show_arm_night", config.alarm_show_arm_night !== false)}
-            ${this._renderCheckboxField("Mostrar vacaciones", "alarm_show_arm_vacation", config.alarm_show_arm_vacation === true)}
-            ${this._renderCheckboxField("Mostrar personalizado", "alarm_show_custom_bypass", config.alarm_show_custom_bypass === true)}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica opcional al tocar la tarjeta.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
-            ${this._renderSelectField(
-              "Estilo",
-              "haptics.style",
-              hapticStyle,
-              [
-                { value: "selection", label: "Selection" },
-                { value: "light", label: "Light" },
-                { value: "medium", label: "Medium" },
-                { value: "heavy", label: "Heavy" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "failure", label: "Failure" },
-              ],
-            )}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales base de la tarjeta favorita.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
-            ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
-            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
-            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-            ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamano burbuja", "styles.icon.size", config.styles.icon.size)}
-            ${this._renderTextField("Color activo", "styles.icon.on_color", config.styles.icon.on_color)}
-            ${this._renderTextField("Color inactivo", "styles.icon.off_color", config.styles.icon.off_color)}
-            ${this._renderTextField("Alto chips", "styles.chip_height", config.styles.chip_height)}
-            ${this._renderTextField("Texto chips", "styles.chip_font_size", config.styles.chip_font_size)}
-            ${this._renderTextField("Padding chips", "styles.chip_padding", config.styles.chip_padding)}
-            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-          </div>
-        </section>
-        ${this._getEntityOptionsMarkup()}
-      </div>
-    `;
-
-    this.shadowRoot
-      .querySelectorAll('input[data-field="entity"]')
-      .forEach(input => input.setAttribute("list", "fav-card-entities"));
-
-    this.shadowRoot
-      .querySelectorAll('input[data-field="alarm_code_entity"]')
-      .forEach(input => input.setAttribute("list", "fav-card-entities"));
-  }
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaFavCardEditor);
-}
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: CARD_TAG,
-  name: "Nodalia Fav Card",
-  description: "Tarjeta mini y elegante para favoritos y controles rapidos en movil.",
   preview: true,
 });
 
@@ -14660,6 +10335,166 @@ function escapeHtml(value) {
 
 function escapeSelectorValue(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
+const EDITOR_COLOR_PRESETS = Object.freeze({
+  standard: Object.freeze([
+    { label: "Tema", value: "var(--primary-color)" },
+    { label: "Info", value: "var(--info-color, #71c0ff)" },
+    { label: "Ambar", value: "var(--warning-color, #f6b73c)" },
+    { label: "Verde", value: "#38d9a9" },
+    { label: "Rojo", value: "#ff6b6b" },
+    { label: "Blanco", value: "#f5f7fb" },
+  ]),
+  muted: Object.freeze([
+    { label: "Inactivo", value: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))" },
+    { label: "Suave", value: "rgba(255, 255, 255, 0.72)" },
+    { label: "Gris", value: "rgba(255, 255, 255, 0.36)" },
+    { label: "Oscuro", value: "rgba(0, 0, 0, 0.38)" },
+  ]),
+  accentBackground: Object.freeze([
+    { label: "Tema", value: "rgba(var(--rgb-primary-color), 0.18)" },
+    { label: "Info", value: "rgba(113, 192, 255, 0.2)" },
+    { label: "Ambar", value: "rgba(246, 183, 60, 0.2)" },
+    { label: "Verde", value: "rgba(56, 217, 169, 0.18)" },
+    { label: "Claro", value: "rgba(255, 255, 255, 0.12)" },
+  ]),
+  surface: Object.freeze([
+    { label: "Tarjeta", value: "var(--ha-card-background)" },
+    { label: "Cristal", value: "rgba(255, 255, 255, 0.04)" },
+    { label: "Bruma", value: "rgba(255, 255, 255, 0.08)" },
+    { label: "Noche", value: "rgba(0, 0, 0, 0.18)" },
+    { label: "Info", value: "rgba(113, 192, 255, 0.14)" },
+  ]),
+  overlay: Object.freeze([
+    { label: "Ligero", value: "rgba(0, 0, 0, 0.18)" },
+    { label: "Medio", value: "rgba(0, 0, 0, 0.32)" },
+    { label: "Intenso", value: "rgba(0, 0, 0, 0.48)" },
+    { label: "Claro", value: "rgba(255, 255, 255, 0.14)" },
+  ]),
+  track: Object.freeze([
+    { label: "Suave", value: "rgba(255, 255, 255, 0.08)" },
+    { label: "Medio", value: "rgba(255, 255, 255, 0.14)" },
+    { label: "Fuerte", value: "rgba(255, 255, 255, 0.22)" },
+    { label: "Oscuro", value: "rgba(0, 0, 0, 0.16)" },
+  ]),
+});
+
+function resolveEditorColorValue(value) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || typeof document === "undefined") {
+    return "";
+  }
+
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.color = "";
+  probe.style.color = rawValue;
+  if (!probe.style.color) {
+    return rawValue;
+  }
+
+  (document.body || document.documentElement).appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved || rawValue;
+}
+
+function formatEditorHexChannel(value) {
+  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+}
+
+function formatEditorColorFromHex(hex, alpha = 1) {
+  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+    return String(hex ?? "");
+  }
+
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+  const safeAlpha = clamp(Number(alpha), 0, 1);
+  if (safeAlpha >= 0.999) {
+    return `#${normalizedHex}`;
+  }
+
+  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+}
+
+function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const channels = resolvedValue.match(/[\d.]+/g) || [];
+  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+
+  return {
+    alpha,
+    hex,
+    resolved: resolvedValue,
+    source: sourceValue,
+    value: formatEditorColorFromHex(hex, alpha),
+  };
+}
+
+function getEditorColorFieldOptions(field) {
+  const normalizedField = String(field ?? "");
+
+  if (normalizedField.endsWith("off_color")) {
+    return {
+      fallbackValue: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))",
+      presets: EDITOR_COLOR_PRESETS.muted,
+    };
+  }
+
+  if (normalizedField.endsWith("accent_background")) {
+    return {
+      fallbackValue: "rgba(113, 192, 255, 0.2)",
+      presets: EDITOR_COLOR_PRESETS.accentBackground,
+    };
+  }
+
+  if (normalizedField.endsWith("progress_background")) {
+    return {
+      fallbackValue: "rgba(255, 255, 255, 0.12)",
+      presets: EDITOR_COLOR_PRESETS.track,
+    };
+  }
+
+  if (normalizedField.endsWith("overlay_color")) {
+    return {
+      fallbackValue: "rgba(0, 0, 0, 0.32)",
+      presets: EDITOR_COLOR_PRESETS.overlay,
+    };
+  }
+
+  if (normalizedField.endsWith("background")) {
+    return {
+      fallbackValue: "var(--ha-card-background)",
+      presets: EDITOR_COLOR_PRESETS.surface,
+    };
+  }
+
+  return {
+    fallbackValue: "var(--info-color, #71c0ff)",
+    presets: EDITOR_COLOR_PRESETS.standard,
+  };
+}
+
+function isSameEditorColor(left, right) {
+  const leftResolved = resolveEditorColorValue(left);
+  const rightResolved = resolveEditorColorValue(right);
+
+  if (leftResolved && rightResolved) {
+    return leftResolved === rightResolved;
+  }
+
+  return String(left ?? "").trim() === String(right ?? "").trim();
 }
 
 function getRangeValueFromClientX(slider, clientX) {
@@ -16710,6 +12545,8 @@ class NodaliaLightCardEditor extends HTMLElement {
     switch (valueType) {
       case "boolean":
         return Boolean(input.checked);
+      case "color":
+        return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
       case "csv": {
         const values = arrayFromCsv(input.value)
           .map(value => Number(value))
@@ -16766,6 +12603,19 @@ class NodaliaLightCardEditor extends HTMLElement {
   }
 
   _onShadowClick(event) {
+    const colorButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.colorField && node.dataset?.colorValue);
+
+    if (colorButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._setFieldValue(colorButton.dataset.colorField, colorButton.dataset.colorValue);
+      this._setEditorConfig();
+      this._emitConfig();
+      return;
+    }
+
     const toggleButton = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
@@ -16800,6 +12650,48 @@ class NodaliaLightCardEditor extends HTMLElement {
           ${placeholder}
         />
       </label>
+    `;
+  }
+
+  _renderColorField(label, field, value, options = {}) {
+    const colorOptions = { ...getEditorColorFieldOptions(field), ...options };
+    const currentValue = value === undefined || value === null || value === ""
+      ? colorOptions.fallbackValue
+      : String(value);
+    const colorModel = getEditorColorModel(currentValue, colorOptions.fallbackValue);
+    const presets = Array.isArray(colorOptions.presets) ? colorOptions.presets : [];
+
+    return `
+      <div class="editor-field ${colorOptions.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="Color personalizado">
+            <input
+              type="color"
+              data-field="${escapeHtml(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml(String(colorModel.alpha))}"
+              value="${escapeHtml(colorModel.hex)}"
+              aria-label="${escapeHtml(label)}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
+          </label>
+          <div class="editor-color-presets">
+            ${presets.map(preset => `
+              <button
+                type="button"
+                class="editor-color-preset ${isSameEditorColor(currentValue, preset.value) ? "is-active" : ""}"
+                data-color-field="${escapeHtml(field)}"
+                data-color-value="${escapeHtml(preset.value)}"
+                title="${escapeHtml(preset.label)}"
+                aria-label="${escapeHtml(`${label}: ${preset.label}`)}"
+              >
+                <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(preset.value)};"></span>
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      </div>
     `;
   }
 
@@ -17015,6 +12907,10 @@ class NodaliaLightCardEditor extends HTMLElement {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
+        .editor-grid--stacked {
+          grid-template-columns: 1fr;
+        }
+
         .editor-field,
         .editor-toggle {
           display: grid;
@@ -17043,6 +12939,86 @@ class NodaliaLightCardEditor extends HTMLElement {
           min-height: 40px;
           padding: 10px 12px;
           width: 100%;
+        }
+
+        .editor-color-field {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          min-height: 40px;
+        }
+
+        .editor-color-picker {
+          align-items: center;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 40px;
+          justify-content: center;
+          position: relative;
+          width: 40px;
+        }
+
+        .editor-color-picker input {
+          cursor: pointer;
+          inset: 0;
+          opacity: 0;
+          position: absolute;
+        }
+
+        .editor-color-presets {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        button.editor-color-preset {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          height: 34px;
+          justify-content: center;
+          min-height: 0;
+          padding: 0;
+          width: 34px;
+        }
+
+        .editor-color-picker:hover,
+        button.editor-color-preset:hover {
+          border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .editor-color-picker:focus-within,
+        button.editor-color-preset.is-active {
+          border-color: rgba(255, 255, 255, 0.22);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .editor-color-swatch {
+          --editor-swatch: #71c0ff;
+          background:
+            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+            conic-gradient(from 90deg, rgba(255, 255, 255, 0.06) 25%, rgba(0, 0, 0, 0.12) 0 50%, rgba(255, 255, 255, 0.06) 0 75%, rgba(0, 0, 0, 0.12) 0);
+          background-position: center;
+          background-size: cover, 10px 10px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 999px;
+          display: block;
+          height: 18px;
+          width: 18px;
+        }
+
+        .editor-color-picker .editor-color-swatch {
+          height: 22px;
+          width: 22px;
         }
 
         .editor-field ha-icon-picker,
@@ -17180,18 +13156,18 @@ class NodaliaLightCardEditor extends HTMLElement {
             this._showStyleSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
+                  ${this._renderColorField("Background", "styles.card.background", config.styles.card.background)}
                   ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
                   ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
                   ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
                   ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
                   ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
                   ${this._renderTextField("Tamaño botón principal", "styles.icon.size", config.styles.icon.size)}
-                  ${this._renderTextField("Color icono encendida", "styles.icon.on_color", config.styles.icon.on_color)}
-                  ${this._renderTextField("Color icono apagada", "styles.icon.off_color", config.styles.icon.off_color)}
+                  ${this._renderColorField("Color icono encendida", "styles.icon.on_color", config.styles.icon.on_color)}
+                  ${this._renderColorField("Color icono apagada", "styles.icon.off_color", config.styles.icon.off_color)}
                   ${this._renderTextField("Tamaño botón", "styles.control.size", config.styles.control.size)}
-                  ${this._renderTextField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background)}
-                  ${this._renderTextField("Color acento", "styles.control.accent_color", config.styles.control.accent_color)}
+                  ${this._renderColorField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background)}
+                  ${this._renderColorField("Color acento", "styles.control.accent_color", config.styles.control.accent_color)}
                   ${this._renderTextField("Alto burbuja info", "styles.chip_height", config.styles.chip_height)}
                   ${this._renderTextField("Texto burbuja info", "styles.chip_font_size", config.styles.chip_font_size)}
                   ${this._renderTextField("Padding burbuja info", "styles.chip_padding", config.styles.chip_padding)}
@@ -17199,7 +13175,7 @@ class NodaliaLightCardEditor extends HTMLElement {
                   ${this._renderTextField("Alto contenedor slider", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
                   ${this._renderTextField("Grosor slider", "styles.slider_height", config.styles.slider_height)}
                   ${this._renderTextField("Ancho burbuja slider", "styles.slider_thumb_size", config.styles.slider_thumb_size)}
-                  ${this._renderTextField("Color slider", "styles.slider_color", config.styles.slider_color)}
+                  ${this._renderColorField("Color slider", "styles.slider_color", config.styles.slider_color)}
                 </div>
               `
               : ""
@@ -17434,6 +13410,166 @@ function escapeHtml(value) {
 
 function escapeSelectorValue(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
+const EDITOR_COLOR_PRESETS = Object.freeze({
+  standard: Object.freeze([
+    { label: "Tema", value: "var(--primary-color)" },
+    { label: "Info", value: "var(--info-color, #71c0ff)" },
+    { label: "Ambar", value: "var(--warning-color, #f6b73c)" },
+    { label: "Verde", value: "#38d9a9" },
+    { label: "Rojo", value: "#ff6b6b" },
+    { label: "Blanco", value: "#f5f7fb" },
+  ]),
+  muted: Object.freeze([
+    { label: "Inactivo", value: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))" },
+    { label: "Suave", value: "rgba(255, 255, 255, 0.72)" },
+    { label: "Gris", value: "rgba(255, 255, 255, 0.36)" },
+    { label: "Oscuro", value: "rgba(0, 0, 0, 0.38)" },
+  ]),
+  accentBackground: Object.freeze([
+    { label: "Tema", value: "rgba(var(--rgb-primary-color), 0.18)" },
+    { label: "Info", value: "rgba(113, 192, 255, 0.2)" },
+    { label: "Ambar", value: "rgba(246, 183, 60, 0.2)" },
+    { label: "Verde", value: "rgba(56, 217, 169, 0.18)" },
+    { label: "Claro", value: "rgba(255, 255, 255, 0.12)" },
+  ]),
+  surface: Object.freeze([
+    { label: "Tarjeta", value: "var(--ha-card-background)" },
+    { label: "Cristal", value: "rgba(255, 255, 255, 0.04)" },
+    { label: "Bruma", value: "rgba(255, 255, 255, 0.08)" },
+    { label: "Noche", value: "rgba(0, 0, 0, 0.18)" },
+    { label: "Info", value: "rgba(113, 192, 255, 0.14)" },
+  ]),
+  overlay: Object.freeze([
+    { label: "Ligero", value: "rgba(0, 0, 0, 0.18)" },
+    { label: "Medio", value: "rgba(0, 0, 0, 0.32)" },
+    { label: "Intenso", value: "rgba(0, 0, 0, 0.48)" },
+    { label: "Claro", value: "rgba(255, 255, 255, 0.14)" },
+  ]),
+  track: Object.freeze([
+    { label: "Suave", value: "rgba(255, 255, 255, 0.08)" },
+    { label: "Medio", value: "rgba(255, 255, 255, 0.14)" },
+    { label: "Fuerte", value: "rgba(255, 255, 255, 0.22)" },
+    { label: "Oscuro", value: "rgba(0, 0, 0, 0.16)" },
+  ]),
+});
+
+function resolveEditorColorValue(value) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || typeof document === "undefined") {
+    return "";
+  }
+
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.color = "";
+  probe.style.color = rawValue;
+  if (!probe.style.color) {
+    return rawValue;
+  }
+
+  (document.body || document.documentElement).appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved || rawValue;
+}
+
+function formatEditorHexChannel(value) {
+  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+}
+
+function formatEditorColorFromHex(hex, alpha = 1) {
+  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+    return String(hex ?? "");
+  }
+
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+  const safeAlpha = clamp(Number(alpha), 0, 1);
+  if (safeAlpha >= 0.999) {
+    return `#${normalizedHex}`;
+  }
+
+  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+}
+
+function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const channels = resolvedValue.match(/[\d.]+/g) || [];
+  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+
+  return {
+    alpha,
+    hex,
+    resolved: resolvedValue,
+    source: sourceValue,
+    value: formatEditorColorFromHex(hex, alpha),
+  };
+}
+
+function getEditorColorFieldOptions(field) {
+  const normalizedField = String(field ?? "");
+
+  if (normalizedField.endsWith("off_color")) {
+    return {
+      fallbackValue: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))",
+      presets: EDITOR_COLOR_PRESETS.muted,
+    };
+  }
+
+  if (normalizedField.endsWith("accent_background")) {
+    return {
+      fallbackValue: "rgba(113, 192, 255, 0.2)",
+      presets: EDITOR_COLOR_PRESETS.accentBackground,
+    };
+  }
+
+  if (normalizedField.endsWith("progress_background")) {
+    return {
+      fallbackValue: "rgba(255, 255, 255, 0.12)",
+      presets: EDITOR_COLOR_PRESETS.track,
+    };
+  }
+
+  if (normalizedField.endsWith("overlay_color")) {
+    return {
+      fallbackValue: "rgba(0, 0, 0, 0.32)",
+      presets: EDITOR_COLOR_PRESETS.overlay,
+    };
+  }
+
+  if (normalizedField.endsWith("background")) {
+    return {
+      fallbackValue: "var(--ha-card-background)",
+      presets: EDITOR_COLOR_PRESETS.surface,
+    };
+  }
+
+  return {
+    fallbackValue: "var(--info-color, #71c0ff)",
+    presets: EDITOR_COLOR_PRESETS.standard,
+  };
+}
+
+function isSameEditorColor(left, right) {
+  const leftResolved = resolveEditorColorValue(left);
+  const rightResolved = resolveEditorColorValue(right);
+
+  if (leftResolved && rightResolved) {
+    return leftResolved === rightResolved;
+  }
+
+  return String(left ?? "").trim() === String(right ?? "").trim();
 }
 
 function getRangeValueFromClientX(slider, clientX) {
@@ -19111,6 +15247,8 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     switch (valueType) {
       case "boolean":
         return Boolean(input.checked);
+      case "color":
+        return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
       default:
         return input.value;
     }
@@ -19136,7 +15274,21 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowClick() {}
+  _onShadowClick(event) {
+    const colorButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.colorField && node.dataset?.colorValue);
+
+    if (!colorButton) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this._setFieldValue(colorButton.dataset.colorField, colorButton.dataset.colorValue);
+    this._setEditorConfig();
+    this._emitConfig();
+  }
 
   _renderTextField(label, field, value, options = {}) {
     const inputType = options.type || "text";
@@ -19155,6 +15307,48 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
           ${placeholder}
         />
       </label>
+    `;
+  }
+
+  _renderColorField(label, field, value, options = {}) {
+    const colorOptions = { ...getEditorColorFieldOptions(field), ...options };
+    const currentValue = value === undefined || value === null || value === ""
+      ? colorOptions.fallbackValue
+      : String(value);
+    const colorModel = getEditorColorModel(currentValue, colorOptions.fallbackValue);
+    const presets = Array.isArray(colorOptions.presets) ? colorOptions.presets : [];
+
+    return `
+      <div class="editor-field ${colorOptions.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="Color personalizado">
+            <input
+              type="color"
+              data-field="${escapeHtml(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml(String(colorModel.alpha))}"
+              value="${escapeHtml(colorModel.hex)}"
+              aria-label="${escapeHtml(label)}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
+          </label>
+          <div class="editor-color-presets">
+            ${presets.map(preset => `
+              <button
+                type="button"
+                class="editor-color-preset ${isSameEditorColor(currentValue, preset.value) ? "is-active" : ""}"
+                data-color-field="${escapeHtml(field)}"
+                data-color-value="${escapeHtml(preset.value)}"
+                title="${escapeHtml(preset.label)}"
+                aria-label="${escapeHtml(`${label}: ${preset.label}`)}"
+              >
+                <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(preset.value)};"></span>
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      </div>
     `;
   }
 
@@ -19292,6 +15486,86 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
           width: 100%;
         }
 
+        .editor-color-field {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          min-height: 40px;
+        }
+
+        .editor-color-picker {
+          align-items: center;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 40px;
+          justify-content: center;
+          position: relative;
+          width: 40px;
+        }
+
+        .editor-color-picker input {
+          cursor: pointer;
+          inset: 0;
+          opacity: 0;
+          position: absolute;
+        }
+
+        .editor-color-presets {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        button.editor-color-preset {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          height: 34px;
+          justify-content: center;
+          min-height: 0;
+          padding: 0;
+          width: 34px;
+        }
+
+        .editor-color-picker:hover,
+        button.editor-color-preset:hover {
+          border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .editor-color-picker:focus-within,
+        button.editor-color-preset.is-active {
+          border-color: rgba(255, 255, 255, 0.22);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .editor-color-swatch {
+          --editor-swatch: #71c0ff;
+          background:
+            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+            conic-gradient(from 90deg, rgba(255, 255, 255, 0.06) 25%, rgba(0, 0, 0, 0.12) 0 50%, rgba(255, 255, 255, 0.06) 0 75%, rgba(0, 0, 0, 0.12) 0);
+          background-position: center;
+          background-size: cover, 10px 10px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 999px;
+          display: block;
+          height: 18px;
+          width: 18px;
+        }
+
+        .editor-color-picker .editor-color-swatch {
+          height: 22px;
+          width: 22px;
+        }
+
         .editor-toggle {
           align-items: center;
           grid-template-columns: auto 1fr;
@@ -19397,25 +15671,25 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
             <div class="editor-section__hint">Ajustes visuales basicos del look Nodalia.</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
+            ${this._renderColorField("Background", "styles.card.background", config.styles.card.background)}
             ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
             ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
             ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
             ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
             ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
             ${this._renderTextField("Tamano boton principal", "styles.icon.size", config.styles.icon.size)}
-            ${this._renderTextField("Color icono encendido", "styles.icon.on_color", config.styles.icon.on_color)}
-            ${this._renderTextField("Color icono apagado", "styles.icon.off_color", config.styles.icon.off_color)}
+            ${this._renderColorField("Color icono encendido", "styles.icon.on_color", config.styles.icon.on_color)}
+            ${this._renderColorField("Color icono apagado", "styles.icon.off_color", config.styles.icon.off_color)}
             ${this._renderTextField("Tamano boton", "styles.control.size", config.styles.control.size)}
-            ${this._renderTextField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background)}
-            ${this._renderTextField("Color acento", "styles.control.accent_color", config.styles.control.accent_color)}
+            ${this._renderColorField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background)}
+            ${this._renderColorField("Color acento", "styles.control.accent_color", config.styles.control.accent_color)}
             ${this._renderTextField("Alto burbuja info", "styles.chip_height", config.styles.chip_height)}
             ${this._renderTextField("Texto burbuja info", "styles.chip_font_size", config.styles.chip_font_size)}
             ${this._renderTextField("Padding burbuja info", "styles.chip_padding", config.styles.chip_padding)}
             ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
             ${this._renderTextField("Alto contenedor slider", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
             ${this._renderTextField("Grosor slider", "styles.slider_height", config.styles.slider_height)}
-            ${this._renderTextField("Color slider", "styles.slider_color", config.styles.slider_color)}
+            ${this._renderColorField("Color slider", "styles.slider_color", config.styles.slider_color)}
           </div>
         </section>
         ${this._getEntityOptionsMarkup()}
@@ -19641,6 +15915,166 @@ function escapeHtml(value) {
 
 function escapeSelectorValue(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
+const EDITOR_COLOR_PRESETS = Object.freeze({
+  standard: Object.freeze([
+    { label: "Tema", value: "var(--primary-color)" },
+    { label: "Info", value: "var(--info-color, #71c0ff)" },
+    { label: "Ambar", value: "var(--warning-color, #f6b73c)" },
+    { label: "Verde", value: "#38d9a9" },
+    { label: "Rojo", value: "#ff6b6b" },
+    { label: "Blanco", value: "#f5f7fb" },
+  ]),
+  muted: Object.freeze([
+    { label: "Inactivo", value: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))" },
+    { label: "Suave", value: "rgba(255, 255, 255, 0.72)" },
+    { label: "Gris", value: "rgba(255, 255, 255, 0.36)" },
+    { label: "Oscuro", value: "rgba(0, 0, 0, 0.38)" },
+  ]),
+  accentBackground: Object.freeze([
+    { label: "Tema", value: "rgba(var(--rgb-primary-color), 0.18)" },
+    { label: "Info", value: "rgba(113, 192, 255, 0.2)" },
+    { label: "Ambar", value: "rgba(246, 183, 60, 0.2)" },
+    { label: "Verde", value: "rgba(56, 217, 169, 0.18)" },
+    { label: "Claro", value: "rgba(255, 255, 255, 0.12)" },
+  ]),
+  surface: Object.freeze([
+    { label: "Tarjeta", value: "var(--ha-card-background)" },
+    { label: "Cristal", value: "rgba(255, 255, 255, 0.04)" },
+    { label: "Bruma", value: "rgba(255, 255, 255, 0.08)" },
+    { label: "Noche", value: "rgba(0, 0, 0, 0.18)" },
+    { label: "Info", value: "rgba(113, 192, 255, 0.14)" },
+  ]),
+  overlay: Object.freeze([
+    { label: "Ligero", value: "rgba(0, 0, 0, 0.18)" },
+    { label: "Medio", value: "rgba(0, 0, 0, 0.32)" },
+    { label: "Intenso", value: "rgba(0, 0, 0, 0.48)" },
+    { label: "Claro", value: "rgba(255, 255, 255, 0.14)" },
+  ]),
+  track: Object.freeze([
+    { label: "Suave", value: "rgba(255, 255, 255, 0.08)" },
+    { label: "Medio", value: "rgba(255, 255, 255, 0.14)" },
+    { label: "Fuerte", value: "rgba(255, 255, 255, 0.22)" },
+    { label: "Oscuro", value: "rgba(0, 0, 0, 0.16)" },
+  ]),
+});
+
+function resolveEditorColorValue(value) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || typeof document === "undefined") {
+    return "";
+  }
+
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.color = "";
+  probe.style.color = rawValue;
+  if (!probe.style.color) {
+    return rawValue;
+  }
+
+  (document.body || document.documentElement).appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved || rawValue;
+}
+
+function formatEditorHexChannel(value) {
+  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+}
+
+function formatEditorColorFromHex(hex, alpha = 1) {
+  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+    return String(hex ?? "");
+  }
+
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+  const safeAlpha = clamp(Number(alpha), 0, 1);
+  if (safeAlpha >= 0.999) {
+    return `#${normalizedHex}`;
+  }
+
+  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+}
+
+function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const channels = resolvedValue.match(/[\d.]+/g) || [];
+  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+
+  return {
+    alpha,
+    hex,
+    resolved: resolvedValue,
+    source: sourceValue,
+    value: formatEditorColorFromHex(hex, alpha),
+  };
+}
+
+function getEditorColorFieldOptions(field) {
+  const normalizedField = String(field ?? "");
+
+  if (normalizedField.endsWith("off_color")) {
+    return {
+      fallbackValue: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))",
+      presets: EDITOR_COLOR_PRESETS.muted,
+    };
+  }
+
+  if (normalizedField.endsWith("accent_background")) {
+    return {
+      fallbackValue: "rgba(113, 192, 255, 0.2)",
+      presets: EDITOR_COLOR_PRESETS.accentBackground,
+    };
+  }
+
+  if (normalizedField.endsWith("progress_background")) {
+    return {
+      fallbackValue: "rgba(255, 255, 255, 0.12)",
+      presets: EDITOR_COLOR_PRESETS.track,
+    };
+  }
+
+  if (normalizedField.endsWith("overlay_color")) {
+    return {
+      fallbackValue: "rgba(0, 0, 0, 0.32)",
+      presets: EDITOR_COLOR_PRESETS.overlay,
+    };
+  }
+
+  if (normalizedField.endsWith("background")) {
+    return {
+      fallbackValue: "var(--ha-card-background)",
+      presets: EDITOR_COLOR_PRESETS.surface,
+    };
+  }
+
+  return {
+    fallbackValue: "var(--info-color, #71c0ff)",
+    presets: EDITOR_COLOR_PRESETS.standard,
+  };
+}
+
+function isSameEditorColor(left, right) {
+  const leftResolved = resolveEditorColorValue(left);
+  const rightResolved = resolveEditorColorValue(right);
+
+  if (leftResolved && rightResolved) {
+    return leftResolved === rightResolved;
+  }
+
+  return String(left ?? "").trim() === String(right ?? "").trim();
 }
 
 function fireEvent(node, type, detail, options) {
@@ -21244,6 +17678,8 @@ class NodaliaFanCardEditor extends HTMLElement {
     switch (valueType) {
       case "boolean":
         return Boolean(input.checked);
+      case "color":
+        return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
       default:
         return input.value;
     }
@@ -21293,6 +17729,19 @@ class NodaliaFanCardEditor extends HTMLElement {
   }
 
   _onShadowClick(event) {
+    const colorButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.colorField && node.dataset?.colorValue);
+
+    if (colorButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._setFieldValue(colorButton.dataset.colorField, colorButton.dataset.colorValue);
+      this._setEditorConfig();
+      this._emitConfig();
+      return;
+    }
+
     const toggleButton = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
@@ -21327,6 +17776,48 @@ class NodaliaFanCardEditor extends HTMLElement {
           ${placeholder}
         />
       </label>
+    `;
+  }
+
+  _renderColorField(label, field, value, options = {}) {
+    const colorOptions = { ...getEditorColorFieldOptions(field), ...options };
+    const currentValue = value === undefined || value === null || value === ""
+      ? colorOptions.fallbackValue
+      : String(value);
+    const colorModel = getEditorColorModel(currentValue, colorOptions.fallbackValue);
+    const presets = Array.isArray(colorOptions.presets) ? colorOptions.presets : [];
+
+    return `
+      <div class="editor-field ${colorOptions.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="Color personalizado">
+            <input
+              type="color"
+              data-field="${escapeHtml(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml(String(colorModel.alpha))}"
+              value="${escapeHtml(colorModel.hex)}"
+              aria-label="${escapeHtml(label)}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
+          </label>
+          <div class="editor-color-presets">
+            ${presets.map(preset => `
+              <button
+                type="button"
+                class="editor-color-preset ${isSameEditorColor(currentValue, preset.value) ? "is-active" : ""}"
+                data-color-field="${escapeHtml(field)}"
+                data-color-value="${escapeHtml(preset.value)}"
+                title="${escapeHtml(preset.label)}"
+                aria-label="${escapeHtml(`${label}: ${preset.label}`)}"
+              >
+                <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(preset.value)};"></span>
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      </div>
     `;
   }
 
@@ -21560,6 +18051,86 @@ class NodaliaFanCardEditor extends HTMLElement {
           width: 100%;
         }
 
+        .editor-color-field {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          min-height: 40px;
+        }
+
+        .editor-color-picker {
+          align-items: center;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 40px;
+          justify-content: center;
+          position: relative;
+          width: 40px;
+        }
+
+        .editor-color-picker input {
+          cursor: pointer;
+          inset: 0;
+          opacity: 0;
+          position: absolute;
+        }
+
+        .editor-color-presets {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        button.editor-color-preset {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          height: 34px;
+          justify-content: center;
+          min-height: 0;
+          padding: 0;
+          width: 34px;
+        }
+
+        .editor-color-picker:hover,
+        button.editor-color-preset:hover {
+          border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .editor-color-picker:focus-within,
+        button.editor-color-preset.is-active {
+          border-color: rgba(255, 255, 255, 0.22);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .editor-color-swatch {
+          --editor-swatch: #71c0ff;
+          background:
+            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+            conic-gradient(from 90deg, rgba(255, 255, 255, 0.06) 25%, rgba(0, 0, 0, 0.12) 0 50%, rgba(255, 255, 255, 0.06) 0 75%, rgba(0, 0, 0, 0.12) 0);
+          background-position: center;
+          background-size: cover, 10px 10px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 999px;
+          display: block;
+          height: 18px;
+          width: 18px;
+        }
+
+        .editor-color-picker .editor-color-swatch {
+          height: 22px;
+          width: 22px;
+        }
+
         .editor-field ha-icon-picker,
         .editor-field ha-entity-picker,
         .editor-field ha-selector,
@@ -21684,25 +18255,25 @@ class NodaliaFanCardEditor extends HTMLElement {
             this._showStyleSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
+                  ${this._renderColorField("Background", "styles.card.background", config.styles.card.background)}
                   ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
                   ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
                   ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
                   ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
                   ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
                   ${this._renderTextField("Tamaño botón principal", "styles.icon.size", config.styles.icon.size)}
-                  ${this._renderTextField("Color icono encendido", "styles.icon.on_color", config.styles.icon.on_color)}
-                  ${this._renderTextField("Color icono apagado", "styles.icon.off_color", config.styles.icon.off_color)}
+                  ${this._renderColorField("Color icono encendido", "styles.icon.on_color", config.styles.icon.on_color)}
+                  ${this._renderColorField("Color icono apagado", "styles.icon.off_color", config.styles.icon.off_color)}
                   ${this._renderTextField("Tamaño botón", "styles.control.size", config.styles.control.size)}
-                  ${this._renderTextField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background)}
-                  ${this._renderTextField("Color acento", "styles.control.accent_color", config.styles.control.accent_color)}
+                  ${this._renderColorField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background)}
+                  ${this._renderColorField("Color acento", "styles.control.accent_color", config.styles.control.accent_color)}
                   ${this._renderTextField("Alto burbuja info", "styles.chip_height", config.styles.chip_height)}
                   ${this._renderTextField("Texto burbuja info", "styles.chip_font_size", config.styles.chip_font_size)}
                   ${this._renderTextField("Padding burbuja info", "styles.chip_padding", config.styles.chip_padding)}
                   ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
                   ${this._renderTextField("Alto contenedor slider", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
                   ${this._renderTextField("Grosor slider", "styles.slider_height", config.styles.slider_height)}
-                  ${this._renderTextField("Color slider", "styles.slider_color", config.styles.slider_color)}
+                  ${this._renderColorField("Color slider", "styles.slider_color", config.styles.slider_color)}
                 </div>
               `
               : ""
@@ -21734,8338 +18305,6 @@ window.customCards.push({
   type: CARD_TAG,
   name: "Nodalia Fan Card",
   description: "Tarjeta de ventilador con slider de velocidad, oscilacion y modos.",
-  preview: true,
-});
-
-}
-{
-const CARD_TAG = "nodalia-person-card";
-const EDITOR_TAG = "nodalia-person-card-editor";
-const CARD_VERSION = "0.9.0";
-const HAPTIC_PATTERNS = {
-  selection: 8,
-  light: 10,
-  medium: 16,
-  heavy: 24,
-  success: [10, 40, 10],
-  warning: [20, 50, 12],
-  failure: [12, 40, 12, 40, 18],
-};
-
-const DEFAULT_CONFIG = {
-  entity: "",
-  name: "",
-  icon: "",
-  tap_action: "more-info",
-  show_state: true,
-  show_zone_badge: true,
-  use_entity_picture: true,
-  use_zone_icon: true,
-  haptics: {
-    enabled: false,
-    style: "selection",
-    fallback_vibrate: false,
-  },
-  styles: {
-    card: {
-      background: "var(--ha-card-background)",
-      border: "1px solid var(--divider-color)",
-      border_radius: "28px",
-      box_shadow: "var(--ha-card-box-shadow)",
-      padding: "12px",
-      gap: "12px",
-    },
-    avatar: {
-      size: "58px",
-      background: "rgba(255, 255, 255, 0.06)",
-      color: "var(--primary-text-color)",
-    },
-    badge: {
-      size: "22px",
-    },
-    title_size: "14px",
-    subtitle_size: "13px",
-  },
-};
-
-const STUB_CONFIG = {
-  entity: "person.ana",
-  name: "Ana",
-};
-
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function deepClone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  return JSON.parse(JSON.stringify(value));
-}
-
-function mergeConfig(base, override) {
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
-  }
-
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-
-  keys.forEach(key => {
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-
-    if (overrideValue === undefined) {
-      result[key] = deepClone(baseValue);
-      return;
-    }
-
-    if (Array.isArray(overrideValue)) {
-      result[key] = deepClone(overrideValue);
-      return;
-    }
-
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      result[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-
-    result[key] = overrideValue;
-  });
-
-  return result;
-}
-
-function compactConfig(value) {
-  if (Array.isArray(value)) {
-    return value
-      .map(item => compactConfig(item))
-      .filter(item => item !== undefined);
-  }
-
-  if (isObject(value)) {
-    const compacted = {};
-
-    Object.entries(value).forEach(([key, item]) => {
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-
-    return compacted;
-  }
-
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
-}
-
-function setByPath(target, path, value) {
-  const parts = path.split(".");
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
-    }
-    cursor = cursor[key];
-  }
-
-  cursor[parts[parts.length - 1]] = value;
-}
-
-function deleteByPath(target, path) {
-  const parts = path.split(".");
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      return;
-    }
-    cursor = cursor[key];
-  }
-
-  delete cursor[parts[parts.length - 1]];
-}
-
-function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function fireEvent(node, type, detail, options) {
-  const event = new CustomEvent(type, {
-    bubbles: options?.bubbles ?? true,
-    cancelable: Boolean(options?.cancelable),
-    composed: options?.composed ?? true,
-    detail,
-  });
-  node.dispatchEvent(event);
-  return event;
-}
-
-function normalizeTextKey(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
-function isUnavailableState(state) {
-  return normalizeTextKey(state?.state) === "unavailable";
-}
-
-function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-}
-
-class NodaliaPersonCard extends HTMLElement {
-  static async getConfigElement() {
-    return document.createElement(EDITOR_TAG);
-  }
-
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
-  }
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    this._lastRenderSignature = "";
-    this._onShadowClick = this._onShadowClick.bind(this);
-  }
-
-  connectedCallback() {
-    this.shadowRoot?.addEventListener("click", this._onShadowClick);
-  }
-
-  disconnectedCallback() {
-    this.shadowRoot?.removeEventListener("click", this._onShadowClick);
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    this._lastRenderSignature = "";
-    this._render();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-
-    const nextSignature = this._getRenderSignature(hass);
-    if (nextSignature && nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
-      return;
-    }
-
-    this._lastRenderSignature = nextSignature;
-    this._render();
-  }
-
-  getCardSize() {
-    return 1;
-  }
-
-  getGridOptions() {
-    return {
-      rows: 1,
-      columns: 6,
-      min_rows: 1,
-      min_columns: 2,
-    };
-  }
-
-  _getState() {
-    return this._hass?.states?.[this._config?.entity] || null;
-  }
-
-  _getTitle(state) {
-    return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Persona";
-  }
-
-  _getPersonPicture(state) {
-    if (this._config?.use_entity_picture === false) {
-      return "";
-    }
-
-    return String(
-      state?.attributes?.entity_picture_local
-      || state?.attributes?.entity_picture
-      || "",
-    ).trim();
-  }
-
-  _getFallbackIcon(state) {
-    return this._config?.icon || state?.attributes?.icon || "mdi:account";
-  }
-
-  _translateState(state) {
-    const raw = String(state?.state || "").trim();
-    const key = normalizeTextKey(raw);
-
-    switch (key) {
-      case "home":
-      case "casa":
-      case "en_casa":
-        return "En casa";
-      case "not_home":
-      case "away":
-      case "fuera":
-        return "Fuera";
-      case "work":
-      case "trabajo":
-      case "office":
-      case "oficina":
-        return "Trabajo";
-      case "school":
-      case "colegio":
-      case "escuela":
-        return "Colegio";
-      case "unavailable":
-        return "No disponible";
-      case "unknown":
-        return "Desconocido";
-      default:
-        return raw || "Ubicacion desconocida";
-    }
-  }
-
-  _getMatchingZoneState(state) {
-    const target = normalizeTextKey(state?.state);
-    if (!target || !this._hass?.states) {
-      return null;
-    }
-
-    const zoneEntry = Object.entries(this._hass.states).find(([entityId, entityState]) => {
-      if (!entityId.startsWith("zone.")) {
-        return false;
-      }
-
-      const objectId = entityId.split(".")[1] || "";
-      const friendlyName = String(entityState?.attributes?.friendly_name || "").trim();
-
-      return normalizeTextKey(objectId) === target || normalizeTextKey(friendlyName) === target;
-    });
-
-    return zoneEntry?.[1] || null;
-  }
-
-  _getBadgeDescriptor(state) {
-    if (this._config?.show_zone_badge === false) {
-      return null;
-    }
-
-    if (isUnavailableState(state)) {
-      return {
-        icon: "mdi:help",
-        color: "#ff9b4a",
-      };
-    }
-
-    const key = normalizeTextKey(state?.state);
-
-    switch (key) {
-      case "home":
-      case "casa":
-      case "en_casa":
-        return { icon: "mdi:home", color: "#67d26f" };
-      case "not_home":
-      case "away":
-      case "fuera":
-        return { icon: "mdi:home-export-outline", color: "#ff6b6b" };
-      case "work":
-      case "trabajo":
-      case "office":
-      case "oficina":
-        return { icon: "mdi:briefcase", color: "#4dabf7" };
-      case "school":
-      case "colegio":
-      case "escuela":
-        return { icon: "mdi:school", color: "#8c7bff" };
-      default:
-        break;
-    }
-
-    const zoneState = this._getMatchingZoneState(state);
-    if (this._config?.use_zone_icon !== false && zoneState?.attributes?.icon) {
-      return {
-        icon: zoneState.attributes.icon,
-        color: "var(--info-color, #71c0ff)",
-      };
-    }
-
-    if (String(state?.state || "").trim()) {
-      return {
-        icon: "mdi:map-marker",
-        color: "var(--info-color, #71c0ff)",
-      };
-    }
-
-    return null;
-  }
-
-  _getAccentColor(state) {
-    return this._getBadgeDescriptor(state)?.color || "var(--info-color, #71c0ff)";
-  }
-
-  _getRenderSignature(hass = this._hass) {
-    const entityId = this._config?.entity || "";
-    const state = entityId ? hass?.states?.[entityId] || null : null;
-    if (!entityId || !state) {
-      return `empty:${this._config?.entity || ""}`;
-    }
-
-    const title = this._getTitle(state);
-    const subtitle = this._config.show_state !== false ? this._translateState(state) : "";
-    const picture = this._getPersonPicture(state);
-    const fallbackIcon = this._getFallbackIcon(state);
-    const badge = this._getBadgeDescriptor(state);
-    const zoneState = this._getMatchingZoneState(state);
-
-    return JSON.stringify({
-      entity: entityId,
-      state: state.state,
-      title,
-      subtitle,
-      picture,
-      fallbackIcon,
-      badgeIcon: badge?.icon || "",
-      badgeColor: badge?.color || "",
-      zoneEntity: zoneState?.entity_id || "",
-      zoneIcon: zoneState?.attributes?.icon || "",
-      showState: this._config.show_state !== false,
-      showZoneBadge: this._config.show_zone_badge !== false,
-      useEntityPicture: this._config.use_entity_picture !== false,
-      useZoneIcon: this._config.use_zone_icon !== false,
-      name: this._config.name || "",
-      icon: this._config.icon || "",
-    });
-  }
-
-  _canRunTapAction() {
-    const action = String(this._config?.tap_action || "more-info");
-    if (action === "none") {
-      return false;
-    }
-
-    return Boolean(this._config?.entity);
-  }
-
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
-    if (haptics.enabled !== true) {
-      return;
-    }
-
-    const style = styleOverride || haptics.style || "selection";
-    fireEvent(this, "haptic", style, {
-      bubbles: true,
-      cancelable: false,
-      composed: true,
-    });
-
-    if (haptics.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
-    }
-  }
-
-  _performTapAction() {
-    const action = String(this._config?.tap_action || "more-info");
-    if (action === "none") {
-      return;
-    }
-
-    this._triggerHaptic();
-
-    if (action === "more-info") {
-      fireEvent(this, "hass-more-info", {
-        entityId: this._config.entity,
-      });
-    }
-  }
-
-  _onShadowClick(event) {
-    const card = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.personAction === "primary");
-
-    if (!card) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    this._performTapAction();
-  }
-
-  _renderEmptyState() {
-    return `
-      <ha-card class="person-card person-card--empty">
-        <div class="person-card__empty-title">Nodalia Person Card</div>
-        <div class="person-card__empty-text">Configura \`entity\` para mostrar la tarjeta.</div>
-      </ha-card>
-    `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const state = this._getState();
-    if (!this._config?.entity || !state) {
-      this._lastRenderSignature = `empty:${this._config?.entity || ""}`;
-      this.shadowRoot.innerHTML = this._renderEmptyState();
-      return;
-    }
-
-    const config = this._config;
-    const styles = config.styles || DEFAULT_CONFIG.styles;
-    const configuredRows = Number(this._config?.grid_options?.rows);
-    const singleRowLayout = Number.isFinite(configuredRows) ? configuredRows <= 1 : true;
-    const title = this._getTitle(state);
-    const subtitle = config.show_state !== false ? this._translateState(state) : "";
-    const picture = this._getPersonPicture(state);
-    const fallbackIcon = this._getFallbackIcon(state);
-    const badge = this._getBadgeDescriptor(state);
-    const accentColor = this._getAccentColor(state);
-    const canRunPrimaryAction = this._canRunTapAction();
-    const singleRowPaddingY = singleRowLayout ? 4 : 12;
-    const singleRowPaddingX = singleRowLayout ? 9 : 12;
-    const avatarSizePx = Math.max(34, Math.min(parseSizeToPixels(styles.avatar.size, 58), singleRowLayout ? 38 : 68));
-    const avatarSize = `${avatarSizePx}px`;
-    const avatarTrackSize = `${avatarSizePx + (singleRowLayout ? 7 : 12)}px`;
-    const badgeSize = `${Math.max(16, Math.min(parseSizeToPixels(styles.badge.size, 22), singleRowLayout ? 18 : 26))}px`;
-    const effectiveTitleSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.title_size, 14), singleRowLayout ? 10.5 : 14))}px`;
-    const effectiveSubtitleSize = `${Math.max(9, Math.min(parseSizeToPixels(styles.subtitle_size, 13), singleRowLayout ? 9.5 : 13))}px`;
-    const effectiveStateChipHeight = `${singleRowLayout ? 18 : 22}px`;
-    const effectiveStateChipPadding = singleRowLayout ? "0 8px" : "0 10px";
-    const effectiveGap = singleRowLayout ? "6px" : styles.card.gap;
-    const effectivePadding = singleRowLayout ? `${singleRowPaddingY}px ${singleRowPaddingX}px` : styles.card.padding;
-    const effectiveCardHeightPx = singleRowLayout ? Math.max(54, avatarSizePx + (singleRowPaddingY * 2)) : avatarSizePx + (singleRowPaddingY * 2);
-    const effectiveContentMinHeight = `${Math.max(avatarSizePx, effectiveCardHeightPx - (singleRowPaddingY * 2))}px`;
-    const isUnavailable = isUnavailableState(state);
-    const cardBackground = isUnavailable
-      ? styles.card.background
-      : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
-    const cardBorder = isUnavailable
-      ? styles.card.border
-      : `1px solid color-mix(in srgb, ${accentColor} 22%, var(--divider-color))`;
-    const cardShadow = isUnavailable
-      ? styles.card.box_shadow
-      : `${styles.card.box_shadow}, 0 12px 28px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-          height: 100%;
-          min-height: 0;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        ha-card {
-          background: ${cardBackground};
-          border: ${cardBorder};
-          border-radius: ${styles.card.border_radius};
-          box-shadow: ${cardShadow};
-          color: var(--primary-text-color);
-          height: 100%;
-          min-height: 0;
-          overflow: hidden;
-          position: relative;
-        }
-
-        ha-card::before {
-          background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
-          content: "";
-          inset: 0;
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
-        }
-
-        .person-card__content {
-          align-items: center;
-          align-content: center;
-          cursor: ${canRunPrimaryAction ? "pointer" : "default"};
-          display: grid;
-          gap: ${effectiveGap};
-          grid-template-columns: ${avatarTrackSize} minmax(0, 1fr);
-          grid-template-rows: 1fr;
-          height: 100%;
-          min-height: ${effectiveContentMinHeight};
-          min-width: 0;
-          padding: ${effectivePadding};
-          position: relative;
-          place-items: center start;
-          z-index: 1;
-        }
-
-        .person-card--single-row {
-          height: 100%;
-          min-height: ${effectiveCardHeightPx}px;
-        }
-
-        .person-card--single-row .person-card__content {
-          padding-bottom: ${singleRowPaddingY - 1}px;
-          padding-top: ${singleRowPaddingY + 1}px;
-        }
-
-        .person-card__avatar {
-          align-self: center;
-          align-items: center;
-          background: ${styles.avatar.background};
-          border: 1px solid color-mix(in srgb, ${accentColor} 16%, rgba(255, 255, 255, 0.08));
-          border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.08),
-            0 10px 24px rgba(0, 0, 0, 0.16);
-          color: ${styles.avatar.color};
-          display: inline-flex;
-          height: ${avatarSize};
-          justify-content: center;
-          overflow: visible;
-          position: relative;
-          width: ${avatarSize};
-        }
-
-        .person-card__avatar img {
-          border-radius: inherit;
-          height: 100%;
-          object-fit: cover;
-          width: 100%;
-        }
-
-        .person-card__avatar ha-icon {
-          --mdc-icon-size: calc(${avatarSize} * 0.5);
-        }
-
-        .person-card__badge {
-          align-items: center;
-          background: var(--badge-color);
-          border: none;
-          border-radius: 999px;
-          box-shadow:
-            0 6px 14px rgba(0, 0, 0, 0.14),
-            0 0 0 2px rgba(255, 255, 255, 0.08);
-          color: #ffffff;
-          display: inline-flex;
-          height: ${badgeSize};
-          justify-content: center;
-          position: absolute;
-          right: 0;
-          top: 0;
-          transform: translate(28%, -28%);
-          width: ${badgeSize};
-          z-index: 2;
-        }
-
-        .person-card--single-row .person-card__badge {
-          transform: translate(20%, -14%);
-        }
-
-        .person-card__badge ha-icon {
-          --mdc-icon-size: calc(${badgeSize} * 0.62);
-          align-items: center;
-          display: inline-flex;
-          height: calc(${badgeSize} * 0.62);
-          justify-content: center;
-          width: calc(${badgeSize} * 0.62);
-        }
-
-        .person-card__copy {
-          align-content: center;
-          align-self: center;
-          display: grid;
-          gap: ${singleRowLayout ? "4px" : "6px"};
-          min-width: 0;
-          width: 100%;
-        }
-
-        .person-card__title {
-          font-size: ${effectiveTitleSize};
-          font-weight: 700;
-          letter-spacing: -0.02em;
-          line-height: ${singleRowLayout ? "1.02" : "1.12"};
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .person-card__chips {
-          align-items: center;
-          display: flex;
-          flex-wrap: nowrap;
-          gap: 6px;
-          min-width: 0;
-        }
-
-        .person-card__state-chip {
-          align-items: center;
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.06),
-            0 1px 1px rgba(0, 0, 0, 0.06);
-          color: var(--primary-text-color);
-          display: inline-flex;
-          font-size: ${effectiveSubtitleSize};
-          font-weight: 700;
-          height: ${effectiveStateChipHeight};
-          line-height: 1;
-          max-width: 100%;
-          min-width: 0;
-          overflow: hidden;
-          padding: ${effectiveStateChipPadding};
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .person-card--empty {
-          display: grid;
-          gap: 8px;
-          padding: 16px;
-        }
-
-        .person-card__empty-title {
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .person-card__empty-text {
-          color: var(--secondary-text-color);
-          font-size: 13px;
-          line-height: 1.5;
-        }
-      </style>
-      <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""}">
-        <div class="person-card__content" ${canRunPrimaryAction ? 'data-person-action="primary"' : ""}>
-          <div class="person-card__avatar">
-            ${
-              picture
-                ? `<img src="${escapeHtml(picture)}" alt="${escapeHtml(title)}" />`
-                : `<ha-icon icon="${escapeHtml(fallbackIcon)}"></ha-icon>`
-            }
-            ${
-              badge
-                ? `<span class="person-card__badge" style="--badge-color:${escapeHtml(badge.color)};"><ha-icon icon="${escapeHtml(badge.icon)}"></ha-icon></span>`
-                : ""
-            }
-          </div>
-          <div class="person-card__copy">
-            <div class="person-card__title">${escapeHtml(title)}</div>
-            ${subtitle ? `<div class="person-card__chips"><div class="person-card__state-chip">${escapeHtml(subtitle)}</div></div>` : ""}
-          </div>
-        </div>
-      </ha-card>
-    `;
-    this._lastRenderSignature = this._getRenderSignature();
-  }
-}
-
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaPersonCard);
-}
-
-class NodaliaPersonCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    this._entityOptionsSignature = "";
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getEntityOptionsSignature(hass);
-    const shouldRender =
-      !this._hass ||
-      nextSignature !== this._entityOptionsSignature ||
-      !this.shadowRoot?.innerHTML;
-
-    this._hass = hass;
-    this._entityOptionsSignature = nextSignature;
-
-    if (shouldRender) {
-      this._render();
-    }
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    this._render();
-  }
-
-  _getEntityOptionsSignature(hass) {
-    if (!hass?.states) {
-      return "";
-    }
-
-    return Object.keys(hass.states)
-      .filter(entityId => entityId.startsWith("person.") || entityId.startsWith("device_tracker."))
-      .sort((left, right) => left.localeCompare(right, "es"))
-      .join("|");
-  }
-
-  _emitConfig() {
-    const nextConfig = deepClone(this._config);
-    this._config = normalizeConfig(compactConfig(nextConfig));
-    this._render();
-    fireEvent(this, "config-changed", {
-      config: compactConfig(nextConfig),
-    });
-  }
-
-  _setFieldValue(path, value) {
-    if (value === undefined || value === null || value === "") {
-      deleteByPath(this._config, path);
-      return;
-    }
-
-    setByPath(this._config, path, value);
-  }
-
-  _readFieldValue(input) {
-    const valueType = input.dataset.valueType || "string";
-    if (valueType === "boolean") {
-      return Boolean(input.checked);
-    }
-    return input.value;
-  }
-
-  _onShadowInput(event) {
-    const input = event
-      .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement);
-
-    if (!input?.dataset?.field) {
-      return;
-    }
-
-    event.stopPropagation();
-    this._setFieldValue(input.dataset.field, this._readFieldValue(input));
-    this._config = normalizeConfig(compactConfig(this._config));
-
-    if (event.type === "change") {
-      this._emitConfig();
-    }
-  }
-
-  _renderTextField(label, field, value, options = {}) {
-    const inputValue = value === undefined || value === null ? "" : String(value);
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-
-    return `
-      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
-        <input
-          type="${escapeHtml(options.type || "text")}"
-          data-field="${escapeHtml(field)}"
-          value="${escapeHtml(inputValue)}"
-          ${placeholder}
-        />
-      </label>
-    `;
-  }
-
-  _renderCheckboxField(label, field, checked) {
-    return `
-      <label class="editor-toggle">
-        <input
-          type="checkbox"
-          data-field="${escapeHtml(field)}"
-          data-value-type="boolean"
-          ${checked ? "checked" : ""}
-        />
-        <span>${escapeHtml(label)}</span>
-      </label>
-    `;
-  }
-
-  _renderSelectField(label, field, value, options) {
-    return `
-      <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
-        <select data-field="${escapeHtml(field)}">
-          ${options.map(option => `
-            <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-              ${escapeHtml(option.label)}
-            </option>
-          `).join("")}
-        </select>
-      </label>
-    `;
-  }
-
-  _getEntityOptionsMarkup() {
-    const entityIds = Object.keys(this._hass?.states || {})
-      .filter(entityId => entityId.startsWith("person.") || entityId.startsWith("device_tracker."))
-      .sort((left, right) => left.localeCompare(right, "es"));
-
-    return `
-      <datalist id="person-card-entities">
-        ${entityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-    `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        .editor {
-          color: var(--primary-text-color);
-          display: grid;
-          gap: 16px;
-        }
-
-        .editor-section {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 18px;
-          display: grid;
-          gap: 14px;
-          padding: 16px;
-        }
-
-        .editor-section__header {
-          display: grid;
-          gap: 4px;
-        }
-
-        .editor-section__title {
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .editor-section__hint {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-        }
-
-        .editor-grid {
-          display: grid;
-          gap: 12px;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .editor-field,
-        .editor-toggle {
-          display: grid;
-          gap: 6px;
-        }
-
-        .editor-field--full {
-          grid-column: 1 / -1;
-        }
-
-        .editor-field span,
-        .editor-toggle span {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .editor-field input,
-        .editor-field select {
-          appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 14px;
-          color: var(--primary-text-color);
-          font: inherit;
-          min-width: 0;
-          outline: none;
-          padding: 10px 12px;
-          width: 100%;
-        }
-
-        .editor-toggle {
-          align-items: center;
-          grid-auto-flow: column;
-          justify-content: start;
-        }
-
-        .editor-toggle input {
-          accent-color: var(--primary-color);
-        }
-
-        @media (max-width: 720px) {
-          .editor-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      </style>
-      <div class="editor">
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad persona, foto, badge de zona y accion principal.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Entidad", "entity", config.entity, {
-              placeholder: "person.rocio",
-            })}
-            ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Rocio",
-            })}
-            ${this._renderTextField("Icono fallback", "icon", config.icon, {
-              placeholder: "mdi:account",
-            })}
-            ${this._renderSelectField(
-              "Accion al tocar",
-              "tap_action",
-              config.tap_action || "more-info",
-              [
-                { value: "more-info", label: "More info" },
-                { value: "none", label: "Sin accion" },
-              ],
-            )}
-            ${this._renderCheckboxField("Mostrar ubicacion", "show_state", config.show_state !== false)}
-            ${this._renderCheckboxField("Mostrar badge de zona", "show_zone_badge", config.show_zone_badge !== false)}
-            ${this._renderCheckboxField("Usar foto de entidad", "use_entity_picture", config.use_entity_picture !== false)}
-            ${this._renderCheckboxField("Usar icono de zona", "use_zone_icon", config.use_zone_icon !== false)}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica al tocar la tarjeta.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
-            ${this._renderSelectField(
-              "Estilo haptico",
-              "haptics.style",
-              hapticStyle,
-              [
-                { value: "selection", label: "Selection" },
-                { value: "light", label: "Light" },
-                { value: "medium", label: "Medium" },
-                { value: "heavy", label: "Heavy" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "failure", label: "Failure" },
-              ],
-            )}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales base de la tarjeta.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
-            ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
-            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
-            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-            ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamano avatar", "styles.avatar.size", config.styles.avatar.size)}
-            ${this._renderTextField("Tamano badge", "styles.badge.size", config.styles.badge.size)}
-            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-            ${this._renderTextField("Tamano subtitulo", "styles.subtitle_size", config.styles.subtitle_size)}
-          </div>
-        </section>
-        ${this._getEntityOptionsMarkup()}
-      </div>
-    `;
-
-    this.shadowRoot.querySelectorAll('input[data-field="entity"]').forEach(input => {
-      input.setAttribute("list", "person-card-entities");
-    });
-  }
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaPersonCardEditor);
-}
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: CARD_TAG,
-  name: "Nodalia Person Card",
-  description: "Tarjeta compacta de persona con foto y zona",
-  preview: true,
-});
-
-}
-{
-const CARD_TAG = "nodalia-alarm-panel-card";
-const EDITOR_TAG = "nodalia-alarm-panel-card-editor";
-const CARD_VERSION = "0.6.0";
-const HAPTIC_PATTERNS = {
-  selection: 8,
-  light: 10,
-  medium: 16,
-  heavy: 24,
-  success: [10, 40, 10],
-  warning: [20, 50, 12],
-  failure: [12, 40, 12, 40, 18],
-};
-const COMPACT_LAYOUT_THRESHOLD = 150;
-const FEATURE_ARM_HOME = 1;
-const FEATURE_ARM_AWAY = 2;
-const FEATURE_ARM_NIGHT = 4;
-const FEATURE_TRIGGER = 8;
-const FEATURE_ARM_CUSTOM_BYPASS = 16;
-const FEATURE_ARM_VACATION = 32;
-
-const DEFAULT_CONFIG = {
-  entity: "",
-  name: "",
-  icon: "",
-  code: "",
-  code_entity: "",
-  show_state: true,
-  show_code_input: true,
-  show_disarm: true,
-  show_arm_home: true,
-  show_arm_away: true,
-  show_arm_night: true,
-  show_arm_vacation: false,
-  show_custom_bypass: false,
-  compact_layout_mode: "auto",
-  haptics: {
-    enabled: false,
-    style: "selection",
-    fallback_vibrate: false,
-  },
-  styles: {
-    card: {
-      background: "var(--ha-card-background)",
-      border: "1px solid var(--divider-color)",
-      border_radius: "28px",
-      box_shadow: "var(--ha-card-box-shadow)",
-      padding: "14px",
-      gap: "12px",
-    },
-    icon: {
-      size: "58px",
-      background: "rgba(255, 255, 255, 0.06)",
-      color: "var(--primary-text-color)",
-      on_color: "var(--primary-text-color)",
-      off_color: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))",
-    },
-    control: {
-      size: "40px",
-      accent_color: "var(--primary-text-color)",
-      accent_background: "rgba(113, 192, 255, 0.18)",
-    },
-    chip_height: "24px",
-    chip_font_size: "11px",
-    chip_padding: "0 9px",
-    title_size: "14px",
-    input_height: "42px",
-  },
-};
-
-const STUB_CONFIG = {
-  entity: "alarm_control_panel.casa",
-  name: "Alarma",
-};
-
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function deepClone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  return JSON.parse(JSON.stringify(value));
-}
-
-function mergeConfig(base, override) {
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
-  }
-
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-
-  keys.forEach(key => {
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-
-    if (overrideValue === undefined) {
-      result[key] = deepClone(baseValue);
-      return;
-    }
-
-    if (Array.isArray(overrideValue)) {
-      result[key] = deepClone(overrideValue);
-      return;
-    }
-
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      result[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-
-    result[key] = overrideValue;
-  });
-
-  return result;
-}
-
-function compactConfig(value) {
-  if (Array.isArray(value)) {
-    return value
-      .map(item => compactConfig(item))
-      .filter(item => item !== undefined);
-  }
-
-  if (isObject(value)) {
-    const compacted = {};
-
-    Object.entries(value).forEach(([key, item]) => {
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-
-    return compacted;
-  }
-
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
-}
-
-function setByPath(target, path, value) {
-  const parts = path.split(".");
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
-    }
-    cursor = cursor[key];
-  }
-
-  cursor[parts[parts.length - 1]] = value;
-}
-
-function deleteByPath(target, path) {
-  const parts = path.split(".");
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      return;
-    }
-    cursor = cursor[key];
-  }
-
-  delete cursor[parts[parts.length - 1]];
-}
-
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function escapeSelectorValue(value) {
-  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-}
-
-function fireEvent(node, type, detail, options) {
-  const event = new CustomEvent(type, {
-    bubbles: options?.bubbles ?? true,
-    cancelable: Boolean(options?.cancelable),
-    composed: options?.composed ?? true,
-    detail,
-  });
-  node.dispatchEvent(event);
-  return event;
-}
-
-function normalizeTextKey(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
-function isUnavailableState(state) {
-  return normalizeTextKey(state?.state) === "unavailable";
-}
-
-function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-}
-
-class NodaliaAlarmPanelCard extends HTMLElement {
-  static async getConfigElement() {
-    return document.createElement(EDITOR_TAG);
-  }
-
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
-  }
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    this._cardWidth = 0;
-    this._isCompactLayout = false;
-    this._codeInput = "";
-    this._isCodeInputFocused = false;
-    this._pendingRenderWhileCodeFocused = false;
-    this._countdownInterval = null;
-    this._resizeObserver = null;
-    this._lastRenderSignature = "";
-    this._onShadowClick = this._onShadowClick.bind(this);
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this._onShadowFocusIn = this._onShadowFocusIn.bind(this);
-    this._onShadowFocusOut = this._onShadowFocusOut.bind(this);
-  }
-
-  _captureCodeFocusState() {
-    const activeElement = this.shadowRoot?.activeElement;
-    if (!(activeElement instanceof HTMLInputElement) || activeElement.dataset?.alarmField !== "code") {
-      return null;
-    }
-
-    const supportsSelection =
-      typeof activeElement.selectionStart === "number" &&
-      typeof activeElement.selectionEnd === "number";
-
-    return {
-      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
-      selectionStart: supportsSelection ? activeElement.selectionStart : null,
-      value: activeElement.value,
-    };
-  }
-
-  _restoreCodeFocusState(focusState) {
-    if (!focusState || !(this.shadowRoot instanceof ShadowRoot)) {
-      return;
-    }
-
-    const target = this.shadowRoot.querySelector('input[data-alarm-field="code"]');
-    if (!(target instanceof HTMLInputElement)) {
-      return;
-    }
-
-    if (typeof focusState.value === "string" && target.value !== focusState.value) {
-      target.value = focusState.value;
-    }
-
-    try {
-      target.focus({ preventScroll: true });
-    } catch (_error) {
-      target.focus();
-    }
-
-    if (
-      typeof focusState.selectionStart === "number" &&
-      typeof focusState.selectionEnd === "number" &&
-      typeof target.setSelectionRange === "function"
-    ) {
-      try {
-        target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
-      } catch (_error) {
-        // Ignore unsupported input selection issues.
-      }
-    }
-  }
-
-  _renderWithFocusPreserved() {
-    const focusState = this._captureCodeFocusState();
-    this._render();
-    this._restoreCodeFocusState(focusState);
-  }
-
-  _shouldDeferRenderForCodeInput() {
-    if (!this._isCodeInputFocused) {
-      return false;
-    }
-
-    const activeElement = this.shadowRoot?.activeElement;
-    return activeElement instanceof HTMLInputElement && activeElement.dataset?.alarmField === "code";
-  }
-
-  _requestRender() {
-    this._syncCountdownTimer();
-
-    if (this._shouldDeferRenderForCodeInput()) {
-      this._pendingRenderWhileCodeFocused = true;
-      return;
-    }
-
-    this._pendingRenderWhileCodeFocused = false;
-    this._renderWithFocusPreserved();
-  }
-
-  connectedCallback() {
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("focusin", this._onShadowFocusIn);
-    this.shadowRoot.addEventListener("focusout", this._onShadowFocusOut);
-
-    if (!this._resizeObserver) {
-      this._resizeObserver = new ResizeObserver(entries => {
-        const entry = entries[0];
-        if (!entry) {
-          return;
-        }
-
-        this._cardWidth = entry.contentRect.width;
-        this._isCompactLayout = this._shouldUseCompactLayout(this._cardWidth);
-        this._requestRender();
-      });
-    }
-
-    this._resizeObserver.observe(this);
-    this._syncCountdownTimer();
-  }
-
-  disconnectedCallback() {
-    this.shadowRoot.removeEventListener("click", this._onShadowClick);
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("focusin", this._onShadowFocusIn);
-    this.shadowRoot.removeEventListener("focusout", this._onShadowFocusOut);
-    this._resizeObserver?.disconnect();
-    this._clearCountdownTimer();
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    this._lastRenderSignature = "";
-    this._syncCountdownTimer();
-    this._requestRender();
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getRenderSignature(hass);
-    this._hass = hass;
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
-      this._syncCountdownTimer();
-      return;
-    }
-    this._lastRenderSignature = nextSignature;
-    this._syncCountdownTimer();
-    this._requestRender();
-  }
-
-  getCardSize() {
-    return 3;
-  }
-
-  getGridOptions() {
-    return {
-      rows: "auto",
-      columns: 6,
-      min_rows: 2,
-      min_columns: 3,
-    };
-  }
-
-  _shouldUseCompactLayout(width) {
-    const mode = this._config?.compact_layout_mode || "auto";
-
-    if (mode === "always") {
-      return true;
-    }
-
-    if (mode === "never") {
-      return false;
-    }
-
-    const configuredColumns = Number(this._config?.grid_options?.columns);
-    if (Number.isFinite(configuredColumns)) {
-      return configuredColumns < 4;
-    }
-
-    return width > 0 && width <= COMPACT_LAYOUT_THRESHOLD;
-  }
-
-  _getState() {
-    return this._hass?.states?.[this._config?.entity] || null;
-  }
-
-  _getRenderSignature(hass = this._hass) {
-    const entityId = this._config?.entity || "";
-    const helperEntityId = this._config?.code_entity || "";
-    const state = entityId ? hass?.states?.[entityId] || null : null;
-    const helperState = helperEntityId ? hass?.states?.[helperEntityId] || null : null;
-    const attrs = state?.attributes || {};
-    return JSON.stringify({
-      entityId,
-      state: String(state?.state || ""),
-      supportedFeatures: Number(attrs.supported_features ?? 0),
-      codeFormat: String(attrs.code_format || ""),
-      delay: Number(attrs.delay ?? -1),
-      nextState: String(attrs.next_state || ""),
-      postPendingState: String(attrs.post_pending_state || ""),
-      postDelayState: String(attrs.post_delay_state || ""),
-      helperEntityId,
-      helperState: String(helperState?.state || ""),
-      compact: Boolean(this._isCompactLayout),
-    });
-  }
-
-  _getTitle(state) {
-    return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Alarma";
-  }
-
-  _getIcon() {
-    return this._config?.icon || "mdi:shield-home";
-  }
-
-  _translateState(state) {
-    const key = normalizeTextKey(state?.state);
-
-    switch (key) {
-      case "disarmed":
-        return "Desarmada";
-      case "armed_home":
-        return "En casa";
-      case "armed_away":
-        return "Ausente";
-      case "armed_night":
-        return "Noche";
-      case "armed_vacation":
-        return "Vacaciones";
-      case "armed_custom_bypass":
-        return "Personalizada";
-      case "armed":
-        return "Armada";
-      case "arming":
-        return "Armando";
-      case "disarming":
-        return "Desarmando";
-      case "pending":
-        return "Pendiente";
-      case "triggered":
-        return "Disparada";
-      case "unavailable":
-        return "No disponible";
-      case "unknown":
-        return "Desconocida";
-      default:
-        return state?.state ? String(state.state) : "Sin estado";
-    }
-  }
-
-  _getCountdownSecondsRemaining(state) {
-    const status = normalizeTextKey(state?.state);
-    if (!["arming", "pending"].includes(status)) {
-      return null;
-    }
-
-    const delay = Number(state?.attributes?.delay);
-    if (!Number.isFinite(delay) || delay <= 0) {
-      return null;
-    }
-
-    const changedAt = Date.parse(state?.last_changed || "");
-    if (!Number.isFinite(changedAt)) {
-      return Math.ceil(delay);
-    }
-
-    const elapsedSeconds = Math.max(0, (Date.now() - changedAt) / 1000);
-    return Math.max(0, Math.ceil(delay - elapsedSeconds));
-  }
-
-  _formatCountdownLabel(seconds) {
-    if (!Number.isFinite(seconds) || seconds < 0) {
-      return null;
-    }
-
-    const total = Math.max(0, Math.ceil(seconds));
-    const minutes = Math.floor(total / 60);
-    const remainingSeconds = total % 60;
-    return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
-  }
-
-  _clearCountdownTimer() {
-    if (this._countdownInterval !== null) {
-      window.clearInterval(this._countdownInterval);
-      this._countdownInterval = null;
-    }
-  }
-
-  _syncCountdownTimer() {
-    const state = this._getState();
-    const remaining = this._getCountdownSecondsRemaining(state);
-
-    if (!Number.isFinite(remaining)) {
-      this._clearCountdownTimer();
-      return;
-    }
-
-    if (this._countdownInterval !== null) {
-      return;
-    }
-
-    this._countdownInterval = window.setInterval(() => {
-      const nextState = this._getState();
-      const nextRemaining = this._getCountdownSecondsRemaining(nextState);
-
-      if (!Number.isFinite(nextRemaining)) {
-        this._clearCountdownTimer();
-      }
-
-      this._requestRender();
-    }, 1000);
-  }
-
-  _getAccentColor(state) {
-    const key = normalizeTextKey(state?.state);
-
-    switch (key) {
-      case "disarmed":
-        return "#82d18a";
-      case "armed_home":
-        return "#74c0ff";
-      case "armed_away":
-        return "#8aa7ff";
-      case "armed_night":
-        return "#9488ff";
-      case "armed_vacation":
-        return "#5fd7cf";
-      case "armed_custom_bypass":
-        return "#64d4a6";
-      case "arming":
-        return "#71c0ff";
-      case "disarming":
-        return "#8de4ff";
-      case "pending":
-        return "#f2c46d";
-      case "triggered":
-        return "#ff7474";
-      default:
-        return "var(--info-color, #71c0ff)";
-    }
-  }
-
-  _isActiveState(state) {
-    const key = normalizeTextKey(state?.state);
-    return !["", "disarmed", "unknown", "unavailable"].includes(key);
-  }
-
-  _getSupportedFeatures(state) {
-    const value = Number(state?.attributes?.supported_features);
-    return Number.isFinite(value) ? value : 0;
-  }
-
-  _supportsMode(state, mode) {
-    const features = this._getSupportedFeatures(state);
-
-    if (!features) {
-      return true;
-    }
-
-    switch (mode) {
-      case "home":
-        return Boolean(features & FEATURE_ARM_HOME);
-      case "away":
-        return Boolean(features & FEATURE_ARM_AWAY);
-      case "night":
-        return Boolean(features & FEATURE_ARM_NIGHT);
-      case "vacation":
-        return Boolean(features & FEATURE_ARM_VACATION);
-      case "custom_bypass":
-        return Boolean(features & FEATURE_ARM_CUSTOM_BYPASS);
-      default:
-        return true;
-    }
-  }
-
-  _getAlarmStateCandidates(state) {
-    return [
-      state?.state,
-      state?.attributes?.next_state,
-      state?.attributes?.post_pending_state,
-      state?.attributes?.post_delay_state,
-      state?.attributes?.arm_mode,
-      state?.attributes?.arming_mode,
-    ]
-      .map(value => normalizeTextKey(value))
-      .filter(Boolean);
-  }
-
-  _matchesAlarmMode(state, ...keys) {
-    const candidates = this._getAlarmStateCandidates(state);
-    return keys.some(key => candidates.includes(normalizeTextKey(key)));
-  }
-
-  _getModeDefinitions(state) {
-    const modes = [
-      {
-        key: "disarm",
-        label: "Desarmar",
-        icon: "mdi:shield-off-outline",
-        service: "alarm_disarm",
-        enabled: this._config?.show_disarm !== false && !this._matchesAlarmMode(state, "disarmed"),
-        active: this._matchesAlarmMode(state, "disarmed"),
-      },
-      {
-        key: "home",
-        label: "Casa",
-        icon: "mdi:home-lock",
-        service: "alarm_arm_home",
-        enabled: this._config?.show_arm_home !== false
-          && this._supportsMode(state, "home")
-          && !this._matchesAlarmMode(state, "armed_home"),
-        active: this._matchesAlarmMode(state, "armed_home"),
-      },
-      {
-        key: "away",
-        label: "Ausente",
-        icon: "mdi:shield-lock",
-        service: "alarm_arm_away",
-        enabled: this._config?.show_arm_away !== false
-          && this._supportsMode(state, "away")
-          && !this._matchesAlarmMode(state, "armed_away"),
-        active: this._matchesAlarmMode(state, "armed_away"),
-      },
-      {
-        key: "night",
-        label: "Noche",
-        icon: "mdi:weather-night",
-        service: "alarm_arm_night",
-        enabled: this._config?.show_arm_night !== false
-          && this._supportsMode(state, "night")
-          && !this._matchesAlarmMode(state, "armed_night"),
-        active: this._matchesAlarmMode(state, "armed_night"),
-      },
-      {
-        key: "vacation",
-        label: "Vacaciones",
-        icon: "mdi:palm-tree",
-        service: "alarm_arm_vacation",
-        enabled: this._config?.show_arm_vacation === true
-          && this._supportsMode(state, "vacation")
-          && !this._matchesAlarmMode(state, "armed_vacation"),
-        active: this._matchesAlarmMode(state, "armed_vacation"),
-      },
-      {
-        key: "custom_bypass",
-        label: "Personalizado",
-        icon: "mdi:tune-variant",
-        service: "alarm_arm_custom_bypass",
-        enabled: this._config?.show_custom_bypass === true
-          && this._supportsMode(state, "custom_bypass")
-          && !this._matchesAlarmMode(state, "armed_custom_bypass"),
-        active: this._matchesAlarmMode(state, "armed_custom_bypass"),
-      },
-    ];
-
-    return modes.filter(mode => mode.enabled);
-  }
-
-  _getCodeValue(state) {
-    if (this._shouldShowCodeInput(state)) {
-      const manualCode = String(this._codeInput || "").trim();
-      if (manualCode) {
-        return manualCode;
-      }
-    }
-
-    const helperEntityId = String(this._config?.code_entity || "").trim();
-
-    if (helperEntityId) {
-      const helperState = this._hass?.states?.[helperEntityId];
-      const helperValue = String(helperState?.state || "").trim();
-      if (helperValue && !["unknown", "unavailable"].includes(normalizeTextKey(helperValue))) {
-        return helperValue;
-      }
-    }
-
-    const configuredCode = String(this._config?.code || "").trim();
-    if (configuredCode) {
-      return configuredCode;
-    }
-
-    return "";
-  }
-
-  _shouldShowCodeInput(state) {
-    if (this._config?.show_code_input === false) {
-      return false;
-    }
-
-    const codeFormat = String(state?.attributes?.code_format || "").trim();
-    return Boolean(codeFormat);
-  }
-
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
-    if (haptics.enabled !== true) {
-      return;
-    }
-
-    const style = styleOverride || haptics.style || "selection";
-    fireEvent(this, "haptic", style, {
-      bubbles: true,
-      cancelable: false,
-      composed: true,
-    });
-
-    if (haptics.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-      const pattern = HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection;
-      navigator.vibrate(pattern);
-    }
-  }
-
-  _runAlarmAction(service) {
-    const state = this._getState();
-    if (!this._hass || !this._config?.entity || !service || !state) {
-      return;
-    }
-
-    const payload = {
-      entity_id: this._config.entity,
-    };
-
-    const code = this._getCodeValue(state);
-    if (code) {
-      payload.code = code;
-    }
-
-    this._triggerHaptic();
-    this._hass.callService("alarm_control_panel", service, payload);
-  }
-
-  _openMoreInfo() {
-    if (!this._config?.entity) {
-      return;
-    }
-
-    fireEvent(this, "hass-more-info", {
-      entityId: this._config.entity,
-    });
-  }
-
-  _onShadowClick(event) {
-    const button = event
-      .composedPath()
-      .find(node => node instanceof HTMLButtonElement && node.dataset?.alarmAction);
-
-    if (!button) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const action = button.dataset.alarmAction;
-
-    if (action === "more-info") {
-      this._triggerHaptic();
-      this._openMoreInfo();
-      return;
-    }
-
-    this._runAlarmAction(action);
-  }
-
-  _onShadowInput(event) {
-    const input = event.composedPath().find(node => node instanceof HTMLInputElement && node.dataset?.alarmField === "code");
-    if (!input) {
-      return;
-    }
-
-    this._codeInput = input.value;
-  }
-
-  _onShadowFocusIn(event) {
-    const input = event.composedPath().find(node => node instanceof HTMLInputElement && node.dataset?.alarmField === "code");
-    if (!input) {
-      return;
-    }
-
-    this._isCodeInputFocused = true;
-  }
-
-  _onShadowFocusOut(event) {
-    const input = event.composedPath().find(node => node instanceof HTMLInputElement && node.dataset?.alarmField === "code");
-    if (!input) {
-      return;
-    }
-
-    window.setTimeout(() => {
-      const activeElement = this.shadowRoot?.activeElement;
-      const stillFocused = activeElement instanceof HTMLInputElement && activeElement.dataset?.alarmField === "code";
-
-      this._isCodeInputFocused = stillFocused;
-
-      if (!stillFocused && this._pendingRenderWhileCodeFocused) {
-        this._pendingRenderWhileCodeFocused = false;
-        this._renderWithFocusPreserved();
-      }
-    }, 0);
-  }
-
-  _renderChip(label, tone = "default", accentColor = "var(--accent-color)") {
-    if (!label) {
-      return "";
-    }
-
-    return `
-      <div class="alarm-card__chip alarm-card__chip--${tone}" ${tone === "state" ? `style="--chip-accent:${escapeHtml(accentColor)};"` : ""}>
-        ${escapeHtml(label)}
-      </div>
-    `;
-  }
-
-  _renderEmptyState() {
-    return `
-      <ha-card class="alarm-card alarm-card--empty">
-        <div class="alarm-card__empty-title">Nodalia Alarm Panel Card</div>
-        <div class="alarm-card__empty-text">Configura \`entity\` para mostrar la tarjeta.</div>
-      </ha-card>
-    `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    if (!this._config?.entity) {
-      this.shadowRoot.innerHTML = this._renderEmptyState();
-      return;
-    }
-
-    const state = this._getState();
-    if (!state) {
-      this.shadowRoot.innerHTML = this._renderEmptyState();
-      return;
-    }
-
-    const config = this._config;
-    const styles = config.styles || DEFAULT_CONFIG.styles;
-    const title = this._getTitle(state);
-    const icon = this._getIcon();
-    const accentColor = this._getAccentColor(state);
-    const showUnavailableBadge = isUnavailableState(state);
-    const isCompactLayout = this._isCompactLayout;
-    const isActive = this._isActiveState(state);
-    const stateLabel = config.show_state !== false ? this._translateState(state) : null;
-    const countdownLabel = this._formatCountdownLabel(this._getCountdownSecondsRemaining(state));
-    const chips = [
-      this._renderChip(stateLabel, "state", accentColor),
-      this._renderChip(countdownLabel, "countdown", accentColor),
-    ].filter(Boolean);
-    const actions = this._getModeDefinitions(state);
-    const showCodeInput = this._shouldShowCodeInput(state);
-    const cardBackground = isActive
-      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`
-      : styles.card.background;
-    const cardBorder = isActive
-      ? `1px solid color-mix(in srgb, ${accentColor} 24%, var(--divider-color))`
-      : styles.card.border;
-    const cardShadow = isActive
-      ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`
-      : styles.card.box_shadow;
-    const titleSize = isCompactLayout
-      ? `${Math.max(12, Math.min(parseSizeToPixels(styles.title_size, 14), 13))}px`
-      : styles.title_size;
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        ha-card {
-          background: ${cardBackground};
-          border: ${cardBorder};
-          border-radius: ${styles.card.border_radius};
-          box-shadow: ${cardShadow};
-          color: var(--primary-text-color);
-          overflow: hidden;
-          position: relative;
-        }
-
-        ha-card::before {
-          background: ${isActive
-            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, rgba(255, 255, 255, 0.05)), rgba(255, 255, 255, 0))`
-            : "linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0))"};
-          content: "";
-          inset: 0;
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
-        }
-
-        .alarm-card__content {
-          display: grid;
-          gap: ${styles.card.gap};
-          min-width: 0;
-          padding: ${styles.card.padding};
-          position: relative;
-          z-index: 1;
-        }
-
-        .alarm-card__hero {
-          align-items: center;
-          display: grid;
-          gap: 12px;
-          grid-template-columns: ${styles.icon.size} minmax(0, 1fr);
-          min-width: 0;
-        }
-
-        .alarm-card__icon {
-          -webkit-tap-highlight-color: transparent;
-          align-items: center;
-          appearance: none;
-          background: ${styles.icon.background};
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 24px;
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.08),
-            0 12px 30px rgba(0, 0, 0, 0.18);
-          color: ${isActive ? styles.icon.on_color : styles.icon.off_color};
-          cursor: pointer;
-          display: inline-flex;
-          height: ${styles.icon.size};
-          justify-content: center;
-          line-height: 0;
-          margin: 0;
-          outline: none;
-          padding: 0;
-          position: relative;
-          width: ${styles.icon.size};
-        }
-
-        .alarm-card__icon ha-icon {
-          --mdc-icon-size: calc(${styles.icon.size} * 0.44);
-          display: inline-flex;
-          height: calc(${styles.icon.size} * 0.44);
-          left: 50%;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: calc(${styles.icon.size} * 0.44);
-        }
-
-        .alarm-card__unavailable-badge {
-          align-items: center;
-          background: #ff9b4a;
-          border: 2px solid ${styles.card.background};
-          border-radius: 999px;
-          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
-          color: #ffffff;
-          display: inline-flex;
-          height: 18px;
-          justify-content: center;
-          position: absolute;
-          right: -2px;
-          top: -2px;
-          width: 18px;
-          z-index: 2;
-        }
-
-        .alarm-card__unavailable-badge ha-icon {
-          --mdc-icon-size: 11px;
-          height: 11px;
-          left: auto;
-          position: static;
-          top: auto;
-          transform: none;
-          width: 11px;
-        }
-
-        .alarm-card__copy {
-          display: grid;
-          gap: 8px;
-          min-width: 0;
-        }
-
-        .alarm-card__title {
-          font-size: ${titleSize};
-          font-weight: 700;
-          letter-spacing: -0.02em;
-          line-height: 1.15;
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .alarm-card__chips {
-          align-items: center;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          min-width: 0;
-        }
-
-        .alarm-card__chip {
-          align-items: center;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-          color: var(--secondary-text-color);
-          display: inline-flex;
-          flex: 0 0 auto;
-          font-size: ${styles.chip_font_size};
-          font-weight: 700;
-          height: max(24px, ${styles.chip_height});
-          line-height: 1;
-          max-width: 100%;
-          min-width: 0;
-          padding: ${styles.chip_padding};
-          white-space: nowrap;
-        }
-
-        .alarm-card__chip--state {
-          background: color-mix(in srgb, var(--chip-accent) 16%, rgba(255, 255, 255, 0.04));
-          border-color: color-mix(in srgb, var(--chip-accent) 40%, rgba(255, 255, 255, 0.08));
-          color: color-mix(in srgb, var(--chip-accent) 72%, white);
-        }
-
-        .alarm-card__code {
-          align-items: center;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-          display: grid;
-          grid-template-columns: minmax(0, 1fr);
-          min-width: 0;
-          padding: 0 14px;
-        }
-
-        .alarm-card__code-input {
-          appearance: none;
-          background: transparent;
-          border: 0;
-          color: var(--primary-text-color);
-          font: inherit;
-          height: ${styles.input_height};
-          letter-spacing: 0.18em;
-          outline: none;
-          width: 100%;
-        }
-
-        .alarm-card__code-input::placeholder {
-          color: var(--secondary-text-color);
-          letter-spacing: normal;
-        }
-
-        .alarm-card__actions {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-          justify-content: center;
-        }
-
-        .alarm-card__action {
-          -webkit-tap-highlight-color: transparent;
-          align-items: center;
-          appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.06),
-            0 10px 24px rgba(0, 0, 0, 0.16);
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          gap: 8px;
-          height: max(${styles.control.size}, 40px);
-          justify-content: center;
-          line-height: 1;
-          margin: 0;
-          min-width: max(${styles.control.size}, 40px);
-          outline: none;
-          padding: 0 14px;
-          position: relative;
-        }
-
-        .alarm-card__action--active {
-          background: ${styles.control.accent_background};
-          border-color: color-mix(in srgb, ${accentColor} 36%, rgba(255, 255, 255, 0.1));
-          color: ${styles.control.accent_color};
-        }
-
-        .alarm-card__action ha-icon {
-          --mdc-icon-size: calc(${styles.control.size} * 0.46);
-          display: inline-flex;
-          height: calc(${styles.control.size} * 0.46);
-          width: calc(${styles.control.size} * 0.46);
-        }
-
-        .alarm-card__action-label {
-          font-size: 13px;
-          font-weight: 700;
-          white-space: nowrap;
-        }
-
-        .alarm-card__empty-title {
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .alarm-card__empty-text {
-          color: var(--secondary-text-color);
-          font-size: 13px;
-          line-height: 1.5;
-        }
-
-        .alarm-card--empty {
-          display: grid;
-          gap: 8px;
-          padding: 16px;
-        }
-
-        @media (max-width: 420px) {
-          .alarm-card__hero {
-            gap: 10px;
-            grid-template-columns: min(${styles.icon.size}, 52px) minmax(0, 1fr);
-          }
-
-          .alarm-card__icon {
-            height: min(${styles.icon.size}, 52px);
-            width: min(${styles.icon.size}, 52px);
-          }
-
-          .alarm-card__actions {
-            gap: 8px;
-          }
-
-          .alarm-card__action {
-            padding: 0 12px;
-          }
-
-          .alarm-card__action-label {
-            font-size: 12px;
-          }
-        }
-      </style>
-      <ha-card class="alarm-card ${isActive ? "is-on" : "is-off"}">
-        <div class="alarm-card__content">
-          <div class="alarm-card__hero">
-            <button
-              type="button"
-              class="alarm-card__icon"
-              data-alarm-action="more-info"
-              aria-label="${escapeHtml(title)}"
-            >
-              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
-              ${showUnavailableBadge ? `<span class="alarm-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
-            </button>
-            <div class="alarm-card__copy">
-              ${isCompactLayout ? "" : `<div class="alarm-card__title">${escapeHtml(title)}</div>`}
-              ${chips.length ? `<div class="alarm-card__chips">${chips.join("")}</div>` : ""}
-            </div>
-          </div>
-
-          ${
-            showCodeInput
-              ? `
-                <label class="alarm-card__code">
-                  <input
-                    class="alarm-card__code-input"
-                    type="password"
-                    inputmode="numeric"
-                    autocomplete="one-time-code"
-                    placeholder="Codigo"
-                    data-alarm-field="code"
-                    value="${escapeHtml(this._codeInput)}"
-                  />
-                </label>
-              `
-              : ""
-          }
-
-          ${
-            actions.length
-              ? `
-                <div class="alarm-card__actions">
-                  ${actions.map(action => `
-                    <button
-                      type="button"
-                      class="alarm-card__action ${action.active ? "alarm-card__action--active" : ""}"
-                      data-alarm-action="${escapeHtml(action.service)}"
-                      aria-label="${escapeHtml(action.label)}"
-                    >
-                      <ha-icon icon="${escapeHtml(action.icon)}"></ha-icon>
-                      ${isCompactLayout ? "" : `<span class="alarm-card__action-label">${escapeHtml(action.label)}</span>`}
-                    </button>
-                  `).join("")}
-                </div>
-              `
-              : ""
-          }
-        </div>
-      </ha-card>
-    `;
-  }
-}
-
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaAlarmPanelCard);
-}
-
-class NodaliaAlarmPanelCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    this._entityOptionsSignature = "";
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getEntityOptionsSignature(hass);
-    const shouldRender =
-      !this._hass ||
-      nextSignature !== this._entityOptionsSignature ||
-      !this.shadowRoot?.innerHTML;
-
-    this._hass = hass;
-    this._entityOptionsSignature = nextSignature;
-
-    if (shouldRender) {
-      this._render();
-    }
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    this._render();
-  }
-
-  _getEntityOptionsSignature(hass) {
-    if (!hass?.states) {
-      return "";
-    }
-
-    return Object.keys(hass.states)
-      .filter(entityId => entityId.startsWith("alarm_control_panel.") || entityId.startsWith("input_text."))
-      .sort((left, right) => left.localeCompare(right, "es"))
-      .join("|");
-  }
-
-  _emitConfig() {
-    const nextConfig = deepClone(this._config);
-    this._config = normalizeConfig(compactConfig(nextConfig));
-    this._render();
-    fireEvent(this, "config-changed", {
-      config: compactConfig(nextConfig),
-    });
-  }
-
-  _setEditorConfig() {
-    this._config = normalizeConfig(compactConfig(this._config));
-  }
-
-  _setFieldValue(path, value) {
-    if (value === undefined || value === null || value === "") {
-      deleteByPath(this._config, path);
-      return;
-    }
-
-    setByPath(this._config, path, value);
-  }
-
-  _readFieldValue(input) {
-    const valueType = input.dataset.valueType || "string";
-
-    switch (valueType) {
-      case "boolean":
-        return Boolean(input.checked);
-      default:
-        return input.value;
-    }
-  }
-
-  _onShadowInput(event) {
-    const input = event
-      .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
-
-    if (!input?.dataset?.field) {
-      return;
-    }
-
-    event.stopPropagation();
-
-    const nextValue = this._readFieldValue(input);
-    this._setFieldValue(input.dataset.field, nextValue);
-    this._setEditorConfig();
-
-    if (event.type === "change") {
-      this._emitConfig();
-    }
-  }
-
-  _renderTextField(label, field, value, options = {}) {
-    const inputType = options.type || "text";
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-    const valueType = options.valueType || "string";
-    const inputValue = value === undefined || value === null ? "" : String(value);
-
-    return `
-      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
-        <input
-          type="${escapeHtml(inputType)}"
-          data-field="${escapeHtml(field)}"
-          data-value-type="${escapeHtml(valueType)}"
-          value="${escapeHtml(inputValue)}"
-          ${placeholder}
-        />
-      </label>
-    `;
-  }
-
-  _renderCheckboxField(label, field, checked) {
-    return `
-      <label class="editor-toggle">
-        <input
-          type="checkbox"
-          data-field="${escapeHtml(field)}"
-          data-value-type="boolean"
-          ${checked ? "checked" : ""}
-        />
-        <span>${escapeHtml(label)}</span>
-      </label>
-    `;
-  }
-
-  _renderSelectField(label, field, value, options) {
-    return `
-      <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
-        <select data-field="${escapeHtml(field)}">
-          ${options
-            .map(option => `
-              <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
-              </option>
-            `)
-            .join("")}
-        </select>
-      </label>
-    `;
-  }
-
-  _getEntityOptionsMarkup() {
-    const alarmIds = Object.keys(this._hass?.states || {})
-      .filter(entityId => entityId.startsWith("alarm_control_panel."))
-      .sort((left, right) => left.localeCompare(right, "es"));
-    const helperIds = Object.keys(this._hass?.states || {})
-      .filter(entityId => entityId.startsWith("input_text."))
-      .sort((left, right) => left.localeCompare(right, "es"));
-
-    return `
-      <datalist id="alarm-card-entities">
-        ${alarmIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-      <datalist id="alarm-card-code-entities">
-        ${helperIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-    `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        .editor {
-          color: var(--primary-text-color);
-          display: grid;
-          gap: 16px;
-        }
-
-        .editor-section {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 18px;
-          display: grid;
-          gap: 14px;
-          padding: 16px;
-        }
-
-        .editor-section__header {
-          display: grid;
-          gap: 4px;
-        }
-
-        .editor-section__title {
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .editor-section__hint {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-        }
-
-        .editor-grid {
-          display: grid;
-          gap: 12px;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .editor-field,
-        .editor-toggle {
-          display: grid;
-          gap: 6px;
-        }
-
-        .editor-field--full {
-          grid-column: 1 / -1;
-        }
-
-        .editor-field span,
-        .editor-toggle span {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .editor-field input,
-        .editor-field select {
-          appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 14px;
-          color: var(--primary-text-color);
-          font: inherit;
-          min-width: 0;
-          outline: none;
-          padding: 10px 12px;
-          width: 100%;
-        }
-
-        .editor-toggle {
-          align-items: center;
-          grid-auto-flow: column;
-          justify-content: start;
-        }
-
-        .editor-toggle input {
-          accent-color: var(--primary-color);
-        }
-
-        @media (max-width: 720px) {
-          .editor-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      </style>
-      <div class="editor">
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal, helper opcional de codigo y apariencia base.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Entidad", "entity", config.entity, {
-              placeholder: "alarm_control_panel.casa",
-            })}
-            ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Alarma",
-            })}
-            ${this._renderTextField("Icono", "icon", config.icon, {
-              placeholder: "mdi:shield-home",
-            })}
-            ${this._renderTextField("PIN fijo", "code", config.code, {
-              placeholder: "1234",
-            })}
-            ${this._renderTextField("Helper codigo", "code_entity", config.code_entity, {
-              placeholder: "input_text.codigo_alarma",
-            })}
-            ${this._renderSelectField(
-              "Layout estrecho",
-              "compact_layout_mode",
-              config.compact_layout_mode || "auto",
-              [
-                { value: "auto", label: "Automatico (<4 columnas)" },
-                { value: "always", label: "Compacto siempre" },
-                { value: "never", label: "Nunca compactar" },
-              ],
-            )}
-            ${this._renderCheckboxField("Mostrar estado en burbuja", "show_state", config.show_state !== false)}
-            ${this._renderCheckboxField("Mostrar cuadro de texto del PIN", "show_code_input", config.show_code_input !== false)}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Modos</div>
-            <div class="editor-section__hint">Botones de armado y desarmado visibles en la tarjeta.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderCheckboxField("Mostrar desarmar", "show_disarm", config.show_disarm !== false)}
-            ${this._renderCheckboxField("Mostrar en casa", "show_arm_home", config.show_arm_home !== false)}
-            ${this._renderCheckboxField("Mostrar ausente", "show_arm_away", config.show_arm_away !== false)}
-            ${this._renderCheckboxField("Mostrar noche", "show_arm_night", config.show_arm_night !== false)}
-            ${this._renderCheckboxField("Mostrar vacaciones", "show_arm_vacation", config.show_arm_vacation === true)}
-            ${this._renderCheckboxField("Mostrar personalizado", "show_custom_bypass", config.show_custom_bypass === true)}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica al pulsar acciones.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
-            ${this._renderSelectField(
-              "Estilo haptico",
-              "haptics.style",
-              hapticStyle,
-              [
-                { value: "selection", label: "Selection" },
-                { value: "light", label: "Light" },
-                { value: "medium", label: "Medium" },
-                { value: "heavy", label: "Heavy" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "failure", label: "Failure" },
-              ],
-            )}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales base de la tarjeta.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
-            ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
-            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
-            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-            ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamano boton principal", "styles.icon.size", config.styles.icon.size)}
-            ${this._renderTextField("Color icono activo", "styles.icon.on_color", config.styles.icon.on_color)}
-            ${this._renderTextField("Color icono inactivo", "styles.icon.off_color", config.styles.icon.off_color)}
-            ${this._renderTextField("Tamano boton", "styles.control.size", config.styles.control.size)}
-            ${this._renderTextField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background)}
-            ${this._renderTextField("Color acento", "styles.control.accent_color", config.styles.control.accent_color)}
-            ${this._renderTextField("Alto burbuja info", "styles.chip_height", config.styles.chip_height)}
-            ${this._renderTextField("Texto burbuja info", "styles.chip_font_size", config.styles.chip_font_size)}
-            ${this._renderTextField("Padding burbuja info", "styles.chip_padding", config.styles.chip_padding)}
-            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-            ${this._renderTextField("Alto input codigo", "styles.input_height", config.styles.input_height)}
-          </div>
-        </section>
-        ${this._getEntityOptionsMarkup()}
-      </div>
-    `;
-
-    this.shadowRoot.querySelectorAll('input[data-field="entity"]').forEach(input => {
-      input.setAttribute("list", "alarm-card-entities");
-    });
-    this.shadowRoot.querySelectorAll('input[data-field="code_entity"]').forEach(input => {
-      input.setAttribute("list", "alarm-card-code-entities");
-    });
-  }
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaAlarmPanelCardEditor);
-}
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: CARD_TAG,
-  name: "Nodalia Alarm Panel Card",
-  description: "Tarjeta elegante para paneles de alarma",
-  preview: true,
-});
-
-}
-{
-const CARD_TAG = "nodalia-climate-card";
-const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "0.10.0";
-const HAPTIC_PATTERNS = {
-  selection: 8,
-  light: 10,
-  medium: 16,
-  heavy: 24,
-  success: [10, 40, 10],
-  warning: [20, 50, 12],
-  failure: [12, 40, 12, 40, 18],
-};
-const DIAL_START_ANGLE = 135;
-const DIAL_END_ANGLE = 405;
-const DIAL_SWEEP = DIAL_END_ANGLE - DIAL_START_ANGLE;
-const DIAL_VIEWBOX_SIZE = 240;
-const DIAL_CIRCLE_RADIUS = 86;
-const DIAL_CIRCUMFERENCE = 2 * Math.PI * DIAL_CIRCLE_RADIUS;
-const DIAL_VISIBLE_LENGTH = DIAL_CIRCUMFERENCE * (DIAL_SWEEP / 360);
-const DIAL_HIDDEN_LENGTH = DIAL_CIRCUMFERENCE - DIAL_VISIBLE_LENGTH;
-
-const DEFAULT_CONFIG = {
-  entity: "",
-  name: "",
-  icon: "",
-  show_state_chip: true,
-  show_current_temperature_chip: true,
-  show_humidity_chip: true,
-  show_mode_buttons: true,
-  show_step_controls: true,
-  show_unavailable_badge: true,
-  haptics: {
-    enabled: false,
-    style: "selection",
-    fallback_vibrate: false,
-  },
-  styles: {
-    card: {
-      background: "var(--ha-card-background)",
-      border: "1px solid var(--divider-color)",
-      border_radius: "30px",
-      box_shadow: "var(--ha-card-box-shadow)",
-      padding: "16px",
-      gap: "14px",
-    },
-    icon: {
-      size: "58px",
-      background: "rgba(255, 255, 255, 0.06)",
-      color: "var(--primary-text-color)",
-      on_color: "var(--primary-text-color)",
-      off_color: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))",
-    },
-    chip_height: "24px",
-    chip_font_size: "11px",
-    chip_padding: "0 10px",
-    title_size: "16px",
-    current_size: "16px",
-    target_size: "50px",
-    dial: {
-      size: "280px",
-      stroke: "18px",
-      thumb_size: "24px",
-      track_color: "rgba(255, 255, 255, 0.08)",
-      background: "rgba(255, 255, 255, 0.02)",
-      heat_color: "#f59f42",
-      cool_color: "#71c0ff",
-      dry_color: "#7fd0c8",
-      auto_color: "#c5a66f",
-      fan_color: "#83d39c",
-      off_color: "rgba(255, 255, 255, 0.28)",
-    },
-    control: {
-      size: "42px",
-      accent_background: "rgba(113, 192, 255, 0.18)",
-      accent_color: "var(--primary-text-color)",
-    },
-    step_control: {
-      size: "50px",
-    },
-  },
-};
-
-const STUB_CONFIG = {
-  entity: "climate.salon",
-  name: "Salon",
-};
-
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function deepClone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  return JSON.parse(JSON.stringify(value));
-}
-
-function mergeConfig(base, override) {
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
-  }
-
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-
-  keys.forEach(key => {
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-
-    if (overrideValue === undefined) {
-      result[key] = deepClone(baseValue);
-      return;
-    }
-
-    if (Array.isArray(overrideValue)) {
-      result[key] = deepClone(overrideValue);
-      return;
-    }
-
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      result[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-
-    result[key] = overrideValue;
-  });
-
-  return result;
-}
-
-function compactConfig(value) {
-  if (Array.isArray(value)) {
-    return value
-      .map(item => compactConfig(item))
-      .filter(item => item !== undefined);
-  }
-
-  if (isObject(value)) {
-    const compacted = {};
-
-    Object.entries(value).forEach(([key, item]) => {
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-
-    return compacted;
-  }
-
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
-}
-
-function setByPath(target, path, value) {
-  const parts = path.split(".");
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
-    }
-    cursor = cursor[key];
-  }
-
-  cursor[parts[parts.length - 1]] = value;
-}
-
-function deleteByPath(target, path) {
-  const parts = path.split(".");
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      return;
-    }
-    cursor = cursor[key];
-  }
-
-  delete cursor[parts[parts.length - 1]];
-}
-
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function escapeSelectorValue(value) {
-  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-}
-
-function fireEvent(node, type, detail, options) {
-  const event = new CustomEvent(type, {
-    bubbles: options?.bubbles ?? true,
-    cancelable: Boolean(options?.cancelable),
-    composed: options?.composed ?? true,
-    detail,
-  });
-  node.dispatchEvent(event);
-  return event;
-}
-
-function normalizeTextKey(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
-function isUnavailableState(state) {
-  return normalizeTextKey(state?.state) === "unavailable";
-}
-
-function getStepPrecision(step) {
-  const text = String(step ?? "");
-  if (!text.includes(".")) {
-    return 0;
-  }
-
-  return text.split(".")[1].length;
-}
-
-function formatTemperature(value, step = 0.5, withUnit = true) {
-  if (!Number.isFinite(Number(value))) {
-    return withUnit ? "-- °C" : "--";
-  }
-
-  const precision = Math.max(0, Math.min(getStepPrecision(step), 2));
-  const formatted = Number(value).toLocaleString("es-ES", {
-    minimumFractionDigits: precision,
-    maximumFractionDigits: precision,
-  });
-
-  return withUnit ? `${formatted} °C` : formatted;
-}
-
-function getModeMeta(mode) {
-  const normalized = normalizeTextKey(mode);
-
-  switch (normalized) {
-    case "off":
-      return { label: "Apagado", icon: "mdi:power", accent: "off" };
-    case "heat":
-    case "heating":
-      return { label: "Calor", icon: "mdi:fire", accent: "heat" };
-    case "cool":
-    case "cooling":
-      return { label: "Frio", icon: "mdi:snowflake", accent: "cool" };
-    case "heat_cool":
-      return { label: "Auto", icon: "mdi:sun-snowflake-variant", accent: "auto" };
-    case "auto":
-      return { label: "Auto", icon: "mdi:autorenew", accent: "auto" };
-    case "dry":
-    case "drying":
-      return { label: "Secado", icon: "mdi:water-percent", accent: "dry" };
-    case "fan_only":
-      return { label: "Ventilador", icon: "mdi:fan", accent: "fan" };
-    default:
-      return { label: String(mode ?? ""), icon: "mdi:thermostat", accent: "auto" };
-  }
-}
-
-function getActionMeta(action) {
-  const normalized = normalizeTextKey(action);
-
-  switch (normalized) {
-    case "heating":
-      return { label: "Calentando", icon: "mdi:fire", accent: "heat" };
-    case "cooling":
-      return { label: "Enfriando", icon: "mdi:snowflake", accent: "cool" };
-    case "drying":
-      return { label: "Secando", icon: "mdi:water-percent", accent: "dry" };
-    case "fan":
-    case "fan_only":
-      return { label: "Ventilando", icon: "mdi:fan", accent: "fan" };
-    case "idle":
-      return { label: "En espera", icon: "mdi:pause-circle-outline", accent: "off" };
-    case "off":
-      return { label: "Apagado", icon: "mdi:power", accent: "off" };
-    default:
-      return getModeMeta(action);
-  }
-}
-
-function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-}
-
-function getDialValueFromPoint(dial, clientX, clientY, range, step, fallbackValue = null) {
-  const rect = dial.getBoundingClientRect();
-  if (!rect.width || !rect.height) {
-    return Number.isFinite(Number(fallbackValue)) ? Number(fallbackValue) : range.min;
-  }
-
-  const centerX = rect.left + (rect.width / 2);
-  const centerY = rect.top + (rect.height / 2);
-  const dx = clientX - centerX;
-  const dy = clientY - centerY;
-  const distance = Math.sqrt((dx ** 2) + (dy ** 2));
-  const outerRadius = Math.min(rect.width, rect.height) / 2;
-  const innerDeadZone = outerRadius * 0.42;
-
-  if (distance < innerDeadZone && Number.isFinite(Number(fallbackValue))) {
-    return Number(fallbackValue);
-  }
-
-  const angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
-  let normalizedAngle = angle < 0 ? angle + 360 : angle;
-
-  if (normalizedAngle < DIAL_START_ANGLE) {
-    normalizedAngle += 360;
-  }
-
-  normalizedAngle = clamp(normalizedAngle, DIAL_START_ANGLE, DIAL_END_ANGLE);
-
-  const ratio = (normalizedAngle - DIAL_START_ANGLE) / DIAL_SWEEP;
-  const rawValue = range.min + ((range.max - range.min) * ratio);
-  const safeStep = Number.isFinite(step) && step > 0 ? step : 0.5;
-  const rounded = range.min + (Math.round((rawValue - range.min) / safeStep) * safeStep);
-
-  return clamp(Number(rounded.toFixed(2)), range.min, range.max);
-}
-
-function getDialMarkerPosition(angle) {
-  const markerRadiusPercent = (DIAL_CIRCLE_RADIUS / DIAL_VIEWBOX_SIZE) * 100;
-  const radians = (angle * Math.PI) / 180;
-  return {
-    left: Number((50 + (Math.cos(radians) * markerRadiusPercent)).toFixed(3)),
-    top: Number((50 + (Math.sin(radians) * markerRadiusPercent)).toFixed(3)),
-  };
-}
-
-class NodaliaClimateCard extends HTMLElement {
-  static async getConfigElement() {
-    return document.createElement(EDITOR_TAG);
-  }
-
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
-  }
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    this._draftTemperature = new Map();
-    this._draftResetTimer = 0;
-    this._activeDialDrag = null;
-    this._pendingRenderAfterDrag = false;
-    this._lastRenderSignature = "";
-    this._onShadowClick = this._onShadowClick.bind(this);
-    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
-    this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
-    this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
-    this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
-    this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
-    this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
-    this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
-    this._onWindowTouchStartCapture = this._onWindowTouchStartCapture.bind(this);
-    this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
-    this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
-    this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
-    }
-  }
-
-  connectedCallback() {
-    window.addEventListener("pointermove", this._onWindowPointerMove);
-    window.addEventListener("pointerup", this._onWindowPointerUp);
-    window.addEventListener("pointercancel", this._onWindowPointerUp);
-    window.addEventListener("mousemove", this._onWindowMouseMove);
-    window.addEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
-      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
-    }
-  }
-
-  disconnectedCallback() {
-    window.removeEventListener("pointermove", this._onWindowPointerMove);
-    window.removeEventListener("pointerup", this._onWindowPointerUp);
-    window.removeEventListener("pointercancel", this._onWindowPointerUp);
-    window.removeEventListener("mousemove", this._onWindowMouseMove);
-    window.removeEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
-      window.removeEventListener("touchmove", this._onWindowTouchMove);
-      window.removeEventListener("touchend", this._onWindowTouchEnd);
-      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
-    }
-
-    if (this._draftResetTimer) {
-      window.clearTimeout(this._draftResetTimer);
-      this._draftResetTimer = 0;
-    }
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    this._lastRenderSignature = "";
-    this._render();
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getRenderSignature(hass);
-    this._hass = hass;
-    this._syncDraftWithState();
-
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
-      return;
-    }
-
-    this._lastRenderSignature = nextSignature;
-
-    if (this._activeDialDrag) {
-      this._pendingRenderAfterDrag = true;
-      return;
-    }
-
-    this._render();
-  }
-
-  getCardSize() {
-    return 4;
-  }
-
-  _getRenderSignature(hass = this._hass) {
-    const entityId = this._config?.entity || "";
-    const state = entityId ? hass?.states?.[entityId] || null : null;
-    const attrs = state?.attributes || {};
-    return JSON.stringify({
-      entityId,
-      state: String(state?.state || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      temperature: Number(attrs.temperature ?? -1),
-      currentTemperature: Number(attrs.current_temperature ?? -1),
-      targetTempHigh: Number(attrs.target_temp_high ?? -1),
-      targetTempLow: Number(attrs.target_temp_low ?? -1),
-      humidity: Number(attrs.humidity ?? -1),
-      currentHumidity: Number(attrs.current_humidity ?? -1),
-      hvacMode: String(attrs.hvac_mode || ""),
-      hvacAction: String(attrs.hvac_action || ""),
-      presetMode: String(attrs.preset_mode || ""),
-      fanMode: String(attrs.fan_mode || ""),
-      swingMode: String(attrs.swing_mode || ""),
-    });
-  }
-
-  getGridOptions() {
-    return {
-      rows: 5,
-      columns: 8,
-      min_rows: 5,
-      min_columns: 7,
-    };
-  }
-
-  _getConfiguredGridRows() {
-    const numericRows = Number(this._config?.grid_options?.rows);
-    return Number.isFinite(numericRows) ? numericRows : null;
-  }
-
-  _getConfiguredGridColumns() {
-    const numericColumns = Number(this._config?.grid_options?.columns);
-    return Number.isFinite(numericColumns) ? numericColumns : null;
-  }
-
-  _getCompactLevel() {
-    const configuredRows = this._getConfiguredGridRows();
-    const configuredColumns = this._getConfiguredGridColumns();
-
-    if (
-      (configuredRows !== null && configuredRows <= 3)
-      || (configuredColumns !== null && configuredColumns <= 4)
-    ) {
-      return "tight";
-    }
-
-    if (
-      (configuredRows !== null && configuredRows <= 4)
-      || (configuredColumns !== null && configuredColumns <= 6)
-    ) {
-      return "compact";
-    }
-
-    return "default";
-  }
-
-  _getState() {
-    return this._config?.entity ? this._hass?.states?.[this._config.entity] || null : null;
-  }
-
-  _syncDraftWithState() {
-    const state = this._getState();
-    const entityId = this._config?.entity;
-    if (!entityId || !state || !this._draftTemperature.has(entityId)) {
-      return;
-    }
-
-    const actualTemperature = Number(state.attributes?.temperature);
-    const draftTemperature = Number(this._draftTemperature.get(entityId));
-    const step = this._getTemperatureStep(state);
-
-    if (Number.isFinite(actualTemperature) && Math.abs(actualTemperature - draftTemperature) <= Math.max(step, 0.5)) {
-      this._draftTemperature.delete(entityId);
-    }
-  }
-
-  _getClimateName(state) {
-    return this._config?.name
-      || state?.attributes?.friendly_name
-      || this._config?.entity
-      || "Clima";
-  }
-
-  _getClimateIcon(state) {
-    return this._config?.icon
-      || state?.attributes?.icon
-      || "mdi:thermostat";
-  }
-
-  _getTemperatureRange(state) {
-    const min = Number(state?.attributes?.min_temp);
-    const max = Number(state?.attributes?.max_temp);
-
-    if (Number.isFinite(min) && Number.isFinite(max) && min < max) {
-      return {
-        min,
-        max,
-      };
-    }
-
-    return {
-      min: 10,
-      max: 30,
-    };
-  }
-
-  _getTemperatureStep(state) {
-    const step = Number(state?.attributes?.target_temp_step);
-    return Number.isFinite(step) && step > 0 ? step : 0.5;
-  }
-
-  _supportsTargetTemperature(state) {
-    return (
-      Number.isFinite(Number(state?.attributes?.temperature)) ||
-      (
-        Number.isFinite(Number(state?.attributes?.min_temp)) &&
-        Number.isFinite(Number(state?.attributes?.max_temp))
-      )
-    );
-  }
-
-  _getTargetTemperature(state) {
-    const entityId = this._config?.entity;
-    if (entityId && this._draftTemperature.has(entityId)) {
-      return Number(this._draftTemperature.get(entityId));
-    }
-
-    const direct = Number(state?.attributes?.temperature);
-    if (Number.isFinite(direct)) {
-      return direct;
-    }
-
-    const high = Number(state?.attributes?.target_temp_high);
-    const low = Number(state?.attributes?.target_temp_low);
-    if (Number.isFinite(high) && Number.isFinite(low)) {
-      return Number(((high + low) / 2).toFixed(1));
-    }
-
-    const range = this._getTemperatureRange(state);
-    return Number((((range.min + range.max) / 2)).toFixed(1));
-  }
-
-  _getCurrentTemperature(state) {
-    const current = Number(state?.attributes?.current_temperature);
-    return Number.isFinite(current) ? current : null;
-  }
-
-  _getCurrentHumidity(state) {
-    const humidity = Number(state?.attributes?.current_humidity);
-    return Number.isFinite(humidity) ? humidity : null;
-  }
-
-  _getCurrentMode(state) {
-    return String(state?.attributes?.hvac_mode || state?.state || "").trim();
-  }
-
-  _getCurrentAction(state) {
-    return String(state?.attributes?.hvac_action || "").trim();
-  }
-
-  _getOrderedModeOptions(state) {
-    const rawModes = Array.isArray(state?.attributes?.hvac_modes)
-      ? state.attributes.hvac_modes.map(item => String(item || "").trim()).filter(Boolean)
-      : [];
-    const uniqueModes = [...new Set(rawModes)];
-    const preferredOrder = ["heat", "cool", "heat_cool", "auto", "dry", "fan_only"];
-
-    return uniqueModes
-      .filter(mode => normalizeTextKey(mode) !== "off")
-      .sort((left, right) => {
-        const leftIndex = preferredOrder.indexOf(normalizeTextKey(left));
-        const rightIndex = preferredOrder.indexOf(normalizeTextKey(right));
-        const safeLeft = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex;
-        const safeRight = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex;
-        return safeLeft - safeRight || left.localeCompare(right, "es");
-      });
-  }
-
-  _getPreferredOnMode(state) {
-    const allModes = Array.isArray(state?.attributes?.hvac_modes)
-      ? state.attributes.hvac_modes.map(item => String(item || "").trim()).filter(Boolean)
-      : [];
-    const modeSet = new Set(allModes.map(mode => normalizeTextKey(mode)));
-
-    if (modeSet.has("heat_cool")) {
-      return "heat_cool";
-    }
-    if (modeSet.has("heat")) {
-      return "heat";
-    }
-    if (modeSet.has("cool")) {
-      return "cool";
-    }
-    if (modeSet.has("auto")) {
-      return "auto";
-    }
-    if (modeSet.has("dry")) {
-      return "dry";
-    }
-    if (modeSet.has("fan_only")) {
-      return "fan_only";
-    }
-
-    return allModes.find(mode => normalizeTextKey(mode) !== "off") || "heat";
-  }
-
-  _isOff(state) {
-    return normalizeTextKey(this._getCurrentMode(state)) === "off";
-  }
-
-  _getStateLabel(state) {
-    const action = this._getCurrentAction(state);
-    if (action) {
-      return getActionMeta(action).label;
-    }
-
-    return getModeMeta(this._getCurrentMode(state)).label;
-  }
-
-  _getAccentColor(state) {
-    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
-    const dialStyles = styles.dial || DEFAULT_CONFIG.styles.dial;
-    const action = this._getCurrentAction(state);
-    const mode = action || this._getCurrentMode(state);
-    const accentKey = getModeMeta(mode).accent;
-
-    switch (accentKey) {
-      case "heat":
-        return dialStyles.heat_color;
-      case "cool":
-        return dialStyles.cool_color;
-      case "dry":
-        return dialStyles.dry_color;
-      case "fan":
-        return dialStyles.fan_color;
-      case "auto":
-        return dialStyles.auto_color;
-      default:
-        return dialStyles.off_color;
-    }
-  }
-
-  _setClimateService(service, data = {}) {
-    if (!this._hass || !this._config?.entity) {
-      return;
-    }
-
-    this._hass.callService("climate", service, {
-      entity_id: this._config.entity,
-      ...data,
-    });
-  }
-
-  _setHvacMode(mode) {
-    if (!mode) {
-      return;
-    }
-
-    this._setClimateService("set_hvac_mode", {
-      hvac_mode: mode,
-    });
-  }
-
-  _toggleClimate(state) {
-    if (this._isOff(state) || isUnavailableState(state)) {
-      this._setHvacMode(this._getPreferredOnMode(state));
-      return;
-    }
-
-    this._setHvacMode("off");
-  }
-
-  _commitTemperature(value) {
-    const state = this._getState();
-    if (!state || !this._supportsTargetTemperature(state)) {
-      return;
-    }
-
-    const range = this._getTemperatureRange(state);
-    const step = this._getTemperatureStep(state);
-    const nextValue = clamp(Number(value), range.min, range.max);
-    const rounded = range.min + (Math.round((nextValue - range.min) / step) * step);
-    this._setClimateService("set_temperature", {
-      temperature: Number(rounded.toFixed(Math.max(1, getStepPrecision(step)))),
-    });
-    this._scheduleDraftReset();
-  }
-
-  _scheduleDraftReset() {
-    if (this._draftResetTimer) {
-      window.clearTimeout(this._draftResetTimer);
-    }
-
-    this._draftResetTimer = window.setTimeout(() => {
-      if (this._config?.entity) {
-        this._draftTemperature.delete(this._config.entity);
-      }
-      this._draftResetTimer = 0;
-      this._render();
-    }, 2200);
-  }
-
-  _changeTemperatureBy(delta) {
-    const state = this._getState();
-    if (!state || !this._supportsTargetTemperature(state)) {
-      return;
-    }
-
-    const step = this._getTemperatureStep(state);
-    const current = this._getTargetTemperature(state);
-    const next = Number(current) + (Number(delta) * step);
-    this._draftTemperature.set(this._config.entity, next);
-    this._render();
-    this._triggerHaptic("selection");
-    this._commitTemperature(next);
-  }
-
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
-    if (haptics.enabled !== true) {
-      return;
-    }
-
-    const style = styleOverride || haptics.style || "selection";
-    fireEvent(this, "haptic", style, {
-      bubbles: true,
-      cancelable: false,
-      composed: true,
-    });
-
-    if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
-    }
-  }
-
-  _updateDialPreview(value) {
-    const state = this._getState();
-    const dial = this.shadowRoot?.querySelector(".climate-card__dial");
-    const targetValue = this.shadowRoot?.querySelector('[data-climate-readout="target"]');
-
-    if (!state || !(dial instanceof HTMLElement)) {
-      return;
-    }
-
-    const range = this._getTemperatureRange(state);
-    const step = this._getTemperatureStep(state);
-    const nextValue = clamp(Number(value), range.min, range.max);
-    const ratio = (nextValue - range.min) / Math.max(range.max - range.min, step);
-    const angle = DIAL_START_ANGLE + (ratio * DIAL_SWEEP);
-    const progressLength = Number((DIAL_VISIBLE_LENGTH * clamp(ratio, 0, 1)).toFixed(3));
-    const thumbPosition = getDialMarkerPosition(angle);
-
-    dial.style.setProperty("--climate-angle", `${angle}deg`);
-    dial.style.setProperty("--climate-progress-length", `${progressLength}`);
-    dial.style.setProperty("--climate-thumb-left", `${thumbPosition.left}%`);
-    dial.style.setProperty("--climate-thumb-top", `${thumbPosition.top}%`);
-    dial.setAttribute("aria-valuenow", String(Number(nextValue)));
-
-    if (targetValue instanceof HTMLElement) {
-      targetValue.textContent = formatTemperature(nextValue, step, false);
-    }
-  }
-
-  _applyDialValue(value, options = {}) {
-    const state = this._getState();
-    if (!state || !this._supportsTargetTemperature(state)) {
-      return;
-    }
-
-    const range = this._getTemperatureRange(state);
-    const step = this._getTemperatureStep(state);
-    const nextValue = clamp(Number(value), range.min, range.max);
-    const rounded = range.min + (Math.round((nextValue - range.min) / step) * step);
-    this._draftTemperature.set(this._config.entity, Number(rounded.toFixed(Math.max(1, getStepPrecision(step)))));
-    this._updateDialPreview(rounded);
-
-    if (options.commit === true) {
-      this._triggerHaptic("selection");
-      this._commitTemperature(rounded);
-    }
-  }
-
-  _startDialDrag(dial, clientX, clientY, event = null, pointerId = null) {
-    if (!(dial instanceof HTMLElement)) {
-      return;
-    }
-
-    this._activeDialDrag = {
-      dial,
-      pointerId,
-      lastValue: null,
-    };
-
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    const state = this._getState();
-    if (!state) {
-      return;
-    }
-
-    const nextValue = getDialValueFromPoint(
-      dial,
-      clientX,
-      clientY,
-      this._getTemperatureRange(state),
-      this._getTemperatureStep(state),
-    );
-    this._activeDialDrag.lastValue = nextValue;
-    this._applyDialValue(nextValue, { commit: false });
-  }
-
-  _moveDialDrag(clientX, clientY, event = null) {
-    const drag = this._activeDialDrag;
-    const state = this._getState();
-
-    if (!drag || !state) {
-      return;
-    }
-
-    if (event) {
-      event.preventDefault();
-    }
-
-    const nextValue = getDialValueFromPoint(
-      drag.dial,
-      clientX,
-      clientY,
-      this._getTemperatureRange(state),
-      this._getTemperatureStep(state),
-      drag.lastValue,
-    );
-    drag.lastValue = nextValue;
-    this._applyDialValue(nextValue, { commit: false });
-  }
-
-  _commitDialDrag(clientX, clientY, event = null, pointerId = null) {
-    const drag = this._activeDialDrag;
-    const state = this._getState();
-
-    if (!drag || !state) {
-      return;
-    }
-
-    if (event) {
-      event.preventDefault();
-    }
-
-    const nextValue = getDialValueFromPoint(
-      drag.dial,
-      clientX,
-      clientY,
-      this._getTemperatureRange(state),
-      this._getTemperatureStep(state),
-      drag.lastValue,
-    );
-    drag.lastValue = nextValue;
-    this._applyDialValue(nextValue, { commit: true });
-
-    this._activeDialDrag = null;
-
-    if (this._pendingRenderAfterDrag) {
-      this._pendingRenderAfterDrag = false;
-      this._render();
-    }
-  }
-
-  _onShadowPointerDown(event) {
-    const path = event.composedPath();
-    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
-    if (actionButton) {
-      return;
-    }
-
-    const dialHandle = path.find(
-      node => node instanceof Element && node.dataset?.climateControl === "dial-hit",
-    );
-    const dial = dialHandle
-      ? path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"))
-      : null;
-
-    if (
-      this._activeDialDrag ||
-      !dial ||
-      (typeof event.button === "number" && event.button !== 0)
-    ) {
-      return;
-    }
-
-    this._startDialDrag(dial, event.clientX, event.clientY, event, event.pointerId);
-  }
-
-  _onShadowMouseDown(event) {
-    const path = event.composedPath();
-    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
-    if (actionButton) {
-      return;
-    }
-
-    const dialHandle = path.find(
-      node => node instanceof Element && node.dataset?.climateControl === "dial-hit",
-    );
-    const dial = dialHandle
-      ? path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"))
-      : null;
-
-    if (this._activeDialDrag || !dial || event.button !== 0) {
-      return;
-    }
-
-    this._startDialDrag(dial, event.clientX, event.clientY, event);
-  }
-
-  _onShadowTouchStart(event) {
-    const path = event.composedPath();
-    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
-    if (actionButton) {
-      return;
-    }
-
-    const dialHandle = path.find(
-      node => node instanceof Element && node.dataset?.climateControl === "dial-hit",
-    );
-    const dial = dialHandle
-      ? path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"))
-      : null;
-
-    if (this._activeDialDrag || !dial || !event.touches?.length) {
-      return;
-    }
-
-    this._startDialDrag(dial, event.touches[0].clientX, event.touches[0].clientY, event);
-  }
-
-  _onWindowPointerMove(event) {
-    const drag = this._activeDialDrag;
-    if (!drag || drag.pointerId !== event.pointerId) {
-      return;
-    }
-
-    this._moveDialDrag(event.clientX, event.clientY, event);
-  }
-
-  _onWindowPointerUp(event) {
-    const drag = this._activeDialDrag;
-    if (!drag || drag.pointerId !== event.pointerId) {
-      return;
-    }
-
-    this._commitDialDrag(event.clientX, event.clientY, event, event.pointerId);
-  }
-
-  _onWindowMouseMove(event) {
-    if (!this._activeDialDrag || (typeof event.buttons === "number" && (event.buttons & 1) === 0)) {
-      return;
-    }
-
-    this._moveDialDrag(event.clientX, event.clientY, event);
-  }
-
-  _onWindowMouseUp(event) {
-    if (!this._activeDialDrag) {
-      return;
-    }
-
-    this._commitDialDrag(event.clientX, event.clientY, event);
-  }
-
-  _onWindowTouchMove(event) {
-    if (!this._activeDialDrag || !event.touches?.length) {
-      return;
-    }
-
-    this._moveDialDrag(event.touches[0].clientX, event.touches[0].clientY, event);
-  }
-
-  _onWindowTouchStartCapture(event) {
-    const drag = this._activeDialDrag;
-    if (!drag) {
-      return;
-    }
-
-    const path = typeof event.composedPath === "function" ? event.composedPath() : [];
-    if (path.includes(drag.dial)) {
-      return;
-    }
-
-    this._activeDialDrag = null;
-
-    if (this._pendingRenderAfterDrag) {
-      this._pendingRenderAfterDrag = false;
-      this._render();
-    }
-  }
-
-  _onWindowTouchEnd(event) {
-    if (!this._activeDialDrag) {
-      return;
-    }
-
-    const touch = event.changedTouches?.[0];
-    if (!touch) {
-      this._activeDialDrag = null;
-      if (this._pendingRenderAfterDrag) {
-        this._pendingRenderAfterDrag = false;
-        this._render();
-      }
-      return;
-    }
-
-    this._commitDialDrag(touch.clientX, touch.clientY, event);
-  }
-
-  _onShadowClick(event) {
-    const path = event.composedPath();
-    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
-    if (!actionButton) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const state = this._getState();
-    if (!state) {
-      return;
-    }
-
-    switch (actionButton.dataset.climateAction) {
-      case "toggle":
-        this._triggerHaptic();
-        this._toggleClimate(state);
-        break;
-      case "decrease":
-        this._changeTemperatureBy(-1);
-        break;
-      case "increase":
-        this._changeTemperatureBy(1);
-        break;
-      case "mode":
-        if (actionButton.dataset.mode) {
-          this._triggerHaptic();
-          this._setHvacMode(actionButton.dataset.mode);
-        }
-        break;
-      default:
-        break;
-    }
-  }
-
-  _renderEmptyState() {
-    return `
-      <ha-card class="climate-card climate-card--empty">
-        <div class="climate-card__empty-title">Nodalia Climate Card</div>
-        <div class="climate-card__empty-text">Configura \`entity\` con una entidad \`climate.*\` para mostrar la tarjeta.</div>
-      </ha-card>
-    `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const config = this._config || normalizeConfig({});
-    const styles = config.styles || DEFAULT_CONFIG.styles;
-    const state = this._getState();
-
-    if (!state) {
-      this.shadowRoot.innerHTML = `
-        <style>
-          :host {
-            display: block;
-          }
-
-          * {
-            box-sizing: border-box;
-          }
-
-          .climate-card--empty {
-            background: ${styles.card.background};
-            border: ${styles.card.border};
-            border-radius: ${styles.card.border_radius};
-            box-shadow: ${styles.card.box_shadow};
-            display: grid;
-            gap: 6px;
-            padding: ${styles.card.padding};
-          }
-
-          .climate-card__empty-title {
-            color: var(--primary-text-color);
-            font-size: 15px;
-            font-weight: 700;
-          }
-
-          .climate-card__empty-text {
-            color: var(--secondary-text-color);
-            font-size: 13px;
-            line-height: 1.5;
-          }
-        </style>
-        ${this._renderEmptyState()}
-      `;
-      return;
-    }
-
-    const title = this._getClimateName(state);
-    const icon = this._getClimateIcon(state);
-    const accentColor = this._getAccentColor(state);
-    const currentMode = this._getCurrentMode(state);
-    const currentTemperature = this._getCurrentTemperature(state);
-    const currentHumidity = this._getCurrentHumidity(state);
-    const targetTemperature = this._getTargetTemperature(state);
-    const temperatureRange = this._getTemperatureRange(state);
-    const temperatureStep = this._getTemperatureStep(state);
-    const normalizedCurrentMode = normalizeTextKey(currentMode);
-    const supportsTargetTemperature = this._supportsTargetTemperature(state);
-    const compactLevel = this._getCompactLevel();
-    const compactLayout = compactLevel !== "default";
-    const tightLayout = compactLevel === "tight";
-    const modeOptions = config.show_mode_buttons !== false ? this._getOrderedModeOptions(state) : [];
-    const visibleModeOptions = modeOptions.filter(mode => normalizeTextKey(mode) !== normalizedCurrentMode);
-    const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
-    const isOff = this._isOff(state) || isUnavailableState(state);
-    const cardPaddingY = tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
-    const cardPaddingX = tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
-    const effectiveCardPadding = `${cardPaddingY}px ${cardPaddingX}px`;
-    const effectiveCardGap = tightLayout ? "10px" : compactLayout ? "12px" : styles.card.gap;
-    const effectiveIconSizePx = Math.max(
-      48,
-      Math.min(parseSizeToPixels(styles.icon.size, 58), tightLayout ? 50 : compactLayout ? 54 : 58),
-    );
-    const effectiveIconSize = `${effectiveIconSizePx}px`;
-    const effectiveTitleSize = `${Math.max(
-      14,
-      Math.min(parseSizeToPixels(styles.title_size, 16), tightLayout ? 15 : compactLayout ? 15.5 : 16),
-    )}px`;
-    const effectiveCurrentSize = `${Math.max(
-      14,
-      Math.min(parseSizeToPixels(styles.current_size, 16), tightLayout ? 15 : compactLayout ? 15.5 : 16),
-    )}px`;
-    const effectiveTargetSize = `${Math.max(
-      42,
-      Math.min(parseSizeToPixels(styles.target_size, 50), tightLayout ? 44 : compactLayout ? 46 : 50),
-    )}px`;
-    const effectiveChipHeight = `${Math.max(
-      21,
-      Math.min(parseSizeToPixels(styles.chip_height, 24), tightLayout ? 22 : compactLayout ? 23 : 24),
-    )}px`;
-    const effectiveChipFontSize = `${Math.max(
-      10,
-      Math.min(parseSizeToPixels(styles.chip_font_size, 11), tightLayout ? 10 : compactLayout ? 10.5 : 11),
-    )}px`;
-    const effectiveChipPadding = tightLayout ? "0 9px" : compactLayout ? "0 10px" : styles.chip_padding;
-    const dialSizePx = Math.max(
-      220,
-      Math.min(parseSizeToPixels(styles.dial.size, 280), tightLayout ? 236 : compactLayout ? 252 : 280),
-    );
-    const dialStrokePx = Math.max(
-      15,
-      Math.min(parseSizeToPixels(styles.dial.stroke, 18), tightLayout ? 16 : compactLayout ? 17 : 18),
-    );
-    const thumbSizePx = Math.max(
-      20,
-      Math.min(parseSizeToPixels(styles.dial.thumb_size, 24), tightLayout ? 21 : compactLayout ? 22 : 24),
-    );
-    const stepControlSize = Math.max(
-      40,
-      Math.min(parseSizeToPixels(styles.step_control.size, 50), tightLayout ? 42 : compactLayout ? 46 : 50),
-    );
-    const modeControlSize = Math.max(
-      32,
-      Math.min(parseSizeToPixels(styles.control.size, 42) - 4, tightLayout ? 34 : compactLayout ? 36 : 38),
-    );
-    const ratio = supportsTargetTemperature
-      ? (targetTemperature - temperatureRange.min) / Math.max(temperatureRange.max - temperatureRange.min, temperatureStep)
-      : 0;
-    const dialAngle = DIAL_START_ANGLE + (clamp(ratio, 0, 1) * DIAL_SWEEP);
-    const progressLength = Number((DIAL_VISIBLE_LENGTH * clamp(ratio, 0, 1)).toFixed(3));
-    const chips = [];
-    const currentRatio = currentTemperature !== null
-      ? clamp(
-        (currentTemperature - temperatureRange.min) / Math.max(temperatureRange.max - temperatureRange.min, temperatureStep),
-        0,
-        1,
-      )
-      : null;
-    const currentAngle = currentRatio === null
-      ? null
-      : DIAL_START_ANGLE + (currentRatio * DIAL_SWEEP);
-    const thumbPosition = getDialMarkerPosition(dialAngle);
-    const currentMarkerPosition = currentAngle === null ? null : getDialMarkerPosition(currentAngle);
-
-    if (config.show_state_chip !== false) {
-      chips.push(`<div class="climate-card__chip climate-card__chip--state">${escapeHtml(this._getStateLabel(state))}</div>`);
-    }
-
-    if (config.show_current_temperature_chip !== false && currentTemperature !== null) {
-      chips.push(`<div class="climate-card__chip">${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true))}</div>`);
-    }
-
-    if (config.show_humidity_chip !== false && currentHumidity !== null) {
-      chips.push(`<div class="climate-card__chip">${escapeHtml(`${Math.round(currentHumidity)}%`)}</div>`);
-    }
-
-    const currentActionMeta = getActionMeta(this._getCurrentAction(state) || currentMode);
-    const cardBackground = isOff
-      ? styles.card.background
-      : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
-    const cardBorder = isOff
-      ? styles.card.border
-      : `1px solid color-mix(in srgb, ${accentColor} 26%, var(--divider-color))`;
-    const cardShadow = isOff
-      ? styles.card.box_shadow
-      : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-          height: 100%;
-          min-height: 0;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        ha-card {
-          height: 100%;
-          min-height: 0;
-          overflow: hidden;
-        }
-
-        .climate-card {
-          background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, transparent 48%),
-            linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0%, rgba(0, 0, 0, 0.02) 100%),
-            ${cardBackground};
-          border: ${cardBorder};
-          border-radius: ${styles.card.border_radius};
-          box-shadow: ${cardShadow};
-          color: var(--primary-text-color);
-        }
-
-        .climate-card__content {
-          display: flex;
-          flex-direction: column;
-          gap: ${effectiveCardGap};
-          height: 100%;
-          min-height: 0;
-          padding: ${effectiveCardPadding};
-        }
-
-        .climate-card__hero {
-          align-items: center;
-          display: grid;
-          gap: ${effectiveCardGap};
-          grid-template-columns: ${effectiveIconSize} minmax(0, 1fr);
-          min-height: 0;
-          width: 100%;
-        }
-
-        .climate-card__icon {
-          -webkit-tap-highlight-color: transparent;
-          align-items: center;
-          appearance: none;
-          background:
-            radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 60%),
-            ${styles.icon.background};
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: calc(${styles.icon.size} * 0.5);
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
-            0 10px 26px rgba(0, 0, 0, 0.16);
-          color: ${isOff ? styles.icon.off_color : styles.icon.on_color};
-          cursor: pointer;
-          display: inline-flex;
-          height: ${effectiveIconSize};
-          justify-content: center;
-          margin: 0;
-          outline: none;
-          padding: 0;
-          position: relative;
-          width: ${effectiveIconSize};
-        }
-
-        .climate-card__icon ha-icon {
-          --mdc-icon-size: calc(${effectiveIconSize} * 0.44);
-          display: inline-flex;
-          height: calc(${effectiveIconSize} * 0.44);
-          left: 50%;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: calc(${effectiveIconSize} * 0.44);
-        }
-
-        .climate-card__unavailable-badge {
-          align-items: center;
-          background: #ff9b4a;
-          border: 2px solid ${styles.card.background};
-          border-radius: 999px;
-          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
-          color: #ffffff;
-          display: inline-flex;
-          height: 18px;
-          justify-content: center;
-          position: absolute;
-          right: -2px;
-          top: -2px;
-          width: 18px;
-          z-index: 2;
-        }
-
-        .climate-card__unavailable-badge ha-icon {
-          --mdc-icon-size: 11px;
-          height: 11px;
-          left: auto;
-          position: static;
-          top: auto;
-          transform: none;
-          width: 11px;
-        }
-
-        .climate-card__copy {
-          display: grid;
-          gap: ${tightLayout ? "8px" : "10px"};
-          min-width: 0;
-        }
-
-        .climate-card__headline {
-          align-items: start;
-          display: grid;
-          gap: ${tightLayout ? "8px" : "10px"};
-          grid-template-columns: minmax(0, 1fr) auto;
-          min-width: 0;
-        }
-
-        .climate-card__title {
-          color: var(--primary-text-color);
-          font-size: ${effectiveTitleSize};
-          font-weight: 700;
-          line-height: 1.14;
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .climate-card__chips {
-          align-items: center;
-          display: flex;
-          flex: 0 0 auto;
-          flex-wrap: wrap;
-          gap: ${tightLayout ? "8px" : "10px"};
-          justify-content: flex-end;
-          min-width: 0;
-          max-width: 100%;
-        }
-
-        .climate-card__chip {
-          align-items: center;
-          backdrop-filter: blur(18px);
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-          color: var(--secondary-text-color);
-          display: inline-flex;
-          font-size: ${effectiveChipFontSize};
-          font-weight: 700;
-          height: ${effectiveChipHeight};
-          max-width: 100%;
-          min-width: 0;
-          overflow: hidden;
-          padding: ${effectiveChipPadding};
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .climate-card__chip--state {
-          color: var(--primary-text-color);
-        }
-
-        .climate-card__dial-wrap {
-          align-items: center;
-          display: flex;
-          flex: 1 1 auto;
-          justify-content: center;
-          min-height: 0;
-          padding-top: ${tightLayout ? "0" : "2px"};
-        }
-
-        .climate-card__dial {
-          --climate-angle: ${dialAngle}deg;
-          --climate-progress-length: ${progressLength};
-          --climate-dial-size: ${dialSizePx}px;
-          --climate-thumb-size: ${thumbSizePx}px;
-          background: ${styles.dial.background};
-          border-radius: 50%;
-          cursor: ${supportsTargetTemperature ? "grab" : "default"};
-          height: var(--climate-dial-size);
-          position: relative;
-          touch-action: none;
-          user-select: none;
-          -webkit-user-select: none;
-          width: var(--climate-dial-size);
-        }
-
-        .climate-card__dial:active {
-          cursor: ${supportsTargetTemperature ? "grabbing" : "default"};
-        }
-
-        .climate-card__dial-svg {
-          display: block;
-          height: 100%;
-          overflow: visible;
-          width: 100%;
-        }
-
-        .climate-card__dial-track,
-        .climate-card__dial-hit,
-        .climate-card__dial-progress {
-          fill: none;
-          stroke-dasharray: ${DIAL_VISIBLE_LENGTH} ${DIAL_HIDDEN_LENGTH};
-          stroke-linecap: round;
-          stroke-width: ${dialStrokePx};
-          transform: rotate(${DIAL_START_ANGLE}deg);
-          transform-origin: ${DIAL_VIEWBOX_SIZE / 2}px ${DIAL_VIEWBOX_SIZE / 2}px;
-        }
-
-        .climate-card__dial-track {
-          stroke: ${styles.dial.track_color};
-        }
-
-        .climate-card__dial-hit {
-          cursor: ${supportsTargetTemperature ? "grab" : "default"};
-          pointer-events: stroke;
-          stroke: transparent;
-          stroke-width: ${dialStrokePx + 22};
-        }
-
-        .climate-card__dial-progress {
-          stroke: ${accentColor};
-          stroke-dasharray: var(--climate-progress-length) ${DIAL_CIRCUMFERENCE};
-          transition: stroke-dasharray 140ms ease-out;
-        }
-
-        .climate-card__dial-thumb {
-          background: #f5f7fb;
-          border: 4px solid color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.72));
-          border-radius: 50%;
-          box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.12);
-          height: var(--climate-thumb-size);
-          left: var(--climate-thumb-left, 50%);
-          pointer-events: auto;
-          position: absolute;
-          top: var(--climate-thumb-top, 50%);
-          transform: translate(-50%, -50%);
-          width: var(--climate-thumb-size);
-          z-index: 2;
-        }
-
-        .climate-card__dial-current-marker {
-          background: rgba(255, 255, 255, 0.94);
-          border: 3px solid rgba(255, 255, 255, 0.12);
-          border-radius: 50%;
-          box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.08);
-          height: calc(var(--climate-thumb-size) * 0.58);
-          left: var(--climate-current-left, 50%);
-          opacity: ${currentAngle === null ? "0" : "1"};
-          pointer-events: none;
-          position: absolute;
-          top: var(--climate-current-top, 50%);
-          transform: translate(-50%, -50%);
-          width: calc(var(--climate-thumb-size) * 0.58);
-          z-index: 1;
-        }
-
-        .climate-card__dial-center {
-          align-content: center;
-          display: grid;
-          gap: ${tightLayout ? "10px" : compactLayout ? "11px" : "12px"};
-          inset: ${tightLayout ? "23% 15% 17% 15%" : compactLayout ? "23% 15.5% 17.5% 15.5%" : "23% 16% 18% 16%"};
-          justify-items: center;
-          pointer-events: auto;
-          position: absolute;
-          text-align: center;
-        }
-
-        .climate-card__target {
-          color: var(--primary-text-color);
-          display: inline-block;
-          font-size: ${effectiveTargetSize};
-          font-weight: 500;
-          letter-spacing: -0.06em;
-          line-height: 0.94;
-          min-height: calc(${effectiveTargetSize} * 0.94);
-          min-width: 0;
-          padding-right: calc(${effectiveTargetSize} * 0.34);
-          pointer-events: none;
-          position: relative;
-          white-space: nowrap;
-        }
-
-        .climate-card__target-value {
-          display: inline-block;
-        }
-
-        .climate-card__target-unit {
-          align-items: flex-start;
-          color: var(--primary-text-color);
-          display: inline-flex;
-          font-size: calc(${effectiveTargetSize} * 0.24);
-          font-weight: 500;
-          gap: 0.04em;
-          letter-spacing: 0;
-          line-height: 1;
-          opacity: 0.92;
-          position: absolute;
-          right: 0;
-          top: 0.14em;
-        }
-
-        .climate-card__target-degree,
-        .climate-card__target-scale {
-          display: inline-block;
-          line-height: 1;
-        }
-
-        .climate-card__target-degree {
-          transform: translateY(-0.06em);
-        }
-
-        .climate-card__divider {
-          background: rgba(255, 255, 255, 0.18);
-          border-radius: 999px;
-          height: 1px;
-          pointer-events: none;
-          width: 100%;
-        }
-
-        .climate-card__dial-meta {
-          align-items: center;
-          color: var(--secondary-text-color);
-          display: flex;
-          flex-wrap: wrap;
-          font-size: ${effectiveCurrentSize};
-          gap: ${tightLayout ? "10px" : "12px"};
-          justify-content: center;
-          line-height: 1;
-          pointer-events: none;
-        }
-
-        .climate-card__dial-action {
-          align-items: center;
-          display: inline-flex;
-          justify-content: center;
-        }
-
-        .climate-card__dial-action ha-icon {
-          --mdc-icon-size: ${tightLayout ? "15px" : compactLayout ? "16px" : "17px"};
-          color: ${accentColor};
-          display: inline-flex;
-          height: ${tightLayout ? "15px" : compactLayout ? "16px" : "17px"};
-          width: ${tightLayout ? "15px" : compactLayout ? "16px" : "17px"};
-        }
-
-        .climate-card__dial-controls {
-          align-items: center;
-          display: flex;
-          flex-wrap: wrap;
-          gap: ${tightLayout ? "8px" : "10px"};
-          justify-content: center;
-          margin-top: 2px;
-          pointer-events: auto;
-          width: 100%;
-        }
-
-        .climate-card__mode-button,
-        .climate-card__step-button {
-          -webkit-tap-highlight-color: transparent;
-          align-items: center;
-          appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.06),
-            0 10px 24px rgba(0, 0, 0, 0.16);
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          justify-content: center;
-          margin: 0;
-          outline: none;
-          padding: 0;
-          pointer-events: auto;
-          position: relative;
-          transition:
-            background 160ms ease,
-            border-color 160ms ease,
-            transform 160ms ease,
-            box-shadow 160ms ease;
-        }
-
-        .climate-card__mode-button {
-          backdrop-filter: blur(18px);
-          background:
-            radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 60%),
-            rgba(255, 255, 255, 0.04);
-          height: ${modeControlSize}px;
-          width: ${modeControlSize}px;
-        }
-
-        .climate-card__mode-button:hover,
-        .climate-card__step-button:hover {
-          transform: translateY(-1px);
-        }
-
-        .climate-card__mode-button--power {
-          border-color: color-mix(in srgb, ${accentColor} 32%, rgba(255, 255, 255, 0.1));
-        }
-
-        .climate-card__mode-button.is-active {
-          background: color-mix(in srgb, ${accentColor} 18%, ${styles.control.accent_background});
-          border-color: color-mix(in srgb, ${accentColor} 48%, rgba(255, 255, 255, 0.12));
-          color: ${styles.control.accent_color};
-        }
-
-        .climate-card__mode-button ha-icon {
-          --mdc-icon-size: calc(${modeControlSize}px * 0.46);
-          display: inline-flex;
-          height: calc(${modeControlSize}px * 0.46);
-          width: calc(${modeControlSize}px * 0.46);
-        }
-
-        .climate-card__steps {
-          display: flex;
-          gap: ${tightLayout ? "10px" : compactLayout ? "12px" : "14px"};
-          justify-content: center;
-        }
-
-        .climate-card__step-button {
-          backdrop-filter: blur(18px);
-          background:
-            radial-gradient(circle at top left, rgba(255, 255, 255, 0.05), transparent 60%),
-            rgba(255, 255, 255, 0.04);
-          color: var(--primary-text-color);
-          font-size: calc(${stepControlSize}px * 0.8);
-          height: ${stepControlSize}px;
-          line-height: 1;
-          width: ${stepControlSize}px;
-        }
-
-        .climate-card__step-button span {
-          align-items: center;
-          display: inline-flex;
-          font-size: calc(${stepControlSize}px * 0.72);
-          height: 100%;
-          justify-content: center;
-          line-height: 1;
-          transform: translateY(-0.04em);
-          width: 100%;
-        }
-
-        @media (max-width: 560px) {
-          .climate-card__headline {
-            grid-template-columns: minmax(0, 1fr);
-          }
-
-          .climate-card__chips {
-            justify-content: flex-start;
-          }
-
-          .climate-card__dial {
-            --climate-dial-size: min(${dialSizePx}px, 100%);
-            --climate-thumb-size: min(${thumbSizePx}px, calc(var(--climate-dial-size) * 0.082));
-          }
-        }
-      </style>
-      <ha-card class="climate-card climate-card--${escapeHtml(compactLevel)}" style="--accent-color:${escapeHtml(accentColor)};">
-        <div class="climate-card__content">
-          <div class="climate-card__hero">
-            <button
-              type="button"
-              class="climate-card__icon"
-              data-climate-action="toggle"
-              aria-label="Encender o apagar"
-            >
-              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
-              ${showUnavailableBadge ? `<span class="climate-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
-            </button>
-            <div class="climate-card__copy">
-              <div class="climate-card__headline">
-                <div class="climate-card__title">${escapeHtml(title)}</div>
-                ${chips.length ? `<div class="climate-card__chips">${chips.join("")}</div>` : ""}
-              </div>
-            </div>
-          </div>
-
-          <div class="climate-card__dial-wrap">
-            <div
-              class="climate-card__dial"
-              data-climate-control="dial"
-              role="slider"
-              aria-label="Temperatura objetivo"
-              aria-valuemin="${temperatureRange.min}"
-              aria-valuemax="${temperatureRange.max}"
-              aria-valuenow="${Number.isFinite(targetTemperature) ? targetTemperature : temperatureRange.min}"
-              style="--climate-thumb-left:${thumbPosition.left}%;--climate-thumb-top:${thumbPosition.top}%;${currentMarkerPosition ? `--climate-current-left:${currentMarkerPosition.left}%;--climate-current-top:${currentMarkerPosition.top}%;` : ""}"
-            >
-              <svg class="climate-card__dial-svg" viewBox="0 0 ${DIAL_VIEWBOX_SIZE} ${DIAL_VIEWBOX_SIZE}" aria-hidden="true">
-                <circle
-                  class="climate-card__dial-track"
-                  cx="${DIAL_VIEWBOX_SIZE / 2}"
-                  cy="${DIAL_VIEWBOX_SIZE / 2}"
-                  r="${DIAL_CIRCLE_RADIUS}"
-                ></circle>
-                <circle
-                  class="climate-card__dial-hit"
-                  data-climate-control="dial-hit"
-                  cx="${DIAL_VIEWBOX_SIZE / 2}"
-                  cy="${DIAL_VIEWBOX_SIZE / 2}"
-                  r="${DIAL_CIRCLE_RADIUS}"
-                ></circle>
-                <circle
-                  class="climate-card__dial-progress"
-                  cx="${DIAL_VIEWBOX_SIZE / 2}"
-                  cy="${DIAL_VIEWBOX_SIZE / 2}"
-                  r="${DIAL_CIRCLE_RADIUS}"
-                ></circle>
-              </svg>
-              <span class="climate-card__dial-current-marker" aria-hidden="true"></span>
-              <span class="climate-card__dial-thumb" data-climate-control="dial-hit" aria-hidden="true"></span>
-              <div class="climate-card__dial-center">
-                <div class="climate-card__target">
-                  <span class="climate-card__target-value" data-climate-readout="target">${escapeHtml(formatTemperature(targetTemperature, temperatureStep, false))}</span>
-                  <span class="climate-card__target-unit"><span class="climate-card__target-degree">°</span><span class="climate-card__target-scale">C</span></span>
-                </div>
-                <div class="climate-card__divider"></div>
-                <div class="climate-card__dial-meta">
-                  ${currentTemperature !== null ? `<span>${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true))}</span>` : ""}
-                  <span class="climate-card__dial-action">
-                    <ha-icon icon="${escapeHtml(currentActionMeta.icon)}"></ha-icon>
-                  </span>
-                </div>
-                <div class="climate-card__dial-controls">
-                  ${isOff ? "" : `
-                  <button
-                    type="button"
-                    class="climate-card__mode-button climate-card__mode-button--power is-active"
-                    data-climate-action="toggle"
-                    title="Apagar"
-                    aria-label="Apagar"
-                  >
-                    <ha-icon icon="mdi:power"></ha-icon>
-                  </button>`}
-                  ${visibleModeOptions
-                    .map(mode => {
-                      const meta = getModeMeta(mode);
-                      return `
-                        <button
-                          type="button"
-                          class="climate-card__mode-button"
-                          data-climate-action="mode"
-                          data-mode="${escapeHtml(mode)}"
-                          title="${escapeHtml(meta.label)}"
-                          aria-label="${escapeHtml(meta.label)}"
-                        >
-                          <ha-icon icon="${escapeHtml(meta.icon)}"></ha-icon>
-                        </button>
-                      `;
-                    })
-                    .join("")}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          ${
-            config.show_step_controls !== false && supportsTargetTemperature
-              ? `
-                <div class="climate-card__steps">
-                  <button
-                    type="button"
-                    class="climate-card__step-button"
-                    data-climate-action="decrease"
-                    aria-label="Bajar temperatura"
-                  >
-                    <span>&minus;</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="climate-card__step-button"
-                    data-climate-action="increase"
-                    aria-label="Subir temperatura"
-                  >
-                    <span>+</span>
-                  </button>
-                </div>
-              `
-              : ""
-          }
-        </div>
-      </ha-card>
-    `;
-  }
-}
-
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaClimateCard);
-}
-
-class NodaliaClimateCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    this._entityOptionsSignature = "";
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getEntityOptionsSignature(hass);
-    const shouldRender =
-      !this._hass ||
-      nextSignature !== this._entityOptionsSignature ||
-      !this.shadowRoot?.innerHTML;
-
-    this._hass = hass;
-    this._entityOptionsSignature = nextSignature;
-
-    if (!shouldRender) {
-      return;
-    }
-
-    const focusState = this._captureFocusState();
-    this._render();
-    this._restoreFocusState(focusState);
-  }
-
-  setConfig(config) {
-    const focusState = this._captureFocusState();
-    this._config = normalizeConfig(config || {});
-    this._render();
-    this._restoreFocusState(focusState);
-  }
-
-  _getEntityOptionsSignature(hass = this._hass) {
-    return Object.keys(hass?.states || {})
-      .filter(entityId => entityId.startsWith("climate."))
-      .sort((left, right) => left.localeCompare(right, "es"))
-      .join("|");
-  }
-
-  _captureFocusState() {
-    const activeElement = this.shadowRoot?.activeElement;
-
-    if (
-      !(
-        activeElement instanceof HTMLInputElement ||
-        activeElement instanceof HTMLTextAreaElement ||
-        activeElement instanceof HTMLSelectElement
-      )
-    ) {
-      return null;
-    }
-
-    const dataset = activeElement.dataset || {};
-    const selector = dataset.field
-      ? `[data-field="${escapeSelectorValue(dataset.field)}"]`
-      : null;
-
-    if (!selector) {
-      return null;
-    }
-
-    const supportsSelection =
-      typeof activeElement.selectionStart === "number" &&
-      typeof activeElement.selectionEnd === "number";
-
-    return {
-      selector,
-      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
-      selectionStart: supportsSelection ? activeElement.selectionStart : null,
-      type: activeElement.type,
-    };
-  }
-
-  _restoreFocusState(focusState) {
-    if (!focusState?.selector || !this.shadowRoot) {
-      return;
-    }
-
-    const target = this.shadowRoot.querySelector(focusState.selector);
-    if (
-      !(
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement
-      )
-    ) {
-      return;
-    }
-
-    try {
-      target.focus({ preventScroll: true });
-    } catch (_error) {
-      target.focus();
-    }
-
-    const canRestoreSelection =
-      focusState.type !== "checkbox" &&
-      typeof focusState.selectionStart === "number" &&
-      typeof focusState.selectionEnd === "number" &&
-      typeof target.setSelectionRange === "function";
-
-    if (!canRestoreSelection) {
-      return;
-    }
-
-    try {
-      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
-    } catch (_error) {
-      // Ignore unsupported inputs.
-    }
-  }
-
-  _emitConfig() {
-    const focusState = this._captureFocusState();
-    const nextConfig = deepClone(this._config);
-    this._config = normalizeConfig(compactConfig(nextConfig));
-    this._render();
-    this._restoreFocusState(focusState);
-    fireEvent(this, "config-changed", {
-      config: compactConfig(nextConfig),
-    });
-  }
-
-  _setEditorConfig() {
-    this._config = normalizeConfig(compactConfig(this._config));
-  }
-
-  _setFieldValue(path, value) {
-    if (value === undefined || value === null || value === "") {
-      deleteByPath(this._config, path);
-      return;
-    }
-
-    setByPath(this._config, path, value);
-  }
-
-  _readFieldValue(input) {
-    const valueType = input.dataset.valueType || "string";
-
-    switch (valueType) {
-      case "boolean":
-        return Boolean(input.checked);
-      default:
-        return input.value;
-    }
-  }
-
-  _onShadowInput(event) {
-    const input = event
-      .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
-
-    if (!input?.dataset?.field) {
-      return;
-    }
-
-    event.stopPropagation();
-
-    const nextValue = this._readFieldValue(input);
-    this._setFieldValue(input.dataset.field, nextValue);
-    this._setEditorConfig();
-
-    if (event.type === "change") {
-      this._emitConfig();
-    }
-  }
-
-  _renderTextField(label, field, value, options = {}) {
-    const inputType = options.type || "text";
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-    const valueType = options.valueType || "string";
-    const inputValue = value === undefined || value === null ? "" : String(value);
-
-    return `
-      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
-        <input
-          type="${escapeHtml(inputType)}"
-          data-field="${escapeHtml(field)}"
-          data-value-type="${escapeHtml(valueType)}"
-          value="${escapeHtml(inputValue)}"
-          ${placeholder}
-        />
-      </label>
-    `;
-  }
-
-  _renderCheckboxField(label, field, checked) {
-    return `
-      <label class="editor-toggle">
-        <input
-          type="checkbox"
-          data-field="${escapeHtml(field)}"
-          data-value-type="boolean"
-          ${checked ? "checked" : ""}
-        />
-        <span>${escapeHtml(label)}</span>
-      </label>
-    `;
-  }
-
-  _renderSelectField(label, field, value, options) {
-    return `
-      <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
-        <select data-field="${escapeHtml(field)}">
-          ${options
-            .map(option => `
-              <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
-              </option>
-            `)
-            .join("")}
-        </select>
-      </label>
-    `;
-  }
-
-  _getEntityOptionsMarkup() {
-    const climateIds = Object.keys(this._hass?.states || {})
-      .filter(entityId => entityId.startsWith("climate."))
-      .sort((left, right) => left.localeCompare(right, "es"));
-
-    return `
-      <datalist id="climate-card-entities">
-        ${climateIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-    `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        .editor {
-          color: var(--primary-text-color);
-          display: grid;
-          gap: 16px;
-        }
-
-        .editor-section {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 18px;
-          display: grid;
-          gap: 14px;
-          padding: 16px;
-        }
-
-        .editor-section__header {
-          display: grid;
-          gap: 4px;
-        }
-
-        .editor-section__title {
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .editor-section__hint {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          line-height: 1.45;
-        }
-
-        .editor-grid {
-          display: grid;
-          gap: 12px;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .editor-field,
-        .editor-toggle {
-          display: grid;
-          gap: 6px;
-          min-width: 0;
-        }
-
-        .editor-field--full {
-          grid-column: 1 / -1;
-        }
-
-        .editor-field > span,
-        .editor-toggle > span {
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .editor-field input,
-        .editor-field select {
-          appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 12px;
-          color: var(--primary-text-color);
-          font: inherit;
-          min-height: 40px;
-          padding: 10px 12px;
-          width: 100%;
-        }
-
-        .editor-toggle {
-          align-items: center;
-          grid-template-columns: auto 1fr;
-          padding-top: 20px;
-        }
-
-        .editor-toggle input {
-          accent-color: var(--primary-color);
-          height: 18px;
-          margin: 0;
-          width: 18px;
-        }
-
-        @media (max-width: 640px) {
-          .editor-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .editor-toggle {
-            padding-top: 0;
-          }
-        }
-      </style>
-      <div class="editor">
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal y textos visibles.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Entidad", "entity", config.entity, {
-              placeholder: "climate.salon",
-            })}
-            ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Salon",
-            })}
-            ${this._renderTextField("Icono", "icon", config.icon, {
-              placeholder: "mdi:thermostat",
-            })}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Elige la informacion y los controles visibles.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderCheckboxField("Mostrar chip de estado", "show_state_chip", config.show_state_chip !== false)}
-            ${this._renderCheckboxField("Mostrar chip de temperatura actual", "show_current_temperature_chip", config.show_current_temperature_chip !== false)}
-            ${this._renderCheckboxField("Mostrar chip de humedad", "show_humidity_chip", config.show_humidity_chip !== false)}
-            ${this._renderCheckboxField("Mostrar botones de modo", "show_mode_buttons", config.show_mode_buttons !== false)}
-            ${this._renderCheckboxField("Mostrar botones +/-", "show_step_controls", config.show_step_controls !== false)}
-            ${this._renderCheckboxField("Mostrar badge de no disponible", "show_unavailable_badge", config.show_unavailable_badge !== false)}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica opcional para dial y controles.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
-            ${this._renderSelectField(
-              "Estilo",
-              "haptics.style",
-              hapticStyle,
-              [
-                { value: "selection", label: "Selection" },
-                { value: "light", label: "Light" },
-                { value: "medium", label: "Medium" },
-                { value: "heavy", label: "Heavy" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "failure", label: "Failure" },
-              ],
-            )}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales del look Nodalia y el dial circular.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
-            ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
-            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
-            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-            ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamano burbuja entidad", "styles.icon.size", config.styles.icon.size)}
-            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-            ${this._renderTextField("Tamano temperatura actual", "styles.current_size", config.styles.current_size)}
-            ${this._renderTextField("Tamano temperatura objetivo", "styles.target_size", config.styles.target_size)}
-            ${this._renderTextField("Tamano dial", "styles.dial.size", config.styles.dial.size)}
-            ${this._renderTextField("Grosor dial", "styles.dial.stroke", config.styles.dial.stroke)}
-            ${this._renderTextField("Tamano thumb dial", "styles.dial.thumb_size", config.styles.dial.thumb_size)}
-            ${this._renderTextField("Color calor", "styles.dial.heat_color", config.styles.dial.heat_color)}
-            ${this._renderTextField("Color frio", "styles.dial.cool_color", config.styles.dial.cool_color)}
-            ${this._renderTextField("Color secado", "styles.dial.dry_color", config.styles.dial.dry_color)}
-            ${this._renderTextField("Color auto", "styles.dial.auto_color", config.styles.dial.auto_color)}
-            ${this._renderTextField("Color ventilador", "styles.dial.fan_color", config.styles.dial.fan_color)}
-            ${this._renderTextField("Track dial", "styles.dial.track_color", config.styles.dial.track_color)}
-            ${this._renderTextField("Tamano chip", "styles.chip_height", config.styles.chip_height)}
-            ${this._renderTextField("Texto chip", "styles.chip_font_size", config.styles.chip_font_size)}
-            ${this._renderTextField("Padding chip", "styles.chip_padding", config.styles.chip_padding)}
-            ${this._renderTextField("Tamano boton modo", "styles.control.size", config.styles.control.size)}
-            ${this._renderTextField("Tamano boton +/-", "styles.step_control.size", config.styles.step_control.size)}
-          </div>
-        </section>
-        ${this._getEntityOptionsMarkup()}
-      </div>
-    `;
-
-    this.shadowRoot
-      .querySelectorAll('input[data-field="entity"]')
-      .forEach(input => input.setAttribute("list", "climate-card-entities"));
-  }
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaClimateCardEditor);
-}
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: CARD_TAG,
-  name: "Nodalia Climate Card",
-  description: "Tarjeta de clima con dial circular, modos HVAC y control rapido de temperatura.",
-  preview: true,
-});
-
-}
-{
-const CARD_TAG = "nodalia-weather-card";
-const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.8.0";
-const HAPTIC_PATTERNS = {
-  selection: 8,
-  light: 10,
-  medium: 16,
-  heavy: 24,
-  success: [10, 40, 10],
-  warning: [20, 50, 12],
-  failure: [12, 40, 12, 40, 18],
-};
-
-const DEFAULT_CONFIG = {
-  entity: "",
-  name: "",
-  icon: "",
-  tap_action: "more-info",
-  show_condition: true,
-  show_humidity_chip: true,
-  show_wind_chip: true,
-  show_pressure_chip: false,
-  haptics: {
-    enabled: false,
-    style: "selection",
-    fallback_vibrate: false,
-  },
-  styles: {
-    card: {
-      background: "var(--ha-card-background)",
-      border: "1px solid var(--divider-color)",
-      border_radius: "28px",
-      box_shadow: "var(--ha-card-box-shadow)",
-      padding: "14px",
-      gap: "12px",
-    },
-    icon: {
-      size: "58px",
-      background: "rgba(255, 255, 255, 0.06)",
-      color: "var(--primary-text-color)",
-    },
-    chip_height: "24px",
-    chip_font_size: "11px",
-    chip_padding: "0 9px",
-    title_size: "14px",
-    temperature_size: "28px",
-    condition_size: "13px",
-  },
-};
-
-const STUB_CONFIG = {
-  entity: "weather.casa",
-  name: "Tiempo",
-};
-
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function deepClone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-  return JSON.parse(JSON.stringify(value));
-}
-
-function mergeConfig(base, override) {
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
-  }
-
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-
-  keys.forEach(key => {
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-
-    if (overrideValue === undefined) {
-      result[key] = deepClone(baseValue);
-      return;
-    }
-
-    if (Array.isArray(overrideValue)) {
-      result[key] = deepClone(overrideValue);
-      return;
-    }
-
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      result[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-
-    result[key] = overrideValue;
-  });
-
-  return result;
-}
-
-function compactConfig(value) {
-  if (Array.isArray(value)) {
-    return value.map(item => compactConfig(item)).filter(item => item !== undefined);
-  }
-
-  if (isObject(value)) {
-    const compacted = {};
-
-    Object.entries(value).forEach(([key, item]) => {
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-
-    return compacted;
-  }
-
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
-}
-
-function setByPath(target, path, value) {
-  const parts = path.split(".");
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
-    }
-    cursor = cursor[key];
-  }
-
-  cursor[parts[parts.length - 1]] = value;
-}
-
-function deleteByPath(target, path) {
-  const parts = path.split(".");
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      return;
-    }
-    cursor = cursor[key];
-  }
-
-  delete cursor[parts[parts.length - 1]];
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function fireEvent(node, type, detail, options) {
-  const event = new CustomEvent(type, {
-    bubbles: options?.bubbles ?? true,
-    cancelable: Boolean(options?.cancelable),
-    composed: options?.composed ?? true,
-    detail,
-  });
-  node.dispatchEvent(event);
-  return event;
-}
-
-function normalizeTextKey(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
-function isUnavailableState(state) {
-  return normalizeTextKey(state?.state) === "unavailable";
-}
-
-function formatNumber(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return null;
-  }
-
-  if (Math.abs(numeric - Math.round(numeric)) < 0.05) {
-    return String(Math.round(numeric));
-  }
-
-  return numeric.toFixed(1);
-}
-
-function translateCondition(value) {
-  switch (normalizeTextKey(value)) {
-    case "clear_night":
-      return "Despejado";
-    case "cloudy":
-      return "Nublado";
-    case "exceptional":
-      return "Excepcional";
-    case "fog":
-      return "Niebla";
-    case "hail":
-      return "Granizo";
-    case "lightning":
-      return "Tormenta";
-    case "lightning_rainy":
-      return "Tormenta con lluvia";
-    case "partlycloudy":
-      return "Parcialmente nublado";
-    case "pouring":
-      return "Lluvia intensa";
-    case "rainy":
-      return "Lluvia";
-    case "snowy":
-      return "Nieve";
-    case "snowy_rainy":
-      return "Aguanieve";
-    case "sunny":
-      return "Soleado";
-    case "windy":
-      return "Ventoso";
-    case "windy_variant":
-      return "Viento variable";
-    default:
-      return String(value || "").trim() || "Tiempo";
-  }
-}
-
-function getConditionIcon(value) {
-  switch (normalizeTextKey(value)) {
-    case "clear_night":
-      return "mdi:weather-night";
-    case "cloudy":
-      return "mdi:weather-cloudy";
-    case "exceptional":
-      return "mdi:alert-circle-outline";
-    case "fog":
-      return "mdi:weather-fog";
-    case "hail":
-      return "mdi:weather-hail";
-    case "lightning":
-      return "mdi:weather-lightning";
-    case "lightning_rainy":
-      return "mdi:weather-lightning-rainy";
-    case "partlycloudy":
-      return "mdi:weather-partly-cloudy";
-    case "pouring":
-      return "mdi:weather-pouring";
-    case "rainy":
-      return "mdi:weather-rainy";
-    case "snowy":
-      return "mdi:weather-snowy";
-    case "snowy_rainy":
-      return "mdi:weather-snowy-rainy";
-    case "sunny":
-      return "mdi:weather-sunny";
-    case "windy":
-    case "windy_variant":
-      return "mdi:weather-windy";
-    default:
-      return "mdi:weather-partly-cloudy";
-  }
-}
-
-function getConditionAccent(value) {
-  switch (normalizeTextKey(value)) {
-    case "sunny":
-      return "#ffd65b";
-    case "clear_night":
-      return "#7ea7ff";
-    case "partlycloudy":
-      return "#9fd1ff";
-    case "cloudy":
-      return "#8fa4b8";
-    case "rainy":
-    case "pouring":
-    case "lightning_rainy":
-      return "#59aef9";
-    case "snowy":
-    case "snowy_rainy":
-    case "hail":
-      return "#a9d8ff";
-    case "fog":
-      return "#9ca8b7";
-    case "windy":
-    case "windy_variant":
-      return "#7dd7d0";
-    case "lightning":
-      return "#ffce6b";
-    case "exceptional":
-      return "#ff7a7a";
-    default:
-      return "var(--info-color, #71c0ff)";
-  }
-}
-
-function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-}
-
-class NodaliaWeatherCard extends HTMLElement {
-  static async getConfigElement() {
-    return document.createElement(EDITOR_TAG);
-  }
-
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
-  }
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    this._lastRenderSignature = "";
-    this._onShadowClick = this._onShadowClick.bind(this);
-  }
-
-  connectedCallback() {
-    this.shadowRoot?.addEventListener("click", this._onShadowClick);
-  }
-
-  disconnectedCallback() {
-    this.shadowRoot?.removeEventListener("click", this._onShadowClick);
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    this._lastRenderSignature = "";
-    this._render();
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getRenderSignature(hass);
-    this._hass = hass;
-
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
-      return;
-    }
-
-    this._lastRenderSignature = nextSignature;
-    this._render();
-  }
-
-  getCardSize() {
-    return 2;
-  }
-
-  _getState() {
-    return this._hass?.states?.[this._config?.entity] || null;
-  }
-
-  _getRenderSignature(hass = this._hass) {
-    const entityId = this._config?.entity || "";
-    const state = entityId ? hass?.states?.[entityId] || null : null;
-    const attrs = state?.attributes || {};
-    return JSON.stringify({
-      entityId,
-      state: String(state?.state || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      temperature: Number(attrs.temperature ?? -1),
-      humidity: Number(attrs.humidity ?? -1),
-      pressure: Number(attrs.pressure ?? -1),
-      windSpeed: Number(attrs.wind_speed ?? -1),
-      windBearing: Number(attrs.wind_bearing ?? -1),
-      visibility: Number(attrs.visibility ?? -1),
-      precipitation: Number(attrs.precipitation ?? -1),
-    });
-  }
-
-  _getTitle(state) {
-    const customName = String(this._config?.name || "").trim();
-    if (customName) {
-      return customName;
-    }
-
-    const friendlyName = String(state?.attributes?.friendly_name || "").trim();
-    return friendlyName || "Tiempo";
-  }
-
-  _getIcon(state) {
-    const customIcon = String(this._config?.icon || "").trim();
-    if (customIcon) {
-      return customIcon;
-    }
-
-    return getConditionIcon(state?.state);
-  }
-
-  _getAccentColor(state) {
-    return getConditionAccent(state?.state);
-  }
-
-  _formatTemperature(state) {
-    const value = formatNumber(state?.attributes?.temperature);
-    const unit = String(state?.attributes?.temperature_unit || "°C").trim();
-
-    if (!value) {
-      return "--";
-    }
-
-    return `${value}${unit.startsWith("°") ? unit : ` ${unit}`}`;
-  }
-
-  _formatHumidity(state) {
-    const value = formatNumber(state?.attributes?.humidity);
-    return value ? `${value}%` : null;
-  }
-
-  _formatWind(state) {
-    const value = formatNumber(state?.attributes?.wind_speed);
-    const unit = String(state?.attributes?.wind_speed_unit || "").trim();
-
-    if (!value) {
-      return null;
-    }
-
-    return unit ? `${value} ${unit}` : value;
-  }
-
-  _formatPressure(state) {
-    const value = formatNumber(state?.attributes?.pressure);
-    const unit = String(state?.attributes?.pressure_unit || "").trim();
-
-    if (!value) {
-      return null;
-    }
-
-    return unit ? `${value} ${unit}` : value;
-  }
-
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
-    if (haptics.enabled !== true) {
-      return;
-    }
-
-    const style = styleOverride || haptics.style || "selection";
-    fireEvent(this, "haptic", style, {
-      bubbles: true,
-      cancelable: false,
-      composed: true,
-    });
-
-    if (haptics.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
-    }
-  }
-
-  _performTapAction() {
-    const action = String(this._config?.tap_action || "more-info");
-    if (action === "none") {
-      return;
-    }
-
-    this._triggerHaptic();
-
-    if (action === "more-info") {
-      fireEvent(this, "hass-more-info", {
-        entityId: this._config.entity,
-      });
-    }
-  }
-
-  _onShadowClick(event) {
-    const card = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.weatherCard === "root");
-    if (!card) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    this._performTapAction();
-  }
-
-  _renderChip(icon, label, accentColor) {
-    if (!label) {
-      return "";
-    }
-
-    return `
-      <div class="weather-card__chip" style="--chip-accent:${escapeHtml(accentColor)};">
-        <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
-        <span>${escapeHtml(label)}</span>
-      </div>
-    `;
-  }
-
-  _renderEmptyState() {
-    return `
-      <ha-card class="weather-card weather-card--empty">
-        <div class="weather-card__empty-title">Nodalia Weather Card</div>
-        <div class="weather-card__empty-text">Configura \`entity\` para mostrar el tiempo.</div>
-      </ha-card>
-    `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const state = this._getState();
-    if (!this._config?.entity || !state) {
-      this.shadowRoot.innerHTML = this._renderEmptyState();
-      return;
-    }
-
-    const config = this._config;
-    const styles = config.styles || DEFAULT_CONFIG.styles;
-    const title = this._getTitle(state);
-    const icon = this._getIcon(state);
-    const accentColor = this._getAccentColor(state);
-    const showUnavailableBadge = isUnavailableState(state);
-    const conditionLabel = translateCondition(state?.state);
-    const temperatureLabel = this._formatTemperature(state);
-    const chips = [
-      config.show_humidity_chip !== false
-        ? this._renderChip("mdi:water-percent", this._formatHumidity(state), accentColor)
-        : "",
-      config.show_wind_chip !== false
-        ? this._renderChip("mdi:weather-windy", this._formatWind(state), accentColor)
-        : "",
-      config.show_pressure_chip === true
-        ? this._renderChip("mdi:gauge", this._formatPressure(state), accentColor)
-        : "",
-    ].filter(Boolean);
-    const tapEnabled = String(config.tap_action || "more-info") !== "none";
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        ha-card {
-          background:
-            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.04)), rgba(255, 255, 255, 0) 44%),
-            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.card.background}) 56%, ${styles.card.background} 100%);
-          border: 1px solid color-mix(in srgb, ${accentColor} 28%, var(--divider-color));
-          border-radius: ${styles.card.border_radius};
-          box-shadow: ${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18));
-          color: var(--primary-text-color);
-          overflow: hidden;
-          position: relative;
-        }
-
-        .weather-card__content {
-          cursor: ${tapEnabled ? "pointer" : "default"};
-          display: grid;
-          gap: ${styles.card.gap};
-          min-width: 0;
-          padding: ${styles.card.padding};
-          position: relative;
-          z-index: 1;
-        }
-
-        .weather-card__hero {
-          align-items: center;
-          display: grid;
-          gap: 12px;
-          grid-template-columns: ${styles.icon.size} minmax(0, 1fr);
-          min-width: 0;
-        }
-
-        .weather-card__icon {
-          align-items: center;
-          background: ${styles.icon.background};
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 22px;
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.08),
-            0 14px 28px rgba(0, 0, 0, 0.14);
-          color: ${styles.icon.color};
-          display: inline-flex;
-          height: ${styles.icon.size};
-          justify-content: center;
-          position: relative;
-          width: ${styles.icon.size};
-        }
-
-        .weather-card__icon ha-icon {
-          --mdc-icon-size: calc(${styles.icon.size} * 0.5);
-        }
-
-        .weather-card__unavailable-badge {
-          align-items: center;
-          background: #ff9b4a;
-          border: 2px solid ${styles.card.background};
-          border-radius: 999px;
-          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
-          color: #ffffff;
-          display: inline-flex;
-          height: 18px;
-          justify-content: center;
-          position: absolute;
-          right: -2px;
-          top: -2px;
-          width: 18px;
-          z-index: 2;
-        }
-
-        .weather-card__unavailable-badge ha-icon {
-          --mdc-icon-size: 11px;
-          height: 11px;
-          width: 11px;
-        }
-
-        .weather-card__copy {
-          display: grid;
-          gap: 10px;
-          min-width: 0;
-        }
-
-        .weather-card__header {
-          align-items: start;
-          display: flex;
-          gap: 10px;
-          justify-content: space-between;
-          min-width: 0;
-        }
-
-        .weather-card__title {
-          font-size: ${styles.title_size};
-          font-weight: 700;
-          line-height: 1.2;
-          min-width: 0;
-        }
-
-        .weather-card__chips {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          justify-content: flex-end;
-        }
-
-        .weather-card__chip {
-          align-items: center;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid color-mix(in srgb, var(--chip-accent) 18%, rgba(255, 255, 255, 0.08));
-          border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-          color: var(--primary-text-color);
-          display: inline-flex;
-          gap: 6px;
-          height: ${styles.chip_height};
-          line-height: 1;
-          padding: ${styles.chip_padding};
-          white-space: nowrap;
-        }
-
-        .weather-card__chip ha-icon {
-          --mdc-icon-size: 13px;
-          color: var(--chip-accent);
-        }
-
-        .weather-card__chip span {
-          font-size: ${styles.chip_font_size};
-          font-weight: 700;
-        }
-
-        .weather-card__metrics {
-          display: grid;
-          gap: 4px;
-          min-width: 0;
-        }
-
-        .weather-card__temperature {
-          font-size: ${styles.temperature_size};
-          font-weight: 800;
-          letter-spacing: -0.03em;
-          line-height: 1;
-        }
-
-        .weather-card__condition {
-          color: var(--secondary-text-color);
-          font-size: ${styles.condition_size};
-          font-weight: 600;
-          line-height: 1.3;
-        }
-
-        .weather-card--empty {
-          display: grid;
-          gap: 8px;
-          padding: 16px;
-        }
-
-        .weather-card__empty-title {
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .weather-card__empty-text {
-          color: var(--secondary-text-color);
-          font-size: 13px;
-          line-height: 1.5;
-        }
-
-        @media (max-width: 520px) {
-          .weather-card__header {
-            align-items: start;
-            flex-direction: column;
-          }
-
-          .weather-card__chips {
-            justify-content: flex-start;
-          }
-        }
-      </style>
-      <ha-card class="weather-card">
-        <div class="weather-card__content" data-weather-card="root">
-          <div class="weather-card__hero">
-            <div class="weather-card__icon">
-              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
-              ${showUnavailableBadge ? `<span class="weather-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
-            </div>
-            <div class="weather-card__copy">
-              <div class="weather-card__header">
-                <div class="weather-card__title">${escapeHtml(title)}</div>
-                ${chips.length ? `<div class="weather-card__chips">${chips.join("")}</div>` : ""}
-              </div>
-              <div class="weather-card__metrics">
-                <div class="weather-card__temperature">${escapeHtml(temperatureLabel)}</div>
-                ${config.show_condition !== false ? `<div class="weather-card__condition">${escapeHtml(conditionLabel)}</div>` : ""}
-              </div>
-            </div>
-          </div>
-        </div>
-      </ha-card>
-    `;
-  }
-}
-
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaWeatherCard);
-}
-
-class NodaliaWeatherCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    this._entityOptionsSignature = "";
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getEntityOptionsSignature(hass);
-    const shouldRender =
-      !this._hass ||
-      nextSignature !== this._entityOptionsSignature ||
-      !this.shadowRoot?.innerHTML;
-
-    this._hass = hass;
-    this._entityOptionsSignature = nextSignature;
-
-    if (shouldRender) {
-      this._render();
-    }
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    this._render();
-  }
-
-  _getEntityOptionsSignature(hass) {
-    if (!hass?.states) {
-      return "";
-    }
-
-    return Object.keys(hass.states)
-      .filter(entityId => entityId.startsWith("weather."))
-      .sort((left, right) => left.localeCompare(right, "es"))
-      .join("|");
-  }
-
-  _emitConfig() {
-    const nextConfig = deepClone(this._config);
-    this._config = normalizeConfig(compactConfig(nextConfig));
-    this._render();
-    fireEvent(this, "config-changed", {
-      config: compactConfig(nextConfig),
-    });
-  }
-
-  _setFieldValue(path, value) {
-    if (value === undefined || value === null || value === "") {
-      deleteByPath(this._config, path);
-      return;
-    }
-
-    setByPath(this._config, path, value);
-  }
-
-  _readFieldValue(input) {
-    const valueType = input.dataset.valueType || "string";
-    if (valueType === "boolean") {
-      return Boolean(input.checked);
-    }
-    return input.value;
-  }
-
-  _onShadowInput(event) {
-    const input = event
-      .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement);
-
-    if (!input?.dataset?.field) {
-      return;
-    }
-
-    event.stopPropagation();
-    this._setFieldValue(input.dataset.field, this._readFieldValue(input));
-    this._config = normalizeConfig(compactConfig(this._config));
-
-    if (event.type === "change") {
-      this._emitConfig();
-    }
-  }
-
-  _renderTextField(label, field, value, options = {}) {
-    const inputValue = value === undefined || value === null ? "" : String(value);
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-
-    return `
-      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
-        <input
-          type="${escapeHtml(options.type || "text")}"
-          data-field="${escapeHtml(field)}"
-          value="${escapeHtml(inputValue)}"
-          ${placeholder}
-        />
-      </label>
-    `;
-  }
-
-  _renderCheckboxField(label, field, checked) {
-    return `
-      <label class="editor-toggle">
-        <input
-          type="checkbox"
-          data-field="${escapeHtml(field)}"
-          data-value-type="boolean"
-          ${checked ? "checked" : ""}
-        />
-        <span>${escapeHtml(label)}</span>
-      </label>
-    `;
-  }
-
-  _renderSelectField(label, field, value, options) {
-    return `
-      <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
-        <select data-field="${escapeHtml(field)}">
-          ${options.map(option => `
-            <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-              ${escapeHtml(option.label)}
-            </option>
-          `).join("")}
-        </select>
-      </label>
-    `;
-  }
-
-  _getEntityOptionsMarkup() {
-    const weatherIds = Object.keys(this._hass?.states || {})
-      .filter(entityId => entityId.startsWith("weather."))
-      .sort((left, right) => left.localeCompare(right, "es"));
-
-    return `
-      <datalist id="weather-card-entities">
-        ${weatherIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-    `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        .editor {
-          color: var(--primary-text-color);
-          display: grid;
-          gap: 16px;
-        }
-
-        .editor-section {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 18px;
-          display: grid;
-          gap: 14px;
-          padding: 16px;
-        }
-
-        .editor-section__header {
-          display: grid;
-          gap: 4px;
-        }
-
-        .editor-section__title {
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .editor-section__hint {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-        }
-
-        .editor-grid {
-          display: grid;
-          gap: 12px;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .editor-field,
-        .editor-toggle {
-          display: grid;
-          gap: 6px;
-        }
-
-        .editor-field--full {
-          grid-column: 1 / -1;
-        }
-
-        .editor-field span,
-        .editor-toggle span {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .editor-field input,
-        .editor-field select {
-          appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 14px;
-          color: var(--primary-text-color);
-          font: inherit;
-          min-width: 0;
-          outline: none;
-          padding: 10px 12px;
-          width: 100%;
-        }
-
-        .editor-toggle {
-          align-items: center;
-          grid-auto-flow: column;
-          justify-content: start;
-        }
-
-        .editor-toggle input {
-          accent-color: var(--primary-color);
-        }
-
-        @media (max-width: 720px) {
-          .editor-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      </style>
-      <div class="editor">
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad meteorologica principal y ajustes de contenido.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Entidad", "entity", config.entity, {
-              placeholder: "weather.casa",
-            })}
-            ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Tiempo",
-            })}
-            ${this._renderTextField("Icono", "icon", config.icon, {
-              placeholder: "mdi:weather-partly-cloudy",
-            })}
-            ${this._renderSelectField(
-              "Accion al tocar",
-              "tap_action",
-              config.tap_action || "more-info",
-              [
-                { value: "more-info", label: "More info" },
-                { value: "none", label: "Sin accion" },
-              ],
-            )}
-            ${this._renderCheckboxField("Mostrar condicion", "show_condition", config.show_condition !== false)}
-            ${this._renderCheckboxField("Mostrar chip humedad", "show_humidity_chip", config.show_humidity_chip !== false)}
-            ${this._renderCheckboxField("Mostrar chip viento", "show_wind_chip", config.show_wind_chip !== false)}
-            ${this._renderCheckboxField("Mostrar chip presion", "show_pressure_chip", config.show_pressure_chip === true)}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica al tocar la tarjeta.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
-            ${this._renderSelectField(
-              "Estilo haptico",
-              "haptics.style",
-              hapticStyle,
-              [
-                { value: "selection", label: "Selection" },
-                { value: "light", label: "Light" },
-                { value: "medium", label: "Medium" },
-                { value: "heavy", label: "Heavy" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "failure", label: "Failure" },
-              ],
-            )}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales base de la tarjeta.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
-            ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
-            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
-            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-            ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamano icono", "styles.icon.size", config.styles.icon.size)}
-            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-            ${this._renderTextField("Tamano temperatura", "styles.temperature_size", config.styles.temperature_size)}
-            ${this._renderTextField("Tamano condicion", "styles.condition_size", config.styles.condition_size)}
-            ${this._renderTextField("Alto burbuja info", "styles.chip_height", config.styles.chip_height)}
-            ${this._renderTextField("Texto burbuja info", "styles.chip_font_size", config.styles.chip_font_size)}
-            ${this._renderTextField("Padding burbuja info", "styles.chip_padding", config.styles.chip_padding)}
-          </div>
-        </section>
-        ${this._getEntityOptionsMarkup()}
-      </div>
-    `;
-
-    this.shadowRoot.querySelectorAll('input[data-field="entity"]').forEach(input => {
-      input.setAttribute("list", "weather-card-entities");
-    });
-  }
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaWeatherCardEditor);
-}
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: CARD_TAG,
-  name: "Nodalia Weather Card",
-  description: "Tarjeta de tiempo elegante para Home Assistant",
-  preview: true,
-});
-
-}
-{
-const CARD_TAG = "nodalia-graph-card";
-const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.0";
-const HAPTIC_PATTERNS = {
-  selection: 8,
-  light: 10,
-  medium: 16,
-  heavy: 24,
-  success: [10, 40, 10],
-  warning: [20, 50, 12],
-  failure: [12, 40, 12, 40, 18],
-};
-const SERIES_COLORS = [
-  "#f29f05",
-  "#42a5f5",
-  "#7fd0c8",
-  "#f56aa0",
-  "#b993ff",
-  "#7ad66f",
-];
-
-const DEFAULT_CONFIG = {
-  entity: "",
-  entities: [],
-  name: "",
-  icon: "",
-  min: "",
-  max: "",
-  hours_to_show: 24,
-  points: 48,
-  show_header: true,
-  show_icon: true,
-  show_value: true,
-  show_legend: true,
-  show_fill: true,
-  show_unavailable_badge: true,
-  tap_action: "more-info",
-  haptics: {
-    enabled: false,
-    style: "selection",
-    fallback_vibrate: false,
-  },
-  styles: {
-    card: {
-      background: "var(--ha-card-background)",
-      border: "1px solid var(--divider-color)",
-      border_radius: "30px",
-      box_shadow: "var(--ha-card-box-shadow)",
-      padding: "16px",
-      gap: "12px",
-    },
-    icon: {
-      color: "var(--primary-text-color)",
-      size: "24px",
-    },
-    title_size: "14px",
-    value_size: "46px",
-    unit_size: "18px",
-    legend_size: "12px",
-    chart_height: "150px",
-    line_width: "3px",
-  },
-};
-
-const STUB_CONFIG = {
-  name: "Humedad",
-  entities: [
-    {
-      entity: "sensor.termostato_dormitorios_humedad",
-      name: "Dormitorio de Rocio",
-      color: "#f29f05",
-    },
-    {
-      entity: "sensor.termostato_habitaciones_comunes_humedad",
-      name: "Pasillo",
-      color: "#42a5f5",
-    },
-  ],
-};
-
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function deepClone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-  return JSON.parse(JSON.stringify(value));
-}
-
-function mergeConfig(base, override) {
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
-  }
-
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-
-  keys.forEach(key => {
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-
-    if (overrideValue === undefined) {
-      result[key] = deepClone(baseValue);
-      return;
-    }
-
-    if (Array.isArray(overrideValue)) {
-      result[key] = deepClone(overrideValue);
-      return;
-    }
-
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      result[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-
-    result[key] = overrideValue;
-  });
-
-  return result;
-}
-
-function compactConfig(value) {
-  if (Array.isArray(value)) {
-    return value.map(item => compactConfig(item)).filter(item => item !== undefined);
-  }
-
-  if (isObject(value)) {
-    const compacted = {};
-
-    Object.entries(value).forEach(([key, item]) => {
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-
-    return compacted;
-  }
-
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
-}
-
-function setByPath(target, path, value) {
-  const parts = path.split(".");
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
-    }
-    cursor = cursor[key];
-  }
-
-  cursor[parts[parts.length - 1]] = value;
-}
-
-function deleteByPath(target, path) {
-  const parts = path.split(".");
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      return;
-    }
-    cursor = cursor[key];
-  }
-
-  delete cursor[parts[parts.length - 1]];
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function fireEvent(node, type, detail, options) {
-  const event = new CustomEvent(type, {
-    bubbles: options?.bubbles ?? true,
-    cancelable: Boolean(options?.cancelable),
-    composed: options?.composed ?? true,
-    detail,
-  });
-  node.dispatchEvent(event);
-  return event;
-}
-
-function normalizeTextKey(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
-function isUnavailableState(state) {
-  return normalizeTextKey(state?.state) === "unavailable";
-}
-
-function parseNumber(value) {
-  const numeric = Number(String(value ?? "").replace(",", "."));
-  return Number.isFinite(numeric) ? numeric : null;
-}
-
-function parseHistoryTimestamp(value) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value > 1e12 ? value : value * 1000;
-  }
-
-  const parsed = Date.parse(String(value ?? ""));
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function formatNumberValue(value, decimals = 0) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return "--";
-  }
-
-  return numeric.toLocaleString("es-ES", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
-}
-
-function inferDecimals(rawValue) {
-  const text = String(rawValue ?? "").trim().replace(",", ".");
-  if (!text.includes(".")) {
-    return 0;
-  }
-  return Math.min(3, text.split(".")[1].length);
-}
-
-function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function formatHoverTimestamp(value) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  return date.toLocaleString("es-ES", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function resolveEntityEntries(config) {
-  const source = Array.isArray(config?.entities) && config.entities.length
-    ? config.entities
-    : config?.entity
-      ? [{ entity: config.entity, name: config.name || "" }]
-      : [];
-
-  return source
-    .map((entry, index) => {
-      if (typeof entry === "string") {
-        return {
-          entity: entry.trim(),
-          name: "",
-          color: SERIES_COLORS[index % SERIES_COLORS.length],
-        };
-      }
-
-      if (!isObject(entry) || !entry.entity) {
-        return null;
-      }
-
-      return {
-        entity: String(entry.entity).trim(),
-        name: String(entry.name || "").trim(),
-        color: String(entry.color || SERIES_COLORS[index % SERIES_COLORS.length]).trim(),
-      };
-    })
-    .filter(entry => entry?.entity);
-}
-
-function normalizeConfig(rawConfig) {
-  const merged = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-  merged.entities = resolveEntityEntries(merged);
-  return merged;
-}
-
-function buildSmoothPath(points) {
-  if (!Array.isArray(points) || points.length === 0) {
-    return "";
-  }
-
-  if (points.length === 1) {
-    return `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
-  }
-
-  let path = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
-
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const p0 = points[index - 1] || points[index];
-    const p1 = points[index];
-    const p2 = points[index + 1];
-    const p3 = points[index + 2] || p2;
-
-    const cp1x = p1.x + ((p2.x - p0.x) / 6);
-    const cp1y = p1.y + ((p2.y - p0.y) / 6);
-    const cp2x = p2.x - ((p3.x - p1.x) / 6);
-    const cp2y = p2.y - ((p3.y - p1.y) / 6);
-
-    path += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
-  }
-
-  return path;
-}
-
-function buildAreaPath(points, bottomY) {
-  if (!Array.isArray(points) || points.length === 0) {
-    return "";
-  }
-
-  const linePath = buildSmoothPath(points);
-  const first = points[0];
-  const last = points[points.length - 1];
-  return `${linePath} L ${last.x.toFixed(2)} ${bottomY.toFixed(2)} L ${first.x.toFixed(2)} ${bottomY.toFixed(2)} Z`;
-}
-
-function buildInterpolatedSamples(events, startMs, endMs, pointsCount, fallbackValue = null) {
-  if (!Array.isArray(events) || !events.length) {
-    if (!Number.isFinite(fallbackValue)) {
-      return [];
-    }
-
-    return Array.from({ length: pointsCount }, (_item, index) => ({
-      ts: startMs + (((endMs - startMs) * index) / Math.max(pointsCount - 1, 1)),
-      value: fallbackValue,
-    }));
-  }
-  const spanMs = Math.max(endMs - startMs, 1);
-  const bucketSize = spanMs / Math.max(pointsCount - 1, 1);
-  const buckets = Array.from({ length: pointsCount }, () => []);
-
-  events.forEach(event => {
-    const clampedTs = clamp(event.ts, startMs, endMs);
-    const rawIndex = Math.floor((clampedTs - startMs) / Math.max(bucketSize, 1));
-    const bucketIndex = clamp(rawIndex, 0, pointsCount - 1);
-    buckets[bucketIndex].push(event.value);
-  });
-
-  let lastValue = Number.isFinite(fallbackValue)
-    ? fallbackValue
-    : buckets.flat().find(Number.isFinite);
-
-  return buckets.map((bucket, index) => {
-    const sampleTs = startMs + (((endMs - startMs) * index) / Math.max(pointsCount - 1, 1));
-    if (bucket.length) {
-      lastValue = bucket.reduce((sum, value) => sum + value, 0) / bucket.length;
-    }
-
-    return {
-      ts: sampleTs,
-      value: Number.isFinite(lastValue) ? lastValue : 0,
-    };
-  });
-}
-
-class NodaliaGraphCard extends HTMLElement {
-  static async getConfigElement() {
-    return document.createElement(EDITOR_TAG);
-  }
-
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
-  }
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    this._historySeries = [];
-    this._historyKey = "";
-    this._historyLoadedAt = 0;
-    this._historyAbortController = null;
-    this._hoverIndex = null;
-    this._hoverChart = null;
-    this._hoverFrame = 0;
-    this._pendingHoverIndex = null;
-    this._lastRenderSignature = "";
-    this._onShadowClick = this._onShadowClick.bind(this);
-    this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
-    this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this.shadowRoot.addEventListener("pointermove", this._onShadowPointerMove);
-    this.shadowRoot.addEventListener("pointerleave", this._onShadowPointerLeave);
-  }
-
-  disconnectedCallback() {
-    this._historyAbortController?.abort();
-    this._historyAbortController = null;
-    if (this._hoverFrame) {
-      window.cancelAnimationFrame(this._hoverFrame);
-      this._hoverFrame = 0;
-    }
-    this._pendingHoverIndex = null;
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    this._historySeries = [];
-    this._historyKey = "";
-    this._historyLoadedAt = 0;
-    this._hoverIndex = null;
-    this._lastRenderSignature = "";
-    this._requestHistory();
-    this._render();
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getRenderSignature(hass);
-    this._hass = hass;
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
-      return;
-    }
-    this._lastRenderSignature = nextSignature;
-    this._requestHistory();
-    this._render();
-  }
-
-  getCardSize() {
-    return 4;
-  }
-
-  getGridOptions() {
-    return {
-      rows: 4,
-      columns: 12,
-      min_rows: 3,
-      min_columns: 6,
-    };
-  }
-
-  _getEntityEntries() {
-    return resolveEntityEntries(this._config);
-  }
-
-  _getRenderSignature(hass = this._hass) {
-    const trackedStates = this._getEntityEntries().map(entry => {
-      const state = entry?.entity ? hass?.states?.[entry.entity] || null : null;
-      return {
-        entity: String(entry?.entity || ""),
-        state: String(state?.state || ""),
-        friendlyName: String(state?.attributes?.friendly_name || ""),
-        unit: String(state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || ""),
-      };
-    });
-
-    return JSON.stringify({
-      trackedStates,
-      activeSeries: String(this._activeSeriesEntityId || ""),
-      selectedSeries: String(this._selectedSeriesEntityId || ""),
-    });
-  }
-
-  _getPrimaryEntityId() {
-    return this._getEntityEntries()[0]?.entity || "";
-  }
-
-  _getPrimaryState() {
-    const primaryEntityId = this._getPrimaryEntityId();
-    return primaryEntityId ? this._hass?.states?.[primaryEntityId] || null : null;
-  }
-
-  _getSelectedEntityId() {
-    const entityIds = this._getEntityEntries().map(entry => entry.entity);
-    return entityIds.includes(this._activeSeriesEntityId) ? this._activeSeriesEntityId : "";
-  }
-
-  _getTitle() {
-    return this._config?.name || "Grafica";
-  }
-
-  _getIcon() {
-    return this._config?.icon || this._getPrimaryState()?.attributes?.icon || "mdi:chart-line";
-  }
-
-  _getUnit() {
-    const entries = this._getEntityEntries();
-    const units = entries
-      .map(entry => {
-        const state = this._hass?.states?.[entry.entity];
-        return String(
-          state?.attributes?.unit_of_measurement
-          || state?.attributes?.native_unit_of_measurement
-          || "",
-        ).trim();
-      })
-      .filter(Boolean);
-
-    return units.length && units.every(unit => unit === units[0]) ? units[0] : "";
-  }
-
-  _getDecimals() {
-    const entry = this._getEntityEntries()[0];
-    if (!entry) {
-      return 0;
-    }
-
-    const state = this._hass?.states?.[entry.entity];
-    return inferDecimals(state?.state);
-  }
-
-  _getCurrentValuesText() {
-    const selectedEntityId = this._getSelectedEntityId();
-    const primaryEntry = this._getEntityEntries().find(entry => entry.entity === selectedEntityId) || this._getEntityEntries()[0];
-    const primaryState = primaryEntry ? this._hass?.states?.[primaryEntry.entity] : null;
-    const primaryValue = parseNumber(primaryState?.state);
-
-    if (!Number.isFinite(primaryValue)) {
-      return { value: "--", unit: this._getUnit() };
-    }
-
-    const decimals = this._getDecimals();
-    return {
-      value: formatNumberValue(primaryValue, decimals),
-      unit: String(
-        primaryState?.attributes?.unit_of_measurement
-        || primaryState?.attributes?.native_unit_of_measurement
-        || this._getUnit(),
-      ).trim(),
-    };
-  }
-
-  _getLegendEntries() {
-    const selectedEntityId = this._getSelectedEntityId();
-    return this._getEntityEntries().map((entry, index) => {
-      const state = this._hass?.states?.[entry.entity];
-      return {
-        entity: entry.entity,
-        name: entry.name || state?.attributes?.friendly_name || entry.entity,
-        color: entry.color || SERIES_COLORS[index % SERIES_COLORS.length],
-        active: !selectedEntityId || selectedEntityId === entry.entity,
-        muted: Boolean(selectedEntityId) && selectedEntityId !== entry.entity,
-      };
-    });
-  }
-
-  _canRunTapAction() {
-    return (this._config?.tap_action || "more-info") !== "none" && Boolean(this._getPrimaryEntityId());
-  }
-
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
-    if (haptics.enabled !== true) {
-      return;
-    }
-
-    const style = styleOverride || haptics.style || "selection";
-    fireEvent(this, "haptic", style, {
-      bubbles: true,
-      cancelable: false,
-      composed: true,
-    });
-
-    if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
-    }
-  }
-
-  _openMoreInfo() {
-    const entityId = this._getPrimaryEntityId();
-    if (!entityId) {
-      return;
-    }
-
-    fireEvent(this, "hass-more-info", {
-      entityId,
-    });
-  }
-
-  _onShadowClick(event) {
-    const seriesChip = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.graphSeries);
-
-    if (seriesChip) {
-      event.preventDefault();
-      event.stopPropagation();
-      const entityId = seriesChip.dataset.graphSeries;
-      this._activeSeriesEntityId = this._activeSeriesEntityId === entityId ? null : entityId;
-      this._hoverIndex = null;
-      this._triggerHaptic("selection");
-      this._render();
-      return;
-    }
-
-    const target = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.graphAction === "primary");
-
-    if (!target || !this._canRunTapAction()) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    this._triggerHaptic();
-    this._openMoreInfo();
-  }
-
-  _getVisibleSeries(series) {
-    const selectedEntityId = this._getSelectedEntityId();
-    if (!selectedEntityId) {
-      return series;
-    }
-
-    return series.filter(entry => entry.entity === selectedEntityId);
-  }
-
-  _onShadowPointerMove(event) {
-    if (
-      (typeof event.pointerType === "string" && event.pointerType === "touch")
-      || (typeof window !== "undefined" && typeof window.matchMedia === "function" && !window.matchMedia("(hover: hover)").matches)
-    ) {
-      return;
-    }
-
-    const surface = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.graphSurface === "chart");
-
-    if (!surface || !this._hoverChart?.entries?.length) {
-      this._scheduleHoverRender(null);
-      return;
-    }
-
-    const sampleCount = this._hoverChart.entries[0]?.samples?.length || 0;
-    if (sampleCount <= 1) {
-      return;
-    }
-
-    const rect = surface.getBoundingClientRect();
-    if (rect.width <= 0) {
-      return;
-    }
-
-    const relativeX = clamp(event.clientX - rect.left, 0, rect.width);
-    const nextIndex = Math.round((relativeX / rect.width) * (sampleCount - 1));
-
-    this._scheduleHoverRender(nextIndex);
-  }
-
-  _onShadowPointerLeave() {
-    this._scheduleHoverRender(null);
-  }
-
-  _scheduleHoverRender(nextIndex) {
-    if (nextIndex === this._hoverIndex && !this._hoverFrame) {
-      return;
-    }
-
-    this._pendingHoverIndex = nextIndex;
-
-    if (this._hoverFrame) {
-      return;
-    }
-
-    this._hoverFrame = window.requestAnimationFrame(() => {
-      this._hoverFrame = 0;
-      const resolvedIndex = this._pendingHoverIndex;
-      this._pendingHoverIndex = null;
-
-      if (resolvedIndex === this._hoverIndex) {
-        return;
-      }
-
-      this._hoverIndex = resolvedIndex;
-      this._render();
-    });
-  }
-
-  _getHistoryRequestKey() {
-    const entries = this._getEntityEntries();
-    return JSON.stringify({
-      entities: entries.map(entry => entry.entity),
-      hours: Number(this._config?.hours_to_show) || DEFAULT_CONFIG.hours_to_show,
-      points: Number(this._config?.points) || DEFAULT_CONFIG.points,
-    });
-  }
-
-  _getStatisticsPeriod() {
-    const hoursToShow = Math.max(1, Number(this._config?.hours_to_show) || DEFAULT_CONFIG.hours_to_show);
-
-    if (hoursToShow <= 48) {
-      return "5minute";
-    }
-
-    if (hoursToShow <= 24 * 14) {
-      return "hour";
-    }
-
-    return "day";
-  }
-
-  async _fetchStatistics(start, end, entityIds) {
-    if (typeof this._hass?.callWS !== "function") {
-      return null;
-    }
-
-    try {
-      const groups = await Promise.all(entityIds.map(async entityId => {
-        const result = await this._hass.callWS({
-          type: "recorder/statistics_during_period",
-          start_time: start.toISOString(),
-          end_time: end.toISOString(),
-          statistic_ids: [entityId],
-          period: this._getStatisticsPeriod(),
-          types: ["mean", "min", "max", "state", "sum"],
-        });
-
-        return [entityId, Array.isArray(result?.[entityId]) ? result[entityId] : []];
-      }));
-
-      return Object.fromEntries(groups);
-    } catch (_error) {
-      return null;
-    }
-  }
-
-  async _fetchHistory(start, end, entityIds, signal) {
-    const groups = await Promise.all(entityIds.map(async entityId => {
-      if (typeof this._hass?.callWS === "function") {
-        try {
-          const result = await this._hass.callWS({
-            type: "history/history_during_period",
-            start_time: start.toISOString(),
-            end_time: end.toISOString(),
-            entity_ids: [entityId],
-            significant_changes_only: false,
-          });
-
-          const rows = Array.isArray(result?.[0]) ? result[0] : Array.isArray(result?.[entityId]) ? result[entityId] : [];
-          return [entityId, rows];
-        } catch (_error) {
-          // Fall through to REST.
-        }
-      }
-
-      if (typeof this._hass?.auth?.fetchWithAuth === "function") {
-        const query = [
-          `filter_entity_id=${encodeURIComponent(entityId)}`,
-          `end_time=${encodeURIComponent(end.toISOString())}`,
-        ].join("&");
-
-        const response = await this._hass.auth.fetchWithAuth(
-          `/api/history/period/${encodeURIComponent(start.toISOString())}?${query}`,
-          { signal },
-        );
-
-        if (!response.ok) {
-          throw new Error(`History request failed with ${response.status}`);
-        }
-
-        const result = await response.json();
-        return [entityId, Array.isArray(result?.[0]) ? result[0] : []];
-      }
-
-      return [entityId, []];
-    }));
-
-    return Object.fromEntries(groups);
-  }
-
-  _normalizeStatisticsSeries(raw) {
-    const entries = this._getLegendEntries();
-
-    return entries.map(entry => {
-      const state = this._hass?.states?.[entry.entity];
-      const rows = Array.isArray(raw?.[entry.entity]) ? raw[entry.entity] : [];
-      const samples = rows
-        .map(item => {
-          const ts = parseHistoryTimestamp(item.start ?? item.end);
-          const value = parseNumber(item.mean ?? item.state ?? item.max ?? item.min ?? item.sum);
-          return { ts, value };
-        })
-        .filter(item => Number.isFinite(item.ts) && Number.isFinite(item.value))
-        .sort((left, right) => left.ts - right.ts);
-
-      const currentValue = parseNumber(state?.state);
-
-      return {
-        ...entry,
-        unit: String(
-          state?.attributes?.unit_of_measurement
-          || state?.attributes?.native_unit_of_measurement
-          || "",
-        ).trim(),
-        currentValue: Number.isFinite(currentValue) ? currentValue : samples[samples.length - 1]?.value ?? 0,
-        rawEventCount: samples.length,
-        samples,
-      };
-    });
-  }
-
-  _normalizeHistorySeries(raw, start, end) {
-    const entries = this._getLegendEntries();
-    const historyByEntity = new Map();
-    const pointsCount = Math.max(20, Number(this._config?.points) || DEFAULT_CONFIG.points);
-    const startMs = start.getTime();
-    const endMs = end.getTime();
-
-    if (Array.isArray(raw)) {
-      raw.forEach((group, index) => {
-        if (!Array.isArray(group)) {
-          return;
-        }
-
-        const resolvedEntityId = group[0]?.entity_id || entries[index]?.entity;
-        if (resolvedEntityId) {
-          historyByEntity.set(resolvedEntityId, group);
-        }
-      });
-    } else if (isObject(raw)) {
-      Object.entries(raw).forEach(([entityId, group]) => {
-        if (Array.isArray(group)) {
-          historyByEntity.set(entityId, group);
-        }
-      });
-    }
-
-    return entries.map(entry => {
-      const state = this._hass?.states?.[entry.entity];
-      const rawGroup = historyByEntity.get(entry.entity) || [];
-      const events = rawGroup
-        .map(item => ({
-          ts: parseHistoryTimestamp(
-            item.last_changed
-            || item.last_updated
-            || item.lc
-            || item.lu
-            || item.last_changed_ts
-            || item.last_updated_ts,
-          ),
-          value: parseNumber(item.state ?? item.s ?? item.value ?? item.v),
-        }))
-        .filter(item => Number.isFinite(item.ts) && Number.isFinite(item.value))
-        .sort((left, right) => left.ts - right.ts);
-
-      const currentValue = parseNumber(state?.state);
-      if (Number.isFinite(currentValue)) {
-        const nowTs = end.getTime();
-        if (!events.length || Math.abs(events[events.length - 1].ts - nowTs) > 1000) {
-          events.push({ ts: nowTs, value: currentValue });
-        }
-      }
-      const samples = buildInterpolatedSamples(events, startMs, endMs, pointsCount, currentValue);
-
-      return {
-        ...entry,
-        unit: String(
-          state?.attributes?.unit_of_measurement
-          || state?.attributes?.native_unit_of_measurement
-          || "",
-        ).trim(),
-        currentValue: Number.isFinite(currentValue) ? currentValue : samples[samples.length - 1]?.value ?? 0,
-        rawEventCount: events.length,
-        samples,
-      };
-    });
-  }
-
-  async _requestHistory() {
-    if (!this._hass || !this._getEntityEntries().length) {
-      return;
-    }
-
-    const requestKey = this._getHistoryRequestKey();
-    if (
-      requestKey === this._historyKey &&
-      this._historySeries.length &&
-      Date.now() - this._historyLoadedAt < 180000
-    ) {
-      return;
-    }
-
-    this._historyAbortController?.abort();
-    const controller = new AbortController();
-    this._historyAbortController = controller;
-
-    const end = new Date();
-    const hoursToShow = Math.max(1, Number(this._config?.hours_to_show) || DEFAULT_CONFIG.hours_to_show);
-    const start = new Date(end.getTime() - (hoursToShow * 60 * 60 * 1000));
-
-    try {
-      const entityIds = this._getEntityEntries().map(entry => entry.entity);
-      const raw = await this._fetchHistory(start, end, entityIds, controller.signal);
-      if (controller.signal.aborted) {
-        return;
-      }
-
-      const normalized = this._normalizeHistorySeries(raw || {}, start, end);
-      const hasMeaningfulHistory = normalized.some(entry => entry.rawEventCount > 1 && entry.samples.length > 1);
-
-      if (hasMeaningfulHistory) {
-        this._historySeries = normalized;
-        this._historyKey = requestKey;
-        this._historyLoadedAt = Date.now();
-        this._render();
-        return;
-      }
-
-      const statisticsRaw = await this._fetchStatistics(start, end, entityIds);
-      if (controller.signal.aborted) {
-        return;
-      }
-
-      const statisticsSeries = this._normalizeStatisticsSeries(statisticsRaw || {});
-      const hasMeaningfulStatistics = statisticsSeries.some(entry => entry.rawEventCount > 1 && entry.samples.length > 1);
-      this._historySeries = statisticsSeries;
-      this._historyKey = hasMeaningfulStatistics ? requestKey : "";
-      this._historyLoadedAt = hasMeaningfulStatistics ? Date.now() : 0;
-      this._render();
-    } catch (_error) {
-      if (controller.signal.aborted) {
-        return;
-      }
-
-      this._historySeries = [];
-      this._historyKey = "";
-      this._historyLoadedAt = 0;
-      this._render();
-    } finally {
-      if (this._historyAbortController === controller) {
-        this._historyAbortController = null;
-      }
-    }
-  }
-
-  _getGraphBounds(series) {
-    const configuredMin = Number(this._config?.min);
-    const configuredMax = Number(this._config?.max);
-    const values = series.flatMap(entry => entry.samples.map(sample => sample.value)).filter(Number.isFinite);
-
-    let min = Number.isFinite(configuredMin) ? configuredMin : Math.min(...values);
-    let max = Number.isFinite(configuredMax) ? configuredMax : Math.max(...values);
-
-    if (!Number.isFinite(min) || !Number.isFinite(max)) {
-      min = 0;
-      max = 100;
-    }
-
-    if (!Number.isFinite(configuredMin)) {
-      const spread = Math.max(max - min, 1);
-      min -= spread * 0.14;
-    }
-
-    if (!Number.isFinite(configuredMax)) {
-      const spread = Math.max(max - min, 1);
-      max += spread * 0.08;
-    }
-
-    if (max <= min) {
-      max = min + 1;
-    }
-
-    return { min, max };
-  }
-
-  _buildChartSeries(series) {
-    const width = 100;
-    const height = 56;
-    const paddingX = -5.5;
-    const paddingTop = 3;
-    const paddingBottom = 2;
-    const bounds = this._getGraphBounds(series);
-    const range = Math.max(bounds.max - bounds.min, 1);
-
-    return {
-      width,
-      height,
-      entries: series.map(entry => {
-        if (!entry.samples.length) {
-          return {
-            ...entry,
-            points: [],
-            linePath: "",
-            fillPath: "",
-          };
-        }
-
-        const points = entry.samples.map((sample, index) => {
-          const x = paddingX + ((width - (paddingX * 2)) * index) / Math.max(entry.samples.length - 1, 1);
-          const normalized = clamp((sample.value - bounds.min) / range, 0, 1);
-          const y = paddingTop + ((height - paddingTop - paddingBottom) * (1 - normalized));
-          return { x, y };
-        });
-
-        return {
-          ...entry,
-          points,
-          linePath: buildSmoothPath(points),
-          fillPath: buildAreaPath(points, height - paddingBottom),
-        };
-      }),
-    };
-  }
-
-  _getHoverPayload(chart) {
-    if (!this._hoverChart || !chart?.entries?.length || this._hoverIndex === null) {
-      return null;
-    }
-
-    const boundedIndex = clamp(this._hoverIndex, 0, Math.max((chart.entries[0]?.samples?.length || 1) - 1, 0));
-    const primaryEntry = chart.entries[0];
-    const primarySample = primaryEntry?.samples?.[boundedIndex];
-    const anchorPoint = primaryEntry?.points?.[boundedIndex];
-
-    if (!primarySample || !anchorPoint) {
-      return null;
-    }
-
-    const decimals = this._getDecimals();
-    return {
-      index: boundedIndex,
-      label: formatHoverTimestamp(primarySample.ts),
-      x: anchorPoint.x,
-      values: chart.entries
-        .map(entry => {
-          const sample = entry.samples?.[boundedIndex];
-          if (!sample) {
-            return null;
-          }
-
-          return {
-            color: entry.color,
-            name: entry.name,
-            value: formatNumberValue(sample.value, decimals),
-            unit: entry.unit || this._getUnit(),
-            point: entry.points?.[boundedIndex] || null,
-          };
-        })
-        .filter(Boolean),
-    };
-  }
-
-  _getSeriesData() {
-    if (this._historySeries.some(entry => entry.samples?.length > 1)) {
-      return this._historySeries;
-    }
-    return [];
-  }
-
-  _renderEmptyState() {
-    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
-    return `
-      <style>
-        :host {
-          display: block;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        .graph-card--empty {
-          background: ${styles.card.background};
-          border: ${styles.card.border};
-          border-radius: ${styles.card.border_radius};
-          box-shadow: ${styles.card.box_shadow};
-          display: grid;
-          gap: 6px;
-          padding: ${styles.card.padding};
-        }
-
-        .graph-card__empty-title {
-          color: var(--primary-text-color);
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .graph-card__empty-text {
-          color: var(--secondary-text-color);
-          font-size: 13px;
-          line-height: 1.5;
-        }
-      </style>
-      <ha-card class="graph-card graph-card--empty">
-        <div class="graph-card__empty-title">Nodalia Graph Card</div>
-        <div class="graph-card__empty-text">Configura \`entities\` con una o varias entidades numericas para mostrar la grafica.</div>
-      </ha-card>
-    `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const entries = this._getEntityEntries();
-    if (!entries.length) {
-      this.shadowRoot.innerHTML = this._renderEmptyState();
-      return;
-    }
-
-    const config = this._config || normalizeConfig({});
-    const styles = config.styles || DEFAULT_CONFIG.styles;
-    const legendEntries = this._getLegendEntries();
-    const showUnavailableBadge = config.show_unavailable_badge !== false && entries.some(entry => isUnavailableState(this._hass?.states?.[entry.entity]));
-    const compactLayout = Number(config?.grid_options?.rows) > 0 && Number(config?.grid_options?.rows) <= 3;
-    const currentValue = this._getCurrentValuesText();
-    const allSeries = this._getSeriesData();
-    const chart = this._buildChartSeries(this._getVisibleSeries(allSeries));
-    this._hoverChart = chart;
-    const hasGraphData = chart.entries.some(entry => entry.linePath);
-    const hover = hasGraphData ? this._getHoverPayload(chart) : null;
-    const icon = this._getIcon();
-    const title = this._getTitle();
-    const accentColor = chart.entries[0]?.color || legendEntries[0]?.color || "var(--primary-color)";
-    const chartHeight = `${Math.max(120, Math.min(parseSizeToPixels(styles.chart_height, 150), compactLayout ? 132 : 150))}px`;
-    const valueSize = `${Math.max(38, Math.min(parseSizeToPixels(styles.value_size, 46), compactLayout ? 42 : 46))}px`;
-    const unitSize = `${Math.max(15, Math.min(parseSizeToPixels(styles.unit_size, 18), compactLayout ? 16 : 18))}px`;
-    const titleSize = `${Math.max(13, Math.min(parseSizeToPixels(styles.title_size, 14), compactLayout ? 13 : 14))}px`;
-    const legendSize = `${Math.max(11, Math.min(parseSizeToPixels(styles.legend_size, 12), compactLayout ? 11 : 12))}px`;
-    const lineWidth = `${Math.max(2, Math.min(parseSizeToPixels(styles.line_width, 3), compactLayout ? 2.4 : 3))}`;
-    const cardPaddingPx = Math.max(12, parseSizeToPixels(styles.card.padding, 16));
-    const chartBleed = Math.round(cardPaddingPx * 0.95);
-    const cardBackground = `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
-    const cardBorder = `1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color))`;
-    const cardShadow = `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 8%, rgba(0, 0, 0, 0.16))`;
-    const tooltipTint = hover?.values?.[0]?.color || accentColor;
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-          height: 100%;
-          min-height: 0;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        ha-card {
-          height: 100%;
-          min-height: 0;
-          overflow: hidden;
-        }
-
-        .graph-card {
-          background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 12%, transparent) 0%, transparent 44%),
-            linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0%, rgba(0, 0, 0, 0.02) 100%),
-            ${cardBackground};
-          border: ${cardBorder};
-          border-radius: ${styles.card.border_radius};
-          box-shadow: ${cardShadow};
-          color: var(--primary-text-color);
-          position: relative;
-        }
-
-        .graph-card__content {
-          cursor: ${this._canRunTapAction() ? "pointer" : "default"};
-          display: flex;
-          flex-direction: column;
-          gap: ${styles.card.gap};
-          height: 100%;
-          min-height: 0;
-          padding: ${styles.card.padding};
-          position: relative;
-          z-index: 1;
-        }
-
-        .graph-card__header {
-          align-items: start;
-          display: grid;
-          gap: 10px;
-          grid-template-columns: minmax(0, 1fr) auto;
-        }
-
-        .graph-card__title {
-          color: var(--primary-text-color);
-          font-size: ${titleSize};
-          font-weight: 500;
-          line-height: 1.15;
-          min-width: 0;
-          opacity: 0.95;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .graph-card__icon {
-          align-items: center;
-          background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.03) 100%);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 20px;
-          color: ${styles.icon.color};
-          display: inline-flex;
-          height: 42px;
-          justify-content: center;
-          opacity: 0.9;
-          padding: 0 12px;
-          position: relative;
-        }
-
-        .graph-card__icon ha-icon {
-          --mdc-icon-size: ${Math.max(22, parseSizeToPixels(styles.icon.size, 28))}px;
-          height: ${Math.max(22, parseSizeToPixels(styles.icon.size, 28))}px;
-          width: ${Math.max(22, parseSizeToPixels(styles.icon.size, 28))}px;
-        }
-
-        .graph-card__unavailable-badge {
-          align-items: center;
-          background: #ff9b4a;
-          border: 2px solid ${styles.card.background};
-          border-radius: 999px;
-          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
-          color: #ffffff;
-          display: inline-flex;
-          height: 18px;
-          justify-content: center;
-          position: absolute;
-          right: -4px;
-          top: -3px;
-          width: 18px;
-          z-index: 2;
-        }
-
-        .graph-card__unavailable-badge ha-icon {
-          --mdc-icon-size: 11px;
-          height: 11px;
-          width: 11px;
-        }
-
-        .graph-card__value {
-          align-items: baseline;
-          display: flex;
-          flex-wrap: nowrap;
-          gap: 6px;
-          line-height: 0.94;
-          min-width: 0;
-        }
-
-        .graph-card__value-number {
-          font-size: ${valueSize};
-          font-weight: 400;
-          letter-spacing: -0.06em;
-          line-height: 0.9;
-          min-width: 0;
-        }
-
-        .graph-card__value-unit {
-          font-size: ${unitSize};
-          font-weight: 500;
-          line-height: 1;
-          opacity: 0.84;
-          padding-top: 0;
-        }
-
-        .graph-card__legend {
-          align-items: center;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px 10px;
-          justify-content: flex-start;
-          min-height: 0;
-          padding-top: 2px;
-        }
-
-        .graph-card__legend-item {
-          align-items: center;
-          background: linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.03) 100%);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 999px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          font-size: ${legendSize};
-          gap: 10px;
-          max-width: min(100%, 220px);
-          min-width: 0;
-          opacity: 0.9;
-          padding: 7px 12px;
-          transition: opacity 160ms ease, transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
-        }
-
-        .graph-card__legend-item:hover {
-          opacity: 1;
-          transform: translateY(-1px);
-        }
-
-        .graph-card__legend-item--active {
-          background: linear-gradient(180deg, color-mix(in srgb, var(--legend-color) 14%, rgba(255,255,255,0.05)) 0%, rgba(255,255,255,0.035) 100%);
-          border-color: color-mix(in srgb, var(--legend-color) 34%, rgba(255,255,255,0.08));
-          box-shadow: 0 12px 24px color-mix(in srgb, var(--legend-color) 10%, rgba(0, 0, 0, 0.14));
-        }
-
-        .graph-card__legend-item--muted {
-          opacity: 0.48;
-        }
-
-        .graph-card__legend-dot {
-          border-radius: 999px;
-          display: inline-flex;
-          flex: 0 0 auto;
-          height: 10px;
-          width: 10px;
-        }
-
-        .graph-card__legend-text {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .graph-card__chart-wrap {
-          flex: 1 1 auto;
-          min-height: ${chartHeight};
-          margin-inline: -${chartBleed}px;
-          margin-top: 8px;
-          overflow: visible;
-          padding: 2px 0 0;
-          position: relative;
-          width: calc(100% + ${chartBleed * 2}px);
-        }
-
-        .graph-card__hover-points-layer {
-          inset: 0;
-          pointer-events: none;
-          position: absolute;
-          z-index: 2;
-        }
-
-        .graph-card__chart {
-          display: block;
-          height: 100%;
-          width: 100%;
-        }
-
-        .graph-card__hover-line {
-          stroke: rgba(255, 255, 255, 0.16);
-          stroke-dasharray: 2 4;
-          stroke-width: 0.7;
-        }
-
-        .graph-card__hover-point {
-          align-items: center;
-          display: inline-flex;
-          height: 10px;
-          justify-content: center;
-          left: 0;
-          pointer-events: none;
-          position: absolute;
-          top: 0;
-          transform: translate(-50%, -50%);
-          width: 10px;
-          z-index: 3;
-        }
-
-        .graph-card__hover-point-halo {
-          background: color-mix(in srgb, var(--hover-color) 10%, transparent);
-          border-radius: 999px;
-          inset: -4px;
-          opacity: 0.82;
-          position: absolute;
-        }
-
-        .graph-card__hover-point-outer {
-          background:
-            radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.92) 0 26%, color-mix(in srgb, var(--hover-color) 24%, rgba(255, 255, 255, 0.76)) 27% 100%);
-          border: 1px solid color-mix(in srgb, var(--hover-color) 24%, rgba(255, 255, 255, 0.42));
-          border-radius: 999px;
-          box-shadow:
-            0 6px 12px rgba(0, 0, 0, 0.12),
-            0 0 0 1px color-mix(in srgb, var(--hover-color) 10%, transparent) inset;
-          inset: 0;
-          position: absolute;
-        }
-
-        .graph-card__hover-point-ring {
-          background: color-mix(in srgb, var(--hover-color) 82%, rgba(255, 255, 255, 0.86));
-          border-radius: 999px;
-          height: 4px;
-          left: 50%;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: 4px;
-        }
-
-        .graph-card__tooltip {
-          backdrop-filter: blur(18px);
-          background:
-            radial-gradient(circle at top left, color-mix(in srgb, var(--tooltip-tint) 18%, transparent) 0%, transparent 48%),
-            linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.02) 100%),
-            linear-gradient(180deg, rgba(42, 43, 53, 0.96) 0%, rgba(31, 32, 41, 0.97) 100%);
-          border: 1px solid color-mix(in srgb, var(--tooltip-tint) 26%, rgba(255, 255, 255, 0.12));
-          border-radius: 22px;
-          box-shadow:
-            0 22px 38px rgba(0, 0, 0, 0.28),
-            0 10px 26px color-mix(in srgb, var(--tooltip-tint) 12%, rgba(0, 0, 0, 0.18));
-          color: var(--primary-text-color);
-          max-width: min(320px, calc(100% - 20px));
-          min-width: 210px;
-          padding: 13px 15px;
-          pointer-events: none;
-          position: absolute;
-          top: -110px;
-          transform: translateX(-50%);
-          z-index: 3;
-        }
-
-        .graph-card__tooltip-time {
-          color: var(--secondary-text-color);
-          font-size: 11px;
-          font-weight: 600;
-          letter-spacing: 0.02em;
-          margin-bottom: 8px;
-          text-transform: uppercase;
-        }
-
-        .graph-card__tooltip-values {
-          display: grid;
-          gap: 6px;
-        }
-
-        .graph-card__tooltip-row {
-          align-items: center;
-          display: grid;
-          gap: 8px;
-          grid-template-columns: auto minmax(0, 1fr) auto;
-        }
-
-        .graph-card__tooltip-dot {
-          border-radius: 999px;
-          display: inline-flex;
-          height: 9px;
-          width: 9px;
-        }
-
-        .graph-card__tooltip-name {
-          font-size: 12px;
-          font-weight: 500;
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .graph-card__tooltip-value {
-          font-size: 12px;
-          font-weight: 700;
-          white-space: nowrap;
-        }
-
-        .graph-card__chart-empty {
-          align-items: center;
-          color: var(--secondary-text-color);
-          display: flex;
-          font-size: 13px;
-          inset: 0;
-          justify-content: center;
-          opacity: 0.8;
-          position: absolute;
-        }
-
-        .graph-card__chart-series-fill {
-          opacity: 0.028;
-        }
-
-        .graph-card__chart-series-glow {
-          fill: none;
-          filter: url(#graph-glow);
-          opacity: 0.18;
-          stroke-linecap: round;
-          stroke-linejoin: round;
-          stroke-width: calc(${lineWidth} * 2.1);
-        }
-
-        .graph-card__chart-series-line {
-          fill: none;
-          stroke-linecap: round;
-          stroke-linejoin: round;
-          stroke-opacity: 0.9;
-          stroke-width: ${lineWidth};
-        }
-
-        @media (max-width: 640px) {
-          .graph-card__header {
-            gap: 8px;
-          }
-
-          .graph-card__legend {
-            justify-content: flex-start;
-          }
-        }
-      </style>
-      <ha-card class="graph-card">
-        <div class="graph-card__content" ${this._canRunTapAction() ? 'data-graph-action="primary"' : ""}>
-          ${
-            config.show_header !== false
-              ? `
-                <div class="graph-card__header">
-                  <div class="graph-card__title">${escapeHtml(title)}</div>
-                  ${
-                    config.show_icon !== false
-                      ? `
-                        <div class="graph-card__icon">
-                          <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
-                          ${showUnavailableBadge ? `<span class="graph-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
-                        </div>
-                      `
-                      : ""
-                  }
-                </div>
-              `
-              : ""
-          }
-
-          ${
-            config.show_value !== false
-              ? `
-                <div class="graph-card__value">
-                  <div class="graph-card__value-number">${escapeHtml(currentValue.value)}</div>
-                  ${currentValue.unit ? `<div class="graph-card__value-unit">${escapeHtml(currentValue.unit)}</div>` : ""}
-                </div>
-              `
-              : ""
-          }
-
-          ${
-            config.show_legend !== false
-              ? `
-                <div class="graph-card__legend">
-                  ${legendEntries.map(entry => `
-                    <div
-                      class="graph-card__legend-item ${entry.active ? "graph-card__legend-item--active" : ""} ${entry.muted ? "graph-card__legend-item--muted" : ""}"
-                      data-graph-series="${escapeHtml(entry.entity)}"
-                      style="--legend-color:${escapeHtml(entry.color)};"
-                    >
-                      <span class="graph-card__legend-dot" style="background:${escapeHtml(entry.color)};"></span>
-                      <span class="graph-card__legend-text">${escapeHtml(entry.name)}</span>
-                    </div>
-                  `).join("")}
-                </div>
-              `
-              : ""
-          }
-
-          <div class="graph-card__chart-wrap" data-graph-surface="chart">
-            ${
-              hover
-                ? `
-                  <div class="graph-card__tooltip" style="left: ${clamp(hover.x, 10, chart.width - 10)}%; --tooltip-tint:${escapeHtml(tooltipTint)};">
-                    <div class="graph-card__tooltip-time">${escapeHtml(hover.label)}</div>
-                    <div class="graph-card__tooltip-values">
-                      ${hover.values.map(item => `
-                        <div class="graph-card__tooltip-row">
-                          <span class="graph-card__tooltip-dot" style="background:${escapeHtml(item.color)};"></span>
-                          <span class="graph-card__tooltip-name">${escapeHtml(item.name)}</span>
-                          <span class="graph-card__tooltip-value">${escapeHtml(item.value)}${item.unit ? ` ${escapeHtml(item.unit)}` : ""}</span>
-                        </div>
-                      `).join("")}
-                    </div>
-                  </div>
-                `
-                : ""
-            }
-            <svg class="graph-card__chart" viewBox="0 0 ${chart.width} ${chart.height}" preserveAspectRatio="none">
-              <defs>
-                <filter id="graph-glow" x="-30%" y="-30%" width="160%" height="160%">
-                  <feGaussianBlur stdDeviation="1.5" />
-                </filter>
-              </defs>
-              ${
-                hover
-                  ? `<line class="graph-card__hover-line" x1="${hover.x.toFixed(2)}" y1="0" x2="${hover.x.toFixed(2)}" y2="${chart.height}"></line>`
-                  : ""
-              }
-              ${chart.entries.map(entry => `
-                ${
-                  config.show_fill !== false
-                    ? `<path class="graph-card__chart-series-fill" d="${entry.fillPath}" fill="${escapeHtml(entry.color)}"></path>`
-                    : ""
-                }
-                <path class="graph-card__chart-series-glow" d="${entry.linePath}" stroke="${escapeHtml(entry.color)}"></path>
-                <path class="graph-card__chart-series-line" d="${entry.linePath}" stroke="${escapeHtml(entry.color)}"></path>
-              `).join("")}
-            </svg>
-            ${
-              hover
-                ? `
-                  <div class="graph-card__hover-points-layer">
-                    ${chart.entries.map(entry => {
-                      const point = hover.values.find(item => item.name === entry.name)?.point;
-                      if (!point) {
-                        return "";
-                      }
-                      const left = (point.x / chart.width) * 100;
-                      const top = (point.y / chart.height) * 100;
-                      return `
-                        <span class="graph-card__hover-point" style="left:${left}%; top:${top}%; --hover-color:${escapeHtml(entry.color)};">
-                          <span class="graph-card__hover-point-halo"></span>
-                          <span class="graph-card__hover-point-outer"></span>
-                          <span class="graph-card__hover-point-ring"></span>
-                        </span>
-                      `;
-                    }).join("")}
-                  </div>
-                `
-                : ""
-            }
-            ${hasGraphData ? "" : `<div class="graph-card__chart-empty">Sin historial disponible</div>`}
-          </div>
-        </div>
-      </ha-card>
-    `;
-  }
-}
-
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaGraphCard);
-}
-
-class NodaliaGraphCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    this._entityOptionsSignature = "";
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getEntityOptionsSignature(hass);
-    const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
-    this._hass = hass;
-    this._entityOptionsSignature = nextSignature;
-
-    if (shouldRender) {
-      this._render();
-    }
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    this._render();
-  }
-
-  _getEntityOptionsSignature(hass) {
-    if (!hass?.states) {
-      return "";
-    }
-
-    return Object.keys(hass.states)
-      .filter(entityId => entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number."))
-      .sort((left, right) => left.localeCompare(right, "es"))
-      .join("|");
-  }
-
-  _captureFocusState() {
-    const activeElement = this.shadowRoot?.activeElement;
-    if (
-      !(
-        activeElement instanceof HTMLInputElement ||
-        activeElement instanceof HTMLTextAreaElement ||
-        activeElement instanceof HTMLSelectElement
-      ) ||
-      !activeElement.dataset?.field
-    ) {
-      return null;
-    }
-
-    const selector = `[data-field="${CSS.escape(activeElement.dataset.field)}"]`;
-    const supportsSelection =
-      (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement) &&
-      activeElement.type !== "checkbox" &&
-      typeof activeElement.selectionStart === "number" &&
-      typeof activeElement.selectionEnd === "number";
-
-    return {
-      selector,
-      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
-      selectionStart: supportsSelection ? activeElement.selectionStart : null,
-      type: activeElement.type,
-    };
-  }
-
-  _restoreFocusState(focusState) {
-    if (!focusState?.selector || !this.shadowRoot) {
-      return;
-    }
-
-    const target = this.shadowRoot.querySelector(focusState.selector);
-    if (
-      !(
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement
-      )
-    ) {
-      return;
-    }
-
-    try {
-      target.focus({ preventScroll: true });
-    } catch (_error) {
-      target.focus();
-    }
-
-    const canRestoreSelection =
-      focusState.type !== "checkbox" &&
-      typeof focusState.selectionStart === "number" &&
-      typeof focusState.selectionEnd === "number" &&
-      typeof target.setSelectionRange === "function";
-
-    if (!canRestoreSelection) {
-      return;
-    }
-
-    try {
-      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
-    } catch (_error) {
-      // Ignore unsupported inputs.
-    }
-  }
-
-  _emitConfig() {
-    const focusState = this._captureFocusState();
-    const nextConfig = deepClone(this._config);
-    this._config = normalizeConfig(compactConfig(nextConfig));
-    this._render();
-    this._restoreFocusState(focusState);
-    fireEvent(this, "config-changed", {
-      config: compactConfig(nextConfig),
-    });
-  }
-
-  _setEditorConfig() {
-    this._config = normalizeConfig(compactConfig(this._config));
-  }
-
-  _setFieldValue(path, value) {
-    if (value === undefined || value === null || value === "") {
-      deleteByPath(this._config, path);
-      return;
-    }
-
-    setByPath(this._config, path, value);
-  }
-
-  _readFieldValue(input) {
-    const valueType = input.dataset.valueType || "string";
-
-    switch (valueType) {
-      case "boolean":
-        return Boolean(input.checked);
-      case "entities":
-        return String(input.value || "")
-          .split("\n")
-          .map(line => line.trim())
-          .filter(Boolean)
-          .map((line, index) => {
-            const [entity, name = "", color = ""] = line.split("|").map(part => part.trim());
-            return {
-              entity,
-              name,
-              color: color || SERIES_COLORS[index % SERIES_COLORS.length],
-            };
-          })
-          .filter(entry => entry.entity);
-      default:
-        return input.value;
-    }
-  }
-
-  _onShadowInput(event) {
-    const input = event
-      .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
-
-    if (!input?.dataset?.field) {
-      return;
-    }
-
-    event.stopPropagation();
-    const nextValue = this._readFieldValue(input);
-    this._setFieldValue(input.dataset.field, nextValue);
-    this._setEditorConfig();
-
-    if (event.type === "change") {
-      this._emitConfig();
-    }
-  }
-
-  _renderTextField(label, field, value, options = {}) {
-    const inputType = options.type || "text";
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-    const valueType = options.valueType || "string";
-    const inputValue = value === undefined || value === null ? "" : String(value);
-
-    return `
-      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
-        <input
-          type="${escapeHtml(inputType)}"
-          data-field="${escapeHtml(field)}"
-          data-value-type="${escapeHtml(valueType)}"
-          value="${escapeHtml(inputValue)}"
-          ${placeholder}
-        />
-      </label>
-    `;
-  }
-
-  _renderTextareaField(label, field, value, options = {}) {
-    const inputValue = value === undefined || value === null ? "" : String(value);
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-
-    return `
-      <label class="editor-field editor-field--full">
-        <span>${escapeHtml(label)}</span>
-        <textarea
-          data-field="${escapeHtml(field)}"
-          data-value-type="${escapeHtml(options.valueType || "string")}"
-          rows="${escapeHtml(String(options.rows || 4))}"
-          ${placeholder}
-        >${escapeHtml(inputValue)}</textarea>
-      </label>
-    `;
-  }
-
-  _renderCheckboxField(label, field, checked) {
-    return `
-      <label class="editor-toggle">
-        <input
-          type="checkbox"
-          data-field="${escapeHtml(field)}"
-          data-value-type="boolean"
-          ${checked ? "checked" : ""}
-        />
-        <span>${escapeHtml(label)}</span>
-      </label>
-    `;
-  }
-
-  _renderSelectField(label, field, value, options) {
-    return `
-      <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
-        <select data-field="${escapeHtml(field)}">
-          ${options
-            .map(option => `
-              <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
-              </option>
-            `)
-            .join("")}
-        </select>
-      </label>
-    `;
-  }
-
-  _serializeEntities() {
-    return this._config.entities
-      .map(entry => [entry.entity || "", entry.name || "", entry.color || ""].join("|"))
-      .join("\n");
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        .editor {
-          color: var(--primary-text-color);
-          display: grid;
-          gap: 16px;
-        }
-
-        .editor-section {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 18px;
-          display: grid;
-          gap: 14px;
-          padding: 16px;
-        }
-
-        .editor-section__header {
-          display: grid;
-          gap: 4px;
-        }
-
-        .editor-section__title {
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .editor-section__hint {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          line-height: 1.45;
-        }
-
-        .editor-grid {
-          display: grid;
-          gap: 12px;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .editor-field,
-        .editor-toggle {
-          display: grid;
-          gap: 6px;
-          min-width: 0;
-        }
-
-        .editor-field--full {
-          grid-column: 1 / -1;
-        }
-
-        .editor-field > span,
-        .editor-toggle > span {
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .editor-field input,
-        .editor-field select,
-        .editor-field textarea {
-          appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 12px;
-          color: var(--primary-text-color);
-          font: inherit;
-          min-height: 40px;
-          padding: 10px 12px;
-          width: 100%;
-        }
-
-        .editor-field textarea {
-          min-height: 110px;
-          resize: vertical;
-        }
-
-        .editor-toggle {
-          align-items: center;
-          grid-template-columns: auto 1fr;
-          padding-top: 20px;
-        }
-
-        .editor-toggle input {
-          accent-color: var(--primary-color);
-          height: 18px;
-          margin: 0;
-          width: 18px;
-        }
-
-        @media (max-width: 640px) {
-          .editor-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .editor-toggle {
-            padding-top: 0;
-          }
-        }
-      </style>
-      <div class="editor">
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Configura titulo, entidades y rango visible de la grafica.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Humedad",
-            })}
-            ${this._renderTextField("Icono", "icon", config.icon, {
-              placeholder: "mdi:water-percent",
-            })}
-            ${this._renderTextField("Minimo", "min", config.min, {
-              type: "number",
-              placeholder: "0",
-            })}
-            ${this._renderTextField("Maximo", "max", config.max, {
-              type: "number",
-              placeholder: "100",
-            })}
-            ${this._renderTextField("Horas a mostrar", "hours_to_show", config.hours_to_show, {
-              type: "number",
-              placeholder: "24",
-            })}
-            ${this._renderTextField("Puntos", "points", config.points, {
-              type: "number",
-              placeholder: "48",
-            })}
-            ${this._renderTextareaField("Entidades", "entities", this._serializeEntities(), {
-              valueType: "entities",
-              rows: 5,
-              placeholder: "sensor.humedad_dormitorio|Dormitorio de Rocio|#f29f05\nsensor.humedad_pasillo|Pasillo|#42a5f5",
-            })}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Activa o desactiva cabecera, valor, leyenda y relleno.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderCheckboxField("Mostrar cabecera", "show_header", config.show_header !== false)}
-            ${this._renderCheckboxField("Mostrar icono", "show_icon", config.show_icon !== false)}
-            ${this._renderCheckboxField("Mostrar valor grande", "show_value", config.show_value !== false)}
-            ${this._renderCheckboxField("Mostrar leyenda", "show_legend", config.show_legend !== false)}
-            ${this._renderCheckboxField("Mostrar relleno", "show_fill", config.show_fill !== false)}
-            ${this._renderCheckboxField("Mostrar badge de no disponible", "show_unavailable_badge", config.show_unavailable_badge !== false)}
-            ${this._renderSelectField(
-              "Tap action",
-              "tap_action",
-              config.tap_action || "more-info",
-              [
-                { value: "more-info", label: "More info" },
-                { value: "none", label: "Sin accion" },
-              ],
-            )}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica opcional al tocar la tarjeta.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
-            ${this._renderSelectField(
-              "Estilo",
-              "haptics.style",
-              hapticStyle,
-              [
-                { value: "selection", label: "Selection" },
-                { value: "light", label: "Light" },
-                { value: "medium", label: "Medium" },
-                { value: "heavy", label: "Heavy" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "failure", label: "Failure" },
-              ],
-            )}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales del grafico y el look Nodalia.</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
-            ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
-            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
-            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-            ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamano icono", "styles.icon.size", config.styles.icon.size)}
-            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-            ${this._renderTextField("Tamano valor", "styles.value_size", config.styles.value_size)}
-            ${this._renderTextField("Tamano unidad", "styles.unit_size", config.styles.unit_size)}
-            ${this._renderTextField("Tamano leyenda", "styles.legend_size", config.styles.legend_size)}
-            ${this._renderTextField("Alto grafico", "styles.chart_height", config.styles.chart_height)}
-            ${this._renderTextField("Grosor linea", "styles.line_width", config.styles.line_width)}
-          </div>
-        </section>
-      </div>
-    `;
-  }
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaGraphCardEditor);
-}
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: CARD_TAG,
-  name: "Nodalia Graph Card",
-  description: "Tarjeta de grafica elegante para una o varias entidades numericas con estilo Nodalia.",
   preview: true,
 });
 
