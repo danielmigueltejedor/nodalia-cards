@@ -1615,6 +1615,7 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         .light-card__slider-wrap {
+          --light-card-slider-input-height: max(44px, var(--light-card-slider-thumb-size));
           --light-card-slider-thumb-size: calc(${styles.slider_thumb_size} + 12px);
           --light-card-slider-thumb-half: calc(var(--light-card-slider-thumb-size) / 2);
           align-items: center;
@@ -1722,7 +1723,7 @@ class NodaliaLightCard extends HTMLElement {
           box-sizing: border-box;
           cursor: pointer;
           display: block;
-          height: max(44px, var(--light-card-slider-thumb-size));
+          height: var(--light-card-slider-input-height);
           margin: 0;
           outline: none;
           padding: 0;
@@ -1765,7 +1766,7 @@ class NodaliaLightCard extends HTMLElement {
           box-sizing: border-box;
           cursor: pointer;
           height: ${styles.slider_thumb_size};
-          margin-top: calc((${styles.slider_height} - ${styles.slider_thumb_size}) / 2);
+          margin-top: calc((var(--light-card-slider-input-height) - ${styles.slider_thumb_size}) / 2);
           width: ${styles.slider_thumb_size};
         }
 

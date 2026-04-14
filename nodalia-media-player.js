@@ -3666,6 +3666,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__tv-volume-wrap {
+          --media-player-slider-input-height: max(44px, var(--media-player-slider-thumb-size));
           --media-player-slider-thumb-size: calc(${playerStyles.slider_thumb_size} + 12px);
           --media-player-slider-thumb-half: calc(var(--media-player-slider-thumb-size) / 2);
           align-items: center;
@@ -3711,7 +3712,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           box-sizing: border-box;
           cursor: pointer;
           display: block;
-          height: max(44px, var(--media-player-slider-thumb-size));
+          height: var(--media-player-slider-input-height);
           margin: 0;
           outline: none;
           padding: 0;
@@ -3754,7 +3755,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           box-sizing: border-box;
           cursor: pointer;
           height: ${playerStyles.slider_thumb_size};
-          margin-top: calc((${playerStyles.slider_height} - ${playerStyles.slider_thumb_size}) / 2);
+          margin-top: calc((var(--media-player-slider-input-height) - ${playerStyles.slider_thumb_size}) / 2);
           width: ${playerStyles.slider_thumb_size};
         }
 

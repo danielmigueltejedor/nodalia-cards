@@ -8453,6 +8453,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__tv-volume-wrap {
+          --media-player-slider-input-height: max(44px, var(--media-player-slider-thumb-size));
           --media-player-slider-thumb-size: calc(${playerStyles.slider_thumb_size} + 12px);
           --media-player-slider-thumb-half: calc(var(--media-player-slider-thumb-size) / 2);
           align-items: center;
@@ -8498,7 +8499,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           box-sizing: border-box;
           cursor: pointer;
           display: block;
-          height: max(44px, var(--media-player-slider-thumb-size));
+          height: var(--media-player-slider-input-height);
           margin: 0;
           outline: none;
           padding: 0;
@@ -8541,7 +8542,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           box-sizing: border-box;
           cursor: pointer;
           height: ${playerStyles.slider_thumb_size};
-          margin-top: calc((${playerStyles.slider_height} - ${playerStyles.slider_thumb_size}) / 2);
+          margin-top: calc((var(--media-player-slider-input-height) - ${playerStyles.slider_thumb_size}) / 2);
           width: ${playerStyles.slider_thumb_size};
         }
 
@@ -15980,6 +15981,7 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         .light-card__slider-wrap {
+          --light-card-slider-input-height: max(44px, var(--light-card-slider-thumb-size));
           --light-card-slider-thumb-size: calc(${styles.slider_thumb_size} + 12px);
           --light-card-slider-thumb-half: calc(var(--light-card-slider-thumb-size) / 2);
           align-items: center;
@@ -16087,7 +16089,7 @@ class NodaliaLightCard extends HTMLElement {
           box-sizing: border-box;
           cursor: pointer;
           display: block;
-          height: max(44px, var(--light-card-slider-thumb-size));
+          height: var(--light-card-slider-input-height);
           margin: 0;
           outline: none;
           padding: 0;
@@ -16130,7 +16132,7 @@ class NodaliaLightCard extends HTMLElement {
           box-sizing: border-box;
           cursor: pointer;
           height: ${styles.slider_thumb_size};
-          margin-top: calc((${styles.slider_height} - ${styles.slider_thumb_size}) / 2);
+          margin-top: calc((var(--light-card-slider-input-height) - ${styles.slider_thumb_size}) / 2);
           width: ${styles.slider_thumb_size};
         }
 
@@ -18424,6 +18426,7 @@ class NodaliaHumidifierCard extends HTMLElement {
         }
 
         .humidifier-card__slider-wrap {
+          --humidifier-card-slider-input-height: max(44px, var(--humidifier-card-slider-thumb-size));
           --humidifier-card-slider-thumb-size: calc(${styles.slider_thumb_size} + 12px);
           --humidifier-card-slider-thumb-half: calc(var(--humidifier-card-slider-thumb-size) / 2);
           align-items: center;
@@ -18474,7 +18477,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           box-sizing: border-box;
           cursor: pointer;
           flex: 1;
-          height: max(44px, var(--humidifier-card-slider-thumb-size));
+          height: var(--humidifier-card-slider-input-height);
           margin: 0;
           padding: 0;
           position: relative;
@@ -18515,7 +18518,7 @@ class NodaliaHumidifierCard extends HTMLElement {
             0 0 0 12px rgba(255, 255, 255, 0.12);
           box-sizing: border-box;
           height: ${styles.slider_thumb_size};
-          margin-top: calc((${styles.slider_height} - ${styles.slider_thumb_size}) / 2);
+          margin-top: calc((var(--humidifier-card-slider-input-height) - ${styles.slider_thumb_size}) / 2);
           width: ${styles.slider_thumb_size};
         }
 
@@ -20598,6 +20601,7 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card__slider-wrap {
+          --fan-card-slider-input-height: max(44px, var(--fan-card-slider-thumb-size));
           --fan-card-slider-thumb-size: calc(${styles.slider_thumb_size} + 12px);
           --fan-card-slider-thumb-half: calc(var(--fan-card-slider-thumb-size) / 2);
           align-items: center;
@@ -20645,7 +20649,7 @@ class NodaliaFanCard extends HTMLElement {
           box-sizing: border-box;
           cursor: pointer;
           flex: 1;
-          height: max(44px, var(--fan-card-slider-thumb-size));
+          height: var(--fan-card-slider-input-height);
           margin: 0;
           padding: 0;
           position: relative;
@@ -20686,7 +20690,7 @@ class NodaliaFanCard extends HTMLElement {
             0 0 0 12px rgba(255, 255, 255, 0.12);
           box-sizing: border-box;
           height: ${styles.slider_thumb_size};
-          margin-top: calc((${styles.slider_height} - ${styles.slider_thumb_size}) / 2);
+          margin-top: calc((var(--fan-card-slider-input-height) - ${styles.slider_thumb_size}) / 2);
           width: ${styles.slider_thumb_size};
         }
 
