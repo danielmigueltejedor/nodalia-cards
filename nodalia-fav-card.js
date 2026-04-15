@@ -170,6 +170,13 @@ function setByPath(target, path, value) {
   cursor[parts[parts.length - 1]] = value;
 }
 
+function getByPath(target, path) {
+  return String(path || "")
+    .split(".")
+    .filter(Boolean)
+    .reduce((cursor, key) => (cursor == null ? undefined : cursor[key]), target);
+}
+
 function deleteByPath(target, path) {
   const parts = path.split(".");
   let cursor = target;
@@ -183,6 +190,82 @@ function deleteByPath(target, path) {
   }
 
   delete cursor[parts[parts.length - 1]];
+}
+
+function resolveEditorColorValue(value) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || typeof document === "undefined") {
+    return "";
+  }
+
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.color = "";
+  probe.style.color = rawValue;
+  if (!probe.style.color) {
+    return rawValue;
+  }
+
+  (document.body || document.documentElement).appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved || rawValue;
+}
+
+function formatEditorHexChannel(value) {
+  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+}
+
+function formatEditorColorFromHex(hex, alpha = 1) {
+  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+    return String(hex ?? "");
+  }
+
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+  const safeAlpha = clamp(Number(alpha), 0, 1);
+  if (safeAlpha >= 0.999) {
+    return `#${normalizedHex}`;
+  }
+
+  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+}
+
+function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const channels = resolvedValue.match(/[\d.]+/g) || [];
+  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+
+  return {
+    alpha,
+    hex,
+    resolved: resolvedValue,
+    source: sourceValue,
+    value: formatEditorColorFromHex(hex, alpha),
+  };
+}
+
+function getEditorColorFallbackValue(field) {
+  const normalizedField = String(field ?? "");
+
+  if (normalizedField.endsWith("off_color")) {
+    return "var(--state-inactive-color, rgba(255, 255, 255, 0.55))";
+  }
+
+  if (normalizedField.endsWith("background")) {
+    return "var(--ha-card-background)";
+  }
+
+  return "var(--info-color, #71c0ff)";
 }
 
 function parseSizeToPixels(value, fallback = 0) {
@@ -1864,9 +1947,15 @@ class NodaliaFavCardEditor extends HTMLElement {
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._entityOptionsSignature = "";
+    this._showStyleSection = false;
+    this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+    this._onShadowClick = this._onShadowClick.bind(this);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
+    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.addEventListener("click", this._onShadowClick);
   }
 
   set hass(hass) {
@@ -1895,10 +1984,81 @@ class NodaliaFavCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
+  _watchEditorControlTag(tagName) {
+    if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+      return;
+    }
+
+    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+      return;
+    }
+
+    this._pendingEditorControlTags.add(tagName);
+    customElements.whenDefined(tagName)
+      .then(() => {
+        this._pendingEditorControlTags.delete(tagName);
+
+        if (!this._hass || !this.shadowRoot) {
+          return;
+        }
+
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+      })
+      .catch(() => {
+        this._pendingEditorControlTags.delete(tagName);
+      });
+  }
+
+  _ensureEditorControlsReady() {
+    this._watchEditorControlTag("ha-entity-picker");
+    this._watchEditorControlTag("ha-selector");
+    this._watchEditorControlTag("ha-icon-picker");
+  }
+
   _getEntityOptionsSignature(hass = this._hass) {
-    return Object.keys(hass?.states || {})
-      .sort((left, right) => left.localeCompare(right, "es"))
+    return Object.entries(hass?.states || {})
+      .map(([entityId, state]) => `${entityId}:${String(state?.attributes?.friendly_name || "")}:${String(state?.attributes?.icon || "")}`)
+      .sort((left, right) => left.localeCompare(right, "es", { sensitivity: "base" }))
       .join("|");
+  }
+
+  _getEntityOptions(field = "entity", domains = []) {
+    const normalizedDomains = Array.isArray(domains)
+      ? domains.map(domain => String(domain || "").trim()).filter(Boolean)
+      : [];
+
+    const options = Object.entries(this._hass?.states || {})
+      .filter(([entityId]) => (
+        !normalizedDomains.length
+        || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
+      ))
+      .map(([entityId, state]) => {
+        const friendlyName = String(state?.attributes?.friendly_name || "").trim();
+        return {
+          value: entityId,
+          label: friendlyName || entityId,
+          displayLabel: friendlyName && friendlyName !== entityId
+            ? `${friendlyName} (${entityId})`
+            : entityId,
+        };
+      })
+      .sort((left, right) => (
+        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
+        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+      ));
+
+    const currentValue = String(getByPath(this._config, field) || "").trim();
+    if (currentValue && !options.some(option => option.value === currentValue)) {
+      options.unshift({
+        value: currentValue,
+        label: currentValue,
+        displayLabel: currentValue,
+      });
+    }
+
+    return options;
   }
 
   _captureFocusState() {
@@ -2004,6 +2164,8 @@ class NodaliaFavCardEditor extends HTMLElement {
     switch (valueType) {
       case "boolean":
         return Boolean(input.checked);
+      case "color":
+        return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
       default:
         return input.value;
     }
@@ -2046,6 +2208,47 @@ class NodaliaFavCardEditor extends HTMLElement {
     }
   }
 
+  _onShadowValueChanged(event) {
+    const control = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.field);
+
+    if (!control?.dataset?.field) {
+      return;
+    }
+
+    event.stopPropagation();
+
+    const nextValue = typeof event.detail?.value === "string"
+      ? event.detail.value
+      : control.value;
+    if (typeof control.dataset?.value === "string") {
+      control.dataset.value = String(nextValue || "");
+    }
+
+    this._setFieldValue(control.dataset.field, nextValue);
+    this._setEditorConfig();
+    this._emitConfig();
+  }
+
+  _onShadowClick(event) {
+    const toggleButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+
+    if (!toggleButton) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (toggleButton.dataset.editorToggle === "styles") {
+      this._showStyleSection = !this._showStyleSection;
+      this._render();
+    }
+  }
+
   _renderTextField(label, field, value, options = {}) {
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -2075,6 +2278,33 @@ class NodaliaFavCardEditor extends HTMLElement {
         <span>${escapeHtml(label)}</span>
         <textarea data-field="${escapeHtml(field)}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
       </label>
+    `;
+  }
+
+  _renderColorField(label, field, value, options = {}) {
+    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+    const currentValue = value === undefined || value === null || value === ""
+      ? fallbackValue
+      : String(value);
+    const colorModel = getEditorColorModel(currentValue, fallbackValue);
+
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="Color personalizado">
+            <input
+              type="color"
+              data-field="${escapeHtml(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml(String(colorModel.alpha))}"
+              value="${escapeHtml(colorModel.hex)}"
+              aria-label="${escapeHtml(label)}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
+          </label>
+        </div>
+      </div>
     `;
   }
 
@@ -2110,19 +2340,141 @@ class NodaliaFavCardEditor extends HTMLElement {
     `;
   }
 
-  _getEntityOptionsMarkup() {
-    const entityIds = Object.keys(this._hass?.states || {})
-      .sort((left, right) => left.localeCompare(right, "es"));
+  _renderEntityField(label, field, value, options = {}) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    const domains = Array.isArray(options.domains)
+      ? options.domains.map(domain => String(domain || "").trim()).filter(Boolean).join(",")
+      : "";
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div
+          class="editor-control-host"
+          data-mounted-control="entity-picker"
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+          data-domains="${escapeHtml(domains)}"
+        ></div>
+      </div>
+    `;
+  }
 
-    if (!entityIds.length) {
-      return "";
+  _renderIconPickerField(label, field, value, options = {}) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div
+          class="editor-control-host"
+          data-mounted-control="icon-picker"
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+          data-placeholder="${escapeHtml(options.placeholder || "")}"
+        ></div>
+      </div>
+    `;
+  }
+
+  _mountEntityPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
     }
 
-    return `
-      <datalist id="fav-card-entities">
-        ${entityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-    `;
+    const field = host.dataset.field || "entity";
+    const nextValue = host.dataset.value || "";
+    const allowedDomains = String(host.dataset.domains || "")
+      .split(",")
+      .map(domain => domain.trim())
+      .filter(Boolean);
+    let control = null;
+
+    if (customElements.get("ha-entity-picker")) {
+      control = document.createElement("ha-entity-picker");
+      if (allowedDomains.length) {
+        control.includeDomains = allowedDomains;
+        control.entityFilter = stateObj => allowedDomains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+      }
+      control.allowCustomEntity = true;
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = {
+        entity: allowedDomains.length === 1
+          ? { domain: allowedDomains[0] }
+          : {},
+      };
+    } else {
+      control = document.createElement("select");
+      this._getEntityOptions(field, allowedDomains).forEach(option => {
+        const optionElement = document.createElement("option");
+        optionElement.value = option.value;
+        optionElement.textContent = option.displayLabel;
+        control.appendChild(optionElement);
+      });
+      control.addEventListener("change", this._onShadowInput);
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+
+    if (control.tagName !== "SELECT") {
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    }
+
+    host.replaceChildren(control);
+  }
+
+  _mountIconPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const field = host.dataset.field || "icon";
+    const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || "";
+    let control = null;
+
+    if (customElements.get("ha-icon-picker")) {
+      control = document.createElement("ha-icon-picker");
+      if (placeholder) {
+        control.setAttribute("placeholder", placeholder);
+      }
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = {
+        icon: {},
+      };
+    } else {
+      control = document.createElement("input");
+      control.type = "text";
+      control.placeholder = placeholder;
+      control.addEventListener("input", this._onShadowInput);
+      control.addEventListener("change", this._onShadowInput);
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+
+    if (control.tagName !== "INPUT") {
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    }
+
+    host.replaceChildren(control);
   }
 
   _render() {
@@ -2174,10 +2526,43 @@ class NodaliaFavCardEditor extends HTMLElement {
           line-height: 1.45;
         }
 
+        .editor-section__actions {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 2px;
+        }
+
+        .editor-section__toggle-button {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        .editor-section__toggle-button ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
         .editor-grid {
           display: grid;
           gap: 12px;
           grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .editor-grid--stacked {
+          grid-template-columns: 1fr;
         }
 
         .editor-field,
@@ -2211,22 +2596,92 @@ class NodaliaFavCardEditor extends HTMLElement {
           width: 100%;
         }
 
+        .editor-control-host input,
+        .editor-control-host select,
+        .editor-control-host textarea {
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          color: var(--primary-text-color);
+          font: inherit;
+          min-height: 40px;
+          padding: 10px 12px;
+          width: 100%;
+        }
+
+        .editor-color-field {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          min-height: 40px;
+        }
+
+        .editor-color-picker {
+          align-items: center;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 40px;
+          justify-content: center;
+          position: relative;
+          width: 40px;
+        }
+
+        .editor-color-picker input {
+          cursor: pointer;
+          inset: 0;
+          opacity: 0;
+          position: absolute;
+        }
+
+        .editor-color-picker:hover,
+        .editor-color-picker:focus-within {
+          border-color: rgba(255, 255, 255, 0.22);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .editor-color-swatch {
+          --editor-swatch: #71c0ff;
+          background:
+            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+            conic-gradient(from 90deg, rgba(255, 255, 255, 0.06) 25%, rgba(0, 0, 0, 0.12) 0 50%, rgba(255, 255, 255, 0.06) 0 75%, rgba(0, 0, 0, 0.12) 0);
+          background-position: center;
+          background-size: cover, 10px 10px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 999px;
+          display: block;
+          height: 18px;
+          width: 18px;
+        }
+
+        .editor-color-picker .editor-color-swatch {
+          height: 22px;
+          width: 22px;
+        }
+
         .editor-field textarea {
           min-height: 86px;
           resize: vertical;
+        }
+
+        .editor-field ha-icon-picker,
+        .editor-field ha-entity-picker,
+        .editor-field ha-selector,
+        .editor-control-host,
+        .editor-control-host > * {
+          display: block;
+          width: 100%;
         }
 
         .editor-toggle {
           align-items: center;
           grid-template-columns: auto 1fr;
           padding-top: 20px;
-        }
-
-        .editor-toggle input {
-          accent-color: var(--primary-color);
-          height: 18px;
-          margin: 0;
-          width: 18px;
         }
 
         @media (max-width: 640px) {
@@ -2305,69 +2760,82 @@ class NodaliaFavCardEditor extends HTMLElement {
             0 0 0 3px rgba(255, 255, 255, 0.14),
             inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
-</style>
+      </style>
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad favorita, icono y accion principal.</div>
+            <div class="editor-section__hint">Entidad favorita, nombre visible e icono principal.</div>
           </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Entidad", "entity", config.entity, {
-              placeholder: "light.sofa",
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderEntityField("Entidad", "entity", config.entity, {
+              fullWidth: true,
             })}
             ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Sofa",
+              placeholder: "Sofá",
+              fullWidth: true,
             })}
-            ${this._renderTextField("Icono", "icon", config.icon, {
+            ${this._renderIconPickerField("Icono", "icon", config.icon, {
               placeholder: "mdi:lightbulb",
+              fullWidth: true,
             })}
-            ${this._renderCheckboxField("Usar icono de la entidad", "use_entity_icon", config.use_entity_icon === true)}
+            <div class="editor-grid">
+              ${this._renderCheckboxField("Usar icono de la entidad", "use_entity_icon", config.use_entity_icon === true)}
+              ${this._renderSelectField(
+                "Modo de tarjeta",
+                "entity_mode",
+                config.entity_mode || "auto",
+                [
+                  { value: "auto", label: "Automático" },
+                  { value: "standard", label: "Normal" },
+                  { value: "alarm_control_panel", label: "Panel de alarma" },
+                ],
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Acción</div>
+            <div class="editor-section__hint">Qué hace la tarjeta cuando la tocas.</div>
+          </div>
+          <div class="editor-grid">
             ${this._renderSelectField(
-              "Modo de tarjeta",
-              "entity_mode",
-              config.entity_mode || "auto",
-              [
-                { value: "auto", label: "Automatico" },
-                { value: "standard", label: "Normal" },
-                { value: "alarm_control_panel", label: "Alarm control panel" },
-              ],
-            )}
-            ${this._renderSelectField(
-              "Accion principal",
+              "Acción principal",
               "tap_action",
               config.tap_action || "auto",
               [
                 { value: "auto", label: "Auto (toggle o info)" },
                 { value: "toggle", label: "Toggle" },
-                { value: "more-info", label: "More info" },
+                { value: "more-info", label: "Más información" },
                 { value: "url", label: "Abrir URL" },
                 { value: "service", label: "Servicio" },
-                { value: "none", label: "Solo informacion" },
+                { value: "none", label: "Solo información" },
               ],
             )}
             ${this._renderCheckboxField(
-              "Sin accion al tocar",
+              "Sin acción al tocar",
               "__info_only",
               (config.tap_action || "auto") === "none",
             )}
             ${this._renderTextField("Servicio al tocar", "tap_service", config.tap_service, {
               placeholder: "light.turn_on",
             })}
-            ${this._renderTextareaField("Datos del servicio (JSON)", "tap_service_data", config.tap_service_data, {
-              placeholder: '{"brightness_pct": 70}',
-            })}
             ${this._renderTextField("URL al tocar", "tap_url", config.tap_url, {
               placeholder: "https://example.com",
             })}
-            ${this._renderCheckboxField("Abrir URL en pestana nueva", "tap_new_tab", config.tap_new_tab === true)}
+            ${this._renderCheckboxField("Abrir URL en pestaña nueva", "tap_new_tab", config.tap_new_tab === true)}
+            ${this._renderTextareaField("Datos del servicio (JSON)", "tap_service_data", config.tap_service_data, {
+              placeholder: '{"brightness_pct": 70}',
+            })}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Layout</div>
-            <div class="editor-section__hint">Version mini para 1x1 o inline para favoritos alargados.</div>
+            <div class="editor-section__title">Visibilidad</div>
+            <div class="editor-section__hint">Presentación compacta y elementos visibles dentro de la tarjeta.</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -2375,7 +2843,7 @@ class NodaliaFavCardEditor extends HTMLElement {
               "layout_mode",
               config.layout_mode || "auto",
               [
-                { value: "auto", label: "Automatico" },
+                { value: "auto", label: "Automático" },
                 { value: "mini", label: "Mini" },
                 { value: "inline", label: "Inline" },
               ],
@@ -2391,15 +2859,13 @@ class NodaliaFavCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Alarma</div>
-            <div class="editor-section__hint">Si la entidad es una alarma, al tocar la tarjeta puede desplegar los modos de armado y usar PIN fijo o helper.</div>
+            <div class="editor-section__hint">Opciones extra si la entidad es un panel de alarma.</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("PIN fijo", "alarm_code", config.alarm_code, {
               placeholder: "1234",
             })}
-            ${this._renderTextField("Helper codigo", "alarm_code_entity", config.alarm_code_entity, {
-              placeholder: "input_text.alarm_pin",
-            })}
+            ${this._renderEntityField("Helper del código", "alarm_code_entity", config.alarm_code_entity)}
             ${this._renderCheckboxField("Mostrar cuadro de texto del PIN", "alarm_show_code_input", config.alarm_show_code_input !== false)}
             ${this._renderCheckboxField("Mostrar desarmar", "alarm_show_disarm", config.alarm_show_disarm !== false)}
             ${this._renderCheckboxField("Mostrar en casa", "alarm_show_arm_home", config.alarm_show_arm_home !== false)}
@@ -2412,24 +2878,24 @@ class NodaliaFavCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica opcional al tocar la tarjeta.</div>
+            <div class="editor-section__title">Respuesta háptica</div>
+            <div class="editor-section__hint">Respuesta táctil opcional al tocar la tarjeta.</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("Activar respuesta háptica", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("Usar vibración si no hay háptica", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
               "Estilo",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Selection" },
-                { value: "light", label: "Light" },
-                { value: "medium", label: "Medium" },
-                { value: "heavy", label: "Heavy" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "failure", label: "Failure" },
+                { value: "selection", label: "Selección" },
+                { value: "light", label: "Ligero" },
+                { value: "medium", label: "Medio" },
+                { value: "heavy", label: "Intenso" },
+                { value: "success", label: "Éxito" },
+                { value: "warning", label: "Aviso" },
+                { value: "failure", label: "Fallo" },
               ],
             )}
           </div>
@@ -2439,34 +2905,55 @@ class NodaliaFavCardEditor extends HTMLElement {
           <div class="editor-section__header">
             <div class="editor-section__title">Estilos</div>
             <div class="editor-section__hint">Ajustes visuales base de la tarjeta favorita.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="styles"
+                aria-expanded="${this._showStyleSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+              </button>
+            </div>
           </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
-            ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
-            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
-            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-            ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamano burbuja", "styles.icon.size", config.styles.icon.size)}
-            ${this._renderTextField("Color activo", "styles.icon.on_color", config.styles.icon.on_color)}
-            ${this._renderTextField("Color inactivo", "styles.icon.off_color", config.styles.icon.off_color)}
-            ${this._renderTextField("Alto chips", "styles.chip_height", config.styles.chip_height)}
-            ${this._renderTextField("Texto chips", "styles.chip_font_size", config.styles.chip_font_size)}
-            ${this._renderTextField("Padding chips", "styles.chip_padding", config.styles.chip_padding)}
-            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-          </div>
+          ${
+            this._showStyleSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderColorField("Fondo de la tarjeta", "styles.card.background", config.styles.card.background)}
+                  ${this._renderTextField("Borde de la tarjeta", "styles.card.border", config.styles.card.border)}
+                  ${this._renderTextField("Radio del borde", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${this._renderTextField("Sombra", "styles.card.box_shadow", config.styles.card.box_shadow)}
+                  ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
+                  ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
+                  ${this._renderTextField("Tamaño de la burbuja", "styles.icon.size", config.styles.icon.size)}
+                  ${this._renderColorField("Fondo de la burbuja", "styles.icon.background", config.styles.icon.background, {
+                    fallbackValue: DEFAULT_CONFIG.styles.icon.background,
+                  })}
+                  ${this._renderColorField("Color activo", "styles.icon.on_color", config.styles.icon.on_color)}
+                  ${this._renderColorField("Color inactivo", "styles.icon.off_color", config.styles.icon.off_color)}
+                  ${this._renderTextField("Alto de chips", "styles.chip_height", config.styles.chip_height)}
+                  ${this._renderTextField("Texto de chips", "styles.chip_font_size", config.styles.chip_font_size)}
+                  ${this._renderTextField("Padding de chips", "styles.chip_padding", config.styles.chip_padding)}
+                  ${this._renderTextField("Tamaño del título", "styles.title_size", config.styles.title_size)}
+                </div>
+              `
+              : ""
+          }
         </section>
-        ${this._getEntityOptionsMarkup()}
       </div>
     `;
 
     this.shadowRoot
-      .querySelectorAll('input[data-field="entity"]')
-      .forEach(input => input.setAttribute("list", "fav-card-entities"));
+      .querySelectorAll('[data-mounted-control="entity-picker"]')
+      .forEach(host => this._mountEntityPicker(host));
 
     this.shadowRoot
-      .querySelectorAll('input[data-field="alarm_code_entity"]')
-      .forEach(input => input.setAttribute("list", "fav-card-entities"));
+      .querySelectorAll('[data-mounted-control="icon-picker"]')
+      .forEach(host => this._mountIconPicker(host));
+
+    this._ensureEditorControlsReady();
   }
 }
 
