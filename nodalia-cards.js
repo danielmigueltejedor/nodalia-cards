@@ -8439,8 +8439,9 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player-card--tv.media-player-card--idle .media-player__idle-main {
           align-items: start;
-          gap: 8px;
+          gap: 16px;
           grid-template-columns: minmax(0, 1fr);
+          padding-top: 4px;
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__idle-main--tv-off {
