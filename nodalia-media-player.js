@@ -4392,9 +4392,15 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
       .join("|");
   }
 
-  _getMediaPlayerEntityOptions(field = "players.0.entity") {
+  _getEntityOptions(field = "players.0.entity", domains = []) {
+    const normalizedDomains = Array.isArray(domains)
+      ? domains.map(domain => String(domain || "").trim()).filter(Boolean)
+      : [];
     const options = Object.entries(this._hass?.states || {})
-      .filter(([entityId]) => entityId.startsWith("media_player."))
+      .filter(([entityId]) => (
+        !normalizedDomains.length
+        || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
+      ))
       .map(([entityId, state]) => {
         const friendlyName = String(state?.attributes?.friendly_name || "").trim();
         return {
@@ -4767,7 +4773,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
               { value: "call-service", label: "Llamar servicio" },
             ],
           )}
-          ${this._renderTextField("Entidad de más información", `${path}.entity`, action?.entity, {
+          ${this._renderEntityField("Entidad de más información", `${path}.entity`, action?.entity, {
             placeholder: "media_player.salon",
           })}
           ${this._renderTextField("Ruta de navegación", `${path}.navigation_path`, action?.navigation_path, {
@@ -4788,33 +4794,38 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     `;
   }
 
-  _renderMediaPlayerEntityField(label, field, value, options = {}) {
+  _renderEntityField(label, field, value, options = {}) {
     const inputValue = value === undefined || value === null ? "" : String(value);
+    const domains = Array.isArray(options.domains)
+      ? options.domains.map(domain => String(domain || "").trim()).filter(Boolean).join(",")
+      : "";
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(label)}</span>
         <div
           class="editor-control-host"
-          data-mounted-control="media-player-entity"
+          data-mounted-control="entity-picker"
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
+          data-placeholder="${escapeHtml(options.placeholder || "")}"
+          data-domains="${escapeHtml(domains)}"
         ></div>
       </div>
     `;
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(label)}</span>
-        <ha-icon-picker
+        <div
+          class="editor-control-host"
+          data-mounted-control="icon-picker"
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
-          value="${escapeHtml(inputValue)}"
-          ${placeholder}
-        ></ha-icon-picker>
+          data-placeholder="${escapeHtml(options.placeholder || "")}"
+        ></div>
       </div>
     `;
   }
@@ -4833,7 +4844,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
         <div class="player-editor-subgroup">
           <div class="player-editor-subgroup__title">Principal</div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderMediaPlayerEntityField("Entidad", `players.${index}.entity`, player.entity, {
+            ${this._renderEntityField("Entidad", `players.${index}.entity`, player.entity, {
+              domains: ["media_player"],
               fullWidth: true,
             })}
             ${this._renderIconPickerField("Icono", `players.${index}.icon`, player.icon, {
@@ -4893,30 +4905,36 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     `;
   }
 
-  _mountMediaPlayerEntityPicker(host) {
+  _mountEntityPicker(host) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
 
     const field = host.dataset.field || "players.0.entity";
     const nextValue = host.dataset.value || "";
+    const allowedDomains = String(host.dataset.domains || "")
+      .split(",")
+      .map(domain => domain.trim())
+      .filter(Boolean);
     let control = null;
 
     if (customElements.get("ha-entity-picker")) {
       control = document.createElement("ha-entity-picker");
-      control.includeDomains = ["media_player"];
+      if (allowedDomains.length) {
+        control.includeDomains = allowedDomains;
+        control.entityFilter = stateObj => allowedDomains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+      }
       control.allowCustomEntity = true;
-      control.entityFilter = stateObj => String(stateObj?.entity_id || "").startsWith("media_player.");
     } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
       control.selector = {
-        entity: {
-          domain: "media_player",
-        },
+        entity: allowedDomains.length === 1
+          ? { domain: allowedDomains[0] }
+          : {},
       };
     } else {
       control = document.createElement("select");
-      this._getMediaPlayerEntityOptions(field).forEach(option => {
+      this._getEntityOptions(field, allowedDomains).forEach(option => {
         const optionElement = document.createElement("option");
         optionElement.value = option.value;
         optionElement.textContent = option.displayLabel;
@@ -4937,6 +4955,52 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     }
 
     if (control.tagName !== "SELECT") {
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    }
+
+    host.replaceChildren(control);
+  }
+
+  _mountIconPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const field = host.dataset.field || "players.0.icon";
+    const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || "";
+    let control = null;
+
+    if (customElements.get("ha-icon-picker")) {
+      control = document.createElement("ha-icon-picker");
+      if (placeholder) {
+        control.setAttribute("placeholder", placeholder);
+      }
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = {
+        icon: {},
+      };
+    } else {
+      control = document.createElement("input");
+      control.type = "text";
+      control.placeholder = placeholder;
+      control.addEventListener("input", this._onShadowInput);
+      control.addEventListener("change", this._onShadowInput);
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+
+    if (control.tagName !== "INPUT") {
       control.addEventListener("value-changed", this._onShadowValueChanged);
     }
 
@@ -5051,6 +5115,20 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
         .editor-field input,
         .editor-field select,
         .editor-field textarea {
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          color: var(--primary-text-color);
+          font: inherit;
+          min-height: 40px;
+          padding: 10px 12px;
+          width: 100%;
+        }
+
+        .editor-control-host input,
+        .editor-control-host select,
+        .editor-control-host textarea {
           appearance: none;
           background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.08);
@@ -5463,16 +5541,12 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     `;
 
     this.shadowRoot
-      .querySelectorAll('[data-mounted-control="media-player-entity"]')
-      .forEach(host => this._mountMediaPlayerEntityPicker(host));
+      .querySelectorAll('[data-mounted-control="entity-picker"]')
+      .forEach(host => this._mountEntityPicker(host));
 
     this.shadowRoot
-      .querySelectorAll("ha-icon-picker[data-field]")
-      .forEach(control => {
-        control.hass = this._hass;
-        control.value = control.dataset.value || "";
-        control.addEventListener("value-changed", this._onShadowValueChanged);
-      });
+      .querySelectorAll('[data-mounted-control="icon-picker"]')
+      .forEach(host => this._mountIconPicker(host));
 
     this._ensureEditorControlsReady();
   }
