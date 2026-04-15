@@ -671,7 +671,7 @@ class NodaliaMediaPlayer extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 6,
+      columns: "full",
       min_rows: 2,
       min_columns: 3,
     };

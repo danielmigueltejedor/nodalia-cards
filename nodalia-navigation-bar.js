@@ -545,7 +545,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 12,
+      columns: "full",
       min_rows: 1,
       min_columns: 4,
     };

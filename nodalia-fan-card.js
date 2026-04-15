@@ -510,7 +510,7 @@ class NodaliaFanCard extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 4,
+      columns: "full",
       min_rows: 2,
       min_columns: 2,
     };

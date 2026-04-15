@@ -546,7 +546,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 12,
+      columns: "full",
       min_rows: 1,
       min_columns: 4,
     };
@@ -5465,7 +5465,7 @@ class NodaliaMediaPlayer extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 6,
+      columns: "full",
       min_rows: 2,
       min_columns: 3,
     };
@@ -10580,7 +10580,7 @@ class NodaliaLightCard extends HTMLElement {
 
   getGridOptions() {
     return {
-      columns: 4,
+      columns: "full",
       rows: "auto",
       min_columns: 2,
       min_rows: 2,
@@ -13679,7 +13679,7 @@ class NodaliaFanCard extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 4,
+      columns: "full",
       min_rows: 2,
       min_columns: 2,
     };
@@ -16288,7 +16288,7 @@ class NodaliaHumidifierCard extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 4,
+      columns: "full",
       min_rows: 2,
       min_columns: 2,
     };
@@ -18979,7 +18979,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 12,
+      columns: "full",
       min_rows: 5,
       min_columns: 6,
     };
@@ -20745,7 +20745,7 @@ class NodaliaGraphCard extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 12,
+      columns: "full",
       min_rows: 3,
       min_columns: 6,
     };
@@ -23068,7 +23068,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
     return {
       rows: "auto",
-      columns: 12,
+      columns: "full",
       min_rows: layoutPreset === "simple" ? 3 : 3,
       min_columns: 6,
     };
@@ -25543,7 +25543,7 @@ class NodaliaClimateCard extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 8,
+      columns: "full",
       min_rows: 5,
       min_columns: 7,
     };
@@ -27863,7 +27863,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 6,
+      columns: "full",
       min_rows: 2,
       min_columns: 3,
     };
@@ -30705,7 +30705,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 12,
+      columns: "full",
       min_rows: 5,
       min_columns: 6,
     };
@@ -37155,7 +37155,7 @@ const DEFAULT_CONFIG = {
       gap: "12px",
     },
     icon: {
-      size: "58px",
+      size: "48px",
       background: "rgba(255, 255, 255, 0.06)",
       color: "var(--primary-text-color)",
       on_color: "var(--info-color, #71c0ff)",
@@ -37167,9 +37167,9 @@ const DEFAULT_CONFIG = {
       accent_background: "rgba(113, 192, 255, 0.18)",
     },
     chip_height: "24px",
-    chip_font_size: "11px",
+    chip_font_size: "9px",
     chip_padding: "0 9px",
-    title_size: "14px",
+    title_size: "12px",
   },
 };
 
@@ -37709,7 +37709,7 @@ class NodaliaEntityCard extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 4,
+      columns: "full",
       min_rows: 2,
       min_columns: 2,
     };
@@ -40346,7 +40346,7 @@ class NodaliaFavCard extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 2,
+      columns: "full",
       min_rows: 1,
       min_columns: 1,
     };
@@ -42649,7 +42649,7 @@ class NodaliaInsigniaCard extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 2,
+      columns: "full",
       min_rows: 1,
       min_columns: 1,
     };
@@ -43840,7 +43840,7 @@ class NodaliaPersonCard extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 6,
+      columns: "full",
       min_rows: 1,
       min_columns: 2,
     };
@@ -45123,7 +45123,7 @@ class NodaliaWeatherCard extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 4,
+      columns: "full",
       min_rows: 2,
       min_columns: 2,
     };
@@ -46434,7 +46434,7 @@ class NodaliaVacuumCard extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 4,
+      columns: "full",
       min_rows: 2,
       min_columns: 2,
     };

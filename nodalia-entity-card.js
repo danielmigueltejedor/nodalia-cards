@@ -45,7 +45,7 @@ const DEFAULT_CONFIG = {
       gap: "12px",
     },
     icon: {
-      size: "58px",
+      size: "48px",
       background: "rgba(255, 255, 255, 0.06)",
       color: "var(--primary-text-color)",
       on_color: "var(--info-color, #71c0ff)",
@@ -57,9 +57,9 @@ const DEFAULT_CONFIG = {
       accent_background: "rgba(113, 192, 255, 0.18)",
     },
     chip_height: "24px",
-    chip_font_size: "11px",
+    chip_font_size: "9px",
     chip_padding: "0 9px",
-    title_size: "14px",
+    title_size: "12px",
   },
 };
 
@@ -599,7 +599,7 @@ class NodaliaEntityCard extends HTMLElement {
   getGridOptions() {
     return {
       rows: "auto",
-      columns: 4,
+      columns: "full",
       min_rows: 2,
       min_columns: 2,
     };
