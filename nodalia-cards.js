@@ -7796,9 +7796,7 @@ class NodaliaMediaPlayer extends HTMLElement {
               }
             </div>
           </div>
-          <div class="media-player__footer">
-            ${chipsMarkup}
-          </div>
+          ${chipsMarkup ? `<div class="media-player__footer">${chipsMarkup}</div>` : ""}
         </div>
       </div>
     `;
@@ -8328,8 +8326,8 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--tv:not(.media-player-card--idle) .media-player__content {
-          gap: 4px;
-          padding-bottom: 12px;
+          gap: 8px;
+          padding-bottom: 6px;
         }
 
         .media-player-card--tv .media-player__hero {
