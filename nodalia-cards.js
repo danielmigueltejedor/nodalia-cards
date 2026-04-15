@@ -543,6 +543,15 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return 1;
   }
 
+  getGridOptions() {
+    return {
+      rows: "auto",
+      columns: 12,
+      min_rows: 1,
+      min_columns: 4,
+    };
+  }
+
   _getTrackedEntityIds() {
     const entityIds = new Set();
 
@@ -5451,6 +5460,15 @@ class NodaliaMediaPlayer extends HTMLElement {
 
   getCardSize() {
     return 3;
+  }
+
+  getGridOptions() {
+    return {
+      rows: "auto",
+      columns: 6,
+      min_rows: 2,
+      min_columns: 3,
+    };
   }
 
   _getTrackedEntities() {
@@ -10563,7 +10581,7 @@ class NodaliaLightCard extends HTMLElement {
   getGridOptions() {
     return {
       columns: 4,
-      rows: 3,
+      rows: "auto",
       min_columns: 2,
       min_rows: 2,
     };
@@ -13658,6 +13676,15 @@ class NodaliaFanCard extends HTMLElement {
     return 3;
   }
 
+  getGridOptions() {
+    return {
+      rows: "auto",
+      columns: 4,
+      min_rows: 2,
+      min_columns: 2,
+    };
+  }
+
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
@@ -16256,6 +16283,15 @@ class NodaliaHumidifierCard extends HTMLElement {
 
   getCardSize() {
     return 3;
+  }
+
+  getGridOptions() {
+    return {
+      rows: "auto",
+      columns: 4,
+      min_rows: 2,
+      min_columns: 2,
+    };
   }
 
   _getRenderSignature(hass = this._hass) {
@@ -18942,7 +18978,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
 
   getGridOptions() {
     return {
-      rows: 5,
+      rows: "auto",
       columns: 12,
       min_rows: 5,
       min_columns: 6,
@@ -20708,7 +20744,7 @@ class NodaliaGraphCard extends HTMLElement {
 
   getGridOptions() {
     return {
-      rows: 4,
+      rows: "auto",
       columns: 12,
       min_rows: 3,
       min_columns: 6,
@@ -23031,7 +23067,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     });
 
     return {
-      rows: layoutPreset === "simple" ? 4 : 4,
+      rows: "auto",
       columns: 12,
       min_rows: layoutPreset === "simple" ? 3 : 3,
       min_columns: 6,
@@ -25506,7 +25542,7 @@ class NodaliaClimateCard extends HTMLElement {
 
   getGridOptions() {
     return {
-      rows: 5,
+      rows: "auto",
       columns: 8,
       min_rows: 5,
       min_columns: 7,
@@ -30668,7 +30704,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   getGridOptions() {
     return {
-      rows: 6,
+      rows: "auto",
       columns: 12,
       min_rows: 5,
       min_columns: 6,
@@ -37672,7 +37708,7 @@ class NodaliaEntityCard extends HTMLElement {
 
   getGridOptions() {
     return {
-      rows: Array.isArray(this._config?.quick_actions) && this._config.quick_actions.length ? 3 : 2,
+      rows: "auto",
       columns: 4,
       min_rows: 2,
       min_columns: 2,
@@ -42610,6 +42646,15 @@ class NodaliaInsigniaCard extends HTMLElement {
     this._render();
   }
 
+  getGridOptions() {
+    return {
+      rows: "auto",
+      columns: 2,
+      min_rows: 1,
+      min_columns: 1,
+    };
+  }
+
   _getState() {
     return this._config?.entity ? this._hass?.states?.[this._config.entity] || null : null;
   }
@@ -43794,7 +43839,7 @@ class NodaliaPersonCard extends HTMLElement {
 
   getGridOptions() {
     return {
-      rows: 1,
+      rows: "auto",
       columns: 6,
       min_rows: 1,
       min_columns: 2,
@@ -45073,6 +45118,15 @@ class NodaliaWeatherCard extends HTMLElement {
 
   getCardSize() {
     return 2;
+  }
+
+  getGridOptions() {
+    return {
+      rows: "auto",
+      columns: 4,
+      min_rows: 2,
+      min_columns: 2,
+    };
   }
 
   _getState() {
@@ -46375,6 +46429,15 @@ class NodaliaVacuumCard extends HTMLElement {
 
   getCardSize() {
     return 3;
+  }
+
+  getGridOptions() {
+    return {
+      rows: "auto",
+      columns: 4,
+      min_rows: 2,
+      min_columns: 2,
+    };
   }
 
   _getRenderSignature(hass = this._hass) {

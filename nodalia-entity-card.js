@@ -598,7 +598,7 @@ class NodaliaEntityCard extends HTMLElement {
 
   getGridOptions() {
     return {
-      rows: Array.isArray(this._config?.quick_actions) && this._config.quick_actions.length ? 3 : 2,
+      rows: "auto",
       columns: 4,
       min_rows: 2,
       min_columns: 2,

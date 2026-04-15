@@ -668,6 +668,15 @@ class NodaliaMediaPlayer extends HTMLElement {
     return 3;
   }
 
+  getGridOptions() {
+    return {
+      rows: "auto",
+      columns: 6,
+      min_rows: 2,
+      min_columns: 3,
+    };
+  }
+
   _getTrackedEntities() {
     const configuredPlayers = Array.isArray(this._config?.players)
       ? this._config.players.map(player => player?.entity).filter(Boolean)

@@ -1522,7 +1522,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   getGridOptions() {
     return {
-      rows: 6,
+      rows: "auto",
       columns: 12,
       min_rows: 5,
       min_columns: 6,

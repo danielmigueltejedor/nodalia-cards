@@ -542,6 +542,15 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return 1;
   }
 
+  getGridOptions() {
+    return {
+      rows: "auto",
+      columns: 12,
+      min_rows: 1,
+      min_columns: 4,
+    };
+  }
+
   _getTrackedEntityIds() {
     const entityIds = new Set();
 

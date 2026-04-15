@@ -530,7 +530,7 @@ class NodaliaLightCard extends HTMLElement {
   getGridOptions() {
     return {
       columns: 4,
-      rows: 3,
+      rows: "auto",
       min_columns: 2,
       min_rows: 2,
     };

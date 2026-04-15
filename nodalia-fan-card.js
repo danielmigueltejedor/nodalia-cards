@@ -507,6 +507,15 @@ class NodaliaFanCard extends HTMLElement {
     return 3;
   }
 
+  getGridOptions() {
+    return {
+      rows: "auto",
+      columns: 4,
+      min_rows: 2,
+      min_columns: 2,
+    };
+  }
+
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;

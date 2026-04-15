@@ -376,7 +376,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
 
   getGridOptions() {
     return {
-      rows: 5,
+      rows: "auto",
       columns: 12,
       min_rows: 5,
       min_columns: 6,

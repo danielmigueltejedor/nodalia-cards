@@ -483,7 +483,7 @@ class NodaliaClimateCard extends HTMLElement {
 
   getGridOptions() {
     return {
-      rows: 5,
+      rows: "auto",
       columns: 8,
       min_rows: 5,
       min_columns: 7,

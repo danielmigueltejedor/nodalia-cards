@@ -361,6 +361,15 @@ class NodaliaWeatherCard extends HTMLElement {
     return 2;
   }
 
+  getGridOptions() {
+    return {
+      rows: "auto",
+      columns: 4,
+      min_rows: 2,
+      min_columns: 2,
+    };
+  }
+
   _getState() {
     return this._hass?.states?.[this._config?.entity] || null;
   }

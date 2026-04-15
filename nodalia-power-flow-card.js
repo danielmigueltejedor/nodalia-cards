@@ -575,7 +575,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     });
 
     return {
-      rows: layoutPreset === "simple" ? 4 : 4,
+      rows: "auto",
       columns: 12,
       min_rows: layoutPreset === "simple" ? 3 : 3,
       min_columns: 6,

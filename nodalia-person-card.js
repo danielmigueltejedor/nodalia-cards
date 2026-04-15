@@ -252,7 +252,7 @@ class NodaliaPersonCard extends HTMLElement {
 
   getGridOptions() {
     return {
-      rows: 1,
+      rows: "auto",
       columns: 6,
       min_rows: 1,
       min_columns: 2,

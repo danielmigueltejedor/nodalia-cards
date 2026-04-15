@@ -456,7 +456,7 @@ class NodaliaGraphCard extends HTMLElement {
 
   getGridOptions() {
     return {
-      rows: 4,
+      rows: "auto",
       columns: 12,
       min_rows: 3,
       min_columns: 6,

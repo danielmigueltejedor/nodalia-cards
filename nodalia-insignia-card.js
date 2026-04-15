@@ -358,6 +358,15 @@ class NodaliaInsigniaCard extends HTMLElement {
     this._render();
   }
 
+  getGridOptions() {
+    return {
+      rows: "auto",
+      columns: 2,
+      min_rows: 1,
+      min_columns: 1,
+    };
+  }
+
   _getState() {
     return this._config?.entity ? this._hass?.states?.[this._config.entity] || null : null;
   }
