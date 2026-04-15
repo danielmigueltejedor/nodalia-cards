@@ -11461,13 +11461,14 @@ class NodaliaLightCard extends HTMLElement {
       ? 0
       : ((currentTemperatureSliderValue - temperatureControlDomain.min) / (temperatureControlDomain.max - temperatureControlDomain.min)) * 100;
     const colorProgress = (currentHue / 360) * 100;
-    const chips = [];
-    const stateChipMarkup = !isMiniLayout && config.show_state === true
-      ? `<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`
-      : "";
+    const headerChips = [];
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
+
+    if (!isMiniLayout && config.show_state === true) {
+      headerChips.push(`<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`);
+    }
 
     if (isOn && !isMiniLayout) {
       let activeValueChip = null;
@@ -11481,11 +11482,11 @@ class NodaliaLightCard extends HTMLElement {
       }
 
       if (activeValueChip) {
-        chips.push(`<span class="light-card__chip">${escapeHtml(activeValueChip)}</span>`);
+        headerChips.push(`<span class="light-card__chip">${escapeHtml(activeValueChip)}</span>`);
       }
     }
 
-    const showCopyBlock = !isMiniLayout && (!isCompactLayout || chips.length > 0 || Boolean(stateChipMarkup));
+    const showCopyBlock = !isMiniLayout && (!isCompactLayout || headerChips.length > 0);
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -11667,7 +11668,7 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__copy {
           display: grid;
-          gap: 4px;
+          gap: 0;
           min-width: 0;
         }
 
@@ -11677,11 +11678,10 @@ class NodaliaLightCard extends HTMLElement {
           gap: 10px;
           justify-content: space-between;
           min-width: 0;
+          width: 100%;
         }
 
         .light-card--compact .light-card__copy {
-          justify-items: center;
-          text-align: center;
           width: 100%;
         }
 
@@ -11702,13 +11702,17 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         .light-card__chips {
+          align-items: center;
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
+          justify-content: flex-end;
+          margin-left: auto;
+          min-width: 0;
         }
 
         .light-card--compact .light-card__chips {
-          justify-content: center;
+          justify-content: flex-end;
         }
 
         .light-card__chip {
@@ -12049,15 +12053,10 @@ class NodaliaLightCard extends HTMLElement {
             ${showCopyBlock
               ? `
                 <div class="light-card__copy">
-                  ${(!isCompactLayout || stateChipMarkup)
-                    ? `
-                      <div class="light-card__copy-header">
-                        ${isCompactLayout ? "" : `<div class="light-card__title">${escapeHtml(title)}</div>`}
-                        ${stateChipMarkup}
-                      </div>
-                    `
-                    : ""}
-                  ${chips.length ? `<div class="light-card__chips">${chips.join("")}</div>` : ""}
+                  <div class="light-card__copy-header">
+                    ${isCompactLayout ? "" : `<div class="light-card__title">${escapeHtml(title)}</div>`}
+                    ${headerChips.length ? `<div class="light-card__chips">${headerChips.join("")}</div>` : ""}
+                  </div>
                 </div>
               `
               : ""}
