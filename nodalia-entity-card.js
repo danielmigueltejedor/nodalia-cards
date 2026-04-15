@@ -17,6 +17,7 @@ const DEFAULT_CONFIG = {
   name: "",
   icon: "",
   use_entity_icon: false,
+  number_decimals: 2,
   tap_action: "auto",
   tap_service: "",
   tap_service_data: "",
@@ -65,6 +66,7 @@ const DEFAULT_CONFIG = {
 const STUB_CONFIG = {
   entity: "switch.lampara",
   name: "Lampara",
+  number_decimals: 2,
   tap_action: "auto",
   show_state: true,
   quick_actions: [
@@ -215,6 +217,60 @@ function parseSizeToPixels(value, fallback = 0) {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+function parseNumericValue(value) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || !/^-?\d+(?:[.,]\d+)?$/.test(rawValue)) {
+    return null;
+  }
+
+  const numericValue = Number(rawValue.replace(",", "."));
+  return Number.isFinite(numericValue) ? numericValue : null;
+}
+
+function formatNumericValue(value, maximumFractionDigits = 2) {
+  const numericValue = parseNumericValue(value);
+  if (!Number.isFinite(numericValue)) {
+    return String(value ?? "");
+  }
+
+  const safeDigits = clamp(Math.round(Number(maximumFractionDigits)), 0, 6);
+  return numericValue
+    .toFixed(safeDigits)
+    .replace(/\.0+$/, "")
+    .replace(/(\.\d*?)0+$/, "$1");
+}
+
+function formatNumericValueWithUnit(value, unit = "", maximumFractionDigits = 2) {
+  const formattedValue = formatNumericValue(value, maximumFractionDigits);
+  const normalizedUnit = String(unit || "").trim();
+
+  if (!normalizedUnit) {
+    return formattedValue;
+  }
+
+  return `${formattedValue}${normalizedUnit.startsWith("°") ? "" : " "}${normalizedUnit}`;
+}
+
+function getValueSignature(value) {
+  if (value === undefined || value === null) {
+    return "";
+  }
+
+  if (Array.isArray(value) || isObject(value)) {
+    try {
+      return JSON.stringify(value);
+    } catch (_error) {
+      return String(value);
+    }
+  }
+
+  return String(value);
 }
 
 function escapeHtml(value) {
@@ -537,14 +593,14 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 1;
+    return 3;
   }
 
   getGridOptions() {
     return {
-      rows: 1,
-      columns: 6,
-      min_rows: 1,
+      rows: Array.isArray(this._config?.quick_actions) && this._config.quick_actions.length ? 3 : 2,
+      columns: 4,
+      min_rows: 2,
       min_columns: 2,
     };
   }
@@ -554,6 +610,8 @@ class NodaliaEntityCard extends HTMLElement {
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const attrs = state?.attributes || {};
     const configuredStateAttribute = String(this._config?.state_attribute || "").trim();
+    const configuredPrimaryAttribute = String(this._config?.primary_attribute || "").trim();
+    const configuredSecondaryAttribute = String(this._config?.secondary_attribute || "").trim();
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
@@ -563,6 +621,10 @@ class NodaliaEntityCard extends HTMLElement {
       unit: String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || ""),
       configuredStateAttribute,
       configuredStateValue: configuredStateAttribute ? String(attrs[configuredStateAttribute] ?? "") : "",
+      configuredPrimaryAttribute,
+      configuredPrimaryValue: configuredPrimaryAttribute ? getValueSignature(attrs[configuredPrimaryAttribute]) : "",
+      configuredSecondaryAttribute,
+      configuredSecondaryValue: configuredSecondaryAttribute ? getValueSignature(attrs[configuredSecondaryAttribute]) : "",
       useEntityIcon: Boolean(this._config?.use_entity_icon),
       compact: Boolean(this._isCompactLayout),
       quickActions: Array.isArray(this._config?.quick_actions) ? this._config.quick_actions.length : 0,
@@ -628,19 +690,27 @@ class NodaliaEntityCard extends HTMLElement {
       : styles?.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color;
   }
 
+  _getNumberDecimals() {
+    const configuredValue = Number(this._config?.number_decimals);
+    return Number.isFinite(configuredValue) ? clamp(Math.round(configuredValue), 0, 6) : 2;
+  }
+
   _translateStateValue(state) {
     if (!state) {
       return null;
     }
 
     const rawState = String(state.state ?? "").trim();
-    const unit = String(state.attributes?.unit_of_measurement || "").trim();
+    const unit = String(state.attributes?.unit_of_measurement || state.attributes?.native_unit_of_measurement || "").trim();
     const key = normalizeTextKey(rawState);
     const domain = getEntityDomain(state);
     const deviceClass = normalizeTextKey(state.attributes?.device_class);
+    const numberDecimals = this._getNumberDecimals();
 
-    if (rawState && unit && /^-?\d+([.,]\d+)?$/.test(rawState)) {
-      return `${rawState} ${unit}`;
+    if (parseNumericValue(rawState) !== null) {
+      return unit
+        ? formatNumericValueWithUnit(rawState, unit, numberDecimals)
+        : formatNumericValue(rawState, numberDecimals);
     }
 
     if (domain === "binary_sensor") {
@@ -819,6 +889,7 @@ class NodaliaEntityCard extends HTMLElement {
     }
 
     const key = normalizeTextKey(attributeName);
+    const numberDecimals = this._getNumberDecimals();
 
     if (typeof value === "boolean") {
       return value ? "Si" : "No";
@@ -848,23 +919,26 @@ class NodaliaEntityCard extends HTMLElement {
       }
     }
 
-    if (typeof value === "number") {
+    const numericValue = parseNumericValue(value);
+    if (numericValue !== null) {
       if (["battery", "battery_level", "humidity", "current_humidity"].includes(key)) {
-        return `${Math.round(value)}%`;
+        return `${Math.round(numericValue)}%`;
       }
 
       if (key === "brightness") {
-        return `${Math.round((value / 255) * 100)}%`;
+        return `${Math.round((numericValue / 255) * 100)}%`;
       }
 
       if (key === "volume_level") {
-        return `${Math.round(value * 100)}%`;
+        return `${Math.round(numericValue * 100)}%`;
       }
 
       if (key.includes("temperature")) {
         const unit = state.attributes?.temperature_unit || "°C";
-        return `${value}${unit.startsWith("°") ? "" : " "}${unit}`;
+        return formatNumericValueWithUnit(numericValue, unit, numberDecimals);
       }
+
+      return formatNumericValue(numericValue, numberDecimals);
     }
 
     return String(value);
@@ -1121,8 +1195,8 @@ class NodaliaEntityCard extends HTMLElement {
     const quickActions = Array.isArray(config.quick_actions) ? config.quick_actions.filter(action => action?.icon) : [];
     const configuredColumns = this._getConfiguredGridColumns();
     const configuredRows = this._getConfiguredGridRows();
-    const singleRowLayout = configuredRows !== null ? configuredRows <= 1 : quickActions.length === 0;
-    const narrowCard = configuredColumns !== null ? configuredColumns <= 6 : (this._cardWidth || this.clientWidth || 0) <= 300;
+    const singleRowLayout = configuredRows !== null ? configuredRows <= 1 : false;
+    const narrowCard = configuredColumns !== null ? configuredColumns < 4 : (this._cardWidth || this.clientWidth || 0) <= 300;
     const compactMetrics = narrowCard || singleRowLayout;
     const singleRowPaddingY = singleRowLayout ? 4 : 0;
     const singleRowPaddingX = singleRowLayout ? 9 : 0;
@@ -2463,7 +2537,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Contenido</div>
-            <div class="editor-section__hint">Estado visible, chips adicionales y comportamiento en modo compacto.</div>
+            <div class="editor-section__hint">Estado visible, chips adicionales, decimales de los valores y comportamiento en modo compacto.</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -2477,6 +2551,10 @@ class NodaliaEntityCardEditor extends HTMLElement {
               ],
             )}
             ${this._renderCheckboxField("Mostrar estado", "show_state", config.show_state !== false)}
+            ${this._renderTextField("Decimales en estado y chips", "number_decimals", config.number_decimals, {
+              placeholder: "2",
+              type: "number",
+            })}
             ${this._renderTextField("Atributo chip principal", "primary_attribute", config.primary_attribute, {
               placeholder: "battery_level",
             })}

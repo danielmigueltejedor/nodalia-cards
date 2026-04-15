@@ -1429,13 +1429,12 @@ class NodaliaLightCard extends HTMLElement {
       : ((currentTemperatureSliderValue - temperatureControlDomain.min) / (temperatureControlDomain.max - temperatureControlDomain.min)) * 100;
     const colorProgress = (currentHue / 360) * 100;
     const chips = [];
+    const stateChipMarkup = !isMiniLayout && config.show_state === true
+      ? `<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`
+      : "";
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
-
-    if (!isMiniLayout && config.show_state === true) {
-      chips.push(`<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`);
-    }
 
     if (isOn && !isMiniLayout) {
       let activeValueChip = null;
@@ -1453,7 +1452,7 @@ class NodaliaLightCard extends HTMLElement {
       }
     }
 
-    const showCopyBlock = !isMiniLayout && (!isCompactLayout || chips.length > 0);
+    const showCopyBlock = !isMiniLayout && (!isCompactLayout || chips.length > 0 || Boolean(stateChipMarkup));
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1639,16 +1638,31 @@ class NodaliaLightCard extends HTMLElement {
           min-width: 0;
         }
 
+        .light-card__copy-header {
+          align-items: center;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+          min-width: 0;
+        }
+
         .light-card--compact .light-card__copy {
           justify-items: center;
           text-align: center;
           width: 100%;
         }
 
+        .light-card--compact .light-card__copy-header {
+          justify-content: flex-end;
+          width: 100%;
+        }
+
         .light-card__title {
           color: var(--primary-text-color);
+          flex: 1 1 auto;
           font-size: ${styles.title_size};
           font-weight: 700;
+          min-width: 0;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -2002,7 +2016,14 @@ class NodaliaLightCard extends HTMLElement {
             ${showCopyBlock
               ? `
                 <div class="light-card__copy">
-                  ${isCompactLayout ? "" : `<div class="light-card__title">${escapeHtml(title)}</div>`}
+                  ${(!isCompactLayout || stateChipMarkup)
+                    ? `
+                      <div class="light-card__copy-header">
+                        ${isCompactLayout ? "" : `<div class="light-card__title">${escapeHtml(title)}</div>`}
+                        ${stateChipMarkup}
+                      </div>
+                    `
+                    : ""}
                   ${chips.length ? `<div class="light-card__chips">${chips.join("")}</div>` : ""}
                 </div>
               `
@@ -2985,7 +3006,7 @@ class NodaliaLightCardEditor extends HTMLElement {
                 { value: "never", label: "Nunca centrar" },
               ],
             )}
-            ${this._renderCheckboxField("Mostrar estado en burbuja", "show_state", config.show_state === true)}
+            ${this._renderCheckboxField("Mostrar burbuja de estado", "show_state", config.show_state === true)}
             ${this._renderCheckboxField("Mostrar brillo", "show_brightness", config.show_brightness !== false)}
             ${this._renderCheckboxField("Botones de modo junto al slider", "show_slider_mode_buttons", config.show_slider_mode_buttons !== false)}
             ${this._renderCheckboxField("Presets de brillo", "show_quick_brightness", config.show_quick_brightness !== false)}
