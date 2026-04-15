@@ -86,8 +86,8 @@ const DEFAULT_CONFIG = {
   min_flow_rate: 1.4,
   max_flow_rate: 5.8,
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -588,7 +588,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       return;
     }
 
-    const style = styleOverride || haptics.style || "selection";
+    const style = styleOverride || haptics.style || "medium";
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -2239,7 +2239,7 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig(STUB_CONFIG);
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
     const grid = resolveNodeConfig("grid", config);
     const home = resolveNodeConfig("home", config);
     const solar = resolveNodeConfig("solar", config);

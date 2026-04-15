@@ -43,8 +43,8 @@ const DEFAULT_CONFIG = {
   state_attribute: "",
   layout_mode: "auto",
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -1306,7 +1306,7 @@ class NodaliaFavCard extends HTMLElement {
       return;
     }
 
-    const style = styleOverride || haptics.style || "selection";
+    const style = styleOverride || haptics.style || "medium";
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -2131,7 +2131,7 @@ class NodaliaFavCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>

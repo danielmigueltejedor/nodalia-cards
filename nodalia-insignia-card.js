@@ -26,8 +26,8 @@ const DEFAULT_CONFIG = {
   show_name: true,
   show_value: true,
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -391,7 +391,7 @@ class NodaliaInsigniaCard extends HTMLElement {
       return;
     }
 
-    const style = styleOverride || haptics.style || "selection";
+    const style = styleOverride || haptics.style || "medium";
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,

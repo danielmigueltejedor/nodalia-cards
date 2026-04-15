@@ -76,8 +76,8 @@ const DEFAULT_CONFIG = {
   title: "",
   show_labels: false,
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   layout: {
@@ -636,7 +636,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       return;
     }
 
-    const hapticStyle = String(style || "selection");
+    const hapticStyle = String(style || "medium");
 
     try {
       fireEvent(this, "haptic", hapticStyle);

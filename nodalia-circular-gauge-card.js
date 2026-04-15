@@ -40,8 +40,8 @@ const DEFAULT_CONFIG = {
   show_bottom_icon_bubble: false,
   tap_action: "more-info",
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -579,7 +579,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       return;
     }
 
-    const style = styleOverride || haptics.style || "selection";
+    const style = styleOverride || haptics.style || "medium";
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -1372,7 +1372,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>

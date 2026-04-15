@@ -31,8 +31,8 @@ const DEFAULT_CONFIG = {
   compact_layout_mode: "auto",
   quick_actions: [],
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -1107,7 +1107,7 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
-    const style = styleOverride || haptics.style || "selection";
+    const style = styleOverride || haptics.style || "medium";
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -2157,7 +2157,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
     const tapAction = config.tap_action || "auto";
 
     this.shadowRoot.innerHTML = `

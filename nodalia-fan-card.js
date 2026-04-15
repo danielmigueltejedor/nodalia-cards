@@ -24,8 +24,8 @@ const DEFAULT_CONFIG = {
   show_preset_modes: true,
   compact_layout_mode: "auto",
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -580,14 +580,14 @@ class NodaliaFanCard extends HTMLElement {
     this.dispatchEvent(new CustomEvent("haptic", {
       bubbles: true,
       composed: true,
-      detail: style || "selection",
+      detail: style || "medium",
     }));
 
     if (!this._config?.haptics?.fallback_vibrate || !navigator?.vibrate) {
       return;
     }
 
-    const vibration = HAPTIC_PATTERNS[style || "selection"];
+    const vibration = HAPTIC_PATTERNS[style || "medium"];
     if (vibration) {
       navigator.vibrate(vibration);
     }
@@ -2166,7 +2166,7 @@ class NodaliaFanCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>

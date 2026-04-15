@@ -77,8 +77,8 @@ const DEFAULT_CONFIG = {
   title: "",
   show_labels: false,
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   layout: {
@@ -637,7 +637,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       return;
     }
 
-    const hapticStyle = String(style || "selection");
+    const hapticStyle = String(style || "medium");
 
     try {
       fireEvent(this, "haptic", hapticStyle);
@@ -4876,8 +4876,8 @@ const DEFAULT_CONFIG = {
   album_cover_background: true,
   show_unavailable_badge: true,
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   layout: {
@@ -5547,7 +5547,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       return;
     }
 
-    const hapticStyle = String(style || "selection");
+    const hapticStyle = String(style || "medium");
 
     try {
       fireEvent(this, "haptic", hapticStyle);
@@ -9576,7 +9576,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -10084,8 +10084,8 @@ const DEFAULT_CONFIG = {
   show_temperature_controls: true,
   quick_brightness: [10, 35, 65, 100],
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -10668,7 +10668,7 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
-    const hapticStyle = String(style || "selection");
+    const hapticStyle = String(style || "medium");
 
     try {
       fireEvent(this, "haptic", hapticStyle);
@@ -12742,7 +12742,7 @@ class NodaliaLightCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -13193,8 +13193,8 @@ const DEFAULT_CONFIG = {
   show_preset_modes: true,
   compact_layout_mode: "auto",
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -13749,14 +13749,14 @@ class NodaliaFanCard extends HTMLElement {
     this.dispatchEvent(new CustomEvent("haptic", {
       bubbles: true,
       composed: true,
-      detail: style || "selection",
+      detail: style || "medium",
     }));
 
     if (!this._config?.haptics?.fallback_vibrate || !navigator?.vibrate) {
       return;
     }
 
-    const vibration = HAPTIC_PATTERNS[style || "selection"];
+    const vibration = HAPTIC_PATTERNS[style || "medium"];
     if (vibration) {
       navigator.vibrate(vibration);
     }
@@ -15335,7 +15335,7 @@ class NodaliaFanCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -15778,8 +15778,8 @@ const DEFAULT_CONFIG = {
   show_fan_mode_button: true,
   compact_layout_mode: "auto",
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -16592,7 +16592,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       return;
     }
 
-    const style = styleOverride || haptics.style || "selection";
+    const style = styleOverride || haptics.style || "medium";
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -18164,7 +18164,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -18642,8 +18642,8 @@ const DEFAULT_CONFIG = {
   show_bottom_icon_bubble: false,
   tap_action: "more-info",
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -19181,7 +19181,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       return;
     }
 
-    const style = styleOverride || haptics.style || "selection";
+    const style = styleOverride || haptics.style || "medium";
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -19974,7 +19974,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -20324,8 +20324,8 @@ const DEFAULT_CONFIG = {
   show_unavailable_badge: true,
   tap_action: "more-info",
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -20866,7 +20866,7 @@ class NodaliaGraphCard extends HTMLElement {
       return;
     }
 
-    const style = styleOverride || haptics.style || "selection";
+    const style = styleOverride || haptics.style || "medium";
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -22189,7 +22189,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -22578,8 +22578,8 @@ const DEFAULT_CONFIG = {
   min_flow_rate: 1.4,
   max_flow_rate: 5.8,
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -23080,7 +23080,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       return;
     }
 
-    const style = styleOverride || haptics.style || "selection";
+    const style = styleOverride || haptics.style || "medium";
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -24731,7 +24731,7 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig(STUB_CONFIG);
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
     const grid = resolveNodeConfig("grid", config);
     const home = resolveNodeConfig("home", config);
     const solar = resolveNodeConfig("solar", config);
@@ -25089,8 +25089,8 @@ const DEFAULT_CONFIG = {
   show_step_controls: true,
   show_unavailable_badge: true,
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -25847,7 +25847,7 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    const style = styleOverride || haptics.style || "selection";
+    const style = styleOverride || haptics.style || "medium";
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -27184,7 +27184,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -27504,8 +27504,8 @@ const DEFAULT_CONFIG = {
   show_custom_bypass: false,
   compact_layout_mode: "auto",
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -28205,7 +28205,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       return;
     }
 
-    const style = styleOverride || haptics.style || "selection";
+    const style = styleOverride || haptics.style || "medium";
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -28889,7 +28889,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -29471,8 +29471,8 @@ const DEFAULT_CONFIG = {
   icons: [],
   map_modes: [],
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -30717,7 +30717,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
-    const style = styleOverride || haptics.style || "selection";
+    const style = styleOverride || haptics.style || "medium";
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -36765,7 +36765,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -37141,8 +37141,8 @@ const DEFAULT_CONFIG = {
   compact_layout_mode: "auto",
   quick_actions: [],
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -38217,7 +38217,7 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
-    const style = styleOverride || haptics.style || "selection";
+    const style = styleOverride || haptics.style || "medium";
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -39267,7 +39267,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
     const tapAction = config.tap_action || "auto";
 
     this.shadowRoot.innerHTML = `
@@ -39845,8 +39845,8 @@ const DEFAULT_CONFIG = {
   state_attribute: "",
   layout_mode: "auto",
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -41108,7 +41108,7 @@ class NodaliaFavCard extends HTMLElement {
       return;
     }
 
-    const style = styleOverride || haptics.style || "selection";
+    const style = styleOverride || haptics.style || "medium";
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -41933,7 +41933,7 @@ class NodaliaFavCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -42314,8 +42314,8 @@ const DEFAULT_CONFIG = {
   show_name: true,
   show_value: true,
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -42679,7 +42679,7 @@ class NodaliaInsigniaCard extends HTMLElement {
       return;
     }
 
-    const style = styleOverride || haptics.style || "selection";
+    const style = styleOverride || haptics.style || "medium";
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -43608,8 +43608,8 @@ const DEFAULT_CONFIG = {
   use_entity_picture: true,
   use_zone_icon: true,
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -44028,7 +44028,7 @@ class NodaliaPersonCard extends HTMLElement {
       return;
     }
 
-    const style = styleOverride || haptics.style || "selection";
+    const style = styleOverride || haptics.style || "medium";
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -44496,7 +44496,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -44780,8 +44780,8 @@ const DEFAULT_CONFIG = {
   show_wind_chip: true,
   show_pressure_chip: false,
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -45219,7 +45219,7 @@ class NodaliaWeatherCard extends HTMLElement {
       return;
     }
 
-    const style = styleOverride || haptics.style || "selection";
+    const style = styleOverride || haptics.style || "medium";
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -45675,7 +45675,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -46032,8 +46032,8 @@ const DEFAULT_CONFIG = {
   suction_select_entity: "",
   mop_select_entity: "",
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -46501,7 +46501,7 @@ class NodaliaVacuumCard extends HTMLElement {
       return;
     }
 
-    const hapticStyle = String(style || "selection");
+    const hapticStyle = String(style || "medium");
 
     try {
       fireEvent(this, "haptic", hapticStyle);
@@ -48778,7 +48778,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>

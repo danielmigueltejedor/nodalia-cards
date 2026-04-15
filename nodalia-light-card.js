@@ -33,8 +33,8 @@ const DEFAULT_CONFIG = {
   show_temperature_controls: true,
   quick_brightness: [10, 35, 65, 100],
   haptics: {
-    enabled: false,
-    style: "selection",
+    enabled: true,
+    style: "medium",
     fallback_vibrate: false,
   },
   styles: {
@@ -617,7 +617,7 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
-    const hapticStyle = String(style || "selection");
+    const hapticStyle = String(style || "medium");
 
     try {
       fireEvent(this, "haptic", hapticStyle);
@@ -2691,7 +2691,7 @@ class NodaliaLightCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "selection";
+    const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>
