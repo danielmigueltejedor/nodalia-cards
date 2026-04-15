@@ -24,6 +24,7 @@ const DEFAULT_CONFIG = {
   tap_url: "",
   tap_new_tab: false,
   show_state: true,
+  state_chip_on_title_row: false,
   primary_attribute: "",
   secondary_attribute: "",
   show_primary_chip: true,
@@ -69,6 +70,7 @@ const STUB_CONFIG = {
   number_decimals: 2,
   tap_action: "auto",
   show_state: true,
+  state_chip_on_title_row: false,
   quick_actions: [
     {
       icon: "mdi:power",
@@ -1219,19 +1221,22 @@ class NodaliaEntityCard extends HTMLElement {
     const accentColor = this._getAccentColor(state);
     const showUnavailableBadge = isUnavailableState(state);
     const stateLabel = config.show_state ? this._translateStateValue(state) : null;
+    const stateChip = this._renderChip(stateLabel, "state");
     const primaryValue = config.show_primary_chip !== false
       ? this._formatAttributeValue(state, config.primary_attribute)
       : null;
     const secondaryValue = config.show_secondary_chip !== false
       ? this._formatAttributeValue(state, config.secondary_attribute)
       : null;
+    const showTitle = !isCompactLayout;
+    const placeStateChipOnTitleRow = config.state_chip_on_title_row === true && Boolean(stateChip) && showTitle;
     const chips = [
-      this._renderChip(stateLabel, "state"),
+      placeStateChipOnTitleRow ? "" : stateChip,
       this._renderChip(primaryValue, "value"),
       this._renderChip(secondaryValue, "value"),
     ].filter(Boolean);
-    const showTitle = !isCompactLayout;
-    const showCopyBlock = showTitle || chips.length > 0;
+    const showCopyHeader = showTitle || placeStateChipOnTitleRow;
+    const showCopyBlock = showCopyHeader || chips.length > 0;
     const canRunPrimaryAction = this._canRunTapAction(state);
     const isActive = this._isActiveState(state);
     const cardBackground = isActive
@@ -1388,7 +1393,15 @@ class NodaliaEntityCard extends HTMLElement {
           grid-template-columns: 1fr;
         }
 
+        .entity-card__copy-header {
+          align-items: center;
+          display: flex;
+          gap: ${singleRowLayout ? "4px" : narrowCard ? "6px" : "8px"};
+          min-width: 0;
+        }
+
         .entity-card__title {
+          flex: 1 1 auto;
           font-size: ${effectiveTitleSize};
           font-weight: 700;
           letter-spacing: -0.02em;
@@ -1397,6 +1410,19 @@ class NodaliaEntityCard extends HTMLElement {
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+        }
+
+        .entity-card__copy-header-chip {
+          display: flex;
+          flex: 0 1 auto;
+          justify-content: flex-end;
+          margin-left: auto;
+          max-width: 100%;
+          min-width: 0;
+        }
+
+        .entity-card__copy-header-chip .entity-card__chip {
+          max-width: 100%;
         }
 
         .entity-card__chips {
@@ -1534,7 +1560,14 @@ class NodaliaEntityCard extends HTMLElement {
             ${showCopyBlock
               ? `
                 <div class="entity-card__copy">
-                  ${showTitle ? `<div class="entity-card__title">${escapeHtml(title)}</div>` : ""}
+                  ${showCopyHeader
+                    ? `
+                      <div class="entity-card__copy-header">
+                        ${showTitle ? `<div class="entity-card__title">${escapeHtml(title)}</div>` : ""}
+                        ${placeStateChipOnTitleRow ? `<div class="entity-card__copy-header-chip">${stateChip}</div>` : ""}
+                      </div>
+                    `
+                    : ""}
                   ${chips.length ? `<div class="entity-card__chips">${chips.join("")}</div>` : ""}
                 </div>
               `
@@ -2551,6 +2584,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
               ],
             )}
             ${this._renderCheckboxField("Mostrar estado", "show_state", config.show_state !== false)}
+            ${this._renderCheckboxField("Estado a la derecha del nombre", "state_chip_on_title_row", config.state_chip_on_title_row === true)}
             ${this._renderTextField("Decimales en estado y chips", "number_decimals", config.number_decimals, {
               placeholder: "2",
               type: "number",
