@@ -10366,7 +10366,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "0.6.0";
+const CARD_VERSION = "0.7.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -10402,6 +10402,11 @@ const DEFAULT_CONFIG = {
     enabled: true,
     style: "medium",
     fallback_vibrate: false,
+  },
+  animations: {
+    enabled: true,
+    power_duration: 420,
+    controls_duration: 320,
   },
   styles: {
     card: {
@@ -10752,6 +10757,18 @@ function normalizeConfig(rawConfig) {
     config.quick_brightness = deepClone(DEFAULT_CONFIG.quick_brightness);
   }
 
+  const numericPowerDuration = Number(config.animations?.power_duration);
+  const numericControlsDuration = Number(config.animations?.controls_duration);
+  config.animations = {
+    enabled: config.animations?.enabled !== false,
+    power_duration: Number.isFinite(numericPowerDuration)
+      ? clamp(Math.round(numericPowerDuration), 120, 4000)
+      : DEFAULT_CONFIG.animations.power_duration,
+    controls_duration: Number.isFinite(numericControlsDuration)
+      ? clamp(Math.round(numericControlsDuration), 120, 2400)
+      : DEFAULT_CONFIG.animations.controls_duration,
+  };
+
   return config;
 }
 
@@ -10781,6 +10798,8 @@ class NodaliaLightCard extends HTMLElement {
     this._dragFrame = 0;
     this._pendingDragUpdate = null;
     this._lastRenderSignature = "";
+    this._lastRenderedIsOn = null;
+    this._lastControlsMarkup = "";
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -11238,6 +11257,15 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     return this._config?.styles?.icon?.off_color || "var(--state-inactive-color, rgba(255, 255, 255, 0.45))";
+  }
+
+  _getAnimationSettings() {
+    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+    return {
+      enabled: configuredAnimations.enabled !== false,
+      powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4000),
+      controlsDuration: clamp(Number(configuredAnimations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
+    };
   }
 
   _setLightState(data = {}) {
@@ -11798,6 +11826,11 @@ class NodaliaLightCard extends HTMLElement {
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
+    const animations = this._getAnimationSettings();
+    const wasOn = this._lastRenderedIsOn;
+    const powerAnimationState = animations.enabled && wasOn !== null && wasOn !== isOn
+      ? (isOn ? "powering-up" : "powering-down")
+      : "";
 
     if (!isMiniLayout && config.show_state === true) {
       headerChips.push(`<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`);
@@ -11820,6 +11853,199 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     const showCopyBlock = !isMiniLayout && (!isCompactLayout || headerChips.length > 0);
+    const sliderSectionMarkup = isOn && !isMiniLayout && availableControlModes.length > 0
+      ? `
+        <div class="light-card__section">
+          <div class="light-card__slider-row">
+            <div class="light-card__slider-wrap">
+              ${
+                activeControlMode === "temperature"
+                  ? `
+                    <div class="light-card__slider-shell" style="--temperature-progress:${clamp(temperatureProgress, 0, 100)};">
+                      <div class="light-card__slider-track" data-light-control="temperature"></div>
+                      <input
+                        type="range"
+                        class="light-card__slider"
+                        data-light-control="temperature"
+                        min="${temperatureControlDomain.min}"
+                        max="${temperatureControlDomain.max}"
+                        step="any"
+                        value="${currentTemperatureSliderValue}"
+                        style="--temperature-progress:${clamp(temperatureProgress, 0, 100)};"
+                        aria-label="Temperatura"
+                      />
+                      <div class="light-card__slider-thumb" data-light-control="temperature"></div>
+                    </div>
+                  `
+                  : activeControlMode === "color"
+                    ? `
+                      <div class="light-card__slider-shell" style="--color-progress:${clamp(colorProgress, 0, 100)};">
+                        <div class="light-card__slider-track" data-light-control="color"></div>
+                        <input
+                          type="range"
+                          class="light-card__slider"
+                          data-light-control="color"
+                          min="0"
+                          max="360"
+                          step="any"
+                          value="${currentHue}"
+                          style="--color-progress:${clamp(colorProgress, 0, 100)};"
+                          aria-label="Color"
+                        />
+                        <div class="light-card__slider-thumb" data-light-control="color"></div>
+                      </div>
+                    `
+                    : `
+                      <div class="light-card__slider-shell" style="--brightness:${brightnessPercent};">
+                        <div class="light-card__slider-track" data-light-control="brightness"></div>
+                        <input
+                          type="range"
+                          class="light-card__slider"
+                          data-light-control="brightness"
+                          min="1"
+                          max="100"
+                          step="any"
+                          value="${brightnessPercent}"
+                          style="--brightness:${brightnessPercent};"
+                          aria-label="Brillo"
+                        />
+                      </div>
+                    `
+              }
+            </div>
+            ${
+              useSliderModeButtons
+                ? `
+                  <div class="light-card__mode-actions">
+                    ${availableControlModes
+                      .filter(mode => mode !== activeControlMode)
+                      .map(mode => `
+                        <button
+                          type="button"
+                          class="light-card__mode-button"
+                          data-light-action="mode"
+                          data-mode="${mode}"
+                          aria-label="${mode === "brightness" ? "Mostrar brillo" : mode === "temperature" ? "Mostrar temperatura" : "Mostrar color"}"
+                        >
+                          <ha-icon icon="${this._getControlModeIcon(mode)}"></ha-icon>
+                        </button>
+                      `)
+                      .join("")}
+                  </div>
+                `
+                : ""
+            }
+          </div>
+        </div>
+      `
+      : "";
+    const brightnessPresetsMarkup = isOn &&
+      !isMiniLayout &&
+      activeControlMode === "brightness" &&
+      config.show_quick_brightness !== false &&
+      supportsBrightness &&
+      quickBrightness.length
+      ? `
+        <div class="light-card__actions">
+          ${quickBrightness
+            .map(value => `
+              <button
+                type="button"
+                class="light-card__brightness-preset ${value === brightnessPercent ? "is-active" : ""}"
+                data-light-action="brightness"
+                data-value="${value}"
+              >
+                ${escapeHtml(`${value}%`)}
+              </button>
+            `)
+            .join("")}
+        </div>
+      `
+      : "";
+    const temperatureControlsMarkup = isOn &&
+      !isMiniLayout &&
+      !useSliderModeButtons &&
+      config.show_temperature_controls !== false &&
+      supportsColorTemperature
+      ? `
+        <div class="light-card__section">
+          <div class="light-card__section-header">
+            <span>Temperatura</span>
+            <span class="light-card__section-value">${escapeHtml(`${currentKelvin}K`)}</span>
+          </div>
+          <div class="light-card__actions">
+            ${temperaturePresets
+              .map(item => `
+                <button
+                  type="button"
+                  class="light-card__temperature-preset ${Math.abs(item.kelvin - currentKelvin) <= 250 ? "is-active" : ""}"
+                  data-light-action="temperature"
+                  data-kelvin="${item.kelvin}"
+                >
+                  ${escapeHtml(item.label)}
+                </button>
+              `)
+              .join("")}
+          </div>
+        </div>
+      `
+      : "";
+    const colorControlsMarkup = isOn &&
+      !isMiniLayout &&
+      !useSliderModeButtons &&
+      config.show_color_controls !== false &&
+      supportsColor
+      ? `
+        <div class="light-card__section">
+          <div class="light-card__section-header">
+            <span>Color</span>
+            <span class="light-card__section-value">Presets</span>
+          </div>
+          <div class="light-card__actions">
+            ${COLOR_PRESETS
+              .map(item => `
+                <button
+                  type="button"
+                  class="light-card__color-preset"
+                  style="--swatch-color:${escapeHtml(item.color)};"
+                  data-light-action="color"
+                  data-hs="${escapeHtml(item.hs.join(","))}"
+                  aria-label="${escapeHtml(item.label)}"
+                  title="${escapeHtml(item.label)}"
+                ></button>
+              `)
+              .join("")}
+          </div>
+        </div>
+      `
+      : "";
+    const currentControlsMarkup = [
+      sliderSectionMarkup,
+      brightnessPresetsMarkup,
+      temperatureControlsMarkup,
+      colorControlsMarkup,
+    ].filter(Boolean).join("");
+    const controlsAnimationState = animations.enabled && !isMiniLayout && wasOn !== null && wasOn !== isOn
+      ? (isOn ? "entering" : "leaving")
+      : "";
+    const controlsContentMarkup = isOn
+      ? currentControlsMarkup
+      : controlsAnimationState === "leaving"
+        ? this._lastControlsMarkup
+        : "";
+    const controlsShellMarkup = !isMiniLayout && controlsContentMarkup
+      ? `
+        <div class="light-card__controls-shell ${controlsAnimationState ? `light-card__controls-shell--${controlsAnimationState}` : ""}">
+          <div class="light-card__controls-inner">
+            ${controlsContentMarkup}
+          </div>
+        </div>
+      `
+      : "";
+
+    if (isOn && currentControlsMarkup) {
+      this._lastControlsMarkup = currentControlsMarkup;
+    }
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -11833,6 +12059,9 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         ha-card.light-card {
+          --light-card-controls-max-height: 420px;
+          --light-card-controls-duration: ${animations.controlsDuration}ms;
+          --light-card-power-duration: ${animations.powerDuration}ms;
           background: ${isOn ? onCardBackground : styles.card.background};
           border: ${isOn ? `1px solid ${onCardBorder}` : styles.card.border};
           border-radius: ${styles.card.border_radius};
@@ -11871,6 +12100,34 @@ class NodaliaLightCard extends HTMLElement {
           pointer-events: none;
           position: absolute;
           z-index: 0;
+        }
+
+        .light-card::after {
+          background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, rgba(255, 255, 255, 0.12)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
+          content: "";
+          inset: 0;
+          opacity: ${isOn ? "1" : "0"};
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .light-card--powering-up {
+          animation: light-card-power-up var(--light-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) both;
+        }
+
+        .light-card--powering-down {
+          animation: light-card-power-down var(--light-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) both;
+        }
+
+        .light-card--powering-up::after {
+          animation: light-card-power-glow-in var(--light-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) both;
+        }
+
+        .light-card--powering-down::after {
+          animation: light-card-power-glow-out var(--light-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) both;
         }
 
         .light-card__content {
@@ -12069,6 +12326,36 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__section {
           display: grid;
           gap: 10px;
+        }
+
+        .light-card__controls-shell {
+          overflow: hidden;
+        }
+
+        .light-card__controls-inner {
+          display: grid;
+          gap: 10px;
+        }
+
+        .light-card__controls-shell--entering {
+          animation: light-card-controls-expand var(--light-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          transform-origin: top;
+        }
+
+        .light-card__controls-shell--entering .light-card__controls-inner {
+          animation: light-card-controls-content-in var(--light-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          transform-origin: top;
+        }
+
+        .light-card__controls-shell--leaving {
+          animation: light-card-controls-collapse var(--light-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          pointer-events: none;
+          transform-origin: top;
+        }
+
+        .light-card__controls-shell--leaving .light-card__controls-inner {
+          animation: light-card-controls-content-out var(--light-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          transform-origin: top;
         }
 
         .light-card__section-header {
@@ -12356,6 +12643,116 @@ class NodaliaLightCard extends HTMLElement {
           position: absolute;
         }
 
+        @keyframes light-card-power-up {
+          0% {
+            background: ${styles.card.background};
+            box-shadow: ${styles.card.box_shadow};
+            transform: scale(0.994);
+          }
+          55% {
+            background: linear-gradient(135deg, color-mix(in srgb, ${accentColor} 26%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 52%, ${styles.card.background} 100%);
+            box-shadow: ${styles.card.box_shadow}, 0 12px 26px color-mix(in srgb, ${accentColor} 12%, rgba(0, 0, 0, 0.16));
+            transform: scale(1);
+          }
+          100% {
+            background: ${onCardBackground};
+            box-shadow: ${styles.card.box_shadow}, ${onCardShadow};
+            transform: scale(1);
+          }
+        }
+
+        @keyframes light-card-power-down {
+          0% {
+            background: ${onCardBackground};
+            box-shadow: ${styles.card.box_shadow}, ${onCardShadow};
+            transform: scale(1);
+          }
+          100% {
+            background: ${styles.card.background};
+            box-shadow: ${styles.card.box_shadow};
+            transform: scale(0.996);
+          }
+        }
+
+        @keyframes light-card-power-glow-in {
+          0% {
+            opacity: 0;
+          }
+          45% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 1;
+          }
+        }
+
+        @keyframes light-card-power-glow-out {
+          0% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+          }
+        }
+
+        @keyframes light-card-controls-expand {
+          0% {
+            margin-top: -6px;
+            max-height: 0;
+            opacity: 0;
+          }
+          100% {
+            margin-top: 0;
+            max-height: var(--light-card-controls-max-height);
+            opacity: 1;
+          }
+        }
+
+        @keyframes light-card-controls-collapse {
+          0% {
+            margin-top: 0;
+            max-height: var(--light-card-controls-max-height);
+            opacity: 1;
+          }
+          100% {
+            margin-top: -6px;
+            max-height: 0;
+            opacity: 0;
+          }
+        }
+
+        @keyframes light-card-controls-content-in {
+          0% {
+            opacity: 0;
+            transform: translateY(-10px) scaleY(0.96);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+        }
+
+        @keyframes light-card-controls-content-out {
+          0% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-8px) scaleY(0.94);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .light-card,
+          .light-card::after,
+          .light-card__controls-shell,
+          .light-card__controls-inner {
+            animation: none !important;
+            transition: none !important;
+          }
+        }
+
         @media (max-width: 420px) {
           .light-card__hero {
             grid-template-columns: 50px minmax(0, 1fr);
@@ -12368,7 +12765,7 @@ class NodaliaLightCard extends HTMLElement {
         }
       </style>
       <ha-card
-        class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""} ${isMiniLayout ? "light-card--mini" : ""} ${showCopyBlock ? "light-card--with-copy" : ""}"
+        class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""} ${isMiniLayout ? "light-card--mini" : ""} ${showCopyBlock ? "light-card--with-copy" : ""} ${powerAnimationState ? `light-card--${powerAnimationState}` : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
         data-light-action="toggle"
       >
@@ -12394,187 +12791,12 @@ class NodaliaLightCard extends HTMLElement {
               `
               : ""}
           </div>
-
-          ${
-            isOn && !isMiniLayout && availableControlModes.length > 0
-              ? `
-                <div class="light-card__section">
-                  <div class="light-card__slider-row">
-                    <div class="light-card__slider-wrap">
-                      ${
-                        activeControlMode === "temperature"
-                          ? `
-                            <div class="light-card__slider-shell" style="--temperature-progress:${clamp(temperatureProgress, 0, 100)};">
-                              <div class="light-card__slider-track" data-light-control="temperature"></div>
-                              <input
-                                type="range"
-                                class="light-card__slider"
-                                data-light-control="temperature"
-                                min="${temperatureControlDomain.min}"
-                                max="${temperatureControlDomain.max}"
-                                step="any"
-                                value="${currentTemperatureSliderValue}"
-                                style="--temperature-progress:${clamp(temperatureProgress, 0, 100)};"
-                                aria-label="Temperatura"
-                              />
-                              <div class="light-card__slider-thumb" data-light-control="temperature"></div>
-                            </div>
-                          `
-                          : activeControlMode === "color"
-                            ? `
-                              <div class="light-card__slider-shell" style="--color-progress:${clamp(colorProgress, 0, 100)};">
-                                <div class="light-card__slider-track" data-light-control="color"></div>
-                                <input
-                                  type="range"
-                                  class="light-card__slider"
-                                  data-light-control="color"
-                                  min="0"
-                                  max="360"
-                                  step="any"
-                                  value="${currentHue}"
-                                  style="--color-progress:${clamp(colorProgress, 0, 100)};"
-                                  aria-label="Color"
-                                />
-                                <div class="light-card__slider-thumb" data-light-control="color"></div>
-                              </div>
-                            `
-                            : `
-                              <div class="light-card__slider-shell" style="--brightness:${brightnessPercent};">
-                                <div class="light-card__slider-track" data-light-control="brightness"></div>
-                                <input
-                                  type="range"
-                                  class="light-card__slider"
-                                  data-light-control="brightness"
-                                  min="1"
-                                  max="100"
-                                  step="any"
-                                value="${brightnessPercent}"
-                                style="--brightness:${brightnessPercent};"
-                                aria-label="Brillo"
-                              />
-                              </div>
-                            `
-                      }
-                    </div>
-                    ${
-                      useSliderModeButtons
-                        ? `
-                          <div class="light-card__mode-actions">
-                            ${availableControlModes
-                              .filter(mode => mode !== activeControlMode)
-                              .map(mode => `
-                                <button
-                                  type="button"
-                                  class="light-card__mode-button"
-                                  data-light-action="mode"
-                                  data-mode="${mode}"
-                                  aria-label="${mode === "brightness" ? "Mostrar brillo" : mode === "temperature" ? "Mostrar temperatura" : "Mostrar color"}"
-                                >
-                                  <ha-icon icon="${this._getControlModeIcon(mode)}"></ha-icon>
-                                </button>
-                              `)
-                              .join("")}
-                          </div>
-                        `
-                        : ""
-                    }
-                  </div>
-                </div>
-              `
-              : ""
-          }
-
-          ${
-            isOn &&
-            !isMiniLayout &&
-            activeControlMode === "brightness" &&
-            config.show_quick_brightness !== false &&
-            supportsBrightness &&
-            quickBrightness.length
-              ? `
-                <div class="light-card__actions">
-                  ${quickBrightness
-                    .map(value => `
-                      <button
-                        type="button"
-                        class="light-card__brightness-preset ${value === brightnessPercent ? "is-active" : ""}"
-                        data-light-action="brightness"
-                        data-value="${value}"
-                      >
-                        ${escapeHtml(`${value}%`)}
-                      </button>
-                    `)
-                    .join("")}
-                </div>
-              `
-              : ""
-          }
-
-          ${
-            isOn &&
-            !isMiniLayout &&
-            !useSliderModeButtons &&
-            config.show_temperature_controls !== false &&
-            supportsColorTemperature
-              ? `
-                <div class="light-card__section">
-                  <div class="light-card__section-header">
-                    <span>Temperatura</span>
-                    <span class="light-card__section-value">${escapeHtml(`${currentKelvin}K`)}</span>
-                  </div>
-                  <div class="light-card__actions">
-                    ${temperaturePresets
-                      .map(item => `
-                        <button
-                          type="button"
-                          class="light-card__temperature-preset ${Math.abs(item.kelvin - currentKelvin) <= 250 ? "is-active" : ""}"
-                          data-light-action="temperature"
-                          data-kelvin="${item.kelvin}"
-                        >
-                          ${escapeHtml(item.label)}
-                        </button>
-                      `)
-                      .join("")}
-                  </div>
-                </div>
-              `
-              : ""
-          }
-
-          ${
-            isOn &&
-            !isMiniLayout &&
-            !useSliderModeButtons &&
-            config.show_color_controls !== false &&
-            supportsColor
-              ? `
-                <div class="light-card__section">
-                  <div class="light-card__section-header">
-                    <span>Color</span>
-                    <span class="light-card__section-value">Presets</span>
-                  </div>
-                  <div class="light-card__actions">
-                    ${COLOR_PRESETS
-                      .map(item => `
-                        <button
-                          type="button"
-                          class="light-card__color-preset"
-                          style="--swatch-color:${escapeHtml(item.color)};"
-                          data-light-action="color"
-                          data-hs="${escapeHtml(item.hs.join(","))}"
-                          aria-label="${escapeHtml(item.label)}"
-                          title="${escapeHtml(item.label)}"
-                        ></button>
-                      `)
-                      .join("")}
-                  </div>
-                </div>
-              `
-              : ""
-          }
+          ${controlsShellMarkup}
         </div>
       </ha-card>
     `;
+
+    this._lastRenderedIsOn = isOn;
   }
 }
 
@@ -12590,6 +12812,7 @@ class NodaliaLightCardEditor extends HTMLElement {
     this._hass = null;
     this._entityOptionsSignature = "";
     this._showStyleSection = false;
+    this._showAnimationSection = false;
     this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
@@ -12809,6 +13032,10 @@ class NodaliaLightCardEditor extends HTMLElement {
           .map(value => clamp(Math.round(value), 1, 100));
         return values.length ? values : undefined;
       }
+      case "number": {
+        const numericValue = Number(input.value);
+        return Number.isFinite(numericValue) ? Math.round(numericValue) : undefined;
+      }
       default:
         return input.value;
     }
@@ -12869,15 +13096,26 @@ class NodaliaLightCardEditor extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
 
-    if (toggleButton.dataset.editorToggle === "styles") {
-      this._showStyleSection = !this._showStyleSection;
-      this._render();
+    switch (toggleButton.dataset.editorToggle) {
+      case "styles":
+        this._showStyleSection = !this._showStyleSection;
+        this._render();
+        break;
+      case "animations":
+        this._showAnimationSection = !this._showAnimationSection;
+        this._render();
+        break;
+      default:
+        break;
     }
   }
 
   _renderTextField(label, field, value, options = {}) {
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const min = options.min !== undefined ? `min="${escapeHtml(String(options.min))}"` : "";
+    const max = options.max !== undefined ? `max="${escapeHtml(String(options.max))}"` : "";
+    const step = options.step !== undefined ? `step="${escapeHtml(String(options.step))}"` : "";
     const valueType = options.valueType || "string";
     const inputValue = value === undefined || value === null ? "" : String(value);
 
@@ -12890,6 +13128,9 @@ class NodaliaLightCardEditor extends HTMLElement {
           data-value-type="${escapeHtml(valueType)}"
           value="${escapeHtml(inputValue)}"
           ${placeholder}
+          ${min}
+          ${max}
+          ${step}
         />
       </label>
     `;
@@ -13403,6 +13644,47 @@ class NodaliaLightCardEditor extends HTMLElement {
               ],
             )}
           </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Animaciones</div>
+            <div class="editor-section__hint">Transiciones suaves al encender, apagar y desplegar controles.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="animations"
+                aria-expanded="${this._showAnimationSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showAnimationSection ? "Ocultar ajustes de animación" : "Mostrar ajustes de animación"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showAnimationSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderTextField("Encendido y apagado (ms)", "animations.power_duration", config.animations.power_duration, {
+                    type: "number",
+                    valueType: "number",
+                    min: 120,
+                    max: 4000,
+                    step: 10,
+                  })}
+                  ${this._renderTextField("Expansión de controles (ms)", "animations.controls_duration", config.animations.controls_duration, {
+                    type: "number",
+                    valueType: "number",
+                    min: 120,
+                    max: 2400,
+                    step: 10,
+                  })}
+                </div>
+              `
+              : ""
+          }
         </section>
 
         <section class="editor-section">
