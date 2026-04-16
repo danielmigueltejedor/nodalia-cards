@@ -10405,9 +10405,9 @@ const DEFAULT_CONFIG = {
   },
   animations: {
     enabled: true,
-    power_duration: 420,
-    controls_duration: 320,
-    mode_switch_duration: 260,
+    power_duration: 600,
+    controls_duration: 420,
+    mode_switch_duration: 500,
   },
   styles: {
     card: {
@@ -11930,7 +11930,8 @@ class NodaliaLightCard extends HTMLElement {
       ? 0
       : ((currentTemperatureSliderValue - temperatureControlDomain.min) / (temperatureControlDomain.max - temperatureControlDomain.min)) * 100;
     const colorProgress = (currentHue / 360) * 100;
-    const headerChips = [];
+    let stateChipMarkup = "";
+    let activeValueChipMarkup = "";
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
@@ -11984,7 +11985,7 @@ class NodaliaLightCard extends HTMLElement {
       : activeControlMode;
 
     if (!isMiniLayout && config.show_state === true) {
-      headerChips.push(`<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`);
+      stateChipMarkup = `<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`;
     }
 
     if (isOn && !isMiniLayout) {
@@ -11999,11 +12000,18 @@ class NodaliaLightCard extends HTMLElement {
       }
 
       if (activeValueChip) {
-        headerChips.push(`<span class="light-card__chip">${escapeHtml(activeValueChip)}</span>`);
+        activeValueChipMarkup = `
+          <span class="light-card__active-chip-shell ${modeTransition ? `light-card__active-chip-shell--${modeTransition.phase}` : ""}">
+            <span class="light-card__active-chip-inner">
+              <span class="light-card__chip">${escapeHtml(activeValueChip)}</span>
+            </span>
+          </span>
+        `;
       }
     }
 
-    const showCopyBlock = !isMiniLayout && (!isCompactLayout || headerChips.length > 0);
+    const hasHeaderChips = Boolean(stateChipMarkup || activeValueChipMarkup);
+    const showCopyBlock = !isMiniLayout && (!isCompactLayout || hasHeaderChips);
     const sliderSectionMarkup = isOn && !isMiniLayout && availableControlModes.length > 0
       ? `
         <div class="light-card__section">
@@ -12496,6 +12504,25 @@ class NodaliaLightCard extends HTMLElement {
           color: var(--primary-text-color);
         }
 
+        .light-card__active-chip-shell {
+          display: inline-flex;
+          overflow: hidden;
+          transform-origin: right center;
+        }
+
+        .light-card__active-chip-inner {
+          display: inline-flex;
+          transform-origin: right center;
+        }
+
+        .light-card__active-chip-shell--collapsing .light-card__active-chip-inner {
+          animation: light-card-mode-chip-out var(--light-card-mode-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+        }
+
+        .light-card__active-chip-shell--expanding .light-card__active-chip-inner {
+          animation: light-card-mode-chip-in var(--light-card-mode-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
         .light-card__section {
           display: grid;
           gap: 10px;
@@ -12968,13 +12995,36 @@ class NodaliaLightCard extends HTMLElement {
           }
         }
 
+        @keyframes light-card-mode-chip-out {
+          0% {
+            opacity: 1;
+            transform: scaleX(1);
+          }
+          100% {
+            opacity: 0;
+            transform: scaleX(0.25);
+          }
+        }
+
+        @keyframes light-card-mode-chip-in {
+          0% {
+            opacity: 0;
+            transform: scaleX(0.25);
+          }
+          100% {
+            opacity: 1;
+            transform: scaleX(1);
+          }
+        }
+
         @media (prefers-reduced-motion: reduce) {
           .light-card,
           .light-card::after,
           .light-card__controls-shell,
           .light-card__controls-inner,
           .light-card__mode-panel,
-          .light-card__mode-panel-inner {
+          .light-card__mode-panel-inner,
+          .light-card__active-chip-inner {
             animation: none !important;
             transition: none !important;
           }
@@ -13012,7 +13062,7 @@ class NodaliaLightCard extends HTMLElement {
                 <div class="light-card__copy">
                   <div class="light-card__copy-header">
                     ${isCompactLayout ? "" : `<div class="light-card__title">${escapeHtml(title)}</div>`}
-                    ${headerChips.length ? `<div class="light-card__chips">${headerChips.join("")}</div>` : ""}
+                    ${hasHeaderChips ? `<div class="light-card__chips">${stateChipMarkup}${activeValueChipMarkup}</div>` : ""}
                   </div>
                 </div>
               `
