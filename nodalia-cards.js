@@ -10408,6 +10408,7 @@ const DEFAULT_CONFIG = {
     power_duration: 600,
     controls_duration: 420,
     mode_switch_duration: 500,
+    mode_switch_horizontal: true,
   },
   styles: {
     card: {
@@ -10772,6 +10773,7 @@ function normalizeConfig(rawConfig) {
     mode_switch_duration: Number.isFinite(numericModeSwitchDuration)
       ? clamp(Math.round(numericModeSwitchDuration), 120, 2400)
       : DEFAULT_CONFIG.animations.mode_switch_duration,
+    mode_switch_horizontal: config.animations?.mode_switch_horizontal !== false,
   };
 
   return config;
@@ -11287,6 +11289,7 @@ class NodaliaLightCard extends HTMLElement {
       powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4000),
       controlsDuration: clamp(Number(configuredAnimations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
       modeSwitchDuration: clamp(Number(configuredAnimations.mode_switch_duration) || DEFAULT_CONFIG.animations.mode_switch_duration, 120, 2400),
+      modeSwitchHorizontal: configuredAnimations.mode_switch_horizontal !== false,
     };
   }
 
@@ -11983,6 +11986,9 @@ class NodaliaLightCard extends HTMLElement {
     const displayedControlMode = modeTransition
       ? (modeTransition.phase === "collapsing" ? modeTransition.from : modeTransition.to)
       : activeControlMode;
+    const modeTransitionAxisClass = animations.modeSwitchHorizontal
+      ? "light-card__mode-panel-inner--horizontal"
+      : "light-card__mode-panel-inner--vertical";
 
     if (!isMiniLayout && config.show_state === true) {
       stateChipMarkup = `<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`;
@@ -12012,66 +12018,85 @@ class NodaliaLightCard extends HTMLElement {
 
     const hasHeaderChips = Boolean(stateChipMarkup || activeValueChipMarkup);
     const showCopyBlock = !isMiniLayout && (!isCompactLayout || hasHeaderChips);
-    const sliderSectionMarkup = isOn && !isMiniLayout && availableControlModes.length > 0
+    const sliderInnerMarkup = isOn && !isMiniLayout && availableControlModes.length > 0
+      ? `
+        ${
+          displayedControlMode === "temperature"
+            ? `
+              <div class="light-card__slider-wrap">
+                <div class="light-card__slider-shell" style="--temperature-progress:${clamp(temperatureProgress, 0, 100)};">
+                  <div class="light-card__slider-track" data-light-control="temperature"></div>
+                  <input
+                    type="range"
+                    class="light-card__slider"
+                    data-light-control="temperature"
+                    min="${temperatureControlDomain.min}"
+                    max="${temperatureControlDomain.max}"
+                    step="any"
+                    value="${currentTemperatureSliderValue}"
+                    style="--temperature-progress:${clamp(temperatureProgress, 0, 100)};"
+                    aria-label="Temperatura"
+                  />
+                  <div class="light-card__slider-thumb" data-light-control="temperature"></div>
+                </div>
+              </div>
+            `
+            : displayedControlMode === "color"
+              ? `
+                <div class="light-card__slider-wrap">
+                  <div class="light-card__slider-shell" style="--color-progress:${clamp(colorProgress, 0, 100)};">
+                    <div class="light-card__slider-track" data-light-control="color"></div>
+                    <input
+                      type="range"
+                      class="light-card__slider"
+                      data-light-control="color"
+                      min="0"
+                      max="360"
+                      step="any"
+                      value="${currentHue}"
+                      style="--color-progress:${clamp(colorProgress, 0, 100)};"
+                      aria-label="Color"
+                    />
+                    <div class="light-card__slider-thumb" data-light-control="color"></div>
+                  </div>
+                </div>
+              `
+              : `
+                <div class="light-card__slider-wrap">
+                  <div class="light-card__slider-shell" style="--brightness:${brightnessPercent};">
+                    <div class="light-card__slider-track" data-light-control="brightness"></div>
+                    <input
+                      type="range"
+                      class="light-card__slider"
+                      data-light-control="brightness"
+                      min="1"
+                      max="100"
+                      step="any"
+                      value="${brightnessPercent}"
+                      style="--brightness:${brightnessPercent};"
+                      aria-label="Brillo"
+                    />
+                  </div>
+                </div>
+              `
+        }
+      `
+      : "";
+    const sliderSectionMarkup = sliderInnerMarkup
       ? `
         <div class="light-card__section">
           <div class="light-card__slider-row">
-            <div class="light-card__slider-wrap">
-              ${
-                displayedControlMode === "temperature"
-                  ? `
-                    <div class="light-card__slider-shell" style="--temperature-progress:${clamp(temperatureProgress, 0, 100)};">
-                      <div class="light-card__slider-track" data-light-control="temperature"></div>
-                      <input
-                        type="range"
-                        class="light-card__slider"
-                        data-light-control="temperature"
-                        min="${temperatureControlDomain.min}"
-                        max="${temperatureControlDomain.max}"
-                        step="any"
-                        value="${currentTemperatureSliderValue}"
-                        style="--temperature-progress:${clamp(temperatureProgress, 0, 100)};"
-                        aria-label="Temperatura"
-                      />
-                      <div class="light-card__slider-thumb" data-light-control="temperature"></div>
+            ${
+              useSliderModeButtons
+                ? `
+                  <div class="light-card__mode-panel">
+                    <div class="light-card__mode-panel-inner ${modeTransition ? `light-card__mode-panel-inner--${modeTransition.phase}` : ""} ${modeTransitionAxisClass}">
+                      ${sliderInnerMarkup}
                     </div>
-                  `
-                  : displayedControlMode === "color"
-                    ? `
-                      <div class="light-card__slider-shell" style="--color-progress:${clamp(colorProgress, 0, 100)};">
-                        <div class="light-card__slider-track" data-light-control="color"></div>
-                        <input
-                          type="range"
-                          class="light-card__slider"
-                          data-light-control="color"
-                          min="0"
-                          max="360"
-                          step="any"
-                          value="${currentHue}"
-                          style="--color-progress:${clamp(colorProgress, 0, 100)};"
-                          aria-label="Color"
-                        />
-                        <div class="light-card__slider-thumb" data-light-control="color"></div>
-                      </div>
-                    `
-                    : `
-                      <div class="light-card__slider-shell" style="--brightness:${brightnessPercent};">
-                        <div class="light-card__slider-track" data-light-control="brightness"></div>
-                        <input
-                          type="range"
-                          class="light-card__slider"
-                          data-light-control="brightness"
-                          min="1"
-                          max="100"
-                          step="any"
-                          value="${brightnessPercent}"
-                          style="--brightness:${brightnessPercent};"
-                          aria-label="Brillo"
-                        />
-                      </div>
-                    `
-              }
-            </div>
+                  </div>
+                `
+                : sliderInnerMarkup
+            }
             ${
               useSliderModeButtons
                 ? `
@@ -12179,19 +12204,8 @@ class NodaliaLightCard extends HTMLElement {
         </div>
       `
       : "";
-    const sliderPanelMarkup = useSliderModeButtons
-      ? sliderSectionMarkup
-        ? `
-          <div class="light-card__mode-panel">
-            <div class="light-card__mode-panel-inner ${modeTransition ? `light-card__mode-panel-inner--${modeTransition.phase}` : ""}">
-              ${sliderSectionMarkup}
-            </div>
-          </div>
-        `
-        : ""
-      : sliderSectionMarkup;
     const currentControlsMarkup = [
-      sliderPanelMarkup,
+      sliderSectionMarkup,
       brightnessPresetsMarkup,
       temperatureControlsMarkup,
       colorControlsMarkup,
@@ -12543,6 +12557,7 @@ class NodaliaLightCard extends HTMLElement {
           display: grid;
           min-height: var(--light-card-mode-shell-height);
           overflow: hidden;
+          width: 100%;
         }
 
         .light-card__mode-panel-inner {
@@ -12550,14 +12565,26 @@ class NodaliaLightCard extends HTMLElement {
           width: 100%;
         }
 
-        .light-card__mode-panel-inner--collapsing {
-          animation: light-card-mode-slider-out var(--light-card-mode-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+        .light-card__mode-panel-inner--horizontal.light-card__mode-panel-inner--collapsing {
+          animation: light-card-mode-slider-out-horizontal var(--light-card-mode-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
           pointer-events: none;
           transform-origin: center;
         }
 
-        .light-card__mode-panel-inner--expanding {
-          animation: light-card-mode-slider-in var(--light-card-mode-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        .light-card__mode-panel-inner--horizontal.light-card__mode-panel-inner--expanding {
+          animation: light-card-mode-slider-in-horizontal var(--light-card-mode-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          pointer-events: none;
+          transform-origin: center;
+        }
+
+        .light-card__mode-panel-inner--vertical.light-card__mode-panel-inner--collapsing {
+          animation: light-card-mode-slider-out-vertical var(--light-card-mode-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          pointer-events: none;
+          transform-origin: center;
+        }
+
+        .light-card__mode-panel-inner--vertical.light-card__mode-panel-inner--expanding {
+          animation: light-card-mode-slider-in-vertical var(--light-card-mode-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           pointer-events: none;
           transform-origin: center;
         }
@@ -12973,7 +13000,29 @@ class NodaliaLightCard extends HTMLElement {
           }
         }
 
-        @keyframes light-card-mode-slider-out {
+        @keyframes light-card-mode-slider-out-horizontal {
+          0% {
+            opacity: 1;
+            transform: scaleX(1);
+          }
+          100% {
+            opacity: 0;
+            transform: scaleX(0.18);
+          }
+        }
+
+        @keyframes light-card-mode-slider-in-horizontal {
+          0% {
+            opacity: 0;
+            transform: scaleX(0.18);
+          }
+          100% {
+            opacity: 1;
+            transform: scaleX(1);
+          }
+        }
+
+        @keyframes light-card-mode-slider-out-vertical {
           0% {
             opacity: 1;
             transform: translateY(0) scaleY(1);
@@ -12984,7 +13033,7 @@ class NodaliaLightCard extends HTMLElement {
           }
         }
 
-        @keyframes light-card-mode-slider-in {
+        @keyframes light-card-mode-slider-in-vertical {
           0% {
             opacity: 0;
             transform: translateY(4px) scaleY(0.42);
@@ -13951,6 +14000,7 @@ class NodaliaLightCardEditor extends HTMLElement {
               ? `
                 <div class="editor-grid">
                   ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderCheckboxField("Contracción horizontal del slider", "animations.mode_switch_horizontal", config.animations.mode_switch_horizontal !== false)}
                   ${this._renderTextField("Encendido y apagado (ms)", "animations.power_duration", config.animations.power_duration, {
                     type: "number",
                     valueType: "number",
