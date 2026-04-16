@@ -10806,6 +10806,8 @@ class NodaliaLightCard extends HTMLElement {
     this._lastRenderedIsOn = null;
     this._lastControlsMarkup = "";
     this._animationCleanupTimer = 0;
+    this._powerTransition = null;
+    this._controlsTransition = null;
     this._modeSwitchTimer = 0;
     this._modeTransition = null;
     this._resizeObserver = new ResizeObserver(entries => {
@@ -10890,6 +10892,8 @@ class NodaliaLightCard extends HTMLElement {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
     }
+    this._powerTransition = null;
+    this._controlsTransition = null;
     if (this._modeSwitchTimer) {
       window.clearTimeout(this._modeSwitchTimer);
       this._modeSwitchTimer = 0;
@@ -11932,9 +11936,42 @@ class NodaliaLightCard extends HTMLElement {
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
     const animations = this._getAnimationSettings();
     const wasOn = this._lastRenderedIsOn;
-    const powerAnimationState = animations.enabled && wasOn !== null && wasOn !== isOn
-      ? (isOn ? "powering-up" : "powering-down")
-      : "";
+    const now = Date.now();
+    let powerAnimationState = "";
+    let controlsAnimationState = "";
+
+    if (!animations.enabled) {
+      this._powerTransition = null;
+      this._controlsTransition = null;
+    } else if (wasOn !== null && wasOn !== isOn) {
+      powerAnimationState = isOn ? "powering-up" : "powering-down";
+      this._powerTransition = {
+        endsAt: now + animations.powerDuration,
+        state: powerAnimationState,
+      };
+
+      if (!isMiniLayout) {
+        controlsAnimationState = isOn ? "entering" : "leaving";
+        this._controlsTransition = {
+          endsAt: now + animations.controlsDuration,
+          state: controlsAnimationState,
+        };
+      } else {
+        this._controlsTransition = null;
+      }
+    } else {
+      if (this._powerTransition?.endsAt > now) {
+        powerAnimationState = this._powerTransition.state;
+      } else {
+        this._powerTransition = null;
+      }
+
+      if (!isMiniLayout && this._controlsTransition?.endsAt > now) {
+        controlsAnimationState = this._controlsTransition.state;
+      } else {
+        this._controlsTransition = null;
+      }
+    }
     const modeTransition = this._modeTransition
       && isOn
       && useSliderModeButtons
@@ -12148,9 +12185,6 @@ class NodaliaLightCard extends HTMLElement {
       temperatureControlsMarkup,
       colorControlsMarkup,
     ].filter(Boolean).join("");
-    const controlsAnimationState = animations.enabled && !isMiniLayout && wasOn !== null && wasOn !== isOn
-      ? (isOn ? "entering" : "leaving")
-      : "";
     const controlsContentMarkup = isOn
       ? currentControlsMarkup
       : controlsAnimationState === "leaving"
@@ -12165,12 +12199,15 @@ class NodaliaLightCard extends HTMLElement {
         </div>
       `
       : "";
-    const shouldCleanupAfterAnimation = Boolean(powerAnimationState || controlsAnimationState);
+    const powerAnimationRemaining = powerAnimationState && this._powerTransition
+      ? Math.max(0, this._powerTransition.endsAt - now)
+      : 0;
+    const controlsAnimationRemaining = controlsAnimationState && this._controlsTransition
+      ? Math.max(0, this._controlsTransition.endsAt - now)
+      : 0;
+    const shouldCleanupAfterAnimation = Boolean(powerAnimationRemaining || controlsAnimationRemaining);
     const cleanupDelay = shouldCleanupAfterAnimation
-      ? Math.max(
-        powerAnimationState ? animations.powerDuration : 0,
-        controlsAnimationState ? animations.controlsDuration : 0,
-      ) + 40
+      ? Math.max(powerAnimationRemaining, controlsAnimationRemaining) + 40
       : 0;
 
     if (isOn && currentControlsMarkup) {
