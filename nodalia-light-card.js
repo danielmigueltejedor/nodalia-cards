@@ -1861,6 +1861,7 @@ class NodaliaLightCard extends HTMLElement {
 
         ha-card.light-card {
           --light-card-controls-max-height: 420px;
+          --light-card-controls-gap: calc(${styles.card.gap} + 4px);
           --light-card-controls-duration: ${animations.controlsDuration}ms;
           --light-card-mode-duration: ${Math.max(100, Math.round(animations.modeSwitchDuration / 2))}ms;
           --light-card-power-duration: ${animations.powerDuration}ms;
@@ -1934,7 +1935,7 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__content {
           display: grid;
-          gap: calc(${styles.card.gap} + 4px);
+          gap: 0;
           position: relative;
           z-index: 1;
         }
@@ -2131,6 +2132,7 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         .light-card__controls-shell {
+          margin-top: var(--light-card-controls-gap);
           overflow: hidden;
         }
 
@@ -2521,12 +2523,12 @@ class NodaliaLightCard extends HTMLElement {
 
         @keyframes light-card-controls-expand {
           0% {
-            margin-top: -6px;
+            margin-top: 0;
             max-height: 0;
             opacity: 0;
           }
           100% {
-            margin-top: 0;
+            margin-top: var(--light-card-controls-gap);
             max-height: var(--light-card-controls-max-height);
             opacity: 1;
           }
@@ -2534,12 +2536,12 @@ class NodaliaLightCard extends HTMLElement {
 
         @keyframes light-card-controls-collapse {
           0% {
-            margin-top: 0;
+            margin-top: var(--light-card-controls-gap);
             max-height: var(--light-card-controls-max-height);
             opacity: 1;
           }
           100% {
-            margin-top: -6px;
+            margin-top: 0;
             max-height: 0;
             opacity: 0;
           }
