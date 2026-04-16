@@ -1806,16 +1806,19 @@ class NodaliaLightCard extends HTMLElement {
       `
       : "";
     const sliderPanelMarkup = useSliderModeButtons
-      ? [sliderSectionMarkup, brightnessPresetsMarkup].filter(Boolean).join("")
+      ? sliderSectionMarkup
         ? `
-          <div class="light-card__mode-panel ${modeTransition ? `light-card__mode-panel--${modeTransition.phase}` : ""}">
-            ${[sliderSectionMarkup, brightnessPresetsMarkup].filter(Boolean).join("")}
+          <div class="light-card__mode-panel">
+            <div class="light-card__mode-panel-inner ${modeTransition ? `light-card__mode-panel-inner--${modeTransition.phase}` : ""}">
+              ${sliderSectionMarkup}
+            </div>
           </div>
         `
         : ""
-      : [sliderSectionMarkup, brightnessPresetsMarkup].filter(Boolean).join("");
+      : sliderSectionMarkup;
     const currentControlsMarkup = [
       sliderPanelMarkup,
+      brightnessPresetsMarkup,
       temperatureControlsMarkup,
       colorControlsMarkup,
     ].filter(Boolean).join("");
@@ -1864,6 +1867,7 @@ class NodaliaLightCard extends HTMLElement {
           --light-card-controls-gap: calc(${styles.card.gap} + 4px);
           --light-card-controls-duration: ${animations.controlsDuration}ms;
           --light-card-mode-duration: ${Math.max(100, Math.round(animations.modeSwitchDuration / 2))}ms;
+          --light-card-mode-shell-height: ${styles.slider_wrap_height};
           --light-card-power-duration: ${animations.powerDuration}ms;
           background: ${isOn ? onCardBackground : styles.card.background};
           border: ${isOn ? `1px solid ${onCardBorder}` : styles.card.border};
@@ -2142,20 +2146,27 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         .light-card__mode-panel {
+          align-items: center;
           display: grid;
-          gap: 10px;
+          min-height: var(--light-card-mode-shell-height);
           overflow: hidden;
-          transform-origin: top;
         }
 
-        .light-card__mode-panel--collapsing {
-          animation: light-card-mode-panel-collapse var(--light-card-mode-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
-          pointer-events: none;
+        .light-card__mode-panel-inner {
+          display: grid;
+          width: 100%;
         }
 
-        .light-card__mode-panel--expanding {
-          animation: light-card-mode-panel-expand var(--light-card-mode-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        .light-card__mode-panel-inner--collapsing {
+          animation: light-card-mode-slider-out var(--light-card-mode-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
           pointer-events: none;
+          transform-origin: center;
+        }
+
+        .light-card__mode-panel-inner--expanding {
+          animation: light-card-mode-slider-in var(--light-card-mode-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          pointer-events: none;
+          transform-origin: center;
         }
 
         .light-card__controls-shell--entering {
@@ -2569,27 +2580,23 @@ class NodaliaLightCard extends HTMLElement {
           }
         }
 
-        @keyframes light-card-mode-panel-collapse {
+        @keyframes light-card-mode-slider-out {
           0% {
-            max-height: 220px;
             opacity: 1;
             transform: translateY(0) scaleY(1);
           }
           100% {
-            max-height: 0;
             opacity: 0;
-            transform: translateY(-8px) scaleY(0.9);
+            transform: translateY(-4px) scaleY(0.42);
           }
         }
 
-        @keyframes light-card-mode-panel-expand {
+        @keyframes light-card-mode-slider-in {
           0% {
-            max-height: 0;
             opacity: 0;
-            transform: translateY(-8px) scaleY(0.9);
+            transform: translateY(4px) scaleY(0.42);
           }
           100% {
-            max-height: 220px;
             opacity: 1;
             transform: translateY(0) scaleY(1);
           }
@@ -2600,7 +2607,8 @@ class NodaliaLightCard extends HTMLElement {
           .light-card::after,
           .light-card__controls-shell,
           .light-card__controls-inner,
-          .light-card__mode-panel {
+          .light-card__mode-panel,
+          .light-card__mode-panel-inner {
             animation: none !important;
             transition: none !important;
           }
