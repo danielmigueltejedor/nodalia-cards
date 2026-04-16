@@ -10407,6 +10407,7 @@ const DEFAULT_CONFIG = {
     enabled: true,
     power_duration: 420,
     controls_duration: 320,
+    mode_switch_duration: 260,
   },
   styles: {
     card: {
@@ -10759,6 +10760,7 @@ function normalizeConfig(rawConfig) {
 
   const numericPowerDuration = Number(config.animations?.power_duration);
   const numericControlsDuration = Number(config.animations?.controls_duration);
+  const numericModeSwitchDuration = Number(config.animations?.mode_switch_duration);
   config.animations = {
     enabled: config.animations?.enabled !== false,
     power_duration: Number.isFinite(numericPowerDuration)
@@ -10767,6 +10769,9 @@ function normalizeConfig(rawConfig) {
     controls_duration: Number.isFinite(numericControlsDuration)
       ? clamp(Math.round(numericControlsDuration), 120, 2400)
       : DEFAULT_CONFIG.animations.controls_duration,
+    mode_switch_duration: Number.isFinite(numericModeSwitchDuration)
+      ? clamp(Math.round(numericModeSwitchDuration), 120, 2400)
+      : DEFAULT_CONFIG.animations.mode_switch_duration,
   };
 
   return config;
@@ -10800,6 +10805,9 @@ class NodaliaLightCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._lastRenderedIsOn = null;
     this._lastControlsMarkup = "";
+    this._animationCleanupTimer = 0;
+    this._modeSwitchTimer = 0;
+    this._modeTransition = null;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -10878,6 +10886,15 @@ class NodaliaLightCard extends HTMLElement {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
     }
+    if (this._animationCleanupTimer) {
+      window.clearTimeout(this._animationCleanupTimer);
+      this._animationCleanupTimer = 0;
+    }
+    if (this._modeSwitchTimer) {
+      window.clearTimeout(this._modeSwitchTimer);
+      this._modeSwitchTimer = 0;
+    }
+    this._modeTransition = null;
     this._pendingDragUpdate = null;
   }
 
@@ -11265,7 +11282,94 @@ class NodaliaLightCard extends HTMLElement {
       enabled: configuredAnimations.enabled !== false,
       powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4000),
       controlsDuration: clamp(Number(configuredAnimations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
+      modeSwitchDuration: clamp(Number(configuredAnimations.mode_switch_duration) || DEFAULT_CONFIG.animations.mode_switch_duration, 120, 2400),
     };
+  }
+
+  _scheduleAnimationCleanup(delay) {
+    if (this._animationCleanupTimer) {
+      window.clearTimeout(this._animationCleanupTimer);
+      this._animationCleanupTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 5000);
+    if (!safeDelay || typeof window === "undefined") {
+      return;
+    }
+
+    this._animationCleanupTimer = window.setTimeout(() => {
+      this._animationCleanupTimer = 0;
+
+      if (!this.isConnected) {
+        return;
+      }
+
+      if (this._activeSliderDrag) {
+        this._pendingRenderAfterDrag = true;
+        return;
+      }
+
+      this._render();
+    }, safeDelay);
+  }
+
+  _clearModeSwitchTransition() {
+    if (this._modeSwitchTimer) {
+      window.clearTimeout(this._modeSwitchTimer);
+      this._modeSwitchTimer = 0;
+    }
+
+    this._modeTransition = null;
+  }
+
+  _startModeSwitchTransition(nextMode, state = this._getState()) {
+    const animations = this._getAnimationSettings();
+    const availableModes = this._getAvailableControlModes(state);
+    const currentMode = this._getActiveControlMode(state);
+
+    if (
+      !animations.enabled ||
+      !state ||
+      !nextMode ||
+      nextMode === currentMode ||
+      !availableModes.includes(nextMode) ||
+      !availableModes.includes(currentMode)
+    ) {
+      this._clearModeSwitchTransition();
+      this._activeControlMode = nextMode || currentMode || "brightness";
+      this._render();
+      return;
+    }
+
+    this._clearModeSwitchTransition();
+
+    const phaseDuration = Math.max(100, Math.round(animations.modeSwitchDuration / 2));
+    const fromMode = currentMode;
+    const toMode = nextMode;
+
+    this._modeTransition = {
+      from: fromMode,
+      to: toMode,
+      phase: "collapsing",
+    };
+    this._render();
+
+    this._modeSwitchTimer = window.setTimeout(() => {
+      this._modeSwitchTimer = 0;
+      this._activeControlMode = toMode;
+      this._modeTransition = {
+        from: fromMode,
+        to: toMode,
+        phase: "expanding",
+      };
+      this._render();
+
+      this._modeSwitchTimer = window.setTimeout(() => {
+        this._modeSwitchTimer = 0;
+        this._modeTransition = null;
+        this._render();
+      }, phaseDuration);
+    }, phaseDuration);
   }
 
   _setLightState(data = {}) {
@@ -11705,11 +11809,11 @@ class NodaliaLightCard extends HTMLElement {
 
     switch (actionButton.dataset.lightAction) {
       case "toggle":
+        this._clearModeSwitchTransition();
         this._toggleLight();
         break;
       case "mode":
-        this._activeControlMode = actionButton.dataset.mode || "brightness";
-        this._render();
+        this._startModeSwitchTransition(actionButton.dataset.mode || "brightness", this._getState());
         break;
       case "brightness": {
         const value = Number(actionButton.dataset.value);
@@ -11831,6 +11935,16 @@ class NodaliaLightCard extends HTMLElement {
     const powerAnimationState = animations.enabled && wasOn !== null && wasOn !== isOn
       ? (isOn ? "powering-up" : "powering-down")
       : "";
+    const modeTransition = this._modeTransition
+      && isOn
+      && useSliderModeButtons
+      && availableControlModes.includes(this._modeTransition.from)
+      && availableControlModes.includes(this._modeTransition.to)
+      ? this._modeTransition
+      : null;
+    const displayedControlMode = modeTransition
+      ? (modeTransition.phase === "collapsing" ? modeTransition.from : modeTransition.to)
+      : activeControlMode;
 
     if (!isMiniLayout && config.show_state === true) {
       headerChips.push(`<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`);
@@ -11839,9 +11953,9 @@ class NodaliaLightCard extends HTMLElement {
     if (isOn && !isMiniLayout) {
       let activeValueChip = null;
 
-      if (activeControlMode === "temperature" && config.show_temperature_controls !== false && supportsColorTemperature) {
+      if (displayedControlMode === "temperature" && config.show_temperature_controls !== false && supportsColorTemperature) {
         activeValueChip = `${currentKelvin}K`;
-      } else if (activeControlMode === "color" && config.show_color_controls !== false && supportsColor) {
+      } else if (displayedControlMode === "color" && config.show_color_controls !== false && supportsColor) {
         activeValueChip = `${currentHue}°`;
       } else if (config.show_brightness !== false && supportsBrightness) {
         activeValueChip = `${Math.round(brightnessPercent)}%`;
@@ -11859,7 +11973,7 @@ class NodaliaLightCard extends HTMLElement {
           <div class="light-card__slider-row">
             <div class="light-card__slider-wrap">
               ${
-                activeControlMode === "temperature"
+                displayedControlMode === "temperature"
                   ? `
                     <div class="light-card__slider-shell" style="--temperature-progress:${clamp(temperatureProgress, 0, 100)};">
                       <div class="light-card__slider-track" data-light-control="temperature"></div>
@@ -11877,7 +11991,7 @@ class NodaliaLightCard extends HTMLElement {
                       <div class="light-card__slider-thumb" data-light-control="temperature"></div>
                     </div>
                   `
-                  : activeControlMode === "color"
+                  : displayedControlMode === "color"
                     ? `
                       <div class="light-card__slider-shell" style="--color-progress:${clamp(colorProgress, 0, 100)};">
                         <div class="light-card__slider-track" data-light-control="color"></div>
@@ -11918,13 +12032,14 @@ class NodaliaLightCard extends HTMLElement {
                 ? `
                   <div class="light-card__mode-actions">
                     ${availableControlModes
-                      .filter(mode => mode !== activeControlMode)
+                      .filter(mode => mode !== displayedControlMode)
                       .map(mode => `
                         <button
                           type="button"
                           class="light-card__mode-button"
                           data-light-action="mode"
                           data-mode="${mode}"
+                          ${modeTransition ? "disabled" : ""}
                           aria-label="${mode === "brightness" ? "Mostrar brillo" : mode === "temperature" ? "Mostrar temperatura" : "Mostrar color"}"
                         >
                           <ha-icon icon="${this._getControlModeIcon(mode)}"></ha-icon>
@@ -11941,7 +12056,7 @@ class NodaliaLightCard extends HTMLElement {
       : "";
     const brightnessPresetsMarkup = isOn &&
       !isMiniLayout &&
-      activeControlMode === "brightness" &&
+      displayedControlMode === "brightness" &&
       config.show_quick_brightness !== false &&
       supportsBrightness &&
       quickBrightness.length
@@ -12019,9 +12134,17 @@ class NodaliaLightCard extends HTMLElement {
         </div>
       `
       : "";
+    const sliderPanelMarkup = useSliderModeButtons
+      ? [sliderSectionMarkup, brightnessPresetsMarkup].filter(Boolean).join("")
+        ? `
+          <div class="light-card__mode-panel ${modeTransition ? `light-card__mode-panel--${modeTransition.phase}` : ""}">
+            ${[sliderSectionMarkup, brightnessPresetsMarkup].filter(Boolean).join("")}
+          </div>
+        `
+        : ""
+      : [sliderSectionMarkup, brightnessPresetsMarkup].filter(Boolean).join("");
     const currentControlsMarkup = [
-      sliderSectionMarkup,
-      brightnessPresetsMarkup,
+      sliderPanelMarkup,
       temperatureControlsMarkup,
       colorControlsMarkup,
     ].filter(Boolean).join("");
@@ -12042,6 +12165,13 @@ class NodaliaLightCard extends HTMLElement {
         </div>
       `
       : "";
+    const shouldCleanupAfterAnimation = Boolean(powerAnimationState || controlsAnimationState);
+    const cleanupDelay = shouldCleanupAfterAnimation
+      ? Math.max(
+        powerAnimationState ? animations.powerDuration : 0,
+        controlsAnimationState ? animations.controlsDuration : 0,
+      ) + 40
+      : 0;
 
     if (isOn && currentControlsMarkup) {
       this._lastControlsMarkup = currentControlsMarkup;
@@ -12061,6 +12191,7 @@ class NodaliaLightCard extends HTMLElement {
         ha-card.light-card {
           --light-card-controls-max-height: 420px;
           --light-card-controls-duration: ${animations.controlsDuration}ms;
+          --light-card-mode-duration: ${Math.max(100, Math.round(animations.modeSwitchDuration / 2))}ms;
           --light-card-power-duration: ${animations.powerDuration}ms;
           background: ${isOn ? onCardBackground : styles.card.background};
           border: ${isOn ? `1px solid ${onCardBorder}` : styles.card.border};
@@ -12337,6 +12468,23 @@ class NodaliaLightCard extends HTMLElement {
           gap: 10px;
         }
 
+        .light-card__mode-panel {
+          display: grid;
+          gap: 10px;
+          overflow: hidden;
+          transform-origin: top;
+        }
+
+        .light-card__mode-panel--collapsing {
+          animation: light-card-mode-panel-collapse var(--light-card-mode-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          pointer-events: none;
+        }
+
+        .light-card__mode-panel--expanding {
+          animation: light-card-mode-panel-expand var(--light-card-mode-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          pointer-events: none;
+        }
+
         .light-card__controls-shell--entering {
           animation: light-card-controls-expand var(--light-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           transform-origin: top;
@@ -12541,6 +12689,11 @@ class NodaliaLightCard extends HTMLElement {
           justify-content: center;
         }
 
+        .light-card__mode-button:disabled {
+          cursor: default;
+          opacity: 0.58;
+        }
+
         .light-card__slider {
           -webkit-appearance: none;
           appearance: none;
@@ -12743,11 +12896,38 @@ class NodaliaLightCard extends HTMLElement {
           }
         }
 
+        @keyframes light-card-mode-panel-collapse {
+          0% {
+            max-height: 220px;
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+          100% {
+            max-height: 0;
+            opacity: 0;
+            transform: translateY(-8px) scaleY(0.9);
+          }
+        }
+
+        @keyframes light-card-mode-panel-expand {
+          0% {
+            max-height: 0;
+            opacity: 0;
+            transform: translateY(-8px) scaleY(0.9);
+          }
+          100% {
+            max-height: 220px;
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+        }
+
         @media (prefers-reduced-motion: reduce) {
           .light-card,
           .light-card::after,
           .light-card__controls-shell,
-          .light-card__controls-inner {
+          .light-card__controls-inner,
+          .light-card__mode-panel {
             animation: none !important;
             transition: none !important;
           }
@@ -12797,6 +12977,13 @@ class NodaliaLightCard extends HTMLElement {
     `;
 
     this._lastRenderedIsOn = isOn;
+
+    if (shouldCleanupAfterAnimation) {
+      this._scheduleAnimationCleanup(cleanupDelay);
+    } else if (this._animationCleanupTimer) {
+      window.clearTimeout(this._animationCleanupTimer);
+      this._animationCleanupTimer = 0;
+    }
   }
 }
 
@@ -13649,7 +13836,7 @@ class NodaliaLightCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Transiciones suaves al encender, apagar y desplegar controles.</div>
+            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles y cambiar entre sliders.</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -13675,6 +13862,13 @@ class NodaliaLightCardEditor extends HTMLElement {
                     step: 10,
                   })}
                   ${this._renderTextField("Expansión de controles (ms)", "animations.controls_duration", config.animations.controls_duration, {
+                    type: "number",
+                    valueType: "number",
+                    min: 120,
+                    max: 2400,
+                    step: 10,
+                  })}
+                  ${this._renderTextField("Cambio entre sliders (ms)", "animations.mode_switch_duration", config.animations.mode_switch_duration, {
                     type: "number",
                     valueType: "number",
                     min: 120,
