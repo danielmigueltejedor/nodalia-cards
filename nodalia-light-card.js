@@ -40,8 +40,8 @@ const DEFAULT_CONFIG = {
   animations: {
     enabled: true,
     power_duration: 600,
-    controls_duration: 420,
-    mode_switch_duration: 650,
+    controls_duration: 600,
+    mode_switch_duration: 600,
     mode_switch_horizontal: true,
   },
   styles: {
@@ -1174,6 +1174,15 @@ class NodaliaLightCard extends HTMLElement {
     this._applySliderValue(slider, nextValue, { commit: false });
   }
 
+  _setSliderDragVisualState(slider, isDragging) {
+    const sliderShell = slider?.closest?.(".light-card__slider-shell");
+    if (!(sliderShell instanceof HTMLElement)) {
+      return;
+    }
+
+    sliderShell.classList.toggle("is-dragging", isDragging === true);
+  }
+
   _startSliderDrag(slider, clientX, event = null, pointerId = null) {
     if (!slider) {
       return;
@@ -1195,6 +1204,7 @@ class NodaliaLightCard extends HTMLElement {
       this._dragFrame = 0;
     }
 
+    this._setSliderDragVisualState(slider, true);
     const nextValue = getRangeValueFromClientX(slider, clientX);
     slider.value = String(nextValue);
     this._applySliderValue(slider, nextValue, { commit: false });
@@ -1220,6 +1230,7 @@ class NodaliaLightCard extends HTMLElement {
     drag.slider.value = String(nextValue);
     this._skipNextSliderChange = drag.slider;
     this._applySliderValue(drag.slider, nextValue, { commit: true });
+    this._setSliderDragVisualState(drag.slider, false);
 
     this._activeSliderDrag = null;
 
@@ -1317,6 +1328,7 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
+    this._setSliderDragVisualState(drag.slider, false);
     this._activeSliderDrag = null;
     this._pendingDragUpdate = null;
     if (this._dragFrame) {
@@ -1337,6 +1349,7 @@ class NodaliaLightCard extends HTMLElement {
 
     const clientX = event.changedTouches?.[0]?.clientX;
     if (!Number.isFinite(clientX)) {
+      this._setSliderDragVisualState(this._activeSliderDrag.slider, false);
       this._activeSliderDrag = null;
       if (this._pendingRenderAfterDrag) {
         this._pendingRenderAfterDrag = false;
@@ -1623,9 +1636,6 @@ class NodaliaLightCard extends HTMLElement {
     const modeTransitionAxisClass = animations.modeSwitchHorizontal
       ? "light-card__mode-panel-inner--horizontal"
       : "light-card__mode-panel-inner--vertical";
-    const modeActionsTransitionAxisClass = animations.modeSwitchHorizontal
-      ? "light-card__mode-actions--horizontal"
-      : "light-card__mode-actions--vertical";
 
     if (!isMiniLayout && config.show_state === true) {
       stateChipMarkup = `<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`;
@@ -1737,8 +1747,7 @@ class NodaliaLightCard extends HTMLElement {
             ${
               useSliderModeButtons
                 ? `
-                  <div class="light-card__mode-actions-shell">
-                    <div class="light-card__mode-actions ${modeTransition ? `light-card__mode-actions--${modeTransition.phase}` : ""} ${modeActionsTransitionAxisClass}">
+                  <div class="light-card__mode-actions">
                       ${availableControlModes
                         .filter(mode => mode !== displayedControlMode)
                         .map(mode => `
@@ -1754,7 +1763,6 @@ class NodaliaLightCard extends HTMLElement {
                           </button>
                         `)
                         .join("")}
-                    </div>
                   </div>
                 `
                 : ""
@@ -2207,13 +2215,13 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__mode-panel-inner--horizontal.light-card__mode-panel-inner--collapsing {
           animation: light-card-mode-slider-out-horizontal var(--light-card-mode-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
           pointer-events: none;
-          transform-origin: center;
+          transform-origin: right center;
         }
 
         .light-card__mode-panel-inner--horizontal.light-card__mode-panel-inner--expanding {
           animation: light-card-mode-slider-in-horizontal var(--light-card-mode-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           pointer-events: none;
-          transform-origin: center;
+          transform-origin: right center;
         }
 
         .light-card__mode-panel-inner--vertical.light-card__mode-panel-inner--collapsing {
@@ -2299,7 +2307,8 @@ class NodaliaLightCard extends HTMLElement {
           pointer-events: none;
           position: absolute;
           top: 50%;
-          transform: translate(-50%, -50%);
+          transform: translate(-50%, -50%) scale(1);
+          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
           z-index: 2;
         }
 
@@ -2321,6 +2330,11 @@ class NodaliaLightCard extends HTMLElement {
           -webkit-backdrop-filter: blur(12px);
           backdrop-filter: blur(12px);
           width: calc(${styles.slider_thumb_size} - 4px);
+        }
+
+        .light-card__slider-shell.is-dragging .light-card__slider-thumb[data-light-control="temperature"],
+        .light-card__slider-shell.is-dragging .light-card__slider-thumb[data-light-control="color"] {
+          transform: translate(-50%, -50%) scale(1.08);
         }
 
         .light-card__slider-thumb[data-light-control="temperature"] {
@@ -2407,37 +2421,6 @@ class NodaliaLightCard extends HTMLElement {
           gap: 10px;
         }
 
-        .light-card__mode-actions-shell {
-          align-items: center;
-          display: grid;
-          justify-self: end;
-          overflow: hidden;
-        }
-
-        .light-card__mode-actions--horizontal.light-card__mode-actions--collapsing {
-          animation: light-card-mode-slider-out-horizontal var(--light-card-mode-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
-          pointer-events: none;
-          transform-origin: right center;
-        }
-
-        .light-card__mode-actions--horizontal.light-card__mode-actions--expanding {
-          animation: light-card-mode-slider-in-horizontal var(--light-card-mode-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-          pointer-events: none;
-          transform-origin: right center;
-        }
-
-        .light-card__mode-actions--vertical.light-card__mode-actions--collapsing {
-          animation: light-card-mode-slider-out-vertical var(--light-card-mode-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
-          pointer-events: none;
-          transform-origin: center;
-        }
-
-        .light-card__mode-actions--vertical.light-card__mode-actions--expanding {
-          animation: light-card-mode-slider-in-vertical var(--light-card-mode-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-          pointer-events: none;
-          transform-origin: center;
-        }
-
         .light-card__mode-button {
           align-items: center;
           appearance: none;
@@ -2453,6 +2436,9 @@ class NodaliaLightCard extends HTMLElement {
           min-width: ${styles.control.size};
           padding: 0;
           position: relative;
+          transform: scale(1);
+          transform-origin: center;
+          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
           width: ${styles.control.size};
         }
 
@@ -2466,6 +2452,28 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__mode-button:disabled {
           cursor: default;
           opacity: 0.58;
+        }
+
+        :is(
+          .light-card__icon,
+          .light-card__mode-button,
+          .light-card__brightness-preset,
+          .light-card__temperature-preset,
+          .light-card__color-preset
+        ) {
+          transform: scale(1);
+          transform-origin: center;
+          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
+        }
+
+        :is(
+          .light-card__icon,
+          .light-card__mode-button,
+          .light-card__brightness-preset,
+          .light-card__temperature-preset,
+          .light-card__color-preset
+        ):active:not(:disabled) {
+          animation: light-card-button-bounce 320ms cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
         .light-card__slider {
@@ -2736,6 +2744,21 @@ class NodaliaLightCard extends HTMLElement {
           }
         }
 
+        @keyframes light-card-button-bounce {
+          0% {
+            transform: scale(1);
+          }
+          45% {
+            transform: scale(1.08);
+          }
+          72% {
+            transform: scale(1.03);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+
         @media (prefers-reduced-motion: reduce) {
           .light-card,
           .light-card::after,
@@ -2744,7 +2767,13 @@ class NodaliaLightCard extends HTMLElement {
           .light-card__mode-panel,
           .light-card__mode-panel-inner,
           .light-card__mode-actions,
-          .light-card__active-chip-inner {
+          .light-card__active-chip-inner,
+          .light-card__icon,
+          .light-card__mode-button,
+          .light-card__brightness-preset,
+          .light-card__temperature-preset,
+          .light-card__color-preset,
+          .light-card__slider-thumb {
             animation: none !important;
             transition: none !important;
           }

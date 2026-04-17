@@ -31,8 +31,8 @@ const DEFAULT_CONFIG = {
   animations: {
     enabled: true,
     power_duration: 600,
-    controls_duration: 420,
-    preset_duration: 420,
+    controls_duration: 600,
+    preset_duration: 600,
   },
   styles: {
     card: {
@@ -1535,6 +1535,9 @@ class NodaliaFanCard extends HTMLElement {
           outline: none;
           padding: 0;
           position: relative;
+          transform: scale(1);
+          transform-origin: center;
+          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
           width: ${styles.icon.size};
         }
 
@@ -1713,6 +1716,9 @@ class NodaliaFanCard extends HTMLElement {
           outline: none;
           padding: 0;
           position: relative;
+          transform: scale(1);
+          transform-origin: center;
+          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
           width: ${styles.control.size};
         }
 
@@ -1899,6 +1905,9 @@ class NodaliaFanCard extends HTMLElement {
           max-width: 100%;
           min-width: 0;
           padding: 0 14px;
+          transform: scale(1);
+          transform-origin: center;
+          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
           white-space: nowrap;
         }
 
@@ -1906,6 +1915,10 @@ class NodaliaFanCard extends HTMLElement {
           background: ${styles.control.accent_background};
           border-color: color-mix(in srgb, ${accentColor} 48%, rgba(255, 255, 255, 0.12));
           color: ${styles.control.accent_color};
+        }
+
+        :is(.fan-card__icon, .fan-card__control, .fan-card__preset):active:not(:disabled) {
+          animation: fan-card-button-bounce 320ms cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
         @keyframes fan-card-power-up {
@@ -2052,6 +2065,21 @@ class NodaliaFanCard extends HTMLElement {
           }
         }
 
+        @keyframes fan-card-button-bounce {
+          0% {
+            transform: scale(1);
+          }
+          45% {
+            transform: scale(1.08);
+          }
+          72% {
+            transform: scale(1.03);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+
         .fan-card--compact:not(.fan-card--with-copy) .fan-card__hero {
           justify-items: center;
         }
@@ -2062,7 +2090,10 @@ class NodaliaFanCard extends HTMLElement {
           .fan-card__controls-shell,
           .fan-card__controls-inner,
           .fan-card__preset-panel-shell,
-          .fan-card__preset-panel-inner {
+          .fan-card__preset-panel-inner,
+          .fan-card__icon,
+          .fan-card__control,
+          .fan-card__preset {
             animation: none !important;
             transition: none !important;
           }
