@@ -10811,6 +10811,7 @@ class NodaliaLightCard extends HTMLElement {
     this._powerTransition = null;
     this._controlsTransition = null;
     this._modeSwitchTimer = 0;
+    this._modeSwitchPressTimer = 0;
     this._modeTransition = null;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
@@ -10899,6 +10900,10 @@ class NodaliaLightCard extends HTMLElement {
     if (this._modeSwitchTimer) {
       window.clearTimeout(this._modeSwitchTimer);
       this._modeSwitchTimer = 0;
+    }
+    if (this._modeSwitchPressTimer) {
+      window.clearTimeout(this._modeSwitchPressTimer);
+      this._modeSwitchPressTimer = 0;
     }
     this._modeTransition = null;
     this._pendingDragUpdate = null;
@@ -11326,7 +11331,26 @@ class NodaliaLightCard extends HTMLElement {
       this._modeSwitchTimer = 0;
     }
 
+    if (this._modeSwitchPressTimer) {
+      window.clearTimeout(this._modeSwitchPressTimer);
+      this._modeSwitchPressTimer = 0;
+    }
+
     this._modeTransition = null;
+  }
+
+  _triggerButtonBounce(button) {
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    button.classList.remove("is-pressing");
+    button.getBoundingClientRect();
+    button.classList.add("is-pressing");
+
+    window.setTimeout(() => {
+      button.classList.remove("is-pressing");
+    }, 340);
   }
 
   _startModeSwitchTransition(nextMode, state = this._getState()) {
@@ -11833,7 +11857,15 @@ class NodaliaLightCard extends HTMLElement {
         this._toggleLight();
         break;
       case "mode":
-        this._startModeSwitchTransition(actionButton.dataset.mode || "brightness", this._getState());
+        this._triggerButtonBounce(actionButton);
+        if (this._modeSwitchPressTimer) {
+          window.clearTimeout(this._modeSwitchPressTimer);
+          this._modeSwitchPressTimer = 0;
+        }
+        this._modeSwitchPressTimer = window.setTimeout(() => {
+          this._modeSwitchPressTimer = 0;
+          this._startModeSwitchTransition(actionButton.dataset.mode || "brightness", this._getState());
+        }, 180);
         break;
       case "brightness": {
         const value = Number(actionButton.dataset.value);
@@ -12838,7 +12870,14 @@ class NodaliaLightCard extends HTMLElement {
           .light-card__brightness-preset,
           .light-card__temperature-preset,
           .light-card__color-preset
-        ):active:not(:disabled) {
+        ):active:not(:disabled),
+        :is(
+          .light-card__icon,
+          .light-card__mode-button,
+          .light-card__brightness-preset,
+          .light-card__temperature-preset,
+          .light-card__color-preset
+        ).is-pressing:not(:disabled) {
           animation: light-card-button-bounce 320ms cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
