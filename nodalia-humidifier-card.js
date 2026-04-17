@@ -436,8 +436,6 @@ class NodaliaHumidifierCard extends HTMLElement {
     this._powerTransition = null;
     this._controlsTransition = null;
     this._panelTransition = null;
-    this._pressedActionKey = "";
-    this._pressedActionTimer = 0;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -519,10 +517,6 @@ class NodaliaHumidifierCard extends HTMLElement {
     if (this._animationCleanupTimer) {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
-    }
-    if (this._pressedActionTimer) {
-      window.clearTimeout(this._pressedActionTimer);
-      this._pressedActionTimer = 0;
     }
     this._powerTransition = null;
     this._controlsTransition = null;
@@ -835,33 +829,19 @@ class NodaliaHumidifierCard extends HTMLElement {
     }, 340);
   }
 
-  _setPressedAction(actionKey) {
-    this._pressedActionKey = actionKey || "";
-
-    if (this._pressedActionTimer) {
-      window.clearTimeout(this._pressedActionTimer);
-      this._pressedActionTimer = 0;
-    }
-
-    if (!this._pressedActionKey || typeof window === "undefined") {
+  _triggerRenderedButtonBounce(selector) {
+    if (!selector || !this.shadowRoot || typeof window === "undefined") {
       return;
     }
 
-    this._pressedActionTimer = window.setTimeout(() => {
-      this._pressedActionTimer = 0;
-      this._pressedActionKey = "";
-
-      if (!this.isConnected) {
+    window.requestAnimationFrame(() => {
+      const button = this.shadowRoot?.querySelector(selector);
+      if (!(button instanceof HTMLElement)) {
         return;
       }
 
-      if (this._activeSliderDrag) {
-        this._pendingRenderAfterDrag = true;
-        return;
-      }
-
-      this._render();
-    }, 340);
+      this._triggerButtonBounce(button);
+    });
   }
 
   _setHumidifierService(service, data = {}) {
@@ -1242,34 +1222,36 @@ class NodaliaHumidifierCard extends HTMLElement {
 
     const state = this._getState();
     this._triggerHaptic();
-    this._triggerButtonBounce(actionButton);
 
     switch (actionButton.dataset.humidifierAction) {
       case "toggle":
+        this._triggerButtonBounce(actionButton);
         this._toggleHumidifier(state);
         break;
       case "toggle-mode-panel":
-        this._setPressedAction("toggle-mode-panel");
         this._modePanelOpen = !this._modePanelOpen;
         if (this._modePanelOpen) {
           this._fanModePanelOpen = false;
         }
         this._render();
+        this._triggerRenderedButtonBounce('[data-humidifier-action="toggle-mode-panel"]');
         break;
       case "toggle-fan-mode-panel":
-        this._setPressedAction("toggle-fan-mode-panel");
         this._fanModePanelOpen = !this._fanModePanelOpen;
         if (this._fanModePanelOpen) {
           this._modePanelOpen = false;
         }
         this._render();
+        this._triggerRenderedButtonBounce('[data-humidifier-action="toggle-fan-mode-panel"]');
         break;
       case "mode":
+        this._triggerButtonBounce(actionButton);
         if (actionButton.dataset.mode) {
           this._commitMode(actionButton.dataset.mode);
         }
         break;
       case "fan-mode":
+        this._triggerButtonBounce(actionButton);
         if (actionButton.dataset.mode) {
           this._commitFanMode(actionButton.dataset.mode);
         }
@@ -1466,7 +1448,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                       ? `
                         <button
                           type="button"
-                          class="humidifier-card__control ${this._modePanelOpen ? "humidifier-card__control--active" : ""} ${this._pressedActionKey === "toggle-mode-panel" ? "is-pressing" : ""}"
+                          class="humidifier-card__control ${this._modePanelOpen ? "humidifier-card__control--active" : ""}"
                           data-humidifier-action="toggle-mode-panel"
                           aria-label="Mostrar modos"
                         >
@@ -1480,7 +1462,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                       ? `
                         <button
                           type="button"
-                          class="humidifier-card__control ${this._fanModePanelOpen ? "humidifier-card__control--active" : ""} ${this._pressedActionKey === "toggle-fan-mode-panel" ? "is-pressing" : ""}"
+                          class="humidifier-card__control ${this._fanModePanelOpen ? "humidifier-card__control--active" : ""}"
                           data-humidifier-action="toggle-fan-mode-panel"
                           aria-label="Mostrar velocidades"
                         >
@@ -1503,7 +1485,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                 ? `
                   <button
                     type="button"
-                    class="humidifier-card__control ${this._modePanelOpen ? "humidifier-card__control--active" : ""} ${this._pressedActionKey === "toggle-mode-panel" ? "is-pressing" : ""}"
+                    class="humidifier-card__control ${this._modePanelOpen ? "humidifier-card__control--active" : ""}"
                     data-humidifier-action="toggle-mode-panel"
                     aria-label="Mostrar modos"
                   >
@@ -1517,7 +1499,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                 ? `
                   <button
                     type="button"
-                    class="humidifier-card__control ${this._fanModePanelOpen ? "humidifier-card__control--active" : ""} ${this._pressedActionKey === "toggle-fan-mode-panel" ? "is-pressing" : ""}"
+                    class="humidifier-card__control ${this._fanModePanelOpen ? "humidifier-card__control--active" : ""}"
                     data-humidifier-action="toggle-fan-mode-panel"
                     aria-label="Mostrar velocidades"
                   >

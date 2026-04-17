@@ -409,8 +409,6 @@ class NodaliaFanCard extends HTMLElement {
     this._powerTransition = null;
     this._controlsTransition = null;
     this._presetPanelTransition = null;
-    this._pressedActionKey = "";
-    this._pressedActionTimer = 0;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -492,10 +490,6 @@ class NodaliaFanCard extends HTMLElement {
     if (this._animationCleanupTimer) {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
-    }
-    if (this._pressedActionTimer) {
-      window.clearTimeout(this._pressedActionTimer);
-      this._pressedActionTimer = 0;
     }
     this._powerTransition = null;
     this._controlsTransition = null;
@@ -764,33 +758,19 @@ class NodaliaFanCard extends HTMLElement {
     }, 340);
   }
 
-  _setPressedAction(actionKey) {
-    this._pressedActionKey = actionKey || "";
-
-    if (this._pressedActionTimer) {
-      window.clearTimeout(this._pressedActionTimer);
-      this._pressedActionTimer = 0;
-    }
-
-    if (!this._pressedActionKey || typeof window === "undefined") {
+  _triggerRenderedButtonBounce(selector) {
+    if (!selector || !this.shadowRoot || typeof window === "undefined") {
       return;
     }
 
-    this._pressedActionTimer = window.setTimeout(() => {
-      this._pressedActionTimer = 0;
-      this._pressedActionKey = "";
-
-      if (!this.isConnected) {
+    window.requestAnimationFrame(() => {
+      const button = this.shadowRoot?.querySelector(selector);
+      if (!(button instanceof HTMLElement)) {
         return;
       }
 
-      if (this._activeSliderDrag) {
-        this._pendingRenderAfterDrag = true;
-        return;
-      }
-
-      this._render();
-    }, 340);
+      this._triggerButtonBounce(button);
+    });
   }
 
   _setFanState(service, data = {}) {
@@ -1120,21 +1100,23 @@ class NodaliaFanCard extends HTMLElement {
 
     const state = this._getState();
     this._triggerHaptic();
-    this._triggerButtonBounce(actionButton);
 
     switch (actionButton.dataset.fanAction) {
       case "toggle":
+        this._triggerButtonBounce(actionButton);
         this._toggleFan(state);
         break;
       case "oscillate":
+        this._triggerButtonBounce(actionButton);
         this._toggleOscillation(state);
         break;
       case "toggle-preset-panel":
-        this._setPressedAction("toggle-preset-panel");
         this._presetPanelOpen = !this._presetPanelOpen;
         this._render();
+        this._triggerRenderedButtonBounce('[data-fan-action="toggle-preset-panel"]');
         break;
       case "preset":
+        this._triggerButtonBounce(actionButton);
         if (actionButton.dataset.mode) {
           this._commitPresetMode(actionButton.dataset.mode);
         }
@@ -1337,7 +1319,7 @@ class NodaliaFanCard extends HTMLElement {
                       ? `
                         <button
                           type="button"
-                          class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""} ${this._pressedActionKey === "toggle-preset-panel" ? "is-pressing" : ""}"
+                          class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
                           data-fan-action="toggle-preset-panel"
                           aria-label="Mostrar modos"
                         >
@@ -1374,7 +1356,7 @@ class NodaliaFanCard extends HTMLElement {
                 ? `
                   <button
                     type="button"
-                    class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""} ${this._pressedActionKey === "toggle-preset-panel" ? "is-pressing" : ""}"
+                    class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
                     data-fan-action="toggle-preset-panel"
                     aria-label="Mostrar modos"
                   >
