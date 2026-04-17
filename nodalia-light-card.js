@@ -1623,6 +1623,9 @@ class NodaliaLightCard extends HTMLElement {
     const modeTransitionAxisClass = animations.modeSwitchHorizontal
       ? "light-card__mode-panel-inner--horizontal"
       : "light-card__mode-panel-inner--vertical";
+    const modeActionsTransitionAxisClass = animations.modeSwitchHorizontal
+      ? "light-card__mode-actions--horizontal"
+      : "light-card__mode-actions--vertical";
 
     if (!isMiniLayout && config.show_state === true) {
       stateChipMarkup = `<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`;
@@ -1734,22 +1737,24 @@ class NodaliaLightCard extends HTMLElement {
             ${
               useSliderModeButtons
                 ? `
-                  <div class="light-card__mode-actions">
-                    ${availableControlModes
-                      .filter(mode => mode !== displayedControlMode)
-                      .map(mode => `
-                        <button
-                          type="button"
-                          class="light-card__mode-button"
-                          data-light-action="mode"
-                          data-mode="${mode}"
-                          ${modeTransition ? "disabled" : ""}
-                          aria-label="${mode === "brightness" ? "Mostrar brillo" : mode === "temperature" ? "Mostrar temperatura" : "Mostrar color"}"
-                        >
-                          <ha-icon icon="${this._getControlModeIcon(mode)}"></ha-icon>
-                        </button>
-                      `)
-                      .join("")}
+                  <div class="light-card__mode-actions-shell">
+                    <div class="light-card__mode-actions ${modeTransition ? `light-card__mode-actions--${modeTransition.phase}` : ""} ${modeActionsTransitionAxisClass}">
+                      ${availableControlModes
+                        .filter(mode => mode !== displayedControlMode)
+                        .map(mode => `
+                          <button
+                            type="button"
+                            class="light-card__mode-button"
+                            data-light-action="mode"
+                            data-mode="${mode}"
+                            ${modeTransition ? "disabled" : ""}
+                            aria-label="${mode === "brightness" ? "Mostrar brillo" : mode === "temperature" ? "Mostrar temperatura" : "Mostrar color"}"
+                          >
+                            <ha-icon icon="${this._getControlModeIcon(mode)}"></ha-icon>
+                          </button>
+                        `)
+                        .join("")}
+                    </div>
                   </div>
                 `
                 : ""
@@ -2402,6 +2407,37 @@ class NodaliaLightCard extends HTMLElement {
           gap: 10px;
         }
 
+        .light-card__mode-actions-shell {
+          align-items: center;
+          display: grid;
+          justify-self: end;
+          overflow: hidden;
+        }
+
+        .light-card__mode-actions--horizontal.light-card__mode-actions--collapsing {
+          animation: light-card-mode-slider-out-horizontal var(--light-card-mode-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          pointer-events: none;
+          transform-origin: right center;
+        }
+
+        .light-card__mode-actions--horizontal.light-card__mode-actions--expanding {
+          animation: light-card-mode-slider-in-horizontal var(--light-card-mode-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          pointer-events: none;
+          transform-origin: right center;
+        }
+
+        .light-card__mode-actions--vertical.light-card__mode-actions--collapsing {
+          animation: light-card-mode-slider-out-vertical var(--light-card-mode-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          pointer-events: none;
+          transform-origin: center;
+        }
+
+        .light-card__mode-actions--vertical.light-card__mode-actions--expanding {
+          animation: light-card-mode-slider-in-vertical var(--light-card-mode-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          pointer-events: none;
+          transform-origin: center;
+        }
+
         .light-card__mode-button {
           align-items: center;
           appearance: none;
@@ -2707,6 +2743,7 @@ class NodaliaLightCard extends HTMLElement {
           .light-card__controls-inner,
           .light-card__mode-panel,
           .light-card__mode-panel-inner,
+          .light-card__mode-actions,
           .light-card__active-chip-inner {
             animation: none !important;
             transition: none !important;
