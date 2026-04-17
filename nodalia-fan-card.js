@@ -409,6 +409,7 @@ class NodaliaFanCard extends HTMLElement {
     this._powerTransition = null;
     this._controlsTransition = null;
     this._presetPanelTransition = null;
+    this._presetPanelPressTimer = 0;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -490,6 +491,10 @@ class NodaliaFanCard extends HTMLElement {
     if (this._animationCleanupTimer) {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
+    }
+    if (this._presetPanelPressTimer) {
+      window.clearTimeout(this._presetPanelPressTimer);
+      this._presetPanelPressTimer = 0;
     }
     this._powerTransition = null;
     this._controlsTransition = null;
@@ -742,6 +747,20 @@ class NodaliaFanCard extends HTMLElement {
 
       this._render();
     }, safeDelay);
+  }
+
+  _triggerButtonBounce(button) {
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    button.classList.remove("is-pressing");
+    button.getBoundingClientRect();
+    button.classList.add("is-pressing");
+
+    window.setTimeout(() => {
+      button.classList.remove("is-pressing");
+    }, 340);
   }
 
   _setFanState(service, data = {}) {
@@ -1071,6 +1090,7 @@ class NodaliaFanCard extends HTMLElement {
 
     const state = this._getState();
     this._triggerHaptic();
+    this._triggerButtonBounce(actionButton);
 
     switch (actionButton.dataset.fanAction) {
       case "toggle":
@@ -1078,16 +1098,21 @@ class NodaliaFanCard extends HTMLElement {
         break;
       case "oscillate":
         this._toggleOscillation(state);
-        this._render();
         break;
       case "toggle-preset-panel":
-        this._presetPanelOpen = !this._presetPanelOpen;
-        this._render();
+        if (this._presetPanelPressTimer) {
+          window.clearTimeout(this._presetPanelPressTimer);
+          this._presetPanelPressTimer = 0;
+        }
+        this._presetPanelPressTimer = window.setTimeout(() => {
+          this._presetPanelPressTimer = 0;
+          this._presetPanelOpen = !this._presetPanelOpen;
+          this._render();
+        }, 180);
         break;
       case "preset":
         if (actionButton.dataset.mode) {
           this._commitPresetMode(actionButton.dataset.mode);
-          this._render();
         }
         break;
       default:
@@ -1687,6 +1712,7 @@ class NodaliaFanCard extends HTMLElement {
           flex-wrap: wrap;
           gap: 10px;
           justify-content: center;
+          padding-inline: 4px;
         }
 
         .fan-card__slider-actions {
@@ -1744,6 +1770,7 @@ class NodaliaFanCard extends HTMLElement {
           display: grid;
           gap: 14px;
           grid-template-columns: minmax(0, 1fr) auto;
+          padding-inline: 4px;
         }
 
         .fan-card__slider-wrap {
@@ -1917,7 +1944,8 @@ class NodaliaFanCard extends HTMLElement {
           color: ${styles.control.accent_color};
         }
 
-        :is(.fan-card__icon, .fan-card__control, .fan-card__preset):active:not(:disabled) {
+        :is(.fan-card__icon, .fan-card__control, .fan-card__preset):active:not(:disabled),
+        :is(.fan-card__icon, .fan-card__control, .fan-card__preset).is-pressing:not(:disabled) {
           animation: fan-card-button-bounce 320ms cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 

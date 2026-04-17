@@ -12812,6 +12812,7 @@ class NodaliaLightCard extends HTMLElement {
           display: grid;
           gap: 10px;
           grid-template-columns: minmax(0, 1fr) auto;
+          padding-inline: 4px;
         }
 
         .light-card__mode-actions {
@@ -14621,6 +14622,7 @@ class NodaliaFanCard extends HTMLElement {
     this._powerTransition = null;
     this._controlsTransition = null;
     this._presetPanelTransition = null;
+    this._presetPanelPressTimer = 0;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -14702,6 +14704,10 @@ class NodaliaFanCard extends HTMLElement {
     if (this._animationCleanupTimer) {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
+    }
+    if (this._presetPanelPressTimer) {
+      window.clearTimeout(this._presetPanelPressTimer);
+      this._presetPanelPressTimer = 0;
     }
     this._powerTransition = null;
     this._controlsTransition = null;
@@ -14954,6 +14960,20 @@ class NodaliaFanCard extends HTMLElement {
 
       this._render();
     }, safeDelay);
+  }
+
+  _triggerButtonBounce(button) {
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    button.classList.remove("is-pressing");
+    button.getBoundingClientRect();
+    button.classList.add("is-pressing");
+
+    window.setTimeout(() => {
+      button.classList.remove("is-pressing");
+    }, 340);
   }
 
   _setFanState(service, data = {}) {
@@ -15283,6 +15303,7 @@ class NodaliaFanCard extends HTMLElement {
 
     const state = this._getState();
     this._triggerHaptic();
+    this._triggerButtonBounce(actionButton);
 
     switch (actionButton.dataset.fanAction) {
       case "toggle":
@@ -15290,16 +15311,21 @@ class NodaliaFanCard extends HTMLElement {
         break;
       case "oscillate":
         this._toggleOscillation(state);
-        this._render();
         break;
       case "toggle-preset-panel":
-        this._presetPanelOpen = !this._presetPanelOpen;
-        this._render();
+        if (this._presetPanelPressTimer) {
+          window.clearTimeout(this._presetPanelPressTimer);
+          this._presetPanelPressTimer = 0;
+        }
+        this._presetPanelPressTimer = window.setTimeout(() => {
+          this._presetPanelPressTimer = 0;
+          this._presetPanelOpen = !this._presetPanelOpen;
+          this._render();
+        }, 180);
         break;
       case "preset":
         if (actionButton.dataset.mode) {
           this._commitPresetMode(actionButton.dataset.mode);
-          this._render();
         }
         break;
       default:
@@ -15899,6 +15925,7 @@ class NodaliaFanCard extends HTMLElement {
           flex-wrap: wrap;
           gap: 10px;
           justify-content: center;
+          padding-inline: 4px;
         }
 
         .fan-card__slider-actions {
@@ -15956,6 +15983,7 @@ class NodaliaFanCard extends HTMLElement {
           display: grid;
           gap: 14px;
           grid-template-columns: minmax(0, 1fr) auto;
+          padding-inline: 4px;
         }
 
         .fan-card__slider-wrap {
@@ -16129,7 +16157,8 @@ class NodaliaFanCard extends HTMLElement {
           color: ${styles.control.accent_color};
         }
 
-        :is(.fan-card__icon, .fan-card__control, .fan-card__preset):active:not(:disabled) {
+        :is(.fan-card__icon, .fan-card__control, .fan-card__preset):active:not(:disabled),
+        :is(.fan-card__icon, .fan-card__control, .fan-card__preset).is-pressing:not(:disabled) {
           animation: fan-card-button-bounce 320ms cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
@@ -17348,6 +17377,12 @@ const DEFAULT_CONFIG = {
     style: "medium",
     fallback_vibrate: false,
   },
+  animations: {
+    enabled: true,
+    power_duration: 600,
+    controls_duration: 600,
+    panel_duration: 600,
+  },
   styles: {
     card: {
       background: "var(--ha-card-background)",
@@ -17739,6 +17774,15 @@ class NodaliaHumidifierCard extends HTMLElement {
     this._dragFrame = 0;
     this._pendingDragUpdate = null;
     this._lastRenderSignature = "";
+    this._lastRenderedIsOn = null;
+    this._lastRenderedPanelKey = "";
+    this._lastControlsMarkup = "";
+    this._lastPanelMarkup = "";
+    this._animationCleanupTimer = 0;
+    this._powerTransition = null;
+    this._controlsTransition = null;
+    this._panelTransition = null;
+    this._panelPressTimer = 0;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -17817,6 +17861,17 @@ class NodaliaHumidifierCard extends HTMLElement {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
     }
+    if (this._animationCleanupTimer) {
+      window.clearTimeout(this._animationCleanupTimer);
+      this._animationCleanupTimer = 0;
+    }
+    if (this._panelPressTimer) {
+      window.clearTimeout(this._panelPressTimer);
+      this._panelPressTimer = 0;
+    }
+    this._powerTransition = null;
+    this._controlsTransition = null;
+    this._panelTransition = null;
     this._pendingDragUpdate = null;
   }
 
@@ -18072,6 +18127,57 @@ class NodaliaHumidifierCard extends HTMLElement {
     return this._isOn(state)
       ? styles?.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color
       : styles?.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color;
+  }
+
+  _getAnimationSettings() {
+    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+    return {
+      enabled: configuredAnimations.enabled !== false,
+      powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4000),
+      controlsDuration: clamp(Number(configuredAnimations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
+      panelDuration: clamp(Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration, 120, 2400),
+    };
+  }
+
+  _scheduleAnimationCleanup(delay) {
+    if (this._animationCleanupTimer) {
+      window.clearTimeout(this._animationCleanupTimer);
+      this._animationCleanupTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 5000);
+    if (!safeDelay || typeof window === "undefined") {
+      return;
+    }
+
+    this._animationCleanupTimer = window.setTimeout(() => {
+      this._animationCleanupTimer = 0;
+
+      if (!this.isConnected) {
+        return;
+      }
+
+      if (this._activeSliderDrag) {
+        this._pendingRenderAfterDrag = true;
+        return;
+      }
+
+      this._render();
+    }, safeDelay);
+  }
+
+  _triggerButtonBounce(button) {
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    button.classList.remove("is-pressing");
+    button.getBoundingClientRect();
+    button.classList.add("is-pressing");
+
+    window.setTimeout(() => {
+      button.classList.remove("is-pressing");
+    }, 340);
   }
 
   _setHumidifierService(service, data = {}) {
@@ -18452,35 +18558,48 @@ class NodaliaHumidifierCard extends HTMLElement {
 
     const state = this._getState();
     this._triggerHaptic();
+    this._triggerButtonBounce(actionButton);
 
     switch (actionButton.dataset.humidifierAction) {
       case "toggle":
         this._toggleHumidifier(state);
         break;
       case "toggle-mode-panel":
-        this._modePanelOpen = !this._modePanelOpen;
-        if (this._modePanelOpen) {
-          this._fanModePanelOpen = false;
+        if (this._panelPressTimer) {
+          window.clearTimeout(this._panelPressTimer);
+          this._panelPressTimer = 0;
         }
-        this._render();
+        this._panelPressTimer = window.setTimeout(() => {
+          this._panelPressTimer = 0;
+          this._modePanelOpen = !this._modePanelOpen;
+          if (this._modePanelOpen) {
+            this._fanModePanelOpen = false;
+          }
+          this._render();
+        }, 180);
         break;
       case "toggle-fan-mode-panel":
-        this._fanModePanelOpen = !this._fanModePanelOpen;
-        if (this._fanModePanelOpen) {
-          this._modePanelOpen = false;
+        if (this._panelPressTimer) {
+          window.clearTimeout(this._panelPressTimer);
+          this._panelPressTimer = 0;
         }
-        this._render();
+        this._panelPressTimer = window.setTimeout(() => {
+          this._panelPressTimer = 0;
+          this._fanModePanelOpen = !this._fanModePanelOpen;
+          if (this._fanModePanelOpen) {
+            this._modePanelOpen = false;
+          }
+          this._render();
+        }, 180);
         break;
       case "mode":
         if (actionButton.dataset.mode) {
           this._commitMode(actionButton.dataset.mode);
-          this._render();
         }
         break;
       case "fan-mode":
         if (actionButton.dataset.mode) {
           this._commitFanMode(actionButton.dataset.mode);
-          this._render();
         }
         break;
       default:
@@ -18578,15 +18697,264 @@ class NodaliaHumidifierCard extends HTMLElement {
 
     const showCopyBlock = !isCompactLayout || chips.length > 0;
     const hasSecondaryControls = (modeOptions.length > 0) || (fanModeOptions.length > 0);
-    const cardBackground = isOn
-      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`
-      : styles.card.background;
-    const cardBorder = isOn
-      ? `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`
-      : styles.card.border;
-    const cardShadow = isOn
-      ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.18))`
-      : styles.card.box_shadow;
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;
+    const onCardBorder = `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
+    const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.18))`;
+    const animations = this._getAnimationSettings();
+    const now = Date.now();
+    const wasOn = this._lastRenderedIsOn;
+    const currentPanelKey = isOn
+      ? (this._modePanelOpen && modeOptions.length
+          ? "mode"
+          : this._fanModePanelOpen && fanModeOptions.length
+            ? "fan"
+            : "")
+      : "";
+    let powerAnimationState = "";
+    let controlsAnimationState = "";
+    let panelAnimationState = "";
+
+    if (!animations.enabled) {
+      this._powerTransition = null;
+      this._controlsTransition = null;
+      this._panelTransition = null;
+    } else if (wasOn !== null && wasOn !== isOn) {
+      powerAnimationState = isOn ? "powering-up" : "powering-down";
+      this._powerTransition = {
+        endsAt: now + animations.powerDuration,
+        state: powerAnimationState,
+      };
+
+      if (supportsHumidity || hasSecondaryControls || this._lastControlsMarkup) {
+        controlsAnimationState = isOn ? "entering" : "leaving";
+        this._controlsTransition = {
+          endsAt: now + animations.controlsDuration,
+          state: controlsAnimationState,
+        };
+      } else {
+        this._controlsTransition = null;
+      }
+
+      this._panelTransition = null;
+    } else {
+      if (this._powerTransition?.endsAt > now) {
+        powerAnimationState = this._powerTransition.state;
+      } else {
+        this._powerTransition = null;
+      }
+
+      if (this._controlsTransition?.endsAt > now) {
+        controlsAnimationState = this._controlsTransition.state;
+      } else {
+        this._controlsTransition = null;
+      }
+
+      if (isOn && this._lastRenderedPanelKey !== currentPanelKey) {
+        panelAnimationState = currentPanelKey ? "entering" : "leaving";
+        this._panelTransition = {
+          endsAt: now + animations.panelDuration,
+          state: panelAnimationState,
+        };
+      } else if (this._panelTransition?.endsAt > now) {
+        panelAnimationState = this._panelTransition.state;
+      } else {
+        this._panelTransition = null;
+      }
+
+      if (!isOn) {
+        this._panelTransition = null;
+      }
+    }
+
+    const mainControlsMarkup = isOn && supportsHumidity
+      ? `
+        <div class="humidifier-card__slider-row ${hasSecondaryControls ? "" : "humidifier-card__slider-row--solo"}">
+          <div class="humidifier-card__slider-wrap">
+            <div class="humidifier-card__slider-shell" style="--humidity:${clamp(humidityProgress, 0, 100)};">
+              <div class="humidifier-card__slider-track"></div>
+              <input
+                type="range"
+                class="humidifier-card__slider"
+                data-humidifier-control="humidity"
+                min="${humidityRange.min}"
+                max="${humidityRange.max}"
+                step="any"
+                value="${currentHumidity}"
+                style="--humidity:${clamp(humidityProgress, 0, 100)};"
+                aria-label="Humedad objetivo"
+              />
+            </div>
+          </div>
+          ${
+            hasSecondaryControls
+              ? `
+                <div class="humidifier-card__slider-actions">
+                  ${
+                    modeOptions.length
+                      ? `
+                        <button
+                          type="button"
+                          class="humidifier-card__control ${this._modePanelOpen ? "humidifier-card__control--active" : ""}"
+                          data-humidifier-action="toggle-mode-panel"
+                          aria-label="Mostrar modos"
+                        >
+                          <ha-icon icon="mdi:tune-variant"></ha-icon>
+                        </button>
+                      `
+                      : ""
+                  }
+                  ${
+                    fanModeOptions.length
+                      ? `
+                        <button
+                          type="button"
+                          class="humidifier-card__control ${this._fanModePanelOpen ? "humidifier-card__control--active" : ""}"
+                          data-humidifier-action="toggle-fan-mode-panel"
+                          aria-label="Mostrar velocidades"
+                        >
+                          <ha-icon icon="mdi:fan"></ha-icon>
+                        </button>
+                      `
+                      : ""
+                  }
+                </div>
+              `
+              : ""
+          }
+        </div>
+      `
+      : !supportsHumidity && hasSecondaryControls && isOn
+        ? `
+          <div class="humidifier-card__controls">
+            ${
+              modeOptions.length
+                ? `
+                  <button
+                    type="button"
+                    class="humidifier-card__control ${this._modePanelOpen ? "humidifier-card__control--active" : ""}"
+                    data-humidifier-action="toggle-mode-panel"
+                    aria-label="Mostrar modos"
+                  >
+                    <ha-icon icon="mdi:tune-variant"></ha-icon>
+                  </button>
+                `
+                : ""
+            }
+            ${
+              fanModeOptions.length
+                ? `
+                  <button
+                    type="button"
+                    class="humidifier-card__control ${this._fanModePanelOpen ? "humidifier-card__control--active" : ""}"
+                    data-humidifier-action="toggle-fan-mode-panel"
+                    aria-label="Mostrar velocidades"
+                  >
+                    <ha-icon icon="mdi:fan"></ha-icon>
+                  </button>
+                `
+                : ""
+            }
+          </div>
+        `
+        : "";
+
+    const currentPanelMarkup = currentPanelKey === "mode"
+      ? `
+        <div class="humidifier-card__panel">
+          ${modeOptions
+            .map(mode => `
+              <button
+                type="button"
+                class="humidifier-card__option ${normalizeTextKey(mode) === normalizeTextKey(currentMode) ? "is-active" : ""}"
+                data-humidifier-action="mode"
+                data-mode="${escapeHtml(mode)}"
+              >
+                ${escapeHtml(translateModeLabel(mode))}
+              </button>
+            `)
+            .join("")}
+        </div>
+      `
+      : currentPanelKey === "fan"
+        ? `
+          <div class="humidifier-card__panel">
+            ${fanModeOptions
+              .map(mode => `
+                <button
+                  type="button"
+                  class="humidifier-card__option ${normalizeTextKey(mode) === normalizeTextKey(currentFanMode) ? "is-active" : ""}"
+                  data-humidifier-action="fan-mode"
+                  data-mode="${escapeHtml(mode)}"
+                >
+                  ${escapeHtml(translateModeLabel(mode))}
+                </button>
+              `)
+              .join("")}
+          </div>
+        `
+        : "";
+    const panelContentMarkup = currentPanelMarkup
+      || (panelAnimationState === "leaving" ? this._lastPanelMarkup : "");
+    const panelShellMarkup = panelContentMarkup
+      ? `
+        <div class="humidifier-card__panel-shell ${panelAnimationState ? `humidifier-card__panel-shell--${panelAnimationState}` : ""}">
+          <div class="humidifier-card__panel-inner">
+            ${panelContentMarkup}
+          </div>
+        </div>
+      `
+      : "";
+    const currentControlsAnimatedMarkup = [
+      mainControlsMarkup,
+      panelShellMarkup,
+    ].filter(Boolean).join("");
+    const currentControlsStaticMarkup = [
+      mainControlsMarkup,
+      currentPanelMarkup
+        ? `
+          <div class="humidifier-card__panel-shell">
+            <div class="humidifier-card__panel-inner">
+              ${currentPanelMarkup}
+            </div>
+          </div>
+        `
+        : "",
+    ].filter(Boolean).join("");
+    const controlsContentMarkup = isOn
+      ? currentControlsAnimatedMarkup
+      : controlsAnimationState === "leaving"
+        ? this._lastControlsMarkup
+        : "";
+    const controlsShellMarkup = controlsContentMarkup
+      ? `
+        <div class="humidifier-card__controls-shell ${controlsAnimationState ? `humidifier-card__controls-shell--${controlsAnimationState}` : ""}">
+          <div class="humidifier-card__controls-inner">
+            ${controlsContentMarkup}
+          </div>
+        </div>
+      `
+      : "";
+    const powerAnimationRemaining = powerAnimationState && this._powerTransition
+      ? Math.max(0, this._powerTransition.endsAt - now)
+      : 0;
+    const controlsAnimationRemaining = controlsAnimationState && this._controlsTransition
+      ? Math.max(0, this._controlsTransition.endsAt - now)
+      : 0;
+    const panelAnimationRemaining = panelAnimationState && this._panelTransition
+      ? Math.max(0, this._panelTransition.endsAt - now)
+      : 0;
+    const shouldCleanupAfterAnimation = Boolean(powerAnimationRemaining || controlsAnimationRemaining || panelAnimationRemaining);
+    const cleanupDelay = shouldCleanupAfterAnimation
+      ? Math.max(powerAnimationRemaining, controlsAnimationRemaining, panelAnimationRemaining) + 40
+      : 0;
+
+    if (currentPanelMarkup) {
+      this._lastPanelMarkup = currentPanelMarkup;
+    }
+
+    if (isOn && currentControlsStaticMarkup && panelAnimationState !== "leaving") {
+      this._lastControlsMarkup = currentControlsStaticMarkup;
+    }
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -18598,11 +18966,16 @@ class NodaliaHumidifierCard extends HTMLElement {
           box-sizing: border-box;
         }
 
-        ha-card {
-          background: ${cardBackground};
-          border: ${cardBorder};
+        ha-card.humidifier-card {
+          --humidifier-card-controls-max-height: 360px;
+          --humidifier-card-controls-gap: calc(${styles.card.gap} + 4px);
+          --humidifier-card-controls-duration: ${animations.controlsDuration}ms;
+          --humidifier-card-panel-duration: ${animations.panelDuration}ms;
+          --humidifier-card-power-duration: ${animations.powerDuration}ms;
+          background: ${isOn ? onCardBackground : styles.card.background};
+          border: ${isOn ? `1px solid ${onCardBorder}` : styles.card.border};
           border-radius: ${styles.card.border_radius};
-          box-shadow: ${cardShadow};
+          box-shadow: ${isOn ? `${styles.card.box_shadow}, ${onCardShadow}` : styles.card.box_shadow};
           min-width: 0;
           overflow: hidden;
           padding: ${styles.card.padding};
@@ -18625,10 +18998,37 @@ class NodaliaHumidifierCard extends HTMLElement {
           z-index: 0;
         }
 
+        ha-card::after {
+          background:
+            radial-gradient(circle at 18% 18%, color-mix(in srgb, ${accentColor} 22%, rgba(255, 255, 255, 0.12)) 0%, transparent 50%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
+          content: "";
+          inset: 0;
+          opacity: ${isOn ? "1" : "0"};
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .humidifier-card--powering-up {
+          animation: humidifier-card-power-up var(--humidifier-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) both;
+        }
+
+        .humidifier-card--powering-down {
+          animation: humidifier-card-power-down var(--humidifier-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) both;
+        }
+
+        .humidifier-card--powering-up::after {
+          animation: humidifier-card-power-glow-in var(--humidifier-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) both;
+        }
+
+        .humidifier-card--powering-down::after {
+          animation: humidifier-card-power-glow-out var(--humidifier-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) both;
+        }
+
         .humidifier-card {
           color: var(--primary-text-color);
           display: grid;
-          gap: ${styles.card.gap};
           min-width: 0;
           position: relative;
           z-index: 1;
@@ -18636,7 +19036,7 @@ class NodaliaHumidifierCard extends HTMLElement {
 
         .humidifier-card__content {
           display: grid;
-          gap: ${styles.card.gap};
+          gap: 0;
         }
 
         .humidifier-card__hero {
@@ -18673,6 +19073,9 @@ class NodaliaHumidifierCard extends HTMLElement {
           outline: none;
           padding: 0;
           position: relative;
+          transform: scale(1);
+          transform-origin: center;
+          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
           width: ${styles.icon.size};
         }
 
@@ -18785,12 +19188,43 @@ class NodaliaHumidifierCard extends HTMLElement {
           color: var(--primary-text-color);
         }
 
+        .humidifier-card__controls-shell {
+          margin-top: var(--humidifier-card-controls-gap);
+          overflow: hidden;
+        }
+
+        .humidifier-card__controls-inner {
+          display: grid;
+          gap: 10px;
+        }
+
+        .humidifier-card__controls-shell--entering {
+          animation: humidifier-card-controls-expand var(--humidifier-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          transform-origin: top;
+        }
+
+        .humidifier-card__controls-shell--entering .humidifier-card__controls-inner {
+          animation: humidifier-card-controls-content-in var(--humidifier-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          transform-origin: top;
+        }
+
+        .humidifier-card__controls-shell--leaving {
+          animation: humidifier-card-controls-collapse var(--humidifier-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          pointer-events: none;
+          transform-origin: top;
+        }
+
+        .humidifier-card__controls-shell--leaving .humidifier-card__controls-inner {
+          animation: humidifier-card-controls-content-out var(--humidifier-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          transform-origin: top;
+        }
+
         .humidifier-card__slider-row {
           align-items: center;
           display: grid;
           gap: 14px;
           grid-template-columns: minmax(0, 1fr) auto;
-          margin-top: 4px;
+          padding-inline: 4px;
         }
 
         .humidifier-card__slider-row--solo {
@@ -18906,6 +19340,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           flex-wrap: wrap;
           gap: 10px;
           justify-content: center;
+          padding-inline: 4px;
         }
 
         .humidifier-card__control {
@@ -18928,6 +19363,9 @@ class NodaliaHumidifierCard extends HTMLElement {
           outline: none;
           padding: 0;
           position: relative;
+          transform: scale(1);
+          transform-origin: center;
+          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
           width: ${styles.control.size};
         }
 
@@ -18956,6 +19394,35 @@ class NodaliaHumidifierCard extends HTMLElement {
           min-width: 0;
         }
 
+        .humidifier-card__panel-shell {
+          overflow: hidden;
+        }
+
+        .humidifier-card__panel-inner {
+          display: grid;
+        }
+
+        .humidifier-card__panel-shell--entering {
+          animation: humidifier-card-panel-expand var(--humidifier-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          transform-origin: top;
+        }
+
+        .humidifier-card__panel-shell--entering .humidifier-card__panel-inner {
+          animation: humidifier-card-panel-content-in var(--humidifier-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          transform-origin: top;
+        }
+
+        .humidifier-card__panel-shell--leaving {
+          animation: humidifier-card-panel-collapse var(--humidifier-card-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          pointer-events: none;
+          transform-origin: top;
+        }
+
+        .humidifier-card__panel-shell--leaving .humidifier-card__panel-inner {
+          animation: humidifier-card-panel-content-out var(--humidifier-card-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          transform-origin: top;
+        }
+
         .humidifier-card__option {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
@@ -18976,6 +19443,9 @@ class NodaliaHumidifierCard extends HTMLElement {
           max-width: 100%;
           min-width: 0;
           padding: 0 14px;
+          transform: scale(1);
+          transform-origin: center;
+          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
           white-space: nowrap;
         }
 
@@ -18985,8 +19455,187 @@ class NodaliaHumidifierCard extends HTMLElement {
           color: ${styles.control.accent_color};
         }
 
+        :is(.humidifier-card__icon, .humidifier-card__control, .humidifier-card__option):active:not(:disabled),
+        :is(.humidifier-card__icon, .humidifier-card__control, .humidifier-card__option).is-pressing:not(:disabled) {
+          animation: humidifier-card-button-bounce 320ms cubic-bezier(0.2, 0.9, 0.24, 1) both;
+        }
+
+        @keyframes humidifier-card-power-up {
+          0% {
+            background: ${styles.card.background};
+            box-shadow: ${styles.card.box_shadow};
+            transform: scale(0.994);
+          }
+          55% {
+            background: linear-gradient(135deg, color-mix(in srgb, ${accentColor} 26%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 54%, ${styles.card.background} 100%);
+            box-shadow: ${styles.card.box_shadow}, 0 12px 26px color-mix(in srgb, ${accentColor} 12%, rgba(0, 0, 0, 0.16));
+            transform: scale(1);
+          }
+          100% {
+            background: ${onCardBackground};
+            box-shadow: ${styles.card.box_shadow}, ${onCardShadow};
+            transform: scale(1);
+          }
+        }
+
+        @keyframes humidifier-card-power-down {
+          0% {
+            background: ${onCardBackground};
+            box-shadow: ${styles.card.box_shadow}, ${onCardShadow};
+            transform: scale(1);
+          }
+          100% {
+            background: ${styles.card.background};
+            box-shadow: ${styles.card.box_shadow};
+            transform: scale(0.996);
+          }
+        }
+
+        @keyframes humidifier-card-power-glow-in {
+          0% {
+            opacity: 0;
+          }
+          45% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 1;
+          }
+        }
+
+        @keyframes humidifier-card-power-glow-out {
+          0% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+          }
+        }
+
+        @keyframes humidifier-card-controls-expand {
+          0% {
+            margin-top: 0;
+            max-height: 0;
+            opacity: 0;
+          }
+          100% {
+            margin-top: var(--humidifier-card-controls-gap);
+            max-height: var(--humidifier-card-controls-max-height);
+            opacity: 1;
+          }
+        }
+
+        @keyframes humidifier-card-controls-collapse {
+          0% {
+            margin-top: var(--humidifier-card-controls-gap);
+            max-height: var(--humidifier-card-controls-max-height);
+            opacity: 1;
+          }
+          100% {
+            margin-top: 0;
+            max-height: 0;
+            opacity: 0;
+          }
+        }
+
+        @keyframes humidifier-card-controls-content-in {
+          0% {
+            opacity: 0;
+            transform: translateY(-10px) scaleY(0.96);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+        }
+
+        @keyframes humidifier-card-controls-content-out {
+          0% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-8px) scaleY(0.94);
+          }
+        }
+
+        @keyframes humidifier-card-panel-expand {
+          0% {
+            max-height: 0;
+            opacity: 0;
+          }
+          100% {
+            max-height: 180px;
+            opacity: 1;
+          }
+        }
+
+        @keyframes humidifier-card-panel-collapse {
+          0% {
+            max-height: 180px;
+            opacity: 1;
+          }
+          100% {
+            max-height: 0;
+            opacity: 0;
+          }
+        }
+
+        @keyframes humidifier-card-panel-content-in {
+          0% {
+            opacity: 0;
+            transform: translateY(-8px) scaleY(0.96);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+        }
+
+        @keyframes humidifier-card-panel-content-out {
+          0% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-6px) scaleY(0.96);
+          }
+        }
+
+        @keyframes humidifier-card-button-bounce {
+          0% {
+            transform: scale(1);
+          }
+          45% {
+            transform: scale(1.08);
+          }
+          72% {
+            transform: scale(1.03);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+
         .humidifier-card--compact:not(.humidifier-card--with-copy) .humidifier-card__hero {
           justify-items: center;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .humidifier-card,
+          .humidifier-card::after,
+          .humidifier-card__controls-shell,
+          .humidifier-card__controls-inner,
+          .humidifier-card__panel-shell,
+          .humidifier-card__panel-inner,
+          .humidifier-card__icon,
+          .humidifier-card__control,
+          .humidifier-card__option {
+            animation: none !important;
+            transition: none !important;
+          }
         }
 
         @media (max-width: 420px) {
@@ -19011,7 +19660,7 @@ class NodaliaHumidifierCard extends HTMLElement {
         }
       </style>
       <ha-card
-        class="humidifier-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "humidifier-card--compact" : ""} ${showCopyBlock ? "humidifier-card--with-copy" : ""}"
+        class="humidifier-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "humidifier-card--compact" : ""} ${showCopyBlock ? "humidifier-card--with-copy" : ""} ${powerAnimationState ? `humidifier-card--${powerAnimationState}` : ""}"
         data-humidifier-action="toggle"
         style="--accent-color:${escapeHtml(accentColor)};"
       >
@@ -19037,149 +19686,20 @@ class NodaliaHumidifierCard extends HTMLElement {
               `
               : ""}
           </div>
-
-          ${
-            isOn && supportsHumidity
-              ? `
-                <div class="humidifier-card__slider-row ${hasSecondaryControls ? "" : "humidifier-card__slider-row--solo"}">
-                  <div class="humidifier-card__slider-wrap">
-                    <div class="humidifier-card__slider-shell" style="--humidity:${clamp(humidityProgress, 0, 100)};">
-                      <div class="humidifier-card__slider-track"></div>
-                      <input
-                        type="range"
-                        class="humidifier-card__slider"
-                        data-humidifier-control="humidity"
-                        min="${humidityRange.min}"
-                        max="${humidityRange.max}"
-                        step="any"
-                        value="${currentHumidity}"
-                        style="--humidity:${clamp(humidityProgress, 0, 100)};"
-                        aria-label="Humedad objetivo"
-                      />
-                    </div>
-                  </div>
-                  ${
-                    hasSecondaryControls
-                      ? `
-                        <div class="humidifier-card__slider-actions">
-                          ${
-                            modeOptions.length
-                              ? `
-                                <button
-                                  type="button"
-                                  class="humidifier-card__control ${this._modePanelOpen ? "humidifier-card__control--active" : ""}"
-                                  data-humidifier-action="toggle-mode-panel"
-                                  aria-label="Mostrar modos"
-                                >
-                                  <ha-icon icon="mdi:tune-variant"></ha-icon>
-                                </button>
-                              `
-                              : ""
-                          }
-                          ${
-                            fanModeOptions.length
-                              ? `
-                                <button
-                                  type="button"
-                                  class="humidifier-card__control ${this._fanModePanelOpen ? "humidifier-card__control--active" : ""}"
-                                  data-humidifier-action="toggle-fan-mode-panel"
-                                  aria-label="Mostrar velocidades"
-                                >
-                                  <ha-icon icon="mdi:fan"></ha-icon>
-                                </button>
-                              `
-                              : ""
-                          }
-                        </div>
-                      `
-                      : ""
-                  }
-                </div>
-              `
-              : ""
-          }
-
-          ${
-            !supportsHumidity && hasSecondaryControls && isOn
-              ? `
-                <div class="humidifier-card__controls">
-                  ${
-                    modeOptions.length
-                      ? `
-                        <button
-                          type="button"
-                          class="humidifier-card__control ${this._modePanelOpen ? "humidifier-card__control--active" : ""}"
-                          data-humidifier-action="toggle-mode-panel"
-                          aria-label="Mostrar modos"
-                        >
-                          <ha-icon icon="mdi:tune-variant"></ha-icon>
-                        </button>
-                      `
-                      : ""
-                  }
-                  ${
-                    fanModeOptions.length
-                      ? `
-                        <button
-                          type="button"
-                          class="humidifier-card__control ${this._fanModePanelOpen ? "humidifier-card__control--active" : ""}"
-                          data-humidifier-action="toggle-fan-mode-panel"
-                          aria-label="Mostrar velocidades"
-                        >
-                          <ha-icon icon="mdi:fan"></ha-icon>
-                        </button>
-                      `
-                      : ""
-                  }
-                </div>
-              `
-              : ""
-          }
-
-          ${
-            isOn && this._modePanelOpen && modeOptions.length
-              ? `
-                <div class="humidifier-card__panel">
-                  ${modeOptions
-                    .map(mode => `
-                      <button
-                        type="button"
-                        class="humidifier-card__option ${normalizeTextKey(mode) === normalizeTextKey(currentMode) ? "is-active" : ""}"
-                        data-humidifier-action="mode"
-                        data-mode="${escapeHtml(mode)}"
-                      >
-                        ${escapeHtml(translateModeLabel(mode))}
-                      </button>
-                    `)
-                    .join("")}
-                </div>
-              `
-              : ""
-          }
-
-          ${
-            isOn && this._fanModePanelOpen && fanModeOptions.length
-              ? `
-                <div class="humidifier-card__panel">
-                  ${fanModeOptions
-                    .map(mode => `
-                      <button
-                        type="button"
-                        class="humidifier-card__option ${normalizeTextKey(mode) === normalizeTextKey(currentFanMode) ? "is-active" : ""}"
-                        data-humidifier-action="fan-mode"
-                        data-mode="${escapeHtml(mode)}"
-                      >
-                        ${escapeHtml(translateModeLabel(mode))}
-                      </button>
-                    `)
-                    .join("")}
-                </div>
-              `
-              : ""
-          }
+          ${controlsShellMarkup}
         </div>
       </ha-card>
     `;
+
+    this._lastRenderedIsOn = isOn;
+    this._lastRenderedPanelKey = currentPanelKey;
+
+    if (shouldCleanupAfterAnimation) {
+      this._scheduleAnimationCleanup(cleanupDelay);
+    } else if (this._animationCleanupTimer) {
+      window.clearTimeout(this._animationCleanupTimer);
+      this._animationCleanupTimer = 0;
+    }
   }
 }
 
@@ -19195,6 +19715,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     this._hass = null;
     this._entityOptionsSignature = "";
     this._showStyleSection = false;
+    this._showAnimationSection = false;
     this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
@@ -19435,6 +19956,14 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     switch (valueType) {
       case "boolean":
         return Boolean(input.checked);
+      case "number": {
+        if (input.value === "") {
+          return "";
+        }
+
+        const numericValue = Number(input.value);
+        return Number.isFinite(numericValue) ? numericValue : "";
+      }
       case "color":
         return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
       default:
@@ -19500,12 +20029,21 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     if (toggleButton.dataset.editorToggle === "styles") {
       this._showStyleSection = !this._showStyleSection;
       this._render();
+      return;
+    }
+
+    if (toggleButton.dataset.editorToggle === "animations") {
+      this._showAnimationSection = !this._showAnimationSection;
+      this._render();
     }
   }
 
   _renderTextField(label, field, value, options = {}) {
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const min = options.min !== undefined ? `min="${escapeHtml(String(options.min))}"` : "";
+    const max = options.max !== undefined ? `max="${escapeHtml(String(options.max))}"` : "";
+    const step = options.step !== undefined ? `step="${escapeHtml(String(options.step))}"` : "";
     const valueType = options.valueType || "string";
     const inputValue = value === undefined || value === null ? "" : String(value);
 
@@ -19518,6 +20056,9 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
           data-value-type="${escapeHtml(valueType)}"
           value="${escapeHtml(inputValue)}"
           ${placeholder}
+          ${min}
+          ${max}
+          ${step}
         />
       </label>
     `;
@@ -20083,6 +20624,54 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
               ],
             )}
           </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Animaciones</div>
+            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles y abrir paneles.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="animations"
+                aria-expanded="${this._showAnimationSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showAnimationSection ? "Ocultar ajustes de animación" : "Mostrar ajustes de animación"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showAnimationSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderTextField("Encendido y apagado (ms)", "animations.power_duration", config.animations.power_duration, {
+                    type: "number",
+                    valueType: "number",
+                    min: 120,
+                    max: 4000,
+                    step: 10,
+                  })}
+                  ${this._renderTextField("Expansión de controles (ms)", "animations.controls_duration", config.animations.controls_duration, {
+                    type: "number",
+                    valueType: "number",
+                    min: 120,
+                    max: 2400,
+                    step: 10,
+                  })}
+                  ${this._renderTextField("Paneles (ms)", "animations.panel_duration", config.animations.panel_duration, {
+                    type: "number",
+                    valueType: "number",
+                    min: 120,
+                    max: 2400,
+                    step: 10,
+                  })}
+                </div>
+              `
+              : ""
+          }
         </section>
 
         <section class="editor-section">

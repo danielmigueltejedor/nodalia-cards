@@ -2446,6 +2446,7 @@ class NodaliaLightCard extends HTMLElement {
           display: grid;
           gap: 10px;
           grid-template-columns: minmax(0, 1fr) auto;
+          padding-inline: 4px;
         }
 
         .light-card__mode-actions {
