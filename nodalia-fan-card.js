@@ -32,7 +32,8 @@ const DEFAULT_CONFIG = {
     enabled: true,
     power_duration: 600,
     controls_duration: 600,
-    preset_duration: 600,
+    preset_duration: 800,
+    button_bounce_duration: 320,
   },
   styles: {
     card: {
@@ -714,6 +715,7 @@ class NodaliaFanCard extends HTMLElement {
       powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4000),
       controlsDuration: clamp(Number(configuredAnimations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
       presetDuration: clamp(Number(configuredAnimations.preset_duration) || DEFAULT_CONFIG.animations.preset_duration, 120, 2400),
+      buttonBounceDuration: clamp(Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1200),
     };
   }
 
@@ -741,13 +743,18 @@ class NodaliaFanCard extends HTMLElement {
       return;
     }
 
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+
     button.classList.remove("is-pressing");
     button.getBoundingClientRect();
     button.classList.add("is-pressing");
 
     window.setTimeout(() => {
       button.classList.remove("is-pressing");
-    }, 340);
+    }, animations.buttonBounceDuration + 40);
   }
 
   _triggerRenderedButtonBounce(selector) {
@@ -1587,6 +1594,7 @@ class NodaliaFanCard extends HTMLElement {
           --fan-card-controls-duration: ${animations.controlsDuration}ms;
           --fan-card-panel-duration: ${animations.presetDuration}ms;
           --fan-card-power-duration: ${animations.powerDuration}ms;
+          --fan-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           background: ${isOn ? onCardBackground : styles.card.background};
           border: ${isOn ? `1px solid ${onCardBorder}` : styles.card.border};
           border-radius: ${styles.card.border_radius};
@@ -2082,7 +2090,7 @@ class NodaliaFanCard extends HTMLElement {
 
         :is(.fan-card__icon, .fan-card__control, .fan-card__preset):active:not(:disabled),
         :is(.fan-card__icon, .fan-card__control, .fan-card__preset).is-pressing:not(:disabled) {
-          animation: fan-card-button-bounce 320ms cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation: fan-card-button-bounce var(--fan-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
         @keyframes fan-card-power-up {
@@ -3145,7 +3153,7 @@ class NodaliaFanCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles y abrir el panel de modos.</div>
+            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles, abrir modos y dar respuesta visual a los botones.</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -3182,6 +3190,13 @@ class NodaliaFanCardEditor extends HTMLElement {
                     valueType: "number",
                     min: 120,
                     max: 2400,
+                    step: 10,
+                  })}
+                  ${this._renderTextField("Rebote de botones (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                    type: "number",
+                    valueType: "number",
+                    min: 120,
+                    max: 1200,
                     step: 10,
                   })}
                 </div>

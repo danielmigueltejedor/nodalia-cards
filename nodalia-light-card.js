@@ -42,6 +42,7 @@ const DEFAULT_CONFIG = {
     power_duration: 600,
     controls_duration: 600,
     mode_switch_duration: 600,
+    button_bounce_duration: 320,
     mode_switch_horizontal: true,
   },
   styles: {
@@ -396,6 +397,7 @@ function normalizeConfig(rawConfig) {
   const numericPowerDuration = Number(config.animations?.power_duration);
   const numericControlsDuration = Number(config.animations?.controls_duration);
   const numericModeSwitchDuration = Number(config.animations?.mode_switch_duration);
+  const numericButtonBounceDuration = Number(config.animations?.button_bounce_duration);
   config.animations = {
     enabled: config.animations?.enabled !== false,
     power_duration: Number.isFinite(numericPowerDuration)
@@ -407,6 +409,9 @@ function normalizeConfig(rawConfig) {
     mode_switch_duration: Number.isFinite(numericModeSwitchDuration)
       ? clamp(Math.round(numericModeSwitchDuration), 120, 2400)
       : DEFAULT_CONFIG.animations.mode_switch_duration,
+    button_bounce_duration: Number.isFinite(numericButtonBounceDuration)
+      ? clamp(Math.round(numericButtonBounceDuration), 120, 1200)
+      : DEFAULT_CONFIG.animations.button_bounce_duration,
     mode_switch_horizontal: config.animations?.mode_switch_horizontal !== false,
   };
 
@@ -928,6 +933,7 @@ class NodaliaLightCard extends HTMLElement {
       powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4000),
       controlsDuration: clamp(Number(configuredAnimations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
       modeSwitchDuration: clamp(Number(configuredAnimations.mode_switch_duration) || DEFAULT_CONFIG.animations.mode_switch_duration, 120, 2400),
+      buttonBounceDuration: clamp(Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1200),
       modeSwitchHorizontal: configuredAnimations.mode_switch_horizontal !== false,
     };
   }
@@ -969,13 +975,18 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+
     button.classList.remove("is-pressing");
     button.getBoundingClientRect();
     button.classList.add("is-pressing");
 
     window.setTimeout(() => {
       button.classList.remove("is-pressing");
-    }, 340);
+    }, animations.buttonBounceDuration + 40);
   }
 
   _startModeSwitchTransition(nextMode, state = this._getState()) {
@@ -1927,6 +1938,7 @@ class NodaliaLightCard extends HTMLElement {
           --light-card-mode-duration: ${Math.max(100, Math.round(animations.modeSwitchDuration / 2))}ms;
           --light-card-mode-shell-height: ${styles.slider_wrap_height};
           --light-card-power-duration: ${animations.powerDuration}ms;
+          --light-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           background: ${isOn ? onCardBackground : styles.card.background};
           border: ${isOn ? `1px solid ${onCardBorder}` : styles.card.border};
           border-radius: ${styles.card.border_radius};
@@ -2516,7 +2528,7 @@ class NodaliaLightCard extends HTMLElement {
           .light-card__temperature-preset,
           .light-card__color-preset
         ).is-pressing:not(:disabled) {
-          animation: light-card-button-bounce 320ms cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation: light-card-button-bounce var(--light-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
         .light-card__slider {
@@ -3725,7 +3737,7 @@ class NodaliaLightCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles y cambiar entre sliders.</div>
+            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles, cambiar entre sliders y dar respuesta visual a los botones.</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -3763,6 +3775,13 @@ class NodaliaLightCardEditor extends HTMLElement {
                     valueType: "number",
                     min: 120,
                     max: 2400,
+                    step: 10,
+                  })}
+                  ${this._renderTextField("Rebote de botones (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                    type: "number",
+                    valueType: "number",
+                    min: 120,
+                    max: 1200,
                     step: 10,
                   })}
                 </div>

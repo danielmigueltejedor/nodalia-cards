@@ -10408,6 +10408,7 @@ const DEFAULT_CONFIG = {
     power_duration: 600,
     controls_duration: 600,
     mode_switch_duration: 600,
+    button_bounce_duration: 320,
     mode_switch_horizontal: true,
   },
   styles: {
@@ -10762,6 +10763,7 @@ function normalizeConfig(rawConfig) {
   const numericPowerDuration = Number(config.animations?.power_duration);
   const numericControlsDuration = Number(config.animations?.controls_duration);
   const numericModeSwitchDuration = Number(config.animations?.mode_switch_duration);
+  const numericButtonBounceDuration = Number(config.animations?.button_bounce_duration);
   config.animations = {
     enabled: config.animations?.enabled !== false,
     power_duration: Number.isFinite(numericPowerDuration)
@@ -10773,6 +10775,9 @@ function normalizeConfig(rawConfig) {
     mode_switch_duration: Number.isFinite(numericModeSwitchDuration)
       ? clamp(Math.round(numericModeSwitchDuration), 120, 2400)
       : DEFAULT_CONFIG.animations.mode_switch_duration,
+    button_bounce_duration: Number.isFinite(numericButtonBounceDuration)
+      ? clamp(Math.round(numericButtonBounceDuration), 120, 1200)
+      : DEFAULT_CONFIG.animations.button_bounce_duration,
     mode_switch_horizontal: config.animations?.mode_switch_horizontal !== false,
   };
 
@@ -11294,6 +11299,7 @@ class NodaliaLightCard extends HTMLElement {
       powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4000),
       controlsDuration: clamp(Number(configuredAnimations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
       modeSwitchDuration: clamp(Number(configuredAnimations.mode_switch_duration) || DEFAULT_CONFIG.animations.mode_switch_duration, 120, 2400),
+      buttonBounceDuration: clamp(Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1200),
       modeSwitchHorizontal: configuredAnimations.mode_switch_horizontal !== false,
     };
   }
@@ -11335,13 +11341,18 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+
     button.classList.remove("is-pressing");
     button.getBoundingClientRect();
     button.classList.add("is-pressing");
 
     window.setTimeout(() => {
       button.classList.remove("is-pressing");
-    }, 340);
+    }, animations.buttonBounceDuration + 40);
   }
 
   _startModeSwitchTransition(nextMode, state = this._getState()) {
@@ -12293,6 +12304,7 @@ class NodaliaLightCard extends HTMLElement {
           --light-card-mode-duration: ${Math.max(100, Math.round(animations.modeSwitchDuration / 2))}ms;
           --light-card-mode-shell-height: ${styles.slider_wrap_height};
           --light-card-power-duration: ${animations.powerDuration}ms;
+          --light-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           background: ${isOn ? onCardBackground : styles.card.background};
           border: ${isOn ? `1px solid ${onCardBorder}` : styles.card.border};
           border-radius: ${styles.card.border_radius};
@@ -12882,7 +12894,7 @@ class NodaliaLightCard extends HTMLElement {
           .light-card__temperature-preset,
           .light-card__color-preset
         ).is-pressing:not(:disabled) {
-          animation: light-card-button-bounce 320ms cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation: light-card-button-bounce var(--light-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
         .light-card__slider {
@@ -14091,7 +14103,7 @@ class NodaliaLightCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles y cambiar entre sliders.</div>
+            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles, cambiar entre sliders y dar respuesta visual a los botones.</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -14129,6 +14141,13 @@ class NodaliaLightCardEditor extends HTMLElement {
                     valueType: "number",
                     min: 120,
                     max: 2400,
+                    step: 10,
+                  })}
+                  ${this._renderTextField("Rebote de botones (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                    type: "number",
+                    valueType: "number",
+                    min: 120,
+                    max: 1200,
                     step: 10,
                   })}
                 </div>
@@ -14248,7 +14267,8 @@ const DEFAULT_CONFIG = {
     enabled: true,
     power_duration: 600,
     controls_duration: 600,
-    preset_duration: 600,
+    preset_duration: 800,
+    button_bounce_duration: 320,
   },
   styles: {
     card: {
@@ -14930,6 +14950,7 @@ class NodaliaFanCard extends HTMLElement {
       powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4000),
       controlsDuration: clamp(Number(configuredAnimations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
       presetDuration: clamp(Number(configuredAnimations.preset_duration) || DEFAULT_CONFIG.animations.preset_duration, 120, 2400),
+      buttonBounceDuration: clamp(Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1200),
     };
   }
 
@@ -14957,13 +14978,18 @@ class NodaliaFanCard extends HTMLElement {
       return;
     }
 
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+
     button.classList.remove("is-pressing");
     button.getBoundingClientRect();
     button.classList.add("is-pressing");
 
     window.setTimeout(() => {
       button.classList.remove("is-pressing");
-    }, 340);
+    }, animations.buttonBounceDuration + 40);
   }
 
   _triggerRenderedButtonBounce(selector) {
@@ -15803,6 +15829,7 @@ class NodaliaFanCard extends HTMLElement {
           --fan-card-controls-duration: ${animations.controlsDuration}ms;
           --fan-card-panel-duration: ${animations.presetDuration}ms;
           --fan-card-power-duration: ${animations.powerDuration}ms;
+          --fan-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           background: ${isOn ? onCardBackground : styles.card.background};
           border: ${isOn ? `1px solid ${onCardBorder}` : styles.card.border};
           border-radius: ${styles.card.border_radius};
@@ -16298,7 +16325,7 @@ class NodaliaFanCard extends HTMLElement {
 
         :is(.fan-card__icon, .fan-card__control, .fan-card__preset):active:not(:disabled),
         :is(.fan-card__icon, .fan-card__control, .fan-card__preset).is-pressing:not(:disabled) {
-          animation: fan-card-button-bounce 320ms cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation: fan-card-button-bounce var(--fan-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
         @keyframes fan-card-power-up {
@@ -17361,7 +17388,7 @@ class NodaliaFanCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles y abrir el panel de modos.</div>
+            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles, abrir modos y dar respuesta visual a los botones.</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -17398,6 +17425,13 @@ class NodaliaFanCardEditor extends HTMLElement {
                     valueType: "number",
                     min: 120,
                     max: 2400,
+                    step: 10,
+                  })}
+                  ${this._renderTextField("Rebote de botones (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                    type: "number",
+                    valueType: "number",
+                    min: 120,
+                    max: 1200,
                     step: 10,
                   })}
                 </div>
@@ -17520,7 +17554,8 @@ const DEFAULT_CONFIG = {
     enabled: true,
     power_duration: 600,
     controls_duration: 600,
-    panel_duration: 600,
+    panel_duration: 800,
+    button_bounce_duration: 320,
   },
   styles: {
     card: {
@@ -18270,6 +18305,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4000),
       controlsDuration: clamp(Number(configuredAnimations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
       panelDuration: clamp(Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration, 120, 2400),
+      buttonBounceDuration: clamp(Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1200),
     };
   }
 
@@ -18297,13 +18333,18 @@ class NodaliaHumidifierCard extends HTMLElement {
       return;
     }
 
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+
     button.classList.remove("is-pressing");
     button.getBoundingClientRect();
     button.classList.add("is-pressing");
 
     window.setTimeout(() => {
       button.classList.remove("is-pressing");
-    }, 340);
+    }, animations.buttonBounceDuration + 40);
   }
 
   _triggerRenderedButtonBounce(selector) {
@@ -19285,6 +19326,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           --humidifier-card-controls-duration: ${animations.controlsDuration}ms;
           --humidifier-card-panel-duration: ${animations.panelDuration}ms;
           --humidifier-card-power-duration: ${animations.powerDuration}ms;
+          --humidifier-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           background: ${isOn ? onCardBackground : styles.card.background};
           border: ${isOn ? `1px solid ${onCardBorder}` : styles.card.border};
           border-radius: ${styles.card.border_radius};
@@ -19779,7 +19821,7 @@ class NodaliaHumidifierCard extends HTMLElement {
 
         :is(.humidifier-card__icon, .humidifier-card__control, .humidifier-card__option):active:not(:disabled),
         :is(.humidifier-card__icon, .humidifier-card__control, .humidifier-card__option).is-pressing:not(:disabled) {
-          animation: humidifier-card-button-bounce 320ms cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation: humidifier-card-button-bounce var(--humidifier-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
         @keyframes humidifier-card-power-up {
@@ -20951,7 +20993,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles y abrir paneles.</div>
+            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles, cambiar paneles y dar respuesta visual a los botones.</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -20988,6 +21030,13 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
                     valueType: "number",
                     min: 120,
                     max: 2400,
+                    step: 10,
+                  })}
+                  ${this._renderTextField("Rebote de botones (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                    type: "number",
+                    valueType: "number",
+                    min: 120,
+                    max: 1200,
                     step: 10,
                   })}
                 </div>

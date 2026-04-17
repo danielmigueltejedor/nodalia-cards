@@ -35,7 +35,8 @@ const DEFAULT_CONFIG = {
     enabled: true,
     power_duration: 600,
     controls_duration: 600,
-    panel_duration: 600,
+    panel_duration: 800,
+    button_bounce_duration: 320,
   },
   styles: {
     card: {
@@ -785,6 +786,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4000),
       controlsDuration: clamp(Number(configuredAnimations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
       panelDuration: clamp(Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration, 120, 2400),
+      buttonBounceDuration: clamp(Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1200),
     };
   }
 
@@ -812,13 +814,18 @@ class NodaliaHumidifierCard extends HTMLElement {
       return;
     }
 
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+
     button.classList.remove("is-pressing");
     button.getBoundingClientRect();
     button.classList.add("is-pressing");
 
     window.setTimeout(() => {
       button.classList.remove("is-pressing");
-    }, 340);
+    }, animations.buttonBounceDuration + 40);
   }
 
   _triggerRenderedButtonBounce(selector) {
@@ -1800,6 +1807,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           --humidifier-card-controls-duration: ${animations.controlsDuration}ms;
           --humidifier-card-panel-duration: ${animations.panelDuration}ms;
           --humidifier-card-power-duration: ${animations.powerDuration}ms;
+          --humidifier-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           background: ${isOn ? onCardBackground : styles.card.background};
           border: ${isOn ? `1px solid ${onCardBorder}` : styles.card.border};
           border-radius: ${styles.card.border_radius};
@@ -2294,7 +2302,7 @@ class NodaliaHumidifierCard extends HTMLElement {
 
         :is(.humidifier-card__icon, .humidifier-card__control, .humidifier-card__option):active:not(:disabled),
         :is(.humidifier-card__icon, .humidifier-card__control, .humidifier-card__option).is-pressing:not(:disabled) {
-          animation: humidifier-card-button-bounce 320ms cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation: humidifier-card-button-bounce var(--humidifier-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
         @keyframes humidifier-card-power-up {
@@ -3466,7 +3474,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles y abrir paneles.</div>
+            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles, cambiar paneles y dar respuesta visual a los botones.</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -3503,6 +3511,13 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
                     valueType: "number",
                     min: 120,
                     max: 2400,
+                    step: 10,
+                  })}
+                  ${this._renderTextField("Rebote de botones (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                    type: "number",
+                    valueType: "number",
+                    min: 120,
+                    max: 1200,
                     step: 10,
                   })}
                 </div>
