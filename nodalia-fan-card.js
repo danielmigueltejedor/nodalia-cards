@@ -816,6 +816,136 @@ class NodaliaFanCard extends HTMLElement {
     });
   }
 
+  _getPresetPanelMarkup(state = this._getState()) {
+    const presetModes = this._config?.show_preset_modes !== false ? this._getPresetModes(state) : [];
+    const currentPresetMode = this._getCurrentPresetMode(state);
+
+    if (!presetModes.length) {
+      return "";
+    }
+
+    return `
+      <div class="fan-card__preset-panel">
+        ${presetModes
+          .map(mode => `
+            <button
+              type="button"
+              class="fan-card__preset ${normalizeTextKey(mode) === normalizeTextKey(currentPresetMode) ? "is-active" : ""}"
+              data-fan-action="preset"
+              data-mode="${escapeHtml(mode)}"
+            >
+              ${escapeHtml(translatePresetLabel(mode))}
+            </button>
+          `)
+          .join("")}
+      </div>
+    `;
+  }
+
+  _setPresetToggleButtonsState(isOpen) {
+    this.shadowRoot
+      ?.querySelectorAll('[data-fan-action="toggle-preset-panel"]')
+      .forEach(button => {
+        if (button instanceof HTMLElement) {
+          button.classList.toggle("fan-card__control--active", isOpen === true);
+        }
+      });
+  }
+
+  _createMarkupNode(markup) {
+    if (!markup || typeof document === "undefined") {
+      return null;
+    }
+
+    const template = document.createElement("template");
+    template.innerHTML = String(markup).trim();
+    const node = template.content.firstElementChild;
+    return node instanceof HTMLElement ? node : null;
+  }
+
+  _setPresetPanelVisibility(isOpen, state = this._getState()) {
+    this._presetPanelOpen = isOpen === true;
+    this._lastRenderedPresetPanelVisible = this._presetPanelOpen;
+    this._setPresetToggleButtonsState(this._presetPanelOpen);
+
+    const controlsInner = this.shadowRoot?.querySelector(".fan-card__controls-inner");
+    const animations = this._getAnimationSettings();
+    const panelMarkup = this._presetPanelOpen ? this._getPresetPanelMarkup(state) : "";
+
+    if (panelMarkup) {
+      this._lastPresetPanelMarkup = panelMarkup;
+    }
+
+    if (!controlsInner || !(controlsInner instanceof HTMLElement) || !state || !this._isOn(state)) {
+      this._render();
+      return;
+    }
+
+    const existingPanel = controlsInner.querySelector(".fan-card__preset-panel-shell");
+    const removePanel = panel => {
+      if (!(panel instanceof HTMLElement)) {
+        return;
+      }
+
+      panel.classList.remove("fan-card__preset-panel-shell--entering");
+      panel.classList.add("fan-card__preset-panel-shell--leaving");
+
+      const finalizeRemoval = () => {
+        if (panel.isConnected) {
+          panel.remove();
+        }
+      };
+
+      panel.addEventListener("animationend", finalizeRemoval, { once: true });
+      window.setTimeout(finalizeRemoval, animations.presetDuration + 80);
+    };
+    const appendPanel = () => {
+      if (!panelMarkup) {
+        return;
+      }
+
+      const panelNode = this._createMarkupNode(`
+        <div class="fan-card__preset-panel-shell fan-card__preset-panel-shell--entering" data-panel-key="preset">
+          <div class="fan-card__preset-panel-inner">
+            ${panelMarkup}
+          </div>
+        </div>
+      `);
+
+      if (!(panelNode instanceof HTMLElement)) {
+        this._render();
+        return;
+      }
+
+      controlsInner.appendChild(panelNode);
+      window.setTimeout(() => {
+        if (panelNode.isConnected) {
+          panelNode.classList.remove("fan-card__preset-panel-shell--entering");
+        }
+      }, animations.presetDuration + 80);
+    };
+
+    if (!this._presetPanelOpen) {
+      if (existingPanel instanceof HTMLElement) {
+        removePanel(existingPanel);
+      }
+      return;
+    }
+
+    if (!panelMarkup) {
+      if (existingPanel instanceof HTMLElement) {
+        removePanel(existingPanel);
+      }
+      return;
+    }
+
+    if (existingPanel instanceof HTMLElement) {
+      existingPanel.remove();
+    }
+
+    appendPanel();
+  }
+
   _updatePercentagePreview(value) {
     const slider = this.shadowRoot?.querySelector('.fan-card__slider[data-fan-control="percentage"]');
     const nextValue = clamp(Number(value), 0, 100);
@@ -1103,9 +1233,8 @@ class NodaliaFanCard extends HTMLElement {
         this._toggleOscillation(state);
         break;
       case "toggle-preset-panel":
-        this._presetPanelOpen = !this._presetPanelOpen;
-        this._render();
-        this._triggerRenderedButtonBounce('[data-fan-action="toggle-preset-panel"]');
+        this._triggerButtonBounce(actionButton);
+        this._setPresetPanelVisibility(!this._presetPanelOpen, state);
         break;
       case "preset":
         this._triggerButtonBounce(actionButton);
@@ -1383,7 +1512,7 @@ class NodaliaFanCard extends HTMLElement {
       || (presetPanelAnimationState === "leaving" ? this._lastPresetPanelMarkup : "");
     const presetPanelShellMarkup = presetPanelContentMarkup
       ? `
-        <div class="fan-card__preset-panel-shell ${presetPanelAnimationState ? `fan-card__preset-panel-shell--${presetPanelAnimationState}` : ""}">
+        <div class="fan-card__preset-panel-shell ${presetPanelAnimationState ? `fan-card__preset-panel-shell--${presetPanelAnimationState}` : ""}" data-panel-key="preset">
           <div class="fan-card__preset-panel-inner">
             ${presetPanelContentMarkup}
           </div>
@@ -1398,7 +1527,7 @@ class NodaliaFanCard extends HTMLElement {
       mainControlsMarkup,
       currentPresetPanelMarkup
         ? `
-          <div class="fan-card__preset-panel-shell">
+          <div class="fan-card__preset-panel-shell" data-panel-key="preset">
             <div class="fan-card__preset-panel-inner">
               ${currentPresetPanelMarkup}
             </div>

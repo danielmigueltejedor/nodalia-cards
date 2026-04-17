@@ -15032,6 +15032,136 @@ class NodaliaFanCard extends HTMLElement {
     });
   }
 
+  _getPresetPanelMarkup(state = this._getState()) {
+    const presetModes = this._config?.show_preset_modes !== false ? this._getPresetModes(state) : [];
+    const currentPresetMode = this._getCurrentPresetMode(state);
+
+    if (!presetModes.length) {
+      return "";
+    }
+
+    return `
+      <div class="fan-card__preset-panel">
+        ${presetModes
+          .map(mode => `
+            <button
+              type="button"
+              class="fan-card__preset ${normalizeTextKey(mode) === normalizeTextKey(currentPresetMode) ? "is-active" : ""}"
+              data-fan-action="preset"
+              data-mode="${escapeHtml(mode)}"
+            >
+              ${escapeHtml(translatePresetLabel(mode))}
+            </button>
+          `)
+          .join("")}
+      </div>
+    `;
+  }
+
+  _setPresetToggleButtonsState(isOpen) {
+    this.shadowRoot
+      ?.querySelectorAll('[data-fan-action="toggle-preset-panel"]')
+      .forEach(button => {
+        if (button instanceof HTMLElement) {
+          button.classList.toggle("fan-card__control--active", isOpen === true);
+        }
+      });
+  }
+
+  _createMarkupNode(markup) {
+    if (!markup || typeof document === "undefined") {
+      return null;
+    }
+
+    const template = document.createElement("template");
+    template.innerHTML = String(markup).trim();
+    const node = template.content.firstElementChild;
+    return node instanceof HTMLElement ? node : null;
+  }
+
+  _setPresetPanelVisibility(isOpen, state = this._getState()) {
+    this._presetPanelOpen = isOpen === true;
+    this._lastRenderedPresetPanelVisible = this._presetPanelOpen;
+    this._setPresetToggleButtonsState(this._presetPanelOpen);
+
+    const controlsInner = this.shadowRoot?.querySelector(".fan-card__controls-inner");
+    const animations = this._getAnimationSettings();
+    const panelMarkup = this._presetPanelOpen ? this._getPresetPanelMarkup(state) : "";
+
+    if (panelMarkup) {
+      this._lastPresetPanelMarkup = panelMarkup;
+    }
+
+    if (!controlsInner || !(controlsInner instanceof HTMLElement) || !state || !this._isOn(state)) {
+      this._render();
+      return;
+    }
+
+    const existingPanel = controlsInner.querySelector(".fan-card__preset-panel-shell");
+    const removePanel = panel => {
+      if (!(panel instanceof HTMLElement)) {
+        return;
+      }
+
+      panel.classList.remove("fan-card__preset-panel-shell--entering");
+      panel.classList.add("fan-card__preset-panel-shell--leaving");
+
+      const finalizeRemoval = () => {
+        if (panel.isConnected) {
+          panel.remove();
+        }
+      };
+
+      panel.addEventListener("animationend", finalizeRemoval, { once: true });
+      window.setTimeout(finalizeRemoval, animations.presetDuration + 80);
+    };
+    const appendPanel = () => {
+      if (!panelMarkup) {
+        return;
+      }
+
+      const panelNode = this._createMarkupNode(`
+        <div class="fan-card__preset-panel-shell fan-card__preset-panel-shell--entering" data-panel-key="preset">
+          <div class="fan-card__preset-panel-inner">
+            ${panelMarkup}
+          </div>
+        </div>
+      `);
+
+      if (!(panelNode instanceof HTMLElement)) {
+        this._render();
+        return;
+      }
+
+      controlsInner.appendChild(panelNode);
+      window.setTimeout(() => {
+        if (panelNode.isConnected) {
+          panelNode.classList.remove("fan-card__preset-panel-shell--entering");
+        }
+      }, animations.presetDuration + 80);
+    };
+
+    if (!this._presetPanelOpen) {
+      if (existingPanel instanceof HTMLElement) {
+        removePanel(existingPanel);
+      }
+      return;
+    }
+
+    if (!panelMarkup) {
+      if (existingPanel instanceof HTMLElement) {
+        removePanel(existingPanel);
+      }
+      return;
+    }
+
+    if (existingPanel instanceof HTMLElement) {
+      existingPanel.remove();
+    }
+
+    appendPanel();
+  }
+
   _updatePercentagePreview(value) {
     const slider = this.shadowRoot?.querySelector('.fan-card__slider[data-fan-control="percentage"]');
     const nextValue = clamp(Number(value), 0, 100);
@@ -15319,9 +15449,8 @@ class NodaliaFanCard extends HTMLElement {
         this._toggleOscillation(state);
         break;
       case "toggle-preset-panel":
-        this._presetPanelOpen = !this._presetPanelOpen;
-        this._render();
-        this._triggerRenderedButtonBounce('[data-fan-action="toggle-preset-panel"]');
+        this._triggerButtonBounce(actionButton);
+        this._setPresetPanelVisibility(!this._presetPanelOpen, state);
         break;
       case "preset":
         this._triggerButtonBounce(actionButton);
@@ -15599,7 +15728,7 @@ class NodaliaFanCard extends HTMLElement {
       || (presetPanelAnimationState === "leaving" ? this._lastPresetPanelMarkup : "");
     const presetPanelShellMarkup = presetPanelContentMarkup
       ? `
-        <div class="fan-card__preset-panel-shell ${presetPanelAnimationState ? `fan-card__preset-panel-shell--${presetPanelAnimationState}` : ""}">
+        <div class="fan-card__preset-panel-shell ${presetPanelAnimationState ? `fan-card__preset-panel-shell--${presetPanelAnimationState}` : ""}" data-panel-key="preset">
           <div class="fan-card__preset-panel-inner">
             ${presetPanelContentMarkup}
           </div>
@@ -15614,7 +15743,7 @@ class NodaliaFanCard extends HTMLElement {
       mainControlsMarkup,
       currentPresetPanelMarkup
         ? `
-          <div class="fan-card__preset-panel-shell">
+          <div class="fan-card__preset-panel-shell" data-panel-key="preset">
             <div class="fan-card__preset-panel-inner">
               ${currentPresetPanelMarkup}
             </div>
@@ -18270,6 +18399,196 @@ class NodaliaHumidifierCard extends HTMLElement {
     this._callOptionService(this._config.fan_mode_entity, mode);
   }
 
+  _getPanelMarkup(panelKey, state = this._getState()) {
+    if (panelKey === "mode") {
+      const modeOptions = this._config?.show_mode_button !== false ? this._getModeOptions(state) : [];
+      const currentMode = this._getCurrentMode(state);
+
+      if (!modeOptions.length) {
+        return "";
+      }
+
+      return `
+        <div class="humidifier-card__panel">
+          ${modeOptions
+            .map(mode => `
+              <button
+                type="button"
+                class="humidifier-card__option ${normalizeTextKey(mode) === normalizeTextKey(currentMode) ? "is-active" : ""}"
+                data-humidifier-action="mode"
+                data-mode="${escapeHtml(mode)}"
+              >
+                ${escapeHtml(translateModeLabel(mode))}
+              </button>
+            `)
+            .join("")}
+        </div>
+      `;
+    }
+
+    if (panelKey === "fan") {
+      const fanModeOptions = this._config?.show_fan_mode_button !== false ? this._getFanModeOptions() : [];
+      const currentFanMode = this._getCurrentFanMode();
+
+      if (!fanModeOptions.length) {
+        return "";
+      }
+
+      return `
+        <div class="humidifier-card__panel">
+          ${fanModeOptions
+            .map(mode => `
+              <button
+                type="button"
+                class="humidifier-card__option ${normalizeTextKey(mode) === normalizeTextKey(currentFanMode) ? "is-active" : ""}"
+                data-humidifier-action="fan-mode"
+                data-mode="${escapeHtml(mode)}"
+              >
+                ${escapeHtml(translateModeLabel(mode))}
+              </button>
+            `)
+            .join("")}
+        </div>
+      `;
+    }
+
+    return "";
+  }
+
+  _setPanelToggleButtonsState(panelKey) {
+    this.shadowRoot
+      ?.querySelectorAll('[data-humidifier-action="toggle-mode-panel"]')
+      .forEach(button => {
+        if (button instanceof HTMLElement) {
+          button.classList.toggle("humidifier-card__control--active", panelKey === "mode");
+        }
+      });
+
+    this.shadowRoot
+      ?.querySelectorAll('[data-humidifier-action="toggle-fan-mode-panel"]')
+      .forEach(button => {
+        if (button instanceof HTMLElement) {
+          button.classList.toggle("humidifier-card__control--active", panelKey === "fan");
+        }
+      });
+  }
+
+  _createMarkupNode(markup) {
+    if (!markup || typeof document === "undefined") {
+      return null;
+    }
+
+    const template = document.createElement("template");
+    template.innerHTML = String(markup).trim();
+    const node = template.content.firstElementChild;
+    return node instanceof HTMLElement ? node : null;
+  }
+
+  _setVisiblePanelKey(panelKey, state = this._getState()) {
+    const nextPanelKey = panelKey === "mode" || panelKey === "fan" ? panelKey : "";
+    this._modePanelOpen = nextPanelKey === "mode";
+    this._fanModePanelOpen = nextPanelKey === "fan";
+    this._lastRenderedPanelKey = nextPanelKey;
+    this._setPanelToggleButtonsState(nextPanelKey);
+
+    const controlsInner = this.shadowRoot?.querySelector(".humidifier-card__controls-inner");
+    const animations = this._getAnimationSettings();
+    const panelMarkup = nextPanelKey ? this._getPanelMarkup(nextPanelKey, state) : "";
+
+    if (panelMarkup) {
+      this._lastPanelMarkup = panelMarkup;
+    }
+
+    if (!controlsInner || !(controlsInner instanceof HTMLElement) || !state || !this._isOn(state)) {
+      this._render();
+      return;
+    }
+
+    const existingPanel = controlsInner.querySelector(".humidifier-card__panel-shell");
+    const removePanel = (panel, onDone = null) => {
+      if (!(panel instanceof HTMLElement)) {
+        if (typeof onDone === "function") {
+          onDone();
+        }
+        return;
+      }
+
+      panel.classList.remove("humidifier-card__panel-shell--entering");
+      panel.classList.add("humidifier-card__panel-shell--leaving");
+
+      const finalizeRemoval = () => {
+        if (panel.isConnected) {
+          panel.remove();
+        }
+        if (typeof onDone === "function") {
+          onDone();
+        }
+      };
+
+      panel.addEventListener("animationend", finalizeRemoval, { once: true });
+      window.setTimeout(finalizeRemoval, animations.panelDuration + 80);
+    };
+    const appendPanel = () => {
+      if (!panelMarkup) {
+        return;
+      }
+
+      const panelNode = this._createMarkupNode(`
+        <div class="humidifier-card__panel-shell humidifier-card__panel-shell--entering" data-panel-key="${nextPanelKey}">
+          <div class="humidifier-card__panel-inner">
+            ${panelMarkup}
+          </div>
+        </div>
+      `);
+
+      if (!(panelNode instanceof HTMLElement)) {
+        this._render();
+        return;
+      }
+
+      controlsInner.appendChild(panelNode);
+      window.setTimeout(() => {
+        if (panelNode.isConnected) {
+          panelNode.classList.remove("humidifier-card__panel-shell--entering");
+        }
+      }, animations.panelDuration + 80);
+    };
+
+    if (!nextPanelKey) {
+      if (existingPanel instanceof HTMLElement) {
+        removePanel(existingPanel);
+      }
+      return;
+    }
+
+    if (!panelMarkup) {
+      if (existingPanel instanceof HTMLElement) {
+        removePanel(existingPanel);
+      }
+      return;
+    }
+
+    const existingPanelKey = existingPanel instanceof HTMLElement ? existingPanel.dataset.panelKey || "" : "";
+    if (existingPanel instanceof HTMLElement && existingPanelKey === nextPanelKey) {
+      if (existingPanel.classList.contains("humidifier-card__panel-shell--leaving")) {
+        existingPanel.remove();
+      } else {
+        const panelInner = existingPanel.querySelector(".humidifier-card__panel-inner");
+        if (panelInner instanceof HTMLElement) {
+          panelInner.innerHTML = panelMarkup;
+        }
+        return;
+      }
+    }
+
+    if (existingPanel instanceof HTMLElement) {
+      removePanel(existingPanel, appendPanel);
+      return;
+    }
+
+    appendPanel();
+  }
+
   _triggerHaptic(styleOverride = null) {
     const haptics = this._config?.haptics || {};
     if (haptics.enabled !== true) {
@@ -18577,20 +18896,12 @@ class NodaliaHumidifierCard extends HTMLElement {
         this._toggleHumidifier(state);
         break;
       case "toggle-mode-panel":
-        this._modePanelOpen = !this._modePanelOpen;
-        if (this._modePanelOpen) {
-          this._fanModePanelOpen = false;
-        }
-        this._render();
-        this._triggerRenderedButtonBounce('[data-humidifier-action="toggle-mode-panel"]');
+        this._triggerButtonBounce(actionButton);
+        this._setVisiblePanelKey(this._modePanelOpen ? "" : "mode", state);
         break;
       case "toggle-fan-mode-panel":
-        this._fanModePanelOpen = !this._fanModePanelOpen;
-        if (this._fanModePanelOpen) {
-          this._modePanelOpen = false;
-        }
-        this._render();
-        this._triggerRenderedButtonBounce('[data-humidifier-action="toggle-fan-mode-panel"]');
+        this._triggerButtonBounce(actionButton);
+        this._setVisiblePanelKey(this._fanModePanelOpen ? "" : "fan", state);
         break;
       case "mode":
         this._triggerButtonBounce(actionButton);
@@ -18899,7 +19210,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       || (panelAnimationState === "leaving" ? this._lastPanelMarkup : "");
     const panelShellMarkup = panelContentMarkup
       ? `
-        <div class="humidifier-card__panel-shell ${panelAnimationState ? `humidifier-card__panel-shell--${panelAnimationState}` : ""}">
+        <div class="humidifier-card__panel-shell ${panelAnimationState ? `humidifier-card__panel-shell--${panelAnimationState}` : ""}" data-panel-key="${currentPanelKey || "hidden"}">
           <div class="humidifier-card__panel-inner">
             ${panelContentMarkup}
           </div>
@@ -18914,7 +19225,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       mainControlsMarkup,
       currentPanelMarkup
         ? `
-          <div class="humidifier-card__panel-shell">
+          <div class="humidifier-card__panel-shell" data-panel-key="${currentPanelKey || "hidden"}">
             <div class="humidifier-card__panel-inner">
               ${currentPanelMarkup}
             </div>
