@@ -801,17 +801,9 @@ class NodaliaHumidifierCard extends HTMLElement {
 
     this._animationCleanupTimer = window.setTimeout(() => {
       this._animationCleanupTimer = 0;
-
-      if (!this.isConnected) {
-        return;
-      }
-
-      if (this._activeSliderDrag) {
-        this._pendingRenderAfterDrag = true;
-        return;
-      }
-
-      this._render();
+      this._powerTransition = null;
+      this._controlsTransition = null;
+      this._panelTransition = null;
     }, safeDelay);
   }
 
@@ -1843,13 +1835,17 @@ class NodaliaHumidifierCard extends HTMLElement {
         }
 
         .humidifier-card__controls-shell {
+          backface-visibility: hidden;
           margin-top: var(--humidifier-card-controls-gap);
           overflow: hidden;
+          will-change: margin-top, max-height, opacity;
         }
 
         .humidifier-card__controls-inner {
+          backface-visibility: hidden;
           display: grid;
           gap: 10px;
+          will-change: opacity, transform;
         }
 
         .humidifier-card__controls-shell--entering {
@@ -2049,12 +2045,16 @@ class NodaliaHumidifierCard extends HTMLElement {
         }
 
         .humidifier-card__panel-shell {
+          backface-visibility: hidden;
           overflow: hidden;
+          will-change: max-height, opacity;
         }
 
         .humidifier-card__panel-inner {
+          backface-visibility: hidden;
           display: grid;
           padding: 4px;
+          will-change: opacity, transform;
         }
 
         .humidifier-card__panel-shell--entering {
@@ -2142,7 +2142,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           100% {
             background: ${styles.card.background};
             box-shadow: ${styles.card.box_shadow};
-            transform: scale(0.996);
+            transform: scale(1);
           }
         }
 
