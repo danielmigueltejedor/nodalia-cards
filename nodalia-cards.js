@@ -14172,6 +14172,12 @@ const DEFAULT_CONFIG = {
     style: "medium",
     fallback_vibrate: false,
   },
+  animations: {
+    enabled: true,
+    power_duration: 600,
+    controls_duration: 420,
+    preset_duration: 420,
+  },
   styles: {
     card: {
       background: "var(--ha-card-background)",
@@ -14539,6 +14545,14 @@ class NodaliaFanCard extends HTMLElement {
     this._dragFrame = 0;
     this._pendingDragUpdate = null;
     this._lastRenderSignature = "";
+    this._lastRenderedIsOn = null;
+    this._lastRenderedPresetPanelVisible = false;
+    this._lastControlsMarkup = "";
+    this._lastPresetPanelMarkup = "";
+    this._animationCleanupTimer = 0;
+    this._powerTransition = null;
+    this._controlsTransition = null;
+    this._presetPanelTransition = null;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -14617,6 +14631,13 @@ class NodaliaFanCard extends HTMLElement {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
     }
+    if (this._animationCleanupTimer) {
+      window.clearTimeout(this._animationCleanupTimer);
+      this._animationCleanupTimer = 0;
+    }
+    this._powerTransition = null;
+    this._controlsTransition = null;
+    this._presetPanelTransition = null;
     this._pendingDragUpdate = null;
   }
 
@@ -14828,6 +14849,43 @@ class NodaliaFanCard extends HTMLElement {
     return this._isOn(state)
       ? styles?.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color
       : styles?.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color;
+  }
+
+  _getAnimationSettings() {
+    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+    return {
+      enabled: configuredAnimations.enabled !== false,
+      powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4000),
+      controlsDuration: clamp(Number(configuredAnimations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
+      presetDuration: clamp(Number(configuredAnimations.preset_duration) || DEFAULT_CONFIG.animations.preset_duration, 120, 2400),
+    };
+  }
+
+  _scheduleAnimationCleanup(delay) {
+    if (this._animationCleanupTimer) {
+      window.clearTimeout(this._animationCleanupTimer);
+      this._animationCleanupTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 5000);
+    if (!safeDelay || typeof window === "undefined") {
+      return;
+    }
+
+    this._animationCleanupTimer = window.setTimeout(() => {
+      this._animationCleanupTimer = 0;
+
+      if (!this.isConnected) {
+        return;
+      }
+
+      if (this._activeSliderDrag) {
+        this._pendingRenderAfterDrag = true;
+        return;
+      }
+
+      this._render();
+    }, safeDelay);
   }
 
   _setFanState(service, data = {}) {
@@ -15265,18 +15323,244 @@ class NodaliaFanCard extends HTMLElement {
       chips.push(`<span class="fan-card__chip">${escapeHtml(translatedPresetMode)}</span>`);
     }
 
-    const cardBackground = isOn
-      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`
-      : styles.card.background;
-    const cardBorder = isOn
-      ? `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`
-      : styles.card.border;
-    const cardShadow = isOn
-      ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.18))`
-      : styles.card.box_shadow;
-
     if (!presetModes.length) {
       this._presetPanelOpen = false;
+    }
+
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;
+    const onCardBorder = `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
+    const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.18))`;
+    const animations = this._getAnimationSettings();
+    const now = Date.now();
+    const wasOn = this._lastRenderedIsOn;
+    const isPresetPanelVisible = Boolean(isOn && this._presetPanelOpen && presetModes.length);
+    let powerAnimationState = "";
+    let controlsAnimationState = "";
+    let presetPanelAnimationState = "";
+
+    if (!animations.enabled) {
+      this._powerTransition = null;
+      this._controlsTransition = null;
+      this._presetPanelTransition = null;
+    } else if (wasOn !== null && wasOn !== isOn) {
+      powerAnimationState = isOn ? "powering-up" : "powering-down";
+      this._powerTransition = {
+        endsAt: now + animations.powerDuration,
+        state: powerAnimationState,
+      };
+
+      if (supportsPercentage || hasSecondaryControls || this._lastControlsMarkup) {
+        controlsAnimationState = isOn ? "entering" : "leaving";
+        this._controlsTransition = {
+          endsAt: now + animations.controlsDuration,
+          state: controlsAnimationState,
+        };
+      } else {
+        this._controlsTransition = null;
+      }
+
+      this._presetPanelTransition = null;
+    } else {
+      if (this._powerTransition?.endsAt > now) {
+        powerAnimationState = this._powerTransition.state;
+      } else {
+        this._powerTransition = null;
+      }
+
+      if (this._controlsTransition?.endsAt > now) {
+        controlsAnimationState = this._controlsTransition.state;
+      } else {
+        this._controlsTransition = null;
+      }
+
+      if (isOn && wasOn === isOn && this._lastRenderedPresetPanelVisible !== isPresetPanelVisible) {
+        presetPanelAnimationState = isPresetPanelVisible ? "entering" : "leaving";
+        this._presetPanelTransition = {
+          endsAt: now + animations.presetDuration,
+          state: presetPanelAnimationState,
+        };
+      } else if (this._presetPanelTransition?.endsAt > now) {
+        presetPanelAnimationState = this._presetPanelTransition.state;
+      } else {
+        this._presetPanelTransition = null;
+      }
+
+      if (!isOn) {
+        this._presetPanelTransition = null;
+      }
+    }
+
+    const mainControlsMarkup = isOn && supportsPercentage
+      ? `
+        <div class="fan-card__slider-row ${hasSecondaryControls ? "" : "fan-card__slider-row--solo"}">
+          <div class="fan-card__slider-wrap">
+            <div class="fan-card__slider-shell" style="--percentage:${currentPercentage};">
+              <div class="fan-card__slider-track"></div>
+              <input
+                type="range"
+                class="fan-card__slider"
+                data-fan-control="percentage"
+                min="0"
+                max="100"
+                step="any"
+                value="${currentPercentage}"
+                style="--percentage:${currentPercentage};"
+                aria-label="Velocidad"
+              />
+            </div>
+          </div>
+          ${
+            hasSecondaryControls
+              ? `
+                <div class="fan-card__slider-actions">
+                  ${
+                    supportsOscillation
+                      ? `
+                        <button
+                          type="button"
+                          class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}"
+                          data-fan-action="oscillate"
+                          aria-label="${this._isOscillating(state) ? "Desactivar oscilacion" : "Activar oscilacion"}"
+                        >
+                          <ha-icon icon="mdi:rotate-360"></ha-icon>
+                        </button>
+                      `
+                      : ""
+                  }
+                  ${
+                    presetModes.length
+                      ? `
+                        <button
+                          type="button"
+                          class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
+                          data-fan-action="toggle-preset-panel"
+                          aria-label="Mostrar modos"
+                        >
+                          <ha-icon icon="mdi:tune-variant"></ha-icon>
+                        </button>
+                      `
+                      : ""
+                  }
+                </div>
+              `
+              : ""
+          }
+        </div>
+      `
+      : !supportsPercentage && hasSecondaryControls
+        ? `
+          <div class="fan-card__controls">
+            ${
+              supportsOscillation
+                ? `
+                  <button
+                    type="button"
+                    class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}"
+                    data-fan-action="oscillate"
+                    aria-label="${this._isOscillating(state) ? "Desactivar oscilacion" : "Activar oscilacion"}"
+                  >
+                    <ha-icon icon="mdi:rotate-360"></ha-icon>
+                  </button>
+                `
+                : ""
+            }
+            ${
+              presetModes.length
+                ? `
+                  <button
+                    type="button"
+                    class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
+                    data-fan-action="toggle-preset-panel"
+                    aria-label="Mostrar modos"
+                  >
+                    <ha-icon icon="mdi:tune-variant"></ha-icon>
+                  </button>
+                `
+                : ""
+            }
+          </div>
+        `
+        : "";
+
+    const currentPresetPanelMarkup = isPresetPanelVisible
+      ? `
+        <div class="fan-card__preset-panel">
+          ${presetModes
+            .map(mode => `
+              <button
+                type="button"
+                class="fan-card__preset ${normalizeTextKey(mode) === normalizeTextKey(currentPresetMode) ? "is-active" : ""}"
+                data-fan-action="preset"
+                data-mode="${escapeHtml(mode)}"
+              >
+                ${escapeHtml(translatePresetLabel(mode))}
+              </button>
+            `)
+            .join("")}
+        </div>
+      `
+      : "";
+    const presetPanelContentMarkup = currentPresetPanelMarkup
+      || (presetPanelAnimationState === "leaving" ? this._lastPresetPanelMarkup : "");
+    const presetPanelShellMarkup = presetPanelContentMarkup
+      ? `
+        <div class="fan-card__preset-panel-shell ${presetPanelAnimationState ? `fan-card__preset-panel-shell--${presetPanelAnimationState}` : ""}">
+          <div class="fan-card__preset-panel-inner">
+            ${presetPanelContentMarkup}
+          </div>
+        </div>
+      `
+      : "";
+    const currentControlsAnimatedMarkup = [
+      mainControlsMarkup,
+      presetPanelShellMarkup,
+    ].filter(Boolean).join("");
+    const currentControlsStaticMarkup = [
+      mainControlsMarkup,
+      currentPresetPanelMarkup
+        ? `
+          <div class="fan-card__preset-panel-shell">
+            <div class="fan-card__preset-panel-inner">
+              ${currentPresetPanelMarkup}
+            </div>
+          </div>
+        `
+        : "",
+    ].filter(Boolean).join("");
+    const controlsContentMarkup = isOn
+      ? currentControlsAnimatedMarkup
+      : controlsAnimationState === "leaving"
+        ? this._lastControlsMarkup
+        : "";
+    const controlsShellMarkup = controlsContentMarkup
+      ? `
+        <div class="fan-card__controls-shell ${controlsAnimationState ? `fan-card__controls-shell--${controlsAnimationState}` : ""}">
+          <div class="fan-card__controls-inner">
+            ${controlsContentMarkup}
+          </div>
+        </div>
+      `
+      : "";
+    const powerAnimationRemaining = powerAnimationState && this._powerTransition
+      ? Math.max(0, this._powerTransition.endsAt - now)
+      : 0;
+    const controlsAnimationRemaining = controlsAnimationState && this._controlsTransition
+      ? Math.max(0, this._controlsTransition.endsAt - now)
+      : 0;
+    const presetAnimationRemaining = presetPanelAnimationState && this._presetPanelTransition
+      ? Math.max(0, this._presetPanelTransition.endsAt - now)
+      : 0;
+    const shouldCleanupAfterAnimation = Boolean(powerAnimationRemaining || controlsAnimationRemaining || presetAnimationRemaining);
+    const cleanupDelay = shouldCleanupAfterAnimation
+      ? Math.max(powerAnimationRemaining, controlsAnimationRemaining, presetAnimationRemaining) + 40
+      : 0;
+
+    if (currentPresetPanelMarkup) {
+      this._lastPresetPanelMarkup = currentPresetPanelMarkup;
+    }
+
+    if (isOn && currentControlsStaticMarkup && presetPanelAnimationState !== "leaving") {
+      this._lastControlsMarkup = currentControlsStaticMarkup;
     }
 
     this.shadowRoot.innerHTML = `
@@ -15289,11 +15573,16 @@ class NodaliaFanCard extends HTMLElement {
           box-sizing: border-box;
         }
 
-        ha-card {
-          background: ${cardBackground};
-          border: ${cardBorder};
+        ha-card.fan-card {
+          --fan-card-controls-max-height: 360px;
+          --fan-card-controls-gap: calc(${styles.card.gap} + 4px);
+          --fan-card-controls-duration: ${animations.controlsDuration}ms;
+          --fan-card-panel-duration: ${animations.presetDuration}ms;
+          --fan-card-power-duration: ${animations.powerDuration}ms;
+          background: ${isOn ? onCardBackground : styles.card.background};
+          border: ${isOn ? `1px solid ${onCardBorder}` : styles.card.border};
           border-radius: ${styles.card.border_radius};
-          box-shadow: ${cardShadow};
+          box-shadow: ${isOn ? `${styles.card.box_shadow}, ${onCardShadow}` : styles.card.box_shadow};
           min-width: 0;
           overflow: hidden;
           padding: ${styles.card.padding};
@@ -15316,10 +15605,37 @@ class NodaliaFanCard extends HTMLElement {
           z-index: 0;
         }
 
+        ha-card::after {
+          background:
+            radial-gradient(circle at 18% 18%, color-mix(in srgb, ${accentColor} 22%, rgba(255, 255, 255, 0.12)) 0%, transparent 50%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
+          content: "";
+          inset: 0;
+          opacity: ${isOn ? "1" : "0"};
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .fan-card--powering-up {
+          animation: fan-card-power-up var(--fan-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) both;
+        }
+
+        .fan-card--powering-down {
+          animation: fan-card-power-down var(--fan-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) both;
+        }
+
+        .fan-card--powering-up::after {
+          animation: fan-card-power-glow-in var(--fan-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) both;
+        }
+
+        .fan-card--powering-down::after {
+          animation: fan-card-power-glow-out var(--fan-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) both;
+        }
+
         .fan-card {
           color: var(--primary-text-color);
           display: grid;
-          gap: calc(${styles.card.gap} + 4px);
           min-width: 0;
           position: relative;
           z-index: 1;
@@ -15327,7 +15643,7 @@ class NodaliaFanCard extends HTMLElement {
 
         .fan-card__content {
           display: grid;
-          gap: ${styles.card.gap};
+          gap: 0;
         }
 
         .fan-card__hero {
@@ -15476,6 +15792,37 @@ class NodaliaFanCard extends HTMLElement {
           color: var(--primary-text-color);
         }
 
+        .fan-card__controls-shell {
+          margin-top: var(--fan-card-controls-gap);
+          overflow: hidden;
+        }
+
+        .fan-card__controls-inner {
+          display: grid;
+          gap: 10px;
+        }
+
+        .fan-card__controls-shell--entering {
+          animation: fan-card-controls-expand var(--fan-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          transform-origin: top;
+        }
+
+        .fan-card__controls-shell--entering .fan-card__controls-inner {
+          animation: fan-card-controls-content-in var(--fan-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          transform-origin: top;
+        }
+
+        .fan-card__controls-shell--leaving {
+          animation: fan-card-controls-collapse var(--fan-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          pointer-events: none;
+          transform-origin: top;
+        }
+
+        .fan-card__controls-shell--leaving .fan-card__controls-inner {
+          animation: fan-card-controls-content-out var(--fan-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          transform-origin: top;
+        }
+
         .fan-card__controls {
           display: flex;
           flex-wrap: wrap;
@@ -15535,7 +15882,6 @@ class NodaliaFanCard extends HTMLElement {
           display: grid;
           gap: 14px;
           grid-template-columns: minmax(0, 1fr) auto;
-          margin-top: 4px;
         }
 
         .fan-card__slider-wrap {
@@ -15648,6 +15994,35 @@ class NodaliaFanCard extends HTMLElement {
           min-width: 0;
         }
 
+        .fan-card__preset-panel-shell {
+          overflow: hidden;
+        }
+
+        .fan-card__preset-panel-inner {
+          display: grid;
+        }
+
+        .fan-card__preset-panel-shell--entering {
+          animation: fan-card-preset-panel-expand var(--fan-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          transform-origin: top;
+        }
+
+        .fan-card__preset-panel-shell--entering .fan-card__preset-panel-inner {
+          animation: fan-card-preset-panel-content-in var(--fan-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          transform-origin: top;
+        }
+
+        .fan-card__preset-panel-shell--leaving {
+          animation: fan-card-preset-panel-collapse var(--fan-card-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          pointer-events: none;
+          transform-origin: top;
+        }
+
+        .fan-card__preset-panel-shell--leaving .fan-card__preset-panel-inner {
+          animation: fan-card-preset-panel-content-out var(--fan-card-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          transform-origin: top;
+        }
+
         .fan-card__preset {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
@@ -15677,8 +16052,164 @@ class NodaliaFanCard extends HTMLElement {
           color: ${styles.control.accent_color};
         }
 
+        @keyframes fan-card-power-up {
+          0% {
+            background: ${styles.card.background};
+            box-shadow: ${styles.card.box_shadow};
+            transform: scale(0.994);
+          }
+          55% {
+            background: linear-gradient(135deg, color-mix(in srgb, ${accentColor} 26%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 54%, ${styles.card.background} 100%);
+            box-shadow: ${styles.card.box_shadow}, 0 12px 26px color-mix(in srgb, ${accentColor} 12%, rgba(0, 0, 0, 0.16));
+            transform: scale(1);
+          }
+          100% {
+            background: ${onCardBackground};
+            box-shadow: ${styles.card.box_shadow}, ${onCardShadow};
+            transform: scale(1);
+          }
+        }
+
+        @keyframes fan-card-power-down {
+          0% {
+            background: ${onCardBackground};
+            box-shadow: ${styles.card.box_shadow}, ${onCardShadow};
+            transform: scale(1);
+          }
+          100% {
+            background: ${styles.card.background};
+            box-shadow: ${styles.card.box_shadow};
+            transform: scale(0.996);
+          }
+        }
+
+        @keyframes fan-card-power-glow-in {
+          0% {
+            opacity: 0;
+          }
+          45% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 1;
+          }
+        }
+
+        @keyframes fan-card-power-glow-out {
+          0% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+          }
+        }
+
+        @keyframes fan-card-controls-expand {
+          0% {
+            margin-top: 0;
+            max-height: 0;
+            opacity: 0;
+          }
+          100% {
+            margin-top: var(--fan-card-controls-gap);
+            max-height: var(--fan-card-controls-max-height);
+            opacity: 1;
+          }
+        }
+
+        @keyframes fan-card-controls-collapse {
+          0% {
+            margin-top: var(--fan-card-controls-gap);
+            max-height: var(--fan-card-controls-max-height);
+            opacity: 1;
+          }
+          100% {
+            margin-top: 0;
+            max-height: 0;
+            opacity: 0;
+          }
+        }
+
+        @keyframes fan-card-controls-content-in {
+          0% {
+            opacity: 0;
+            transform: translateY(-10px) scaleY(0.96);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+        }
+
+        @keyframes fan-card-controls-content-out {
+          0% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-8px) scaleY(0.94);
+          }
+        }
+
+        @keyframes fan-card-preset-panel-expand {
+          0% {
+            max-height: 0;
+            opacity: 0;
+          }
+          100% {
+            max-height: 180px;
+            opacity: 1;
+          }
+        }
+
+        @keyframes fan-card-preset-panel-collapse {
+          0% {
+            max-height: 180px;
+            opacity: 1;
+          }
+          100% {
+            max-height: 0;
+            opacity: 0;
+          }
+        }
+
+        @keyframes fan-card-preset-panel-content-in {
+          0% {
+            opacity: 0;
+            transform: translateY(-8px) scaleY(0.96);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+        }
+
+        @keyframes fan-card-preset-panel-content-out {
+          0% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-6px) scaleY(0.96);
+          }
+        }
+
         .fan-card--compact:not(.fan-card--with-copy) .fan-card__hero {
           justify-items: center;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .fan-card,
+          .fan-card::after,
+          .fan-card__controls-shell,
+          .fan-card__controls-inner,
+          .fan-card__preset-panel-shell,
+          .fan-card__preset-panel-inner {
+            animation: none !important;
+            transition: none !important;
+          }
         }
 
         @media (max-width: 420px) {
@@ -15703,7 +16234,7 @@ class NodaliaFanCard extends HTMLElement {
         }
       </style>
       <ha-card
-        class="fan-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""}"
+        class="fan-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""} ${powerAnimationState ? `fan-card--${powerAnimationState}` : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
         data-fan-action="toggle"
       >
@@ -15729,128 +16260,20 @@ class NodaliaFanCard extends HTMLElement {
               `
               : ""}
           </div>
-
-          ${
-            isOn && supportsPercentage
-              ? `
-                <div class="fan-card__slider-row ${hasSecondaryControls ? "" : "fan-card__slider-row--solo"}">
-                  <div class="fan-card__slider-wrap">
-                    <div class="fan-card__slider-shell" style="--percentage:${currentPercentage};">
-                      <div class="fan-card__slider-track"></div>
-                      <input
-                        type="range"
-                        class="fan-card__slider"
-                        data-fan-control="percentage"
-                        min="0"
-                        max="100"
-                        step="any"
-                        value="${currentPercentage}"
-                        style="--percentage:${currentPercentage};"
-                        aria-label="Velocidad"
-                      />
-                    </div>
-                  </div>
-                  ${
-                    hasSecondaryControls
-                      ? `
-                        <div class="fan-card__slider-actions">
-                          ${
-                            supportsOscillation
-                              ? `
-                                <button
-                                  type="button"
-                                  class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}"
-                                  data-fan-action="oscillate"
-                                  aria-label="${this._isOscillating(state) ? "Desactivar oscilacion" : "Activar oscilacion"}"
-                                >
-                                  <ha-icon icon="mdi:rotate-360"></ha-icon>
-                                </button>
-                              `
-                              : ""
-                          }
-                          ${
-                            presetModes.length
-                              ? `
-                                <button
-                                  type="button"
-                                  class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
-                                  data-fan-action="toggle-preset-panel"
-                                  aria-label="Mostrar modos"
-                                >
-                                  <ha-icon icon="mdi:tune-variant"></ha-icon>
-                                </button>
-                              `
-                              : ""
-                          }
-                        </div>
-                      `
-                      : ""
-                  }
-                </div>
-              `
-              : ""
-          }
-
-          ${
-            !supportsPercentage && hasSecondaryControls
-              ? `
-                <div class="fan-card__controls">
-                  ${
-                    supportsOscillation
-                      ? `
-                        <button
-                          type="button"
-                          class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}"
-                          data-fan-action="oscillate"
-                          aria-label="${this._isOscillating(state) ? "Desactivar oscilacion" : "Activar oscilacion"}"
-                        >
-                          <ha-icon icon="mdi:rotate-360"></ha-icon>
-                        </button>
-                      `
-                      : ""
-                  }
-                  ${
-                    presetModes.length
-                      ? `
-                        <button
-                          type="button"
-                          class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
-                          data-fan-action="toggle-preset-panel"
-                          aria-label="Mostrar modos"
-                        >
-                          <ha-icon icon="mdi:tune-variant"></ha-icon>
-                        </button>
-                      `
-                      : ""
-                  }
-                </div>
-              `
-              : ""
-          }
-
-          ${
-            isOn && this._presetPanelOpen && presetModes.length
-              ? `
-                <div class="fan-card__preset-panel">
-                  ${presetModes
-                    .map(mode => `
-                      <button
-                        type="button"
-                        class="fan-card__preset ${normalizeTextKey(mode) === normalizeTextKey(currentPresetMode) ? "is-active" : ""}"
-                        data-fan-action="preset"
-                        data-mode="${escapeHtml(mode)}"
-                      >
-                        ${escapeHtml(translatePresetLabel(mode))}
-                      </button>
-                    `)
-                    .join("")}
-                </div>
-              `
-              : ""
-          }
+          ${controlsShellMarkup}
         </div>
       </ha-card>
     `;
+
+    this._lastRenderedIsOn = isOn;
+    this._lastRenderedPresetPanelVisible = isPresetPanelVisible;
+
+    if (shouldCleanupAfterAnimation) {
+      this._scheduleAnimationCleanup(cleanupDelay);
+    } else if (this._animationCleanupTimer) {
+      window.clearTimeout(this._animationCleanupTimer);
+      this._animationCleanupTimer = 0;
+    }
   }
 }
 
@@ -15866,6 +16289,7 @@ class NodaliaFanCardEditor extends HTMLElement {
     this._hass = null;
     this._entityOptionsSignature = "";
     this._showStyleSection = false;
+    this._showAnimationSection = false;
     this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
@@ -16076,6 +16500,14 @@ class NodaliaFanCardEditor extends HTMLElement {
     switch (valueType) {
       case "boolean":
         return Boolean(input.checked);
+      case "number": {
+        if (input.value === "") {
+          return "";
+        }
+
+        const numericValue = Number(input.value);
+        return Number.isFinite(numericValue) ? numericValue : "";
+      }
       case "color":
         return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
       default:
@@ -16141,12 +16573,21 @@ class NodaliaFanCardEditor extends HTMLElement {
     if (toggleButton.dataset.editorToggle === "styles") {
       this._showStyleSection = !this._showStyleSection;
       this._render();
+      return;
+    }
+
+    if (toggleButton.dataset.editorToggle === "animations") {
+      this._showAnimationSection = !this._showAnimationSection;
+      this._render();
     }
   }
 
   _renderTextField(label, field, value, options = {}) {
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const min = options.min !== undefined ? `min="${escapeHtml(String(options.min))}"` : "";
+    const max = options.max !== undefined ? `max="${escapeHtml(String(options.max))}"` : "";
+    const step = options.step !== undefined ? `step="${escapeHtml(String(options.step))}"` : "";
     const valueType = options.valueType || "string";
     const inputValue = value === undefined || value === null ? "" : String(value);
 
@@ -16159,6 +16600,9 @@ class NodaliaFanCardEditor extends HTMLElement {
           data-value-type="${escapeHtml(valueType)}"
           value="${escapeHtml(inputValue)}"
           ${placeholder}
+          ${min}
+          ${max}
+          ${step}
         />
       </label>
     `;
@@ -16645,6 +17089,54 @@ class NodaliaFanCardEditor extends HTMLElement {
               ],
             )}
           </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Animaciones</div>
+            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles y abrir el panel de modos.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="animations"
+                aria-expanded="${this._showAnimationSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showAnimationSection ? "Ocultar ajustes de animación" : "Mostrar ajustes de animación"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showAnimationSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderTextField("Encendido y apagado (ms)", "animations.power_duration", config.animations.power_duration, {
+                    type: "number",
+                    valueType: "number",
+                    min: 120,
+                    max: 4000,
+                    step: 10,
+                  })}
+                  ${this._renderTextField("Expansión de controles (ms)", "animations.controls_duration", config.animations.controls_duration, {
+                    type: "number",
+                    valueType: "number",
+                    min: 120,
+                    max: 2400,
+                    step: 10,
+                  })}
+                  ${this._renderTextField("Panel de modos (ms)", "animations.preset_duration", config.animations.preset_duration, {
+                    type: "number",
+                    valueType: "number",
+                    min: 120,
+                    max: 2400,
+                    step: 10,
+                  })}
+                </div>
+              `
+              : ""
+          }
         </section>
 
         <section class="editor-section">
