@@ -22,6 +22,7 @@ const DEFAULT_CONFIG = {
   show_slider: true,
   show_oscillation: true,
   show_preset_modes: true,
+  hidden_preset_modes: [],
   compact_layout_mode: "auto",
   haptics: {
     enabled: true,
@@ -375,7 +376,20 @@ function translatePresetLabel(value) {
 }
 
 function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const normalizeList = value => (
+    Array.isArray(value)
+      ? value
+      : typeof value === "string"
+        ? value.split(",")
+        : []
+  )
+    .map(item => String(item || "").trim())
+    .filter(Boolean);
+
+  config.hidden_preset_modes = normalizeList(config.hidden_preset_modes);
+
+  return config;
 }
 
 class NodaliaFanCard extends HTMLElement {
@@ -693,8 +707,17 @@ class NodaliaFanCard extends HTMLElement {
 
   _getPresetModes(state) {
     return Array.isArray(state?.attributes?.preset_modes)
-      ? state.attributes.preset_modes.map(item => String(item || "").trim()).filter(Boolean)
+      ? state.attributes.preset_modes
+        .map(item => String(item || "").trim())
+        .filter(Boolean)
+        .filter(mode => !this._isPresetModeHidden(mode))
       : [];
+  }
+
+  _isPresetModeHidden(value) {
+    const hiddenModes = Array.isArray(this._config?.hidden_preset_modes) ? this._config.hidden_preset_modes : [];
+    const expectedKey = normalizeTextKey(value);
+    return hiddenModes.some(item => normalizeTextKey(item) === expectedKey);
   }
 
   _getCurrentPresetMode(state) {
@@ -2621,6 +2644,15 @@ class NodaliaFanCardEditor extends HTMLElement {
       .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
 
     if (!input?.dataset?.field) {
+      if (input?.dataset?.modeListField && input.dataset.modeValue !== undefined) {
+        event.stopPropagation();
+        this._setPresetModeVisibility(input.dataset.modeValue, input.checked);
+        this._setEditorConfig();
+
+        if (event.type === "change") {
+          this._emitConfig();
+        }
+      }
       return;
     }
 
@@ -2750,6 +2782,66 @@ class NodaliaFanCardEditor extends HTMLElement {
     `;
   }
 
+  _getFanState() {
+    return this._config?.entity ? this._hass?.states?.[this._config.entity] || null : null;
+  }
+
+  _getPresetModeVisibilityOptions() {
+    const fanState = this._getFanState();
+    return Array.isArray(fanState?.attributes?.preset_modes)
+      ? fanState.attributes.preset_modes.map(item => String(item || "").trim()).filter(Boolean)
+      : [];
+  }
+
+  _getHiddenPresetModes() {
+    return Array.isArray(this._config?.hidden_preset_modes)
+      ? this._config.hidden_preset_modes.map(item => String(item || "").trim()).filter(Boolean)
+      : [];
+  }
+
+  _isPresetModeVisible(value) {
+    const expectedKey = normalizeTextKey(value);
+    return !this._getHiddenPresetModes().some(item => normalizeTextKey(item) === expectedKey);
+  }
+
+  _setPresetModeVisibility(value, visible) {
+    const rawValue = String(value || "").trim();
+    if (!rawValue) {
+      return;
+    }
+
+    const nextValues = this._getHiddenPresetModes().filter(item => normalizeTextKey(item) !== normalizeTextKey(rawValue));
+    if (!visible) {
+      nextValues.push(rawValue);
+    }
+
+    if (nextValues.length) {
+      setByPath(this._config, "hidden_preset_modes", nextValues);
+      return;
+    }
+
+    deleteByPath(this._config, "hidden_preset_modes");
+  }
+
+  _renderPresetModeVisibilityField(modeValue) {
+    const translatedLabel = translatePresetLabel(modeValue);
+    const showRawValue = normalizeTextKey(translatedLabel) !== normalizeTextKey(modeValue);
+    const label = showRawValue ? `${translatedLabel} (${modeValue})` : translatedLabel;
+
+    return `
+      <label class="editor-toggle">
+        <input
+          type="checkbox"
+          data-mode-list-field="hidden_preset_modes"
+          data-mode-value="${escapeHtml(modeValue)}"
+          ${this._isPresetModeVisible(modeValue) ? "checked" : ""}
+        />
+        <span class="editor-toggle__switch" aria-hidden="true"></span>
+        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+      </label>
+    `;
+  }
+
   _renderSelectField(label, field, value, options) {
     return `
       <label class="editor-field">
@@ -2855,6 +2947,7 @@ class NodaliaFanCardEditor extends HTMLElement {
 
     const config = this._config || normalizeConfig({});
     const hapticStyle = config.haptics?.style || "medium";
+    const presetModeVisibilityOptions = this._getPresetModeVisibilityOptions();
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -3029,6 +3122,26 @@ class NodaliaFanCardEditor extends HTMLElement {
           width: 100%;
         }
 
+        .editor-subsection {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 14px;
+          display: grid;
+          gap: 10px;
+          padding: 12px;
+        }
+
+        .editor-subsection__title {
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .editor-subsection__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
         .editor-toggle {
           align-items: center;
           grid-template-columns: auto 1fr;
@@ -3163,6 +3276,19 @@ class NodaliaFanCardEditor extends HTMLElement {
             ${this._renderCheckboxField("Mostrar slider", "show_slider", config.show_slider !== false)}
             ${this._renderCheckboxField("Mostrar botón de oscilación", "show_oscillation", config.show_oscillation !== false)}
             ${this._renderCheckboxField("Mostrar presets de modo", "show_preset_modes", config.show_preset_modes !== false)}
+            ${
+              presetModeVisibilityOptions.length
+                ? `
+                  <div class="editor-subsection editor-field--full">
+                    <div class="editor-subsection__title">Modos visibles</div>
+                    <div class="editor-subsection__hint">Oculta los modos que expone el ventilador pero no quieres mostrar en la tarjeta.</div>
+                    <div class="editor-grid editor-grid--stacked">
+                      ${presetModeVisibilityOptions.map(mode => this._renderPresetModeVisibilityField(mode)).join("")}
+                    </div>
+                  </div>
+                `
+                : ""
+            }
           </div>
         </section>
 

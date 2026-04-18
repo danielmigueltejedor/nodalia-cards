@@ -1423,6 +1423,221 @@ class NodaliaVacuumCard extends HTMLElement {
     };
   }
 
+  _getVisibleModeDescriptors(state) {
+    const modeControlsEnabled = this._config?.show_mode_controls !== false && this._config?.show_fan_presets !== false;
+    if (!modeControlsEnabled) {
+      return [];
+    }
+
+    return [
+      this._getModeDescriptor("suction", state),
+      this._getModeDescriptor("mop", state),
+    ].filter(Boolean);
+  }
+
+  _getActiveModeDescriptor(state, panelKind = this._activeModePanel) {
+    return this._getVisibleModeDescriptors(state).find(mode => mode.kind === panelKind) || null;
+  }
+
+  _getModePanelMarkup(panelKind, state = this._getState()) {
+    const descriptor = this._getActiveModeDescriptor(state, panelKind);
+    if (!descriptor) {
+      return "";
+    }
+
+    const activeModeDisplayValue = this._getOptimisticModeValue(
+      descriptor.kind,
+      descriptor.current,
+      descriptor.options,
+    );
+
+    return `
+      <div class="vacuum-card__presets vacuum-card__mode-panel">
+        ${descriptor.options
+          .map(option => `
+            <button
+              class="vacuum-card__preset ${normalizeTextKey(option) === normalizeTextKey(activeModeDisplayValue) ? "vacuum-card__preset--active" : ""}"
+              type="button"
+              data-vacuum-action="${descriptor.service === "select" ? "select" : "fan"}"
+              ${descriptor.service === "select" ? `data-target-entity="${escapeHtml(descriptor.target)}"` : ""}
+              data-mode-kind="${escapeHtml(descriptor.kind)}"
+              data-value="${escapeHtml(option)}"
+            >
+              ${escapeHtml(humanizeModeLabel(option, descriptor.kind))}
+            </button>
+          `)
+          .join("")}
+      </div>
+    `;
+  }
+
+  _setModeToggleButtonsState(panelKind) {
+    this.shadowRoot
+      ?.querySelectorAll('[data-vacuum-action="toggle-mode-panel"]')
+      .forEach(button => {
+        if (!(button instanceof HTMLElement)) {
+          return;
+        }
+
+        const isActive = (button.dataset.modeKind || "") === panelKind;
+        button.classList.toggle("vacuum-card__mode-toggle--active", isActive);
+        button.classList.toggle("vacuum-card__control--active", isActive);
+      });
+  }
+
+  _setModePanelActiveSelection(modeKind, value) {
+    const panelShell = this.shadowRoot?.querySelector(".vacuum-card__mode-panel-shell");
+    if (!(panelShell instanceof HTMLElement) || panelShell.dataset.panelKind !== String(modeKind || "")) {
+      return;
+    }
+
+    panelShell
+      .querySelectorAll(".vacuum-card__preset")
+      .forEach(button => {
+        if (!(button instanceof HTMLElement)) {
+          return;
+        }
+
+        const isActive = normalizeTextKey(button.dataset.value || "") === normalizeTextKey(value);
+        button.classList.toggle("vacuum-card__preset--active", isActive);
+      });
+  }
+
+  _createMarkupNode(markup) {
+    if (!markup || typeof document === "undefined") {
+      return null;
+    }
+
+    const template = document.createElement("template");
+    template.innerHTML = String(markup).trim();
+    const node = template.content.firstElementChild;
+    return node instanceof HTMLElement ? node : null;
+  }
+
+  _setVisibleModePanelKind(panelKind, state = this._getState()) {
+    const nextPanelKind = this._getActiveModeDescriptor(state, panelKind)?.kind || "";
+    this._activeModePanel = nextPanelKind || null;
+    this._setModeToggleButtonsState(nextPanelKind);
+
+    const controlsInner = this.shadowRoot?.querySelector(".vacuum-card__controls-inner");
+    const animations = this._getAnimationSettings();
+    const panelMarkup = nextPanelKind ? this._getModePanelMarkup(nextPanelKind, state) : "";
+
+    if (!controlsInner || !(controlsInner instanceof HTMLElement) || !state) {
+      this._render();
+      return;
+    }
+
+    const existingPanel = controlsInner.querySelector(".vacuum-card__mode-panel-shell");
+    if (!animations.enabled) {
+      if (existingPanel instanceof HTMLElement) {
+        existingPanel.remove();
+      }
+
+      if (panelMarkup) {
+        const panelNode = this._createMarkupNode(`
+          <div class="vacuum-card__mode-panel-shell" data-panel-kind="${nextPanelKind}">
+            <div class="vacuum-card__mode-panel-inner">
+              ${panelMarkup}
+            </div>
+          </div>
+        `);
+
+        if (panelNode instanceof HTMLElement) {
+          controlsInner.appendChild(panelNode);
+          return;
+        }
+      }
+
+      this._render();
+      return;
+    }
+
+    const removePanel = (panel, onDone = null) => {
+      if (!(panel instanceof HTMLElement)) {
+        if (typeof onDone === "function") {
+          onDone();
+        }
+        return;
+      }
+
+      panel.classList.remove("vacuum-card__mode-panel-shell--entering");
+      panel.classList.add("vacuum-card__mode-panel-shell--leaving");
+
+      const finalizeRemoval = () => {
+        if (panel.isConnected) {
+          panel.remove();
+        }
+        if (typeof onDone === "function") {
+          onDone();
+        }
+      };
+
+      panel.addEventListener("animationend", finalizeRemoval, { once: true });
+      window.setTimeout(finalizeRemoval, animations.panelDuration + 80);
+    };
+
+    const appendPanel = () => {
+      if (!panelMarkup) {
+        return;
+      }
+
+      const panelNode = this._createMarkupNode(`
+        <div class="vacuum-card__mode-panel-shell vacuum-card__mode-panel-shell--entering" data-panel-kind="${nextPanelKind}">
+          <div class="vacuum-card__mode-panel-inner">
+            ${panelMarkup}
+          </div>
+        </div>
+      `);
+
+      if (!(panelNode instanceof HTMLElement)) {
+        this._render();
+        return;
+      }
+
+      controlsInner.appendChild(panelNode);
+      window.setTimeout(() => {
+        if (panelNode.isConnected) {
+          panelNode.classList.remove("vacuum-card__mode-panel-shell--entering");
+        }
+      }, animations.panelDuration + 80);
+    };
+
+    if (!nextPanelKind) {
+      if (existingPanel instanceof HTMLElement) {
+        removePanel(existingPanel);
+      }
+      return;
+    }
+
+    if (!panelMarkup) {
+      if (existingPanel instanceof HTMLElement) {
+        removePanel(existingPanel);
+      }
+      return;
+    }
+
+    const existingPanelKind = existingPanel instanceof HTMLElement ? existingPanel.dataset.panelKind || "" : "";
+    if (existingPanel instanceof HTMLElement && existingPanelKind === nextPanelKind) {
+      if (existingPanel.classList.contains("vacuum-card__mode-panel-shell--leaving")) {
+        existingPanel.remove();
+      } else {
+        const panelInner = existingPanel.querySelector(".vacuum-card__mode-panel-inner");
+        if (panelInner instanceof HTMLElement) {
+          panelInner.innerHTML = panelMarkup;
+        }
+        return;
+      }
+    }
+
+    if (existingPanel instanceof HTMLElement) {
+      removePanel(existingPanel, appendPanel);
+      return;
+    }
+
+    appendPanel();
+  }
+
   _isCleaning(state) {
     return this._matchesActivity(state, [
       "cleaning",
@@ -1939,13 +2154,17 @@ class NodaliaVacuumCard extends HTMLElement {
         break;
       case "toggle-mode-panel": {
         const modeKind = button.dataset.modeKind || "";
-        this._roomPanelOpen = false;
-        this._activeModePanel = this._activeModePanel === modeKind ? null : modeKind;
-        this._render();
+        const nextModeKind = this._activeModePanel === modeKind ? "" : modeKind;
+        if (this._roomPanelOpen) {
+          this._roomPanelOpen = false;
+          this._render();
+        }
+        this._setVisibleModePanelKind(nextModeKind, state);
         break;
       }
       case "toggle-room-panel":
         this._activeModePanel = null;
+        this._setModeToggleButtonsState("");
         this._roomPanelOpen = !this._roomPanelOpen;
         this._render();
         break;
@@ -1959,19 +2178,19 @@ class NodaliaVacuumCard extends HTMLElement {
         if (button.dataset.value) {
           this._setPendingModeSelection(button.dataset.modeKind || "suction", button.dataset.value);
           this._rememberNonSmartModeSelection(button.dataset.modeKind || "suction", button.dataset.value);
+          this._setModePanelActiveSelection(button.dataset.modeKind || "suction", button.dataset.value);
           this._callService("set_fan_speed", {
             fan_speed: button.dataset.value,
           });
         }
-        this._render();
         break;
       case "select":
         if (button.dataset.targetEntity && button.dataset.value) {
           this._setPendingModeSelection(button.dataset.modeKind || "", button.dataset.value);
           this._rememberNonSmartModeSelection(button.dataset.modeKind || "", button.dataset.value);
+          this._setModePanelActiveSelection(button.dataset.modeKind || "", button.dataset.value);
           this._applyLinkedSmartModeSelection(button.dataset.modeKind || "", button.dataset.value, state);
         }
-        this._render();
         break;
       default:
         break;
@@ -2035,9 +2254,7 @@ class NodaliaVacuumCard extends HTMLElement {
     const stateLabel = this._getStateLabel(state);
     const showUnavailableBadge = isUnavailableState(state);
     const batteryLevel = this._getBatteryLevel(state);
-    const modeControlsEnabled = config.show_mode_controls !== false && config.show_fan_presets !== false;
-    const suctionMode = modeControlsEnabled ? this._getModeDescriptor("suction", state) : null;
-    const mopMode = modeControlsEnabled ? this._getModeDescriptor("mop", state) : null;
+    const availableModeDescriptors = this._getVisibleModeDescriptors(state);
     const isCompactLayout = this._isCompactLayout;
     const accentColor = this._getAccentColor(state);
     const animations = this._getAnimationSettings();
@@ -2068,7 +2285,6 @@ class NodaliaVacuumCard extends HTMLElement {
       chips.push(`<span class="vacuum-card__chip vacuum-card__chip--state">${escapeHtml(stateLabel)}</span>`);
     }
 
-    const availableModeDescriptors = [suctionMode, mopMode].filter(Boolean);
     if (this._activeModePanel && !availableModeDescriptors.some(mode => mode.kind === this._activeModePanel)) {
       this._activeModePanel = null;
     }
@@ -2078,12 +2294,15 @@ class NodaliaVacuumCard extends HTMLElement {
     this._sanitizeSelectedCleaningAreas(roomMappings);
 
     const activeModeDescriptor = availableModeDescriptors.find(mode => mode.kind === this._activeModePanel) || null;
-    const activeModeDisplayValue = activeModeDescriptor
-      ? this._getOptimisticModeValue(
-          activeModeDescriptor.kind,
-          activeModeDescriptor.current,
-          activeModeDescriptor.options,
-        )
+    const currentModePanelMarkup = activeModeDescriptor ? this._getModePanelMarkup(activeModeDescriptor.kind, state) : "";
+    const modePanelShellMarkup = currentModePanelMarkup
+      ? `
+        <div class="vacuum-card__mode-panel-shell" data-panel-kind="${escapeHtml(activeModeDescriptor.kind)}">
+          <div class="vacuum-card__mode-panel-inner">
+            ${currentModePanelMarkup}
+          </div>
+        </div>
+      `
       : "";
 
     const showCopyBlock = !isCompactLayout || chips.length > 0;
@@ -2313,6 +2532,18 @@ class NodaliaVacuumCard extends HTMLElement {
           width: 13px;
         }
 
+        .vacuum-card__controls-group {
+          display: grid;
+          gap: 0;
+          min-width: 0;
+        }
+
+        .vacuum-card__controls-inner {
+          display: grid;
+          gap: 0;
+          min-width: 0;
+        }
+
         .vacuum-card__controls {
           display: flex;
           flex-wrap: wrap;
@@ -2426,10 +2657,33 @@ class NodaliaVacuumCard extends HTMLElement {
           color: var(--primary-text-color);
         }
 
-        .vacuum-card__presets--panel {
-          animation: vacuum-card-panel-in var(--vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        .vacuum-card__mode-panel {
           margin-top: -2px;
+        }
+
+        .vacuum-card__mode-panel-shell {
+          overflow: hidden;
           transform-origin: top center;
+        }
+
+        .vacuum-card__mode-panel-inner {
+          will-change: transform, opacity;
+        }
+
+        .vacuum-card__mode-panel-shell--entering {
+          animation: vacuum-card-mode-panel-shell-in var(--vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        .vacuum-card__mode-panel-shell--entering .vacuum-card__mode-panel-inner {
+          animation: vacuum-card-mode-panel-content-in var(--vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        .vacuum-card__mode-panel-shell--leaving {
+          animation: vacuum-card-mode-panel-shell-out var(--vacuum-card-panel-duration) cubic-bezier(0.36, 0, 0.2, 1) both;
+        }
+
+        .vacuum-card__mode-panel-shell--leaving .vacuum-card__mode-panel-inner {
+          animation: vacuum-card-mode-panel-content-out var(--vacuum-card-panel-duration) cubic-bezier(0.36, 0, 0.2, 1) both;
         }
 
         @keyframes vacuum-card-button-bounce {
@@ -2446,6 +2700,50 @@ class NodaliaVacuumCard extends HTMLElement {
           100% {
             opacity: 1;
             transform: translateY(0) scaleY(1);
+          }
+        }
+
+        @keyframes vacuum-card-mode-panel-shell-in {
+          0% {
+            max-height: 0;
+            opacity: 0;
+          }
+          100% {
+            max-height: 220px;
+            opacity: 1;
+          }
+        }
+
+        @keyframes vacuum-card-mode-panel-shell-out {
+          0% {
+            max-height: 220px;
+            opacity: 1;
+          }
+          100% {
+            max-height: 0;
+            opacity: 0;
+          }
+        }
+
+        @keyframes vacuum-card-mode-panel-content-in {
+          0% {
+            opacity: 0;
+            transform: translateY(-8px) scaleY(0.96);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+        }
+
+        @keyframes vacuum-card-mode-panel-content-out {
+          0% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-6px) scaleY(0.96);
           }
         }
 
@@ -2523,32 +2821,37 @@ class NodaliaVacuumCard extends HTMLElement {
           ${
             controls.length || availableModeDescriptors.length
               ? `
-                <div class="vacuum-card__controls">
-                  ${controls
-                    .map(control => `
-                      <button
-                          class="vacuum-card__control ${control.active ? "vacuum-card__control--active" : ""}"
-                          type="button"
-                          data-vacuum-action="${escapeHtml(control.action)}"
-                          aria-label="${escapeHtml(control.label)}"
-                        >
-                          <ha-icon icon="${escapeHtml(control.icon)}"></ha-icon>
-                        </button>
-                      `)
-                    .join("")}
-                  ${availableModeDescriptors
-                    .map(mode => `
-                      <button
-                        class="vacuum-card__control vacuum-card__mode-toggle ${activeModeDescriptor?.kind === mode.kind ? "vacuum-card__mode-toggle--active vacuum-card__control--active" : ""}"
-                        type="button"
-                        data-vacuum-action="toggle-mode-panel"
-                        data-mode-kind="${escapeHtml(mode.kind)}"
-                        aria-label="${escapeHtml(mode.label)}"
-                      >
-                        <ha-icon icon="${mode.kind === "mop" ? "mdi:waves" : "mdi:fan"}"></ha-icon>
-                      </button>
-                    `)
-                    .join("")}
+                <div class="vacuum-card__controls-group">
+                  <div class="vacuum-card__controls-inner">
+                    <div class="vacuum-card__controls">
+                      ${controls
+                        .map(control => `
+                          <button
+                              class="vacuum-card__control ${control.active ? "vacuum-card__control--active" : ""}"
+                              type="button"
+                              data-vacuum-action="${escapeHtml(control.action)}"
+                              aria-label="${escapeHtml(control.label)}"
+                            >
+                              <ha-icon icon="${escapeHtml(control.icon)}"></ha-icon>
+                            </button>
+                          `)
+                        .join("")}
+                      ${availableModeDescriptors
+                        .map(mode => `
+                          <button
+                            class="vacuum-card__control vacuum-card__mode-toggle ${activeModeDescriptor?.kind === mode.kind ? "vacuum-card__mode-toggle--active vacuum-card__control--active" : ""}"
+                            type="button"
+                            data-vacuum-action="toggle-mode-panel"
+                            data-mode-kind="${escapeHtml(mode.kind)}"
+                            aria-label="${escapeHtml(mode.label)}"
+                          >
+                            <ha-icon icon="${mode.kind === "mop" ? "mdi:waves" : "mdi:fan"}"></ha-icon>
+                          </button>
+                        `)
+                        .join("")}
+                    </div>
+                    ${modePanelShellMarkup}
+                  </div>
                 </div>
               `
               : ""
@@ -2575,28 +2878,6 @@ class NodaliaVacuumCard extends HTMLElement {
               : ""
           }
 
-          ${
-            activeModeDescriptor
-              ? `
-                <div class="vacuum-card__presets vacuum-card__presets--panel">
-                  ${activeModeDescriptor.options
-                    .map(option => `
-                      <button
-                        class="vacuum-card__preset ${normalizeTextKey(option) === normalizeTextKey(activeModeDisplayValue) ? "vacuum-card__preset--active" : ""}"
-                        type="button"
-                        data-vacuum-action="${activeModeDescriptor.service === "select" ? "select" : "fan"}"
-                        ${activeModeDescriptor.service === "select" ? `data-target-entity="${escapeHtml(activeModeDescriptor.target)}"` : ""}
-                        data-mode-kind="${escapeHtml(activeModeDescriptor.kind)}"
-                        data-value="${escapeHtml(option)}"
-                      >
-                        ${escapeHtml(humanizeModeLabel(option, activeModeDescriptor.kind))}
-                      </button>
-                    `)
-                    .join("")}
-                </div>
-              `
-              : ""
-          }
         </div>
       </ha-card>
     `;
