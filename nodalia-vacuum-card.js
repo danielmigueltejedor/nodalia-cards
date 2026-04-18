@@ -85,6 +85,8 @@ const DEFAULT_CONFIG = {
   show_stop: true,
   show_locate: true,
   fan_presets: [],
+  hidden_suction_modes: [],
+  hidden_mop_modes: [],
   state_entity: "",
   battery_entity: "",
   room_mapping_entity: "",
@@ -405,6 +407,15 @@ function humanizeModeLabel(value, kind = "generic") {
 
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const normalizeList = value => (
+    Array.isArray(value)
+      ? value
+      : typeof value === "string"
+        ? value.split(",")
+        : []
+  )
+    .map(item => String(item || "").trim())
+    .filter(Boolean);
 
   if (!Array.isArray(config.fan_presets)) {
     config.fan_presets = [];
@@ -413,6 +424,8 @@ function normalizeConfig(rawConfig) {
   config.fan_presets = config.fan_presets
     .map(item => String(item || "").trim())
     .filter(Boolean);
+  config.hidden_suction_modes = normalizeList(config.hidden_suction_modes);
+  config.hidden_mop_modes = normalizeList(config.hidden_mop_modes);
 
   return config;
 }
@@ -1304,6 +1317,17 @@ class NodaliaVacuumCard extends HTMLElement {
     return current ? String(current) : "";
   }
 
+  _getModeVisibilityField(kind) {
+    return kind === "mop" ? "hidden_mop_modes" : "hidden_suction_modes";
+  }
+
+  _isModeHidden(kind, value) {
+    const field = this._getModeVisibilityField(kind);
+    const hiddenModes = Array.isArray(this._config?.[field]) ? this._config[field] : [];
+    const expectedKey = normalizeTextKey(value);
+    return hiddenModes.some(item => normalizeTextKey(item) === expectedKey);
+  }
+
   _getSelectOptions(entityId) {
     const selectState = entityId ? this._hass?.states?.[entityId] : null;
     const options = Array.isArray(selectState?.attributes?.options)
@@ -1383,11 +1407,16 @@ class NodaliaVacuumCard extends HTMLElement {
     const selectDescriptor = this._getSelectOptions(selectEntity);
 
     if (selectDescriptor.entityId && selectDescriptor.options.length) {
+      const visibleOptions = selectDescriptor.options.filter(option => !this._isModeHidden(kind, option));
+      if (!visibleOptions.length) {
+        return null;
+      }
+
       return {
         current: selectDescriptor.value,
         kind,
         label: kind === "mop" ? "Fregado" : "Aspirado",
-        options: selectDescriptor.options,
+        options: visibleOptions,
         service: "select",
         target: selectDescriptor.entityId,
       };
@@ -1407,7 +1436,7 @@ class NodaliaVacuumCard extends HTMLElement {
       }
 
       return optionKind !== "mop" || isSharedSmartMode;
-    });
+    }).filter(option => !this._isModeHidden(kind, option));
 
     if (!options.length) {
       return null;
@@ -1437,6 +1466,14 @@ class NodaliaVacuumCard extends HTMLElement {
 
   _getActiveModeDescriptor(state, panelKind = this._activeModePanel) {
     return this._getVisibleModeDescriptors(state).find(mode => mode.kind === panelKind) || null;
+  }
+
+  _getModePanelMaxHeight(descriptors) {
+    const maxOptions = Array.isArray(descriptors)
+      ? descriptors.reduce((maxValue, descriptor) => Math.max(maxValue, descriptor?.options?.length || 0), 0)
+      : 0;
+
+    return clamp(84 + (maxOptions * 52), 220, 560);
   }
 
   _getModePanelMarkup(panelKind, state = this._getState()) {
@@ -2263,6 +2300,7 @@ class NodaliaVacuumCard extends HTMLElement {
     const roomMappings = this._getRoomMappings(state);
     const chips = [];
     const batteryChipColor = this._getBatteryColor(batteryLevel);
+    const modePanelMaxHeight = this._getModePanelMaxHeight(availableModeDescriptors);
     const batteryChipMarkup = config.show_battery_chip !== false && batteryLevel !== null
       ? `
         <span class="vacuum-card__chip vacuum-card__chip--battery">
@@ -2329,6 +2367,7 @@ class NodaliaVacuumCard extends HTMLElement {
         ha-card {
           --vacuum-card-panel-duration: ${animations.enabled ? animations.panelDuration : 0}ms;
           --vacuum-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
+          --vacuum-card-mode-panel-max-height: ${modePanelMaxHeight}px;
           background: ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -2662,11 +2701,14 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card__mode-panel-shell {
+          min-width: 0;
           overflow: hidden;
           transform-origin: top center;
+          width: 100%;
         }
 
         .vacuum-card__mode-panel-inner {
+          min-width: 0;
           will-change: transform, opacity;
         }
 
@@ -2709,14 +2751,14 @@ class NodaliaVacuumCard extends HTMLElement {
             opacity: 0;
           }
           100% {
-            max-height: 220px;
+            max-height: var(--vacuum-card-mode-panel-max-height);
             opacity: 1;
           }
         }
 
         @keyframes vacuum-card-mode-panel-shell-out {
           0% {
-            max-height: 220px;
+            max-height: var(--vacuum-card-mode-panel-max-height);
             opacity: 1;
           }
           100% {
@@ -3146,6 +3188,15 @@ class NodaliaVacuumCardEditor extends HTMLElement {
       .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
 
     if (!input?.dataset?.field) {
+      if (input?.dataset?.modeListField && input.dataset.modeValue !== undefined) {
+        event.stopPropagation();
+        this._setModeVisibility(input.dataset.modeListField, input.dataset.modeValue, input.checked);
+        this._setEditorConfig();
+
+        if (event.type === "change") {
+          this._emitConfig();
+        }
+      }
       return;
     }
 
@@ -3262,6 +3313,144 @@ class NodaliaVacuumCardEditor extends HTMLElement {
           data-field="${escapeHtml(field)}"
           data-value-type="boolean"
           ${checked ? "checked" : ""}
+        />
+        <span class="editor-toggle__switch" aria-hidden="true"></span>
+        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+      </label>
+    `;
+  }
+
+  _getVacuumState() {
+    return this._config?.entity ? this._hass?.states?.[this._config.entity] || null : null;
+  }
+
+  _getEditorSelectOptionsForMode(kind) {
+    const explicitEntity = kind === "mop"
+      ? this._config?.mop_select_entity
+      : this._config?.suction_select_entity;
+    const entityId = explicitEntity || this._guessRelatedSelectEntity(kind);
+    const state = entityId ? this._hass?.states?.[entityId] || null : null;
+
+    return Array.isArray(state?.attributes?.options)
+      ? state.attributes.options.map(item => String(item || "").trim()).filter(Boolean)
+      : [];
+  }
+
+  _guessRelatedSelectEntity(kind) {
+    if (!this._hass?.states || !this._config?.entity) {
+      return "";
+    }
+
+    const objectId = String(this._config.entity).split(".")[1] || "";
+    if (!objectId) {
+      return "";
+    }
+
+    const patterns = kind === "mop"
+      ? ["mop", "water", "water_level", "water_volume", "scrub"]
+      : ["fan_speed", "fan_power", "suction", "cleaning_mode"];
+
+    const candidates = Object.keys(this._hass.states)
+      .filter(entityId => entityId.startsWith("select."))
+      .filter(entityId => entityId.includes(objectId))
+      .filter(entityId => patterns.some(pattern => entityId.includes(pattern)))
+      .sort((left, right) => left.localeCompare(right, "es"));
+
+    return candidates[0] || "";
+  }
+
+  _categorizeModeOption(value) {
+    const key = normalizeTextKey(value);
+
+    if (MOP_MODE_PATTERNS.some(pattern => key.includes(pattern))) {
+      return "mop";
+    }
+
+    if (SUCTION_MODE_PATTERNS.some(pattern => key.includes(pattern))) {
+      return "suction";
+    }
+
+    return "unknown";
+  }
+
+  _isSharedSmartMode(value) {
+    const key = normalizeTextKey(value);
+    return SHARED_SMART_MODE_PATTERNS.some(pattern => key.includes(pattern));
+  }
+
+  _getEditorFanPresets() {
+    const configuredPresets = Array.isArray(this._config?.fan_presets) ? this._config.fan_presets : [];
+    if (configuredPresets.length) {
+      return configuredPresets;
+    }
+
+    const vacuumState = this._getVacuumState();
+    return Array.isArray(vacuumState?.attributes?.fan_speed_list)
+      ? vacuumState.attributes.fan_speed_list.map(item => String(item || "").trim()).filter(Boolean)
+      : [];
+  }
+
+  _getModeVisibilityOptions(kind) {
+    const selectOptions = this._getEditorSelectOptionsForMode(kind);
+    if (selectOptions.length) {
+      return selectOptions;
+    }
+
+    const rawPresets = this._getEditorFanPresets();
+    return rawPresets.filter(option => {
+      const optionKind = this._categorizeModeOption(option);
+      const isSharedSmartMode = this._isSharedSmartMode(option);
+
+      if (kind === "mop") {
+        return optionKind === "mop" || isSharedSmartMode;
+      }
+
+      return optionKind !== "mop" || isSharedSmartMode;
+    });
+  }
+
+  _getHiddenModeList(field) {
+    return Array.isArray(this._config?.[field])
+      ? this._config[field].map(item => String(item || "").trim()).filter(Boolean)
+      : [];
+  }
+
+  _isModeVisible(field, value) {
+    const expectedKey = normalizeTextKey(value);
+    return !this._getHiddenModeList(field).some(item => normalizeTextKey(item) === expectedKey);
+  }
+
+  _setModeVisibility(field, value, visible) {
+    const rawValue = String(value || "").trim();
+    if (!rawValue) {
+      return;
+    }
+
+    const nextValues = this._getHiddenModeList(field).filter(item => normalizeTextKey(item) !== normalizeTextKey(rawValue));
+    if (!visible) {
+      nextValues.push(rawValue);
+    }
+
+    if (nextValues.length) {
+      setByPath(this._config, field, nextValues);
+      return;
+    }
+
+    deleteByPath(this._config, field);
+  }
+
+  _renderModeVisibilityField(field, modeValue, kind) {
+    const translatedLabel = humanizeModeLabel(modeValue, kind);
+    const showRawValue = normalizeTextKey(translatedLabel) !== normalizeTextKey(modeValue);
+    const label = showRawValue ? `${translatedLabel} (${modeValue})` : translatedLabel;
+
+    return `
+      <label class="editor-toggle">
+        <input
+          type="checkbox"
+          data-mode-list-field="${escapeHtml(field)}"
+          data-mode-value="${escapeHtml(modeValue)}"
+          ${this._isModeVisible(field, modeValue) ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
         <span class="editor-toggle__label">${escapeHtml(label)}</span>
@@ -3391,6 +3580,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
     const config = this._config || normalizeConfig({});
     const hapticStyle = config.haptics?.style || "medium";
+    const suctionModeVisibilityOptions = this._getModeVisibilityOptions("suction");
+    const mopModeVisibilityOptions = this._getModeVisibilityOptions("mop");
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -3558,6 +3749,26 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         .editor-control-host > * {
           display: block;
           width: 100%;
+        }
+
+        .editor-subsection {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 14px;
+          display: grid;
+          gap: 10px;
+          padding: 12px;
+        }
+
+        .editor-subsection__title {
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .editor-subsection__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
         }
 
         .editor-toggle {
@@ -3749,6 +3960,32 @@ class NodaliaVacuumCardEditor extends HTMLElement {
             ${this._renderCheckboxField("Botón volver a base", "show_return_to_base", config.show_return_to_base !== false)}
             ${this._renderCheckboxField("Botón parar", "show_stop", config.show_stop !== false)}
             ${this._renderCheckboxField("Botón localizar", "show_locate", config.show_locate !== false)}
+            ${
+              suctionModeVisibilityOptions.length
+                ? `
+                  <div class="editor-subsection editor-field--full">
+                    <div class="editor-subsection__title">Modos de aspirado visibles</div>
+                    <div class="editor-subsection__hint">Oculta las potencias o modos de aspirado que no quieras mostrar en la tarjeta.</div>
+                    <div class="editor-grid editor-grid--stacked">
+                      ${suctionModeVisibilityOptions.map(mode => this._renderModeVisibilityField("hidden_suction_modes", mode, "suction")).join("")}
+                    </div>
+                  </div>
+                `
+                : ""
+            }
+            ${
+              mopModeVisibilityOptions.length
+                ? `
+                  <div class="editor-subsection editor-field--full">
+                    <div class="editor-subsection__title">Modos de mopa visibles</div>
+                    <div class="editor-subsection__hint">Oculta los niveles o modos de fregado que no quieras enseñar.</div>
+                    <div class="editor-grid editor-grid--stacked">
+                      ${mopModeVisibilityOptions.map(mode => this._renderModeVisibilityField("hidden_mop_modes", mode, "mop")).join("")}
+                    </div>
+                  </div>
+                `
+                : ""
+            }
           </div>
         </section>
 
