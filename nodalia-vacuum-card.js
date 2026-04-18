@@ -1871,7 +1871,6 @@ class NodaliaVacuumCard extends HTMLElement {
             fan_speed: button.dataset.value,
           });
         }
-        this._activeModePanel = null;
         this._render();
         break;
       case "select":
@@ -1879,7 +1878,6 @@ class NodaliaVacuumCard extends HTMLElement {
           this._rememberNonSmartModeSelection(button.dataset.modeKind || "", button.dataset.value);
           this._applyLinkedSmartModeSelection(button.dataset.modeKind || "", button.dataset.value, state);
         }
-        this._activeModePanel = null;
         this._render();
         break;
       default:
