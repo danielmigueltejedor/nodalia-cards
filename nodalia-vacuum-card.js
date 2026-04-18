@@ -462,6 +462,13 @@ class NodaliaVacuumCard extends HTMLElement {
       mop: 0,
     };
     this._lastRenderSignature = "";
+    this._lastRenderedModePanelKey = "";
+    this._lastRenderedRoomPanelOpen = false;
+    this._lastModePanelMarkup = "";
+    this._lastRoomPanelMarkup = "";
+    this._animationCleanupTimer = 0;
+    this._modePanelTransition = null;
+    this._roomPanelTransition = null;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -495,6 +502,12 @@ class NodaliaVacuumCard extends HTMLElement {
         this._pendingModeSelectionTimers[kind] = 0;
       }
     });
+    if (this._animationCleanupTimer) {
+      window.clearTimeout(this._animationCleanupTimer);
+      this._animationCleanupTimer = 0;
+    }
+    this._modePanelTransition = null;
+    this._roomPanelTransition = null;
   }
 
   setConfig(config) {
@@ -552,20 +565,57 @@ class NodaliaVacuumCard extends HTMLElement {
     }, Math.max(0, Number(delay) || 0));
   }
 
+  _scheduleAnimationCleanup(delay = 0) {
+    if (this._animationCleanupTimer) {
+      window.clearTimeout(this._animationCleanupTimer);
+      this._animationCleanupTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 5000);
+    if (!safeDelay || typeof window === "undefined") {
+      return;
+    }
+
+    this._animationCleanupTimer = window.setTimeout(() => {
+      this._animationCleanupTimer = 0;
+      this._modePanelTransition = null;
+      this._roomPanelTransition = null;
+      this._render();
+      this._notifyLayoutChange();
+    }, safeDelay);
+  }
+
   _getEstimatedCardSize(state = this._getState()) {
     let size = 3;
-    const activeModeDescriptor = this._getActiveModeDescriptor(state);
+    const now = Date.now();
+    const availableModeDescriptors = this._getVisibleModeDescriptors(state);
+    const activeModeDescriptor = availableModeDescriptors.find(mode => mode.kind === this._activeModePanel)
+      || availableModeDescriptors.find(mode => mode.kind === this._lastRenderedModePanelKey)
+      || null;
     const roomMappings = this._getRoomMappings(state);
+    const modePanelVisible = Boolean(
+      this._activeModePanel
+      || (this._modePanelTransition?.endsAt > now && this._lastRenderedModePanelKey),
+    );
+    const roomPanelVisible = Boolean(
+      (this._roomPanelOpen && roomMappings.length)
+      || (this._roomPanelTransition?.endsAt > now && this._lastRenderedRoomPanelOpen && roomMappings.length),
+    );
 
-    if (activeModeDescriptor?.options?.length) {
+    if (modePanelVisible && activeModeDescriptor?.options?.length) {
       size += Math.min(3, Math.max(1, Math.ceil(activeModeDescriptor.options.length / 4)));
     }
 
-    if (this._roomPanelOpen && roomMappings.length) {
+    if (roomPanelVisible) {
       size += Math.min(3, Math.max(1, Math.ceil(roomMappings.length / 4)));
     }
 
     return size;
+  }
+
+  _getRoomPanelMaxHeight(roomMappings) {
+    const roomCount = Array.isArray(roomMappings) ? roomMappings.length : 0;
+    return clamp(84 + (roomCount * 52), 220, 720);
   }
 
   _getRenderSignature(hass = this._hass) {
@@ -2224,6 +2274,7 @@ class NodaliaVacuumCard extends HTMLElement {
     const chips = [];
     const batteryChipColor = this._getBatteryColor(batteryLevel);
     const modePanelMaxHeight = this._getModePanelMaxHeight(availableModeDescriptors);
+    const roomPanelMaxHeight = this._getRoomPanelMaxHeight(roomMappings);
     const batteryChipMarkup = config.show_battery_chip !== false && batteryLevel !== null
       ? `
         <span class="vacuum-card__chip vacuum-card__chip--battery">
@@ -2256,15 +2307,99 @@ class NodaliaVacuumCard extends HTMLElement {
 
     const activeModeDescriptor = availableModeDescriptors.find(mode => mode.kind === this._activeModePanel) || null;
     const currentModePanelMarkup = activeModeDescriptor ? this._getModePanelMarkup(activeModeDescriptor.kind, state) : "";
-    const modePanelShellMarkup = currentModePanelMarkup
+    const currentModePanelKey = activeModeDescriptor?.kind || "";
+    const currentRoomPanelMarkup = this._roomPanelOpen && roomMappings.length
       ? `
-        <div class="vacuum-card__mode-panel-shell" data-panel-kind="${escapeHtml(activeModeDescriptor.kind)}">
+        <div class="vacuum-card__room-panel">
+          ${roomMappings
+            .map(room => `
+              <button
+                class="vacuum-card__preset ${this._selectedCleaningAreas.includes(room.cleaningAreaId) ? "vacuum-card__preset--active" : ""}"
+                type="button"
+                data-vacuum-action="toggle-room"
+                data-cleaning-area-id="${escapeHtml(room.cleaningAreaId)}"
+              >
+                ${escapeHtml(room.name)}
+              </button>
+            `)
+            .join("")}
+        </div>
+      `
+      : "";
+    const currentRoomPanelOpen = Boolean(currentRoomPanelMarkup);
+    const now = Date.now();
+    let modePanelAnimationState = "";
+    let roomPanelAnimationState = "";
+
+    if (!animations.enabled) {
+      this._modePanelTransition = null;
+      this._roomPanelTransition = null;
+    } else {
+      if (currentModePanelKey !== this._lastRenderedModePanelKey) {
+        if (currentModePanelKey || this._lastRenderedModePanelKey) {
+          modePanelAnimationState = currentModePanelKey ? "entering" : "leaving";
+          this._modePanelTransition = {
+            endsAt: now + animations.panelDuration,
+            state: modePanelAnimationState,
+          };
+        } else {
+          this._modePanelTransition = null;
+        }
+      } else if (this._modePanelTransition?.endsAt > now) {
+        modePanelAnimationState = this._modePanelTransition.state;
+      } else {
+        this._modePanelTransition = null;
+      }
+
+      if (currentRoomPanelOpen !== this._lastRenderedRoomPanelOpen) {
+        if (currentRoomPanelOpen || this._lastRenderedRoomPanelOpen) {
+          roomPanelAnimationState = currentRoomPanelOpen ? "entering" : "leaving";
+          this._roomPanelTransition = {
+            endsAt: now + animations.panelDuration,
+            state: roomPanelAnimationState,
+          };
+        } else {
+          this._roomPanelTransition = null;
+        }
+      } else if (this._roomPanelTransition?.endsAt > now) {
+        roomPanelAnimationState = this._roomPanelTransition.state;
+      } else {
+        this._roomPanelTransition = null;
+      }
+    }
+
+    const modePanelContentMarkup = currentModePanelMarkup
+      || (modePanelAnimationState === "leaving" ? this._lastModePanelMarkup : "");
+    const modePanelShellMarkup = modePanelContentMarkup
+      ? `
+        <div class="vacuum-card__mode-panel-shell ${modePanelAnimationState ? `vacuum-card__mode-panel-shell--${modePanelAnimationState}` : ""}" data-panel-kind="${escapeHtml(currentModePanelKey || "hidden")}">
           <div class="vacuum-card__mode-panel-inner">
-            ${currentModePanelMarkup}
+            ${modePanelContentMarkup}
           </div>
         </div>
       `
       : "";
+    const roomPanelContentMarkup = currentRoomPanelMarkup
+      || (roomPanelAnimationState === "leaving" ? this._lastRoomPanelMarkup : "");
+    const roomPanelShellMarkup = roomPanelContentMarkup
+      ? `
+        <div class="vacuum-card__room-panel-shell ${roomPanelAnimationState ? `vacuum-card__room-panel-shell--${roomPanelAnimationState}` : ""}">
+          <div class="vacuum-card__room-panel-inner">
+            ${roomPanelContentMarkup}
+          </div>
+        </div>
+      `
+      : "";
+    const modePanelAnimationRemaining = modePanelAnimationState && this._modePanelTransition
+      ? Math.max(0, this._modePanelTransition.endsAt - now)
+      : 0;
+    const roomPanelAnimationRemaining = roomPanelAnimationState && this._roomPanelTransition
+      ? Math.max(0, this._roomPanelTransition.endsAt - now)
+      : 0;
+    const shouldCleanupAfterAnimation = Boolean(modePanelAnimationRemaining || roomPanelAnimationRemaining);
+    const cleanupDelay = shouldCleanupAfterAnimation
+      ? Math.max(modePanelAnimationRemaining, roomPanelAnimationRemaining) + 40
+      : 0;
 
     const showCopyBlock = !isCompactLayout || chips.length > 0;
     const cardTapAction = normalizeTextKey(config.tap_action || "default");
@@ -2291,6 +2426,7 @@ class NodaliaVacuumCard extends HTMLElement {
           --vacuum-card-panel-duration: ${animations.enabled ? animations.panelDuration : 0}ms;
           --vacuum-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --vacuum-card-mode-panel-max-height: ${modePanelMaxHeight}px;
+          --vacuum-card-room-panel-max-height: ${roomPanelMaxHeight}px;
           background: ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -2566,14 +2702,12 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card__room-panel {
-          animation: vacuum-card-panel-in var(--vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
           justify-content: center;
           margin-top: -2px;
           min-width: 0;
-          transform-origin: top center;
         }
 
         .vacuum-card__mode-toggle {
@@ -2624,15 +2758,20 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card__mode-panel-shell {
+          backface-visibility: hidden;
           min-width: 0;
           overflow: hidden;
           transform-origin: top center;
+          will-change: max-height, opacity;
           width: 100%;
         }
 
         .vacuum-card__mode-panel-inner {
+          backface-visibility: hidden;
+          display: grid;
           min-width: 0;
-          will-change: transform, opacity;
+          padding: 4px 0 0;
+          will-change: opacity, transform;
         }
 
         .vacuum-card__mode-panel-shell--entering {
@@ -2651,21 +2790,44 @@ class NodaliaVacuumCard extends HTMLElement {
           animation: vacuum-card-mode-panel-content-out var(--vacuum-card-panel-duration) cubic-bezier(0.36, 0, 0.2, 1) both;
         }
 
+        .vacuum-card__room-panel-shell {
+          backface-visibility: hidden;
+          min-width: 0;
+          overflow: hidden;
+          transform-origin: top center;
+          will-change: max-height, opacity;
+          width: 100%;
+        }
+
+        .vacuum-card__room-panel-inner {
+          backface-visibility: hidden;
+          display: grid;
+          min-width: 0;
+          padding: 4px 0 0;
+          will-change: opacity, transform;
+        }
+
+        .vacuum-card__room-panel-shell--entering {
+          animation: vacuum-card-room-panel-shell-in var(--vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        .vacuum-card__room-panel-shell--entering .vacuum-card__room-panel-inner {
+          animation: vacuum-card-room-panel-content-in var(--vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        .vacuum-card__room-panel-shell--leaving {
+          animation: vacuum-card-room-panel-shell-out var(--vacuum-card-panel-duration) cubic-bezier(0.36, 0, 0.2, 1) both;
+          pointer-events: none;
+        }
+
+        .vacuum-card__room-panel-shell--leaving .vacuum-card__room-panel-inner {
+          animation: vacuum-card-room-panel-content-out var(--vacuum-card-panel-duration) cubic-bezier(0.36, 0, 0.2, 1) both;
+        }
+
         @keyframes vacuum-card-button-bounce {
           0% { transform: scale(1); }
           38% { transform: scale(1.08); }
           100% { transform: scale(1); }
-        }
-
-        @keyframes vacuum-card-panel-in {
-          0% {
-            opacity: 0;
-            transform: translateY(-8px) scaleY(0.92);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scaleY(1);
-          }
         }
 
         @keyframes vacuum-card-mode-panel-shell-in {
@@ -2702,6 +2864,50 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         @keyframes vacuum-card-mode-panel-content-out {
+          0% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-6px) scaleY(0.96);
+          }
+        }
+
+        @keyframes vacuum-card-room-panel-shell-in {
+          0% {
+            max-height: 0;
+            opacity: 0;
+          }
+          100% {
+            max-height: var(--vacuum-card-room-panel-max-height);
+            opacity: 1;
+          }
+        }
+
+        @keyframes vacuum-card-room-panel-shell-out {
+          0% {
+            max-height: var(--vacuum-card-room-panel-max-height);
+            opacity: 1;
+          }
+          100% {
+            max-height: 0;
+            opacity: 0;
+          }
+        }
+
+        @keyframes vacuum-card-room-panel-content-in {
+          0% {
+            opacity: 0;
+            transform: translateY(-8px) scaleY(0.96);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+        }
+
+        @keyframes vacuum-card-room-panel-content-out {
           0% {
             opacity: 1;
             transform: translateY(0) scaleY(1);
@@ -2823,30 +3029,28 @@ class NodaliaVacuumCard extends HTMLElement {
 
           ${modePanelShellMarkup}
 
-          ${
-            this._roomPanelOpen && roomMappings.length
-              ? `
-                <div class="vacuum-card__room-panel">
-                  ${roomMappings
-                    .map(room => `
-                      <button
-                        class="vacuum-card__preset ${this._selectedCleaningAreas.includes(room.cleaningAreaId) ? "vacuum-card__preset--active" : ""}"
-                        type="button"
-                        data-vacuum-action="toggle-room"
-                        data-cleaning-area-id="${escapeHtml(room.cleaningAreaId)}"
-                      >
-                        ${escapeHtml(room.name)}
-                      </button>
-                    `)
-                    .join("")}
-                </div>
-              `
-              : ""
-          }
+          ${roomPanelShellMarkup}
 
         </div>
       </ha-card>
     `;
+
+    if (currentModePanelMarkup && modePanelAnimationState !== "leaving") {
+      this._lastModePanelMarkup = currentModePanelMarkup;
+    }
+    if (currentRoomPanelMarkup && roomPanelAnimationState !== "leaving") {
+      this._lastRoomPanelMarkup = currentRoomPanelMarkup;
+    }
+
+    this._lastRenderedModePanelKey = currentModePanelKey;
+    this._lastRenderedRoomPanelOpen = currentRoomPanelOpen;
+
+    if (shouldCleanupAfterAnimation) {
+      this._scheduleAnimationCleanup(cleanupDelay);
+    } else if (this._animationCleanupTimer) {
+      window.clearTimeout(this._animationCleanupTimer);
+      this._animationCleanupTimer = 0;
+    }
   }
 }
 
