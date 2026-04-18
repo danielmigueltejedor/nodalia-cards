@@ -1590,133 +1590,10 @@ class NodaliaVacuumCard extends HTMLElement {
   _setVisibleModePanelKind(panelKind, state = this._getState()) {
     const nextPanelKind = this._getActiveModeDescriptor(state, panelKind)?.kind || "";
     this._activeModePanel = nextPanelKind || null;
-    this._setModeToggleButtonsState(nextPanelKind);
-
-    const controlsInner = this.shadowRoot?.querySelector(".vacuum-card__controls-inner");
     const animations = this._getAnimationSettings();
-    const panelMarkup = nextPanelKind ? this._getModePanelMarkup(nextPanelKind, state) : "";
-
-    if (!controlsInner || !(controlsInner instanceof HTMLElement) || !state) {
-      this._render();
-      this._notifyLayoutChange();
-      return;
-    }
-
-    const existingPanel = controlsInner.querySelector(".vacuum-card__mode-panel-shell");
-    if (!animations.enabled) {
-      if (existingPanel instanceof HTMLElement) {
-        existingPanel.remove();
-      }
-
-      if (panelMarkup) {
-        const panelNode = this._createMarkupNode(`
-          <div class="vacuum-card__mode-panel-shell" data-panel-kind="${nextPanelKind}">
-            <div class="vacuum-card__mode-panel-inner">
-              ${panelMarkup}
-            </div>
-          </div>
-        `);
-
-        if (panelNode instanceof HTMLElement) {
-          controlsInner.appendChild(panelNode);
-          this._notifyLayoutChange();
-          return;
-        }
-      }
-
-      this._render();
-      this._notifyLayoutChange();
-      return;
-    }
-
-    const removePanel = (panel, onDone = null) => {
-      if (!(panel instanceof HTMLElement)) {
-        if (typeof onDone === "function") {
-          onDone();
-        }
-        return;
-      }
-
-      panel.classList.remove("vacuum-card__mode-panel-shell--entering");
-      panel.classList.add("vacuum-card__mode-panel-shell--leaving");
-
-      const finalizeRemoval = () => {
-        if (panel.isConnected) {
-          panel.remove();
-        }
-        this._notifyLayoutChange();
-        if (typeof onDone === "function") {
-          onDone();
-        }
-      };
-
-      panel.addEventListener("animationend", finalizeRemoval, { once: true });
-      window.setTimeout(finalizeRemoval, animations.panelDuration + 80);
-    };
-
-    const appendPanel = () => {
-      if (!panelMarkup) {
-        return;
-      }
-
-      const panelNode = this._createMarkupNode(`
-        <div class="vacuum-card__mode-panel-shell vacuum-card__mode-panel-shell--entering" data-panel-kind="${nextPanelKind}">
-          <div class="vacuum-card__mode-panel-inner">
-            ${panelMarkup}
-          </div>
-        </div>
-      `);
-
-      if (!(panelNode instanceof HTMLElement)) {
-        this._render();
-        return;
-      }
-
-      controlsInner.appendChild(panelNode);
-      this._notifyLayoutChange();
-      this._scheduleLayoutRefresh(animations.panelDuration + 120);
-      window.setTimeout(() => {
-        if (panelNode.isConnected) {
-          panelNode.classList.remove("vacuum-card__mode-panel-shell--entering");
-        }
-      }, animations.panelDuration + 80);
-    };
-
-    if (!nextPanelKind) {
-      if (existingPanel instanceof HTMLElement) {
-        removePanel(existingPanel);
-      }
-      return;
-    }
-
-    if (!panelMarkup) {
-      if (existingPanel instanceof HTMLElement) {
-        removePanel(existingPanel);
-      }
-      return;
-    }
-
-    const existingPanelKind = existingPanel instanceof HTMLElement ? existingPanel.dataset.panelKind || "" : "";
-    if (existingPanel instanceof HTMLElement && existingPanelKind === nextPanelKind) {
-      if (existingPanel.classList.contains("vacuum-card__mode-panel-shell--leaving")) {
-        existingPanel.remove();
-      } else {
-        const panelInner = existingPanel.querySelector(".vacuum-card__mode-panel-inner");
-        if (panelInner instanceof HTMLElement) {
-          panelInner.innerHTML = panelMarkup;
-          this._notifyLayoutChange();
-          this._scheduleLayoutRefresh(animations.panelDuration + 120);
-        }
-        return;
-      }
-    }
-
-    if (existingPanel instanceof HTMLElement) {
-      removePanel(existingPanel, appendPanel);
-      return;
-    }
-
-    appendPanel();
+    this._render();
+    this._notifyLayoutChange();
+    this._scheduleLayoutRefresh(animations.panelDuration + 120);
   }
 
   _isCleaning(state) {
@@ -2938,12 +2815,13 @@ class NodaliaVacuumCard extends HTMLElement {
                         `)
                         .join("")}
                     </div>
-                    ${modePanelShellMarkup}
                   </div>
                 </div>
               `
               : ""
           }
+
+          ${modePanelShellMarkup}
 
           ${
             this._roomPanelOpen && roomMappings.length
