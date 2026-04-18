@@ -2523,10 +2523,9 @@ class NodaliaVacuumCard extends HTMLElement {
           will-change: transform;
         }
 
-        .vacuum-card__icon-button.is-pressing,
-        .vacuum-card__control.is-pressing,
-        .vacuum-card__preset.is-pressing {
-          animation: vacuum-card-button-bounce var(--vacuum-card-button-bounce-duration) cubic-bezier(0.22, 0.84, 0.26, 1);
+        :is(.vacuum-card__icon-button, .vacuum-card__control, .vacuum-card__preset):active:not(:disabled),
+        :is(.vacuum-card__icon-button, .vacuum-card__control, .vacuum-card__preset).is-pressing:not(:disabled) {
+          animation: vacuum-card-button-bounce var(--vacuum-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
         .vacuum-card__header {
@@ -2761,7 +2760,7 @@ class NodaliaVacuumCard extends HTMLElement {
           flex-wrap: wrap;
           gap: 8px;
           justify-content: center;
-          margin-top: -2px;
+          margin-top: 8px;
           min-width: 0;
         }
 
@@ -2809,7 +2808,7 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card__mode-panel {
-          margin-top: -2px;
+          margin-top: 8px;
         }
 
         .vacuum-card__panels {
@@ -2830,7 +2829,7 @@ class NodaliaVacuumCard extends HTMLElement {
           backface-visibility: hidden;
           display: grid;
           min-width: 0;
-          padding: 4px 0 0;
+          padding: 4px;
           will-change: opacity, transform;
         }
 
