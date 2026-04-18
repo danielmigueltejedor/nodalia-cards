@@ -520,7 +520,7 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 3;
+    return this._getEstimatedCardSize();
   }
 
   getGridOptions() {
@@ -530,6 +530,42 @@ class NodaliaVacuumCard extends HTMLElement {
       min_rows: 2,
       min_columns: 2,
     };
+  }
+
+  _notifyLayoutChange() {
+    fireEvent(this, "iron-resize", {});
+
+    if (typeof window !== "undefined") {
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new Event("resize"));
+      });
+    }
+  }
+
+  _scheduleLayoutRefresh(delay = 0) {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.setTimeout(() => {
+      this._notifyLayoutChange();
+    }, Math.max(0, Number(delay) || 0));
+  }
+
+  _getEstimatedCardSize(state = this._getState()) {
+    let size = 3;
+    const activeModeDescriptor = this._getActiveModeDescriptor(state);
+    const roomMappings = this._getRoomMappings(state);
+
+    if (activeModeDescriptor?.options?.length) {
+      size += Math.min(3, Math.max(1, Math.ceil(activeModeDescriptor.options.length / 4)));
+    }
+
+    if (this._roomPanelOpen && roomMappings.length) {
+      size += Math.min(3, Math.max(1, Math.ceil(roomMappings.length / 4)));
+    }
+
+    return size;
   }
 
   _getRenderSignature(hass = this._hass) {
@@ -1562,6 +1598,7 @@ class NodaliaVacuumCard extends HTMLElement {
 
     if (!controlsInner || !(controlsInner instanceof HTMLElement) || !state) {
       this._render();
+      this._notifyLayoutChange();
       return;
     }
 
@@ -1582,11 +1619,13 @@ class NodaliaVacuumCard extends HTMLElement {
 
         if (panelNode instanceof HTMLElement) {
           controlsInner.appendChild(panelNode);
+          this._notifyLayoutChange();
           return;
         }
       }
 
       this._render();
+      this._notifyLayoutChange();
       return;
     }
 
@@ -1605,6 +1644,7 @@ class NodaliaVacuumCard extends HTMLElement {
         if (panel.isConnected) {
           panel.remove();
         }
+        this._notifyLayoutChange();
         if (typeof onDone === "function") {
           onDone();
         }
@@ -1633,6 +1673,8 @@ class NodaliaVacuumCard extends HTMLElement {
       }
 
       controlsInner.appendChild(panelNode);
+      this._notifyLayoutChange();
+      this._scheduleLayoutRefresh(animations.panelDuration + 120);
       window.setTimeout(() => {
         if (panelNode.isConnected) {
           panelNode.classList.remove("vacuum-card__mode-panel-shell--entering");
@@ -1662,6 +1704,8 @@ class NodaliaVacuumCard extends HTMLElement {
         const panelInner = existingPanel.querySelector(".vacuum-card__mode-panel-inner");
         if (panelInner instanceof HTMLElement) {
           panelInner.innerHTML = panelMarkup;
+          this._notifyLayoutChange();
+          this._scheduleLayoutRefresh(animations.panelDuration + 120);
         }
         return;
       }
@@ -2204,6 +2248,8 @@ class NodaliaVacuumCard extends HTMLElement {
         this._setModeToggleButtonsState("");
         this._roomPanelOpen = !this._roomPanelOpen;
         this._render();
+        this._notifyLayoutChange();
+        this._scheduleLayoutRefresh(this._getAnimationSettings().panelDuration + 120);
         break;
       case "toggle-room":
         if (button.dataset.cleaningAreaId) {
