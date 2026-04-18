@@ -2814,6 +2814,27 @@ class NodaliaLightCard extends HTMLElement {
           }
         }
 
+        ${animations.enabled ? "" : `
+        .light-card,
+        .light-card::after,
+        .light-card__controls-shell,
+        .light-card__controls-inner,
+        .light-card__mode-panel,
+        .light-card__mode-panel-inner,
+        .light-card__mode-actions,
+        .light-card__active-chip-inner,
+        .light-card__icon,
+        .light-card__mode-button,
+        .light-card__brightness-preset,
+        .light-card__temperature-preset,
+        .light-card__color-preset,
+        .light-card__slider-thumb,
+        .light-card * {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
+
         @media (prefers-reduced-motion: reduce) {
           .light-card,
           .light-card::after,

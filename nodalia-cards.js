@@ -4880,6 +4880,12 @@ const DEFAULT_CONFIG = {
     style: "medium",
     fallback_vibrate: false,
   },
+  animations: {
+    enabled: true,
+    panel_duration: 700,
+    browser_duration: 760,
+    button_bounce_duration: 320,
+  },
   layout: {
     fixed: false,
     reserve_space: false,
@@ -5250,6 +5256,22 @@ function normalizeTextKey(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function appendQueryParam(url, key, value) {
+  const rawUrl = String(url || "").trim();
+  if (!rawUrl || value === null || value === undefined || value === "") {
+    return rawUrl;
+  }
+
+  const encodedKey = encodeURIComponent(String(key));
+  const encodedValue = encodeURIComponent(String(value));
+  const existingPattern = new RegExp(`([?&])${encodedKey}=[^&]*`);
+  if (existingPattern.test(rawUrl)) {
+    return rawUrl.replace(existingPattern, `$1${encodedKey}=${encodedValue}`);
+  }
+
+  return `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}`;
+}
+
 function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
@@ -5573,6 +5595,78 @@ class NodaliaMediaPlayer extends HTMLElement {
     navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
   }
 
+  _getAnimationSettings() {
+    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+    return {
+      enabled: configuredAnimations.enabled !== false,
+      panelDuration: clamp(
+        Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration,
+        120,
+        2400,
+      ),
+      browserDuration: clamp(
+        Number(configuredAnimations.browser_duration) || DEFAULT_CONFIG.animations.browser_duration,
+        120,
+        2400,
+      ),
+      buttonBounceDuration: clamp(
+        Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+        120,
+        1200,
+      ),
+    };
+  }
+
+  _triggerButtonBounce(button) {
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+
+    button.classList.remove("is-pressing");
+    button.getBoundingClientRect();
+    button.classList.add("is-pressing");
+
+    window.setTimeout(() => {
+      button.classList.remove("is-pressing");
+    }, animations.buttonBounceDuration + 40);
+  }
+
+  _resolveMediaUrl(value, options = {}) {
+    const raw = String(value || "").trim();
+    if (!raw) {
+      return "";
+    }
+
+    const isAbsolute = /^(?:https?:)?\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:");
+    const baseUrl = isAbsolute
+      ? raw
+      : typeof this._hass?.hassUrl === "function"
+        ? this._hass.hassUrl(raw.startsWith("/") ? raw : `/${raw.replace(/^\.?\//, "")}`)
+        : raw;
+
+    return appendQueryParam(baseUrl, "nodalia_ts", options.cacheToken);
+  }
+
+  _getArtworkCacheToken(state) {
+    if (!state) {
+      return "";
+    }
+
+    return [
+      String(state.last_updated || state.last_changed || ""),
+      String(state.attributes?.entity_picture || state.attributes?.entity_picture_local || ""),
+      String(state.attributes?.media_title || ""),
+      String(state.attributes?.media_artist || ""),
+      String(state.attributes?.media_album_name || ""),
+      String(state.attributes?.app_name || ""),
+    ].filter(Boolean).join("|");
+  }
+
   _getConfiguredPlayers() {
     return Array.isArray(this._config?.players) ? this._config.players : [];
   }
@@ -5764,14 +5858,23 @@ class NodaliaMediaPlayer extends HTMLElement {
 
   _getPlayerArtwork(player, state) {
     if (player.image) {
-      return player.image;
+      return this._resolveMediaUrl(player.image);
     }
 
     if (!this._shouldShowTvArtwork(player, state)) {
       return null;
     }
 
-    return state.attributes.entity_picture || null;
+    const artwork =
+      state.attributes.entity_picture_local ||
+      state.attributes.entity_picture ||
+      "";
+
+    return artwork
+      ? this._resolveMediaUrl(artwork, {
+          cacheToken: this._getArtworkCacheToken(state),
+        })
+      : null;
   }
 
   _getPlayerStateLabel(stateValue) {
@@ -7082,6 +7185,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       event.preventDefault();
       event.stopPropagation();
       this._triggerHaptic();
+      this._triggerButtonBounce(mediaControlButton);
       this._handleMediaControl(mediaControlButton.dataset.mediaControl, mediaControlButton.dataset.entity, {
         path: mediaControlButton.dataset.mediaPath,
         source: mediaControlButton.dataset.mediaSource,
@@ -7109,6 +7213,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       event.preventDefault();
       event.stopPropagation();
       this._triggerHaptic();
+      this._triggerButtonBounce(mediaDotButton);
       this._activePlayerIndex = Number(mediaDotButton.dataset.mediaIndex);
       this._render();
       return;
@@ -7121,6 +7226,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     if (mediaBrowserCloseButton) {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerButtonBounce(mediaBrowserCloseButton);
       this._closeMediaBrowser();
       return;
     }
@@ -7132,6 +7238,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     if (mediaBrowserBackButton) {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerButtonBounce(mediaBrowserBackButton);
       this._goBackMediaBrowser();
       return;
     }
@@ -7144,6 +7251,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       event.preventDefault();
       event.stopPropagation();
       this._triggerHaptic();
+      this._triggerButtonBounce(mediaBrowserActionButton);
 
       const action = mediaBrowserActionButton.dataset.mediaBrowserAction;
       const mediaContentType = mediaBrowserActionButton.dataset.mediaContentType || "";
@@ -7214,6 +7322,9 @@ class NodaliaMediaPlayer extends HTMLElement {
                   const defaultAction = canExpand ? "browse" : canPlay ? "play" : "";
                   const itemIcon = this._getMediaBrowserIcon(item);
                   const itemTitle = this._getMediaBrowserDisplayTitle(item);
+                  const itemThumbnail = this._resolveMediaUrl(item.thumbnail || item.thumbnail_url || "", {
+                    cacheToken: item.media_content_id || itemTitle,
+                  });
 
                   return `
                     <div class="media-browser__item">
@@ -7226,8 +7337,8 @@ class NodaliaMediaPlayer extends HTMLElement {
                       >
                         <span class="media-browser__item-artwork">
                           ${
-                            item.thumbnail
-                              ? `<img src="${escapeHtml(item.thumbnail)}" alt="${escapeHtml(itemTitle)}" />`
+                            itemThumbnail
+                              ? `<img src="${escapeHtml(itemThumbnail)}" alt="${escapeHtml(itemTitle)}" />`
                               : `<ha-icon icon="${escapeHtml(itemIcon)}"></ha-icon>`
                           }
                         </span>
@@ -7307,6 +7418,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     const artwork = this._getPlayerArtwork(player, state);
+    const safeArtwork = artwork ? escapeHtml(artwork) : "";
     const deviceType = this._getPlayerDeviceType(player, state);
     const isTvPlayer = deviceType === "tv";
     const playerLabel = this._getPlayerLabel(player, state);
@@ -7317,6 +7429,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     const subtitle = isTvPlayer
       ? ""
       : this._getPlayerSubtitle(player, state);
+    const artworkAlt = escapeHtml(title || playerLabel);
     const subtitleMarkup = subtitle && normalizeTextKey(subtitle) !== normalizeTextKey(title)
       ? `<div class="media-player__subtitle">${escapeHtml(subtitle)}</div>`
       : "";
@@ -7628,7 +7741,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         >
           ${
             hasAlbumBackground
-              ? `<div class="media-player__album-bg" style="background-image:url('${escapeHtml(artwork)}');"></div>`
+              ? `<div class="media-player__album-bg" style="background-image:url('${safeArtwork}');"></div>`
               : ""
           }
           <div class="media-player__content media-player__content--idle">
@@ -7645,7 +7758,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                     >
                       ${
                         artwork
-                          ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
+                          ? `<img src="${safeArtwork}" alt="${artworkAlt}" />`
                           : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                       }
                       ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
@@ -7655,7 +7768,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                     <div class="media-player__artwork media-player__artwork--idle">
                       ${
                         artwork
-                          ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
+                          ? `<img src="${safeArtwork}" alt="${artworkAlt}" />`
                           : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                       }
                       ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
@@ -7687,7 +7800,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       >
         ${
           hasAlbumBackground
-            ? `<div class="media-player__album-bg" style="background-image:url('${escapeHtml(artwork)}');"></div>`
+            ? `<div class="media-player__album-bg" style="background-image:url('${safeArtwork}');"></div>`
             : ""
         }
         ${
@@ -7713,7 +7826,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                   >
                     ${
                       artwork
-                        ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
+                        ? `<img src="${safeArtwork}" alt="${artworkAlt}" />`
                         : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                     }
                     ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
@@ -7723,7 +7836,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                   <div class="media-player__artwork">
                     ${
                       artwork
-                        ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
+                        ? `<img src="${safeArtwork}" alt="${artworkAlt}" />`
                         : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                     }
                     ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
@@ -7838,11 +7951,15 @@ class NodaliaMediaPlayer extends HTMLElement {
     const config = this._config;
     const playerStyles = config.styles.player;
     const browserStyles = config.styles.browser;
+    const animations = this._getAnimationSettings();
     const tvArtworkSize = playerStyles.tv_artwork_size || playerStyles.artwork_size;
 
     this.shadowRoot.innerHTML = `
       <style>
         :host {
+          --media-player-panel-duration: ${animations.enabled ? animations.panelDuration : 0}ms;
+          --media-player-browser-duration: ${animations.enabled ? animations.browserDuration : 0}ms;
+          --media-player-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           display: block;
           width: 100%;
         }
@@ -8533,8 +8650,10 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__tv-source-panel {
+          animation: media-player-panel-in var(--media-player-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           display: flex;
           justify-content: center;
+          transform-origin: top center;
           width: 100%;
         }
 
@@ -8570,6 +8689,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__tv-volume-wrap {
           --media-player-slider-input-height: max(44px, var(--media-player-slider-thumb-size));
           --media-player-slider-thumb-size: calc(${playerStyles.slider_thumb_size} + 12px);
+          animation: media-player-panel-in var(--media-player-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           align-items: center;
           background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.06);
@@ -8577,6 +8697,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           display: grid;
           min-height: ${playerStyles.slider_wrap_height};
           padding: 0 16px;
+          transform-origin: top center;
           width: min(100%, 320px);
         }
 
@@ -8758,6 +8879,30 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__control,
+        .media-player__volume-button,
+        .media-player__source-button,
+        .media-player__dot,
+        .media-browser__header-button,
+        .media-browser__item-play,
+        .media-browser__item-main {
+          transform: translateZ(0);
+          transform-origin: center;
+          will-change: transform;
+        }
+
+        :is(
+          .media-player__control,
+          .media-player__volume-button,
+          .media-player__source-button,
+          .media-player__dot,
+          .media-browser__header-button,
+          .media-browser__item-play,
+          .media-browser__item-main
+        ).is-pressing {
+          animation: media-player-button-bounce var(--media-player-button-bounce-duration) cubic-bezier(0.22, 0.84, 0.26, 1);
+        }
+
+        .media-player__control,
         .media-player__volume-button {
           align-items: center;
           appearance: none;
@@ -8868,6 +9013,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-browser-backdrop {
+          animation: media-player-browser-backdrop-in var(--media-player-browser-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           background: ${browserStyles.backdrop};
           inset: 0;
           position: fixed;
@@ -8875,6 +9021,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-browser-panel {
+          animation: media-player-browser-panel-in var(--media-player-browser-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           background: ${browserStyles.background};
           border: ${browserStyles.border};
           border-radius: ${browserStyles.border_radius};
@@ -9034,6 +9181,61 @@ class NodaliaMediaPlayer extends HTMLElement {
           text-align: center;
         }
 
+        @keyframes media-player-button-bounce {
+          0% { transform: scale(1); }
+          40% { transform: scale(1.08); }
+          100% { transform: scale(1); }
+        }
+
+        @keyframes media-player-panel-in {
+          0% {
+            opacity: 0;
+            transform: translateY(-8px) scaleY(0.94);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+        }
+
+        @keyframes media-player-browser-backdrop-in {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+
+        @keyframes media-player-browser-panel-in {
+          0% {
+            opacity: 0;
+            transform: translateY(14px) scale(0.98);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        ${animations.enabled ? "" : `
+        .media-player-card,
+        .media-player-card::before,
+        .media-player-card::after,
+        .media-player__tv-source-panel,
+        .media-player__tv-volume-wrap,
+        .media-browser-backdrop,
+        .media-browser-panel,
+        .media-player__control,
+        .media-player__volume-button,
+        .media-player__source-button,
+        .media-player__dot,
+        .media-browser__header-button,
+        .media-browser__item-play,
+        .media-browser__item-main,
+        .media-player-card *,
+        .media-browser-panel * {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
+
         @media (max-width: 520px) {
           .media-player__footer {
             justify-content: center;
@@ -9079,6 +9281,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     this._hass = null;
     this._entityOptionsSignature = "";
     this._showStyleSection = false;
+    this._showAnimationSection = false;
     this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
@@ -9385,6 +9588,12 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
       if (toggleButton.dataset.editorToggle === "styles") {
         this._showStyleSection = !this._showStyleSection;
+        this._render();
+        return;
+      }
+
+      if (toggleButton.dataset.editorToggle === "animations") {
+        this._showAnimationSection = !this._showAnimationSection;
         this._render();
       }
 
@@ -10283,6 +10492,42 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
               ],
             )}
           </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Animaciones</div>
+            <div class="editor-section__hint">Ajusta la apertura de paneles, navegador y el rebote de los botones.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="animations"
+                aria-expanded="${this._showAnimationSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showAnimationSection ? "Ocultar ajustes de animación" : "Mostrar ajustes de animación"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showAnimationSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderTextField("Paneles TV (ms)", "animations.panel_duration", config.animations.panel_duration, {
+                    type: "number",
+                  })}
+                  ${this._renderTextField("Navegador de medios (ms)", "animations.browser_duration", config.animations.browser_duration, {
+                    type: "number",
+                  })}
+                  ${this._renderTextField("Rebote de botones (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                    type: "number",
+                  })}
+                </div>
+              `
+              : ""
+          }
         </section>
 
         <section class="editor-section">
@@ -13180,6 +13425,27 @@ class NodaliaLightCard extends HTMLElement {
           }
         }
 
+        ${animations.enabled ? "" : `
+        .light-card,
+        .light-card::after,
+        .light-card__controls-shell,
+        .light-card__controls-inner,
+        .light-card__mode-panel,
+        .light-card__mode-panel-inner,
+        .light-card__mode-actions,
+        .light-card__active-chip-inner,
+        .light-card__icon,
+        .light-card__mode-button,
+        .light-card__brightness-preset,
+        .light-card__temperature-preset,
+        .light-card__color-preset,
+        .light-card__slider-thumb,
+        .light-card * {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
+
         @media (prefers-reduced-motion: reduce) {
           .light-card,
           .light-card::after,
@@ -15124,6 +15390,30 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     const existingPanel = controlsInner.querySelector(".fan-card__preset-panel-shell");
+    if (!animations.enabled) {
+      if (existingPanel instanceof HTMLElement) {
+        existingPanel.remove();
+      }
+
+      if (panelMarkup) {
+        const panelNode = this._createMarkupNode(`
+          <div class="fan-card__preset-panel-shell" data-panel-key="preset">
+            <div class="fan-card__preset-panel-inner">
+              ${panelMarkup}
+            </div>
+          </div>
+        `);
+
+        if (panelNode instanceof HTMLElement) {
+          controlsInner.appendChild(panelNode);
+          return;
+        }
+      }
+
+      this._render();
+      return;
+    }
+
     const removePanel = panel => {
       if (!(panel instanceof HTMLElement)) {
         return;
@@ -16486,6 +16776,23 @@ class NodaliaFanCard extends HTMLElement {
             transform: scale(1);
           }
         }
+
+        ${animations.enabled ? "" : `
+        .fan-card,
+        .fan-card::after,
+        .fan-card__controls-shell,
+        .fan-card__controls-inner,
+        .fan-card__preset-panel-shell,
+        .fan-card__preset-panel-inner,
+        .fan-card__icon,
+        .fan-card__slider-mode-button,
+        .fan-card__preset,
+        .fan-card__control,
+        .fan-card * {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
 
         .fan-card--compact:not(.fan-card--with-copy) .fan-card__hero {
           justify-items: center;
@@ -18546,6 +18853,30 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
 
     const existingPanel = controlsInner.querySelector(".humidifier-card__panel-shell");
+    if (!animations.enabled) {
+      if (existingPanel instanceof HTMLElement) {
+        existingPanel.remove();
+      }
+
+      if (panelMarkup) {
+        const panelNode = this._createMarkupNode(`
+          <div class="humidifier-card__panel-shell" data-panel-key="${nextPanelKey}">
+            <div class="humidifier-card__panel-inner">
+              ${panelMarkup}
+            </div>
+          </div>
+        `);
+
+        if (panelNode instanceof HTMLElement) {
+          controlsInner.appendChild(panelNode);
+          return;
+        }
+      }
+
+      this._render();
+      return;
+    }
+
     const removePanel = (panel, onDone = null) => {
       if (!(panel instanceof HTMLElement)) {
         if (typeof onDone === "function") {
@@ -19982,6 +20313,22 @@ class NodaliaHumidifierCard extends HTMLElement {
             transform: scale(1);
           }
         }
+
+        ${animations.enabled ? "" : `
+        .humidifier-card,
+        .humidifier-card::after,
+        .humidifier-card__controls-shell,
+        .humidifier-card__controls-inner,
+        .humidifier-card__panel-shell,
+        .humidifier-card__panel-inner,
+        .humidifier-card__icon,
+        .humidifier-card__option,
+        .humidifier-card__control,
+        .humidifier-card * {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
 
         .humidifier-card--compact:not(.humidifier-card--with-copy) .humidifier-card__hero {
           justify-items: center;
@@ -49083,6 +49430,11 @@ const DEFAULT_CONFIG = {
     style: "medium",
     fallback_vibrate: false,
   },
+  animations: {
+    enabled: true,
+    panel_duration: 800,
+    button_bounce_duration: 320,
+  },
   styles: {
     card: {
       background: "var(--ha-card-background)",
@@ -49567,6 +49919,42 @@ class NodaliaVacuumCard extends HTMLElement {
     navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
   }
 
+  _getAnimationSettings() {
+    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+    return {
+      enabled: configuredAnimations.enabled !== false,
+      panelDuration: clamp(
+        Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration,
+        120,
+        2400,
+      ),
+      buttonBounceDuration: clamp(
+        Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+        120,
+        1200,
+      ),
+    };
+  }
+
+  _triggerButtonBounce(button) {
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+
+    button.classList.remove("is-pressing");
+    button.getBoundingClientRect();
+    button.classList.add("is-pressing");
+
+    window.setTimeout(() => {
+      button.classList.remove("is-pressing");
+    }, animations.buttonBounceDuration + 40);
+  }
+
   _openMoreInfo(entityId = this._config?.entity) {
     if (!entityId) {
       return;
@@ -49853,6 +50241,10 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _getStateLabel(state) {
+    if (this._isGoingToWashMops(state)) {
+      return "Yendo a lavar mopas";
+    }
+
     if (this._isWashingMops(state)) {
       return "Lavando mopas";
     }
@@ -49876,10 +50268,19 @@ class NodaliaVacuumCard extends HTMLElement {
       case "segment_cleaning":
       case "room_cleaning":
       case "zone_cleaning":
+      case "segment_clean":
+      case "room_clean":
+      case "zone_clean":
       case "clean_area":
       case "vacuuming":
       case "limpiando":
         return "Limpiando";
+      case "going_to_wash_the_mop":
+      case "going_to_wash_mop":
+      case "go_to_wash_mop":
+      case "go_wash_mop":
+      case "returning_to_wash_mop":
+        return "Yendo a lavar mopas";
       case "paused":
       case "pause":
       case "pausado":
@@ -49907,8 +50308,50 @@ class NodaliaVacuumCard extends HTMLElement {
       case "unknown":
         return "Desconocido";
       default:
-        return this._getReportedStateValue(state) || "Sin estado";
+        return this._humanizeStateLabel(this._getReportedStateValue(state)) || "Sin estado";
     }
+  }
+
+  _humanizeStateLabel(value) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+
+    const normalized = normalizeTextKey(raw);
+    if (!normalized) {
+      return raw;
+    }
+
+    if (normalized.includes("go") && normalized.includes("wash") && normalized.includes("mop")) {
+      return "Yendo a lavar mopas";
+    }
+
+    if (normalized.includes("wash") && normalized.includes("mop")) {
+      return "Lavando mopas";
+    }
+
+    if (normalized.includes("dry") && normalized.includes("mop")) {
+      return "Secando mopas";
+    }
+
+    if (normalized.includes("empty")) {
+      return "Autovaciando";
+    }
+
+    if (normalized.includes("zone") && normalized.includes("clean")) {
+      return "Limpiando zona";
+    }
+
+    if ((normalized.includes("room") || normalized.includes("segment")) && normalized.includes("clean")) {
+      return "Limpiando habitación";
+    }
+
+    return raw
+      .replace(/[_-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\b\w/g, match => match.toUpperCase());
   }
 
   _getActivityTextBlob(state) {
@@ -50304,12 +50747,28 @@ class NodaliaVacuumCard extends HTMLElement {
     return this._matchesActivity(state, [
       "cleaning",
       "segment_cleaning",
+      "segment_clean",
       "room_cleaning",
+      "room_clean",
       "zone_cleaning",
+      "zone_clean",
       "clean_area",
+      "clean_zone",
+      "clean_room",
       "spot_cleaning",
       "vacuuming",
       "limpiando",
+    ]);
+  }
+
+  _isGoingToWashMops(state) {
+    return this._matchesActivity(state, [
+      "going_to_wash_the_mop",
+      "going_to_wash_mop",
+      "go_to_wash_mop",
+      "go_wash_mop",
+      "returning_to_wash_mop",
+      "heading_to_wash_mop",
     ]);
   }
 
@@ -50328,6 +50787,10 @@ class NodaliaVacuumCard extends HTMLElement {
       "lavado_mopa",
       "washing_pads",
       "rinse_mop",
+      "wash_the_mop",
+      "washing_the_mop",
+      "mop_rinsing",
+      "rinsing_mop",
     ]);
   }
 
@@ -50689,6 +51152,9 @@ class NodaliaVacuumCard extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
     this._triggerHaptic();
+    if (button instanceof HTMLButtonElement) {
+      this._triggerButtonBounce(button);
+    }
 
     const state = this._getState();
     this._syncRememberedModeSelections(state);
@@ -50818,6 +51284,7 @@ class NodaliaVacuumCard extends HTMLElement {
     const mopMode = modeControlsEnabled ? this._getModeDescriptor("mop", state) : null;
     const isCompactLayout = this._isCompactLayout;
     const accentColor = this._getAccentColor(state);
+    const animations = this._getAnimationSettings();
     const controls = this._getControls(state);
     const isTintedState = this._shouldTintCard(state);
     const roomMappings = this._getRoomMappings(state);
@@ -50878,6 +51345,8 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         ha-card {
+          --vacuum-card-panel-duration: ${animations.enabled ? animations.panelDuration : 0}ms;
+          --vacuum-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           background: ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -50909,6 +51378,20 @@ class NodaliaVacuumCard extends HTMLElement {
           min-width: 0;
           position: relative;
           z-index: 1;
+        }
+
+        .vacuum-card__icon-button,
+        .vacuum-card__control,
+        .vacuum-card__preset {
+          transform: translateZ(0);
+          transform-origin: center;
+          will-change: transform;
+        }
+
+        .vacuum-card__icon-button.is-pressing,
+        .vacuum-card__control.is-pressing,
+        .vacuum-card__preset.is-pressing {
+          animation: vacuum-card-button-bounce var(--vacuum-card-button-bounce-duration) cubic-bezier(0.22, 0.84, 0.26, 1);
         }
 
         .vacuum-card__header {
@@ -51127,12 +51610,14 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card__room-panel {
+          animation: vacuum-card-panel-in var(--vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
           justify-content: center;
           margin-top: -2px;
           min-width: 0;
+          transform-origin: top center;
         }
 
         .vacuum-card__mode-toggle {
@@ -51179,8 +51664,37 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card__presets--panel {
+          animation: vacuum-card-panel-in var(--vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           margin-top: -2px;
+          transform-origin: top center;
         }
+
+        @keyframes vacuum-card-button-bounce {
+          0% { transform: scale(1); }
+          38% { transform: scale(1.08); }
+          100% { transform: scale(1); }
+        }
+
+        @keyframes vacuum-card-panel-in {
+          0% {
+            opacity: 0;
+            transform: translateY(-8px) scaleY(0.92);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+        }
+
+        ${animations.enabled ? "" : `
+        ha-card,
+        ha-card::before,
+        .vacuum-card,
+        .vacuum-card * {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
 
         .vacuum-card--compact .vacuum-card__presets {
           justify-content: center;
@@ -51338,6 +51852,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
     this._hass = null;
     this._entityOptionsSignature = "";
     this._showStyleSection = false;
+    this._showAnimationSection = false;
     this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
@@ -51638,6 +52153,12 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
     if (toggleButton.dataset.editorToggle === "styles") {
       this._showStyleSection = !this._showStyleSection;
+      this._render();
+      return;
+    }
+
+    if (toggleButton.dataset.editorToggle === "animations") {
+      this._showAnimationSection = !this._showAnimationSection;
       this._render();
     }
   }
@@ -52210,6 +52731,39 @@ class NodaliaVacuumCardEditor extends HTMLElement {
               ],
             )}
           </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Animaciones</div>
+            <div class="editor-section__hint">Feedback visual para botones y paneles del robot.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="animations"
+                aria-expanded="${this._showAnimationSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showAnimationSection ? "Ocultar ajustes de animación" : "Mostrar ajustes de animación"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showAnimationSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderTextField("Paneles (ms)", "animations.panel_duration", config.animations.panel_duration, {
+                    type: "number",
+                  })}
+                  ${this._renderTextField("Rebote de botones (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                    type: "number",
+                  })}
+                </div>
+              `
+              : ""
+          }
         </section>
 
         <section class="editor-section">

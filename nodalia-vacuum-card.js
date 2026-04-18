@@ -95,6 +95,11 @@ const DEFAULT_CONFIG = {
     style: "medium",
     fallback_vibrate: false,
   },
+  animations: {
+    enabled: true,
+    panel_duration: 800,
+    button_bounce_duration: 320,
+  },
   styles: {
     card: {
       background: "var(--ha-card-background)",
@@ -579,6 +584,42 @@ class NodaliaVacuumCard extends HTMLElement {
     navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
   }
 
+  _getAnimationSettings() {
+    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+    return {
+      enabled: configuredAnimations.enabled !== false,
+      panelDuration: clamp(
+        Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration,
+        120,
+        2400,
+      ),
+      buttonBounceDuration: clamp(
+        Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+        120,
+        1200,
+      ),
+    };
+  }
+
+  _triggerButtonBounce(button) {
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+
+    button.classList.remove("is-pressing");
+    button.getBoundingClientRect();
+    button.classList.add("is-pressing");
+
+    window.setTimeout(() => {
+      button.classList.remove("is-pressing");
+    }, animations.buttonBounceDuration + 40);
+  }
+
   _openMoreInfo(entityId = this._config?.entity) {
     if (!entityId) {
       return;
@@ -865,6 +906,10 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _getStateLabel(state) {
+    if (this._isGoingToWashMops(state)) {
+      return "Yendo a lavar mopas";
+    }
+
     if (this._isWashingMops(state)) {
       return "Lavando mopas";
     }
@@ -888,10 +933,19 @@ class NodaliaVacuumCard extends HTMLElement {
       case "segment_cleaning":
       case "room_cleaning":
       case "zone_cleaning":
+      case "segment_clean":
+      case "room_clean":
+      case "zone_clean":
       case "clean_area":
       case "vacuuming":
       case "limpiando":
         return "Limpiando";
+      case "going_to_wash_the_mop":
+      case "going_to_wash_mop":
+      case "go_to_wash_mop":
+      case "go_wash_mop":
+      case "returning_to_wash_mop":
+        return "Yendo a lavar mopas";
       case "paused":
       case "pause":
       case "pausado":
@@ -919,8 +973,50 @@ class NodaliaVacuumCard extends HTMLElement {
       case "unknown":
         return "Desconocido";
       default:
-        return this._getReportedStateValue(state) || "Sin estado";
+        return this._humanizeStateLabel(this._getReportedStateValue(state)) || "Sin estado";
     }
+  }
+
+  _humanizeStateLabel(value) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+
+    const normalized = normalizeTextKey(raw);
+    if (!normalized) {
+      return raw;
+    }
+
+    if (normalized.includes("go") && normalized.includes("wash") && normalized.includes("mop")) {
+      return "Yendo a lavar mopas";
+    }
+
+    if (normalized.includes("wash") && normalized.includes("mop")) {
+      return "Lavando mopas";
+    }
+
+    if (normalized.includes("dry") && normalized.includes("mop")) {
+      return "Secando mopas";
+    }
+
+    if (normalized.includes("empty")) {
+      return "Autovaciando";
+    }
+
+    if (normalized.includes("zone") && normalized.includes("clean")) {
+      return "Limpiando zona";
+    }
+
+    if ((normalized.includes("room") || normalized.includes("segment")) && normalized.includes("clean")) {
+      return "Limpiando habitación";
+    }
+
+    return raw
+      .replace(/[_-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\b\w/g, match => match.toUpperCase());
   }
 
   _getActivityTextBlob(state) {
@@ -1316,12 +1412,28 @@ class NodaliaVacuumCard extends HTMLElement {
     return this._matchesActivity(state, [
       "cleaning",
       "segment_cleaning",
+      "segment_clean",
       "room_cleaning",
+      "room_clean",
       "zone_cleaning",
+      "zone_clean",
       "clean_area",
+      "clean_zone",
+      "clean_room",
       "spot_cleaning",
       "vacuuming",
       "limpiando",
+    ]);
+  }
+
+  _isGoingToWashMops(state) {
+    return this._matchesActivity(state, [
+      "going_to_wash_the_mop",
+      "going_to_wash_mop",
+      "go_to_wash_mop",
+      "go_wash_mop",
+      "returning_to_wash_mop",
+      "heading_to_wash_mop",
     ]);
   }
 
@@ -1340,6 +1452,10 @@ class NodaliaVacuumCard extends HTMLElement {
       "lavado_mopa",
       "washing_pads",
       "rinse_mop",
+      "wash_the_mop",
+      "washing_the_mop",
+      "mop_rinsing",
+      "rinsing_mop",
     ]);
   }
 
@@ -1701,6 +1817,9 @@ class NodaliaVacuumCard extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
     this._triggerHaptic();
+    if (button instanceof HTMLButtonElement) {
+      this._triggerButtonBounce(button);
+    }
 
     const state = this._getState();
     this._syncRememberedModeSelections(state);
@@ -1830,6 +1949,7 @@ class NodaliaVacuumCard extends HTMLElement {
     const mopMode = modeControlsEnabled ? this._getModeDescriptor("mop", state) : null;
     const isCompactLayout = this._isCompactLayout;
     const accentColor = this._getAccentColor(state);
+    const animations = this._getAnimationSettings();
     const controls = this._getControls(state);
     const isTintedState = this._shouldTintCard(state);
     const roomMappings = this._getRoomMappings(state);
@@ -1890,6 +2010,8 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         ha-card {
+          --vacuum-card-panel-duration: ${animations.enabled ? animations.panelDuration : 0}ms;
+          --vacuum-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           background: ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -1921,6 +2043,20 @@ class NodaliaVacuumCard extends HTMLElement {
           min-width: 0;
           position: relative;
           z-index: 1;
+        }
+
+        .vacuum-card__icon-button,
+        .vacuum-card__control,
+        .vacuum-card__preset {
+          transform: translateZ(0);
+          transform-origin: center;
+          will-change: transform;
+        }
+
+        .vacuum-card__icon-button.is-pressing,
+        .vacuum-card__control.is-pressing,
+        .vacuum-card__preset.is-pressing {
+          animation: vacuum-card-button-bounce var(--vacuum-card-button-bounce-duration) cubic-bezier(0.22, 0.84, 0.26, 1);
         }
 
         .vacuum-card__header {
@@ -2139,12 +2275,14 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card__room-panel {
+          animation: vacuum-card-panel-in var(--vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
           justify-content: center;
           margin-top: -2px;
           min-width: 0;
+          transform-origin: top center;
         }
 
         .vacuum-card__mode-toggle {
@@ -2191,8 +2329,37 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card__presets--panel {
+          animation: vacuum-card-panel-in var(--vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           margin-top: -2px;
+          transform-origin: top center;
         }
+
+        @keyframes vacuum-card-button-bounce {
+          0% { transform: scale(1); }
+          38% { transform: scale(1.08); }
+          100% { transform: scale(1); }
+        }
+
+        @keyframes vacuum-card-panel-in {
+          0% {
+            opacity: 0;
+            transform: translateY(-8px) scaleY(0.92);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+        }
+
+        ${animations.enabled ? "" : `
+        ha-card,
+        ha-card::before,
+        .vacuum-card,
+        .vacuum-card * {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
 
         .vacuum-card--compact .vacuum-card__presets {
           justify-content: center;
@@ -2350,6 +2517,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
     this._hass = null;
     this._entityOptionsSignature = "";
     this._showStyleSection = false;
+    this._showAnimationSection = false;
     this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
@@ -2650,6 +2818,12 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
     if (toggleButton.dataset.editorToggle === "styles") {
       this._showStyleSection = !this._showStyleSection;
+      this._render();
+      return;
+    }
+
+    if (toggleButton.dataset.editorToggle === "animations") {
+      this._showAnimationSection = !this._showAnimationSection;
       this._render();
     }
   }
@@ -3222,6 +3396,39 @@ class NodaliaVacuumCardEditor extends HTMLElement {
               ],
             )}
           </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Animaciones</div>
+            <div class="editor-section__hint">Feedback visual para botones y paneles del robot.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="animations"
+                aria-expanded="${this._showAnimationSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showAnimationSection ? "Ocultar ajustes de animación" : "Mostrar ajustes de animación"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showAnimationSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderTextField("Paneles (ms)", "animations.panel_duration", config.animations.panel_duration, {
+                    type: "number",
+                  })}
+                  ${this._renderTextField("Rebote de botones (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                    type: "number",
+                  })}
+                </div>
+              `
+              : ""
+          }
         </section>
 
         <section class="editor-section">

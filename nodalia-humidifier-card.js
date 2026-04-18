@@ -1027,6 +1027,30 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
 
     const existingPanel = controlsInner.querySelector(".humidifier-card__panel-shell");
+    if (!animations.enabled) {
+      if (existingPanel instanceof HTMLElement) {
+        existingPanel.remove();
+      }
+
+      if (panelMarkup) {
+        const panelNode = this._createMarkupNode(`
+          <div class="humidifier-card__panel-shell" data-panel-key="${nextPanelKey}">
+            <div class="humidifier-card__panel-inner">
+              ${panelMarkup}
+            </div>
+          </div>
+        `);
+
+        if (panelNode instanceof HTMLElement) {
+          controlsInner.appendChild(panelNode);
+          return;
+        }
+      }
+
+      this._render();
+      return;
+    }
+
     const removePanel = (panel, onDone = null) => {
       if (!(panel instanceof HTMLElement)) {
         if (typeof onDone === "function") {
@@ -2463,6 +2487,22 @@ class NodaliaHumidifierCard extends HTMLElement {
             transform: scale(1);
           }
         }
+
+        ${animations.enabled ? "" : `
+        .humidifier-card,
+        .humidifier-card::after,
+        .humidifier-card__controls-shell,
+        .humidifier-card__controls-inner,
+        .humidifier-card__panel-shell,
+        .humidifier-card__panel-inner,
+        .humidifier-card__icon,
+        .humidifier-card__option,
+        .humidifier-card__control,
+        .humidifier-card * {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
 
         .humidifier-card--compact:not(.humidifier-card--with-copy) .humidifier-card__hero {
           justify-items: center;

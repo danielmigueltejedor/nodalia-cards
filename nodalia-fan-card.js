@@ -889,6 +889,30 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     const existingPanel = controlsInner.querySelector(".fan-card__preset-panel-shell");
+    if (!animations.enabled) {
+      if (existingPanel instanceof HTMLElement) {
+        existingPanel.remove();
+      }
+
+      if (panelMarkup) {
+        const panelNode = this._createMarkupNode(`
+          <div class="fan-card__preset-panel-shell" data-panel-key="preset">
+            <div class="fan-card__preset-panel-inner">
+              ${panelMarkup}
+            </div>
+          </div>
+        `);
+
+        if (panelNode instanceof HTMLElement) {
+          controlsInner.appendChild(panelNode);
+          return;
+        }
+      }
+
+      this._render();
+      return;
+    }
+
     const removePanel = panel => {
       if (!(panel instanceof HTMLElement)) {
         return;
@@ -2251,6 +2275,23 @@ class NodaliaFanCard extends HTMLElement {
             transform: scale(1);
           }
         }
+
+        ${animations.enabled ? "" : `
+        .fan-card,
+        .fan-card::after,
+        .fan-card__controls-shell,
+        .fan-card__controls-inner,
+        .fan-card__preset-panel-shell,
+        .fan-card__preset-panel-inner,
+        .fan-card__icon,
+        .fan-card__slider-mode-button,
+        .fan-card__preset,
+        .fan-card__control,
+        .fan-card * {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
 
         .fan-card--compact:not(.fan-card--with-copy) .fan-card__hero {
           justify-items: center;

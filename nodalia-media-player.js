@@ -86,6 +86,12 @@ const DEFAULT_CONFIG = {
     style: "medium",
     fallback_vibrate: false,
   },
+  animations: {
+    enabled: true,
+    panel_duration: 700,
+    browser_duration: 760,
+    button_bounce_duration: 320,
+  },
   layout: {
     fixed: false,
     reserve_space: false,
@@ -456,6 +462,22 @@ function normalizeTextKey(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function appendQueryParam(url, key, value) {
+  const rawUrl = String(url || "").trim();
+  if (!rawUrl || value === null || value === undefined || value === "") {
+    return rawUrl;
+  }
+
+  const encodedKey = encodeURIComponent(String(key));
+  const encodedValue = encodeURIComponent(String(value));
+  const existingPattern = new RegExp(`([?&])${encodedKey}=[^&]*`);
+  if (existingPattern.test(rawUrl)) {
+    return rawUrl.replace(existingPattern, `$1${encodedKey}=${encodedValue}`);
+  }
+
+  return `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}`;
+}
+
 function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
@@ -779,6 +801,78 @@ class NodaliaMediaPlayer extends HTMLElement {
     navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
   }
 
+  _getAnimationSettings() {
+    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+    return {
+      enabled: configuredAnimations.enabled !== false,
+      panelDuration: clamp(
+        Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration,
+        120,
+        2400,
+      ),
+      browserDuration: clamp(
+        Number(configuredAnimations.browser_duration) || DEFAULT_CONFIG.animations.browser_duration,
+        120,
+        2400,
+      ),
+      buttonBounceDuration: clamp(
+        Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+        120,
+        1200,
+      ),
+    };
+  }
+
+  _triggerButtonBounce(button) {
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+
+    button.classList.remove("is-pressing");
+    button.getBoundingClientRect();
+    button.classList.add("is-pressing");
+
+    window.setTimeout(() => {
+      button.classList.remove("is-pressing");
+    }, animations.buttonBounceDuration + 40);
+  }
+
+  _resolveMediaUrl(value, options = {}) {
+    const raw = String(value || "").trim();
+    if (!raw) {
+      return "";
+    }
+
+    const isAbsolute = /^(?:https?:)?\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:");
+    const baseUrl = isAbsolute
+      ? raw
+      : typeof this._hass?.hassUrl === "function"
+        ? this._hass.hassUrl(raw.startsWith("/") ? raw : `/${raw.replace(/^\.?\//, "")}`)
+        : raw;
+
+    return appendQueryParam(baseUrl, "nodalia_ts", options.cacheToken);
+  }
+
+  _getArtworkCacheToken(state) {
+    if (!state) {
+      return "";
+    }
+
+    return [
+      String(state.last_updated || state.last_changed || ""),
+      String(state.attributes?.entity_picture || state.attributes?.entity_picture_local || ""),
+      String(state.attributes?.media_title || ""),
+      String(state.attributes?.media_artist || ""),
+      String(state.attributes?.media_album_name || ""),
+      String(state.attributes?.app_name || ""),
+    ].filter(Boolean).join("|");
+  }
+
   _getConfiguredPlayers() {
     return Array.isArray(this._config?.players) ? this._config.players : [];
   }
@@ -970,14 +1064,23 @@ class NodaliaMediaPlayer extends HTMLElement {
 
   _getPlayerArtwork(player, state) {
     if (player.image) {
-      return player.image;
+      return this._resolveMediaUrl(player.image);
     }
 
     if (!this._shouldShowTvArtwork(player, state)) {
       return null;
     }
 
-    return state.attributes.entity_picture || null;
+    const artwork =
+      state.attributes.entity_picture_local ||
+      state.attributes.entity_picture ||
+      "";
+
+    return artwork
+      ? this._resolveMediaUrl(artwork, {
+          cacheToken: this._getArtworkCacheToken(state),
+        })
+      : null;
   }
 
   _getPlayerStateLabel(stateValue) {
@@ -2288,6 +2391,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       event.preventDefault();
       event.stopPropagation();
       this._triggerHaptic();
+      this._triggerButtonBounce(mediaControlButton);
       this._handleMediaControl(mediaControlButton.dataset.mediaControl, mediaControlButton.dataset.entity, {
         path: mediaControlButton.dataset.mediaPath,
         source: mediaControlButton.dataset.mediaSource,
@@ -2315,6 +2419,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       event.preventDefault();
       event.stopPropagation();
       this._triggerHaptic();
+      this._triggerButtonBounce(mediaDotButton);
       this._activePlayerIndex = Number(mediaDotButton.dataset.mediaIndex);
       this._render();
       return;
@@ -2327,6 +2432,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     if (mediaBrowserCloseButton) {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerButtonBounce(mediaBrowserCloseButton);
       this._closeMediaBrowser();
       return;
     }
@@ -2338,6 +2444,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     if (mediaBrowserBackButton) {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerButtonBounce(mediaBrowserBackButton);
       this._goBackMediaBrowser();
       return;
     }
@@ -2350,6 +2457,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       event.preventDefault();
       event.stopPropagation();
       this._triggerHaptic();
+      this._triggerButtonBounce(mediaBrowserActionButton);
 
       const action = mediaBrowserActionButton.dataset.mediaBrowserAction;
       const mediaContentType = mediaBrowserActionButton.dataset.mediaContentType || "";
@@ -2420,6 +2528,9 @@ class NodaliaMediaPlayer extends HTMLElement {
                   const defaultAction = canExpand ? "browse" : canPlay ? "play" : "";
                   const itemIcon = this._getMediaBrowserIcon(item);
                   const itemTitle = this._getMediaBrowserDisplayTitle(item);
+                  const itemThumbnail = this._resolveMediaUrl(item.thumbnail || item.thumbnail_url || "", {
+                    cacheToken: item.media_content_id || itemTitle,
+                  });
 
                   return `
                     <div class="media-browser__item">
@@ -2432,8 +2543,8 @@ class NodaliaMediaPlayer extends HTMLElement {
                       >
                         <span class="media-browser__item-artwork">
                           ${
-                            item.thumbnail
-                              ? `<img src="${escapeHtml(item.thumbnail)}" alt="${escapeHtml(itemTitle)}" />`
+                            itemThumbnail
+                              ? `<img src="${escapeHtml(itemThumbnail)}" alt="${escapeHtml(itemTitle)}" />`
                               : `<ha-icon icon="${escapeHtml(itemIcon)}"></ha-icon>`
                           }
                         </span>
@@ -2513,6 +2624,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     const artwork = this._getPlayerArtwork(player, state);
+    const safeArtwork = artwork ? escapeHtml(artwork) : "";
     const deviceType = this._getPlayerDeviceType(player, state);
     const isTvPlayer = deviceType === "tv";
     const playerLabel = this._getPlayerLabel(player, state);
@@ -2523,6 +2635,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     const subtitle = isTvPlayer
       ? ""
       : this._getPlayerSubtitle(player, state);
+    const artworkAlt = escapeHtml(title || playerLabel);
     const subtitleMarkup = subtitle && normalizeTextKey(subtitle) !== normalizeTextKey(title)
       ? `<div class="media-player__subtitle">${escapeHtml(subtitle)}</div>`
       : "";
@@ -2834,7 +2947,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         >
           ${
             hasAlbumBackground
-              ? `<div class="media-player__album-bg" style="background-image:url('${escapeHtml(artwork)}');"></div>`
+              ? `<div class="media-player__album-bg" style="background-image:url('${safeArtwork}');"></div>`
               : ""
           }
           <div class="media-player__content media-player__content--idle">
@@ -2851,7 +2964,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                     >
                       ${
                         artwork
-                          ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
+                          ? `<img src="${safeArtwork}" alt="${artworkAlt}" />`
                           : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                       }
                       ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
@@ -2861,7 +2974,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                     <div class="media-player__artwork media-player__artwork--idle">
                       ${
                         artwork
-                          ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
+                          ? `<img src="${safeArtwork}" alt="${artworkAlt}" />`
                           : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                       }
                       ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
@@ -2893,7 +3006,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       >
         ${
           hasAlbumBackground
-            ? `<div class="media-player__album-bg" style="background-image:url('${escapeHtml(artwork)}');"></div>`
+            ? `<div class="media-player__album-bg" style="background-image:url('${safeArtwork}');"></div>`
             : ""
         }
         ${
@@ -2919,7 +3032,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                   >
                     ${
                       artwork
-                        ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
+                        ? `<img src="${safeArtwork}" alt="${artworkAlt}" />`
                         : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                     }
                     ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
@@ -2929,7 +3042,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                   <div class="media-player__artwork">
                     ${
                       artwork
-                        ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title || playerLabel)}" />`
+                        ? `<img src="${safeArtwork}" alt="${artworkAlt}" />`
                         : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
                     }
                     ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
@@ -3044,11 +3157,15 @@ class NodaliaMediaPlayer extends HTMLElement {
     const config = this._config;
     const playerStyles = config.styles.player;
     const browserStyles = config.styles.browser;
+    const animations = this._getAnimationSettings();
     const tvArtworkSize = playerStyles.tv_artwork_size || playerStyles.artwork_size;
 
     this.shadowRoot.innerHTML = `
       <style>
         :host {
+          --media-player-panel-duration: ${animations.enabled ? animations.panelDuration : 0}ms;
+          --media-player-browser-duration: ${animations.enabled ? animations.browserDuration : 0}ms;
+          --media-player-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           display: block;
           width: 100%;
         }
@@ -3739,8 +3856,10 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__tv-source-panel {
+          animation: media-player-panel-in var(--media-player-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           display: flex;
           justify-content: center;
+          transform-origin: top center;
           width: 100%;
         }
 
@@ -3776,6 +3895,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__tv-volume-wrap {
           --media-player-slider-input-height: max(44px, var(--media-player-slider-thumb-size));
           --media-player-slider-thumb-size: calc(${playerStyles.slider_thumb_size} + 12px);
+          animation: media-player-panel-in var(--media-player-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           align-items: center;
           background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.06);
@@ -3783,6 +3903,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           display: grid;
           min-height: ${playerStyles.slider_wrap_height};
           padding: 0 16px;
+          transform-origin: top center;
           width: min(100%, 320px);
         }
 
@@ -3964,6 +4085,30 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__control,
+        .media-player__volume-button,
+        .media-player__source-button,
+        .media-player__dot,
+        .media-browser__header-button,
+        .media-browser__item-play,
+        .media-browser__item-main {
+          transform: translateZ(0);
+          transform-origin: center;
+          will-change: transform;
+        }
+
+        :is(
+          .media-player__control,
+          .media-player__volume-button,
+          .media-player__source-button,
+          .media-player__dot,
+          .media-browser__header-button,
+          .media-browser__item-play,
+          .media-browser__item-main
+        ).is-pressing {
+          animation: media-player-button-bounce var(--media-player-button-bounce-duration) cubic-bezier(0.22, 0.84, 0.26, 1);
+        }
+
+        .media-player__control,
         .media-player__volume-button {
           align-items: center;
           appearance: none;
@@ -4074,6 +4219,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-browser-backdrop {
+          animation: media-player-browser-backdrop-in var(--media-player-browser-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           background: ${browserStyles.backdrop};
           inset: 0;
           position: fixed;
@@ -4081,6 +4227,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-browser-panel {
+          animation: media-player-browser-panel-in var(--media-player-browser-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           background: ${browserStyles.background};
           border: ${browserStyles.border};
           border-radius: ${browserStyles.border_radius};
@@ -4240,6 +4387,61 @@ class NodaliaMediaPlayer extends HTMLElement {
           text-align: center;
         }
 
+        @keyframes media-player-button-bounce {
+          0% { transform: scale(1); }
+          40% { transform: scale(1.08); }
+          100% { transform: scale(1); }
+        }
+
+        @keyframes media-player-panel-in {
+          0% {
+            opacity: 0;
+            transform: translateY(-8px) scaleY(0.94);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+        }
+
+        @keyframes media-player-browser-backdrop-in {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+
+        @keyframes media-player-browser-panel-in {
+          0% {
+            opacity: 0;
+            transform: translateY(14px) scale(0.98);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        ${animations.enabled ? "" : `
+        .media-player-card,
+        .media-player-card::before,
+        .media-player-card::after,
+        .media-player__tv-source-panel,
+        .media-player__tv-volume-wrap,
+        .media-browser-backdrop,
+        .media-browser-panel,
+        .media-player__control,
+        .media-player__volume-button,
+        .media-player__source-button,
+        .media-player__dot,
+        .media-browser__header-button,
+        .media-browser__item-play,
+        .media-browser__item-main,
+        .media-player-card *,
+        .media-browser-panel * {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
+
         @media (max-width: 520px) {
           .media-player__footer {
             justify-content: center;
@@ -4285,6 +4487,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     this._hass = null;
     this._entityOptionsSignature = "";
     this._showStyleSection = false;
+    this._showAnimationSection = false;
     this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
@@ -4591,6 +4794,12 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
       if (toggleButton.dataset.editorToggle === "styles") {
         this._showStyleSection = !this._showStyleSection;
+        this._render();
+        return;
+      }
+
+      if (toggleButton.dataset.editorToggle === "animations") {
+        this._showAnimationSection = !this._showAnimationSection;
         this._render();
       }
 
@@ -5489,6 +5698,42 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
               ],
             )}
           </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Animaciones</div>
+            <div class="editor-section__hint">Ajusta la apertura de paneles, navegador y el rebote de los botones.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="animations"
+                aria-expanded="${this._showAnimationSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showAnimationSection ? "Ocultar ajustes de animación" : "Mostrar ajustes de animación"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showAnimationSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderTextField("Paneles TV (ms)", "animations.panel_duration", config.animations.panel_duration, {
+                    type: "number",
+                  })}
+                  ${this._renderTextField("Navegador de medios (ms)", "animations.browser_duration", config.animations.browser_duration, {
+                    type: "number",
+                  })}
+                  ${this._renderTextField("Rebote de botones (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                    type: "number",
+                  })}
+                </div>
+              `
+              : ""
+          }
         </section>
 
         <section class="editor-section">
