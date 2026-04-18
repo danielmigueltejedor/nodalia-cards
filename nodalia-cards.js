@@ -17851,6 +17851,8 @@ const DEFAULT_CONFIG = {
   show_slider: true,
   show_mode_button: true,
   show_fan_mode_button: true,
+  hidden_modes: [],
+  hidden_fan_modes: [],
   compact_layout_mode: "auto",
   haptics: {
     enabled: true,
@@ -18227,7 +18229,21 @@ function translateModeLabel(value) {
 }
 
 function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const normalizeList = value => (
+    Array.isArray(value)
+      ? value
+      : typeof value === "string"
+        ? value.split(",")
+        : []
+  )
+    .map(item => String(item || "").trim())
+    .filter(Boolean);
+
+  config.hidden_modes = normalizeList(config.hidden_modes);
+  config.hidden_fan_modes = normalizeList(config.hidden_fan_modes);
+
+  return config;
 }
 
 class NodaliaHumidifierCard extends HTMLElement {
@@ -18559,11 +18575,17 @@ class NodaliaHumidifierCard extends HTMLElement {
     const modeEntity = this._getExternalEntityState(this._config?.mode_entity);
 
     if (Array.isArray(modeEntity?.attributes?.options)) {
-      return modeEntity.attributes.options.map(item => String(item || "").trim()).filter(Boolean);
+      return modeEntity.attributes.options
+        .map(item => String(item || "").trim())
+        .filter(Boolean)
+        .filter(option => !this._isModeHidden("hidden_modes", option));
     }
 
     if (Array.isArray(state?.attributes?.available_modes)) {
-      return state.attributes.available_modes.map(item => String(item || "").trim()).filter(Boolean);
+      return state.attributes.available_modes
+        .map(item => String(item || "").trim())
+        .filter(Boolean)
+        .filter(option => !this._isModeHidden("hidden_modes", option));
     }
 
     return [];
@@ -18585,8 +18607,17 @@ class NodaliaHumidifierCard extends HTMLElement {
   _getFanModeOptions() {
     const fanModeEntity = this._getExternalEntityState(this._config?.fan_mode_entity);
     return Array.isArray(fanModeEntity?.attributes?.options)
-      ? fanModeEntity.attributes.options.map(item => String(item || "").trim()).filter(Boolean)
+      ? fanModeEntity.attributes.options
+        .map(item => String(item || "").trim())
+        .filter(Boolean)
+        .filter(option => !this._isModeHidden("hidden_fan_modes", option))
       : [];
+  }
+
+  _isModeHidden(field, value) {
+    const hiddenModes = Array.isArray(this._config?.[field]) ? this._config[field] : [];
+    const expectedKey = normalizeTextKey(value);
+    return hiddenModes.some(item => normalizeTextKey(item) === expectedKey);
   }
 
   _getCurrentFanMode() {
@@ -20688,6 +20719,15 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
       .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
 
     if (!input?.dataset?.field) {
+      if (input?.dataset?.modeListField && input.dataset.modeValue !== undefined) {
+        event.stopPropagation();
+        this._setModeVisibility(input.dataset.modeListField, input.dataset.modeValue, input.checked);
+        this._setEditorConfig();
+
+        if (event.type === "change") {
+          this._emitConfig();
+        }
+      }
       return;
     }
 
@@ -20810,6 +20850,89 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
           data-field="${escapeHtml(field)}"
           data-value-type="boolean"
           ${checked ? "checked" : ""}
+        />
+        <span class="editor-toggle__switch" aria-hidden="true"></span>
+        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+      </label>
+    `;
+  }
+
+  _getHumidifierState() {
+    return this._config?.entity ? this._hass?.states?.[this._config.entity] || null : null;
+  }
+
+  _getModeEntityState() {
+    return this._config?.mode_entity ? this._hass?.states?.[this._config.mode_entity] || null : null;
+  }
+
+  _getFanModeEntityState() {
+    return this._config?.fan_mode_entity ? this._hass?.states?.[this._config.fan_mode_entity] || null : null;
+  }
+
+  _getModeVisibilityOptions() {
+    const modeEntity = this._getModeEntityState();
+    const humidifierState = this._getHumidifierState();
+
+    if (Array.isArray(modeEntity?.attributes?.options)) {
+      return modeEntity.attributes.options.map(item => String(item || "").trim()).filter(Boolean);
+    }
+
+    if (Array.isArray(humidifierState?.attributes?.available_modes)) {
+      return humidifierState.attributes.available_modes.map(item => String(item || "").trim()).filter(Boolean);
+    }
+
+    return [];
+  }
+
+  _getFanModeVisibilityOptions() {
+    const fanModeEntity = this._getFanModeEntityState();
+    return Array.isArray(fanModeEntity?.attributes?.options)
+      ? fanModeEntity.attributes.options.map(item => String(item || "").trim()).filter(Boolean)
+      : [];
+  }
+
+  _getHiddenModeList(field) {
+    return Array.isArray(this._config?.[field])
+      ? this._config[field].map(item => String(item || "").trim()).filter(Boolean)
+      : [];
+  }
+
+  _isModeVisible(field, value) {
+    const expectedKey = normalizeTextKey(value);
+    return !this._getHiddenModeList(field).some(item => normalizeTextKey(item) === expectedKey);
+  }
+
+  _setModeVisibility(field, value, visible) {
+    const rawValue = String(value || "").trim();
+    if (!rawValue) {
+      return;
+    }
+
+    const nextValues = this._getHiddenModeList(field).filter(item => normalizeTextKey(item) !== normalizeTextKey(rawValue));
+    if (!visible) {
+      nextValues.push(rawValue);
+    }
+
+    if (nextValues.length) {
+      setByPath(this._config, field, nextValues);
+      return;
+    }
+
+    deleteByPath(this._config, field);
+  }
+
+  _renderModeVisibilityField(field, modeValue) {
+    const translatedLabel = translateModeLabel(modeValue);
+    const showRawValue = normalizeTextKey(translatedLabel) !== normalizeTextKey(modeValue);
+    const label = showRawValue ? `${translatedLabel} (${modeValue})` : translatedLabel;
+
+    return `
+      <label class="editor-toggle">
+        <input
+          type="checkbox"
+          data-mode-list-field="${escapeHtml(field)}"
+          data-mode-value="${escapeHtml(modeValue)}"
+          ${this._isModeVisible(field, modeValue) ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
         <span class="editor-toggle__label">${escapeHtml(label)}</span>
@@ -20983,6 +21106,8 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
 
     const config = this._config || normalizeConfig({});
     const hapticStyle = config.haptics?.style || "medium";
+    const modeVisibilityOptions = this._getModeVisibilityOptions();
+    const fanModeVisibilityOptions = this._getFanModeVisibilityOptions();
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -21157,6 +21282,26 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
           width: 100%;
         }
 
+        .editor-subsection {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 14px;
+          display: grid;
+          gap: 10px;
+          padding: 12px;
+        }
+
+        .editor-subsection__title {
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .editor-subsection__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
         .editor-toggle {
           align-items: center;
           grid-template-columns: auto 1fr;
@@ -21309,6 +21454,32 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
             ${this._renderCheckboxField("Mostrar control deslizante", "show_slider", config.show_slider !== false)}
             ${this._renderCheckboxField("Mostrar botón de modo", "show_mode_button", config.show_mode_button !== false)}
             ${this._renderCheckboxField("Mostrar botón de ventilación", "show_fan_mode_button", config.show_fan_mode_button !== false)}
+            ${
+              modeVisibilityOptions.length
+                ? `
+                  <div class="editor-subsection editor-field--full">
+                    <div class="editor-subsection__title">Modos visibles</div>
+                    <div class="editor-subsection__hint">Oculta los modos que expone la integración pero no quieres mostrar en la tarjeta.</div>
+                    <div class="editor-grid editor-grid--stacked">
+                      ${modeVisibilityOptions.map(mode => this._renderModeVisibilityField("hidden_modes", mode)).join("")}
+                    </div>
+                  </div>
+                `
+                : ""
+            }
+            ${
+              fanModeVisibilityOptions.length
+                ? `
+                  <div class="editor-subsection editor-field--full">
+                    <div class="editor-subsection__title">Velocidades visibles</div>
+                    <div class="editor-subsection__hint">Elige qué opciones de ventilación quieres dejar disponibles.</div>
+                    <div class="editor-grid editor-grid--stacked">
+                      ${fanModeVisibilityOptions.map(mode => this._renderModeVisibilityField("hidden_fan_modes", mode)).join("")}
+                    </div>
+                  </div>
+                `
+                : ""
+            }
           </div>
         </section>
 
@@ -49775,6 +49946,14 @@ class NodaliaVacuumCard extends HTMLElement {
       suction: "",
       mop: "",
     };
+    this._pendingModeSelection = {
+      suction: "",
+      mop: "",
+    };
+    this._pendingModeSelectionTimers = {
+      suction: 0,
+      mop: 0,
+    };
     this._lastRenderSignature = "";
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
@@ -49803,6 +49982,12 @@ class NodaliaVacuumCard extends HTMLElement {
 
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
+    Object.keys(this._pendingModeSelectionTimers).forEach(kind => {
+      if (this._pendingModeSelectionTimers[kind]) {
+        window.clearTimeout(this._pendingModeSelectionTimers[kind]);
+        this._pendingModeSelectionTimers[kind] = 0;
+      }
+    });
   }
 
   setConfig(config) {
@@ -49817,8 +50002,9 @@ class NodaliaVacuumCard extends HTMLElement {
   set hass(hass) {
     const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+    const pendingChanged = this._syncPendingModeSelections();
 
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !pendingChanged) {
       return;
     }
 
@@ -50975,6 +51161,82 @@ class NodaliaVacuumCard extends HTMLElement {
     return firstNonSmart || "";
   }
 
+  _clearPendingModeSelection(kind) {
+    if (!kind || !(kind in this._pendingModeSelection)) {
+      return false;
+    }
+
+    if (this._pendingModeSelectionTimers[kind]) {
+      window.clearTimeout(this._pendingModeSelectionTimers[kind]);
+      this._pendingModeSelectionTimers[kind] = 0;
+    }
+
+    if (!this._pendingModeSelection[kind]) {
+      return false;
+    }
+
+    this._pendingModeSelection[kind] = "";
+    return true;
+  }
+
+  _setPendingModeSelection(kind, value) {
+    if (!kind || !(kind in this._pendingModeSelection)) {
+      return;
+    }
+
+    this._clearPendingModeSelection(kind);
+    this._pendingModeSelection[kind] = String(value || "").trim();
+
+    if (!this._pendingModeSelection[kind]) {
+      return;
+    }
+
+    this._pendingModeSelectionTimers[kind] = window.setTimeout(() => {
+      this._pendingModeSelectionTimers[kind] = 0;
+      if (!this._pendingModeSelection[kind]) {
+        return;
+      }
+
+      this._pendingModeSelection[kind] = "";
+      this._render();
+    }, 2500);
+  }
+
+  _syncPendingModeSelections(state = this._getState()) {
+    let didChange = false;
+
+    ["suction", "mop"].forEach(kind => {
+      const pendingValue = this._pendingModeSelection[kind];
+      if (!pendingValue) {
+        return;
+      }
+
+      const descriptor = this._getModeDescriptor(kind, state);
+      if (!descriptor?.current) {
+        return;
+      }
+
+      if (normalizeTextKey(descriptor.current) === normalizeTextKey(pendingValue)) {
+        didChange = this._clearPendingModeSelection(kind) || didChange;
+      }
+    });
+
+    return didChange;
+  }
+
+  _getOptimisticModeValue(kind, currentValue, options = []) {
+    const pendingValue = this._pendingModeSelection?.[kind];
+    if (!pendingValue) {
+      return currentValue;
+    }
+
+    const matchedOption = Array.isArray(options)
+      ? options.find(option => normalizeTextKey(option) === normalizeTextKey(pendingValue))
+      : "";
+
+    return matchedOption || currentValue;
+  }
+
   _rememberNonSmartModeSelection(kind, value) {
     if (!kind || !value || this._isSharedSmartMode(value)) {
       return;
@@ -51201,6 +51463,7 @@ class NodaliaVacuumCard extends HTMLElement {
         break;
       case "fan":
         if (button.dataset.value) {
+          this._setPendingModeSelection(button.dataset.modeKind || "suction", button.dataset.value);
           this._rememberNonSmartModeSelection(button.dataset.modeKind || "suction", button.dataset.value);
           this._callService("set_fan_speed", {
             fan_speed: button.dataset.value,
@@ -51210,6 +51473,7 @@ class NodaliaVacuumCard extends HTMLElement {
         break;
       case "select":
         if (button.dataset.targetEntity && button.dataset.value) {
+          this._setPendingModeSelection(button.dataset.modeKind || "", button.dataset.value);
           this._rememberNonSmartModeSelection(button.dataset.modeKind || "", button.dataset.value);
           this._applyLinkedSmartModeSelection(button.dataset.modeKind || "", button.dataset.value, state);
         }
@@ -51320,6 +51584,13 @@ class NodaliaVacuumCard extends HTMLElement {
     this._sanitizeSelectedCleaningAreas(roomMappings);
 
     const activeModeDescriptor = availableModeDescriptors.find(mode => mode.kind === this._activeModePanel) || null;
+    const activeModeDisplayValue = activeModeDescriptor
+      ? this._getOptimisticModeValue(
+          activeModeDescriptor.kind,
+          activeModeDescriptor.current,
+          activeModeDescriptor.options,
+        )
+      : "";
 
     const showCopyBlock = !isCompactLayout || chips.length > 0;
     const cardTapAction = normalizeTextKey(config.tap_action || "default");
@@ -51817,7 +52088,7 @@ class NodaliaVacuumCard extends HTMLElement {
                   ${activeModeDescriptor.options
                     .map(option => `
                       <button
-                        class="vacuum-card__preset ${normalizeTextKey(option) === normalizeTextKey(activeModeDescriptor.current) ? "vacuum-card__preset--active" : ""}"
+                        class="vacuum-card__preset ${normalizeTextKey(option) === normalizeTextKey(activeModeDisplayValue) ? "vacuum-card__preset--active" : ""}"
                         type="button"
                         data-vacuum-action="${activeModeDescriptor.service === "select" ? "select" : "fan"}"
                         ${activeModeDescriptor.service === "select" ? `data-target-entity="${escapeHtml(activeModeDescriptor.target)}"` : ""}

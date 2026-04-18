@@ -440,6 +440,14 @@ class NodaliaVacuumCard extends HTMLElement {
       suction: "",
       mop: "",
     };
+    this._pendingModeSelection = {
+      suction: "",
+      mop: "",
+    };
+    this._pendingModeSelectionTimers = {
+      suction: 0,
+      mop: 0,
+    };
     this._lastRenderSignature = "";
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
@@ -468,6 +476,12 @@ class NodaliaVacuumCard extends HTMLElement {
 
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
+    Object.keys(this._pendingModeSelectionTimers).forEach(kind => {
+      if (this._pendingModeSelectionTimers[kind]) {
+        window.clearTimeout(this._pendingModeSelectionTimers[kind]);
+        this._pendingModeSelectionTimers[kind] = 0;
+      }
+    });
   }
 
   setConfig(config) {
@@ -482,8 +496,9 @@ class NodaliaVacuumCard extends HTMLElement {
   set hass(hass) {
     const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+    const pendingChanged = this._syncPendingModeSelections();
 
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !pendingChanged) {
       return;
     }
 
@@ -1640,6 +1655,82 @@ class NodaliaVacuumCard extends HTMLElement {
     return firstNonSmart || "";
   }
 
+  _clearPendingModeSelection(kind) {
+    if (!kind || !(kind in this._pendingModeSelection)) {
+      return false;
+    }
+
+    if (this._pendingModeSelectionTimers[kind]) {
+      window.clearTimeout(this._pendingModeSelectionTimers[kind]);
+      this._pendingModeSelectionTimers[kind] = 0;
+    }
+
+    if (!this._pendingModeSelection[kind]) {
+      return false;
+    }
+
+    this._pendingModeSelection[kind] = "";
+    return true;
+  }
+
+  _setPendingModeSelection(kind, value) {
+    if (!kind || !(kind in this._pendingModeSelection)) {
+      return;
+    }
+
+    this._clearPendingModeSelection(kind);
+    this._pendingModeSelection[kind] = String(value || "").trim();
+
+    if (!this._pendingModeSelection[kind]) {
+      return;
+    }
+
+    this._pendingModeSelectionTimers[kind] = window.setTimeout(() => {
+      this._pendingModeSelectionTimers[kind] = 0;
+      if (!this._pendingModeSelection[kind]) {
+        return;
+      }
+
+      this._pendingModeSelection[kind] = "";
+      this._render();
+    }, 2500);
+  }
+
+  _syncPendingModeSelections(state = this._getState()) {
+    let didChange = false;
+
+    ["suction", "mop"].forEach(kind => {
+      const pendingValue = this._pendingModeSelection[kind];
+      if (!pendingValue) {
+        return;
+      }
+
+      const descriptor = this._getModeDescriptor(kind, state);
+      if (!descriptor?.current) {
+        return;
+      }
+
+      if (normalizeTextKey(descriptor.current) === normalizeTextKey(pendingValue)) {
+        didChange = this._clearPendingModeSelection(kind) || didChange;
+      }
+    });
+
+    return didChange;
+  }
+
+  _getOptimisticModeValue(kind, currentValue, options = []) {
+    const pendingValue = this._pendingModeSelection?.[kind];
+    if (!pendingValue) {
+      return currentValue;
+    }
+
+    const matchedOption = Array.isArray(options)
+      ? options.find(option => normalizeTextKey(option) === normalizeTextKey(pendingValue))
+      : "";
+
+    return matchedOption || currentValue;
+  }
+
   _rememberNonSmartModeSelection(kind, value) {
     if (!kind || !value || this._isSharedSmartMode(value)) {
       return;
@@ -1866,6 +1957,7 @@ class NodaliaVacuumCard extends HTMLElement {
         break;
       case "fan":
         if (button.dataset.value) {
+          this._setPendingModeSelection(button.dataset.modeKind || "suction", button.dataset.value);
           this._rememberNonSmartModeSelection(button.dataset.modeKind || "suction", button.dataset.value);
           this._callService("set_fan_speed", {
             fan_speed: button.dataset.value,
@@ -1875,6 +1967,7 @@ class NodaliaVacuumCard extends HTMLElement {
         break;
       case "select":
         if (button.dataset.targetEntity && button.dataset.value) {
+          this._setPendingModeSelection(button.dataset.modeKind || "", button.dataset.value);
           this._rememberNonSmartModeSelection(button.dataset.modeKind || "", button.dataset.value);
           this._applyLinkedSmartModeSelection(button.dataset.modeKind || "", button.dataset.value, state);
         }
@@ -1985,6 +2078,13 @@ class NodaliaVacuumCard extends HTMLElement {
     this._sanitizeSelectedCleaningAreas(roomMappings);
 
     const activeModeDescriptor = availableModeDescriptors.find(mode => mode.kind === this._activeModePanel) || null;
+    const activeModeDisplayValue = activeModeDescriptor
+      ? this._getOptimisticModeValue(
+          activeModeDescriptor.kind,
+          activeModeDescriptor.current,
+          activeModeDescriptor.options,
+        )
+      : "";
 
     const showCopyBlock = !isCompactLayout || chips.length > 0;
     const cardTapAction = normalizeTextKey(config.tap_action || "default");
@@ -2482,7 +2582,7 @@ class NodaliaVacuumCard extends HTMLElement {
                   ${activeModeDescriptor.options
                     .map(option => `
                       <button
-                        class="vacuum-card__preset ${normalizeTextKey(option) === normalizeTextKey(activeModeDescriptor.current) ? "vacuum-card__preset--active" : ""}"
+                        class="vacuum-card__preset ${normalizeTextKey(option) === normalizeTextKey(activeModeDisplayValue) ? "vacuum-card__preset--active" : ""}"
                         type="button"
                         data-vacuum-action="${activeModeDescriptor.service === "select" ? "select" : "fan"}"
                         ${activeModeDescriptor.service === "select" ? `data-target-entity="${escapeHtml(activeModeDescriptor.target)}"` : ""}

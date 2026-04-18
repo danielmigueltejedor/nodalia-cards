@@ -25,6 +25,8 @@ const DEFAULT_CONFIG = {
   show_slider: true,
   show_mode_button: true,
   show_fan_mode_button: true,
+  hidden_modes: [],
+  hidden_fan_modes: [],
   compact_layout_mode: "auto",
   haptics: {
     enabled: true,
@@ -401,7 +403,21 @@ function translateModeLabel(value) {
 }
 
 function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const normalizeList = value => (
+    Array.isArray(value)
+      ? value
+      : typeof value === "string"
+        ? value.split(",")
+        : []
+  )
+    .map(item => String(item || "").trim())
+    .filter(Boolean);
+
+  config.hidden_modes = normalizeList(config.hidden_modes);
+  config.hidden_fan_modes = normalizeList(config.hidden_fan_modes);
+
+  return config;
 }
 
 class NodaliaHumidifierCard extends HTMLElement {
@@ -733,11 +749,17 @@ class NodaliaHumidifierCard extends HTMLElement {
     const modeEntity = this._getExternalEntityState(this._config?.mode_entity);
 
     if (Array.isArray(modeEntity?.attributes?.options)) {
-      return modeEntity.attributes.options.map(item => String(item || "").trim()).filter(Boolean);
+      return modeEntity.attributes.options
+        .map(item => String(item || "").trim())
+        .filter(Boolean)
+        .filter(option => !this._isModeHidden("hidden_modes", option));
     }
 
     if (Array.isArray(state?.attributes?.available_modes)) {
-      return state.attributes.available_modes.map(item => String(item || "").trim()).filter(Boolean);
+      return state.attributes.available_modes
+        .map(item => String(item || "").trim())
+        .filter(Boolean)
+        .filter(option => !this._isModeHidden("hidden_modes", option));
     }
 
     return [];
@@ -759,8 +781,17 @@ class NodaliaHumidifierCard extends HTMLElement {
   _getFanModeOptions() {
     const fanModeEntity = this._getExternalEntityState(this._config?.fan_mode_entity);
     return Array.isArray(fanModeEntity?.attributes?.options)
-      ? fanModeEntity.attributes.options.map(item => String(item || "").trim()).filter(Boolean)
+      ? fanModeEntity.attributes.options
+        .map(item => String(item || "").trim())
+        .filter(Boolean)
+        .filter(option => !this._isModeHidden("hidden_fan_modes", option))
       : [];
+  }
+
+  _isModeHidden(field, value) {
+    const hiddenModes = Array.isArray(this._config?.[field]) ? this._config[field] : [];
+    const expectedKey = normalizeTextKey(value);
+    return hiddenModes.some(item => normalizeTextKey(item) === expectedKey);
   }
 
   _getCurrentFanMode() {
@@ -2862,6 +2893,15 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
       .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
 
     if (!input?.dataset?.field) {
+      if (input?.dataset?.modeListField && input.dataset.modeValue !== undefined) {
+        event.stopPropagation();
+        this._setModeVisibility(input.dataset.modeListField, input.dataset.modeValue, input.checked);
+        this._setEditorConfig();
+
+        if (event.type === "change") {
+          this._emitConfig();
+        }
+      }
       return;
     }
 
@@ -2984,6 +3024,89 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
           data-field="${escapeHtml(field)}"
           data-value-type="boolean"
           ${checked ? "checked" : ""}
+        />
+        <span class="editor-toggle__switch" aria-hidden="true"></span>
+        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+      </label>
+    `;
+  }
+
+  _getHumidifierState() {
+    return this._config?.entity ? this._hass?.states?.[this._config.entity] || null : null;
+  }
+
+  _getModeEntityState() {
+    return this._config?.mode_entity ? this._hass?.states?.[this._config.mode_entity] || null : null;
+  }
+
+  _getFanModeEntityState() {
+    return this._config?.fan_mode_entity ? this._hass?.states?.[this._config.fan_mode_entity] || null : null;
+  }
+
+  _getModeVisibilityOptions() {
+    const modeEntity = this._getModeEntityState();
+    const humidifierState = this._getHumidifierState();
+
+    if (Array.isArray(modeEntity?.attributes?.options)) {
+      return modeEntity.attributes.options.map(item => String(item || "").trim()).filter(Boolean);
+    }
+
+    if (Array.isArray(humidifierState?.attributes?.available_modes)) {
+      return humidifierState.attributes.available_modes.map(item => String(item || "").trim()).filter(Boolean);
+    }
+
+    return [];
+  }
+
+  _getFanModeVisibilityOptions() {
+    const fanModeEntity = this._getFanModeEntityState();
+    return Array.isArray(fanModeEntity?.attributes?.options)
+      ? fanModeEntity.attributes.options.map(item => String(item || "").trim()).filter(Boolean)
+      : [];
+  }
+
+  _getHiddenModeList(field) {
+    return Array.isArray(this._config?.[field])
+      ? this._config[field].map(item => String(item || "").trim()).filter(Boolean)
+      : [];
+  }
+
+  _isModeVisible(field, value) {
+    const expectedKey = normalizeTextKey(value);
+    return !this._getHiddenModeList(field).some(item => normalizeTextKey(item) === expectedKey);
+  }
+
+  _setModeVisibility(field, value, visible) {
+    const rawValue = String(value || "").trim();
+    if (!rawValue) {
+      return;
+    }
+
+    const nextValues = this._getHiddenModeList(field).filter(item => normalizeTextKey(item) !== normalizeTextKey(rawValue));
+    if (!visible) {
+      nextValues.push(rawValue);
+    }
+
+    if (nextValues.length) {
+      setByPath(this._config, field, nextValues);
+      return;
+    }
+
+    deleteByPath(this._config, field);
+  }
+
+  _renderModeVisibilityField(field, modeValue) {
+    const translatedLabel = translateModeLabel(modeValue);
+    const showRawValue = normalizeTextKey(translatedLabel) !== normalizeTextKey(modeValue);
+    const label = showRawValue ? `${translatedLabel} (${modeValue})` : translatedLabel;
+
+    return `
+      <label class="editor-toggle">
+        <input
+          type="checkbox"
+          data-mode-list-field="${escapeHtml(field)}"
+          data-mode-value="${escapeHtml(modeValue)}"
+          ${this._isModeVisible(field, modeValue) ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
         <span class="editor-toggle__label">${escapeHtml(label)}</span>
@@ -3157,6 +3280,8 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
 
     const config = this._config || normalizeConfig({});
     const hapticStyle = config.haptics?.style || "medium";
+    const modeVisibilityOptions = this._getModeVisibilityOptions();
+    const fanModeVisibilityOptions = this._getFanModeVisibilityOptions();
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -3331,6 +3456,26 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
           width: 100%;
         }
 
+        .editor-subsection {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 14px;
+          display: grid;
+          gap: 10px;
+          padding: 12px;
+        }
+
+        .editor-subsection__title {
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .editor-subsection__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
         .editor-toggle {
           align-items: center;
           grid-template-columns: auto 1fr;
@@ -3483,6 +3628,32 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
             ${this._renderCheckboxField("Mostrar control deslizante", "show_slider", config.show_slider !== false)}
             ${this._renderCheckboxField("Mostrar botón de modo", "show_mode_button", config.show_mode_button !== false)}
             ${this._renderCheckboxField("Mostrar botón de ventilación", "show_fan_mode_button", config.show_fan_mode_button !== false)}
+            ${
+              modeVisibilityOptions.length
+                ? `
+                  <div class="editor-subsection editor-field--full">
+                    <div class="editor-subsection__title">Modos visibles</div>
+                    <div class="editor-subsection__hint">Oculta los modos que expone la integración pero no quieres mostrar en la tarjeta.</div>
+                    <div class="editor-grid editor-grid--stacked">
+                      ${modeVisibilityOptions.map(mode => this._renderModeVisibilityField("hidden_modes", mode)).join("")}
+                    </div>
+                  </div>
+                `
+                : ""
+            }
+            ${
+              fanModeVisibilityOptions.length
+                ? `
+                  <div class="editor-subsection editor-field--full">
+                    <div class="editor-subsection__title">Velocidades visibles</div>
+                    <div class="editor-subsection__hint">Elige qué opciones de ventilación quieres dejar disponibles.</div>
+                    <div class="editor-grid editor-grid--stacked">
+                      ${fanModeVisibilityOptions.map(mode => this._renderModeVisibilityField("hidden_fan_modes", mode)).join("")}
+                    </div>
+                  </div>
+                `
+                : ""
+            }
           </div>
         </section>
 
