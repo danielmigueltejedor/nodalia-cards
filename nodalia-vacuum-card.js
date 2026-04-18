@@ -462,13 +462,6 @@ class NodaliaVacuumCard extends HTMLElement {
       mop: 0,
     };
     this._lastRenderSignature = "";
-    this._lastRenderedModePanelKey = "";
-    this._lastRenderedRoomPanelOpen = false;
-    this._lastModePanelMarkup = "";
-    this._lastRoomPanelMarkup = "";
-    this._animationCleanupTimer = 0;
-    this._modePanelTransition = null;
-    this._roomPanelTransition = null;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -502,12 +495,6 @@ class NodaliaVacuumCard extends HTMLElement {
         this._pendingModeSelectionTimers[kind] = 0;
       }
     });
-    if (this._animationCleanupTimer) {
-      window.clearTimeout(this._animationCleanupTimer);
-      this._animationCleanupTimer = 0;
-    }
-    this._modePanelTransition = null;
-    this._roomPanelTransition = null;
   }
 
   setConfig(config) {
@@ -565,42 +552,14 @@ class NodaliaVacuumCard extends HTMLElement {
     }, Math.max(0, Number(delay) || 0));
   }
 
-  _scheduleAnimationCleanup(delay = 0) {
-    if (this._animationCleanupTimer) {
-      window.clearTimeout(this._animationCleanupTimer);
-      this._animationCleanupTimer = 0;
-    }
-
-    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 5000);
-    if (!safeDelay || typeof window === "undefined") {
-      return;
-    }
-
-    this._animationCleanupTimer = window.setTimeout(() => {
-      this._animationCleanupTimer = 0;
-      this._modePanelTransition = null;
-      this._roomPanelTransition = null;
-      this._render();
-      this._notifyLayoutChange();
-    }, safeDelay);
-  }
-
   _getEstimatedCardSize(state = this._getState()) {
     let size = 3;
-    const now = Date.now();
     const availableModeDescriptors = this._getVisibleModeDescriptors(state);
     const activeModeDescriptor = availableModeDescriptors.find(mode => mode.kind === this._activeModePanel)
-      || availableModeDescriptors.find(mode => mode.kind === this._lastRenderedModePanelKey)
       || null;
     const roomMappings = this._getRoomMappings(state);
-    const modePanelVisible = Boolean(
-      this._activeModePanel
-      || (this._modePanelTransition?.endsAt > now && this._lastRenderedModePanelKey),
-    );
-    const roomPanelVisible = Boolean(
-      (this._roomPanelOpen && roomMappings.length)
-      || (this._roomPanelTransition?.endsAt > now && this._lastRenderedRoomPanelOpen && roomMappings.length),
-    );
+    const modePanelVisible = Boolean(this._activeModePanel);
+    const roomPanelVisible = Boolean(this._roomPanelOpen && roomMappings.length);
 
     if (modePanelVisible && activeModeDescriptor?.options?.length) {
       size += Math.min(3, Math.max(1, Math.ceil(activeModeDescriptor.options.length / 4)));
@@ -1594,7 +1553,43 @@ class NodaliaVacuumCard extends HTMLElement {
     `;
   }
 
-  _setModeToggleButtonsState(panelKind) {
+  _getRoomPanelMarkup(state = this._getState()) {
+    const roomMappings = this._getRoomMappings(state);
+    if (!(this._roomPanelOpen && roomMappings.length)) {
+      return "";
+    }
+
+    return `
+      <div class="vacuum-card__room-panel">
+        ${roomMappings
+          .map(room => `
+            <button
+              class="vacuum-card__preset ${this._selectedCleaningAreas.includes(room.cleaningAreaId) ? "vacuum-card__preset--active" : ""}"
+              type="button"
+              data-vacuum-action="toggle-room"
+              data-cleaning-area-id="${escapeHtml(room.cleaningAreaId)}"
+            >
+              ${escapeHtml(room.name)}
+            </button>
+          `)
+          .join("")}
+      </div>
+    `;
+  }
+
+  _getPanelMarkup(panelKey, state = this._getState()) {
+    if (panelKey === "room") {
+      return this._getRoomPanelMarkup(state);
+    }
+
+    if (panelKey === "suction" || panelKey === "mop") {
+      return this._getModePanelMarkup(panelKey, state);
+    }
+
+    return "";
+  }
+
+  _setPanelToggleButtonsState(panelKey) {
     this.shadowRoot
       ?.querySelectorAll('[data-vacuum-action="toggle-mode-panel"]')
       .forEach(button => {
@@ -1602,15 +1597,26 @@ class NodaliaVacuumCard extends HTMLElement {
           return;
         }
 
-        const isActive = (button.dataset.modeKind || "") === panelKind;
+        const isActive = (button.dataset.modeKind || "") === panelKey;
         button.classList.toggle("vacuum-card__mode-toggle--active", isActive);
+        button.classList.toggle("vacuum-card__control--active", isActive);
+      });
+
+    this.shadowRoot
+      ?.querySelectorAll('[data-vacuum-action="toggle-room-panel"]')
+      .forEach(button => {
+        if (!(button instanceof HTMLElement)) {
+          return;
+        }
+
+        const isActive = panelKey === "room";
         button.classList.toggle("vacuum-card__control--active", isActive);
       });
   }
 
   _setModePanelActiveSelection(modeKind, value) {
-    const panelShell = this.shadowRoot?.querySelector(".vacuum-card__mode-panel-shell");
-    if (!(panelShell instanceof HTMLElement) || panelShell.dataset.panelKind !== String(modeKind || "")) {
+    const panelShell = this.shadowRoot?.querySelector(".vacuum-card__panel-shell");
+    if (!(panelShell instanceof HTMLElement) || panelShell.dataset.panelKey !== String(modeKind || "")) {
       return;
     }
 
@@ -1637,13 +1643,150 @@ class NodaliaVacuumCard extends HTMLElement {
     return node instanceof HTMLElement ? node : null;
   }
 
-  _setVisibleModePanelKind(panelKind, state = this._getState()) {
-    const nextPanelKind = this._getActiveModeDescriptor(state, panelKind)?.kind || "";
-    this._activeModePanel = nextPanelKind || null;
+  _setVisiblePanelKey(panelKey, state = this._getState()) {
+    const nextPanelKey = panelKey === "room"
+      ? (this._canSelectRooms(state) ? "room" : "")
+      : this._getActiveModeDescriptor(state, panelKey)?.kind || "";
+
+    this._activeModePanel = nextPanelKey === "suction" || nextPanelKey === "mop" ? nextPanelKey : null;
+    this._roomPanelOpen = nextPanelKey === "room";
     const animations = this._getAnimationSettings();
-    this._render();
-    this._notifyLayoutChange();
-    this._scheduleLayoutRefresh(animations.panelDuration + 120);
+    const panelsHost = this.shadowRoot?.querySelector(".vacuum-card__panels");
+    const panelMarkup = nextPanelKey ? this._getPanelMarkup(nextPanelKey, state) : "";
+
+    this._setPanelToggleButtonsState(nextPanelKey);
+
+    if (!panelsHost || !(panelsHost instanceof HTMLElement) || !state) {
+      this._render();
+      this._notifyLayoutChange();
+      return;
+    }
+
+    const existingPanel = panelsHost.querySelector(".vacuum-card__panel-shell");
+    if (!animations.enabled) {
+      if (existingPanel instanceof HTMLElement) {
+        existingPanel.remove();
+      }
+
+      if (panelMarkup) {
+        const panelNode = this._createMarkupNode(`
+          <div class="vacuum-card__panel-shell" data-panel-key="${nextPanelKey}">
+            <div class="vacuum-card__panel-inner">
+              ${panelMarkup}
+            </div>
+          </div>
+        `);
+
+        if (panelNode instanceof HTMLElement) {
+          panelsHost.replaceChildren(panelNode);
+          this._notifyLayoutChange();
+          return;
+        }
+      }
+
+      panelsHost.replaceChildren();
+      this._notifyLayoutChange();
+      return;
+    }
+
+    const removePanel = (panel, onDone = null) => {
+      if (!(panel instanceof HTMLElement)) {
+        if (typeof onDone === "function") {
+          onDone();
+        }
+        return;
+      }
+
+      panel.classList.remove("vacuum-card__panel-shell--entering");
+      panel.classList.add("vacuum-card__panel-shell--leaving");
+
+      const finalizeRemoval = () => {
+        if (panel.isConnected) {
+          panel.remove();
+        }
+        this._notifyLayoutChange();
+        if (typeof onDone === "function") {
+          onDone();
+        }
+      };
+
+      panel.addEventListener("animationend", finalizeRemoval, { once: true });
+      window.setTimeout(finalizeRemoval, animations.panelDuration + 80);
+    };
+
+    const appendPanel = () => {
+      if (!panelMarkup) {
+        panelsHost.replaceChildren();
+        this._notifyLayoutChange();
+        return;
+      }
+
+      const panelNode = this._createMarkupNode(`
+        <div class="vacuum-card__panel-shell vacuum-card__panel-shell--entering" data-panel-key="${nextPanelKey}">
+          <div class="vacuum-card__panel-inner">
+            ${panelMarkup}
+          </div>
+        </div>
+      `);
+
+      if (!(panelNode instanceof HTMLElement)) {
+        this._render();
+        return;
+      }
+
+      panelsHost.replaceChildren(panelNode);
+      this._notifyLayoutChange();
+      this._scheduleLayoutRefresh(animations.panelDuration + 120);
+      window.setTimeout(() => {
+        if (panelNode.isConnected) {
+          panelNode.classList.remove("vacuum-card__panel-shell--entering");
+        }
+      }, animations.panelDuration + 80);
+    };
+
+    if (!nextPanelKey) {
+      if (existingPanel instanceof HTMLElement) {
+        removePanel(existingPanel, () => {
+          panelsHost.replaceChildren();
+        });
+      } else {
+        panelsHost.replaceChildren();
+        this._notifyLayoutChange();
+      }
+      return;
+    }
+
+    if (!panelMarkup) {
+      if (existingPanel instanceof HTMLElement) {
+        removePanel(existingPanel, () => {
+          panelsHost.replaceChildren();
+        });
+      } else {
+        panelsHost.replaceChildren();
+        this._notifyLayoutChange();
+      }
+      return;
+    }
+
+    const existingPanelKey = existingPanel instanceof HTMLElement ? existingPanel.dataset.panelKey || "" : "";
+    if (existingPanel instanceof HTMLElement && existingPanelKey === nextPanelKey) {
+      if (existingPanel.classList.contains("vacuum-card__panel-shell--leaving")) {
+        existingPanel.remove();
+      } else {
+        const panelInner = existingPanel.querySelector(".vacuum-card__panel-inner");
+        if (panelInner instanceof HTMLElement) {
+          panelInner.innerHTML = panelMarkup;
+        }
+        return;
+      }
+    }
+
+    if (existingPanel instanceof HTMLElement) {
+      removePanel(existingPanel, appendPanel);
+      return;
+    }
+
+    appendPanel();
   }
 
   _isCleaning(state) {
@@ -2163,20 +2306,11 @@ class NodaliaVacuumCard extends HTMLElement {
       case "toggle-mode-panel": {
         const modeKind = button.dataset.modeKind || "";
         const nextModeKind = this._activeModePanel === modeKind ? "" : modeKind;
-        if (this._roomPanelOpen) {
-          this._roomPanelOpen = false;
-          this._render();
-        }
-        this._setVisibleModePanelKind(nextModeKind, state);
+        this._setVisiblePanelKey(nextModeKind, state);
         break;
       }
       case "toggle-room-panel":
-        this._activeModePanel = null;
-        this._setModeToggleButtonsState("");
-        this._roomPanelOpen = !this._roomPanelOpen;
-        this._render();
-        this._notifyLayoutChange();
-        this._scheduleLayoutRefresh(this._getAnimationSettings().panelDuration + 120);
+        this._setVisiblePanelKey(this._roomPanelOpen ? "" : "room", state);
         break;
       case "toggle-room":
         if (button.dataset.cleaningAreaId) {
@@ -2307,99 +2441,21 @@ class NodaliaVacuumCard extends HTMLElement {
 
     const activeModeDescriptor = availableModeDescriptors.find(mode => mode.kind === this._activeModePanel) || null;
     const currentModePanelMarkup = activeModeDescriptor ? this._getModePanelMarkup(activeModeDescriptor.kind, state) : "";
-    const currentModePanelKey = activeModeDescriptor?.kind || "";
-    const currentRoomPanelMarkup = this._roomPanelOpen && roomMappings.length
-      ? `
-        <div class="vacuum-card__room-panel">
-          ${roomMappings
-            .map(room => `
-              <button
-                class="vacuum-card__preset ${this._selectedCleaningAreas.includes(room.cleaningAreaId) ? "vacuum-card__preset--active" : ""}"
-                type="button"
-                data-vacuum-action="toggle-room"
-                data-cleaning-area-id="${escapeHtml(room.cleaningAreaId)}"
-              >
-                ${escapeHtml(room.name)}
-              </button>
-            `)
-            .join("")}
-        </div>
-      `
+    const currentPanelKey = this._roomPanelOpen && roomMappings.length
+      ? "room"
+      : activeModeDescriptor?.kind || "";
+    const currentPanelMarkup = currentPanelKey
+      ? this._getPanelMarkup(currentPanelKey, state)
       : "";
-    const currentRoomPanelOpen = Boolean(currentRoomPanelMarkup);
-    const now = Date.now();
-    let modePanelAnimationState = "";
-    let roomPanelAnimationState = "";
-
-    if (!animations.enabled) {
-      this._modePanelTransition = null;
-      this._roomPanelTransition = null;
-    } else {
-      if (currentModePanelKey !== this._lastRenderedModePanelKey) {
-        if (currentModePanelKey || this._lastRenderedModePanelKey) {
-          modePanelAnimationState = currentModePanelKey ? "entering" : "leaving";
-          this._modePanelTransition = {
-            endsAt: now + animations.panelDuration,
-            state: modePanelAnimationState,
-          };
-        } else {
-          this._modePanelTransition = null;
-        }
-      } else if (this._modePanelTransition?.endsAt > now) {
-        modePanelAnimationState = this._modePanelTransition.state;
-      } else {
-        this._modePanelTransition = null;
-      }
-
-      if (currentRoomPanelOpen !== this._lastRenderedRoomPanelOpen) {
-        if (currentRoomPanelOpen || this._lastRenderedRoomPanelOpen) {
-          roomPanelAnimationState = currentRoomPanelOpen ? "entering" : "leaving";
-          this._roomPanelTransition = {
-            endsAt: now + animations.panelDuration,
-            state: roomPanelAnimationState,
-          };
-        } else {
-          this._roomPanelTransition = null;
-        }
-      } else if (this._roomPanelTransition?.endsAt > now) {
-        roomPanelAnimationState = this._roomPanelTransition.state;
-      } else {
-        this._roomPanelTransition = null;
-      }
-    }
-
-    const modePanelContentMarkup = currentModePanelMarkup
-      || (modePanelAnimationState === "leaving" ? this._lastModePanelMarkup : "");
-    const modePanelShellMarkup = modePanelContentMarkup
+    const panelShellMarkup = currentPanelMarkup
       ? `
-        <div class="vacuum-card__mode-panel-shell ${modePanelAnimationState ? `vacuum-card__mode-panel-shell--${modePanelAnimationState}` : ""}" data-panel-kind="${escapeHtml(currentModePanelKey || "hidden")}">
-          <div class="vacuum-card__mode-panel-inner">
-            ${modePanelContentMarkup}
+        <div class="vacuum-card__panel-shell" data-panel-key="${escapeHtml(currentPanelKey)}">
+          <div class="vacuum-card__panel-inner">
+            ${currentPanelMarkup}
           </div>
         </div>
       `
       : "";
-    const roomPanelContentMarkup = currentRoomPanelMarkup
-      || (roomPanelAnimationState === "leaving" ? this._lastRoomPanelMarkup : "");
-    const roomPanelShellMarkup = roomPanelContentMarkup
-      ? `
-        <div class="vacuum-card__room-panel-shell ${roomPanelAnimationState ? `vacuum-card__room-panel-shell--${roomPanelAnimationState}` : ""}">
-          <div class="vacuum-card__room-panel-inner">
-            ${roomPanelContentMarkup}
-          </div>
-        </div>
-      `
-      : "";
-    const modePanelAnimationRemaining = modePanelAnimationState && this._modePanelTransition
-      ? Math.max(0, this._modePanelTransition.endsAt - now)
-      : 0;
-    const roomPanelAnimationRemaining = roomPanelAnimationState && this._roomPanelTransition
-      ? Math.max(0, this._roomPanelTransition.endsAt - now)
-      : 0;
-    const shouldCleanupAfterAnimation = Boolean(modePanelAnimationRemaining || roomPanelAnimationRemaining);
-    const cleanupDelay = shouldCleanupAfterAnimation
-      ? Math.max(modePanelAnimationRemaining, roomPanelAnimationRemaining) + 40
-      : 0;
 
     const showCopyBlock = !isCompactLayout || chips.length > 0;
     const cardTapAction = normalizeTextKey(config.tap_action || "default");
@@ -2425,8 +2481,7 @@ class NodaliaVacuumCard extends HTMLElement {
         ha-card {
           --vacuum-card-panel-duration: ${animations.enabled ? animations.panelDuration : 0}ms;
           --vacuum-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
-          --vacuum-card-mode-panel-max-height: ${modePanelMaxHeight}px;
-          --vacuum-card-room-panel-max-height: ${roomPanelMaxHeight}px;
+          --vacuum-card-panel-max-height: ${Math.max(modePanelMaxHeight, roomPanelMaxHeight)}px;
           background: ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -2757,7 +2812,12 @@ class NodaliaVacuumCard extends HTMLElement {
           margin-top: -2px;
         }
 
-        .vacuum-card__mode-panel-shell {
+        .vacuum-card__panels {
+          display: grid;
+          min-width: 0;
+        }
+
+        .vacuum-card__panel-shell {
           backface-visibility: hidden;
           min-width: 0;
           overflow: hidden;
@@ -2766,7 +2826,7 @@ class NodaliaVacuumCard extends HTMLElement {
           width: 100%;
         }
 
-        .vacuum-card__mode-panel-inner {
+        .vacuum-card__panel-inner {
           backface-visibility: hidden;
           display: grid;
           min-width: 0;
@@ -2774,54 +2834,21 @@ class NodaliaVacuumCard extends HTMLElement {
           will-change: opacity, transform;
         }
 
-        .vacuum-card__mode-panel-shell--entering {
-          animation: vacuum-card-mode-panel-shell-in var(--vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        .vacuum-card__panel-shell--entering {
+          animation: vacuum-card-panel-shell-in var(--vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
-        .vacuum-card__mode-panel-shell--entering .vacuum-card__mode-panel-inner {
-          animation: vacuum-card-mode-panel-content-in var(--vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        .vacuum-card__panel-shell--entering .vacuum-card__panel-inner {
+          animation: vacuum-card-panel-content-in var(--vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
-        .vacuum-card__mode-panel-shell--leaving {
-          animation: vacuum-card-mode-panel-shell-out var(--vacuum-card-panel-duration) cubic-bezier(0.36, 0, 0.2, 1) both;
-        }
-
-        .vacuum-card__mode-panel-shell--leaving .vacuum-card__mode-panel-inner {
-          animation: vacuum-card-mode-panel-content-out var(--vacuum-card-panel-duration) cubic-bezier(0.36, 0, 0.2, 1) both;
-        }
-
-        .vacuum-card__room-panel-shell {
-          backface-visibility: hidden;
-          min-width: 0;
-          overflow: hidden;
-          transform-origin: top center;
-          will-change: max-height, opacity;
-          width: 100%;
-        }
-
-        .vacuum-card__room-panel-inner {
-          backface-visibility: hidden;
-          display: grid;
-          min-width: 0;
-          padding: 4px 0 0;
-          will-change: opacity, transform;
-        }
-
-        .vacuum-card__room-panel-shell--entering {
-          animation: vacuum-card-room-panel-shell-in var(--vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-        }
-
-        .vacuum-card__room-panel-shell--entering .vacuum-card__room-panel-inner {
-          animation: vacuum-card-room-panel-content-in var(--vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-        }
-
-        .vacuum-card__room-panel-shell--leaving {
-          animation: vacuum-card-room-panel-shell-out var(--vacuum-card-panel-duration) cubic-bezier(0.36, 0, 0.2, 1) both;
+        .vacuum-card__panel-shell--leaving {
+          animation: vacuum-card-panel-shell-out var(--vacuum-card-panel-duration) cubic-bezier(0.36, 0, 0.2, 1) both;
           pointer-events: none;
         }
 
-        .vacuum-card__room-panel-shell--leaving .vacuum-card__room-panel-inner {
-          animation: vacuum-card-room-panel-content-out var(--vacuum-card-panel-duration) cubic-bezier(0.36, 0, 0.2, 1) both;
+        .vacuum-card__panel-shell--leaving .vacuum-card__panel-inner {
+          animation: vacuum-card-panel-content-out var(--vacuum-card-panel-duration) cubic-bezier(0.36, 0, 0.2, 1) both;
         }
 
         @keyframes vacuum-card-button-bounce {
@@ -2830,20 +2857,20 @@ class NodaliaVacuumCard extends HTMLElement {
           100% { transform: scale(1); }
         }
 
-        @keyframes vacuum-card-mode-panel-shell-in {
+        @keyframes vacuum-card-panel-shell-in {
           0% {
             max-height: 0;
             opacity: 0;
           }
           100% {
-            max-height: var(--vacuum-card-mode-panel-max-height);
+            max-height: var(--vacuum-card-panel-max-height);
             opacity: 1;
           }
         }
 
-        @keyframes vacuum-card-mode-panel-shell-out {
+        @keyframes vacuum-card-panel-shell-out {
           0% {
-            max-height: var(--vacuum-card-mode-panel-max-height);
+            max-height: var(--vacuum-card-panel-max-height);
             opacity: 1;
           }
           100% {
@@ -2852,7 +2879,7 @@ class NodaliaVacuumCard extends HTMLElement {
           }
         }
 
-        @keyframes vacuum-card-mode-panel-content-in {
+        @keyframes vacuum-card-panel-content-in {
           0% {
             opacity: 0;
             transform: translateY(-8px) scaleY(0.96);
@@ -2863,51 +2890,7 @@ class NodaliaVacuumCard extends HTMLElement {
           }
         }
 
-        @keyframes vacuum-card-mode-panel-content-out {
-          0% {
-            opacity: 1;
-            transform: translateY(0) scaleY(1);
-          }
-          100% {
-            opacity: 0;
-            transform: translateY(-6px) scaleY(0.96);
-          }
-        }
-
-        @keyframes vacuum-card-room-panel-shell-in {
-          0% {
-            max-height: 0;
-            opacity: 0;
-          }
-          100% {
-            max-height: var(--vacuum-card-room-panel-max-height);
-            opacity: 1;
-          }
-        }
-
-        @keyframes vacuum-card-room-panel-shell-out {
-          0% {
-            max-height: var(--vacuum-card-room-panel-max-height);
-            opacity: 1;
-          }
-          100% {
-            max-height: 0;
-            opacity: 0;
-          }
-        }
-
-        @keyframes vacuum-card-room-panel-content-in {
-          0% {
-            opacity: 0;
-            transform: translateY(-8px) scaleY(0.96);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scaleY(1);
-          }
-        }
-
-        @keyframes vacuum-card-room-panel-content-out {
+        @keyframes vacuum-card-panel-content-out {
           0% {
             opacity: 1;
             transform: translateY(0) scaleY(1);
@@ -3027,30 +3010,13 @@ class NodaliaVacuumCard extends HTMLElement {
               : ""
           }
 
-          ${modePanelShellMarkup}
-
-          ${roomPanelShellMarkup}
+          <div class="vacuum-card__panels">
+            ${panelShellMarkup}
+          </div>
 
         </div>
       </ha-card>
     `;
-
-    if (currentModePanelMarkup && modePanelAnimationState !== "leaving") {
-      this._lastModePanelMarkup = currentModePanelMarkup;
-    }
-    if (currentRoomPanelMarkup && roomPanelAnimationState !== "leaving") {
-      this._lastRoomPanelMarkup = currentRoomPanelMarkup;
-    }
-
-    this._lastRenderedModePanelKey = currentModePanelKey;
-    this._lastRenderedRoomPanelOpen = currentRoomPanelOpen;
-
-    if (shouldCleanupAfterAnimation) {
-      this._scheduleAnimationCleanup(cleanupDelay);
-    } else if (this._animationCleanupTimer) {
-      window.clearTimeout(this._animationCleanupTimer);
-      this._animationCleanupTimer = 0;
-    }
   }
 }
 
