@@ -1970,11 +1970,12 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__dial.is-dragging .climate-card__dial-thumb {
+          animation: climate-card-dial-thumb-pop 260ms cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
           border-color: color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.76));
           box-shadow:
-            0 0 0 5px color-mix(in srgb, ${accentColor} 12%, transparent),
-            0 10px 22px rgba(0, 0, 0, 0.14);
-          transform: translate(-50%, -50%) scale(1.14);
+            0 0 0 7px color-mix(in srgb, ${accentColor} 14%, transparent),
+            0 12px 24px rgba(0, 0, 0, 0.16);
+          transform: translate(-50%, -50%) scale(1.2);
         }
 
         .climate-card__dial-center {
@@ -2266,6 +2267,21 @@ class NodaliaClimateCard extends HTMLElement {
           100% {
             opacity: 1;
             transform: scale(1);
+          }
+        }
+
+        @keyframes climate-card-dial-thumb-pop {
+          0% {
+            transform: translate(-50%, -50%) scale(1);
+          }
+          48% {
+            transform: translate(-50%, -50%) scale(1.34);
+          }
+          72% {
+            transform: translate(-50%, -50%) scale(1.15);
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1.2);
           }
         }
 
