@@ -1825,9 +1825,7 @@ class NodaliaClimateCard extends HTMLElement {
           --climate-angle: ${dialAngle}deg;
           --climate-progress-length: ${progressLength};
           --climate-dial-size: ${dialSizePx}px;
-          --climate-thumb-height: calc(var(--climate-thumb-size) * 0.84);
           --climate-thumb-size: ${thumbSizePx}px;
-          --climate-thumb-width: calc(var(--climate-thumb-size) * 1.34);
           -webkit-backdrop-filter: blur(18px);
           backdrop-filter: blur(18px);
           background:
@@ -1905,27 +1903,28 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__dial-thumb {
-          -webkit-backdrop-filter: blur(14px);
-          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(16px);
+          backdrop-filter: blur(16px);
           background:
+            radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.18) 24%, transparent 44%),
+            radial-gradient(circle at 72% 76%, color-mix(in srgb, ${accentColor} 22%, rgba(255, 255, 255, 0.18)) 0%, transparent 54%),
             linear-gradient(
               180deg,
-              color-mix(in srgb, ${accentColor} 12%, rgba(255, 255, 255, 0.9)) 0%,
-              rgba(255, 255, 255, 0.7) 100%
+              color-mix(in srgb, ${accentColor} 10%, rgba(255, 255, 255, 0.92)) 0%,
+              color-mix(in srgb, ${accentColor} 8%, rgba(255, 255, 255, 0.58)) 100%
             );
-          border: 1px solid color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.14));
-          border-radius: 999px;
+          border: 1px solid color-mix(in srgb, ${accentColor} 16%, rgba(255, 255, 255, 0.24));
+          border-radius: 50%;
           box-shadow:
-            0 10px 24px rgba(0, 0, 0, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.24),
-            inset 0 -1px 0 rgba(255, 255, 255, 0.08);
-          height: var(--climate-thumb-height);
+            0 12px 28px rgba(0, 0, 0, 0.22),
+            inset 0 1px 0 rgba(255, 255, 255, 0.28),
+            inset 0 -8px 12px rgba(255, 255, 255, 0.06);
+          height: var(--climate-thumb-size);
           left: var(--climate-thumb-left, 50%);
           pointer-events: auto;
           position: absolute;
           top: var(--climate-thumb-top, 50%);
-          transform: translate(-50%, -50%) rotate(calc(var(--climate-angle) + 90deg)) scale(1);
-          transform-origin: center;
+          transform: translate(-50%, -50%) scale(1);
           transition:
             left var(--climate-card-dial-duration) ease-out,
             top var(--climate-card-dial-duration) ease-out,
@@ -1933,29 +1932,42 @@ class NodaliaClimateCard extends HTMLElement {
             border-color var(--climate-card-dial-duration) ease,
             box-shadow var(--climate-card-dial-duration) ease,
             background var(--climate-card-dial-duration) ease;
-          width: var(--climate-thumb-width);
+          width: var(--climate-thumb-size);
           z-index: 2;
         }
 
         .climate-card__dial-thumb::before {
-          background: color-mix(in srgb, ${accentColor} 26%, rgba(255, 255, 255, 0.9));
-          border-radius: 999px;
-          box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+          background:
+            radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.48) 0%, rgba(255, 255, 255, 0.08) 30%, transparent 48%),
+            linear-gradient(
+              180deg,
+              color-mix(in srgb, ${accentColor} 34%, rgba(255, 255, 255, 0.44)) 0%,
+              color-mix(in srgb, ${accentColor} 44%, rgba(255, 255, 255, 0.1)) 100%
+            );
+          border-radius: 50%;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.18),
+            0 0 0 1px color-mix(in srgb, ${accentColor} 10%, rgba(255, 255, 255, 0.08));
           content: "";
-          height: calc(100% - 10px);
+          height: calc(100% - 8px);
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: 3px;
+          width: calc(100% - 8px);
         }
 
         .climate-card__dial-thumb::after {
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          border-radius: inherit;
           content: "";
-          inset: 0;
+          height: 38%;
+          left: 21%;
           position: absolute;
+          top: 18%;
+          width: 38%;
+          background: radial-gradient(circle, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.26) 56%, transparent 72%);
+          border-radius: 50%;
+          filter: blur(0.4px);
+          opacity: 0.92;
         }
 
         .climate-card__dial-current-marker {
@@ -2007,17 +2019,19 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__dial.is-dragging .climate-card__dial-thumb {
           animation: climate-card-dial-thumb-pop 260ms cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
           background:
+            radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.84) 0%, rgba(255, 255, 255, 0.22) 24%, transparent 44%),
+            radial-gradient(circle at 72% 76%, color-mix(in srgb, ${accentColor} 28%, rgba(255, 255, 255, 0.24)) 0%, transparent 56%),
             linear-gradient(
               180deg,
-              color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.94)) 0%,
-              rgba(255, 255, 255, 0.76) 100%
+              color-mix(in srgb, ${accentColor} 16%, rgba(255, 255, 255, 0.96)) 0%,
+              color-mix(in srgb, ${accentColor} 12%, rgba(255, 255, 255, 0.68)) 100%
             );
-          border-color: color-mix(in srgb, ${accentColor} 20%, rgba(255, 255, 255, 0.78));
+          border-color: color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.34));
           box-shadow:
-            0 0 0 6px color-mix(in srgb, ${accentColor} 12%, transparent),
-            0 16px 30px rgba(0, 0, 0, 0.22),
-            inset 0 1px 0 rgba(255, 255, 255, 0.24);
-          transform: translate(-50%, -50%) rotate(calc(var(--climate-angle) + 90deg)) scale(1.14);
+            0 0 0 5px color-mix(in srgb, ${accentColor} 10%, transparent),
+            0 18px 34px rgba(0, 0, 0, 0.24),
+            inset 0 1px 0 rgba(255, 255, 255, 0.28);
+          transform: translate(-50%, -50%) scale(1.15);
         }
 
         .climate-card__dial-center {
@@ -2314,16 +2328,16 @@ class NodaliaClimateCard extends HTMLElement {
 
         @keyframes climate-card-dial-thumb-pop {
           0% {
-            transform: translate(-50%, -50%) rotate(calc(var(--climate-angle) + 90deg)) scale(1);
+            transform: translate(-50%, -50%) scale(1);
           }
           48% {
-            transform: translate(-50%, -50%) rotate(calc(var(--climate-angle) + 90deg)) scale(1.22);
+            transform: translate(-50%, -50%) scale(1.24);
           }
           72% {
-            transform: translate(-50%, -50%) rotate(calc(var(--climate-angle) + 90deg)) scale(1.08);
+            transform: translate(-50%, -50%) scale(1.09);
           }
           100% {
-            transform: translate(-50%, -50%) rotate(calc(var(--climate-angle) + 90deg)) scale(1.14);
+            transform: translate(-50%, -50%) scale(1.15);
           }
         }
 
