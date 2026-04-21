@@ -2134,6 +2134,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
                 .join("")}
             </div>
           `;
+
     return `
       <div class="media-browser-backdrop" data-media-browser-close="true"></div>
       <div class="media-browser-panel" role="dialog" aria-modal="true" aria-label="Navegador de medios">
@@ -7392,10 +7393,22 @@ class NodaliaMediaPlayer extends HTMLElement {
                 .join("")}
             </div>
           `;
+    const mediaBrowserBackdropClasses = [
+      "media-browser-backdrop",
+      this._mediaBrowserState?.animateIn === true ? "media-browser-backdrop--entering" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const mediaBrowserPanelClasses = [
+      "media-browser-panel",
+      this._mediaBrowserState?.animateIn === true ? "media-browser-panel--entering" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
 
     return `
-      <div class="media-browser-backdrop" data-media-browser-close="true"></div>
-      <div class="media-browser-panel" role="dialog" aria-modal="true" aria-label="Navegador de medios">
+      <div class="${mediaBrowserBackdropClasses}" data-media-browser-close="true"></div>
+      <div class="${mediaBrowserPanelClasses}" role="dialog" aria-modal="true" aria-label="Navegador de medios">
         <div class="media-browser__header">
           <button
             type="button"
@@ -23530,6 +23543,9 @@ const SERIES_COLORS = [
   "#b993ff",
   "#7ad66f",
 ];
+const TOUCH_HOLD_DELAY = 240;
+const TOUCH_MOVE_CANCEL_DISTANCE = 14;
+const TOUCH_CLICK_SUPPRESSION_WINDOW = 350;
 
 const DEFAULT_CONFIG = {
   entity: "",
@@ -23551,6 +23567,11 @@ const DEFAULT_CONFIG = {
     enabled: true,
     style: "medium",
     fallback_vibrate: false,
+  },
+  animations: {
+    enabled: true,
+    hover_duration: 180,
+    button_bounce_duration: 280,
   },
   styles: {
     card: {
@@ -23680,6 +23701,12 @@ function setByPath(target, path, value) {
   cursor[parts[parts.length - 1]] = value;
 }
 
+function getByPath(target, path) {
+  return String(path || "")
+    .split(".")
+    .reduce((cursor, key) => (cursor === undefined || cursor === null ? undefined : cursor[key]), target);
+}
+
 function deleteByPath(target, path) {
   const parts = path.split(".");
   let cursor = target;
@@ -23769,6 +23796,110 @@ function parseSizeToPixels(value, fallback = 0) {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+function escapeSelectorValue(value) {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(String(value));
+  }
+
+  return String(value).replaceAll('"', '\\"');
+}
+
+function resolveEditorColorValue(value) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || typeof document === "undefined") {
+    return "";
+  }
+
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.color = "";
+  probe.style.color = rawValue;
+  if (!probe.style.color) {
+    return rawValue;
+  }
+
+  (document.body || document.documentElement).appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved || rawValue;
+}
+
+function formatEditorHexChannel(value) {
+  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+}
+
+function formatEditorColorFromHex(hex, alpha = 1) {
+  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+    return String(hex ?? "");
+  }
+
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+  const safeAlpha = clamp(Number(alpha), 0, 1);
+  if (safeAlpha >= 0.999) {
+    return `#${normalizedHex}`;
+  }
+
+  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+}
+
+function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const channels = resolvedValue.match(/[\d.]+/g) || [];
+  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+
+  return {
+    alpha,
+    hex,
+    resolved: resolvedValue,
+    source: sourceValue,
+    value: formatEditorColorFromHex(hex, alpha),
+  };
+}
+
+function getEditorColorFallbackValue(field) {
+  const normalizedField = String(field ?? "");
+
+  if (normalizedField.endsWith("background")) {
+    return "var(--ha-card-background)";
+  }
+
+  if (normalizedField.endsWith("icon.color")) {
+    return "var(--primary-text-color)";
+  }
+
+  return "var(--info-color, #71c0ff)";
+}
+
+function moveItem(array, fromIndex, toIndex) {
+  if (!Array.isArray(array)) {
+    return array;
+  }
+
+  if (
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= array.length ||
+    toIndex >= array.length ||
+    fromIndex === toIndex
+  ) {
+    return array;
+  }
+
+  const [item] = array.splice(fromIndex, 1);
+  array.splice(toIndex, 0, item);
+  return array;
 }
 
 function formatHoverTimestamp(value) {
@@ -23917,17 +24048,31 @@ class NodaliaGraphCard extends HTMLElement {
     this._historyKey = "";
     this._historyLoadedAt = 0;
     this._historyAbortController = null;
+    this._activeSeriesEntityId = null;
     this._hoverIndex = null;
     this._hoverChart = null;
     this._hoverFrame = 0;
     this._pendingHoverIndex = null;
+    this._hoverEntering = false;
     this._lastRenderSignature = "";
+    this._touchPressTimer = 0;
+    this._touchPressState = null;
+    this._touchHoverActive = false;
+    this._suppressClickUntil = 0;
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
     this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
+    this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
+    this._onShadowTouchMove = this._onShadowTouchMove.bind(this);
+    this._onShadowTouchEnd = this._onShadowTouchEnd.bind(this);
+    this._onShadowTouchCancel = this._onShadowTouchCancel.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("pointermove", this._onShadowPointerMove);
     this.shadowRoot.addEventListener("pointerleave", this._onShadowPointerLeave);
+    this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: true });
+    this.shadowRoot.addEventListener("touchmove", this._onShadowTouchMove, { passive: false });
+    this.shadowRoot.addEventListener("touchend", this._onShadowTouchEnd);
+    this.shadowRoot.addEventListener("touchcancel", this._onShadowTouchCancel);
   }
 
   disconnectedCallback() {
@@ -23938,6 +24083,9 @@ class NodaliaGraphCard extends HTMLElement {
       this._hoverFrame = 0;
     }
     this._pendingHoverIndex = null;
+    this._clearTouchPressTimer();
+    this._touchPressState = null;
+    this._touchHoverActive = false;
   }
 
   setConfig(config) {
@@ -24114,6 +24262,12 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   _onShadowClick(event) {
+    if (Date.now() < this._suppressClickUntil) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
     const seriesChip = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.graphSeries);
@@ -24125,6 +24279,7 @@ class NodaliaGraphCard extends HTMLElement {
       this._activeSeriesEntityId = this._activeSeriesEntityId === entityId ? null : entityId;
       this._hoverIndex = null;
       this._triggerHaptic("selection");
+      this._triggerButtonBounce(seriesChip);
       this._render();
       return;
     }
@@ -24140,7 +24295,41 @@ class NodaliaGraphCard extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
     this._triggerHaptic();
+    this._triggerButtonBounce(target);
     this._openMoreInfo();
+  }
+
+  _getAnimationSettings() {
+    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+
+    return {
+      enabled: configuredAnimations.enabled !== false,
+      hoverDuration: clamp(
+        Number(configuredAnimations.hover_duration) || DEFAULT_CONFIG.animations.hover_duration,
+        80,
+        1200,
+      ),
+      buttonBounceDuration: clamp(
+        Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+        120,
+        1200,
+      ),
+    };
+  }
+
+  _triggerButtonBounce(element) {
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled || !(element instanceof HTMLElement)) {
+      return;
+    }
+
+    element.classList.remove("is-pressing");
+    void element.offsetWidth;
+    element.classList.add("is-pressing");
+
+    window.setTimeout(() => {
+      element.classList.remove("is-pressing");
+    }, animations.buttonBounceDuration + 40);
   }
 
   _getVisibleSeries(series) {
@@ -24152,6 +24341,40 @@ class NodaliaGraphCard extends HTMLElement {
     return series.filter(entry => entry.entity === selectedEntityId);
   }
 
+  _getChartSurfaceFromEvent(event) {
+    return event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.graphSurface === "chart");
+  }
+
+  _getHoverSampleCount() {
+    return this._hoverChart?.entries?.[0]?.samples?.length || 0;
+  }
+
+  _getHoverIndexFromClientX(surface, clientX) {
+    const sampleCount = this._getHoverSampleCount();
+    if (!(surface instanceof HTMLElement) || sampleCount <= 1) {
+      return null;
+    }
+
+    const rect = surface.getBoundingClientRect();
+    if (rect.width <= 0) {
+      return null;
+    }
+
+    const relativeX = clamp(clientX - rect.left, 0, rect.width);
+    return Math.round((relativeX / rect.width) * (sampleCount - 1));
+  }
+
+  _updateHoverFromClientX(surface, clientX) {
+    const nextIndex = this._getHoverIndexFromClientX(surface, clientX);
+    if (nextIndex === null) {
+      return;
+    }
+
+    this._scheduleHoverRender(nextIndex);
+  }
+
   _onShadowPointerMove(event) {
     if (
       (typeof event.pointerType === "string" && event.pointerType === "touch")
@@ -24160,33 +24383,143 @@ class NodaliaGraphCard extends HTMLElement {
       return;
     }
 
-    const surface = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.graphSurface === "chart");
+    const surface = this._getChartSurfaceFromEvent(event);
 
     if (!surface || !this._hoverChart?.entries?.length) {
       this._scheduleHoverRender(null);
       return;
     }
 
-    const sampleCount = this._hoverChart.entries[0]?.samples?.length || 0;
-    if (sampleCount <= 1) {
-      return;
-    }
-
-    const rect = surface.getBoundingClientRect();
-    if (rect.width <= 0) {
-      return;
-    }
-
-    const relativeX = clamp(event.clientX - rect.left, 0, rect.width);
-    const nextIndex = Math.round((relativeX / rect.width) * (sampleCount - 1));
-
-    this._scheduleHoverRender(nextIndex);
+    this._updateHoverFromClientX(surface, event.clientX);
   }
 
   _onShadowPointerLeave() {
+    if (this._touchHoverActive) {
+      return;
+    }
+
     this._scheduleHoverRender(null);
+  }
+
+  _clearTouchPressTimer() {
+    if (!this._touchPressTimer) {
+      return;
+    }
+
+    window.clearTimeout(this._touchPressTimer);
+    this._touchPressTimer = 0;
+  }
+
+  _findTrackedTouch(touches) {
+    if (!this._touchPressState || !touches) {
+      return null;
+    }
+
+    return Array.from(touches).find(touch => touch.identifier === this._touchPressState.identifier) || null;
+  }
+
+  _clearTouchHover(options = {}) {
+    const shouldRender = options.shouldRender !== false;
+    const suppressClick = options.suppressClick === true;
+    const shouldClearHover = options.clearHover !== false;
+
+    this._clearTouchPressTimer();
+    this._touchPressState = null;
+
+    if (suppressClick) {
+      this._suppressClickUntil = Date.now() + TOUCH_CLICK_SUPPRESSION_WINDOW;
+    }
+
+    const wasActive = this._touchHoverActive;
+    this._touchHoverActive = false;
+    if (!wasActive || !shouldClearHover) {
+      return;
+    }
+
+    if (shouldRender) {
+      this._scheduleHoverRender(null);
+      return;
+    }
+
+    this._hoverIndex = null;
+  }
+
+  _onShadowTouchStart(event) {
+    if (event.touches.length !== 1) {
+      this._clearTouchHover({ shouldRender: false, clearHover: false });
+      return;
+    }
+
+    const surface = this._getChartSurfaceFromEvent(event);
+    if (!surface || !this._hoverChart?.entries?.length) {
+      this._clearTouchHover({ shouldRender: false, clearHover: false });
+      return;
+    }
+
+    const touch = event.touches[0];
+    this._clearTouchPressTimer();
+    this._touchPressState = {
+      identifier: touch.identifier,
+      lastX: touch.clientX,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      surface,
+    };
+
+    this._touchPressTimer = window.setTimeout(() => {
+      if (!this._touchPressState) {
+        return;
+      }
+
+      this._touchPressTimer = 0;
+      this._touchHoverActive = true;
+      this._updateHoverFromClientX(this._touchPressState.surface, this._touchPressState.lastX);
+      this._triggerHaptic("selection");
+    }, TOUCH_HOLD_DELAY);
+  }
+
+  _onShadowTouchMove(event) {
+    if (!this._touchPressState) {
+      return;
+    }
+
+    const touch = this._findTrackedTouch(event.touches);
+    if (!touch) {
+      return;
+    }
+
+    this._touchPressState.lastX = touch.clientX;
+
+    if (!this._touchHoverActive) {
+      const deltaX = touch.clientX - this._touchPressState.startX;
+      const deltaY = touch.clientY - this._touchPressState.startY;
+      if (Math.hypot(deltaX, deltaY) > TOUCH_MOVE_CANCEL_DISTANCE) {
+        this._clearTouchHover({ shouldRender: false, clearHover: false });
+      }
+      return;
+    }
+
+    event.preventDefault();
+    this._updateHoverFromClientX(this._touchPressState.surface, touch.clientX);
+  }
+
+  _onShadowTouchEnd(event) {
+    const touch = this._findTrackedTouch(event.changedTouches);
+    if (!touch && !this._touchHoverActive && !this._touchPressTimer) {
+      return;
+    }
+
+    if (this._touchHoverActive) {
+      event.preventDefault();
+    }
+
+    this._clearTouchHover({
+      suppressClick: this._touchHoverActive,
+    });
+  }
+
+  _onShadowTouchCancel() {
+    this._clearTouchHover();
   }
 
   _scheduleHoverRender(nextIndex) {
@@ -24209,6 +24542,7 @@ class NodaliaGraphCard extends HTMLElement {
         return;
       }
 
+      this._hoverEntering = resolvedIndex !== null && this._hoverIndex === null;
       this._hoverIndex = resolvedIndex;
       this._render();
     });
@@ -24578,6 +24912,39 @@ class NodaliaGraphCard extends HTMLElement {
     };
   }
 
+  _syncTooltipPosition() {
+    if (!this.shadowRoot) {
+      return;
+    }
+
+    const tooltip = this.shadowRoot.querySelector(".graph-card__tooltip");
+    const chartWrap = this.shadowRoot.querySelector(".graph-card__chart-wrap");
+    if (!(tooltip instanceof HTMLElement) || !(chartWrap instanceof HTMLElement)) {
+      return;
+    }
+
+    const chartWidth = Number(tooltip.dataset.chartWidth || 0);
+    const anchorX = Number(tooltip.dataset.anchorX || 0);
+    if (!Number.isFinite(chartWidth) || chartWidth <= 0) {
+      return;
+    }
+
+    const wrapWidth = chartWrap.clientWidth;
+    if (!wrapWidth) {
+      return;
+    }
+
+    const visibleInset = clamp(Number(chartWrap.dataset.visibleInset || 0), 0, wrapWidth / 2);
+    const usableWidth = Math.max(160, wrapWidth - (visibleInset * 2) - 20);
+    tooltip.style.maxWidth = `${usableWidth}px`;
+
+    const tooltipWidth = Math.min(tooltip.offsetWidth || usableWidth, usableWidth);
+    const anchorPx = (anchorX / chartWidth) * wrapWidth;
+    const minCenter = visibleInset + (tooltipWidth / 2) + 10;
+    const maxCenter = wrapWidth - visibleInset - (tooltipWidth / 2) - 10;
+    tooltip.style.left = `${clamp(anchorPx, minCenter, maxCenter)}px`;
+  }
+
   _getSeriesData() {
     if (this._historySeries.some(entry => entry.samples?.length > 1)) {
       return this._historySeries;
@@ -24660,13 +25027,19 @@ class NodaliaGraphCard extends HTMLElement {
     const cardPaddingPx = Math.max(12, parseSizeToPixels(styles.card.padding, 16));
     const chartBleed = Math.round(cardPaddingPx * 0.95);
     const cardBackground = `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
-    const cardBorder = `1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color))`;
+    const computedCardBorder = `1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color))`;
+    const cardBorder = String(styles.card.border || "").trim() && styles.card.border !== DEFAULT_CONFIG.styles.card.border
+      ? styles.card.border
+      : computedCardBorder;
     const cardShadow = `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 8%, rgba(0, 0, 0, 0.16))`;
     const tooltipTint = hover?.values?.[0]?.color || accentColor;
+    const animations = this._getAnimationSettings();
 
     this.shadowRoot.innerHTML = `
       <style>
         :host {
+          --graph-card-hover-duration: ${animations.enabled ? animations.hoverDuration : 0}ms;
+          --graph-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           display: block;
           height: 100%;
           min-height: 0;
@@ -24817,7 +25190,10 @@ class NodaliaGraphCard extends HTMLElement {
           min-width: 0;
           opacity: 0.9;
           padding: 7px 12px;
+          transform: translateZ(0);
+          transform-origin: center;
           transition: opacity 160ms ease, transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+          will-change: transform;
         }
 
         .graph-card__legend-item:hover {
@@ -24857,6 +25233,9 @@ class NodaliaGraphCard extends HTMLElement {
           overflow: visible;
           padding: 2px 0 0;
           position: relative;
+          touch-action: pan-y;
+          user-select: none;
+          -webkit-user-select: none;
           width: calc(100% + ${chartBleed * 2}px);
         }
 
@@ -24936,6 +25315,7 @@ class NodaliaGraphCard extends HTMLElement {
             0 22px 38px rgba(0, 0, 0, 0.28),
             0 10px 26px color-mix(in srgb, var(--tooltip-tint) 12%, rgba(0, 0, 0, 0.18));
           color: var(--primary-text-color);
+          left: 0;
           max-width: min(320px, calc(100% - 20px));
           min-width: 210px;
           padding: 13px 15px;
@@ -24944,6 +25324,10 @@ class NodaliaGraphCard extends HTMLElement {
           top: -110px;
           transform: translateX(-50%);
           z-index: 3;
+        }
+
+        .graph-card__tooltip--entering {
+          animation: graph-card-tooltip-in var(--graph-card-hover-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
         .graph-card__tooltip-time {
@@ -25021,6 +25405,61 @@ class NodaliaGraphCard extends HTMLElement {
           stroke-width: ${lineWidth};
         }
 
+        .graph-card__hover-points-layer--entering .graph-card__hover-point {
+          animation: graph-card-hover-point-in var(--graph-card-hover-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        .graph-card__hover-line--entering {
+          animation: graph-card-hover-line-in var(--graph-card-hover-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        .graph-card__legend-item.is-pressing {
+          animation: graph-card-button-bounce var(--graph-card-button-bounce-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        @keyframes graph-card-tooltip-in {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, 8px) scale(0.98);
+          }
+          100% {
+            opacity: 1;
+            transform: translate(-50%, 0) scale(1);
+          }
+        }
+
+        @keyframes graph-card-hover-point-in {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.72);
+          }
+          100% {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+          }
+        }
+
+        @keyframes graph-card-hover-line-in {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+
+        @keyframes graph-card-button-bounce {
+          0% { transform: scale(1); }
+          40% { transform: scale(1.08); }
+          100% { transform: scale(1); }
+        }
+
+        ${animations.enabled ? "" : `
+        .graph-card__legend-item,
+        .graph-card__tooltip,
+        .graph-card__hover-line,
+        .graph-card__hover-point {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
+
         @media (max-width: 640px) {
           .graph-card__header {
             gap: 8px;
@@ -25083,11 +25522,16 @@ class NodaliaGraphCard extends HTMLElement {
               : ""
           }
 
-          <div class="graph-card__chart-wrap" data-graph-surface="chart">
+          <div class="graph-card__chart-wrap" data-graph-surface="chart" data-visible-inset="${chartBleed}">
             ${
               hover
                 ? `
-                  <div class="graph-card__tooltip" style="left: ${clamp(hover.x, 10, chart.width - 10)}%; --tooltip-tint:${escapeHtml(tooltipTint)};">
+                  <div
+                    class="graph-card__tooltip ${this._hoverEntering && animations.enabled ? "graph-card__tooltip--entering" : ""}"
+                    data-anchor-x="${hover.x.toFixed(2)}"
+                    data-chart-width="${chart.width}"
+                    style="--tooltip-tint:${escapeHtml(tooltipTint)};"
+                  >
                     <div class="graph-card__tooltip-time">${escapeHtml(hover.label)}</div>
                     <div class="graph-card__tooltip-values">
                       ${hover.values.map(item => `
@@ -25110,7 +25554,7 @@ class NodaliaGraphCard extends HTMLElement {
               </defs>
               ${
                 hover
-                  ? `<line class="graph-card__hover-line" x1="${hover.x.toFixed(2)}" y1="0" x2="${hover.x.toFixed(2)}" y2="${chart.height}"></line>`
+                  ? `<line class="graph-card__hover-line ${this._hoverEntering && animations.enabled ? "graph-card__hover-line--entering" : ""}" x1="${hover.x.toFixed(2)}" y1="0" x2="${hover.x.toFixed(2)}" y2="${chart.height}"></line>`
                   : ""
               }
               ${chart.entries.map(entry => `
@@ -25126,7 +25570,7 @@ class NodaliaGraphCard extends HTMLElement {
             ${
               hover
                 ? `
-                  <div class="graph-card__hover-points-layer">
+                  <div class="graph-card__hover-points-layer ${this._hoverEntering && animations.enabled ? "graph-card__hover-points-layer--entering" : ""}">
                     ${chart.entries.map(entry => {
                       const point = hover.values.find(item => item.name === entry.name)?.point;
                       if (!point) {
@@ -25151,6 +25595,9 @@ class NodaliaGraphCard extends HTMLElement {
         </div>
       </ha-card>
     `;
+
+    this._syncTooltipPosition();
+    this._hoverEntering = false;
   }
 }
 
@@ -25158,7 +25605,7 @@ if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaGraphCard);
 }
 
-class NodaliaGraphCardEditor extends HTMLElement {
+class NodaliaGraphCardEditorLegacy extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -25697,6 +26144,1201 @@ class NodaliaGraphCardEditor extends HTMLElement {
         </section>
       </div>
     `;
+  }
+}
+
+class NodaliaGraphCardEditor extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._config = normalizeConfig(STUB_CONFIG);
+    this._hass = null;
+    this._entityOptionsSignature = "";
+    this._showStyleSection = false;
+    this._showAnimationSection = false;
+    this._pendingEditorControlTags = new Set();
+    this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+    this._onShadowClick = this._onShadowClick.bind(this);
+    this.shadowRoot.addEventListener("input", this._onShadowInput);
+    this.shadowRoot.addEventListener("change", this._onShadowInput);
+    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.addEventListener("click", this._onShadowClick);
+  }
+
+  set hass(hass) {
+    const nextSignature = this._getEntityOptionsSignature(hass);
+    const shouldRender =
+      !this._hass ||
+      nextSignature !== this._entityOptionsSignature ||
+      !this.shadowRoot?.innerHTML;
+
+    this._hass = hass;
+    this._entityOptionsSignature = nextSignature;
+
+    if (!shouldRender) {
+      return;
+    }
+
+    const focusState = this._captureFocusState();
+    this._render();
+    this._restoreFocusState(focusState);
+  }
+
+  setConfig(config) {
+    const focusState = this._captureFocusState();
+    this._config = normalizeConfig(config || {});
+    this._render();
+    this._restoreFocusState(focusState);
+  }
+
+  _watchEditorControlTag(tagName) {
+    if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+      return;
+    }
+
+    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+      return;
+    }
+
+    this._pendingEditorControlTags.add(tagName);
+    customElements.whenDefined(tagName)
+      .then(() => {
+        this._pendingEditorControlTags.delete(tagName);
+
+        if (!this._hass || !this.shadowRoot) {
+          return;
+        }
+
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+      })
+      .catch(() => {
+        this._pendingEditorControlTags.delete(tagName);
+      });
+  }
+
+  _ensureEditorControlsReady() {
+    this._watchEditorControlTag("ha-entity-picker");
+    this._watchEditorControlTag("ha-selector");
+    this._watchEditorControlTag("ha-icon-picker");
+  }
+
+  _getEntityOptionsSignature(hass = this._hass) {
+    return Object.entries(hass?.states || {})
+      .filter(([entityId]) => (
+        entityId.startsWith("sensor.")
+        || entityId.startsWith("number.")
+        || entityId.startsWith("input_number.")
+      ))
+      .map(([entityId, state]) => `${entityId}:${String(state?.attributes?.friendly_name || "")}:${String(state?.attributes?.icon || "")}`)
+      .sort((left, right) => left.localeCompare(right, "es", { sensitivity: "base" }))
+      .join("|");
+  }
+
+  _getEntityOptions(field = "entities.0.entity", domains = []) {
+    const normalizedDomains = Array.isArray(domains)
+      ? domains.map(domain => String(domain || "").trim()).filter(Boolean)
+      : [];
+    const options = Object.entries(this._hass?.states || {})
+      .filter(([entityId]) => (
+        !normalizedDomains.length
+        || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
+      ))
+      .map(([entityId, state]) => {
+        const friendlyName = String(state?.attributes?.friendly_name || "").trim();
+        return {
+          value: entityId,
+          label: friendlyName || entityId,
+          displayLabel: friendlyName && friendlyName !== entityId
+            ? `${friendlyName} (${entityId})`
+            : entityId,
+        };
+      })
+      .sort((left, right) => (
+        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
+        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+      ));
+
+    const currentValue = String(getByPath(this._config, field) || "").trim();
+    if (currentValue && !options.some(option => option.value === currentValue)) {
+      options.unshift({
+        value: currentValue,
+        label: currentValue,
+        displayLabel: currentValue,
+      });
+    }
+
+    return options;
+  }
+
+  _captureFocusState() {
+    const activeElement = this.shadowRoot?.activeElement;
+
+    if (
+      !(
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement instanceof HTMLSelectElement
+      )
+    ) {
+      return null;
+    }
+
+    const dataset = activeElement.dataset || {};
+    const selector = dataset.field
+      ? `[data-field="${escapeSelectorValue(dataset.field)}"]`
+      : null;
+
+    if (!selector) {
+      return null;
+    }
+
+    const supportsSelection =
+      typeof activeElement.selectionStart === "number" &&
+      typeof activeElement.selectionEnd === "number";
+
+    return {
+      selector,
+      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
+      selectionStart: supportsSelection ? activeElement.selectionStart : null,
+      type: activeElement.type,
+    };
+  }
+
+  _restoreFocusState(focusState) {
+    if (!focusState?.selector || !this.shadowRoot) {
+      return;
+    }
+
+    const target = this.shadowRoot.querySelector(focusState.selector);
+    if (
+      !(
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      )
+    ) {
+      return;
+    }
+
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_error) {
+      target.focus();
+    }
+
+    const canRestoreSelection =
+      focusState.type !== "checkbox" &&
+      typeof focusState.selectionStart === "number" &&
+      typeof focusState.selectionEnd === "number" &&
+      typeof target.setSelectionRange === "function";
+
+    if (!canRestoreSelection) {
+      return;
+    }
+
+    try {
+      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+    } catch (_error) {
+      // Ignore inputs that do not support selection ranges.
+    }
+  }
+
+  _emitConfig() {
+    const focusState = this._captureFocusState();
+    const nextConfig = deepClone(this._config);
+
+    if (!Array.isArray(nextConfig.entities)) {
+      nextConfig.entities = [];
+    }
+
+    delete nextConfig.entity;
+    this._config = normalizeConfig(compactConfig(nextConfig));
+    this._render();
+    this._restoreFocusState(focusState);
+    fireEvent(this, "config-changed", {
+      config: compactConfig(nextConfig),
+    });
+  }
+
+  _setEditorConfig() {
+    this._config = normalizeConfig(compactConfig(this._config));
+  }
+
+  _setFieldValue(path, value) {
+    if (value === undefined || value === null || value === "") {
+      deleteByPath(this._config, path);
+      return;
+    }
+
+    setByPath(this._config, path, value);
+  }
+
+  _readFieldValue(input) {
+    const valueType = input.dataset.valueType || "string";
+
+    switch (valueType) {
+      case "boolean":
+        return Boolean(input.checked);
+      case "number": {
+        const trimmed = String(input.value || "").trim();
+        if (!trimmed) {
+          return undefined;
+        }
+
+        const parsed = Number(trimmed);
+        return Number.isFinite(parsed) ? parsed : trimmed;
+      }
+      case "color":
+        return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+      case "tristate":
+        if (input.value === "true") {
+          return true;
+        }
+
+        if (input.value === "false") {
+          return false;
+        }
+
+        return undefined;
+      default:
+        return input.value;
+    }
+  }
+
+  _onShadowInput(event) {
+    const input = event
+      .composedPath()
+      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+
+    if (!input?.dataset?.field) {
+      return;
+    }
+
+    event.stopPropagation();
+
+    const nextValue = this._readFieldValue(input);
+    this._setFieldValue(input.dataset.field, nextValue);
+    this._setEditorConfig();
+
+    if (event.type === "change") {
+      this._emitConfig();
+    }
+  }
+
+  _onShadowValueChanged(event) {
+    const control = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.field);
+
+    if (!control?.dataset?.field) {
+      return;
+    }
+
+    event.stopPropagation();
+
+    const nextValue = typeof event.detail?.value === "string"
+      ? event.detail.value
+      : control.value;
+    if (typeof control.dataset?.value === "string") {
+      control.dataset.value = String(nextValue || "");
+    }
+
+    this._setFieldValue(control.dataset.field, nextValue);
+    this._setEditorConfig();
+    this._emitConfig();
+  }
+
+  _onShadowClick(event) {
+    const toggleButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+
+    if (toggleButton) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (toggleButton.dataset.editorToggle === "styles") {
+        this._showStyleSection = !this._showStyleSection;
+        this._render();
+        return;
+      }
+
+      if (toggleButton.dataset.editorToggle === "animations") {
+        this._showAnimationSection = !this._showAnimationSection;
+        this._render();
+      }
+
+      return;
+    }
+
+    const button = event
+      .composedPath()
+      .find(node => node instanceof HTMLButtonElement && node.dataset?.action);
+
+    if (!button) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const action = button.dataset.action;
+    const index = Number(button.dataset.index);
+    this._config.entities = Array.isArray(this._config.entities) ? this._config.entities : [];
+
+    if (action === "add-series") {
+      this._config.entities.push({
+        entity: "",
+        name: "",
+        color: SERIES_COLORS[this._config.entities.length % SERIES_COLORS.length],
+      });
+      this._emitConfig();
+      return;
+    }
+
+    if (!Number.isInteger(index) || index < 0 || index >= this._config.entities.length) {
+      return;
+    }
+
+    if (action === "remove-series") {
+      this._config.entities.splice(index, 1);
+      this._emitConfig();
+      return;
+    }
+
+    if (action === "move-series-up") {
+      moveItem(this._config.entities, index, index - 1);
+      this._emitConfig();
+      return;
+    }
+
+    if (action === "move-series-down") {
+      moveItem(this._config.entities, index, index + 1);
+      this._emitConfig();
+    }
+  }
+
+  _renderTextField(label, field, value, options = {}) {
+    const tag = options.multiline ? "textarea" : "input";
+    const inputType = options.type || "text";
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const valueType = options.valueType || "string";
+    const inputValue = value === undefined || value === null ? "" : String(value);
+
+    if (tag === "textarea") {
+      return `
+        <label class="editor-field ${options.fullWidth !== false ? "editor-field--full" : ""}">
+          <span>${escapeHtml(label)}</span>
+          <textarea data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(valueType)}" rows="${options.rows || 2}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
+        </label>
+      `;
+    }
+
+    return `
+      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <input
+          type="${escapeHtml(inputType)}"
+          data-field="${escapeHtml(field)}"
+          data-value-type="${escapeHtml(valueType)}"
+          value="${escapeHtml(inputValue)}"
+          ${placeholder}
+        />
+      </label>
+    `;
+  }
+
+  _renderColorField(label, field, value, options = {}) {
+    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+    const currentValue = value === undefined || value === null || value === ""
+      ? fallbackValue
+      : String(value);
+    const colorModel = getEditorColorModel(currentValue, fallbackValue);
+
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="Color personalizado">
+            <input
+              type="color"
+              data-field="${escapeHtml(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml(String(colorModel.alpha))}"
+              value="${escapeHtml(colorModel.hex)}"
+              aria-label="${escapeHtml(label)}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch:${escapeHtml(currentValue)};"></span>
+          </label>
+        </div>
+      </div>
+    `;
+  }
+
+  _renderCheckboxField(label, field, checked) {
+    return `
+      <label class="editor-toggle">
+        <input
+          type="checkbox"
+          data-field="${escapeHtml(field)}"
+          data-value-type="boolean"
+          ${checked ? "checked" : ""}
+        />
+        <span class="editor-toggle__switch" aria-hidden="true"></span>
+        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+      </label>
+    `;
+  }
+
+  _renderSelectField(label, field, value, options, valueType = "string") {
+    return `
+      <label class="editor-field">
+        <span>${escapeHtml(label)}</span>
+        <select data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(valueType)}">
+          ${options
+            .map(option => {
+              const optionValue = option.value === undefined ? "auto" : String(option.value);
+              const isSelected =
+                value === option.value ||
+                (option.value === undefined && value === undefined);
+
+              return `
+                <option value="${escapeHtml(optionValue)}" ${isSelected ? "selected" : ""}>
+                  ${escapeHtml(option.label)}
+                </option>
+              `;
+            })
+            .join("")}
+        </select>
+      </label>
+    `;
+  }
+
+  _renderEntityField(label, field, value, options = {}) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    const domains = Array.isArray(options.domains)
+      ? options.domains.map(domain => String(domain || "").trim()).filter(Boolean).join(",")
+      : "";
+
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div
+          class="editor-control-host"
+          data-mounted-control="entity-picker"
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+          data-placeholder="${escapeHtml(options.placeholder || "")}"
+          data-domains="${escapeHtml(domains)}"
+        ></div>
+      </div>
+    `;
+  }
+
+  _renderIconPickerField(label, field, value, options = {}) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
+
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div
+          class="editor-control-host"
+          data-mounted-control="icon-picker"
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+          data-placeholder="${escapeHtml(options.placeholder || "")}"
+        ></div>
+      </div>
+    `;
+  }
+
+  _renderSeriesCard(series, index, total) {
+    const fallbackColor = SERIES_COLORS[index % SERIES_COLORS.length];
+
+    return `
+      <div class="series-editor-card">
+        <div class="series-editor-card__header">
+          <div class="series-editor-card__title">Serie ${index + 1}</div>
+          <div class="series-editor-card__actions">
+            <button type="button" data-action="move-series-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>Subir</button>
+            <button type="button" data-action="move-series-down" data-index="${index}" ${index === total - 1 ? "disabled" : ""}>Bajar</button>
+            <button type="button" data-action="remove-series" data-index="${index}" class="danger">Eliminar</button>
+          </div>
+        </div>
+        <div class="series-editor-subgroup">
+          <div class="series-editor-subgroup__title">Datos</div>
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderEntityField("Entidad", `entities.${index}.entity`, series.entity, {
+              domains: ["sensor", "number", "input_number"],
+              placeholder: "sensor.humedad_dormitorio",
+              fullWidth: true,
+            })}
+            ${this._renderTextField("Nombre visible", `entities.${index}.name`, series.name, {
+              placeholder: "Dormitorio",
+              fullWidth: true,
+            })}
+            ${this._renderColorField("Color de la linea", `entities.${index}.color`, series.color, {
+              fallbackValue,
+            })}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  _mountEntityPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const field = host.dataset.field || "entities.0.entity";
+    const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || "";
+    const allowedDomains = String(host.dataset.domains || "")
+      .split(",")
+      .map(domain => domain.trim())
+      .filter(Boolean);
+    let control = null;
+
+    if (customElements.get("ha-entity-picker")) {
+      control = document.createElement("ha-entity-picker");
+      if (allowedDomains.length) {
+        control.includeDomains = allowedDomains;
+        control.entityFilter = stateObj => allowedDomains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+      }
+      if (placeholder) {
+        control.setAttribute("placeholder", placeholder);
+      }
+      control.allowCustomEntity = true;
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = {
+        entity: allowedDomains.length === 1
+          ? { domain: allowedDomains[0] }
+          : {},
+      };
+    } else {
+      control = document.createElement("select");
+      const emptyOption = document.createElement("option");
+      emptyOption.value = "";
+      emptyOption.textContent = placeholder || "Selecciona una entidad";
+      control.appendChild(emptyOption);
+      this._getEntityOptions(field, allowedDomains).forEach(option => {
+        const optionElement = document.createElement("option");
+        optionElement.value = option.value;
+        optionElement.textContent = option.displayLabel;
+        control.appendChild(optionElement);
+      });
+      control.addEventListener("change", this._onShadowInput);
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+
+    if (control.tagName !== "SELECT") {
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    }
+
+    host.replaceChildren(control);
+  }
+
+  _mountIconPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const field = host.dataset.field || "icon";
+    const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || "";
+    let control = null;
+
+    if (customElements.get("ha-icon-picker")) {
+      control = document.createElement("ha-icon-picker");
+      if (placeholder) {
+        control.setAttribute("placeholder", placeholder);
+      }
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = {
+        icon: {},
+      };
+    } else {
+      control = document.createElement("input");
+      control.type = "text";
+      control.placeholder = placeholder;
+      control.addEventListener("input", this._onShadowInput);
+      control.addEventListener("change", this._onShadowInput);
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+
+    if (control.tagName !== "INPUT") {
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    }
+
+    host.replaceChildren(control);
+  }
+
+  _render() {
+    if (!this.shadowRoot) {
+      return;
+    }
+
+    const config = this._config || normalizeConfig({});
+    const hapticStyle = config.haptics?.style || "medium";
+    const entities = Array.isArray(config.entities) ? config.entities : [];
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        .editor {
+          color: var(--primary-text-color);
+          display: grid;
+          gap: 16px;
+        }
+
+        .editor-section {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 18px;
+          display: grid;
+          gap: 14px;
+          padding: 16px;
+        }
+
+        .editor-section__header {
+          display: grid;
+          gap: 4px;
+        }
+
+        .editor-section__title {
+          font-size: 15px;
+          font-weight: 700;
+        }
+
+        .editor-section__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .editor-section__actions {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 2px;
+        }
+
+        .editor-section__toggle-button {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        .editor-section__toggle-button ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
+        .editor-grid {
+          display: grid;
+          gap: 12px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .editor-grid--stacked {
+          grid-template-columns: 1fr;
+        }
+
+        .editor-field,
+        .editor-toggle {
+          display: grid;
+          gap: 6px;
+          min-width: 0;
+        }
+
+        .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+        .editor-field > span,
+        .editor-toggle > span {
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .editor-field input,
+        .editor-field select,
+        .editor-field textarea,
+        .editor-control-host input,
+        .editor-control-host select,
+        .editor-control-host textarea {
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          color: var(--primary-text-color);
+          font: inherit;
+          min-height: 40px;
+          padding: 10px 12px;
+          width: 100%;
+        }
+
+        .editor-field textarea {
+          min-height: 72px;
+          resize: vertical;
+        }
+
+        .editor-field ha-icon-picker,
+        .editor-field ha-entity-picker,
+        .editor-field ha-selector,
+        .editor-control-host,
+        .editor-control-host > * {
+          display: block;
+          width: 100%;
+        }
+
+        .editor-color-field {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          min-height: 40px;
+        }
+
+        .editor-color-picker {
+          align-items: center;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 40px;
+          justify-content: center;
+          position: relative;
+          width: 40px;
+        }
+
+        .editor-color-picker input {
+          cursor: pointer;
+          inset: 0;
+          opacity: 0;
+          position: absolute;
+        }
+
+        .editor-color-picker:hover,
+        .editor-color-picker:focus-within {
+          border-color: rgba(255, 255, 255, 0.22);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .editor-color-swatch {
+          --editor-swatch: #71c0ff;
+          background:
+            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+            conic-gradient(from 90deg, rgba(255, 255, 255, 0.06) 25%, rgba(0, 0, 0, 0.12) 0 50%, rgba(255, 255, 255, 0.06) 0 75%, rgba(0, 0, 0, 0.12) 0);
+          background-position: center;
+          background-size: cover, 10px 10px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 999px;
+          display: block;
+          height: 18px;
+          width: 18px;
+        }
+
+        .editor-color-picker .editor-color-swatch {
+          height: 22px;
+          width: 22px;
+        }
+
+        .editor-actions {
+          display: flex;
+          justify-content: flex-start;
+        }
+
+        button {
+          appearance: none;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        button.danger {
+          color: var(--error-color);
+        }
+
+        button:disabled {
+          cursor: default;
+          opacity: 0.45;
+        }
+
+        .series-editor-list {
+          display: grid;
+          gap: 12px;
+        }
+
+        .series-editor-card {
+          background: rgba(255, 255, 255, 0.025);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 16px;
+          display: grid;
+          gap: 12px;
+          padding: 14px;
+        }
+
+        .series-editor-subgroup {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 14px;
+          display: grid;
+          gap: 12px;
+          padding: 12px;
+        }
+
+        .series-editor-subgroup__title {
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .series-editor-card__header {
+          align-items: center;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+        }
+
+        .series-editor-card__title {
+          font-size: 13px;
+          font-weight: 700;
+        }
+
+        .series-editor-card__actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: flex-end;
+        }
+
+        .empty-note {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.5;
+        }
+
+        @media (max-width: 640px) {
+          .editor-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .series-editor-card__header {
+            align-items: start;
+            flex-direction: column;
+          }
+
+          .series-editor-card__actions {
+            justify-content: flex-start;
+          }
+        }
+
+        :is(.editor-toggle, .editor-checkbox) {
+          align-items: center;
+          column-gap: 10px;
+          cursor: pointer;
+          grid-auto-flow: row;
+          grid-template-columns: auto minmax(0, 1fr);
+          justify-content: stretch;
+          min-height: 40px;
+          padding-top: 0;
+          position: relative;
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input {
+          block-size: 1px;
+          inline-size: 1px;
+          margin: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: absolute;
+        }
+
+        .editor-toggle__switch {
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+          display: inline-flex;
+          font-size: 0;
+          height: 22px;
+          line-height: 0;
+          position: relative;
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+          width: 40px;
+        }
+
+        .editor-toggle__switch::before {
+          background: rgba(255, 255, 255, 0.92);
+          border-radius: 999px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+          content: "";
+          height: 18px;
+          left: 1px;
+          position: absolute;
+          top: 1px;
+          transition: transform 160ms ease;
+          width: 18px;
+        }
+
+        .editor-toggle__label {
+          min-width: 0;
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch {
+          background: var(--primary-color);
+          border-color: var(--primary-color);
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch::before {
+          transform: translateX(18px);
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input:focus-visible + .editor-toggle__switch {
+          box-shadow:
+            0 0 0 3px rgba(255, 255, 255, 0.14),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+      </style>
+      <div class="editor">
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">General</div>
+            <div class="editor-section__hint">Nombre, icono, rango visible y comportamiento basico de la grafica.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderTextField("Nombre", "name", config.name, {
+              placeholder: "Estadisticas",
+            })}
+            ${this._renderIconPickerField("Icono", "icon", config.icon, {
+              placeholder: "mdi:chart-line",
+            })}
+            ${this._renderSelectField(
+              "Accion al tocar",
+              "tap_action",
+              config.tap_action || "more-info",
+              [
+                { value: "more-info", label: "Mas informacion" },
+                { value: "none", label: "Sin accion" },
+              ],
+            )}
+            ${this._renderTextField("Horas a mostrar", "hours_to_show", config.hours_to_show, {
+              type: "number",
+              valueType: "number",
+            })}
+            ${this._renderTextField("Puntos", "points", config.points, {
+              type: "number",
+              valueType: "number",
+            })}
+            ${this._renderTextField("Minimo", "min", config.min, {
+              type: "number",
+              valueType: "number",
+            })}
+            ${this._renderTextField("Maximo", "max", config.max, {
+              type: "number",
+              valueType: "number",
+            })}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Series</div>
+            <div class="editor-section__hint">Anade, reordena y personaliza cada entidad mostrada en la grafica.</div>
+          </div>
+          <div class="series-editor-list">
+            ${
+              entities.length
+                ? entities.map((series, index) => this._renderSeriesCard(series, index, entities.length)).join("")
+                : '<div class="empty-note">Todavia no has anadido ninguna serie.</div>'
+            }
+          </div>
+          <div class="editor-actions">
+            <button type="button" data-action="add-series">Anadir serie</button>
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Visibilidad</div>
+            <div class="editor-section__hint">Activa o desactiva cabecera, valor grande, leyenda y relleno.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderCheckboxField("Mostrar cabecera", "show_header", config.show_header !== false)}
+            ${this._renderCheckboxField("Mostrar icono", "show_icon", config.show_icon !== false)}
+            ${this._renderCheckboxField("Mostrar valor grande", "show_value", config.show_value !== false)}
+            ${this._renderCheckboxField("Mostrar leyenda", "show_legend", config.show_legend !== false)}
+            ${this._renderCheckboxField("Mostrar relleno", "show_fill", config.show_fill !== false)}
+            ${this._renderCheckboxField("Mostrar badge de no disponible", "show_unavailable_badge", config.show_unavailable_badge !== false)}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Haptics</div>
+            <div class="editor-section__hint">Respuesta tactil opcional para taps, hover y cambios de serie.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderSelectField(
+              "Estilo",
+              "haptics.style",
+              hapticStyle,
+              [
+                { value: "selection", label: "Seleccion" },
+                { value: "light", label: "Ligero" },
+                { value: "medium", label: "Medio" },
+                { value: "heavy", label: "Intenso" },
+                { value: "success", label: "Exito" },
+                { value: "warning", label: "Aviso" },
+                { value: "failure", label: "Fallo" },
+              ],
+            )}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Animaciones</div>
+            <div class="editor-section__hint">Controla la entrada del tooltip y el rebote visual de los chips.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="animations"
+                aria-expanded="${this._showAnimationSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showAnimationSection ? "Ocultar ajustes de animacion" : "Mostrar ajustes de animacion"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showAnimationSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderTextField("Tooltip y hover (ms)", "animations.hover_duration", config.animations.hover_duration, {
+                    type: "number",
+                    valueType: "number",
+                  })}
+                  ${this._renderTextField("Rebote de chips (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                    type: "number",
+                    valueType: "number",
+                  })}
+                </div>
+              `
+              : ""
+          }
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Estilos</div>
+            <div class="editor-section__hint">Ajustes visuales de la card, el icono y el grafico.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="styles"
+                aria-expanded="${this._showStyleSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showStyleSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderColorField("Fondo tarjeta", "styles.card.background", config.styles.card.background)}
+                  ${this._renderTextField("Borde", "styles.card.border", config.styles.card.border)}
+                  ${this._renderTextField("Radio del borde", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${this._renderTextField("Sombra", "styles.card.box_shadow", config.styles.card.box_shadow)}
+                  ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
+                  ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
+                  ${this._renderColorField("Color icono", "styles.icon.color", config.styles.icon.color, {
+                    fallbackValue: "var(--primary-text-color)",
+                  })}
+                  ${this._renderTextField("Tamano icono", "styles.icon.size", config.styles.icon.size)}
+                  ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
+                  ${this._renderTextField("Tamano valor", "styles.value_size", config.styles.value_size)}
+                  ${this._renderTextField("Tamano unidad", "styles.unit_size", config.styles.unit_size)}
+                  ${this._renderTextField("Tamano leyenda", "styles.legend_size", config.styles.legend_size)}
+                  ${this._renderTextField("Alto grafica", "styles.chart_height", config.styles.chart_height)}
+                  ${this._renderTextField("Grosor linea", "styles.line_width", config.styles.line_width)}
+                </div>
+              `
+              : ""
+          }
+        </section>
+      </div>
+    `;
+
+    this.shadowRoot
+      .querySelectorAll('[data-mounted-control="entity-picker"]')
+      .forEach(host => this._mountEntityPicker(host));
+
+    this.shadowRoot
+      .querySelectorAll('[data-mounted-control="icon-picker"]')
+      .forEach(host => this._mountIconPicker(host));
+
+    this._ensureEditorControlsReady();
   }
 }
 
