@@ -507,6 +507,10 @@ function buildInterpolatedSamples(events, startMs, endMs, pointsCount, fallbackV
 
 class NodaliaGraphCard extends HTMLElement {
   static async getConfigElement() {
+    if (!customElements.get(EDITOR_TAG) && typeof customElements?.whenDefined === "function") {
+      await customElements.whenDefined(EDITOR_TAG);
+    }
+
     return document.createElement(EDITOR_TAG);
   }
 
@@ -530,6 +534,7 @@ class NodaliaGraphCard extends HTMLElement {
     this._pendingHoverIndex = null;
     this._hoverEntering = false;
     this._lastRenderSignature = "";
+    this._tooltipSyncFrame = 0;
     this._touchPressTimer = 0;
     this._touchPressState = null;
     this._touchHoverActive = false;
@@ -556,6 +561,10 @@ class NodaliaGraphCard extends HTMLElement {
     if (this._hoverFrame) {
       window.cancelAnimationFrame(this._hoverFrame);
       this._hoverFrame = 0;
+    }
+    if (this._tooltipSyncFrame) {
+      window.cancelAnimationFrame(this._tooltipSyncFrame);
+      this._tooltipSyncFrame = 0;
     }
     this._pendingHoverIndex = null;
     this._clearTouchPressTimer();
@@ -1387,7 +1396,24 @@ class NodaliaGraphCard extends HTMLElement {
     };
   }
 
-  _syncTooltipPosition() {
+  _scheduleTooltipPositionSync(retries = 3) {
+    if (this._tooltipSyncFrame) {
+      window.cancelAnimationFrame(this._tooltipSyncFrame);
+      this._tooltipSyncFrame = 0;
+    }
+
+    if (typeof window?.requestAnimationFrame !== "function") {
+      this._syncTooltipPosition(retries);
+      return;
+    }
+
+    this._tooltipSyncFrame = window.requestAnimationFrame(() => {
+      this._tooltipSyncFrame = 0;
+      this._syncTooltipPosition(retries);
+    });
+  }
+
+  _syncTooltipPosition(retries = 0) {
     if (!this.shadowRoot) {
       return;
     }
@@ -1404,8 +1430,16 @@ class NodaliaGraphCard extends HTMLElement {
       return;
     }
 
-    const wrapWidth = chartWrap.clientWidth;
+    const wrapWidth = Math.round(
+      chartWrap.getBoundingClientRect().width
+      || chartWrap.clientWidth
+      || chartWrap.offsetWidth
+      || 0,
+    );
     if (!wrapWidth) {
+      if (retries > 0) {
+        this._scheduleTooltipPositionSync(retries - 1);
+      }
       return;
     }
 
@@ -1413,11 +1447,24 @@ class NodaliaGraphCard extends HTMLElement {
     const usableWidth = Math.max(160, wrapWidth - (visibleInset * 2) - 20);
     tooltip.style.maxWidth = `${usableWidth}px`;
 
-    const tooltipWidth = Math.min(tooltip.offsetWidth || usableWidth, usableWidth);
-    const anchorPx = (anchorX / chartWidth) * wrapWidth;
+    const tooltipWidth = Math.min(
+      Math.round(tooltip.getBoundingClientRect().width || tooltip.offsetWidth || 0) || usableWidth,
+      usableWidth,
+    );
+    if (!tooltipWidth) {
+      if (retries > 0) {
+        this._scheduleTooltipPositionSync(retries - 1);
+      }
+      return;
+    }
+
+    const anchorPx = clamp((anchorX / chartWidth) * wrapWidth, 0, wrapWidth);
     const minCenter = visibleInset + (tooltipWidth / 2) + 10;
     const maxCenter = wrapWidth - visibleInset - (tooltipWidth / 2) - 10;
-    tooltip.style.left = `${clamp(anchorPx, minCenter, maxCenter)}px`;
+    const resolvedCenter = minCenter <= maxCenter
+      ? clamp(anchorPx, minCenter, maxCenter)
+      : wrapWidth / 2;
+    tooltip.style.left = `${resolvedCenter}px`;
   }
 
   _getSeriesData() {
@@ -2071,7 +2118,7 @@ class NodaliaGraphCard extends HTMLElement {
       </ha-card>
     `;
 
-    this._syncTooltipPosition();
+    this._scheduleTooltipPositionSync(4);
     this._hoverEntering = false;
   }
 }
