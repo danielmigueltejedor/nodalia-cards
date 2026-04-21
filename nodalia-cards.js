@@ -29962,7 +29962,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "0.10.0";
+const CARD_VERSION = "0.10.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -29998,9 +29998,9 @@ const DEFAULT_CONFIG = {
   },
   animations: {
     enabled: true,
-    dial_duration: 180,
-    button_bounce_duration: 280,
-    content_duration: 340,
+    dial_duration: 220,
+    button_bounce_duration: 340,
+    content_duration: 420,
   },
   styles: {
     card: {
@@ -31226,7 +31226,9 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    this._triggerButtonBounce(actionButton);
+    if (event.detail === 0) {
+      this._triggerButtonBounce(actionButton);
+    }
 
     switch (actionButton.dataset.climateAction) {
       case "toggle":
@@ -31616,20 +31618,76 @@ class NodaliaClimateCard extends HTMLElement {
           --climate-progress-length: ${progressLength};
           --climate-dial-size: ${dialSizePx}px;
           --climate-thumb-size: ${thumbSizePx}px;
-          background: ${styles.dial.background};
+          -webkit-backdrop-filter: blur(26px);
+          backdrop-filter: blur(26px);
+          background:
+            radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.16), transparent 34%),
+            radial-gradient(circle at 72% 78%, color-mix(in srgb, ${accentColor} 12%, transparent) 0%, transparent 28%),
+            linear-gradient(
+              180deg,
+              color-mix(in srgb, ${styles.dial.background} 88%, rgba(255, 255, 255, 0.07)) 0%,
+              color-mix(in srgb, ${styles.dial.background} 92%, rgba(0, 0, 0, 0.18)) 100%
+            );
+          border: 1px solid color-mix(in srgb, ${accentColor} 14%, rgba(255, 255, 255, 0.08));
           border-radius: 50%;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            inset 0 -18px 36px rgba(0, 0, 0, 0.14),
+            0 22px 48px rgba(0, 0, 0, 0.18);
           cursor: ${supportsTargetTemperature ? "grab" : "default"};
           height: var(--climate-dial-size);
           position: relative;
           touch-action: none;
-          transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+          transform: translateZ(0) scale(1);
+          transform-origin: center;
+          transition:
+            background 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            border-color 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            box-shadow 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            transform 220ms cubic-bezier(0.22, 0.84, 0.26, 1);
           user-select: none;
           -webkit-user-select: none;
+          will-change: transform, box-shadow;
           width: var(--climate-dial-size);
         }
 
         .climate-card__dial:active {
           cursor: ${supportsTargetTemperature ? "grabbing" : "default"};
+        }
+
+        .climate-card__dial::before,
+        .climate-card__dial::after {
+          border-radius: inherit;
+          content: "";
+          pointer-events: none;
+          position: absolute;
+          transition:
+            opacity 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            transform 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            box-shadow 220ms cubic-bezier(0.22, 0.84, 0.26, 1);
+        }
+
+        .climate-card__dial::before {
+          background:
+            radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.15), transparent 42%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            inset 0 -8px 20px rgba(0, 0, 0, 0.08);
+          inset: 4.5%;
+          opacity: 0.94;
+          z-index: 0;
+        }
+
+        .climate-card__dial::after {
+          background:
+            radial-gradient(circle at 36% 24%, rgba(255, 255, 255, 0.1), transparent 52%),
+            radial-gradient(circle at 64% 72%, color-mix(in srgb, ${accentColor} 10%, transparent) 0%, transparent 34%);
+          box-shadow: 0 18px 34px rgba(0, 0, 0, 0.08);
+          inset: 16%;
+          opacity: 0.62;
+          transform: scale(0.98);
+          z-index: 0;
         }
 
         .climate-card__dial-svg {
@@ -31662,9 +31720,15 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__dial-progress {
+          filter: drop-shadow(0 0 0 transparent);
+          opacity: 0.94;
           stroke: ${accentColor};
           stroke-dasharray: var(--climate-progress-length) ${DIAL_CIRCUMFERENCE};
-          transition: stroke var(--climate-card-dial-duration) ease, stroke-dasharray var(--climate-card-dial-duration) ease-out;
+          transition:
+            stroke var(--climate-card-dial-duration) ease,
+            stroke-dasharray var(--climate-card-dial-duration) ease-out,
+            filter 180ms ease,
+            opacity 180ms ease;
         }
 
         .climate-card__dial-thumb {
@@ -31677,10 +31741,11 @@ class NodaliaClimateCard extends HTMLElement {
           pointer-events: auto;
           position: absolute;
           top: var(--climate-thumb-top, 50%);
-          transform: translate(-50%, -50%);
+          transform: translate(-50%, -50%) scale(1);
           transition:
             left var(--climate-card-dial-duration) ease-out,
             top var(--climate-card-dial-duration) ease-out,
+            transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1),
             border-color var(--climate-card-dial-duration) ease,
             box-shadow var(--climate-card-dial-duration) ease;
           width: var(--climate-thumb-size);
@@ -31713,8 +31778,61 @@ class NodaliaClimateCard extends HTMLElement {
           transition: none !important;
         }
 
+        .climate-card__dial.is-dragging {
+          background:
+            radial-gradient(circle at 26% 18%, rgba(255, 255, 255, 0.18), transparent 34%),
+            radial-gradient(circle at 74% 78%, color-mix(in srgb, ${accentColor} 16%, transparent) 0%, transparent 30%),
+            linear-gradient(
+              180deg,
+              color-mix(in srgb, ${styles.dial.background} 82%, rgba(255, 255, 255, 0.09)) 0%,
+              color-mix(in srgb, ${styles.dial.background} 88%, rgba(0, 0, 0, 0.2)) 100%
+            );
+          border-color: color-mix(in srgb, ${accentColor} 28%, rgba(255, 255, 255, 0.12));
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.1),
+            inset 0 -20px 44px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16)),
+            0 28px 58px rgba(0, 0, 0, 0.24);
+          transform: translateZ(0) scale(1.045);
+        }
+
+        .climate-card__dial.is-dragging::before {
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.1),
+            inset 0 -10px 24px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.1));
+          opacity: 1;
+          transform: scale(1.03);
+        }
+
+        .climate-card__dial.is-dragging::after {
+          opacity: 0.84;
+          transform: scale(1.05);
+        }
+
+        .climate-card__dial.is-dragging .climate-card__dial-progress {
+          filter: drop-shadow(0 0 10px color-mix(in srgb, ${accentColor} 24%, transparent));
+          opacity: 1;
+        }
+
+        .climate-card__dial.is-dragging .climate-card__dial-thumb {
+          border-color: color-mix(in srgb, ${accentColor} 24%, rgba(255, 255, 255, 0.76));
+          box-shadow:
+            0 0 0 8px color-mix(in srgb, ${accentColor} 14%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.16);
+          transform: translate(-50%, -50%) scale(1.22);
+        }
+
         .climate-card__dial-center {
           align-content: center;
+          -webkit-backdrop-filter: blur(18px);
+          backdrop-filter: blur(18px);
+          background:
+            radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.12), transparent 52%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.015) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 50%;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            0 16px 34px rgba(0, 0, 0, 0.14);
           display: grid;
           gap: ${tightLayout ? "10px" : compactLayout ? "11px" : "12px"};
           inset: ${tightLayout ? "23% 15% 17% 15%" : compactLayout ? "23% 15.5% 17.5% 15.5%" : "23% 16% 18% 16%"};
@@ -31722,6 +31840,13 @@ class NodaliaClimateCard extends HTMLElement {
           pointer-events: auto;
           position: absolute;
           text-align: center;
+          transform: scale(1);
+          transition:
+            background 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            border-color 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            box-shadow 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            transform 220ms cubic-bezier(0.22, 0.84, 0.26, 1);
+          z-index: 1;
         }
 
         .climate-card__target {
@@ -31738,6 +31863,17 @@ class NodaliaClimateCard extends HTMLElement {
           position: relative;
           transition: color var(--climate-card-dial-duration) ease;
           white-space: nowrap;
+        }
+
+        .climate-card__dial.is-dragging .climate-card__dial-center {
+          background:
+            radial-gradient(circle at 30% 22%, color-mix(in srgb, ${accentColor} 16%, rgba(255, 255, 255, 0.14)) 0%, transparent 54%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.018) 100%);
+          border-color: color-mix(in srgb, ${accentColor} 26%, rgba(255, 255, 255, 0.1));
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.1),
+            0 20px 40px rgba(0, 0, 0, 0.18);
+          transform: scale(1.05);
         }
 
         .climate-card__target-value {
@@ -31775,7 +31911,7 @@ class NodaliaClimateCard extends HTMLElement {
           border-radius: 999px;
           height: 1px;
           pointer-events: none;
-          width: 100%;
+          width: clamp(84px, 72%, 148px);
         }
 
         .climate-card__dial-meta {
@@ -31861,8 +31997,9 @@ class NodaliaClimateCard extends HTMLElement {
           transform: translateY(-1px);
         }
 
-        :is(.climate-card__icon, .climate-card__mode-button, .climate-card__step-button).is-pressing {
-          animation: climate-card-button-bounce var(--climate-card-button-bounce-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        :is(.climate-card__icon, .climate-card__mode-button, .climate-card__step-button):active:not(:disabled),
+        :is(.climate-card__icon, .climate-card__mode-button, .climate-card__step-button).is-pressing:not(:disabled) {
+          animation: climate-card-button-bounce var(--climate-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
         .climate-card__mode-button--power {
@@ -31897,6 +32034,15 @@ class NodaliaClimateCard extends HTMLElement {
           animation-delay: 40ms;
         }
 
+        .climate-card__dial-wrap--entering .climate-card__dial {
+          animation: climate-card-dial-bloom calc(var(--climate-card-content-duration) * 1.02) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+        }
+
+        .climate-card__dial-wrap--entering .climate-card__dial-center {
+          animation: climate-card-dial-center-bloom calc(var(--climate-card-content-duration) * 0.92) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 70ms;
+        }
+
         .climate-card__steps--entering {
           animation: climate-card-fade-up calc(var(--climate-card-content-duration) * 0.88) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: 90ms;
@@ -31926,19 +32072,65 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         @keyframes climate-card-button-bounce {
-          0% { transform: scale(1); }
-          40% { transform: scale(1.08); }
-          100% { transform: scale(1); }
+          0% {
+            transform: scale(1);
+          }
+          45% {
+            transform: scale(1.1);
+          }
+          72% {
+            transform: scale(1.03);
+          }
+          100% {
+            transform: scale(1);
+          }
         }
 
         @keyframes climate-card-fade-up {
           0% {
             opacity: 0;
-            transform: translateY(10px) scale(0.985);
+            transform: translateY(14px) scale(0.965);
           }
           100% {
             opacity: 1;
             transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes climate-card-dial-bloom {
+          0% {
+            opacity: 0;
+            transform: translateZ(0) scale(0.92);
+            box-shadow:
+              inset 0 1px 0 rgba(255, 255, 255, 0.02),
+              0 12px 28px rgba(0, 0, 0, 0.1);
+          }
+          55% {
+            opacity: 1;
+            transform: translateZ(0) scale(1.03);
+            box-shadow:
+              inset 0 1px 0 rgba(255, 255, 255, 0.1),
+              inset 0 -20px 36px color-mix(in srgb, ${accentColor} 8%, rgba(0, 0, 0, 0.14)),
+              0 26px 54px rgba(0, 0, 0, 0.22);
+          }
+          100% {
+            opacity: 1;
+            transform: translateZ(0) scale(1);
+            box-shadow:
+              inset 0 1px 0 rgba(255, 255, 255, 0.08),
+              inset 0 -18px 36px rgba(0, 0, 0, 0.14),
+              0 22px 48px rgba(0, 0, 0, 0.18);
+          }
+        }
+
+        @keyframes climate-card-dial-center-bloom {
+          0% {
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
           }
         }
 
