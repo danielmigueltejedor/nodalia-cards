@@ -3871,6 +3871,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--tv .media-player__tv-volume-wrap {
+          margin-top: 4px;
           min-height: ${playerStyles.slider_wrap_height};
           padding: 0 14px;
           width: 100%;
