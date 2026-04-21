@@ -1234,22 +1234,13 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         }
 
         .gauge-card__dial-thumb {
-          -webkit-backdrop-filter: blur(16px);
-          backdrop-filter: blur(16px);
-          background:
-            radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.08) 24%, transparent 46%),
-            radial-gradient(circle at 72% 76%, color-mix(in srgb, ${accentColor} 12%, transparent) 0%, transparent 58%),
-            linear-gradient(
-              180deg,
-              rgba(255, 255, 255, 0.1) 0%,
-              color-mix(in srgb, rgba(255, 255, 255, 0.04) 88%, ${accentColor}) 100%
-            );
-          border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.1) 88%, ${accentColor});
+          background: transparent;
           border-radius: 50%;
           box-shadow:
-            0 12px 24px rgba(0, 0, 0, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.1),
-            inset 0 -6px 12px rgba(0, 0, 0, 0.08);
+            0 0 0 1px rgba(255, 255, 255, 0.04),
+            0 0 0 6px rgba(255, 255, 255, 0.05),
+            0 0 18px color-mix(in srgb, ${accentColor} 12%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.18);
           height: var(--gauge-thumb-size);
           left: var(--gauge-thumb-left, 50%);
           position: absolute;
@@ -1267,36 +1258,30 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         }
 
         .gauge-card__dial-thumb::before {
-          background:
-            linear-gradient(
-              180deg,
-              rgba(255, 255, 255, 0.08) 0%,
-              color-mix(in srgb, rgba(255, 255, 255, 0.03) 90%, ${accentColor}) 100%
-            );
+          -webkit-backdrop-filter: blur(16px);
+          backdrop-filter: blur(16px);
+          background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.08) 38%, rgba(255, 255, 255, 0.03) 58%, transparent 76%);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 50%;
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
-            0 0 0 1px rgba(255, 255, 255, 0.03);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
           content: "";
-          height: calc(100% - 6px);
+          inset: 0;
+          position: absolute;
+        }
+
+        .gauge-card__dial-thumb::after {
+          background: rgba(255, 255, 255, 0.96);
+          border-radius: 50%;
+          content: "";
+          box-shadow:
+            0 0 0 1px rgba(255, 255, 255, 0.08),
+            0 0 12px rgba(255, 255, 255, 0.22);
+          height: 42%;
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: calc(100% - 6px);
-        }
-
-        .gauge-card__dial-thumb::after {
-          background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.14) 58%, transparent 76%);
-          border-radius: 50%;
-          content: "";
-          filter: blur(0.4px);
-          height: 24%;
-          left: 22%;
-          opacity: 0.72;
-          position: absolute;
-          top: 18%;
-          width: 24%;
+          width: 42%;
         }
 
         .gauge-card__dial-center {

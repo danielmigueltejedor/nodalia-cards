@@ -23073,22 +23073,13 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         }
 
         .gauge-card__dial-thumb {
-          -webkit-backdrop-filter: blur(16px);
-          backdrop-filter: blur(16px);
-          background:
-            radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.08) 24%, transparent 46%),
-            radial-gradient(circle at 72% 76%, color-mix(in srgb, ${accentColor} 12%, transparent) 0%, transparent 58%),
-            linear-gradient(
-              180deg,
-              rgba(255, 255, 255, 0.1) 0%,
-              color-mix(in srgb, rgba(255, 255, 255, 0.04) 88%, ${accentColor}) 100%
-            );
-          border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.1) 88%, ${accentColor});
+          background: transparent;
           border-radius: 50%;
           box-shadow:
-            0 12px 24px rgba(0, 0, 0, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.1),
-            inset 0 -6px 12px rgba(0, 0, 0, 0.08);
+            0 0 0 1px rgba(255, 255, 255, 0.04),
+            0 0 0 6px rgba(255, 255, 255, 0.05),
+            0 0 18px color-mix(in srgb, ${accentColor} 12%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.18);
           height: var(--gauge-thumb-size);
           left: var(--gauge-thumb-left, 50%);
           position: absolute;
@@ -23106,36 +23097,30 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         }
 
         .gauge-card__dial-thumb::before {
-          background:
-            linear-gradient(
-              180deg,
-              rgba(255, 255, 255, 0.08) 0%,
-              color-mix(in srgb, rgba(255, 255, 255, 0.03) 90%, ${accentColor}) 100%
-            );
+          -webkit-backdrop-filter: blur(16px);
+          backdrop-filter: blur(16px);
+          background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.08) 38%, rgba(255, 255, 255, 0.03) 58%, transparent 76%);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 50%;
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
-            0 0 0 1px rgba(255, 255, 255, 0.03);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
           content: "";
-          height: calc(100% - 6px);
+          inset: 0;
+          position: absolute;
+        }
+
+        .gauge-card__dial-thumb::after {
+          background: rgba(255, 255, 255, 0.96);
+          border-radius: 50%;
+          content: "";
+          box-shadow:
+            0 0 0 1px rgba(255, 255, 255, 0.08),
+            0 0 12px rgba(255, 255, 255, 0.22);
+          height: 42%;
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: calc(100% - 6px);
-        }
-
-        .gauge-card__dial-thumb::after {
-          background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.14) 58%, transparent 76%);
-          border-radius: 50%;
-          content: "";
-          filter: blur(0.4px);
-          height: 24%;
-          left: 22%;
-          opacity: 0.72;
-          position: absolute;
-          top: 18%;
-          width: 24%;
+          width: 42%;
         }
 
         .gauge-card__dial-center {
@@ -32859,22 +32844,13 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__dial-thumb {
-          -webkit-backdrop-filter: blur(16px);
-          backdrop-filter: blur(16px);
-          background:
-            radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.08) 24%, transparent 46%),
-            radial-gradient(circle at 72% 76%, color-mix(in srgb, ${accentColor} 12%, transparent) 0%, transparent 58%),
-            linear-gradient(
-              180deg,
-              rgba(255, 255, 255, 0.1) 0%,
-              color-mix(in srgb, rgba(255, 255, 255, 0.04) 88%, ${accentColor}) 100%
-            );
-          border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.1) 88%, ${accentColor});
+          background: transparent;
           border-radius: 50%;
           box-shadow:
-            0 12px 24px rgba(0, 0, 0, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.1),
-            inset 0 -6px 12px rgba(0, 0, 0, 0.08);
+            0 0 0 1px rgba(255, 255, 255, 0.04),
+            0 0 0 6px rgba(255, 255, 255, 0.05),
+            0 0 18px color-mix(in srgb, ${accentColor} 12%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.18);
           height: var(--climate-thumb-size);
           left: var(--climate-thumb-left, 50%);
           pointer-events: auto;
@@ -32893,36 +32869,30 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__dial-thumb::before {
-          background:
-            linear-gradient(
-              180deg,
-              rgba(255, 255, 255, 0.08) 0%,
-              color-mix(in srgb, rgba(255, 255, 255, 0.03) 90%, ${accentColor}) 100%
-            );
+          -webkit-backdrop-filter: blur(16px);
+          backdrop-filter: blur(16px);
+          background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.08) 38%, rgba(255, 255, 255, 0.03) 58%, transparent 76%);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 50%;
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
-            0 0 0 1px rgba(255, 255, 255, 0.03);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
           content: "";
-          height: calc(100% - 6px);
-          left: 50%;
+          inset: 0;
           position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: calc(100% - 6px);
         }
 
         .climate-card__dial-thumb::after {
           content: "";
-          height: 24%;
-          left: 22%;
+          height: 42%;
+          left: 50%;
           position: absolute;
-          top: 18%;
-          width: 24%;
-          background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.14) 58%, transparent 76%);
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: 42%;
+          background: rgba(255, 255, 255, 0.96);
           border-radius: 50%;
-          filter: blur(0.4px);
-          opacity: 0.72;
+          box-shadow:
+            0 0 0 1px rgba(255, 255, 255, 0.08),
+            0 0 12px rgba(255, 255, 255, 0.22);
         }
 
         .climate-card__dial-current-marker {
@@ -32973,19 +32943,12 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__dial.is-dragging .climate-card__dial-thumb {
           animation: climate-card-dial-thumb-pop 260ms cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
-          background:
-            radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 24%, transparent 46%),
-            radial-gradient(circle at 72% 76%, color-mix(in srgb, ${accentColor} 16%, transparent) 0%, transparent 60%),
-            linear-gradient(
-              180deg,
-              rgba(255, 255, 255, 0.12) 0%,
-              color-mix(in srgb, rgba(255, 255, 255, 0.05) 84%, ${accentColor}) 100%
-            );
-          border-color: color-mix(in srgb, rgba(255, 255, 255, 0.12) 82%, ${accentColor});
+          background: transparent;
           box-shadow:
-            0 0 0 5px color-mix(in srgb, ${accentColor} 8%, transparent),
-            0 18px 34px rgba(0, 0, 0, 0.24),
-            inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            0 0 0 1px rgba(255, 255, 255, 0.06),
+            0 0 0 7px color-mix(in srgb, ${accentColor} 12%, rgba(255, 255, 255, 0.04)),
+            0 0 22px color-mix(in srgb, ${accentColor} 18%, transparent),
+            0 18px 34px rgba(0, 0, 0, 0.24);
           transform: translate(-50%, -50%) scale(1.15);
         }
 
@@ -44658,6 +44621,11 @@ const DEFAULT_CONFIG = {
     style: "medium",
     fallback_vibrate: false,
   },
+  animations: {
+    enabled: true,
+    content_duration: 420,
+    button_bounce_duration: 320,
+  },
   styles: {
     card: {
       background: "var(--ha-card-background)",
@@ -45166,6 +45134,7 @@ class NodaliaEntityCard extends HTMLElement {
     this._cardWidth = 0;
     this._isCompactLayout = false;
     this._lastRenderSignature = "";
+    this._animateContentOnNextRender = true;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -45201,6 +45170,7 @@ class NodaliaEntityCard extends HTMLElement {
       Math.round(this._cardWidth || this.clientWidth || 0),
     );
     this._lastRenderSignature = "";
+    this._animateContentOnNextRender = true;
     this._render();
   }
 
@@ -45743,6 +45713,43 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
+  _getAnimationSettings() {
+    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+
+    return {
+      enabled: configuredAnimations.enabled !== false,
+      buttonBounceDuration: clamp(
+        Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+        120,
+        1200,
+      ),
+      contentDuration: clamp(
+        Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration,
+        140,
+        1800,
+      ),
+    };
+  }
+
+  _triggerPressAnimation(element, className = "is-pressing") {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+
+    element.classList.remove(className);
+    element.getBoundingClientRect();
+    element.classList.add(className);
+
+    window.setTimeout(() => {
+      element.classList.remove(className);
+    }, animations.buttonBounceDuration + 40);
+  }
+
   _onShadowClick(event) {
     const actionTarget = event
       .composedPath()
@@ -45764,6 +45771,8 @@ class NodaliaEntityCard extends HTMLElement {
       }
 
       this._triggerHaptic();
+      this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
+      this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
       this._performPrimaryAction(state);
       return;
     }
@@ -45777,6 +45786,8 @@ class NodaliaEntityCard extends HTMLElement {
       }
 
       this._triggerHaptic();
+      this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
+      this._triggerPressAnimation(actionTarget);
       this._performQuickAction(quickAction);
     }
   }
@@ -45870,10 +45881,14 @@ class NodaliaEntityCard extends HTMLElement {
     const cardShadow = isActive
       ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`
       : styles.card.box_shadow;
+    const animations = this._getAnimationSettings();
+    const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
 
     this.shadowRoot.innerHTML = `
       <style>
         :host {
+          --entity-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
+          --entity-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
           display: block;
         }
 
@@ -45889,6 +45904,7 @@ class NodaliaEntityCard extends HTMLElement {
           color: var(--primary-text-color);
           overflow: hidden;
           position: relative;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
 
         .entity-card--single-row {
@@ -45916,7 +45932,14 @@ class NodaliaEntityCard extends HTMLElement {
           min-width: 0;
           padding: ${effectivePadding};
           position: relative;
+          transform-origin: center;
+          transition: transform 160ms ease;
+          will-change: transform;
           z-index: 1;
+        }
+
+        .entity-card__content.is-pressing {
+          animation: entity-card-content-bounce var(--entity-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
         .entity-card--single-row .entity-card__content {
@@ -45931,6 +45954,10 @@ class NodaliaEntityCard extends HTMLElement {
           grid-template-columns: ${effectiveIconTrackSize} minmax(0, 1fr);
           min-height: ${singleRowLayout ? effectiveContentMinHeight : "0px"};
           min-width: 0;
+        }
+
+        .entity-card__hero--entering {
+          animation: entity-card-fade-up calc(var(--entity-card-content-duration) * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
         .entity-card__icon {
@@ -45955,7 +45982,20 @@ class NodaliaEntityCard extends HTMLElement {
           padding: 0;
           position: relative;
           justify-self: start;
+          transform-origin: center;
+          transition: transform 160ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, color 180ms ease;
+          will-change: transform;
           width: ${effectiveIconSize};
+        }
+
+        .entity-card__icon--entering {
+          animation: entity-card-bubble-bloom calc(var(--entity-card-content-duration) * 0.92) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation-delay: 40ms;
+        }
+
+        .entity-card__icon.is-pressing,
+        .entity-card__control.is-pressing {
+          animation: entity-card-bubble-bounce var(--entity-card-button-bounce-duration) cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
         }
 
         .entity-card__icon ha-icon {
@@ -46001,6 +46041,11 @@ class NodaliaEntityCard extends HTMLElement {
           display: grid;
           gap: ${singleRowLayout ? "0" : narrowCard ? "6px" : "10px"};
           min-width: 0;
+        }
+
+        .entity-card__copy--entering {
+          animation: entity-card-fade-up calc(var(--entity-card-content-duration) * 0.92) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 70ms;
         }
 
         .entity-card--single-row .entity-card__copy {
@@ -46098,6 +46143,11 @@ class NodaliaEntityCard extends HTMLElement {
           justify-content: center;
         }
 
+        .entity-card__actions--entering {
+          animation: entity-card-fade-up calc(var(--entity-card-content-duration) * 0.94) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 110ms;
+        }
+
         .entity-card__control {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
@@ -46120,7 +46170,66 @@ class NodaliaEntityCard extends HTMLElement {
           outline: none;
           padding: 0;
           position: relative;
+          transform-origin: center;
+          transition: transform 160ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, color 180ms ease;
+          will-change: transform;
           width: ${effectiveControlSize};
+        }
+
+        @keyframes entity-card-content-bounce {
+          0% {
+            transform: scale(1);
+          }
+          45% {
+            transform: scale(1.02);
+          }
+          72% {
+            transform: scale(1.008);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+
+        @keyframes entity-card-fade-up {
+          0% {
+            opacity: 0;
+            transform: translateY(12px) scale(0.97);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes entity-card-bubble-bloom {
+          0% {
+            opacity: 0;
+            transform: scale(0.92);
+          }
+          58% {
+            opacity: 1;
+            transform: scale(1.04);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes entity-card-bubble-bounce {
+          0% {
+            transform: scale(1);
+          }
+          48% {
+            transform: scale(1.12);
+          }
+          72% {
+            transform: scale(1.04);
+          }
+          100% {
+            transform: scale(1);
+          }
         }
 
         .entity-card__control ha-icon {
@@ -46162,6 +46271,15 @@ class NodaliaEntityCard extends HTMLElement {
             width: min(${effectiveIconSize}, 52px);
           }
         }
+
+        ${animations.enabled ? "" : `
+        ha-card,
+        .entity-card,
+        .entity-card * {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
       </style>
       <ha-card
         class="entity-card ${isActive ? "is-on" : "is-off"} ${isCompactLayout ? "entity-card--compact" : ""} ${showCopyBlock ? "entity-card--with-copy" : ""} ${singleRowLayout ? "entity-card--single-row" : ""} ${canRunPrimaryAction ? "entity-card--clickable" : ""}"
@@ -46169,10 +46287,10 @@ class NodaliaEntityCard extends HTMLElement {
         ${canRunPrimaryAction ? 'data-entity-action="primary"' : ""}
       >
         <div class="entity-card__content">
-          <div class="entity-card__hero">
+          <div class="entity-card__hero ${shouldAnimateEntrance ? "entity-card__hero--entering" : ""}">
             <button
               type="button"
-              class="entity-card__icon"
+              class="entity-card__icon ${shouldAnimateEntrance ? "entity-card__icon--entering" : ""}"
               ${canRunPrimaryAction ? 'data-entity-action="primary"' : ""}
               aria-label="${escapeHtml(canRunPrimaryAction ? "Accion principal" : title)}"
             >
@@ -46181,7 +46299,7 @@ class NodaliaEntityCard extends HTMLElement {
             </button>
             ${showCopyBlock
               ? `
-                <div class="entity-card__copy">
+                <div class="entity-card__copy ${shouldAnimateEntrance ? "entity-card__copy--entering" : ""}">
                   ${showCopyHeader
                     ? `
                       <div class="entity-card__copy-header">
@@ -46199,7 +46317,7 @@ class NodaliaEntityCard extends HTMLElement {
           ${
             quickActions.length
               ? `
-                <div class="entity-card__actions">
+                <div class="entity-card__actions ${shouldAnimateEntrance ? "entity-card__actions--entering" : ""}">
                   ${quickActions
                     .map((action, index) => `
                       <button
@@ -46221,6 +46339,8 @@ class NodaliaEntityCard extends HTMLElement {
         </div>
       </ha-card>
     `;
+
+    this._animateContentOnNextRender = false;
   }
 }
 
@@ -46235,6 +46355,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._entityOptionsSignature = "";
+    this._showAnimationSection = false;
     this._showStyleSection = false;
     this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
@@ -46519,6 +46640,9 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
       if (toggleButton.dataset.editorToggle === "styles") {
         this._showStyleSection = !this._showStyleSection;
+        this._render();
+      } else if (toggleButton.dataset.editorToggle === "animations") {
+        this._showAnimationSection = !this._showAnimationSection;
         this._render();
       }
       return;
@@ -46814,6 +46938,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     const config = this._config || normalizeConfig({});
     const hapticStyle = config.haptics?.style || "medium";
     const tapAction = config.tap_action || "auto";
+    const animations = config.animations || DEFAULT_CONFIG.animations;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -47234,6 +47359,39 @@ class NodaliaEntityCardEditor extends HTMLElement {
             </div>
           </div>
           ${this._renderQuickActions(config)}
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Animaciones</div>
+            <div class="editor-section__hint">Entrada suave del contenido y pequeño rebote al pulsar la tarjeta o sus acciones.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="animations"
+                aria-expanded="${this._showAnimationSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showAnimationSection ? "Ocultar ajustes de animación" : "Mostrar ajustes de animación"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showAnimationSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", animations.content_duration, {
+                    type: "number",
+                  })}
+                  ${this._renderTextField("Rebote pulsación (ms)", "animations.button_bounce_duration", animations.button_bounce_duration, {
+                    type: "number",
+                  })}
+                </div>
+              `
+              : ""
+          }
         </section>
 
         <section class="editor-section">
