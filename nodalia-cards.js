@@ -31941,15 +31941,6 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__dial-center {
           align-content: center;
-          -webkit-backdrop-filter: blur(12px);
-          backdrop-filter: blur(12px);
-          background:
-            linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.015) 100%);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 50%;
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
-            0 10px 24px rgba(0, 0, 0, 0.1);
           display: grid;
           gap: ${tightLayout ? "10px" : compactLayout ? "11px" : "12px"};
           inset: ${tightLayout ? "23% 15% 17% 15%" : compactLayout ? "23% 15.5% 17.5% 15.5%" : "23% 16% 18% 16%"};
@@ -31959,9 +31950,7 @@ class NodaliaClimateCard extends HTMLElement {
           text-align: center;
           transform: scale(1);
           transition:
-            background 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
-            border-color 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
-            box-shadow 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            opacity 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
             transform 220ms cubic-bezier(0.22, 0.84, 0.26, 1);
           z-index: 1;
         }
@@ -31983,12 +31972,6 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__dial.is-dragging .climate-card__dial-center {
-          background:
-            linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.018) 100%);
-          border-color: color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.08));
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.06),
-            0 14px 30px rgba(0, 0, 0, 0.12);
           transform: scale(1.02);
         }
 
