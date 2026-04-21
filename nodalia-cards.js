@@ -23006,19 +23006,18 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           -webkit-backdrop-filter: blur(16px);
           backdrop-filter: blur(16px);
           background:
-            radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.18) 24%, transparent 44%),
-            radial-gradient(circle at 72% 76%, color-mix(in srgb, ${accentColor} 22%, rgba(255, 255, 255, 0.18)) 0%, transparent 54%),
+            radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.36) 0%, rgba(255, 255, 255, 0.12) 24%, transparent 44%),
             linear-gradient(
               180deg,
-              color-mix(in srgb, ${accentColor} 10%, rgba(255, 255, 255, 0.92)) 0%,
-              color-mix(in srgb, ${accentColor} 8%, rgba(255, 255, 255, 0.58)) 100%
+              color-mix(in srgb, ${accentColor} 30%, rgba(255, 255, 255, 0.18)) 0%,
+              color-mix(in srgb, ${accentColor} 44%, rgba(0, 0, 0, 0.08)) 100%
             );
-          border: 1px solid color-mix(in srgb, ${accentColor} 16%, rgba(255, 255, 255, 0.24));
+          border: 1px solid color-mix(in srgb, ${accentColor} 24%, rgba(255, 255, 255, 0.16));
           border-radius: 50%;
           box-shadow:
-            0 12px 28px rgba(0, 0, 0, 0.22),
-            inset 0 1px 0 rgba(255, 255, 255, 0.28),
-            inset 0 -8px 12px rgba(255, 255, 255, 0.06);
+            0 12px 26px rgba(0, 0, 0, 0.22),
+            inset 0 1px 0 rgba(255, 255, 255, 0.14),
+            inset 0 -6px 12px rgba(0, 0, 0, 0.08);
           height: var(--gauge-thumb-size);
           left: var(--gauge-thumb-left, 50%);
           position: absolute;
@@ -23037,36 +23036,35 @@ class NodaliaCircularGaugeCard extends HTMLElement {
 
         .gauge-card__dial-thumb::before {
           background:
-            radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.48) 0%, rgba(255, 255, 255, 0.08) 30%, transparent 48%),
             linear-gradient(
               180deg,
-              color-mix(in srgb, ${accentColor} 34%, rgba(255, 255, 255, 0.44)) 0%,
-              color-mix(in srgb, ${accentColor} 44%, rgba(255, 255, 255, 0.1)) 100%
+              color-mix(in srgb, ${accentColor} 20%, rgba(255, 255, 255, 0.14)) 0%,
+              color-mix(in srgb, ${accentColor} 34%, rgba(0, 0, 0, 0.06)) 100%
             );
           border-radius: 50%;
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.18),
-            0 0 0 1px color-mix(in srgb, ${accentColor} 10%, rgba(255, 255, 255, 0.08));
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            0 0 0 1px rgba(255, 255, 255, 0.04);
           content: "";
-          height: calc(100% - 8px);
+          height: calc(100% - 6px);
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: calc(100% - 8px);
+          width: calc(100% - 6px);
         }
 
         .gauge-card__dial-thumb::after {
-          background: radial-gradient(circle, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.26) 56%, transparent 72%);
+          background: radial-gradient(circle, rgba(255, 255, 255, 0.76) 0%, rgba(255, 255, 255, 0.18) 54%, transparent 74%);
           border-radius: 50%;
           content: "";
-          filter: blur(0.4px);
-          height: 38%;
-          left: 21%;
-          opacity: 0.92;
+          filter: blur(0.3px);
+          height: 28%;
+          left: 24%;
+          opacity: 0.86;
           position: absolute;
-          top: 18%;
-          width: 38%;
+          top: 20%;
+          width: 28%;
         }
 
         .gauge-card__dial-center {
@@ -32753,19 +32751,18 @@ class NodaliaClimateCard extends HTMLElement {
           -webkit-backdrop-filter: blur(16px);
           backdrop-filter: blur(16px);
           background:
-            radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.18) 24%, transparent 44%),
-            radial-gradient(circle at 72% 76%, color-mix(in srgb, ${accentColor} 22%, rgba(255, 255, 255, 0.18)) 0%, transparent 54%),
+            radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.36) 0%, rgba(255, 255, 255, 0.12) 24%, transparent 44%),
             linear-gradient(
               180deg,
-              color-mix(in srgb, ${accentColor} 10%, rgba(255, 255, 255, 0.92)) 0%,
-              color-mix(in srgb, ${accentColor} 8%, rgba(255, 255, 255, 0.58)) 100%
+              color-mix(in srgb, ${accentColor} 30%, rgba(255, 255, 255, 0.18)) 0%,
+              color-mix(in srgb, ${accentColor} 44%, rgba(0, 0, 0, 0.08)) 100%
             );
-          border: 1px solid color-mix(in srgb, ${accentColor} 16%, rgba(255, 255, 255, 0.24));
+          border: 1px solid color-mix(in srgb, ${accentColor} 24%, rgba(255, 255, 255, 0.16));
           border-radius: 50%;
           box-shadow:
-            0 12px 28px rgba(0, 0, 0, 0.22),
-            inset 0 1px 0 rgba(255, 255, 255, 0.28),
-            inset 0 -8px 12px rgba(255, 255, 255, 0.06);
+            0 12px 26px rgba(0, 0, 0, 0.22),
+            inset 0 1px 0 rgba(255, 255, 255, 0.14),
+            inset 0 -6px 12px rgba(0, 0, 0, 0.08);
           height: var(--climate-thumb-size);
           left: var(--climate-thumb-left, 50%);
           pointer-events: auto;
@@ -32785,36 +32782,35 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__dial-thumb::before {
           background:
-            radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.48) 0%, rgba(255, 255, 255, 0.08) 30%, transparent 48%),
             linear-gradient(
               180deg,
-              color-mix(in srgb, ${accentColor} 34%, rgba(255, 255, 255, 0.44)) 0%,
-              color-mix(in srgb, ${accentColor} 44%, rgba(255, 255, 255, 0.1)) 100%
+              color-mix(in srgb, ${accentColor} 20%, rgba(255, 255, 255, 0.14)) 0%,
+              color-mix(in srgb, ${accentColor} 34%, rgba(0, 0, 0, 0.06)) 100%
             );
           border-radius: 50%;
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.18),
-            0 0 0 1px color-mix(in srgb, ${accentColor} 10%, rgba(255, 255, 255, 0.08));
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            0 0 0 1px rgba(255, 255, 255, 0.04);
           content: "";
-          height: calc(100% - 8px);
+          height: calc(100% - 6px);
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: calc(100% - 8px);
+          width: calc(100% - 6px);
         }
 
         .climate-card__dial-thumb::after {
           content: "";
+          height: 28%;
+          left: 24%;
           position: absolute;
-          height: 38%;
-          left: 21%;
-          top: 18%;
-          width: 38%;
-          background: radial-gradient(circle, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.26) 56%, transparent 72%);
+          top: 20%;
+          width: 28%;
+          background: radial-gradient(circle, rgba(255, 255, 255, 0.76) 0%, rgba(255, 255, 255, 0.18) 54%, transparent 74%);
           border-radius: 50%;
-          filter: blur(0.4px);
-          opacity: 0.92;
+          filter: blur(0.3px);
+          opacity: 0.86;
         }
 
         .climate-card__dial-current-marker {
@@ -32866,18 +32862,17 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__dial.is-dragging .climate-card__dial-thumb {
           animation: climate-card-dial-thumb-pop 260ms cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
           background:
-            radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.84) 0%, rgba(255, 255, 255, 0.22) 24%, transparent 44%),
-            radial-gradient(circle at 72% 76%, color-mix(in srgb, ${accentColor} 28%, rgba(255, 255, 255, 0.24)) 0%, transparent 56%),
+            radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.14) 24%, transparent 44%),
             linear-gradient(
               180deg,
-              color-mix(in srgb, ${accentColor} 16%, rgba(255, 255, 255, 0.96)) 0%,
-              color-mix(in srgb, ${accentColor} 12%, rgba(255, 255, 255, 0.68)) 100%
+              color-mix(in srgb, ${accentColor} 38%, rgba(255, 255, 255, 0.18)) 0%,
+              color-mix(in srgb, ${accentColor} 54%, rgba(0, 0, 0, 0.1)) 100%
             );
-          border-color: color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.34));
+          border-color: color-mix(in srgb, ${accentColor} 28%, rgba(255, 255, 255, 0.18));
           box-shadow:
-            0 0 0 5px color-mix(in srgb, ${accentColor} 10%, transparent),
+            0 0 0 5px color-mix(in srgb, ${accentColor} 12%, transparent),
             0 18px 34px rgba(0, 0, 0, 0.24),
-            inset 0 1px 0 rgba(255, 255, 255, 0.28);
+            inset 0 1px 0 rgba(255, 255, 255, 0.16);
           transform: translate(-50%, -50%) scale(1.15);
         }
 
