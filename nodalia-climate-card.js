@@ -18,6 +18,9 @@ const DIAL_CIRCLE_RADIUS = 86;
 const DIAL_CIRCUMFERENCE = 2 * Math.PI * DIAL_CIRCLE_RADIUS;
 const DIAL_VISIBLE_LENGTH = DIAL_CIRCUMFERENCE * (DIAL_SWEEP / 360);
 const DIAL_HIDDEN_LENGTH = DIAL_CIRCUMFERENCE - DIAL_VISIBLE_LENGTH;
+const STEP_BUTTON_COMMIT_DEBOUNCE = 160;
+const DRAFT_CONFIRMATION_TIMEOUT = 4200;
+const DRAFT_CONFIRMATION_RETRY_LIMIT = 1;
 
 const DEFAULT_CONFIG = {
   entity: "",
@@ -488,6 +491,10 @@ class NodaliaClimateCard extends HTMLElement {
     this._hass = null;
     this._draftTemperature = new Map();
     this._draftResetTimer = 0;
+    this._temperatureCommitDebounceTimer = 0;
+    this._temperatureCommitQueuedValue = null;
+    this._temperatureCommitInFlight = false;
+    this._temperatureCommitRetryCount = 0;
     this._activeDialDrag = null;
     this._pendingRenderAfterDrag = false;
     this._lastRenderSignature = "";
@@ -541,6 +548,11 @@ class NodaliaClimateCard extends HTMLElement {
     if (this._draftResetTimer) {
       window.clearTimeout(this._draftResetTimer);
       this._draftResetTimer = 0;
+    }
+
+    if (this._temperatureCommitDebounceTimer) {
+      window.clearTimeout(this._temperatureCommitDebounceTimer);
+      this._temperatureCommitDebounceTimer = 0;
     }
   }
 
@@ -649,10 +661,29 @@ class NodaliaClimateCard extends HTMLElement {
 
     const actualTemperature = Number(state.attributes?.temperature);
     const draftTemperature = Number(this._draftTemperature.get(entityId));
-    const step = this._getTemperatureStep(state);
+    const tolerance = this._getTemperatureSyncTolerance(state);
 
-    if (Number.isFinite(actualTemperature) && Math.abs(actualTemperature - draftTemperature) <= Math.max(step, 0.5)) {
+    if (Number.isFinite(actualTemperature) && Math.abs(actualTemperature - draftTemperature) <= tolerance) {
+      this._clearTemperatureDraft(entityId);
+    }
+  }
+
+  _clearTemperatureDraft(entityId = this._config?.entity) {
+    if (entityId) {
       this._draftTemperature.delete(entityId);
+    }
+
+    this._temperatureCommitQueuedValue = null;
+    this._temperatureCommitRetryCount = 0;
+
+    if (this._draftResetTimer) {
+      window.clearTimeout(this._draftResetTimer);
+      this._draftResetTimer = 0;
+    }
+
+    if (this._temperatureCommitDebounceTimer) {
+      window.clearTimeout(this._temperatureCommitDebounceTimer);
+      this._temperatureCommitDebounceTimer = 0;
     }
   }
 
@@ -689,6 +720,23 @@ class NodaliaClimateCard extends HTMLElement {
   _getTemperatureStep(state) {
     const step = Number(state?.attributes?.target_temp_step);
     return Number.isFinite(step) && step > 0 ? step : 0.5;
+  }
+
+  _getTemperatureSyncTolerance(state) {
+    const step = this._getTemperatureStep(state);
+    return Math.max(0.05, Math.min(step / 2, 0.2));
+  }
+
+  _normalizeTemperatureValue(value, state = this._getState()) {
+    if (!state) {
+      return Number(value);
+    }
+
+    const range = this._getTemperatureRange(state);
+    const step = this._getTemperatureStep(state);
+    const nextValue = clamp(Number(value), range.min, range.max);
+    const rounded = range.min + (Math.round((nextValue - range.min) / step) * step);
+    return Number(rounded.toFixed(Math.max(1, getStepPrecision(step))));
   }
 
   _supportsTargetTemperature(state) {
@@ -824,10 +872,10 @@ class NodaliaClimateCard extends HTMLElement {
 
   _setClimateService(service, data = {}) {
     if (!this._hass || !this._config?.entity) {
-      return;
+      return Promise.resolve();
     }
 
-    this._hass.callService("climate", service, {
+    return this._hass.callService("climate", service, {
       entity_id: this._config.entity,
       ...data,
     });
@@ -852,20 +900,114 @@ class NodaliaClimateCard extends HTMLElement {
     this._setHvacMode("off");
   }
 
-  _commitTemperature(value) {
+  _queueTemperatureCommit(value, options = {}) {
     const state = this._getState();
     if (!state || !this._supportsTargetTemperature(state)) {
+      return null;
+    }
+
+    const normalized = this._normalizeTemperatureValue(value, state);
+    const entityId = this._config?.entity;
+
+    if (!entityId || !Number.isFinite(normalized)) {
+      return null;
+    }
+
+    this._draftTemperature.set(entityId, normalized);
+    this._temperatureCommitQueuedValue = normalized;
+    this._temperatureCommitRetryCount = 0;
+
+    if (options.render !== false) {
+      this._render();
+    }
+
+    if (options.immediate === true) {
+      this._flushQueuedTemperatureCommit();
+      return normalized;
+    }
+
+    if (this._temperatureCommitDebounceTimer) {
+      window.clearTimeout(this._temperatureCommitDebounceTimer);
+    }
+
+    this._temperatureCommitDebounceTimer = window.setTimeout(() => {
+      this._temperatureCommitDebounceTimer = 0;
+      this._flushQueuedTemperatureCommit();
+    }, STEP_BUTTON_COMMIT_DEBOUNCE);
+
+    this._scheduleDraftReset();
+    return normalized;
+  }
+
+  async _flushQueuedTemperatureCommit() {
+    const entityId = this._config?.entity;
+    if (!entityId) {
       return;
     }
 
-    const range = this._getTemperatureRange(state);
-    const step = this._getTemperatureStep(state);
-    const nextValue = clamp(Number(value), range.min, range.max);
-    const rounded = range.min + (Math.round((nextValue - range.min) / step) * step);
-    this._setClimateService("set_temperature", {
-      temperature: Number(rounded.toFixed(Math.max(1, getStepPrecision(step)))),
+    if (this._temperatureCommitDebounceTimer) {
+      window.clearTimeout(this._temperatureCommitDebounceTimer);
+      this._temperatureCommitDebounceTimer = 0;
+    }
+
+    if (this._temperatureCommitInFlight) {
+      return;
+    }
+
+    const target = Number(
+      this._temperatureCommitQueuedValue ?? this._draftTemperature.get(entityId),
+    );
+    if (!Number.isFinite(target)) {
+      return;
+    }
+
+    this._temperatureCommitQueuedValue = null;
+    this._temperatureCommitInFlight = true;
+    let serviceFailed = false;
+
+    try {
+      await Promise.resolve(this._setClimateService("set_temperature", {
+        temperature: target,
+      }));
+    } catch (_error) {
+      serviceFailed = true;
+      this._temperatureCommitQueuedValue = target;
+    } finally {
+      this._temperatureCommitInFlight = false;
+
+      if (serviceFailed) {
+        this._scheduleDraftReset();
+        return;
+      }
+
+      const queuedValue = Number(this._temperatureCommitQueuedValue);
+      if (Number.isFinite(queuedValue) && Math.abs(queuedValue - target) > 0.001) {
+        this._flushQueuedTemperatureCommit();
+        return;
+      }
+
+      if (Number.isFinite(queuedValue) && Math.abs(queuedValue - target) <= 0.001) {
+        this._temperatureCommitQueuedValue = null;
+      }
+
+      if (this._draftTemperature.has(entityId)) {
+        this._scheduleDraftReset();
+      }
+    }
+  }
+
+  _commitTemperature(value, options = {}) {
+    const normalized = this._queueTemperatureCommit(value, {
+      immediate: options.immediate !== false,
+      render: options.render,
     });
+
+    if (!Number.isFinite(normalized)) {
+      return null;
+    }
+
     this._scheduleDraftReset();
+    return normalized;
   }
 
   _scheduleDraftReset() {
@@ -874,12 +1016,39 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     this._draftResetTimer = window.setTimeout(() => {
-      if (this._config?.entity) {
-        this._draftTemperature.delete(this._config.entity);
-      }
       this._draftResetTimer = 0;
+
+      const entityId = this._config?.entity;
+      const state = this._getState();
+      if (!entityId || !state || !this._draftTemperature.has(entityId)) {
+        return;
+      }
+
+      if (this._temperatureCommitDebounceTimer || this._temperatureCommitInFlight) {
+        this._scheduleDraftReset();
+        return;
+      }
+
+      const actualTemperature = Number(state.attributes?.temperature);
+      const draftTemperature = Number(this._draftTemperature.get(entityId));
+      const tolerance = this._getTemperatureSyncTolerance(state);
+
+      if (Number.isFinite(actualTemperature) && Math.abs(actualTemperature - draftTemperature) <= tolerance) {
+        this._clearTemperatureDraft(entityId);
+        this._render();
+        return;
+      }
+
+      if (this._temperatureCommitRetryCount < DRAFT_CONFIRMATION_RETRY_LIMIT && Number.isFinite(draftTemperature)) {
+        this._temperatureCommitRetryCount += 1;
+        this._temperatureCommitQueuedValue = draftTemperature;
+        this._flushQueuedTemperatureCommit();
+        return;
+      }
+
+      this._clearTemperatureDraft(entityId);
       this._render();
-    }, 2200);
+    }, DRAFT_CONFIRMATION_TIMEOUT);
   }
 
   _changeTemperatureBy(delta) {
@@ -890,11 +1059,12 @@ class NodaliaClimateCard extends HTMLElement {
 
     const step = this._getTemperatureStep(state);
     const current = this._getTargetTemperature(state);
-    const next = Number(current) + (Number(delta) * step);
-    this._draftTemperature.set(this._config.entity, next);
-    this._render();
+    const next = this._normalizeTemperatureValue(Number(current) + (Number(delta) * step), state);
     this._triggerHaptic("selection");
-    this._commitTemperature(next);
+    this._queueTemperatureCommit(next, {
+      immediate: false,
+      render: true,
+    });
   }
 
   _triggerHaptic(styleOverride = null) {
