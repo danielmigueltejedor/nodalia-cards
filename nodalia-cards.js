@@ -29996,6 +29996,12 @@ const DEFAULT_CONFIG = {
     style: "medium",
     fallback_vibrate: false,
   },
+  animations: {
+    enabled: true,
+    dial_duration: 180,
+    button_bounce_duration: 280,
+    content_duration: 340,
+  },
   styles: {
     card: {
       background: "var(--ha-card-background)",
@@ -30174,7 +30180,111 @@ function escapeHtml(value) {
 }
 
 function escapeSelectorValue(value) {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(String(value));
+  }
+
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
+function resolveEditorColorValue(value) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || typeof document === "undefined") {
+    return "";
+  }
+
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.color = "";
+  probe.style.color = rawValue;
+  if (!probe.style.color) {
+    return rawValue;
+  }
+
+  (document.body || document.documentElement).appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved || rawValue;
+}
+
+function formatEditorHexChannel(value) {
+  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+}
+
+function formatEditorColorFromHex(hex, alpha = 1) {
+  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+    return String(hex ?? "");
+  }
+
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+  const safeAlpha = clamp(Number(alpha), 0, 1);
+  if (safeAlpha >= 0.999) {
+    return `#${normalizedHex}`;
+  }
+
+  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+}
+
+function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const channels = resolvedValue.match(/[\d.]+/g) || [];
+  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+
+  return {
+    alpha,
+    hex,
+    resolved: resolvedValue,
+    source: sourceValue,
+    value: formatEditorColorFromHex(hex, alpha),
+  };
+}
+
+function getEditorColorFallbackValue(field) {
+  const normalizedField = String(field ?? "");
+
+  if (normalizedField.endsWith("icon.background")) {
+    return "rgba(255, 255, 255, 0.06)";
+  }
+
+  if (normalizedField.endsWith("dial.background")) {
+    return "rgba(255, 255, 255, 0.02)";
+  }
+
+  if (normalizedField.endsWith("track_color")) {
+    return "rgba(255, 255, 255, 0.08)";
+  }
+
+  if (normalizedField.endsWith("accent_background")) {
+    return "rgba(113, 192, 255, 0.18)";
+  }
+
+  if (normalizedField.endsWith("accent_color")) {
+    return "var(--primary-text-color)";
+  }
+
+  if (normalizedField.endsWith("on_color") || normalizedField.endsWith("icon.color")) {
+    return "var(--primary-text-color)";
+  }
+
+  if (normalizedField.endsWith("off_color")) {
+    return "var(--state-inactive-color, rgba(255, 255, 255, 0.5))";
+  }
+
+  if (normalizedField.endsWith("background")) {
+    return "var(--ha-card-background)";
+  }
+
+  return "var(--info-color, #71c0ff)";
 }
 
 function fireEvent(node, type, detail, options) {
@@ -30322,6 +30432,10 @@ function getDialMarkerPosition(angle) {
 
 class NodaliaClimateCard extends HTMLElement {
   static async getConfigElement() {
+    if (!customElements.get(EDITOR_TAG) && typeof customElements?.whenDefined === "function") {
+      await customElements.whenDefined(EDITOR_TAG);
+    }
+
     return document.createElement(EDITOR_TAG);
   }
 
@@ -30339,6 +30453,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._activeDialDrag = null;
     this._pendingRenderAfterDrag = false;
     this._lastRenderSignature = "";
+    this._animateContentOnNextRender = true;
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
     this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
@@ -30762,6 +30877,56 @@ class NodaliaClimateCard extends HTMLElement {
     }
   }
 
+  _getAnimationSettings() {
+    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+
+    return {
+      enabled: configuredAnimations.enabled !== false,
+      dialDuration: clamp(
+        Number(configuredAnimations.dial_duration) || DEFAULT_CONFIG.animations.dial_duration,
+        80,
+        2000,
+      ),
+      buttonBounceDuration: clamp(
+        Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+        120,
+        1200,
+      ),
+      contentDuration: clamp(
+        Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration,
+        140,
+        1800,
+      ),
+    };
+  }
+
+  _triggerButtonBounce(button) {
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+
+    button.classList.remove("is-pressing");
+    button.getBoundingClientRect();
+    button.classList.add("is-pressing");
+
+    window.setTimeout(() => {
+      button.classList.remove("is-pressing");
+    }, animations.buttonBounceDuration + 40);
+  }
+
+  _setDialDraggingState(isDragging, dial = this._activeDialDrag?.dial || null) {
+    if (!(dial instanceof HTMLElement)) {
+      return;
+    }
+
+    dial.classList.toggle("is-dragging", Boolean(isDragging));
+  }
+
   _updateDialPreview(value) {
     const state = this._getState();
     const dial = this.shadowRoot?.querySelector(".climate-card__dial");
@@ -30819,6 +30984,7 @@ class NodaliaClimateCard extends HTMLElement {
       pointerId,
       lastValue: null,
     };
+    this._setDialDraggingState(true, dial);
 
     if (event) {
       event.preventDefault();
@@ -30888,6 +31054,7 @@ class NodaliaClimateCard extends HTMLElement {
     drag.lastValue = nextValue;
     this._applyDialValue(nextValue, { commit: true });
 
+    this._setDialDraggingState(false, drag.dial);
     this._activeDialDrag = null;
 
     if (this._pendingRenderAfterDrag) {
@@ -31016,6 +31183,7 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
+    this._setDialDraggingState(false, drag.dial);
     this._activeDialDrag = null;
 
     if (this._pendingRenderAfterDrag) {
@@ -31031,6 +31199,7 @@ class NodaliaClimateCard extends HTMLElement {
 
     const touch = event.changedTouches?.[0];
     if (!touch) {
+      this._setDialDraggingState(false, this._activeDialDrag.dial);
       this._activeDialDrag = null;
       if (this._pendingRenderAfterDrag) {
         this._pendingRenderAfterDrag = false;
@@ -31056,6 +31225,8 @@ class NodaliaClimateCard extends HTMLElement {
     if (!state) {
       return;
     }
+
+    this._triggerButtonBounce(actionButton);
 
     switch (actionButton.dataset.climateAction) {
       case "toggle":
@@ -31244,10 +31415,15 @@ class NodaliaClimateCard extends HTMLElement {
     const cardShadow = isOff
       ? styles.card.box_shadow
       : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
+    const animations = this._getAnimationSettings();
+    const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
 
     this.shadowRoot.innerHTML = `
       <style>
         :host {
+          --climate-card-dial-duration: ${animations.enabled ? animations.dialDuration : 0}ms;
+          --climate-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
+          --climate-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
           display: block;
           height: 100%;
           min-height: 0;
@@ -31261,6 +31437,7 @@ class NodaliaClimateCard extends HTMLElement {
           height: 100%;
           min-height: 0;
           overflow: hidden;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
 
         .climate-card {
@@ -31272,6 +31449,7 @@ class NodaliaClimateCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
 
         .climate-card__content {
@@ -31313,6 +31491,15 @@ class NodaliaClimateCard extends HTMLElement {
           outline: none;
           padding: 0;
           position: relative;
+          transform: translateZ(0);
+          transform-origin: center;
+          transition:
+            background 180ms ease,
+            border-color 180ms ease,
+            box-shadow 180ms ease,
+            color 180ms ease,
+            transform 160ms ease;
+          will-change: transform;
           width: ${effectiveIconSize};
         }
 
@@ -31407,6 +31594,7 @@ class NodaliaClimateCard extends HTMLElement {
           overflow: hidden;
           padding: ${effectiveChipPadding};
           text-overflow: ellipsis;
+          transition: background 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
           white-space: nowrap;
         }
 
@@ -31434,6 +31622,7 @@ class NodaliaClimateCard extends HTMLElement {
           height: var(--climate-dial-size);
           position: relative;
           touch-action: none;
+          transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
           user-select: none;
           -webkit-user-select: none;
           width: var(--climate-dial-size);
@@ -31475,7 +31664,7 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__dial-progress {
           stroke: ${accentColor};
           stroke-dasharray: var(--climate-progress-length) ${DIAL_CIRCUMFERENCE};
-          transition: stroke-dasharray 140ms ease-out;
+          transition: stroke var(--climate-card-dial-duration) ease, stroke-dasharray var(--climate-card-dial-duration) ease-out;
         }
 
         .climate-card__dial-thumb {
@@ -31489,6 +31678,11 @@ class NodaliaClimateCard extends HTMLElement {
           position: absolute;
           top: var(--climate-thumb-top, 50%);
           transform: translate(-50%, -50%);
+          transition:
+            left var(--climate-card-dial-duration) ease-out,
+            top var(--climate-card-dial-duration) ease-out,
+            border-color var(--climate-card-dial-duration) ease,
+            box-shadow var(--climate-card-dial-duration) ease;
           width: var(--climate-thumb-size);
           z-index: 2;
         }
@@ -31505,8 +31699,18 @@ class NodaliaClimateCard extends HTMLElement {
           position: absolute;
           top: var(--climate-current-top, 50%);
           transform: translate(-50%, -50%);
+          transition:
+            left var(--climate-card-dial-duration) ease-out,
+            top var(--climate-card-dial-duration) ease-out,
+            opacity var(--climate-card-dial-duration) ease;
           width: calc(var(--climate-thumb-size) * 0.58);
           z-index: 1;
+        }
+
+        .climate-card__dial.is-dragging .climate-card__dial-progress,
+        .climate-card__dial.is-dragging .climate-card__dial-thumb,
+        .climate-card__dial.is-dragging .climate-card__dial-current-marker {
+          transition: none !important;
         }
 
         .climate-card__dial-center {
@@ -31532,11 +31736,13 @@ class NodaliaClimateCard extends HTMLElement {
           padding-right: calc(${effectiveTargetSize} * 0.34);
           pointer-events: none;
           position: relative;
+          transition: color var(--climate-card-dial-duration) ease;
           white-space: nowrap;
         }
 
         .climate-card__target-value {
           display: inline-block;
+          transition: opacity 140ms ease;
         }
 
         .climate-card__target-unit {
@@ -31595,6 +31801,7 @@ class NodaliaClimateCard extends HTMLElement {
           color: ${accentColor};
           display: inline-flex;
           height: ${tightLayout ? "15px" : compactLayout ? "16px" : "17px"};
+          transition: color var(--climate-card-dial-duration) ease;
           width: ${tightLayout ? "15px" : compactLayout ? "16px" : "17px"};
         }
 
@@ -31629,11 +31836,15 @@ class NodaliaClimateCard extends HTMLElement {
           padding: 0;
           pointer-events: auto;
           position: relative;
+          transform: translateZ(0);
+          transform-origin: center;
           transition:
             background 160ms ease,
             border-color 160ms ease,
             transform 160ms ease,
-            box-shadow 160ms ease;
+            box-shadow 160ms ease,
+            color 160ms ease;
+          will-change: transform;
         }
 
         .climate-card__mode-button {
@@ -31648,6 +31859,10 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__mode-button:hover,
         .climate-card__step-button:hover {
           transform: translateY(-1px);
+        }
+
+        :is(.climate-card__icon, .climate-card__mode-button, .climate-card__step-button).is-pressing {
+          animation: climate-card-button-bounce var(--climate-card-button-bounce-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
         .climate-card__mode-button--power {
@@ -31673,6 +31888,20 @@ class NodaliaClimateCard extends HTMLElement {
           justify-content: center;
         }
 
+        .climate-card__hero--entering {
+          animation: climate-card-fade-up calc(var(--climate-card-content-duration) * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        .climate-card__dial-wrap--entering {
+          animation: climate-card-fade-up var(--climate-card-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 40ms;
+        }
+
+        .climate-card__steps--entering {
+          animation: climate-card-fade-up calc(var(--climate-card-content-duration) * 0.88) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 90ms;
+        }
+
         .climate-card__step-button {
           backdrop-filter: blur(18px);
           background:
@@ -31696,6 +31925,32 @@ class NodaliaClimateCard extends HTMLElement {
           width: 100%;
         }
 
+        @keyframes climate-card-button-bounce {
+          0% { transform: scale(1); }
+          40% { transform: scale(1.08); }
+          100% { transform: scale(1); }
+        }
+
+        @keyframes climate-card-fade-up {
+          0% {
+            opacity: 0;
+            transform: translateY(10px) scale(0.985);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        ${animations.enabled ? "" : `
+        ha-card,
+        .climate-card,
+        .climate-card * {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
+
         @media (max-width: 560px) {
           .climate-card__headline {
             grid-template-columns: minmax(0, 1fr);
@@ -31713,7 +31968,7 @@ class NodaliaClimateCard extends HTMLElement {
       </style>
       <ha-card class="climate-card climate-card--${escapeHtml(compactLevel)}" style="--accent-color:${escapeHtml(accentColor)};">
         <div class="climate-card__content">
-          <div class="climate-card__hero">
+          <div class="climate-card__hero ${shouldAnimateEntrance ? "climate-card__hero--entering" : ""}">
             <button
               type="button"
               class="climate-card__icon"
@@ -31731,7 +31986,7 @@ class NodaliaClimateCard extends HTMLElement {
             </div>
           </div>
 
-          <div class="climate-card__dial-wrap">
+          <div class="climate-card__dial-wrap ${shouldAnimateEntrance ? "climate-card__dial-wrap--entering" : ""}">
             <div
               class="climate-card__dial"
               data-climate-control="dial"
@@ -31813,7 +32068,7 @@ class NodaliaClimateCard extends HTMLElement {
           ${
             config.show_step_controls !== false && supportsTargetTemperature
               ? `
-                <div class="climate-card__steps">
+                <div class="climate-card__steps ${shouldAnimateEntrance ? "climate-card__steps--entering" : ""}">
                   <button
                     type="button"
                     class="climate-card__step-button"
@@ -31837,6 +32092,8 @@ class NodaliaClimateCard extends HTMLElement {
         </div>
       </ha-card>
     `;
+
+    this._animateContentOnNextRender = false;
   }
 }
 
@@ -31844,7 +32101,7 @@ if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaClimateCard);
 }
 
-class NodaliaClimateCardEditor extends HTMLElement {
+class NodaliaClimateCardEditorLegacy extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -32354,6 +32611,1004 @@ class NodaliaClimateCardEditor extends HTMLElement {
     this.shadowRoot
       .querySelectorAll('input[data-field="entity"]')
       .forEach(input => input.setAttribute("list", "climate-card-entities"));
+  }
+}
+
+class NodaliaClimateCardEditor extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._config = normalizeConfig(STUB_CONFIG);
+    this._hass = null;
+    this._entityOptionsSignature = "";
+    this._showStyleSection = false;
+    this._showAnimationSection = false;
+    this._pendingEditorControlTags = new Set();
+    this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+    this._onShadowClick = this._onShadowClick.bind(this);
+    this.shadowRoot.addEventListener("input", this._onShadowInput);
+    this.shadowRoot.addEventListener("change", this._onShadowInput);
+    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.addEventListener("click", this._onShadowClick);
+  }
+
+  set hass(hass) {
+    const nextSignature = this._getEntityOptionsSignature(hass);
+    const shouldRender =
+      !this._hass ||
+      nextSignature !== this._entityOptionsSignature ||
+      !this.shadowRoot?.innerHTML;
+
+    this._hass = hass;
+    this._entityOptionsSignature = nextSignature;
+
+    if (!shouldRender) {
+      return;
+    }
+
+    const focusState = this._captureFocusState();
+    this._render();
+    this._restoreFocusState(focusState);
+  }
+
+  setConfig(config) {
+    const focusState = this._captureFocusState();
+    this._config = normalizeConfig(config || {});
+    this._render();
+    this._restoreFocusState(focusState);
+  }
+
+  _watchEditorControlTag(tagName) {
+    if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+      return;
+    }
+
+    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+      return;
+    }
+
+    this._pendingEditorControlTags.add(tagName);
+    customElements.whenDefined(tagName)
+      .then(() => {
+        this._pendingEditorControlTags.delete(tagName);
+
+        if (!this._hass || !this.shadowRoot) {
+          return;
+        }
+
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+      })
+      .catch(() => {
+        this._pendingEditorControlTags.delete(tagName);
+      });
+  }
+
+  _ensureEditorControlsReady() {
+    this._watchEditorControlTag("ha-entity-picker");
+    this._watchEditorControlTag("ha-selector");
+    this._watchEditorControlTag("ha-icon-picker");
+  }
+
+  _getEntityOptionsSignature(hass = this._hass) {
+    return Object.entries(hass?.states || {})
+      .filter(([entityId]) => entityId.startsWith("climate."))
+      .map(([entityId, state]) => `${entityId}:${String(state?.attributes?.friendly_name || "")}:${String(state?.attributes?.icon || "")}`)
+      .sort((left, right) => left.localeCompare(right, "es", { sensitivity: "base" }))
+      .join("|");
+  }
+
+  _getClimateEntityOptions() {
+    const options = Object.entries(this._hass?.states || {})
+      .filter(([entityId]) => entityId.startsWith("climate."))
+      .map(([entityId, state]) => {
+        const friendlyName = String(state?.attributes?.friendly_name || "").trim();
+        return {
+          value: entityId,
+          label: friendlyName || entityId,
+          displayLabel: friendlyName && friendlyName !== entityId
+            ? `${friendlyName} (${entityId})`
+            : entityId,
+        };
+      })
+      .sort((left, right) => (
+        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
+        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+      ));
+
+    const currentValue = String(this._config?.entity || "").trim();
+    if (currentValue && !options.some(option => option.value === currentValue)) {
+      options.unshift({
+        value: currentValue,
+        label: currentValue,
+        displayLabel: currentValue,
+      });
+    }
+
+    return options;
+  }
+
+  _captureFocusState() {
+    const activeElement = this.shadowRoot?.activeElement;
+
+    if (
+      !(
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement instanceof HTMLSelectElement
+      )
+    ) {
+      return null;
+    }
+
+    const dataset = activeElement.dataset || {};
+    const selector = dataset.field
+      ? `[data-field="${escapeSelectorValue(dataset.field)}"]`
+      : null;
+
+    if (!selector) {
+      return null;
+    }
+
+    const supportsSelection =
+      typeof activeElement.selectionStart === "number" &&
+      typeof activeElement.selectionEnd === "number";
+
+    return {
+      selector,
+      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
+      selectionStart: supportsSelection ? activeElement.selectionStart : null,
+      type: activeElement.type,
+    };
+  }
+
+  _restoreFocusState(focusState) {
+    if (!focusState?.selector || !this.shadowRoot) {
+      return;
+    }
+
+    const target = this.shadowRoot.querySelector(focusState.selector);
+    if (
+      !(
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      )
+    ) {
+      return;
+    }
+
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_error) {
+      target.focus();
+    }
+
+    const canRestoreSelection =
+      focusState.type !== "checkbox" &&
+      typeof focusState.selectionStart === "number" &&
+      typeof focusState.selectionEnd === "number" &&
+      typeof target.setSelectionRange === "function";
+
+    if (!canRestoreSelection) {
+      return;
+    }
+
+    try {
+      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+    } catch (_error) {
+      // Ignore unsupported inputs.
+    }
+  }
+
+  _emitConfig() {
+    const focusState = this._captureFocusState();
+    const nextConfig = deepClone(this._config);
+    this._config = normalizeConfig(compactConfig(nextConfig));
+    this._render();
+    this._restoreFocusState(focusState);
+    fireEvent(this, "config-changed", {
+      config: compactConfig(nextConfig),
+    });
+  }
+
+  _setEditorConfig() {
+    this._config = normalizeConfig(compactConfig(this._config));
+  }
+
+  _setFieldValue(path, value) {
+    if (value === undefined || value === null || value === "") {
+      deleteByPath(this._config, path);
+      return;
+    }
+
+    setByPath(this._config, path, value);
+  }
+
+  _readFieldValue(input) {
+    const valueType = input.dataset.valueType || "string";
+
+    switch (valueType) {
+      case "boolean":
+        return Boolean(input.checked);
+      case "number": {
+        const trimmed = String(input.value || "").trim();
+        if (!trimmed) {
+          return undefined;
+        }
+
+        const parsed = Number(trimmed);
+        return Number.isFinite(parsed) ? parsed : trimmed;
+      }
+      case "color":
+        return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+      default:
+        return input.value;
+    }
+  }
+
+  _onShadowInput(event) {
+    const input = event
+      .composedPath()
+      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+
+    if (!input?.dataset?.field) {
+      return;
+    }
+
+    event.stopPropagation();
+
+    const nextValue = this._readFieldValue(input);
+    this._setFieldValue(input.dataset.field, nextValue);
+    this._setEditorConfig();
+
+    if (event.type === "change") {
+      this._emitConfig();
+    }
+  }
+
+  _onShadowValueChanged(event) {
+    const control = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.field);
+
+    if (!control?.dataset?.field) {
+      return;
+    }
+
+    event.stopPropagation();
+
+    const nextValue = typeof event.detail?.value === "string"
+      ? event.detail.value
+      : control.value;
+    if (typeof control.dataset?.value === "string") {
+      control.dataset.value = String(nextValue || "");
+    }
+
+    this._setFieldValue(control.dataset.field, nextValue);
+    this._setEditorConfig();
+    this._emitConfig();
+  }
+
+  _onShadowClick(event) {
+    const toggleButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+
+    if (!toggleButton) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (toggleButton.dataset.editorToggle === "styles") {
+      this._showStyleSection = !this._showStyleSection;
+      this._render();
+      return;
+    }
+
+    if (toggleButton.dataset.editorToggle === "animations") {
+      this._showAnimationSection = !this._showAnimationSection;
+      this._render();
+    }
+  }
+
+  _renderTextField(label, field, value, options = {}) {
+    const tag = options.multiline ? "textarea" : "input";
+    const inputType = options.type || "text";
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const valueType = options.valueType || "string";
+    const inputValue = value === undefined || value === null ? "" : String(value);
+
+    if (tag === "textarea") {
+      return `
+        <label class="editor-field ${options.fullWidth !== false ? "editor-field--full" : ""}">
+          <span>${escapeHtml(label)}</span>
+          <textarea data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(valueType)}" rows="${options.rows || 2}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
+        </label>
+      `;
+    }
+
+    return `
+      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <input
+          type="${escapeHtml(inputType)}"
+          data-field="${escapeHtml(field)}"
+          data-value-type="${escapeHtml(valueType)}"
+          value="${escapeHtml(inputValue)}"
+          ${placeholder}
+        />
+      </label>
+    `;
+  }
+
+  _renderColorField(label, field, value, options = {}) {
+    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+    const currentValue = value === undefined || value === null || value === ""
+      ? fallbackValue
+      : String(value);
+    const colorModel = getEditorColorModel(currentValue, fallbackValue);
+
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="Color personalizado">
+            <input
+              type="color"
+              data-field="${escapeHtml(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml(String(colorModel.alpha))}"
+              value="${escapeHtml(colorModel.hex)}"
+              aria-label="${escapeHtml(label)}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch:${escapeHtml(currentValue)};"></span>
+          </label>
+        </div>
+      </div>
+    `;
+  }
+
+  _renderCheckboxField(label, field, checked) {
+    return `
+      <label class="editor-toggle">
+        <input
+          type="checkbox"
+          data-field="${escapeHtml(field)}"
+          data-value-type="boolean"
+          ${checked ? "checked" : ""}
+        />
+        <span class="editor-toggle__switch" aria-hidden="true"></span>
+        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+      </label>
+    `;
+  }
+
+  _renderSelectField(label, field, value, options) {
+    return `
+      <label class="editor-field">
+        <span>${escapeHtml(label)}</span>
+        <select data-field="${escapeHtml(field)}">
+          ${options
+            .map(option => `
+              <option value="${escapeHtml(String(option.value))}" ${String(value) === String(option.value) ? "selected" : ""}>
+                ${escapeHtml(option.label)}
+              </option>
+            `)
+            .join("")}
+        </select>
+      </label>
+    `;
+  }
+
+  _renderEntityField(label, field, value, options = {}) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
+
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div
+          class="editor-control-host"
+          data-mounted-control="entity-picker"
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+          data-placeholder="${escapeHtml(options.placeholder || "")}"
+        ></div>
+      </div>
+    `;
+  }
+
+  _renderIconPickerField(label, field, value, options = {}) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
+
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div
+          class="editor-control-host"
+          data-mounted-control="icon-picker"
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+          data-placeholder="${escapeHtml(options.placeholder || "")}"
+        ></div>
+      </div>
+    `;
+  }
+
+  _mountEntityPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const field = host.dataset.field || "entity";
+    const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || "";
+    let control = null;
+
+    if (customElements.get("ha-entity-picker")) {
+      control = document.createElement("ha-entity-picker");
+      control.includeDomains = ["climate"];
+      control.allowCustomEntity = true;
+      control.entityFilter = stateObj => String(stateObj?.entity_id || "").startsWith("climate.");
+      if (placeholder) {
+        control.setAttribute("placeholder", placeholder);
+      }
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = {
+        entity: {
+          domain: "climate",
+        },
+      };
+    } else {
+      control = document.createElement("select");
+      const emptyOption = document.createElement("option");
+      emptyOption.value = "";
+      emptyOption.textContent = placeholder || "Selecciona una entidad";
+      control.appendChild(emptyOption);
+      this._getClimateEntityOptions().forEach(option => {
+        const optionElement = document.createElement("option");
+        optionElement.value = option.value;
+        optionElement.textContent = option.displayLabel;
+        control.appendChild(optionElement);
+      });
+      control.addEventListener("change", this._onShadowInput);
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+
+    if (control.tagName !== "SELECT") {
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    }
+
+    host.replaceChildren(control);
+  }
+
+  _mountIconPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const field = host.dataset.field || "icon";
+    const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || "";
+    let control = null;
+
+    if (customElements.get("ha-icon-picker")) {
+      control = document.createElement("ha-icon-picker");
+      if (placeholder) {
+        control.setAttribute("placeholder", placeholder);
+      }
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = {
+        icon: {},
+      };
+    } else {
+      control = document.createElement("input");
+      control.type = "text";
+      control.placeholder = placeholder;
+      control.addEventListener("input", this._onShadowInput);
+      control.addEventListener("change", this._onShadowInput);
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+
+    if (control.tagName !== "INPUT") {
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    }
+
+    host.replaceChildren(control);
+  }
+
+  _render() {
+    if (!this.shadowRoot) {
+      return;
+    }
+
+    const config = this._config || normalizeConfig({});
+    const hapticStyle = config.haptics?.style || "medium";
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        .editor {
+          color: var(--primary-text-color);
+          display: grid;
+          gap: 16px;
+        }
+
+        .editor-section {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 18px;
+          display: grid;
+          gap: 14px;
+          padding: 16px;
+        }
+
+        .editor-section__header {
+          display: grid;
+          gap: 4px;
+        }
+
+        .editor-section__title {
+          font-size: 15px;
+          font-weight: 700;
+        }
+
+        .editor-section__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .editor-section__actions {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 2px;
+        }
+
+        .editor-section__toggle-button {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        .editor-section__toggle-button ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
+        .editor-grid {
+          display: grid;
+          gap: 12px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .editor-field,
+        .editor-toggle {
+          display: grid;
+          gap: 6px;
+          min-width: 0;
+        }
+
+        .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+        .editor-field > span,
+        .editor-toggle > span {
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .editor-field input,
+        .editor-field select,
+        .editor-field textarea,
+        .editor-control-host input,
+        .editor-control-host select,
+        .editor-control-host textarea {
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          color: var(--primary-text-color);
+          font: inherit;
+          min-height: 40px;
+          padding: 10px 12px;
+          width: 100%;
+        }
+
+        .editor-field ha-icon-picker,
+        .editor-field ha-entity-picker,
+        .editor-field ha-selector,
+        .editor-control-host,
+        .editor-control-host > * {
+          display: block;
+          width: 100%;
+        }
+
+        .editor-color-field {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          min-height: 40px;
+        }
+
+        .editor-color-picker {
+          align-items: center;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 40px;
+          justify-content: center;
+          position: relative;
+          width: 40px;
+        }
+
+        .editor-color-picker input {
+          cursor: pointer;
+          inset: 0;
+          opacity: 0;
+          position: absolute;
+        }
+
+        .editor-color-picker:hover,
+        .editor-color-picker:focus-within {
+          border-color: rgba(255, 255, 255, 0.22);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .editor-color-swatch {
+          --editor-swatch: #71c0ff;
+          background:
+            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+            conic-gradient(from 90deg, rgba(255, 255, 255, 0.06) 25%, rgba(0, 0, 0, 0.12) 0 50%, rgba(255, 255, 255, 0.06) 0 75%, rgba(0, 0, 0, 0.12) 0);
+          background-position: center;
+          background-size: cover, 10px 10px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 999px;
+          display: block;
+          height: 18px;
+          width: 18px;
+        }
+
+        .editor-color-picker .editor-color-swatch {
+          height: 22px;
+          width: 22px;
+        }
+
+        @media (max-width: 640px) {
+          .editor-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        :is(.editor-toggle, .editor-checkbox) {
+          align-items: center;
+          column-gap: 10px;
+          cursor: pointer;
+          grid-auto-flow: row;
+          grid-template-columns: auto minmax(0, 1fr);
+          justify-content: stretch;
+          min-height: 40px;
+          padding-top: 0;
+          position: relative;
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input {
+          block-size: 1px;
+          inline-size: 1px;
+          margin: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: absolute;
+        }
+
+        .editor-toggle__switch {
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+          display: inline-flex;
+          font-size: 0;
+          height: 22px;
+          line-height: 0;
+          position: relative;
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+          width: 40px;
+        }
+
+        .editor-toggle__switch::before {
+          background: rgba(255, 255, 255, 0.92);
+          border-radius: 999px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+          content: "";
+          height: 18px;
+          left: 1px;
+          position: absolute;
+          top: 1px;
+          transition: transform 160ms ease;
+          width: 18px;
+        }
+
+        .editor-toggle__label {
+          min-width: 0;
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch {
+          background: var(--primary-color);
+          border-color: var(--primary-color);
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch::before {
+          transform: translateX(18px);
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input:focus-visible + .editor-toggle__switch {
+          box-shadow:
+            0 0 0 3px rgba(255, 255, 255, 0.14),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+      </style>
+      <div class="editor">
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">General</div>
+            <div class="editor-section__hint">Entidad principal, nombre visible e icono de la tarjeta.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderEntityField("Entidad climate", "entity", config.entity, {
+              placeholder: "climate.salon",
+              fullWidth: true,
+            })}
+            ${this._renderTextField("Nombre", "name", config.name, {
+              placeholder: "Salon",
+              fullWidth: true,
+            })}
+            ${this._renderIconPickerField("Icono", "icon", config.icon, {
+              placeholder: "mdi:thermostat",
+              fullWidth: true,
+            })}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Layout</div>
+            <div class="editor-section__hint">Ayuda a compactar la climate card según el espacio disponible en la vista.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderTextField("Rows de grid", "grid_options.rows", config.grid_options?.rows, {
+              type: "number",
+              valueType: "number",
+            })}
+            ${this._renderTextField("Columnas de grid", "grid_options.columns", config.grid_options?.columns, {
+              type: "number",
+              valueType: "number",
+            })}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Visibilidad</div>
+            <div class="editor-section__hint">Elige qué chips y controles deben mostrarse.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderCheckboxField("Chip de estado", "show_state_chip", config.show_state_chip !== false)}
+            ${this._renderCheckboxField("Chip de temperatura actual", "show_current_temperature_chip", config.show_current_temperature_chip !== false)}
+            ${this._renderCheckboxField("Chip de humedad", "show_humidity_chip", config.show_humidity_chip !== false)}
+            ${this._renderCheckboxField("Botones de modo", "show_mode_buttons", config.show_mode_buttons !== false)}
+            ${this._renderCheckboxField("Botones + / -", "show_step_controls", config.show_step_controls !== false)}
+            ${this._renderCheckboxField("Badge de no disponible", "show_unavailable_badge", config.show_unavailable_badge !== false)}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Haptics</div>
+            <div class="editor-section__hint">Respuesta táctil opcional al interactuar con el dial y los botones.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("Fallback con vibración", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderSelectField(
+              "Estilo",
+              "haptics.style",
+              hapticStyle,
+              [
+                { value: "selection", label: "Selección" },
+                { value: "light", label: "Ligero" },
+                { value: "medium", label: "Medio" },
+                { value: "heavy", label: "Intenso" },
+                { value: "success", label: "Éxito" },
+                { value: "warning", label: "Aviso" },
+                { value: "failure", label: "Fallo" },
+              ],
+            )}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Animaciones</div>
+            <div class="editor-section__hint">Controla la transición del dial, la entrada del contenido y el rebote de los botones.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="animations"
+                aria-expanded="${this._showAnimationSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showAnimationSection ? "Ocultar ajustes de animación" : "Mostrar ajustes de animación"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showAnimationSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderTextField("Dial (ms)", "animations.dial_duration", config.animations.dial_duration, {
+                    type: "number",
+                    valueType: "number",
+                  })}
+                  ${this._renderTextField("Rebote botones (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                    type: "number",
+                    valueType: "number",
+                  })}
+                  ${this._renderTextField("Entrada del contenido (ms)", "animations.content_duration", config.animations.content_duration, {
+                    type: "number",
+                    valueType: "number",
+                  })}
+                </div>
+              `
+              : ""
+          }
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Estilos</div>
+            <div class="editor-section__hint">Personaliza el look Nodalia de la climate card, el dial y los controles.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="styles"
+                aria-expanded="${this._showStyleSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showStyleSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderColorField("Fondo tarjeta", "styles.card.background", config.styles.card.background)}
+                  ${this._renderTextField("Borde", "styles.card.border", config.styles.card.border)}
+                  ${this._renderTextField("Radio", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${this._renderTextField("Sombra", "styles.card.box_shadow", config.styles.card.box_shadow)}
+                  ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
+                  ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
+                  ${this._renderTextField("Tamaño burbuja", "styles.icon.size", config.styles.icon.size)}
+                  ${this._renderColorField("Fondo burbuja", "styles.icon.background", config.styles.icon.background, {
+                    fallbackValue: "rgba(255, 255, 255, 0.06)",
+                  })}
+                  ${this._renderColorField("Color icono encendido", "styles.icon.on_color", config.styles.icon.on_color, {
+                    fallbackValue: "var(--primary-text-color)",
+                  })}
+                  ${this._renderColorField("Color icono apagado", "styles.icon.off_color", config.styles.icon.off_color, {
+                    fallbackValue: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))",
+                  })}
+                  ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
+                  ${this._renderTextField("Tamaño temperatura actual", "styles.current_size", config.styles.current_size)}
+                  ${this._renderTextField("Tamaño objetivo", "styles.target_size", config.styles.target_size)}
+                  ${this._renderTextField("Alto chip", "styles.chip_height", config.styles.chip_height)}
+                  ${this._renderTextField("Texto chip", "styles.chip_font_size", config.styles.chip_font_size)}
+                  ${this._renderTextField("Padding chip", "styles.chip_padding", config.styles.chip_padding)}
+                  ${this._renderTextField("Tamaño dial", "styles.dial.size", config.styles.dial.size)}
+                  ${this._renderTextField("Grosor dial", "styles.dial.stroke", config.styles.dial.stroke)}
+                  ${this._renderTextField("Tamaño thumb", "styles.dial.thumb_size", config.styles.dial.thumb_size)}
+                  ${this._renderColorField("Fondo dial", "styles.dial.background", config.styles.dial.background, {
+                    fallbackValue: "rgba(255, 255, 255, 0.02)",
+                  })}
+                  ${this._renderColorField("Track dial", "styles.dial.track_color", config.styles.dial.track_color, {
+                    fallbackValue: "rgba(255, 255, 255, 0.08)",
+                  })}
+                  ${this._renderColorField("Color calor", "styles.dial.heat_color", config.styles.dial.heat_color, {
+                    fallbackValue: "#f59f42",
+                  })}
+                  ${this._renderColorField("Color frío", "styles.dial.cool_color", config.styles.dial.cool_color, {
+                    fallbackValue: "#71c0ff",
+                  })}
+                  ${this._renderColorField("Color secado", "styles.dial.dry_color", config.styles.dial.dry_color, {
+                    fallbackValue: "#7fd0c8",
+                  })}
+                  ${this._renderColorField("Color auto", "styles.dial.auto_color", config.styles.dial.auto_color, {
+                    fallbackValue: "#c5a66f",
+                  })}
+                  ${this._renderColorField("Color ventilador", "styles.dial.fan_color", config.styles.dial.fan_color, {
+                    fallbackValue: "#83d39c",
+                  })}
+                  ${this._renderColorField("Color apagado", "styles.dial.off_color", config.styles.dial.off_color, {
+                    fallbackValue: "rgba(255, 255, 255, 0.28)",
+                  })}
+                  ${this._renderTextField("Tamaño botones modo", "styles.control.size", config.styles.control.size)}
+                  ${this._renderColorField("Fondo acento botones", "styles.control.accent_background", config.styles.control.accent_background, {
+                    fallbackValue: "rgba(113, 192, 255, 0.18)",
+                  })}
+                  ${this._renderColorField("Color acento botones", "styles.control.accent_color", config.styles.control.accent_color, {
+                    fallbackValue: "var(--primary-text-color)",
+                  })}
+                  ${this._renderTextField("Tamaño botones + / -", "styles.step_control.size", config.styles.step_control.size)}
+                </div>
+              `
+              : ""
+          }
+        </section>
+      </div>
+    `;
+
+    this.shadowRoot
+      .querySelectorAll('[data-mounted-control="entity-picker"]')
+      .forEach(host => this._mountEntityPicker(host));
+
+    this.shadowRoot
+      .querySelectorAll('[data-mounted-control="icon-picker"]')
+      .forEach(host => this._mountIconPicker(host));
+
+    this._ensureEditorControlsReady();
   }
 }
 
