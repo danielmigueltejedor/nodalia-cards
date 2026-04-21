@@ -21839,7 +21839,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-circular-gauge-card";
 const EDITOR_TAG = "nodalia-circular-gauge-card-editor";
-const CARD_VERSION = "0.11.0";
+const CARD_VERSION = "0.12.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -21882,6 +21882,12 @@ const DEFAULT_CONFIG = {
     enabled: true,
     style: "medium",
     fallback_vibrate: false,
+  },
+  animations: {
+    enabled: true,
+    dial_duration: 220,
+    button_bounce_duration: 320,
+    content_duration: 420,
   },
   styles: {
     card: {
@@ -22048,6 +22054,106 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function escapeSelectorValue(value) {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(String(value));
+  }
+
+  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
+function resolveEditorColorValue(value) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || typeof document === "undefined") {
+    return "";
+  }
+
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.color = "";
+  probe.style.color = rawValue;
+  if (!probe.style.color) {
+    return rawValue;
+  }
+
+  (document.body || document.documentElement).appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved || rawValue;
+}
+
+function formatEditorHexChannel(value) {
+  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+}
+
+function formatEditorColorFromHex(hex, alpha = 1) {
+  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+    return String(hex ?? "");
+  }
+
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+  const safeAlpha = clamp(Number(alpha), 0, 1);
+  if (safeAlpha >= 0.999) {
+    return `#${normalizedHex}`;
+  }
+
+  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+}
+
+function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const channels = resolvedValue.match(/[\d.]+/g) || [];
+  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+
+  return {
+    alpha,
+    hex,
+    resolved: resolvedValue,
+    source: sourceValue,
+    value: formatEditorColorFromHex(hex, alpha),
+  };
+}
+
+function getEditorColorFallbackValue(field) {
+  const normalizedField = String(field ?? "");
+
+  if (normalizedField.endsWith("icon.background")) {
+    return "rgba(255, 255, 255, 0.06)";
+  }
+
+  if (normalizedField.endsWith("gauge.background")) {
+    return "rgba(255, 255, 255, 0.02)";
+  }
+
+  if (normalizedField.endsWith("track_color")) {
+    return "rgba(255, 255, 255, 0.08)";
+  }
+
+  if (normalizedField.endsWith("foreground_color")) {
+    return "var(--info-color, #71c0ff)";
+  }
+
+  if (normalizedField.endsWith("icon.color")) {
+    return "var(--primary-text-color)";
+  }
+
+  if (normalizedField.endsWith("background")) {
+    return "var(--ha-card-background)";
+  }
+
+  return "var(--info-color, #71c0ff)";
+}
+
 function fireEvent(node, type, detail, options) {
   const event = new CustomEvent(type, {
     bubbles: options?.bubbles ?? true,
@@ -22174,6 +22280,15 @@ function inferReasonableMax(currentValue, unit, state) {
   return 100;
 }
 
+function getDialMarkerPosition(angle) {
+  const markerRadiusPercent = (DIAL_CIRCLE_RADIUS / DIAL_VIEWBOX_SIZE) * 100;
+  const radians = (angle * Math.PI) / 180;
+  return {
+    left: Number((50 + (Math.cos(radians) * markerRadiusPercent)).toFixed(3)),
+    top: Number((50 + (Math.sin(radians) * markerRadiusPercent)).toFixed(3)),
+  };
+}
+
 class NodaliaCircularGaugeCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -22189,13 +22304,24 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._lastRenderSignature = "";
+    this._lastGaugeVisualState = null;
+    this._gaugeVisualFrame = 0;
+    this._animateContentOnNextRender = true;
     this._onShadowClick = this._onShadowClick.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+  }
+
+  disconnectedCallback() {
+    if (this._gaugeVisualFrame) {
+      window.cancelAnimationFrame(this._gaugeVisualFrame);
+      this._gaugeVisualFrame = 0;
+    }
   }
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
     this._lastRenderSignature = "";
+    this._animateContentOnNextRender = true;
     this._render();
   }
 
@@ -22408,6 +22534,29 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     return unit ? `${formatted} ${unit}` : formatted;
   }
 
+  _getAnimationSettings() {
+    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+
+    return {
+      enabled: configuredAnimations.enabled !== false,
+      dialDuration: clamp(
+        Number(configuredAnimations.dial_duration) || DEFAULT_CONFIG.animations.dial_duration,
+        80,
+        2000,
+      ),
+      buttonBounceDuration: clamp(
+        Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+        120,
+        1200,
+      ),
+      contentDuration: clamp(
+        Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration,
+        140,
+        1800,
+      ),
+    };
+  }
+
   _canRunTapAction() {
     return (this._config?.tap_action || "more-info") !== "none" && Boolean(this._config?.entity);
   }
@@ -22428,6 +22577,25 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
       navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
     }
+  }
+
+  _triggerContentBounce(content) {
+    if (!(content instanceof HTMLElement)) {
+      return;
+    }
+
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+
+    content.classList.remove("is-pressing");
+    content.getBoundingClientRect();
+    content.classList.add("is-pressing");
+
+    window.setTimeout(() => {
+      content.classList.remove("is-pressing");
+    }, animations.buttonBounceDuration + 40);
   }
 
   _openMoreInfo() {
@@ -22452,6 +22620,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
     this._triggerHaptic();
+    this._triggerContentBounce(target);
     this._openMoreInfo();
   }
 
@@ -22520,6 +22689,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const accentColor = this._getAccentColor(state, ratio);
     const progressLength = Number((DIAL_VISIBLE_LENGTH * ratio).toFixed(3));
     const dialAngle = DIAL_START_ANGLE + (ratio * DIAL_SWEEP);
+    const thumbPosition = getDialMarkerPosition(dialAngle);
     const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
     const showHeader = config.show_header !== false;
     const showName = config.show_name !== false;
@@ -22536,7 +22706,6 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       18,
       Math.min(parseSizeToPixels(styles.gauge.thumb_size, 22), compactLayout ? 20 : 22),
     );
-    const dialRadiusPx = Number(((DIAL_CIRCLE_RADIUS * dialSizePx) / DIAL_VIEWBOX_SIZE).toFixed(3));
     const effectiveCardPadding = compactLayout ? "14px" : styles.card.padding;
     const effectiveGap = compactLayout ? "12px" : styles.card.gap;
     const effectiveIconSize = `${Math.max(50, Math.min(parseSizeToPixels(styles.icon.size, 58), compactLayout ? 54 : 58))}px`;
@@ -22556,6 +22725,11 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const cardShadow = value === null
       ? styles.card.box_shadow
       : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
+    const animations = this._getAnimationSettings();
+    const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
+    const previousVisualState = animations.enabled && !shouldAnimateEntrance ? this._lastGaugeVisualState : null;
+    const initialProgressLength = previousVisualState ? previousVisualState.progressLength : shouldAnimateEntrance ? 0 : progressLength;
+    const initialThumbPosition = previousVisualState ? previousVisualState.thumbPosition : shouldAnimateEntrance ? getDialMarkerPosition(DIAL_START_ANGLE) : thumbPosition;
     const chips = [];
 
     if (config.show_percentage_chip === true && value !== null) {
@@ -22565,6 +22739,9 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
+          --gauge-card-dial-duration: ${animations.enabled ? animations.dialDuration : 0}ms;
+          --gauge-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
+          --gauge-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
           display: block;
           height: 100%;
           min-height: 0;
@@ -22578,6 +22755,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           height: 100%;
           min-height: 0;
           overflow: hidden;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
 
         .gauge-card {
@@ -22590,6 +22768,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
           position: relative;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
 
         .gauge-card__content {
@@ -22601,7 +22780,14 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           min-height: 0;
           padding: ${effectiveCardPadding};
           position: relative;
+          transform-origin: center;
+          transition: transform 160ms ease;
+          will-change: transform;
           z-index: 1;
+        }
+
+        .gauge-card__content.is-pressing {
+          animation: gauge-card-content-bounce var(--gauge-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
         .gauge-card__hero {
@@ -22722,6 +22908,10 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           white-space: nowrap;
         }
 
+        .gauge-card__hero--entering {
+          animation: gauge-card-fade-up calc(var(--gauge-card-content-duration) * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
         .gauge-card__dial-wrap {
           align-items: center;
           display: flex;
@@ -22730,17 +22920,53 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           min-height: 0;
         }
 
+        .gauge-card__dial-wrap--entering {
+          animation: gauge-card-fade-up var(--gauge-card-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 40ms;
+        }
+
+        .gauge-card__dial-wrap--entering .gauge-card__dial {
+          animation: gauge-card-dial-bloom calc(var(--gauge-card-content-duration) * 1.02) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+        }
+
+        .gauge-card__dial-wrap--entering .gauge-card__dial-center {
+          animation: gauge-card-dial-center-bloom calc(var(--gauge-card-content-duration) * 0.92) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 70ms;
+        }
+
+        .gauge-card__dial-wrap--entering .gauge-card__dial-thumb {
+          animation: gauge-card-dial-thumb-pop calc(var(--gauge-card-content-duration) * 0.66) cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
+          animation-delay: 90ms;
+        }
+
         .gauge-card__dial {
-          --gauge-angle: ${dialAngle}deg;
-          --gauge-progress-length: ${progressLength};
+          --gauge-progress-length: ${initialProgressLength};
           --gauge-dial-size: ${dialSizePx}px;
-          --gauge-dial-radius: ${dialRadiusPx}px;
           --gauge-thumb-size: ${thumbSizePx}px;
-          background: ${styles.gauge.background};
+          background:
+            radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.08), transparent 30%),
+            linear-gradient(
+              180deg,
+              color-mix(in srgb, ${styles.gauge.background} 94%, rgba(255, 255, 255, 0.04)) 0%,
+              color-mix(in srgb, ${styles.gauge.background} 96%, rgba(0, 0, 0, 0.12)) 100%
+            );
+          border: 1px solid color-mix(in srgb, ${accentColor} 10%, rgba(255, 255, 255, 0.08));
           border-radius: 50%;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            0 18px 38px rgba(0, 0, 0, 0.16);
           height: var(--gauge-dial-size);
           position: relative;
+          transform: translateZ(0) scale(1);
+          transform-origin: center;
+          transition:
+            background 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            border-color 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            box-shadow 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            transform 220ms cubic-bezier(0.22, 0.84, 0.26, 1);
           width: var(--gauge-dial-size);
+          -webkit-backdrop-filter: blur(18px);
+          backdrop-filter: blur(18px);
         }
 
         .gauge-card__dial-svg {
@@ -22765,23 +22991,82 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         }
 
         .gauge-card__dial-progress {
+          filter: drop-shadow(0 0 0 transparent);
+          opacity: 0.94;
           stroke: ${accentColor};
           stroke-dasharray: var(--gauge-progress-length) ${DIAL_CIRCUMFERENCE};
-          transition: stroke-dasharray 180ms ease-out;
+          transition:
+            stroke var(--gauge-card-dial-duration) ease,
+            stroke-dasharray var(--gauge-card-dial-duration) ease-out,
+            filter 180ms ease,
+            opacity 180ms ease;
         }
 
         .gauge-card__dial-thumb {
-          background: #f5f7fb;
-          border: 4px solid color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.72));
+          -webkit-backdrop-filter: blur(16px);
+          backdrop-filter: blur(16px);
+          background:
+            radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.18) 24%, transparent 44%),
+            radial-gradient(circle at 72% 76%, color-mix(in srgb, ${accentColor} 22%, rgba(255, 255, 255, 0.18)) 0%, transparent 54%),
+            linear-gradient(
+              180deg,
+              color-mix(in srgb, ${accentColor} 10%, rgba(255, 255, 255, 0.92)) 0%,
+              color-mix(in srgb, ${accentColor} 8%, rgba(255, 255, 255, 0.58)) 100%
+            );
+          border: 1px solid color-mix(in srgb, ${accentColor} 16%, rgba(255, 255, 255, 0.24));
           border-radius: 50%;
-          box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.12);
+          box-shadow:
+            0 12px 28px rgba(0, 0, 0, 0.22),
+            inset 0 1px 0 rgba(255, 255, 255, 0.28),
+            inset 0 -8px 12px rgba(255, 255, 255, 0.06);
           height: var(--gauge-thumb-size);
+          left: var(--gauge-thumb-left, 50%);
+          position: absolute;
+          top: var(--gauge-thumb-top, 50%);
+          transform: translate(-50%, -50%) scale(1);
+          transition:
+            left var(--gauge-card-dial-duration) ease-out,
+            top var(--gauge-card-dial-duration) ease-out,
+            transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            border-color var(--gauge-card-dial-duration) ease,
+            box-shadow var(--gauge-card-dial-duration) ease,
+            background var(--gauge-card-dial-duration) ease;
+          width: var(--gauge-thumb-size);
+          z-index: 2;
+        }
+
+        .gauge-card__dial-thumb::before {
+          background:
+            radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.48) 0%, rgba(255, 255, 255, 0.08) 30%, transparent 48%),
+            linear-gradient(
+              180deg,
+              color-mix(in srgb, ${accentColor} 34%, rgba(255, 255, 255, 0.44)) 0%,
+              color-mix(in srgb, ${accentColor} 44%, rgba(255, 255, 255, 0.1)) 100%
+            );
+          border-radius: 50%;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.18),
+            0 0 0 1px color-mix(in srgb, ${accentColor} 10%, rgba(255, 255, 255, 0.08));
+          content: "";
+          height: calc(100% - 8px);
           left: 50%;
           position: absolute;
           top: 50%;
-          transform: translate(-50%, -50%) rotate(calc(var(--gauge-angle) + 90deg)) translateY(calc(-1 * var(--gauge-dial-radius)));
-          width: var(--gauge-thumb-size);
-          z-index: 2;
+          transform: translate(-50%, -50%);
+          width: calc(100% - 8px);
+        }
+
+        .gauge-card__dial-thumb::after {
+          background: radial-gradient(circle, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.26) 56%, transparent 72%);
+          border-radius: 50%;
+          content: "";
+          filter: blur(0.4px);
+          height: 38%;
+          left: 21%;
+          opacity: 0.92;
+          position: absolute;
+          top: 18%;
+          width: 38%;
         }
 
         .gauge-card__dial-center {
@@ -22792,6 +23077,10 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           justify-items: center;
           position: absolute;
           text-align: center;
+          transform: scale(1);
+          transition:
+            opacity 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            transform 220ms cubic-bezier(0.22, 0.84, 0.26, 1);
         }
 
         .gauge-card__name-chip {
@@ -22874,6 +23163,91 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           width: ${compactLayout ? "20px" : "22px"};
         }
 
+        @keyframes gauge-card-content-bounce {
+          0% {
+            transform: scale(1);
+          }
+          45% {
+            transform: scale(1.02);
+          }
+          72% {
+            transform: scale(1.008);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+
+        @keyframes gauge-card-fade-up {
+          0% {
+            opacity: 0;
+            transform: translateY(14px) scale(0.965);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes gauge-card-dial-bloom {
+          0% {
+            opacity: 0;
+            transform: translateZ(0) scale(0.95);
+            box-shadow:
+              inset 0 1px 0 rgba(255, 255, 255, 0.02),
+              0 10px 24px rgba(0, 0, 0, 0.08);
+          }
+          55% {
+            opacity: 1;
+            transform: translateZ(0) scale(1.015);
+            box-shadow:
+              inset 0 1px 0 rgba(255, 255, 255, 0.06),
+              0 22px 42px rgba(0, 0, 0, 0.16);
+          }
+          100% {
+            opacity: 1;
+            transform: translateZ(0) scale(1);
+            box-shadow:
+              inset 0 1px 0 rgba(255, 255, 255, 0.05),
+              0 18px 38px rgba(0, 0, 0, 0.16);
+          }
+        }
+
+        @keyframes gauge-card-dial-center-bloom {
+          0% {
+            opacity: 0;
+            transform: scale(0.96);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes gauge-card-dial-thumb-pop {
+          0% {
+            transform: translate(-50%, -50%) scale(1);
+          }
+          48% {
+            transform: translate(-50%, -50%) scale(1.22);
+          }
+          72% {
+            transform: translate(-50%, -50%) scale(1.06);
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1);
+          }
+        }
+
+        ${animations.enabled ? "" : `
+        ha-card,
+        .gauge-card,
+        .gauge-card * {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
+
         @media (max-width: 560px) {
           .gauge-card__headline {
             grid-template-columns: minmax(0, 1fr);
@@ -22893,7 +23267,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           ${
             showHeader
               ? `
-                <div class="gauge-card__hero">
+                <div class="gauge-card__hero ${shouldAnimateEntrance ? "gauge-card__hero--entering" : ""}">
                   ${
                     showIcon
                       ? `
@@ -22920,8 +23294,12 @@ class NodaliaCircularGaugeCard extends HTMLElement {
               ? `<div class="gauge-card__chip gauge-card__name-chip">${escapeHtml(title)}</div>`
               : ""
           }
-          <div class="gauge-card__dial-wrap">
-            <div class="gauge-card__dial" aria-hidden="true">
+          <div class="gauge-card__dial-wrap ${shouldAnimateEntrance ? "gauge-card__dial-wrap--entering" : ""}">
+            <div
+              class="gauge-card__dial"
+              aria-hidden="true"
+              style="--gauge-progress-length:${initialProgressLength};--gauge-thumb-left:${initialThumbPosition.left}%;--gauge-thumb-top:${initialThumbPosition.top}%;"
+            >
               <svg class="gauge-card__dial-svg" viewBox="0 0 ${DIAL_VIEWBOX_SIZE} ${DIAL_VIEWBOX_SIZE}">
                 <circle
                   class="gauge-card__dial-track"
@@ -22969,6 +23347,29 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         </div>
       </ha-card>
     `;
+
+    if (this._gaugeVisualFrame) {
+      window.cancelAnimationFrame(this._gaugeVisualFrame);
+      this._gaugeVisualFrame = 0;
+    }
+
+    if (animations.enabled && (shouldAnimateEntrance || previousVisualState)) {
+      const dial = this.shadowRoot.querySelector(".gauge-card__dial");
+      if (dial instanceof HTMLElement) {
+        this._gaugeVisualFrame = window.requestAnimationFrame(() => {
+          dial.style.setProperty("--gauge-progress-length", `${progressLength}`);
+          dial.style.setProperty("--gauge-thumb-left", `${thumbPosition.left}%`);
+          dial.style.setProperty("--gauge-thumb-top", `${thumbPosition.top}%`);
+          this._gaugeVisualFrame = 0;
+        });
+      }
+    }
+
+    this._lastGaugeVisualState = {
+      progressLength,
+      thumbPosition,
+    };
+    this._animateContentOnNextRender = false;
   }
 }
 
@@ -22983,9 +23384,16 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._entityOptionsSignature = "";
+    this._showStyleSection = false;
+    this._showAnimationSection = false;
+    this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+    this._onShadowClick = this._onShadowClick.bind(this);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
+    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.addEventListener("click", this._onShadowClick);
   }
 
   set hass(hass) {
@@ -22998,25 +23406,99 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     this._hass = hass;
     this._entityOptionsSignature = nextSignature;
 
-    if (shouldRender) {
-      this._render();
+    if (!shouldRender) {
+      return;
     }
+
+    const focusState = this._captureFocusState();
+    this._render();
+    this._restoreFocusState(focusState);
   }
 
   setConfig(config) {
+    const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
     this._render();
+    this._restoreFocusState(focusState);
   }
 
-  _getEntityOptionsSignature(hass) {
-    if (!hass?.states) {
-      return "";
+  _watchEditorControlTag(tagName) {
+    if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+      return;
     }
 
-    return Object.keys(hass.states)
-      .filter(entityId => entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number."))
-      .sort((left, right) => left.localeCompare(right, "es"))
+    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+      return;
+    }
+
+    this._pendingEditorControlTags.add(tagName);
+    customElements.whenDefined(tagName)
+      .then(() => {
+        this._pendingEditorControlTags.delete(tagName);
+
+        if (!this._hass || !this.shadowRoot) {
+          return;
+        }
+
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+      })
+      .catch(() => {
+        this._pendingEditorControlTags.delete(tagName);
+      });
+  }
+
+  _ensureEditorControlsReady() {
+    this._watchEditorControlTag("ha-entity-picker");
+    this._watchEditorControlTag("ha-selector");
+    this._watchEditorControlTag("ha-icon-picker");
+  }
+
+  _getEntityOptionsSignature(hass = this._hass) {
+    return Object.entries(hass?.states || {})
+      .filter(([entityId]) => (
+        entityId.startsWith("sensor.")
+        || entityId.startsWith("number.")
+        || entityId.startsWith("input_number.")
+      ))
+      .map(([entityId, state]) => `${entityId}:${String(state?.attributes?.friendly_name || "")}:${String(state?.attributes?.icon || "")}`)
+      .sort((left, right) => left.localeCompare(right, "es", { sensitivity: "base" }))
       .join("|");
+  }
+
+  _getNumericEntityOptions() {
+    const options = Object.entries(this._hass?.states || {})
+      .filter(([entityId]) => (
+        entityId.startsWith("sensor.")
+        || entityId.startsWith("number.")
+        || entityId.startsWith("input_number.")
+      ))
+      .map(([entityId, state]) => {
+        const friendlyName = String(state?.attributes?.friendly_name || "").trim();
+        return {
+          value: entityId,
+          label: friendlyName || entityId,
+          displayLabel: friendlyName && friendlyName !== entityId
+            ? `${friendlyName} (${entityId})`
+            : entityId,
+        };
+      })
+      .sort((left, right) => (
+        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
+        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+      ));
+
+    const currentValue = String(this._config?.entity || "").trim();
+    if (currentValue && !options.some(option => option.value === currentValue)) {
+      options.unshift({
+        value: currentValue,
+        label: currentValue,
+        displayLabel: currentValue,
+      });
+    }
+
+    return options;
   }
 
   _captureFocusState() {
@@ -23026,16 +23508,21 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
         activeElement instanceof HTMLInputElement ||
         activeElement instanceof HTMLTextAreaElement ||
         activeElement instanceof HTMLSelectElement
-      ) ||
-      !activeElement.dataset?.field
+      )
     ) {
       return null;
     }
 
-    const selector = `[data-field="${CSS.escape(activeElement.dataset.field)}"]`;
+    const dataset = activeElement.dataset || {};
+    const selector = dataset.field
+      ? `[data-field="${escapeSelectorValue(dataset.field)}"]`
+      : null;
+
+    if (!selector) {
+      return null;
+    }
+
     const supportsSelection =
-      activeElement instanceof HTMLInputElement &&
-      activeElement.type !== "checkbox" &&
       typeof activeElement.selectionStart === "number" &&
       typeof activeElement.selectionEnd === "number";
 
@@ -23116,6 +23603,17 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     switch (valueType) {
       case "boolean":
         return Boolean(input.checked);
+      case "number": {
+        const trimmed = String(input.value || "").trim();
+        if (!trimmed) {
+          return undefined;
+        }
+
+        const parsed = Number(trimmed);
+        return Number.isFinite(parsed) ? parsed : trimmed;
+      }
+      case "color":
+        return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
       default:
         return input.value;
     }
@@ -23141,11 +23639,68 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     }
   }
 
+  _onShadowValueChanged(event) {
+    const control = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.field);
+
+    if (!control?.dataset?.field) {
+      return;
+    }
+
+    event.stopPropagation();
+
+    const nextValue = typeof event.detail?.value === "string"
+      ? event.detail.value
+      : control.value;
+    if (typeof control.dataset?.value === "string") {
+      control.dataset.value = String(nextValue || "");
+    }
+
+    this._setFieldValue(control.dataset.field, nextValue);
+    this._setEditorConfig();
+    this._emitConfig();
+  }
+
+  _onShadowClick(event) {
+    const toggleButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+
+    if (!toggleButton) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (toggleButton.dataset.editorToggle === "styles") {
+      this._showStyleSection = !this._showStyleSection;
+      this._render();
+      return;
+    }
+
+    if (toggleButton.dataset.editorToggle === "animations") {
+      this._showAnimationSection = !this._showAnimationSection;
+      this._render();
+    }
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tag = options.multiline ? "textarea" : "input";
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
     const inputValue = value === undefined || value === null ? "" : String(value);
+
+    if (tag === "textarea") {
+      return `
+        <label class="editor-field ${options.fullWidth !== false ? "editor-field--full" : ""}">
+          <span>${escapeHtml(label)}</span>
+          <textarea data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(valueType)}" rows="${options.rows || 2}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
+        </label>
+      `;
+    }
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
@@ -23158,6 +23713,33 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
           ${placeholder}
         />
       </label>
+    `;
+  }
+
+  _renderColorField(label, field, value, options = {}) {
+    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+    const currentValue = value === undefined || value === null || value === ""
+      ? fallbackValue
+      : String(value);
+    const colorModel = getEditorColorModel(currentValue, fallbackValue);
+
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="Color personalizado">
+            <input
+              type="color"
+              data-field="${escapeHtml(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml(String(colorModel.alpha))}"
+              value="${escapeHtml(colorModel.hex)}"
+              aria-label="${escapeHtml(label)}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch:${escapeHtml(currentValue)};"></span>
+          </label>
+        </div>
+      </div>
     `;
   }
 
@@ -23193,16 +23775,143 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     `;
   }
 
-  _getEntityOptionsMarkup() {
-    const entityIds = Object.keys(this._hass?.states || {})
-      .filter(entityId => entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number."))
-      .sort((left, right) => left.localeCompare(right, "es"));
+  _renderEntityField(label, field, value, options = {}) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
 
     return `
-      <datalist id="circular-gauge-card-entities">
-        ${entityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div
+          class="editor-control-host"
+          data-mounted-control="entity-picker"
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+          data-placeholder="${escapeHtml(options.placeholder || "")}"
+        ></div>
+      </div>
     `;
+  }
+
+  _renderIconPickerField(label, field, value, options = {}) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
+
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div
+          class="editor-control-host"
+          data-mounted-control="icon-picker"
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+          data-placeholder="${escapeHtml(options.placeholder || "")}"
+        ></div>
+      </div>
+    `;
+  }
+
+  _mountEntityPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const field = host.dataset.field || "entity";
+    const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || "";
+    let control = null;
+
+    if (customElements.get("ha-entity-picker")) {
+      control = document.createElement("ha-entity-picker");
+      control.includeDomains = ["sensor", "number", "input_number"];
+      control.allowCustomEntity = true;
+      control.entityFilter = stateObj => {
+        const entityId = String(stateObj?.entity_id || "");
+        return entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number.");
+      };
+      if (placeholder) {
+        control.setAttribute("placeholder", placeholder);
+      }
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = {
+        entity: {},
+      };
+    } else {
+      control = document.createElement("select");
+      const emptyOption = document.createElement("option");
+      emptyOption.value = "";
+      emptyOption.textContent = placeholder || "Selecciona una entidad";
+      control.appendChild(emptyOption);
+      this._getNumericEntityOptions().forEach(option => {
+        const optionElement = document.createElement("option");
+        optionElement.value = option.value;
+        optionElement.textContent = option.displayLabel;
+        control.appendChild(optionElement);
+      });
+      control.addEventListener("change", this._onShadowInput);
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+
+    if (control.tagName !== "SELECT") {
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    }
+
+    host.replaceChildren(control);
+  }
+
+  _mountIconPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const field = host.dataset.field || "icon";
+    const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || "";
+    let control = null;
+
+    if (customElements.get("ha-icon-picker")) {
+      control = document.createElement("ha-icon-picker");
+      if (placeholder) {
+        control.setAttribute("placeholder", placeholder);
+      }
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = {
+        icon: {},
+      };
+    } else {
+      control = document.createElement("input");
+      control.type = "text";
+      control.placeholder = placeholder;
+      control.addEventListener("input", this._onShadowInput);
+      control.addEventListener("change", this._onShadowInput);
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+
+    if (control.tagName !== "INPUT") {
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    }
+
+    host.replaceChildren(control);
   }
 
   _render() {
@@ -23254,6 +23963,35 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
           line-height: 1.45;
         }
 
+        .editor-section__actions {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 2px;
+        }
+
+        .editor-section__toggle-button {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        .editor-section__toggle-button ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
         .editor-grid {
           display: grid;
           gap: 12px;
@@ -23278,7 +24016,11 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
         }
 
         .editor-field input,
-        .editor-field select {
+        .editor-field select,
+        .editor-field textarea,
+        .editor-control-host input,
+        .editor-control-host select,
+        .editor-control-host textarea {
           appearance: none;
           background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.08);
@@ -23290,29 +24032,75 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
           width: 100%;
         }
 
-        .editor-toggle {
-          align-items: center;
-          grid-template-columns: auto 1fr;
-          padding-top: 20px;
+        .editor-field ha-icon-picker,
+        .editor-field ha-entity-picker,
+        .editor-field ha-selector,
+        .editor-control-host,
+        .editor-control-host > * {
+          display: block;
+          width: 100%;
         }
 
-        .editor-toggle input {
-          accent-color: var(--primary-color);
+        .editor-color-field {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          min-height: 40px;
+        }
+
+        .editor-color-picker {
+          align-items: center;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 40px;
+          justify-content: center;
+          position: relative;
+          width: 40px;
+        }
+
+        .editor-color-picker input {
+          cursor: pointer;
+          inset: 0;
+          opacity: 0;
+          position: absolute;
+        }
+
+        .editor-color-picker:hover,
+        .editor-color-picker:focus-within {
+          border-color: rgba(255, 255, 255, 0.22);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .editor-color-swatch {
+          --editor-swatch: #71c0ff;
+          background:
+            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+            conic-gradient(from 90deg, rgba(255, 255, 255, 0.06) 25%, rgba(0, 0, 0, 0.12) 0 50%, rgba(255, 255, 255, 0.06) 0 75%, rgba(0, 0, 0, 0.12) 0);
+          background-position: center;
+          background-size: cover, 10px 10px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 999px;
+          display: block;
           height: 18px;
-          margin: 0;
           width: 18px;
+        }
+
+        .editor-color-picker .editor-color-swatch {
+          height: 22px;
+          width: 22px;
         }
 
         @media (max-width: 640px) {
           .editor-grid {
             grid-template-columns: 1fr;
           }
-
-          .editor-toggle {
-            padding-top: 0;
-          }
         }
-      
+
         :is(.editor-toggle, .editor-checkbox) {
           align-items: center;
           column-gap: 10px;
@@ -23384,17 +24172,20 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal, rango y textos visibles.</div>
+            <div class="editor-section__hint">Entidad numérica principal, nombre, icono y rango del gauge.</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("Entidad", "entity", config.entity, {
+            ${this._renderEntityField("Entidad numérica", "entity", config.entity, {
               placeholder: "sensor.enchufe_inteligente_potencia",
+              fullWidth: true,
             })}
             ${this._renderTextField("Nombre", "name", config.name, {
               placeholder: "Potencia",
+              fullWidth: true,
             })}
-            ${this._renderTextField("Icono", "icon", config.icon, {
+            ${this._renderIconPickerField("Icono", "icon", config.icon, {
               placeholder: "mdi:flash",
+              fullWidth: true,
             })}
             ${this._renderTextField("Unidad", "unit", config.unit, {
               placeholder: "W",
@@ -23402,10 +24193,12 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
             ${this._renderTextField("Minimo", "min", config.min, {
               placeholder: "0",
               type: "number",
+              valueType: "number",
             })}
             ${this._renderTextField("Maximo", "max", config.max, {
               placeholder: "2500",
               type: "number",
+              valueType: "number",
             })}
             ${this._renderTextField("Etiqueta minimo", "min_label", config.min_label, {
               placeholder: "0",
@@ -23416,6 +24209,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
             ${this._renderTextField("Decimales", "decimals", config.decimals, {
               placeholder: "0",
               type: "number",
+              valueType: "number",
             })}
             ${this._renderSelectField(
               "Tap action",
@@ -23423,9 +24217,26 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
               config.tap_action || "more-info",
               [
                 { value: "more-info", label: "More info" },
-                { value: "none", label: "Sin accion" },
+                { value: "none", label: "Sin acción" },
               ],
             )}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Layout</div>
+            <div class="editor-section__hint">Ayuda a compactar el gauge según el espacio disponible en la vista.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderTextField("Rows de grid", "grid_options.rows", config.grid_options?.rows, {
+              type: "number",
+              valueType: "number",
+            })}
+            ${this._renderTextField("Columnas de grid", "grid_options.columns", config.grid_options?.columns, {
+              type: "number",
+              valueType: "number",
+            })}
           </div>
         </section>
 
@@ -23474,38 +24285,112 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales del dial circular y el look Nodalia.</div>
+            <div class="editor-section__title">Animaciones</div>
+            <div class="editor-section__hint">Controla la transición del dial, la entrada del contenido y el rebote al tocar la tarjeta.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="animations"
+                aria-expanded="${this._showAnimationSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showAnimationSection ? "Ocultar ajustes de animación" : "Mostrar ajustes de animación"}</span>
+              </button>
+            </div>
           </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
-            ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
-            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
-            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-            ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamano burbuja entidad", "styles.icon.size", config.styles.icon.size)}
-            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-            ${this._renderTextField("Tamano valor", "styles.value_size", config.styles.value_size)}
-            ${this._renderTextField("Tamano rango", "styles.range_size", config.styles.range_size)}
-            ${this._renderTextField("Max ancho chip nombre", "styles.name_chip_max_width", config.styles.name_chip_max_width)}
-            ${this._renderTextField("Tamano dial", "styles.gauge.size", config.styles.gauge.size)}
-            ${this._renderTextField("Grosor dial", "styles.gauge.stroke", config.styles.gauge.stroke)}
-            ${this._renderTextField("Tamano thumb", "styles.gauge.thumb_size", config.styles.gauge.thumb_size)}
-            ${this._renderTextField("Color gauge", "styles.gauge.foreground_color", config.styles.gauge.foreground_color)}
-            ${this._renderTextField("Track gauge", "styles.gauge.track_color", config.styles.gauge.track_color)}
-            ${this._renderTextField("Tamano chip", "styles.chip_height", config.styles.chip_height)}
-            ${this._renderTextField("Texto chip", "styles.chip_font_size", config.styles.chip_font_size)}
-            ${this._renderTextField("Padding chip", "styles.chip_padding", config.styles.chip_padding)}
-          </div>
+          ${
+            this._showAnimationSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderTextField("Dial (ms)", "animations.dial_duration", config.animations.dial_duration, {
+                    type: "number",
+                    valueType: "number",
+                  })}
+                  ${this._renderTextField("Rebote tap (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                    type: "number",
+                    valueType: "number",
+                  })}
+                  ${this._renderTextField("Entrada del contenido (ms)", "animations.content_duration", config.animations.content_duration, {
+                    type: "number",
+                    valueType: "number",
+                  })}
+                </div>
+              `
+              : ""
+          }
         </section>
-        ${this._getEntityOptionsMarkup()}
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Estilos</div>
+            <div class="editor-section__hint">Personaliza el look Nodalia, el dial circular y la nueva burbuja del thumb.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="styles"
+                aria-expanded="${this._showStyleSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showStyleSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderColorField("Fondo tarjeta", "styles.card.background", config.styles.card.background)}
+                  ${this._renderTextField("Borde", "styles.card.border", config.styles.card.border)}
+                  ${this._renderTextField("Radio", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${this._renderTextField("Sombra", "styles.card.box_shadow", config.styles.card.box_shadow)}
+                  ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
+                  ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
+                  ${this._renderTextField("Tamaño burbuja entidad", "styles.icon.size", config.styles.icon.size)}
+                  ${this._renderColorField("Fondo burbuja", "styles.icon.background", config.styles.icon.background, {
+                    fallbackValue: "rgba(255, 255, 255, 0.06)",
+                  })}
+                  ${this._renderColorField("Color icono", "styles.icon.color", config.styles.icon.color, {
+                    fallbackValue: "var(--primary-text-color)",
+                  })}
+                  ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
+                  ${this._renderTextField("Tamaño valor", "styles.value_size", config.styles.value_size)}
+                  ${this._renderTextField("Tamaño rango", "styles.range_size", config.styles.range_size)}
+                  ${this._renderTextField("Máx ancho chip nombre", "styles.name_chip_max_width", config.styles.name_chip_max_width)}
+                  ${this._renderTextField("Tamaño dial", "styles.gauge.size", config.styles.gauge.size)}
+                  ${this._renderTextField("Grosor dial", "styles.gauge.stroke", config.styles.gauge.stroke)}
+                  ${this._renderTextField("Tamaño thumb", "styles.gauge.thumb_size", config.styles.gauge.thumb_size)}
+                  ${this._renderColorField("Fondo dial", "styles.gauge.background", config.styles.gauge.background, {
+                    fallbackValue: "rgba(255, 255, 255, 0.02)",
+                  })}
+                  ${this._renderColorField("Color gauge", "styles.gauge.foreground_color", config.styles.gauge.foreground_color, {
+                    fallbackValue: "var(--info-color, #71c0ff)",
+                  })}
+                  ${this._renderColorField("Track gauge", "styles.gauge.track_color", config.styles.gauge.track_color, {
+                    fallbackValue: "rgba(255, 255, 255, 0.08)",
+                  })}
+                  ${this._renderTextField("Tamaño chip", "styles.chip_height", config.styles.chip_height)}
+                  ${this._renderTextField("Texto chip", "styles.chip_font_size", config.styles.chip_font_size)}
+                  ${this._renderTextField("Padding chip", "styles.chip_padding", config.styles.chip_padding)}
+                </div>
+              `
+              : ""
+          }
+        </section>
       </div>
     `;
 
     this.shadowRoot
-      .querySelectorAll('input[data-field="entity"]')
-      .forEach(input => input.setAttribute("list", "circular-gauge-card-entities"));
+      .querySelectorAll('[data-mounted-control="entity-picker"]')
+      .forEach(host => this._mountEntityPicker(host));
+
+    this.shadowRoot
+      .querySelectorAll('[data-mounted-control="icon-picker"]')
+      .forEach(host => this._mountIconPicker(host));
+
+    this._ensureEditorControlsReady();
   }
 }
 
