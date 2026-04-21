@@ -24952,7 +24952,6 @@ class NodaliaGraphCard extends HTMLElement {
     const chartWidth = Number(tooltip.dataset.chartWidth || 0);
     const anchorX = Number(tooltip.dataset.anchorX || 0);
     if (!Number.isFinite(chartWidth) || chartWidth <= 0) {
-      tooltip.classList.remove("is-positioned");
       return;
     }
 
@@ -24963,7 +24962,6 @@ class NodaliaGraphCard extends HTMLElement {
       || 0,
     );
     if (!wrapWidth) {
-      tooltip.classList.remove("is-positioned");
       if (retries > 0) {
         this._scheduleTooltipPositionSync(retries - 1);
       }
@@ -24979,7 +24977,6 @@ class NodaliaGraphCard extends HTMLElement {
       usableWidth,
     );
     if (!tooltipWidth) {
-      tooltip.classList.remove("is-positioned");
       if (retries > 0) {
         this._scheduleTooltipPositionSync(retries - 1);
       }
@@ -24993,7 +24990,6 @@ class NodaliaGraphCard extends HTMLElement {
       ? clamp(anchorPx, minCenter, maxCenter)
       : wrapWidth / 2;
     tooltip.style.left = `${resolvedCenter}px`;
-    tooltip.classList.add("is-positioned");
   }
 
   _getSeriesData() {
@@ -25368,23 +25364,16 @@ class NodaliaGraphCard extends HTMLElement {
           color: var(--primary-text-color);
           max-width: min(320px, calc(100% - 20px));
           min-width: 210px;
-          opacity: 0;
           padding: 13px 15px;
           pointer-events: none;
           position: absolute;
           top: -110px;
           transform: translateX(-50%);
-          visibility: hidden;
-          will-change: left, opacity, transform;
+          will-change: left, transform;
           z-index: 3;
         }
 
-        .graph-card__tooltip.is-positioned {
-          opacity: 1;
-          visibility: visible;
-        }
-
-        .graph-card__tooltip.is-positioned.graph-card__tooltip--entering {
+        .graph-card__tooltip--entering {
           animation: graph-card-tooltip-in var(--graph-card-hover-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
