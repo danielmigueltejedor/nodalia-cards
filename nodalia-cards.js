@@ -21857,6 +21857,9 @@ const DIAL_CIRCLE_RADIUS = 86;
 const DIAL_CIRCUMFERENCE = 2 * Math.PI * DIAL_CIRCLE_RADIUS;
 const DIAL_VISIBLE_LENGTH = DIAL_CIRCUMFERENCE * (DIAL_SWEEP / 360);
 const DIAL_HIDDEN_LENGTH = DIAL_CIRCUMFERENCE - DIAL_VISIBLE_LENGTH;
+const DEFAULT_GAUGE_MIN_TINT_COLOR = "rgba(255, 255, 255, 0.24)";
+const DEFAULT_GAUGE_MAX_TINT_COLOR = "#ff7d57";
+const GAUGE_TINT_SEGMENT_COUNT = 40;
 
 const DEFAULT_CONFIG = {
   entity: "",
@@ -21916,6 +21919,8 @@ const DEFAULT_CONFIG = {
       thumb_size: "22px",
       track_color: "rgba(255, 255, 255, 0.08)",
       background: "rgba(255, 255, 255, 0.02)",
+      min_tint_color: DEFAULT_GAUGE_MIN_TINT_COLOR,
+      max_tint_color: DEFAULT_GAUGE_MAX_TINT_COLOR,
       foreground_color: "",
     },
   },
@@ -22139,8 +22144,16 @@ function getEditorColorFallbackValue(field) {
     return "rgba(255, 255, 255, 0.08)";
   }
 
+  if (normalizedField.endsWith("min_tint_color")) {
+    return DEFAULT_GAUGE_MIN_TINT_COLOR;
+  }
+
+  if (normalizedField.endsWith("max_tint_color")) {
+    return DEFAULT_GAUGE_MAX_TINT_COLOR;
+  }
+
   if (normalizedField.endsWith("foreground_color")) {
-    return "var(--info-color, #71c0ff)";
+    return DEFAULT_GAUGE_MAX_TINT_COLOR;
   }
 
   if (normalizedField.endsWith("icon.color")) {
@@ -22287,6 +22300,66 @@ function getDialMarkerPosition(angle) {
     left: Number((50 + (Math.cos(radians) * markerRadiusPercent)).toFixed(3)),
     top: Number((50 + (Math.sin(radians) * markerRadiusPercent)).toFixed(3)),
   };
+}
+
+function getDialMarkerCoordinates(angle) {
+  const center = DIAL_VIEWBOX_SIZE / 2;
+  const radians = (angle * Math.PI) / 180;
+  return {
+    x: Number((center + (Math.cos(radians) * DIAL_CIRCLE_RADIUS)).toFixed(3)),
+    y: Number((center + (Math.sin(radians) * DIAL_CIRCLE_RADIUS)).toFixed(3)),
+  };
+}
+
+function mixCssColors(leftColor, rightColor, ratio) {
+  const safeRatio = clamp(Number(ratio) || 0, 0, 1);
+  if (safeRatio <= 0) {
+    return leftColor;
+  }
+
+  if (safeRatio >= 1) {
+    return rightColor;
+  }
+
+  const rightPercent = Number((safeRatio * 100).toFixed(2));
+  const leftPercent = Number((100 - rightPercent).toFixed(2));
+
+  return `color-mix(in srgb, ${leftColor} ${leftPercent}%, ${rightColor} ${rightPercent}%)`;
+}
+
+function buildGaugeTintScale(minTintColor, maxTintColor) {
+  const safeMinTintColor = String(minTintColor || DEFAULT_GAUGE_MIN_TINT_COLOR).trim() || DEFAULT_GAUGE_MIN_TINT_COLOR;
+  const safeMaxTintColor = String(maxTintColor || DEFAULT_GAUGE_MAX_TINT_COLOR).trim() || DEFAULT_GAUGE_MAX_TINT_COLOR;
+
+  return [
+    { offset: 0, color: safeMinTintColor },
+    { offset: 0.28, color: mixCssColors("#71cf78", safeMaxTintColor, 0.08) },
+    { offset: 0.52, color: mixCssColors("#d9c45a", safeMaxTintColor, 0.14) },
+    { offset: 0.76, color: mixCssColors("#f5a03d", safeMaxTintColor, 0.22) },
+    { offset: 1, color: safeMaxTintColor },
+  ];
+}
+
+function resolveGaugeTintColor(scale, ratio) {
+  const safeRatio = clamp(Number(ratio) || 0, 0, 1);
+  const tintScale = Array.isArray(scale) && scale.length ? scale : buildGaugeTintScale();
+
+  if (safeRatio <= tintScale[0].offset) {
+    return tintScale[0].color;
+  }
+
+  for (let index = 1; index < tintScale.length; index += 1) {
+    const currentStop = tintScale[index];
+    const previousStop = tintScale[index - 1];
+
+    if (safeRatio <= currentStop.offset) {
+      const span = Math.max(currentStop.offset - previousStop.offset, 0.0001);
+      const localRatio = (safeRatio - previousStop.offset) / span;
+      return mixCssColors(previousStop.color, currentStop.color, localRatio);
+    }
+  }
+
+  return tintScale[tintScale.length - 1].color;
 }
 
 class NodaliaCircularGaugeCard extends HTMLElement {
@@ -22473,6 +22546,31 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     return formatNumberValue(boundary === "min" ? range.min : range.max, this._getDecimals(state));
   }
 
+  _getGaugeTintScale() {
+    const gaugeStyles = this._config?.styles?.gauge || DEFAULT_CONFIG.styles.gauge;
+    return buildGaugeTintScale(gaugeStyles.min_tint_color, gaugeStyles.max_tint_color);
+  }
+
+  _getGaugeProgressSegments(ratio, tintScale) {
+    const safeRatio = clamp(Number(ratio) || 0, 0, 1);
+    const configuredColor = String(this._config?.styles?.gauge?.foreground_color || "").trim();
+    const segmentLength = DIAL_VISIBLE_LENGTH / GAUGE_TINT_SEGMENT_COUNT;
+    const segmentRatioSize = 1 / GAUGE_TINT_SEGMENT_COUNT;
+
+    return Array.from({ length: GAUGE_TINT_SEGMENT_COUNT }, (_, index) => {
+      const startRatio = index * segmentRatioSize;
+      const fillRatio = clamp((safeRatio - startRatio) / segmentRatioSize, 0, 1);
+      const visibleLength = Number((segmentLength * fillRatio).toFixed(3));
+
+      return {
+        color: configuredColor || resolveGaugeTintColor(tintScale, startRatio + (segmentRatioSize * 0.5)),
+        dasharray: `${visibleLength} ${DIAL_CIRCUMFERENCE}`,
+        dashoffset: `${Number((-segmentLength * index).toFixed(3))}`,
+        opacity: visibleLength > 0.05 ? 0.96 : 0,
+      };
+    });
+  }
+
   _getAccentColor(state, ratio) {
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
     const configuredColor = String(styles?.gauge?.foreground_color || "").trim();
@@ -22480,47 +22578,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       return configuredColor;
     }
 
-    const unit = normalizeTextKey(this._getUnit(state));
-    const entityHint = `${this._config?.entity || ""} ${state?.attributes?.device_class || ""} ${state?.attributes?.friendly_name || ""}`.toLowerCase();
-
-    if (
-      unit.includes("l_s")
-      || unit.includes("l_min")
-      || unit.includes("m3_h")
-      || entityHint.includes("water")
-      || entityHint.includes("agua")
-      || entityHint.includes("caudal")
-      || entityHint.includes("flow")
-    ) {
-      return "#62b9ff";
-    }
-
-    if (unit === "%" || entityHint.includes("humid")) {
-      return "#7fd0c8";
-    }
-
-    if (
-      ["w", "kw", "va"].includes(unit)
-      || entityHint.includes("power")
-      || entityHint.includes("potencia")
-      || entityHint.includes("consumo")
-    ) {
-      return ratio >= 0.85 ? "#ff7d57" : ratio >= 0.55 ? "#f5a03d" : "#d9c45a";
-    }
-
-    if (["a", "ma", "v", "mv"].includes(unit) || entityHint.includes("corriente") || entityHint.includes("tension")) {
-      return "#71c0ff";
-    }
-
-    if (unit.includes("c") || unit.includes("f") || entityHint.includes("temperatura")) {
-      return "#f59f42";
-    }
-
-    if (entityHint.includes("pressure") || entityHint.includes("presion")) {
-      return "#b993ff";
-    }
-
-    return "var(--primary-color)";
+    return resolveGaugeTintColor(this._getGaugeTintScale(), ratio);
   }
 
   _formatValue(value, state, withUnit = false) {
@@ -22686,10 +22744,13 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const unit = this._getUnit(state);
     const range = this._getRange(state, value);
     const ratio = value === null ? 0 : clamp((value - range.min) / Math.max(range.max - range.min, 1), 0, 1);
+    const tintScale = this._getGaugeTintScale();
     const accentColor = this._getAccentColor(state, ratio);
     const progressLength = Number((DIAL_VISIBLE_LENGTH * ratio).toFixed(3));
     const dialAngle = DIAL_START_ANGLE + (ratio * DIAL_SWEEP);
     const thumbPosition = getDialMarkerPosition(dialAngle);
+    const dialStartCoordinates = getDialMarkerCoordinates(DIAL_START_ANGLE);
+    const dialStartCapColor = String(styles.gauge.foreground_color || "").trim() || resolveGaugeTintColor(tintScale, 0.02);
     const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
     const showHeader = config.show_header !== false;
     const showName = config.show_name !== false;
@@ -22728,8 +22789,10 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const previousVisualState = animations.enabled && !shouldAnimateEntrance ? this._lastGaugeVisualState : null;
-    const initialProgressLength = previousVisualState ? previousVisualState.progressLength : shouldAnimateEntrance ? 0 : progressLength;
+    const initialRatio = previousVisualState ? previousVisualState.ratio : shouldAnimateEntrance ? 0 : ratio;
+    const initialProgressLength = Number((DIAL_VISIBLE_LENGTH * initialRatio).toFixed(3));
     const initialThumbPosition = previousVisualState ? previousVisualState.thumbPosition : shouldAnimateEntrance ? getDialMarkerPosition(DIAL_START_ANGLE) : thumbPosition;
+    const initialProgressSegments = this._getGaugeProgressSegments(initialRatio, tintScale);
     const chips = [];
 
     if (config.show_percentage_chip === true && value !== null) {
@@ -22977,28 +23040,35 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         }
 
         .gauge-card__dial-track,
-        .gauge-card__dial-progress {
+        .gauge-card__dial-progress-segment {
           fill: none;
-          stroke-dasharray: ${DIAL_VISIBLE_LENGTH} ${DIAL_HIDDEN_LENGTH};
-          stroke-linecap: round;
           stroke-width: ${dialStrokePx};
           transform: rotate(${DIAL_START_ANGLE}deg);
           transform-origin: ${DIAL_VIEWBOX_SIZE / 2}px ${DIAL_VIEWBOX_SIZE / 2}px;
         }
 
         .gauge-card__dial-track {
+          stroke-dasharray: ${DIAL_VISIBLE_LENGTH} ${DIAL_HIDDEN_LENGTH};
+          stroke-linecap: round;
           stroke: ${styles.gauge.track_color};
         }
 
-        .gauge-card__dial-progress {
+        .gauge-card__dial-progress-segment {
           filter: drop-shadow(0 0 0 transparent);
-          opacity: 0.94;
-          stroke: ${accentColor};
-          stroke-dasharray: var(--gauge-progress-length) ${DIAL_CIRCUMFERENCE};
+          opacity: 0;
+          stroke-linecap: butt;
           transition:
             stroke var(--gauge-card-dial-duration) ease,
             stroke-dasharray var(--gauge-card-dial-duration) ease-out,
+            opacity 180ms ease,
             filter 180ms ease,
+            stroke-dashoffset 0ms linear;
+        }
+
+        .gauge-card__dial-progress-start {
+          opacity: ${initialRatio > 0 ? "0.96" : "0"};
+          transition:
+            fill var(--gauge-card-dial-duration) ease,
             opacity 180ms ease;
         }
 
@@ -23306,11 +23376,25 @@ class NodaliaCircularGaugeCard extends HTMLElement {
                   cy="${DIAL_VIEWBOX_SIZE / 2}"
                   r="${DIAL_CIRCLE_RADIUS}"
                 ></circle>
+                ${initialProgressSegments
+                  .map((segment, index) => `
+                    <circle
+                      class="gauge-card__dial-progress-segment"
+                      data-progress-segment="${index}"
+                      cx="${DIAL_VIEWBOX_SIZE / 2}"
+                      cy="${DIAL_VIEWBOX_SIZE / 2}"
+                      r="${DIAL_CIRCLE_RADIUS}"
+                      style="stroke:${segment.color};stroke-dasharray:${segment.dasharray};stroke-dashoffset:${segment.dashoffset};opacity:${segment.opacity};"
+                    ></circle>
+                  `)
+                  .join("")}
                 <circle
-                  class="gauge-card__dial-progress"
-                  cx="${DIAL_VIEWBOX_SIZE / 2}"
-                  cy="${DIAL_VIEWBOX_SIZE / 2}"
-                  r="${DIAL_CIRCLE_RADIUS}"
+                  class="gauge-card__dial-progress-start"
+                  data-progress-start
+                  cx="${dialStartCoordinates.x}"
+                  cy="${dialStartCoordinates.y}"
+                  r="${Number((dialStrokePx / 2).toFixed(3))}"
+                  style="fill:${dialStartCapColor};"
                 ></circle>
               </svg>
               <span class="gauge-card__dial-thumb" aria-hidden="true"></span>
@@ -23356,6 +23440,25 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       const dial = this.shadowRoot.querySelector(".gauge-card__dial");
       if (dial instanceof HTMLElement) {
         this._gaugeVisualFrame = window.requestAnimationFrame(() => {
+          const nextProgressSegments = this._getGaugeProgressSegments(ratio, tintScale);
+          dial.querySelectorAll("[data-progress-segment]").forEach((segmentElement, index) => {
+            const segment = nextProgressSegments[index];
+            if (!(segmentElement instanceof SVGElement) || !segment) {
+              return;
+            }
+
+            segmentElement.style.stroke = segment.color;
+            segmentElement.style.strokeDasharray = segment.dasharray;
+            segmentElement.style.strokeDashoffset = segment.dashoffset;
+            segmentElement.style.opacity = String(segment.opacity);
+          });
+
+          const startCap = dial.querySelector("[data-progress-start]");
+          if (startCap instanceof SVGElement) {
+            startCap.style.fill = dialStartCapColor;
+            startCap.style.opacity = ratio > 0 ? "0.96" : "0";
+          }
+
           dial.style.setProperty("--gauge-progress-length", `${progressLength}`);
           dial.style.setProperty("--gauge-thumb-left", `${thumbPosition.left}%`);
           dial.style.setProperty("--gauge-thumb-top", `${thumbPosition.top}%`);
@@ -23366,6 +23469,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
 
     this._lastGaugeVisualState = {
       progressLength,
+      ratio,
       thumbPosition,
     };
     this._animateContentOnNextRender = false;
@@ -24324,7 +24428,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Personaliza el look Nodalia, el dial circular y la nueva burbuja del thumb.</div>
+            <div class="editor-section__hint">Personaliza el look Nodalia, el dial circular, la nueva burbuja del thumb y la escala de tinte del gauge.</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -24364,8 +24468,14 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
                   ${this._renderColorField("Fondo dial", "styles.gauge.background", config.styles.gauge.background, {
                     fallbackValue: "rgba(255, 255, 255, 0.02)",
                   })}
-                  ${this._renderColorField("Color gauge", "styles.gauge.foreground_color", config.styles.gauge.foreground_color, {
-                    fallbackValue: "var(--info-color, #71c0ff)",
+                  ${this._renderColorField("Tinte mínimo gauge", "styles.gauge.min_tint_color", config.styles.gauge.min_tint_color, {
+                    fallbackValue: DEFAULT_GAUGE_MIN_TINT_COLOR,
+                  })}
+                  ${this._renderColorField("Tinte máximo gauge", "styles.gauge.max_tint_color", config.styles.gauge.max_tint_color, {
+                    fallbackValue: DEFAULT_GAUGE_MAX_TINT_COLOR,
+                  })}
+                  ${this._renderColorField("Color fijo gauge", "styles.gauge.foreground_color", config.styles.gauge.foreground_color, {
+                    fallbackValue: DEFAULT_GAUGE_MAX_TINT_COLOR,
                   })}
                   ${this._renderColorField("Track gauge", "styles.gauge.track_color", config.styles.gauge.track_color, {
                     fallbackValue: "rgba(255, 255, 255, 0.08)",
