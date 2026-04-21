@@ -1007,29 +1007,19 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   _scheduleHoverRender(nextIndex) {
-    if (nextIndex === this._hoverIndex && !this._hoverFrame) {
+    if (nextIndex === this._hoverIndex) {
       return;
     }
-
-    this._pendingHoverIndex = nextIndex;
 
     if (this._hoverFrame) {
-      return;
+      window.cancelAnimationFrame(this._hoverFrame);
+      this._hoverFrame = 0;
     }
 
-    this._hoverFrame = window.requestAnimationFrame(() => {
-      this._hoverFrame = 0;
-      const resolvedIndex = this._pendingHoverIndex;
-      this._pendingHoverIndex = null;
-
-      if (resolvedIndex === this._hoverIndex) {
-        return;
-      }
-
-      this._hoverEntering = resolvedIndex !== null && this._hoverIndex === null;
-      this._hoverIndex = resolvedIndex;
-      this._render();
-    });
+    this._pendingHoverIndex = null;
+    this._hoverEntering = nextIndex !== null && this._hoverIndex === null;
+    this._hoverIndex = nextIndex;
+    this._render();
   }
 
   _getHistoryRequestKey() {
