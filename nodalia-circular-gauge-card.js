@@ -973,7 +973,10 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const effectiveNameChipMaxWidth = `${Math.max(120, Math.min(parseSizeToPixels(styles.name_chip_max_width, 170), compactLayout ? 148 : 170))}px`;
     const cardBackground = value === null
       ? styles.card.background
-      : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 9%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
+      : `
+        radial-gradient(circle at 50% 42%, color-mix(in srgb, ${accentColor} 10%, transparent) 0%, transparent 54%),
+        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 24%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 12%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
+      `.trim();
     const cardBorder = value === null
       ? styles.card.border
       : `1px solid color-mix(in srgb, ${accentColor} 26%, var(--divider-color))`;
@@ -1022,7 +1025,8 @@ class NodaliaCircularGaugeCard extends HTMLElement {
 
         .gauge-card {
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, transparent 48%),
+            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 24%, transparent) 0%, transparent 58%),
+            radial-gradient(circle at 50% 38%, color-mix(in srgb, ${accentColor} 8%, transparent) 0%, transparent 60%),
             linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
             ${cardBackground};
           border: ${cardBorder};

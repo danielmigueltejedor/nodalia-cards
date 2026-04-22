@@ -3576,13 +3576,14 @@ class NodaliaMediaPlayer extends HTMLElement {
       ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))"
       : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0))";
     const activeCardBackground = `
-      radial-gradient(circle at top left, color-mix(in srgb, ${activeTintColor} 18%, transparent) 0%, transparent 48%),
-      linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} 16%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
-      linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} 18%, ${playerStyles.background}) 0%, color-mix(in srgb, ${activeTintColor} 9%, ${playerStyles.background}) 56%, ${playerStyles.background} 100%)
+      radial-gradient(circle at top left, color-mix(in srgb, ${activeTintColor} 24%, transparent) 0%, transparent 58%),
+      radial-gradient(circle at 50% 38%, color-mix(in srgb, ${activeTintColor} 10%, transparent) 0%, transparent 64%),
+      linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} 18%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
+      linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} 24%, ${playerStyles.background}) 0%, color-mix(in srgb, ${activeTintColor} 12%, ${playerStyles.background}) 56%, ${playerStyles.background} 100%)
     `.trim();
     const activeCardBorder = `color-mix(in srgb, ${activeTintColor} 34%, var(--divider-color))`;
-    const activeCardShadow = `${playerStyles.box_shadow}, 0 0 0 1px color-mix(in srgb, ${activeTintColor} 10%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)), 0 18px 38px color-mix(in srgb, ${activeTintColor} 18%, rgba(16, 34, 82, 0.18))`;
-    const activeCardHighlight = `linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} 14%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0))`;
+    const activeCardShadow = `${playerStyles.box_shadow}, 0 0 0 1px color-mix(in srgb, ${activeTintColor} 12%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)), 0 18px 38px color-mix(in srgb, ${activeTintColor} 22%, rgba(16, 34, 82, 0.18))`;
+    const activeCardHighlight = `linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} 18%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0))`;
 
     this.shadowRoot.innerHTML = `
       <style>
