@@ -69,7 +69,7 @@ const DEFAULT_CONFIG = {
       size: "280px",
       stroke: "18px",
       thumb_size: "24px",
-      track_color: "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))",
+      track_color: "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))",
       background: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
       heat_color: "#f59f42",
       cool_color: "#71c0ff",
@@ -302,7 +302,7 @@ function getEditorColorFallbackValue(field) {
   }
 
   if (normalizedField.endsWith("track_color")) {
-    return "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))";
+    return "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))";
   }
 
   if (normalizedField.endsWith("accent_background")) {
@@ -1650,8 +1650,8 @@ class NodaliaClimateCard extends HTMLElement {
     const cardBackground = isOff
       ? styles.card.background
       : `
-        radial-gradient(circle at 50% 42%, color-mix(in srgb, ${accentColor} 10%, transparent) 0%, transparent 54%),
-        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 24%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 12%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
+        radial-gradient(circle at 50% 42%, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 58%),
+        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 32%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 16%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
       `.trim();
     const cardBorder = isOff
       ? styles.card.border
@@ -1691,9 +1691,9 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card {
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 24%, transparent) 0%, transparent 58%),
-            radial-gradient(circle at 50% 38%, color-mix(in srgb, ${accentColor} 8%, transparent) 0%, transparent 60%),
-            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
+            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 30%, transparent) 0%, transparent 60%),
+            radial-gradient(circle at 50% 38%, color-mix(in srgb, ${accentColor} 12%, transparent) 0%, transparent 64%),
+            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 20%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
             ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -3974,7 +3974,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
                     fallbackValue: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
                   })}
                   ${this._renderColorField("Track dial", "styles.dial.track_color", config.styles.dial.track_color, {
-                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))",
+                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))",
                   })}
                   ${this._renderColorField("Color calor", "styles.dial.heat_color", config.styles.dial.heat_color, {
                     fallbackValue: "#f59f42",

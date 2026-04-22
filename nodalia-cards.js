@@ -8370,14 +8370,14 @@ class NodaliaMediaPlayer extends HTMLElement {
       ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))"
       : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0))";
     const activeCardBackground = `
-      radial-gradient(circle at top left, color-mix(in srgb, ${activeTintColor} 24%, transparent) 0%, transparent 58%),
-      radial-gradient(circle at 50% 38%, color-mix(in srgb, ${activeTintColor} 10%, transparent) 0%, transparent 64%),
-      linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} 18%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
-      linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} 24%, ${playerStyles.background}) 0%, color-mix(in srgb, ${activeTintColor} 12%, ${playerStyles.background}) 56%, ${playerStyles.background} 100%)
+      radial-gradient(circle at top left, color-mix(in srgb, ${activeTintColor} 34%, transparent) 0%, transparent 62%),
+      radial-gradient(circle at 50% 38%, color-mix(in srgb, ${activeTintColor} 18%, transparent) 0%, transparent 68%),
+      linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} 24%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
+      linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} 34%, ${playerStyles.background}) 0%, color-mix(in srgb, ${activeTintColor} 18%, ${playerStyles.background}) 56%, ${playerStyles.background} 100%)
     `.trim();
-    const activeCardBorder = `color-mix(in srgb, ${activeTintColor} 34%, var(--divider-color))`;
-    const activeCardShadow = `${playerStyles.box_shadow}, 0 0 0 1px color-mix(in srgb, ${activeTintColor} 12%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)), 0 18px 38px color-mix(in srgb, ${activeTintColor} 22%, rgba(16, 34, 82, 0.18))`;
-    const activeCardHighlight = `linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} 18%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0))`;
+    const activeCardBorder = `color-mix(in srgb, ${activeTintColor} 46%, var(--divider-color))`;
+    const activeCardShadow = `${playerStyles.box_shadow}, 0 0 0 1px color-mix(in srgb, ${activeTintColor} 18%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)), 0 18px 38px color-mix(in srgb, ${activeTintColor} 30%, rgba(16, 34, 82, 0.18))`;
+    const activeCardHighlight = `linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} 24%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0))`;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -22880,7 +22880,7 @@ const DEFAULT_CONFIG = {
       size: "280px",
       stroke: "18px",
       thumb_size: "22px",
-      track_color: "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))",
+      track_color: "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))",
       background: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
       min_tint_color: DEFAULT_GAUGE_MIN_TINT_COLOR,
       max_tint_color: DEFAULT_GAUGE_MAX_TINT_COLOR,
@@ -23104,7 +23104,7 @@ function getEditorColorFallbackValue(field) {
   }
 
   if (normalizedField.endsWith("track_color")) {
-    return "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))";
+    return "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))";
   }
 
   if (normalizedField.endsWith("min_tint_color")) {
@@ -23776,8 +23776,8 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const cardBackground = value === null
       ? styles.card.background
       : `
-        radial-gradient(circle at 50% 42%, color-mix(in srgb, ${accentColor} 10%, transparent) 0%, transparent 54%),
-        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 24%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 12%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
+        radial-gradient(circle at 50% 42%, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 58%),
+        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 32%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 16%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
       `.trim();
     const cardBorder = value === null
       ? styles.card.border
@@ -23827,9 +23827,9 @@ class NodaliaCircularGaugeCard extends HTMLElement {
 
         .gauge-card {
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 24%, transparent) 0%, transparent 58%),
-            radial-gradient(circle at 50% 38%, color-mix(in srgb, ${accentColor} 8%, transparent) 0%, transparent 60%),
-            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
+            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 30%, transparent) 0%, transparent 60%),
+            radial-gradient(circle at 50% 38%, color-mix(in srgb, ${accentColor} 12%, transparent) 0%, transparent 64%),
+            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 20%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
             ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -25463,7 +25463,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
                     fallbackValue: DEFAULT_GAUGE_MAX_TINT_COLOR,
                   })}
                   ${this._renderColorField("Track gauge", "styles.gauge.track_color", config.styles.gauge.track_color, {
-                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))",
+                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))",
                   })}
                   ${this._renderTextField("Tamaño chip", "styles.chip_height", config.styles.chip_height)}
                   ${this._renderTextField("Texto chip", "styles.chip_font_size", config.styles.chip_font_size)}
@@ -33465,7 +33465,7 @@ const DEFAULT_CONFIG = {
       size: "280px",
       stroke: "18px",
       thumb_size: "24px",
-      track_color: "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))",
+      track_color: "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))",
       background: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
       heat_color: "#f59f42",
       cool_color: "#71c0ff",
@@ -33698,7 +33698,7 @@ function getEditorColorFallbackValue(field) {
   }
 
   if (normalizedField.endsWith("track_color")) {
-    return "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))";
+    return "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))";
   }
 
   if (normalizedField.endsWith("accent_background")) {
@@ -35046,8 +35046,8 @@ class NodaliaClimateCard extends HTMLElement {
     const cardBackground = isOff
       ? styles.card.background
       : `
-        radial-gradient(circle at 50% 42%, color-mix(in srgb, ${accentColor} 10%, transparent) 0%, transparent 54%),
-        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 24%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 12%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
+        radial-gradient(circle at 50% 42%, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 58%),
+        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 32%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 16%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
       `.trim();
     const cardBorder = isOff
       ? styles.card.border
@@ -35087,9 +35087,9 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card {
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 24%, transparent) 0%, transparent 58%),
-            radial-gradient(circle at 50% 38%, color-mix(in srgb, ${accentColor} 8%, transparent) 0%, transparent 60%),
-            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
+            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 30%, transparent) 0%, transparent 60%),
+            radial-gradient(circle at 50% 38%, color-mix(in srgb, ${accentColor} 12%, transparent) 0%, transparent 64%),
+            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 20%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
             ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -37370,7 +37370,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
                     fallbackValue: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
                   })}
                   ${this._renderColorField("Track dial", "styles.dial.track_color", config.styles.dial.track_color, {
-                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))",
+                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))",
                   })}
                   ${this._renderColorField("Color calor", "styles.dial.heat_color", config.styles.dial.heat_color, {
                     fallbackValue: "#f59f42",
