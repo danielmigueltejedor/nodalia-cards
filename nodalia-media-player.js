@@ -646,6 +646,8 @@ class NodaliaMediaPlayer extends HTMLElement {
       window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
       window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
     }
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
     this._render();
   }
 
@@ -679,6 +681,8 @@ class NodaliaMediaPlayer extends HTMLElement {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
   setConfig(config) {

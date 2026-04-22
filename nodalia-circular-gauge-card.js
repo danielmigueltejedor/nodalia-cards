@@ -541,8 +541,17 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     this._lastGaugeVisualState = null;
     this._gaugeVisualFrame = 0;
     this._animateContentOnNextRender = true;
+    this._entranceAnimationResetTimer = 0;
     this._onShadowClick = this._onShadowClick.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+  }
+
+  connectedCallback() {
+    this._animateContentOnNextRender = true;
+    if (this._hass && this._config) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
   }
 
   disconnectedCallback() {
@@ -550,6 +559,12 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       window.cancelAnimationFrame(this._gaugeVisualFrame);
       this._gaugeVisualFrame = 0;
     }
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
   setConfig(config) {
@@ -815,6 +830,24 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     window.setTimeout(() => {
       content.classList.remove("is-pressing");
     }, animations.buttonBounceDuration + 40);
+  }
+
+  _scheduleEntranceAnimationReset(delay) {
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
+    if (!safeDelay || typeof window === "undefined") {
+      this._animateContentOnNextRender = false;
+      return;
+    }
+
+    this._entranceAnimationResetTimer = window.setTimeout(() => {
+      this._entranceAnimationResetTimer = 0;
+      this._animateContentOnNextRender = false;
+    }, safeDelay);
   }
 
   _openMoreInfo() {
@@ -1616,7 +1649,10 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       ratio,
       thumbPosition,
     };
-    this._animateContentOnNextRender = false;
+
+    if (shouldAnimateEntrance) {
+      this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
+    }
   }
 }
 

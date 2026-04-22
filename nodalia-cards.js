@@ -5440,6 +5440,8 @@ class NodaliaMediaPlayer extends HTMLElement {
       window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
       window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
     }
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
     this._render();
   }
 
@@ -5473,6 +5475,8 @@ class NodaliaMediaPlayer extends HTMLElement {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
   setConfig(config) {
@@ -11299,6 +11303,11 @@ class NodaliaLightCard extends HTMLElement {
       window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
       window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
     }
+    this._animateContentOnNextRender = true;
+    if (this._hass && this._config) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
   }
 
   disconnectedCallback() {
@@ -11338,6 +11347,8 @@ class NodaliaLightCard extends HTMLElement {
     }
     this._modeTransition = null;
     this._pendingDragUpdate = null;
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
   setConfig(config) {
@@ -18688,6 +18699,11 @@ class NodaliaHumidifierCard extends HTMLElement {
       window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
       window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
     }
+    this._animateContentOnNextRender = true;
+    if (this._hass && this._config) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
   }
 
   disconnectedCallback() {
@@ -18719,6 +18735,8 @@ class NodaliaHumidifierCard extends HTMLElement {
     this._controlsTransition = null;
     this._panelTransition = null;
     this._pendingDragUpdate = null;
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
   setConfig(config) {
@@ -22582,8 +22600,17 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     this._lastGaugeVisualState = null;
     this._gaugeVisualFrame = 0;
     this._animateContentOnNextRender = true;
+    this._entranceAnimationResetTimer = 0;
     this._onShadowClick = this._onShadowClick.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+  }
+
+  connectedCallback() {
+    this._animateContentOnNextRender = true;
+    if (this._hass && this._config) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
   }
 
   disconnectedCallback() {
@@ -22591,6 +22618,12 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       window.cancelAnimationFrame(this._gaugeVisualFrame);
       this._gaugeVisualFrame = 0;
     }
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
   setConfig(config) {
@@ -22856,6 +22889,24 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     window.setTimeout(() => {
       content.classList.remove("is-pressing");
     }, animations.buttonBounceDuration + 40);
+  }
+
+  _scheduleEntranceAnimationReset(delay) {
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
+    if (!safeDelay || typeof window === "undefined") {
+      this._animateContentOnNextRender = false;
+      return;
+    }
+
+    this._entranceAnimationResetTimer = window.setTimeout(() => {
+      this._entranceAnimationResetTimer = 0;
+      this._animateContentOnNextRender = false;
+    }, safeDelay);
   }
 
   _openMoreInfo() {
@@ -23657,7 +23708,10 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       ratio,
       thumbPosition,
     };
-    this._animateContentOnNextRender = false;
+
+    if (shouldAnimateEntrance) {
+      this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
+    }
   }
 }
 
@@ -31640,6 +31694,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._pendingRenderAfterDrag = false;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
+    this._entranceAnimationResetTimer = 0;
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
     this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
@@ -31671,6 +31726,11 @@ class NodaliaClimateCard extends HTMLElement {
       window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
       window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
     }
+    this._animateContentOnNextRender = true;
+    if (this._hass && this._config) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
   }
 
   disconnectedCallback() {
@@ -31695,11 +31755,18 @@ class NodaliaClimateCard extends HTMLElement {
       window.clearTimeout(this._temperatureCommitDebounceTimer);
       this._temperatureCommitDebounceTimer = 0;
     }
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
     this._lastRenderSignature = "";
+    this._animateContentOnNextRender = true;
     this._render();
   }
 
@@ -32266,6 +32333,24 @@ class NodaliaClimateCard extends HTMLElement {
     window.setTimeout(() => {
       button.classList.remove("is-pressing");
     }, animations.buttonBounceDuration + 40);
+  }
+
+  _scheduleEntranceAnimationReset(delay) {
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
+    if (!safeDelay || typeof window === "undefined") {
+      this._animateContentOnNextRender = false;
+      return;
+    }
+
+    this._entranceAnimationResetTimer = window.setTimeout(() => {
+      this._entranceAnimationResetTimer = 0;
+      this._animateContentOnNextRender = false;
+    }, safeDelay);
   }
 
   _setDialDraggingState(isDragging, dial = this._activeDialDrag?.dial || null) {
@@ -33608,7 +33693,9 @@ class NodaliaClimateCard extends HTMLElement {
       </ha-card>
     `;
 
-    this._animateContentOnNextRender = false;
+    if (shouldAnimateEntrance) {
+      this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
+    }
   }
 }
 
@@ -35613,6 +35700,9 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
     this._resizeObserver.observe(this);
     this._syncCountdownTimer();
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
+    this._requestRender();
   }
 
   disconnectedCallback() {
@@ -35626,6 +35716,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
   setConfig(config) {
@@ -46123,6 +46215,11 @@ class NodaliaEntityCard extends HTMLElement {
 
   connectedCallback() {
     this._resizeObserver?.observe(this);
+    this._animateContentOnNextRender = true;
+    if (this._hass && this._config) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
   }
 
   disconnectedCallback() {
@@ -46131,6 +46228,8 @@ class NodaliaEntityCard extends HTMLElement {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
   setConfig(config) {
@@ -52796,6 +52895,11 @@ const DEFAULT_CONFIG = {
     style: "medium",
     fallback_vibrate: false,
   },
+  animations: {
+    enabled: true,
+    content_duration: 420,
+    button_bounce_duration: 320,
+  },
   styles: {
     card: {
       background: "var(--ha-card-background)",
@@ -52931,6 +53035,29 @@ function deleteByPath(target, path) {
   delete cursor[parts[parts.length - 1]];
 }
 
+function getByPath(target, path) {
+  const parts = String(path || "").split(".");
+  let cursor = target;
+
+  for (const key of parts) {
+    if (!key) {
+      return undefined;
+    }
+
+    if (!isObject(cursor) && !Array.isArray(cursor)) {
+      return undefined;
+    }
+
+    cursor = cursor[key];
+  }
+
+  return cursor;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
 function parseSizeToPixels(value, fallback = 0) {
   const numeric = Number.parseFloat(String(value ?? ""));
   return Number.isFinite(numeric) ? numeric : fallback;
@@ -52943,6 +53070,90 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function escapeSelectorValue(value) {
+  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
+function resolveEditorColorValue(value) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || typeof document === "undefined") {
+    return "";
+  }
+
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.color = "";
+  probe.style.color = rawValue;
+  if (!probe.style.color) {
+    return rawValue;
+  }
+
+  (document.body || document.documentElement).appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved || rawValue;
+}
+
+function formatEditorHexChannel(value) {
+  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+}
+
+function formatEditorColorFromHex(hex, alpha = 1) {
+  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+    return String(hex ?? "");
+  }
+
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+  const safeAlpha = clamp(Number(alpha), 0, 1);
+  if (safeAlpha >= 0.999) {
+    return `#${normalizedHex}`;
+  }
+
+  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+}
+
+function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const channels = resolvedValue.match(/[\d.]+/g) || [];
+  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+
+  return {
+    alpha,
+    hex,
+    resolved: resolvedValue,
+    source: sourceValue,
+    value: formatEditorColorFromHex(hex, alpha),
+  };
+}
+
+function getEditorColorFallbackValue(field) {
+  const normalizedField = String(field ?? "");
+
+  if (normalizedField.endsWith("avatar.background")) {
+    return "rgba(255, 255, 255, 0.06)";
+  }
+
+  if (normalizedField.endsWith("avatar.color")) {
+    return "var(--primary-text-color)";
+  }
+
+  if (normalizedField.endsWith("background")) {
+    return "var(--ha-card-background)";
+  }
+
+  return "var(--info-color, #71c0ff)";
 }
 
 function fireEvent(node, type, detail, options) {
@@ -52988,20 +53199,34 @@ class NodaliaPersonCard extends HTMLElement {
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._lastRenderSignature = "";
+    this._animateContentOnNextRender = true;
+    this._entranceAnimationResetTimer = 0;
     this._onShadowClick = this._onShadowClick.bind(this);
   }
 
   connectedCallback() {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this._animateContentOnNextRender = true;
+    if (this._hass && this._config) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
   }
 
   disconnectedCallback() {
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
     this._lastRenderSignature = "";
+    this._animateContentOnNextRender = true;
     this._render();
   }
 
@@ -53224,6 +53449,61 @@ class NodaliaPersonCard extends HTMLElement {
     }
   }
 
+  _getAnimationSettings() {
+    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+
+    return {
+      enabled: configuredAnimations.enabled !== false,
+      buttonBounceDuration: clamp(
+        Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+        120,
+        1200,
+      ),
+      contentDuration: clamp(
+        Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration,
+        140,
+        1800,
+      ),
+    };
+  }
+
+  _triggerPressAnimation(element, className = "is-pressing") {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+
+    element.classList.remove(className);
+    element.getBoundingClientRect();
+    element.classList.add(className);
+
+    window.setTimeout(() => {
+      element.classList.remove(className);
+    }, animations.buttonBounceDuration + 40);
+  }
+
+  _scheduleEntranceAnimationReset(delay) {
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
+    if (!safeDelay || typeof window === "undefined") {
+      this._animateContentOnNextRender = false;
+      return;
+    }
+
+    this._entranceAnimationResetTimer = window.setTimeout(() => {
+      this._entranceAnimationResetTimer = 0;
+      this._animateContentOnNextRender = false;
+    }, safeDelay);
+  }
+
   _performTapAction() {
     const action = String(this._config?.tap_action || "more-info");
     if (action === "none") {
@@ -53250,6 +53530,8 @@ class NodaliaPersonCard extends HTMLElement {
 
     event.preventDefault();
     event.stopPropagation();
+    this._triggerPressAnimation(this.shadowRoot.querySelector(".person-card__content"));
+    this._triggerPressAnimation(this.shadowRoot.querySelector(".person-card__avatar"));
     this._performTapAction();
   }
 
@@ -53309,10 +53591,14 @@ class NodaliaPersonCard extends HTMLElement {
     const cardShadow = isUnavailable
       ? styles.card.box_shadow
       : `${styles.card.box_shadow}, 0 12px 28px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
+    const animations = this._getAnimationSettings();
+    const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
 
     this.shadowRoot.innerHTML = `
       <style>
         :host {
+          --person-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
+          --person-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
           display: block;
           height: 100%;
           min-height: 0;
@@ -53332,6 +53618,7 @@ class NodaliaPersonCard extends HTMLElement {
           min-height: 0;
           overflow: hidden;
           position: relative;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
 
         ha-card::before {
@@ -53357,7 +53644,18 @@ class NodaliaPersonCard extends HTMLElement {
           padding: ${effectivePadding};
           position: relative;
           place-items: center start;
+          transform-origin: center;
+          transition: transform 160ms ease;
+          will-change: transform;
           z-index: 1;
+        }
+
+        .person-card__content--entering {
+          animation: person-card-fade-up calc(var(--person-card-content-duration) * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        .person-card__content.is-pressing {
+          animation: person-card-content-bounce var(--person-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
         .person-card--single-row {
@@ -53385,7 +53683,19 @@ class NodaliaPersonCard extends HTMLElement {
           justify-content: center;
           overflow: visible;
           position: relative;
+          transform-origin: center;
+          transition: transform 160ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, color 180ms ease;
+          will-change: transform;
           width: ${avatarSize};
+        }
+
+        .person-card__avatar--entering {
+          animation: person-card-bubble-bloom calc(var(--person-card-content-duration) * 0.92) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation-delay: 40ms;
+        }
+
+        .person-card__avatar.is-pressing {
+          animation: person-card-bubble-bounce var(--person-card-button-bounce-duration) cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
         }
 
         .person-card__avatar img {
@@ -53441,6 +53751,11 @@ class NodaliaPersonCard extends HTMLElement {
           width: 100%;
         }
 
+        .person-card__copy--entering {
+          animation: person-card-fade-up calc(var(--person-card-content-duration) * 0.92) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 75ms;
+        }
+
         .person-card__title {
           font-size: ${effectiveTitleSize};
           font-weight: 700;
@@ -53458,6 +53773,11 @@ class NodaliaPersonCard extends HTMLElement {
           flex-wrap: nowrap;
           gap: 6px;
           min-width: 0;
+        }
+
+        .person-card__chips--entering {
+          animation: person-card-fade-up calc(var(--person-card-content-duration) * 0.94) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 110ms;
         }
 
         .person-card__state-chip {
@@ -53498,10 +53818,75 @@ class NodaliaPersonCard extends HTMLElement {
           font-size: 13px;
           line-height: 1.5;
         }
+
+        @keyframes person-card-content-bounce {
+          0% {
+            transform: scale(1);
+          }
+          45% {
+            transform: scale(1.02);
+          }
+          72% {
+            transform: scale(1.008);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+
+        @keyframes person-card-fade-up {
+          0% {
+            opacity: 0;
+            transform: translateY(12px) scale(0.97);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes person-card-bubble-bloom {
+          0% {
+            opacity: 0;
+            transform: scale(0.92);
+          }
+          58% {
+            opacity: 1;
+            transform: scale(1.04);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes person-card-bubble-bounce {
+          0% {
+            transform: scale(1);
+          }
+          48% {
+            transform: scale(1.12);
+          }
+          72% {
+            transform: scale(1.04);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+
+        ${animations.enabled ? "" : `
+        ha-card,
+        .person-card,
+        .person-card * {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
       </style>
       <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""}">
-        <div class="person-card__content" ${canRunPrimaryAction ? 'data-person-action="primary"' : ""}>
-          <div class="person-card__avatar">
+        <div class="person-card__content ${shouldAnimateEntrance ? "person-card__content--entering" : ""}" ${canRunPrimaryAction ? 'data-person-action="primary"' : ""}>
+          <div class="person-card__avatar ${shouldAnimateEntrance ? "person-card__avatar--entering" : ""}">
             ${
               picture
                 ? `<img src="${escapeHtml(picture)}" alt="${escapeHtml(title)}" />`
@@ -53513,13 +53898,18 @@ class NodaliaPersonCard extends HTMLElement {
                 : ""
             }
           </div>
-          <div class="person-card__copy">
+          <div class="person-card__copy ${shouldAnimateEntrance ? "person-card__copy--entering" : ""}">
             <div class="person-card__title">${escapeHtml(title)}</div>
-            ${subtitle ? `<div class="person-card__chips"><div class="person-card__state-chip">${escapeHtml(subtitle)}</div></div>` : ""}
+            ${subtitle ? `<div class="person-card__chips ${shouldAnimateEntrance ? "person-card__chips--entering" : ""}"><div class="person-card__state-chip">${escapeHtml(subtitle)}</div></div>` : ""}
           </div>
         </div>
       </ha-card>
     `;
+
+    if (shouldAnimateEntrance) {
+      this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
+    }
+
     this._lastRenderSignature = this._getRenderSignature();
   }
 }
@@ -53535,9 +53925,23 @@ class NodaliaPersonCardEditor extends HTMLElement {
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._entityOptionsSignature = "";
+    this._showAnimationSection = false;
+    this._showStyleSection = false;
+    this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+    this._onShadowClick = this._onShadowClick.bind(this);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
+    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.addEventListener("click", this._onShadowClick);
+  }
+
+  disconnectedCallback() {
+    this.shadowRoot.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot.removeEventListener("change", this._onShadowInput);
+    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.removeEventListener("click", this._onShadowClick);
   }
 
   set hass(hass) {
@@ -53550,34 +53954,183 @@ class NodaliaPersonCardEditor extends HTMLElement {
     this._hass = hass;
     this._entityOptionsSignature = nextSignature;
 
-    if (shouldRender) {
-      this._render();
+    if (!shouldRender) {
+      return;
     }
+
+    const focusState = this._captureFocusState();
+    this._render();
+    this._restoreFocusState(focusState);
   }
 
   setConfig(config) {
+    const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
     this._render();
+    this._restoreFocusState(focusState);
   }
 
-  _getEntityOptionsSignature(hass) {
-    if (!hass?.states) {
-      return "";
-    }
-
-    return Object.keys(hass.states)
-      .filter(entityId => entityId.startsWith("person.") || entityId.startsWith("device_tracker."))
-      .sort((left, right) => left.localeCompare(right, "es"))
+  _getEntityOptionsSignature(hass = this._hass) {
+    return Object.entries(hass?.states || {})
+      .filter(([entityId]) => entityId.startsWith("person.") || entityId.startsWith("device_tracker."))
+      .map(([entityId, state]) => `${entityId}:${String(state?.attributes?.friendly_name || "")}:${String(state?.attributes?.icon || "")}`)
+      .sort((left, right) => left.localeCompare(right, "es", { sensitivity: "base" }))
       .join("|");
   }
 
+  _watchEditorControlTag(tagName) {
+    if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+      return;
+    }
+
+    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+      return;
+    }
+
+    this._pendingEditorControlTags.add(tagName);
+    customElements.whenDefined(tagName)
+      .then(() => {
+        this._pendingEditorControlTags.delete(tagName);
+
+        if (!this._hass || !this.shadowRoot) {
+          return;
+        }
+
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+      })
+      .catch(() => {
+        this._pendingEditorControlTags.delete(tagName);
+      });
+  }
+
+  _ensureEditorControlsReady() {
+    this._watchEditorControlTag("ha-entity-picker");
+    this._watchEditorControlTag("ha-selector");
+    this._watchEditorControlTag("ha-icon-picker");
+  }
+
+  _getDomainEntityOptions(domains = [], path = "entity") {
+    const normalizedDomains = Array.isArray(domains)
+      ? domains.filter(Boolean)
+      : String(domains || "").split(",").map(domain => domain.trim()).filter(Boolean);
+
+    const options = Object.entries(this._hass?.states || {})
+      .filter(([entityId]) => normalizedDomains.some(domain => entityId.startsWith(`${domain}.`)))
+      .map(([entityId, state]) => {
+        const friendlyName = String(state?.attributes?.friendly_name || "").trim();
+        return {
+          value: entityId,
+          label: friendlyName || entityId,
+          displayLabel: friendlyName && friendlyName !== entityId
+            ? `${friendlyName} (${entityId})`
+            : entityId,
+        };
+      })
+      .sort((left, right) => (
+        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
+        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+      ));
+
+    const currentValue = String(getByPath(this._config, path) || "").trim();
+    if (currentValue && !options.some(option => option.value === currentValue)) {
+      options.unshift({
+        value: currentValue,
+        label: currentValue,
+        displayLabel: currentValue,
+      });
+    }
+
+    return options;
+  }
+
+  _captureFocusState() {
+    const activeElement = this.shadowRoot?.activeElement;
+
+    if (
+      !(
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement instanceof HTMLSelectElement
+      )
+    ) {
+      return null;
+    }
+
+    const dataset = activeElement.dataset || {};
+    const selector = dataset.field
+      ? `[data-field="${escapeSelectorValue(dataset.field)}"]`
+      : null;
+
+    if (!selector) {
+      return null;
+    }
+
+    const supportsSelection =
+      typeof activeElement.selectionStart === "number" &&
+      typeof activeElement.selectionEnd === "number";
+
+    return {
+      selector,
+      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
+      selectionStart: supportsSelection ? activeElement.selectionStart : null,
+      type: activeElement.type,
+    };
+  }
+
+  _restoreFocusState(focusState) {
+    if (!focusState?.selector || !this.shadowRoot) {
+      return;
+    }
+
+    const target = this.shadowRoot.querySelector(focusState.selector);
+    if (
+      !(
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      )
+    ) {
+      return;
+    }
+
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_error) {
+      target.focus();
+    }
+
+    const canRestoreSelection =
+      focusState.type !== "checkbox" &&
+      typeof focusState.selectionStart === "number" &&
+      typeof focusState.selectionEnd === "number" &&
+      typeof target.setSelectionRange === "function";
+
+    if (!canRestoreSelection) {
+      return;
+    }
+
+    try {
+      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+    } catch (_error) {
+      // Ignore unsupported inputs.
+    }
+  }
+
   _emitConfig() {
+    const focusState = this._captureFocusState();
     const nextConfig = deepClone(this._config);
     this._config = normalizeConfig(compactConfig(nextConfig));
     this._render();
+    this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
       config: compactConfig(nextConfig),
     });
+  }
+
+  _setEditorConfig() {
+    this._config = normalizeConfig(compactConfig(this._config));
   }
 
   _setFieldValue(path, value) {
@@ -53591,33 +54144,88 @@ class NodaliaPersonCardEditor extends HTMLElement {
 
   _readFieldValue(input) {
     const valueType = input.dataset.valueType || "string";
-    if (valueType === "boolean") {
-      return Boolean(input.checked);
+
+    switch (valueType) {
+      case "boolean":
+        return Boolean(input.checked);
+      case "color":
+        return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+      default:
+        return input.value;
     }
-    return input.value;
   }
 
   _onShadowInput(event) {
     const input = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement);
+      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
 
     if (!input?.dataset?.field) {
       return;
     }
 
     event.stopPropagation();
-    this._setFieldValue(input.dataset.field, this._readFieldValue(input));
-    this._config = normalizeConfig(compactConfig(this._config));
+
+    const nextValue = this._readFieldValue(input);
+    this._setFieldValue(input.dataset.field, nextValue);
+    this._setEditorConfig();
 
     if (event.type === "change") {
       this._emitConfig();
     }
   }
 
+  _onShadowValueChanged(event) {
+    const control = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.field);
+
+    if (!control?.dataset?.field) {
+      return;
+    }
+
+    event.stopPropagation();
+
+    const nextValue = typeof event.detail?.value === "string"
+      ? event.detail.value
+      : control.value;
+    if (typeof control.dataset?.value === "string") {
+      control.dataset.value = String(nextValue || "");
+    }
+
+    this._setFieldValue(control.dataset.field, nextValue);
+    this._setEditorConfig();
+    this._emitConfig();
+  }
+
+  _onShadowClick(event) {
+    const toggleButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+
+    if (!toggleButton) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const focusState = this._captureFocusState();
+
+    if (toggleButton.dataset.editorToggle === "styles") {
+      this._showStyleSection = !this._showStyleSection;
+    } else if (toggleButton.dataset.editorToggle === "animations") {
+      this._showAnimationSection = !this._showAnimationSection;
+    }
+
+    this._render();
+    this._restoreFocusState(focusState);
+  }
+
   _renderTextField(label, field, value, options = {}) {
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const valueType = options.valueType || "string";
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
@@ -53625,10 +54233,38 @@ class NodaliaPersonCardEditor extends HTMLElement {
         <input
           type="${escapeHtml(options.type || "text")}"
           data-field="${escapeHtml(field)}"
+          data-value-type="${escapeHtml(valueType)}"
           value="${escapeHtml(inputValue)}"
           ${placeholder}
         />
       </label>
+    `;
+  }
+
+  _renderColorField(label, field, value, options = {}) {
+    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+    const currentValue = value === undefined || value === null || value === ""
+      ? fallbackValue
+      : String(value);
+    const colorModel = getEditorColorModel(currentValue, fallbackValue);
+
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="Color personalizado">
+            <input
+              type="color"
+              data-field="${escapeHtml(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml(String(colorModel.alpha))}"
+              value="${escapeHtml(colorModel.hex)}"
+              aria-label="${escapeHtml(label)}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
+          </label>
+        </div>
+      </div>
     `;
   }
 
@@ -53647,9 +54283,9 @@ class NodaliaPersonCardEditor extends HTMLElement {
     `;
   }
 
-  _renderSelectField(label, field, value, options) {
+  _renderSelectField(label, field, value, options, renderOptions = {}) {
     return `
-      <label class="editor-field">
+      <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(label)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options.map(option => `
@@ -53662,16 +54298,100 @@ class NodaliaPersonCardEditor extends HTMLElement {
     `;
   }
 
-  _getEntityOptionsMarkup() {
-    const entityIds = Object.keys(this._hass?.states || {})
-      .filter(entityId => entityId.startsWith("person.") || entityId.startsWith("device_tracker."))
-      .sort((left, right) => left.localeCompare(right, "es"));
+  _renderEntityPickerField(label, field, value, options = {}) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    const placeholder = options.placeholder || "";
+    const domains = Array.isArray(options.domains)
+      ? options.domains.join(",")
+      : String(options.domains || "");
 
     return `
-      <datalist id="person-card-entities">
-        ${entityIds.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div
+          class="editor-control-host"
+          data-mounted-control="entity"
+          data-domains="${escapeHtml(domains)}"
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+          data-placeholder="${escapeHtml(placeholder)}"
+        ></div>
+      </div>
     `;
+  }
+
+  _renderIconPickerField(label, field, value, options = {}) {
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const inputValue = value === undefined || value === null ? "" : String(value);
+
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <ha-icon-picker
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+          value="${escapeHtml(inputValue)}"
+          ${placeholder}
+        ></ha-icon-picker>
+      </div>
+    `;
+  }
+
+  _mountEntityPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const field = host.dataset.field || "entity";
+    const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || "";
+    const domains = String(host.dataset.domains || "")
+      .split(",")
+      .map(domain => domain.trim())
+      .filter(Boolean);
+    let control = null;
+
+    if (customElements.get("ha-entity-picker")) {
+      control = document.createElement("ha-entity-picker");
+      control.includeDomains = domains;
+      control.allowCustomEntity = true;
+      control.entityFilter = stateObj => domains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+      if (placeholder) {
+        control.setAttribute("placeholder", placeholder);
+      }
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = {
+        entity: domains.length === 1
+          ? { domain: domains[0] }
+          : {},
+      };
+    } else {
+      control = document.createElement("select");
+      const emptyOption = document.createElement("option");
+      emptyOption.value = "";
+      emptyOption.textContent = placeholder || "Selecciona una entidad";
+      control.appendChild(emptyOption);
+      this._getDomainEntityOptions(domains, field).forEach(option => {
+        const optionElement = document.createElement("option");
+        optionElement.value = option.value;
+        optionElement.textContent = option.displayLabel;
+        control.appendChild(optionElement);
+      });
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+
+    host.replaceChildren(control);
   }
 
   _render() {
@@ -53681,6 +54401,8 @@ class NodaliaPersonCardEditor extends HTMLElement {
 
     const config = this._config || normalizeConfig({});
     const hapticStyle = config.haptics?.style || "medium";
+    const tapAction = config.tap_action || "more-info";
+    const animations = config.animations || DEFAULT_CONFIG.animations;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -53728,6 +54450,10 @@ class NodaliaPersonCardEditor extends HTMLElement {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
+        .editor-grid--stacked {
+          grid-template-columns: 1fr;
+        }
+
         .editor-field,
         .editor-toggle {
           display: grid;
@@ -53759,14 +54485,97 @@ class NodaliaPersonCardEditor extends HTMLElement {
           width: 100%;
         }
 
-        .editor-toggle {
+        .editor-color-field {
           align-items: center;
-          grid-auto-flow: column;
-          justify-content: start;
+          display: flex;
+          gap: 10px;
+          min-height: 46px;
         }
 
-        .editor-toggle input {
-          accent-color: var(--primary-color);
+        .editor-color-picker {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 40px;
+          justify-content: center;
+          position: relative;
+          width: 40px;
+        }
+
+        .editor-color-picker input {
+          cursor: pointer;
+          inset: 0;
+          opacity: 0;
+          position: absolute;
+        }
+
+        .editor-color-picker:hover,
+        .editor-color-picker:focus-within {
+          border-color: rgba(255, 255, 255, 0.22);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .editor-color-swatch {
+          --editor-swatch: #71c0ff;
+          background:
+            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+            conic-gradient(from 90deg, rgba(255, 255, 255, 0.06) 25%, rgba(0, 0, 0, 0.12) 0 50%, rgba(255, 255, 255, 0.06) 0 75%, rgba(0, 0, 0, 0.12) 0);
+          background-position: center;
+          background-size: cover, 10px 10px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 999px;
+          display: block;
+          height: 22px;
+          width: 22px;
+        }
+
+        .editor-toggle {
+          align-items: center;
+          grid-template-columns: auto 1fr;
+          padding-top: 20px;
+        }
+
+        .editor-section__actions {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 2px;
+        }
+
+        .editor-section__toggle-button {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        .editor-section__toggle-button ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
+        .editor-field ha-icon-picker,
+        .editor-field ha-entity-picker,
+        .editor-field ha-selector,
+        .editor-control-host,
+        .editor-control-host > * {
+          display: block;
+          width: 100%;
         }
 
         @media (max-width: 720px) {
@@ -53841,31 +54650,36 @@ class NodaliaPersonCardEditor extends HTMLElement {
             0 0 0 3px rgba(255, 255, 255, 0.14),
             inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
-</style>
+      </style>
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad persona, foto, badge de zona y accion principal.</div>
+            <div class="editor-section__hint">Entidad persona, foto, icono de zona y comportamiento principal de la tarjeta.</div>
           </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Entidad", "entity", config.entity, {
-              placeholder: "person.rocio",
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderEntityPickerField("Entidad principal", "entity", config.entity, {
+              domains: ["person", "device_tracker"],
+              placeholder: "person.ana",
+              fullWidth: true,
+            })}
+            ${this._renderIconPickerField("Icono fallback", "icon", config.icon, {
+              placeholder: "mdi:account",
+              fullWidth: true,
             })}
             ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Rocio",
-            })}
-            ${this._renderTextField("Icono fallback", "icon", config.icon, {
-              placeholder: "mdi:account",
+              placeholder: "Ana",
+              fullWidth: true,
             })}
             ${this._renderSelectField(
               "Accion al tocar",
               "tap_action",
-              config.tap_action || "more-info",
+              tapAction,
               [
-                { value: "more-info", label: "More info" },
+                { value: "more-info", label: "Mas informacion" },
                 { value: "none", label: "Sin accion" },
               ],
+              { fullWidth: true },
             )}
             ${this._renderCheckboxField("Mostrar ubicacion", "show_state", config.show_state !== false)}
             ${this._renderCheckboxField("Mostrar badge de zona", "show_zone_badge", config.show_zone_badge !== false)}
@@ -53876,8 +54690,41 @@ class NodaliaPersonCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica al tocar la tarjeta.</div>
+            <div class="editor-section__title">Animaciones</div>
+            <div class="editor-section__hint">Entrada suave del contenido y rebote ligero al pulsar la tarjeta.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="animations"
+                aria-expanded="${this._showAnimationSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showAnimationSection ? "Ocultar ajustes de animacion" : "Mostrar ajustes de animacion"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showAnimationSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", animations.content_duration, {
+                    type: "number",
+                  })}
+                  ${this._renderTextField("Rebote pulsacion (ms)", "animations.button_bounce_duration", animations.button_bounce_duration, {
+                    type: "number",
+                  })}
+                </div>
+              `
+              : ""
+          }
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Respuesta haptica</div>
+            <div class="editor-section__hint">Respuesta tactil opcional al tocar la tarjeta.</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -53903,27 +54750,58 @@ class NodaliaPersonCardEditor extends HTMLElement {
           <div class="editor-section__header">
             <div class="editor-section__title">Estilos</div>
             <div class="editor-section__hint">Ajustes visuales base de la tarjeta.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="styles"
+                aria-expanded="${this._showStyleSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+              </button>
+            </div>
           </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
-            ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
-            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
-            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-            ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamano avatar", "styles.avatar.size", config.styles.avatar.size)}
-            ${this._renderTextField("Tamano badge", "styles.badge.size", config.styles.badge.size)}
-            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-            ${this._renderTextField("Tamano subtitulo", "styles.subtitle_size", config.styles.subtitle_size)}
-          </div>
+          ${
+            this._showStyleSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderColorField("Fondo tarjeta", "styles.card.background", config.styles.card.background)}
+                  ${this._renderTextField("Borde tarjeta", "styles.card.border", config.styles.card.border)}
+                  ${this._renderTextField("Radio borde", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${this._renderTextField("Sombra", "styles.card.box_shadow", config.styles.card.box_shadow)}
+                  ${this._renderTextField("Padding interior", "styles.card.padding", config.styles.card.padding)}
+                  ${this._renderTextField("Separacion interna", "styles.card.gap", config.styles.card.gap)}
+                  ${this._renderTextField("Tamano avatar", "styles.avatar.size", config.styles.avatar.size)}
+                  ${this._renderColorField("Fondo avatar", "styles.avatar.background", config.styles.avatar.background, {
+                    fallbackValue: "rgba(255, 255, 255, 0.06)",
+                  })}
+                  ${this._renderColorField("Color avatar", "styles.avatar.color", config.styles.avatar.color, {
+                    fallbackValue: "var(--primary-text-color)",
+                  })}
+                  ${this._renderTextField("Tamano badge", "styles.badge.size", config.styles.badge.size)}
+                  ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
+                  ${this._renderTextField("Tamano subtitulo", "styles.subtitle_size", config.styles.subtitle_size)}
+                </div>
+              `
+              : ""
+          }
         </section>
-        ${this._getEntityOptionsMarkup()}
       </div>
     `;
 
-    this.shadowRoot.querySelectorAll('input[data-field="entity"]').forEach(input => {
-      input.setAttribute("list", "person-card-entities");
-    });
+    this.shadowRoot
+      .querySelectorAll('.editor-control-host[data-mounted-control="entity"]')
+      .forEach(host => this._mountEntityPicker(host));
+
+    this.shadowRoot
+      .querySelectorAll("ha-icon-picker[data-field]")
+      .forEach(control => {
+        control.hass = this._hass;
+        control.value = control.dataset.value || "";
+      });
+
+    this._ensureEditorControlsReady();
   }
 }
 
@@ -54389,15 +55267,27 @@ class NodaliaWeatherCard extends HTMLElement {
     this._hass = null;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
+    this._entranceAnimationResetTimer = 0;
     this._onShadowClick = this._onShadowClick.bind(this);
   }
 
   connectedCallback() {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this._animateContentOnNextRender = true;
+    if (this._hass && this._config) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
   }
 
   disconnectedCallback() {
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
   setConfig(config) {
@@ -54532,6 +55422,24 @@ class NodaliaWeatherCard extends HTMLElement {
     if (haptics.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
       navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
     }
+  }
+
+  _scheduleEntranceAnimationReset(delay) {
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
+    if (!safeDelay || typeof window === "undefined") {
+      this._animateContentOnNextRender = false;
+      return;
+    }
+
+    this._entranceAnimationResetTimer = window.setTimeout(() => {
+      this._entranceAnimationResetTimer = 0;
+      this._animateContentOnNextRender = false;
+    }, safeDelay);
   }
 
   _getAnimationSettings() {
@@ -54985,7 +55893,9 @@ class NodaliaWeatherCard extends HTMLElement {
       </ha-card>
     `;
 
-    this._animateContentOnNextRender = false;
+    if (shouldAnimateEntrance) {
+      this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
+    }
   }
 }
 
@@ -56360,6 +57270,11 @@ class NodaliaVacuumCard extends HTMLElement {
 
   connectedCallback() {
     this._resizeObserver?.observe(this);
+    this._animateContentOnNextRender = true;
+    if (this._hass && this._config) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
   }
 
   disconnectedCallback() {
@@ -56374,6 +57289,8 @@ class NodaliaVacuumCard extends HTMLElement {
         this._pendingModeSelectionTimers[kind] = 0;
       }
     });
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
   setConfig(config) {

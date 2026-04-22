@@ -514,6 +514,11 @@ class NodaliaHumidifierCard extends HTMLElement {
       window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
       window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
     }
+    this._animateContentOnNextRender = true;
+    if (this._hass && this._config) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
   }
 
   disconnectedCallback() {
@@ -545,6 +550,8 @@ class NodaliaHumidifierCard extends HTMLElement {
     this._controlsTransition = null;
     this._panelTransition = null;
     this._pendingDragUpdate = null;
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
   setConfig(config) {

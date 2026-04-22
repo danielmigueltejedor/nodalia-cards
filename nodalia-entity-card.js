@@ -574,6 +574,11 @@ class NodaliaEntityCard extends HTMLElement {
 
   connectedCallback() {
     this._resizeObserver?.observe(this);
+    this._animateContentOnNextRender = true;
+    if (this._hass && this._config) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
   }
 
   disconnectedCallback() {
@@ -582,6 +587,8 @@ class NodaliaEntityCard extends HTMLElement {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
   setConfig(config) {

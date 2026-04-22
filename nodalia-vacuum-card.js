@@ -487,6 +487,11 @@ class NodaliaVacuumCard extends HTMLElement {
 
   connectedCallback() {
     this._resizeObserver?.observe(this);
+    this._animateContentOnNextRender = true;
+    if (this._hass && this._config) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
   }
 
   disconnectedCallback() {
@@ -501,6 +506,8 @@ class NodaliaVacuumCard extends HTMLElement {
         this._pendingModeSelectionTimers[kind] = 0;
       }
     });
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
   setConfig(config) {

@@ -499,6 +499,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._pendingRenderAfterDrag = false;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
+    this._entranceAnimationResetTimer = 0;
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
     this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
@@ -530,6 +531,11 @@ class NodaliaClimateCard extends HTMLElement {
       window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
       window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
     }
+    this._animateContentOnNextRender = true;
+    if (this._hass && this._config) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
   }
 
   disconnectedCallback() {
@@ -554,11 +560,18 @@ class NodaliaClimateCard extends HTMLElement {
       window.clearTimeout(this._temperatureCommitDebounceTimer);
       this._temperatureCommitDebounceTimer = 0;
     }
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
     this._lastRenderSignature = "";
+    this._animateContentOnNextRender = true;
     this._render();
   }
 
@@ -1125,6 +1138,24 @@ class NodaliaClimateCard extends HTMLElement {
     window.setTimeout(() => {
       button.classList.remove("is-pressing");
     }, animations.buttonBounceDuration + 40);
+  }
+
+  _scheduleEntranceAnimationReset(delay) {
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
+    if (!safeDelay || typeof window === "undefined") {
+      this._animateContentOnNextRender = false;
+      return;
+    }
+
+    this._entranceAnimationResetTimer = window.setTimeout(() => {
+      this._entranceAnimationResetTimer = 0;
+      this._animateContentOnNextRender = false;
+    }, safeDelay);
   }
 
   _setDialDraggingState(isDragging, dial = this._activeDialDrag?.dial || null) {
@@ -2467,7 +2498,9 @@ class NodaliaClimateCard extends HTMLElement {
       </ha-card>
     `;
 
-    this._animateContentOnNextRender = false;
+    if (shouldAnimateEntrance) {
+      this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
+    }
   }
 }
 

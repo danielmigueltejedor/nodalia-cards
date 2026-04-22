@@ -470,6 +470,9 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
     this._resizeObserver.observe(this);
     this._syncCountdownTimer();
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
+    this._requestRender();
   }
 
   disconnectedCallback() {
@@ -483,6 +486,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
   setConfig(config) {
