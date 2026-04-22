@@ -17,6 +17,19 @@ const FEATURE_ARM_NIGHT = 4;
 const FEATURE_TRIGGER = 8;
 const FEATURE_ARM_CUSTOM_BYPASS = 16;
 const FEATURE_ARM_VACATION = 32;
+const ALARM_STATE_TINT_FALLBACKS = Object.freeze({
+  disarmed: "#82d18a",
+  armed_home: "#74c0ff",
+  armed_away: "#8aa7ff",
+  armed_night: "#9488ff",
+  armed_vacation: "#5fd7cf",
+  armed_custom_bypass: "#64d4a6",
+  armed: "#8aa7ff",
+  arming: "#71c0ff",
+  disarming: "#8de4ff",
+  pending: "#f2c46d",
+  triggered: "#ff7474",
+});
 
 const DEFAULT_CONFIG = {
   entity: "",
@@ -675,31 +688,12 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
   _getAccentColor(state) {
     const key = normalizeTextKey(state?.state);
-
-    switch (key) {
-      case "disarmed":
-        return "#82d18a";
-      case "armed_home":
-        return "#74c0ff";
-      case "armed_away":
-        return "#8aa7ff";
-      case "armed_night":
-        return "#9488ff";
-      case "armed_vacation":
-        return "#5fd7cf";
-      case "armed_custom_bypass":
-        return "#64d4a6";
-      case "arming":
-        return "#71c0ff";
-      case "disarming":
-        return "#8de4ff";
-      case "pending":
-        return "#f2c46d";
-      case "triggered":
-        return "#ff7474";
-      default:
-        return "var(--info-color, #71c0ff)";
+    const configuredTint = this._config?.styles?.state_tints?.[key];
+    if (typeof configuredTint === "string" && configuredTint.trim()) {
+      return configuredTint.trim();
     }
+
+    return ALARM_STATE_TINT_FALLBACKS[key] || "var(--info-color, #71c0ff)";
   }
 
   _isActiveState(state) {
@@ -2445,6 +2439,33 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
                   })}
                   ${this._renderColorField("Color acento", "styles.control.accent_color", config.styles.control.accent_color, {
                     fallbackValue: "var(--primary-text-color)",
+                  })}
+                  ${this._renderColorField("Tinte desarmada", "styles.state_tints.disarmed", config.styles.state_tints?.disarmed, {
+                    fallbackValue: ALARM_STATE_TINT_FALLBACKS.disarmed,
+                  })}
+                  ${this._renderColorField("Tinte en casa", "styles.state_tints.armed_home", config.styles.state_tints?.armed_home, {
+                    fallbackValue: ALARM_STATE_TINT_FALLBACKS.armed_home,
+                  })}
+                  ${this._renderColorField("Tinte ausente", "styles.state_tints.armed_away", config.styles.state_tints?.armed_away, {
+                    fallbackValue: ALARM_STATE_TINT_FALLBACKS.armed_away,
+                  })}
+                  ${this._renderColorField("Tinte noche", "styles.state_tints.armed_night", config.styles.state_tints?.armed_night, {
+                    fallbackValue: ALARM_STATE_TINT_FALLBACKS.armed_night,
+                  })}
+                  ${this._renderColorField("Tinte vacaciones", "styles.state_tints.armed_vacation", config.styles.state_tints?.armed_vacation, {
+                    fallbackValue: ALARM_STATE_TINT_FALLBACKS.armed_vacation,
+                  })}
+                  ${this._renderColorField("Tinte personalizado", "styles.state_tints.armed_custom_bypass", config.styles.state_tints?.armed_custom_bypass, {
+                    fallbackValue: ALARM_STATE_TINT_FALLBACKS.armed_custom_bypass,
+                  })}
+                  ${this._renderColorField("Tinte armando", "styles.state_tints.arming", config.styles.state_tints?.arming, {
+                    fallbackValue: ALARM_STATE_TINT_FALLBACKS.arming,
+                  })}
+                  ${this._renderColorField("Tinte pendiente", "styles.state_tints.pending", config.styles.state_tints?.pending, {
+                    fallbackValue: ALARM_STATE_TINT_FALLBACKS.pending,
+                  })}
+                  ${this._renderColorField("Tinte disparada", "styles.state_tints.triggered", config.styles.state_tints?.triggered, {
+                    fallbackValue: ALARM_STATE_TINT_FALLBACKS.triggered,
                   })}
                   ${this._renderTextField("Alto chips", "styles.chip_height", config.styles.chip_height)}
                   ${this._renderTextField("Texto chips", "styles.chip_font_size", config.styles.chip_font_size)}
