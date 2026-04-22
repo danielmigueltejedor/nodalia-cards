@@ -3272,6 +3272,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     const isFixed = this._config.layout.fixed && !inEditMode;
     const spacerHeight = isFixed ? this._getReservedHeight(hasPlayers) : "0px";
     const mediaBrowserMarkup = this._renderMediaBrowser();
+    const animations = this._getAnimationSettings();
 
     this._syncTicker(hasPlayers ? players : []);
 
@@ -3286,7 +3287,6 @@ class NodaliaMediaPlayer extends HTMLElement {
     const config = this._config;
     const playerStyles = config.styles.player;
     const browserStyles = config.styles.browser;
-    const animations = this._getAnimationSettings();
     const tvArtworkSize = playerStyles.tv_artwork_size || playerStyles.artwork_size;
     const activeTintColor = playerStyles.active_tint_color || "var(--info-color, #71c0ff)";
     const activeCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} 18%, ${playerStyles.background}) 0%, color-mix(in srgb, ${activeTintColor} 10%, ${playerStyles.background}) 52%, ${playerStyles.background} 100%)`;
