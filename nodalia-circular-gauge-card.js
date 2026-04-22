@@ -78,7 +78,7 @@ const DEFAULT_CONFIG = {
       size: "280px",
       stroke: "18px",
       thumb_size: "22px",
-      track_color: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
+      track_color: "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))",
       background: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
       min_tint_color: DEFAULT_GAUGE_MIN_TINT_COLOR,
       max_tint_color: DEFAULT_GAUGE_MAX_TINT_COLOR,
@@ -302,7 +302,7 @@ function getEditorColorFallbackValue(field) {
   }
 
   if (normalizedField.endsWith("track_color")) {
-    return "color-mix(in srgb, var(--primary-text-color) 8%, transparent)";
+    return "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))";
   }
 
   if (normalizedField.endsWith("min_tint_color")) {
@@ -2657,7 +2657,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
                     fallbackValue: DEFAULT_GAUGE_MAX_TINT_COLOR,
                   })}
                   ${this._renderColorField("Track gauge", "styles.gauge.track_color", config.styles.gauge.track_color, {
-                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
+                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))",
                   })}
                   ${this._renderTextField("Tamaño chip", "styles.chip_height", config.styles.chip_height)}
                   ${this._renderTextField("Texto chip", "styles.chip_font_size", config.styles.chip_font_size)}

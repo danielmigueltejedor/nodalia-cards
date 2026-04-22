@@ -1326,6 +1326,13 @@ class NodaliaEntityCard extends HTMLElement {
     const cardShadow = isActive
       ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`
       : styles.card.box_shadow;
+    const activeIconBackground = `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 16%, ${styles.icon.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.icon.background}) 100%)`;
+    const activeIconBorder = `color-mix(in srgb, ${accentColor} 34%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`;
+    const activeIconShadow = `
+      inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
+      0 12px 30px rgba(0, 0, 0, 0.18),
+      0 0 0 1px color-mix(in srgb, ${accentColor} 12%, transparent)
+    `.trim();
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
 
@@ -1413,12 +1420,15 @@ class NodaliaEntityCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: ${styles.icon.background};
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          background: ${isActive ? activeIconBackground : styles.icon.background};
+          border: 1px solid ${isActive ? activeIconBorder : "color-mix(in srgb, var(--primary-text-color) 8%, transparent)"};
           border-radius: ${singleRowLayout ? "18px" : "24px"};
-          box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
-            0 12px 30px rgba(0, 0, 0, 0.18);
+          box-shadow: ${isActive
+            ? activeIconShadow
+            : `
+              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
+              0 12px 30px rgba(0, 0, 0, 0.18)
+            `.trim()};
           color: ${isActive ? styles.icon.on_color : styles.icon.off_color};
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           display: inline-flex;

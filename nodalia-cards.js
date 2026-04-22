@@ -22879,7 +22879,7 @@ const DEFAULT_CONFIG = {
       size: "280px",
       stroke: "18px",
       thumb_size: "22px",
-      track_color: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
+      track_color: "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))",
       background: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
       min_tint_color: DEFAULT_GAUGE_MIN_TINT_COLOR,
       max_tint_color: DEFAULT_GAUGE_MAX_TINT_COLOR,
@@ -23103,7 +23103,7 @@ function getEditorColorFallbackValue(field) {
   }
 
   if (normalizedField.endsWith("track_color")) {
-    return "color-mix(in srgb, var(--primary-text-color) 8%, transparent)";
+    return "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))";
   }
 
   if (normalizedField.endsWith("min_tint_color")) {
@@ -25458,7 +25458,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
                     fallbackValue: DEFAULT_GAUGE_MAX_TINT_COLOR,
                   })}
                   ${this._renderColorField("Track gauge", "styles.gauge.track_color", config.styles.gauge.track_color, {
-                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
+                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))",
                   })}
                   ${this._renderTextField("Tamaño chip", "styles.chip_height", config.styles.chip_height)}
                   ${this._renderTextField("Texto chip", "styles.chip_font_size", config.styles.chip_font_size)}
@@ -33460,7 +33460,7 @@ const DEFAULT_CONFIG = {
       size: "280px",
       stroke: "18px",
       thumb_size: "24px",
-      track_color: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
+      track_color: "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))",
       background: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
       heat_color: "#f59f42",
       cool_color: "#71c0ff",
@@ -33693,7 +33693,7 @@ function getEditorColorFallbackValue(field) {
   }
 
   if (normalizedField.endsWith("track_color")) {
-    return "color-mix(in srgb, var(--primary-text-color) 8%, transparent)";
+    return "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))";
   }
 
   if (normalizedField.endsWith("accent_background")) {
@@ -37361,7 +37361,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
                     fallbackValue: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
                   })}
                   ${this._renderColorField("Track dial", "styles.dial.track_color", config.styles.dial.track_color, {
-                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
+                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))",
                   })}
                   ${this._renderColorField("Color calor", "styles.dial.heat_color", config.styles.dial.heat_color, {
                     fallbackValue: "#f59f42",
@@ -49183,6 +49183,13 @@ class NodaliaEntityCard extends HTMLElement {
     const cardShadow = isActive
       ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`
       : styles.card.box_shadow;
+    const activeIconBackground = `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 16%, ${styles.icon.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.icon.background}) 100%)`;
+    const activeIconBorder = `color-mix(in srgb, ${accentColor} 34%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`;
+    const activeIconShadow = `
+      inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
+      0 12px 30px rgba(0, 0, 0, 0.18),
+      0 0 0 1px color-mix(in srgb, ${accentColor} 12%, transparent)
+    `.trim();
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
 
@@ -49270,12 +49277,15 @@ class NodaliaEntityCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: ${styles.icon.background};
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          background: ${isActive ? activeIconBackground : styles.icon.background};
+          border: 1px solid ${isActive ? activeIconBorder : "color-mix(in srgb, var(--primary-text-color) 8%, transparent)"};
           border-radius: ${singleRowLayout ? "18px" : "24px"};
-          box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
-            0 12px 30px rgba(0, 0, 0, 0.18);
+          box-shadow: ${isActive
+            ? activeIconShadow
+            : `
+              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
+              0 12px 30px rgba(0, 0, 0, 0.18)
+            `.trim()};
           color: ${isActive ? styles.icon.on_color : styles.icon.off_color};
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           display: inline-flex;

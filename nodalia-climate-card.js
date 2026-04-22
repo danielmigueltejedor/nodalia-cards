@@ -69,7 +69,7 @@ const DEFAULT_CONFIG = {
       size: "280px",
       stroke: "18px",
       thumb_size: "24px",
-      track_color: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
+      track_color: "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))",
       background: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
       heat_color: "#f59f42",
       cool_color: "#71c0ff",
@@ -302,7 +302,7 @@ function getEditorColorFallbackValue(field) {
   }
 
   if (normalizedField.endsWith("track_color")) {
-    return "color-mix(in srgb, var(--primary-text-color) 8%, transparent)";
+    return "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))";
   }
 
   if (normalizedField.endsWith("accent_background")) {
@@ -3970,7 +3970,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
                     fallbackValue: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
                   })}
                   ${this._renderColorField("Track dial", "styles.dial.track_color", config.styles.dial.track_color, {
-                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
+                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 14%, var(--ha-card-background))",
                   })}
                   ${this._renderColorField("Color calor", "styles.dial.heat_color", config.styles.dial.heat_color, {
                     fallbackValue: "#f59f42",
