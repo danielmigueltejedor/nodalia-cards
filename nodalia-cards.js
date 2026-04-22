@@ -53705,9 +53705,7 @@ class NodaliaPersonCard extends HTMLElement {
 
     const title = this._getTitle(state);
     const subtitle = this._config.show_state !== false ? this._translateState(state) : "";
-    const desiredPicture = this._getPersonPicture(state);
-    const pictureReady = !desiredPicture || this._ensurePersonPictureReady(desiredPicture);
-    const picture = this._getRenderablePersonPicture(state);
+    const picture = this._getPersonPicture(state);
     const fallbackIcon = this._getFallbackIcon(state);
     const badge = this._getBadgeDescriptor(state);
     const zoneState = this._getMatchingZoneState(state);
@@ -53872,7 +53870,9 @@ class NodaliaPersonCard extends HTMLElement {
     const singleRowLayout = Number.isFinite(configuredRows) ? configuredRows <= 1 : true;
     const title = this._getTitle(state);
     const subtitle = config.show_state !== false ? this._translateState(state) : "";
-    const picture = this._getPersonPicture(state);
+    const desiredPicture = this._getPersonPicture(state);
+    const pictureReady = !desiredPicture || this._ensurePersonPictureReady(desiredPicture);
+    const picture = this._getRenderablePersonPicture(state);
     const fallbackIcon = this._getFallbackIcon(state);
     const badge = this._getBadgeDescriptor(state);
     const accentColor = this._getAccentColor(state);
