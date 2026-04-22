@@ -5478,6 +5478,9 @@ class NodaliaMediaPlayer extends HTMLElement {
   set hass(hass) {
     const previousHass = this._hass;
     this._hass = hass;
+    if (!this._activeSliderDrag) {
+      this._syncVolumeControlsFromHass(hass);
+    }
 
     const nextSignature = this._getRenderSignature(hass);
     if (previousHass && nextSignature === this._lastRenderSignature) {
@@ -5543,7 +5546,6 @@ class NodaliaMediaPlayer extends HTMLElement {
           attrs.app_name || "",
           attrs.source || "",
           attrs.media_channel || "",
-          attrs.volume_level ?? "",
           attrs.media_duration ?? "",
           attrs.supported_features ?? "",
           Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
@@ -6068,27 +6070,77 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _updatePlayerVolumePreview(entityId, value) {
-    const slider = this.shadowRoot?.querySelector(
-      `.media-player__volume-slider[data-entity="${escapeSelectorValue(entityId)}"]`,
-    );
     const nextValue = clamp(Number(value), 0, 100);
+    const normalizedEntityId = escapeSelectorValue(entityId);
+    const sliders = this.shadowRoot?.querySelectorAll(
+      `.media-player__volume-slider[data-entity="${normalizedEntityId}"]`,
+    ) || [];
 
-    if (slider instanceof HTMLInputElement) {
+    sliders.forEach(slider => {
+      if (!(slider instanceof HTMLInputElement)) {
+        return;
+      }
+
+      slider.value = String(nextValue);
       slider.style.setProperty("--media-volume", String(nextValue));
       slider.closest(".media-player__volume-slider-shell")?.style.setProperty("--media-volume", String(nextValue));
+    });
+
+    const volumeButtons = this.shadowRoot?.querySelectorAll(
+      `.media-player__volume-button[data-entity="${normalizedEntityId}"][data-media-volume]`,
+    ) || [];
+
+    volumeButtons.forEach(button => {
+      if (!(button instanceof HTMLElement)) {
+        return;
+      }
+
+      button.dataset.mediaVolume = String(clamp(nextValue / 100, 0, 1));
+    });
+  }
+
+  _clearDraftVolume(entityId) {
+    const timerId = this._draftVolumeTimers.get(entityId);
+    if (timerId) {
+      window.clearTimeout(timerId);
+      this._draftVolumeTimers.delete(entityId);
     }
+
+    this._draftVolume.delete(entityId);
+  }
+
+  _syncVolumeControlsFromHass(hass = this._hass) {
+    if (!this.shadowRoot?.innerHTML) {
+      return;
+    }
+
+    const states = hass?.states || {};
+    this._getTrackedEntities().forEach(entityId => {
+      const state = states[entityId];
+      if (!this._supportsVolumeControl(state)) {
+        return;
+      }
+
+      const actualPercent = clamp(Math.round(Number(state.attributes?.volume_level || 0) * 100), 0, 100);
+      const draftValue = this._draftVolume.get(entityId);
+      if (Number.isFinite(draftValue) && Math.abs(actualPercent - draftValue) <= 2) {
+        this._clearDraftVolume(entityId);
+      }
+
+      this._updatePlayerVolumePreview(entityId, this._getPlayerVolumePercent(entityId, state));
+    });
   }
 
   _scheduleDraftVolumeClear(entityId, delay = 1400) {
     const existingTimer = this._draftVolumeTimers.get(entityId);
     if (existingTimer) {
       window.clearTimeout(existingTimer);
+      this._draftVolumeTimers.delete(entityId);
     }
 
     const timerId = window.setTimeout(() => {
-      this._draftVolume.delete(entityId);
-      this._draftVolumeTimers.delete(entityId);
-      this._render();
+      this._clearDraftVolume(entityId);
+      this._syncVolumeControlsFromHass(this._hass);
     }, delay);
 
     this._draftVolumeTimers.set(entityId, timerId);
@@ -6448,9 +6500,13 @@ class NodaliaMediaPlayer extends HTMLElement {
         break;
       case "volume-down": {
         const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
+        const nextVolumeLevel = clamp(currentVolume - 0.08, 0, 1);
+        this._draftVolume.set(entityId, Math.round(nextVolumeLevel * 100));
+        this._updatePlayerVolumePreview(entityId, nextVolumeLevel * 100);
+        this._scheduleDraftVolumeClear(entityId);
         this._hass.callService("media_player", "volume_set", {
           entity_id: entityId,
-          volume_level: clamp(currentVolume - 0.08, 0, 1),
+          volume_level: nextVolumeLevel,
         });
         break;
       }
@@ -6459,9 +6515,13 @@ class NodaliaMediaPlayer extends HTMLElement {
         break;
       case "volume-up": {
         const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
+        const nextVolumeLevel = clamp(currentVolume + 0.08, 0, 1);
+        this._draftVolume.set(entityId, Math.round(nextVolumeLevel * 100));
+        this._updatePlayerVolumePreview(entityId, nextVolumeLevel * 100);
+        this._scheduleDraftVolumeClear(entityId);
         this._hass.callService("media_player", "volume_set", {
           entity_id: entityId,
-          volume_level: clamp(currentVolume + 0.08, 0, 1),
+          volume_level: nextVolumeLevel,
         });
         break;
       }
@@ -23115,12 +23175,12 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           box-shadow:
             0 0 0 1px rgba(255, 255, 255, 0.08),
             0 0 12px rgba(255, 255, 255, 0.22);
-          height: 42%;
+          height: 52%;
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: 42%;
+          width: 52%;
         }
 
         .gauge-card__dial-center {
@@ -32882,12 +32942,12 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__dial-thumb::after {
           content: "";
-          height: 42%;
+          height: 52%;
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: 42%;
+          width: 52%;
           background: rgba(255, 255, 255, 0.96);
           border-radius: 50%;
           box-shadow:
