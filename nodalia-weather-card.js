@@ -41,7 +41,7 @@ const DEFAULT_CONFIG = {
     },
     icon: {
       size: "58px",
-      background: "rgba(255, 255, 255, 0.06)",
+      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
     },
     chip_height: "24px",
@@ -270,7 +270,7 @@ function getEditorColorFallbackValue(field) {
   const normalizedField = String(field ?? "");
 
   if (normalizedField.endsWith("icon.background")) {
-    return "rgba(255, 255, 255, 0.06)";
+    return "color-mix(in srgb, var(--primary-text-color) 6%, transparent)";
   }
 
   if (normalizedField.endsWith("icon.color")) {
@@ -761,7 +761,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
         ha-card {
           background:
-            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.04)), rgba(255, 255, 255, 0) 44%),
+            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)), rgba(255, 255, 255, 0) 44%),
             linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.card.background}) 56%, ${styles.card.background} 100%);
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -773,7 +773,7 @@ class NodaliaWeatherCard extends HTMLElement {
         }
 
         ha-card::before {
-          background: linear-gradient(180deg, color-mix(in srgb, ${accentColor} 12%, rgba(255, 255, 255, 0.05)), rgba(255, 255, 255, 0));
+          background: linear-gradient(180deg, color-mix(in srgb, ${accentColor} 12%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0));
           content: "";
           inset: 0;
           pointer-events: none;
@@ -817,10 +817,10 @@ class NodaliaWeatherCard extends HTMLElement {
         .weather-card__icon {
           align-items: center;
           background: ${styles.icon.background};
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 22px;
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
             0 14px 28px rgba(0, 0, 0, 0.14);
           color: ${styles.icon.color};
           display: inline-flex;
@@ -909,10 +909,10 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__chip {
           align-items: center;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid color-mix(in srgb, var(--chip-accent) 18%, rgba(255, 255, 255, 0.08));
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--chip-accent) 18%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           color: var(--primary-text-color);
           display: inline-flex;
           gap: 6px;
@@ -1560,8 +1560,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
         }
 
         .editor-section {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 18px;
           display: grid;
           gap: 14px;
@@ -1613,8 +1613,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
         .editor-field input,
         .editor-field select {
           appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 14px;
           color: var(--primary-text-color);
           font: inherit;
@@ -1634,8 +1634,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
         .editor-color-picker {
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           cursor: pointer;
           display: inline-flex;
@@ -1655,18 +1655,18 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
         .editor-color-picker:hover,
         .editor-color-picker:focus-within {
-          border-color: rgba(255, 255, 255, 0.22);
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+          border-color: color-mix(in srgb, var(--primary-text-color) 22%, transparent);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 
         .editor-color-swatch {
           --editor-swatch: #71c0ff;
           background:
             linear-gradient(var(--editor-swatch), var(--editor-swatch)),
-            conic-gradient(from 90deg, rgba(255, 255, 255, 0.06) 25%, rgba(0, 0, 0, 0.12) 0 50%, rgba(255, 255, 255, 0.06) 0 75%, rgba(0, 0, 0, 0.12) 0);
+            conic-gradient(from 90deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 25%, rgba(0, 0, 0, 0.12) 0 50%, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 0 75%, rgba(0, 0, 0, 0.12) 0);
           background-position: center;
           background-size: cover, 10px 10px;
-          border: 1px solid rgba(255, 255, 255, 0.14);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
           border-radius: 999px;
           display: block;
           height: 22px;
@@ -1690,8 +1690,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
         .editor-section__toggle-button {
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -1745,10 +1745,10 @@ class NodaliaWeatherCardEditor extends HTMLElement {
         }
 
         .editor-toggle__switch {
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           display: inline-flex;
           font-size: 0;
           height: 22px;
@@ -1786,8 +1786,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
         :is(.editor-toggle, .editor-checkbox) input:focus-visible + .editor-toggle__switch {
           box-shadow:
-            0 0 0 3px rgba(255, 255, 255, 0.14),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            0 0 0 3px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 </style>
       <div class="editor">
@@ -1912,7 +1912,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
                   ${this._renderTextField("Separacion interna", "styles.card.gap", config.styles.card.gap)}
                   ${this._renderTextField("Tamano icono", "styles.icon.size", config.styles.icon.size)}
                   ${this._renderColorField("Fondo burbuja icono", "styles.icon.background", config.styles.icon.background, {
-                    fallbackValue: "rgba(255, 255, 255, 0.06)",
+                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
                   })}
                   ${this._renderColorField("Color icono", "styles.icon.color", config.styles.icon.color, {
                     fallbackValue: "var(--primary-text-color)",

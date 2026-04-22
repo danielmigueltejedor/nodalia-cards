@@ -18,7 +18,7 @@ const DIAL_CIRCLE_RADIUS = 86;
 const DIAL_CIRCUMFERENCE = 2 * Math.PI * DIAL_CIRCLE_RADIUS;
 const DIAL_VISIBLE_LENGTH = DIAL_CIRCUMFERENCE * (DIAL_SWEEP / 360);
 const DIAL_HIDDEN_LENGTH = DIAL_CIRCUMFERENCE - DIAL_VISIBLE_LENGTH;
-const DEFAULT_GAUGE_MIN_TINT_COLOR = "rgba(255, 255, 255, 0.24)";
+const DEFAULT_GAUGE_MIN_TINT_COLOR = "color-mix(in srgb, var(--primary-text-color) 24%, transparent)";
 const DEFAULT_GAUGE_MAX_TINT_COLOR = "#ff7d57";
 const GAUGE_TINT_SEGMENT_COUNT = 40;
 
@@ -64,7 +64,7 @@ const DEFAULT_CONFIG = {
     },
     icon: {
       size: "58px",
-      background: "rgba(255, 255, 255, 0.06)",
+      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
     },
     chip_height: "24px",
@@ -78,8 +78,8 @@ const DEFAULT_CONFIG = {
       size: "280px",
       stroke: "18px",
       thumb_size: "22px",
-      track_color: "rgba(255, 255, 255, 0.08)",
-      background: "rgba(255, 255, 255, 0.02)",
+      track_color: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
+      background: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
       min_tint_color: DEFAULT_GAUGE_MIN_TINT_COLOR,
       max_tint_color: DEFAULT_GAUGE_MAX_TINT_COLOR,
       foreground_color: "",
@@ -294,15 +294,15 @@ function getEditorColorFallbackValue(field) {
   const normalizedField = String(field ?? "");
 
   if (normalizedField.endsWith("icon.background")) {
-    return "rgba(255, 255, 255, 0.06)";
+    return "color-mix(in srgb, var(--primary-text-color) 6%, transparent)";
   }
 
   if (normalizedField.endsWith("gauge.background")) {
-    return "rgba(255, 255, 255, 0.02)";
+    return "color-mix(in srgb, var(--primary-text-color) 2%, transparent)";
   }
 
   if (normalizedField.endsWith("track_color")) {
-    return "rgba(255, 255, 255, 0.08)";
+    return "color-mix(in srgb, var(--primary-text-color) 8%, transparent)";
   }
 
   if (normalizedField.endsWith("min_tint_color")) {
@@ -973,7 +973,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const effectiveNameChipMaxWidth = `${Math.max(120, Math.min(parseSizeToPixels(styles.name_chip_max_width, 170), compactLayout ? 148 : 170))}px`;
     const cardBackground = value === null
       ? styles.card.background
-      : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, rgba(255, 255, 255, 0.02)) 0%, ${styles.card.background} 100%)`;
+      : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, color-mix(in srgb, var(--primary-text-color) 2%, transparent)) 0%, ${styles.card.background} 100%)`;
     const cardBorder = value === null
       ? styles.card.border
       : `1px solid color-mix(in srgb, ${accentColor} 26%, var(--divider-color))`;
@@ -1060,12 +1060,12 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           align-items: center;
           appearance: none;
           background:
-            radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 60%),
+            radial-gradient(circle at top left, color-mix(in srgb, var(--primary-text-color) 6%, transparent), transparent 60%),
             ${styles.icon.background};
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: calc(${effectiveIconSize} * 0.5);
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent),
             0 10px 26px rgba(0, 0, 0, 0.16);
           color: ${styles.icon.color};
           display: inline-flex;
@@ -1148,10 +1148,10 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         .gauge-card__chip {
           align-items: center;
           backdrop-filter: blur(18px);
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           color: var(--primary-text-color);
           display: inline-flex;
           font-size: ${effectiveChipFontSize};
@@ -1201,16 +1201,16 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           --gauge-dial-size: ${dialSizePx}px;
           --gauge-thumb-size: ${thumbSizePx}px;
           background:
-            radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.08), transparent 30%),
+            radial-gradient(circle at 24% 18%, color-mix(in srgb, var(--primary-text-color) 8%, transparent), transparent 30%),
             linear-gradient(
               180deg,
-              color-mix(in srgb, ${styles.gauge.background} 94%, rgba(255, 255, 255, 0.04)) 0%,
+              color-mix(in srgb, ${styles.gauge.background} 94%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%,
               color-mix(in srgb, ${styles.gauge.background} 96%, rgba(0, 0, 0, 0.12)) 100%
             );
-          border: 1px solid color-mix(in srgb, ${accentColor} 10%, rgba(255, 255, 255, 0.08));
+          border: 1px solid color-mix(in srgb, ${accentColor} 10%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
           border-radius: 50%;
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent),
             0 18px 38px rgba(0, 0, 0, 0.16);
           height: var(--gauge-dial-size);
           position: relative;
@@ -1270,8 +1270,8 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           background: transparent;
           border-radius: 50%;
           box-shadow:
-            0 0 0 1px rgba(255, 255, 255, 0.04),
-            0 0 0 6px rgba(255, 255, 255, 0.05),
+            0 0 0 1px color-mix(in srgb, var(--primary-text-color) 4%, transparent),
+            0 0 0 6px color-mix(in srgb, var(--primary-text-color) 5%, transparent),
             0 0 18px color-mix(in srgb, ${accentColor} 12%, transparent),
             0 10px 24px rgba(0, 0, 0, 0.18);
           height: var(--gauge-thumb-size);
@@ -1293,10 +1293,10 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         .gauge-card__dial-thumb::before {
           -webkit-backdrop-filter: blur(16px);
           backdrop-filter: blur(16px);
-          background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.08) 38%, rgba(255, 255, 255, 0.03) 58%, transparent 76%);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: radial-gradient(circle, color-mix(in srgb, var(--primary-text-color) 14%, transparent) 0%, color-mix(in srgb, var(--primary-text-color) 8%, transparent) 38%, color-mix(in srgb, var(--primary-text-color) 3%, transparent) 58%, transparent 76%);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 50%;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           content: "";
           inset: 0;
           position: absolute;
@@ -1306,7 +1306,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           background: rgba(255, 255, 255, 0.96);
           border-radius: 50%;
           content: "";
-          box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+          box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           height: 82%;
           left: 50%;
           position: absolute;
@@ -1384,12 +1384,12 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         .gauge-card__bottom-icon {
           align-items: center;
           background:
-            radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 60%),
+            radial-gradient(circle at top left, color-mix(in srgb, var(--primary-text-color) 8%, transparent), transparent 60%),
             ${styles.icon.background};
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent),
             0 10px 26px rgba(0, 0, 0, 0.16);
           color: ${styles.icon.color};
           display: inline-flex;
@@ -1440,21 +1440,21 @@ class NodaliaCircularGaugeCard extends HTMLElement {
             opacity: 0;
             transform: translateZ(0) scale(0.95);
             box-shadow:
-              inset 0 1px 0 rgba(255, 255, 255, 0.02),
+              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 2%, transparent),
               0 10px 24px rgba(0, 0, 0, 0.08);
           }
           55% {
             opacity: 1;
             transform: translateZ(0) scale(1.015);
             box-shadow:
-              inset 0 1px 0 rgba(255, 255, 255, 0.06),
+              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
               0 22px 42px rgba(0, 0, 0, 0.16);
           }
           100% {
             opacity: 1;
             transform: translateZ(0) scale(1);
             box-shadow:
-              inset 0 1px 0 rgba(255, 255, 255, 0.05),
+              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent),
               0 18px 38px rgba(0, 0, 0, 0.16);
           }
         }
@@ -2222,8 +2222,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
         }
 
         .editor-section {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 18px;
           display: grid;
           gap: 14px;
@@ -2257,8 +2257,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
         .editor-section__toggle-button {
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -2305,8 +2305,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
         .editor-control-host select,
         .editor-control-host textarea {
           appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 12px;
           color: var(--primary-text-color);
           font: inherit;
@@ -2334,8 +2334,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
         .editor-color-picker {
           align-items: center;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           cursor: pointer;
           display: inline-flex;
@@ -2355,18 +2355,18 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
         .editor-color-picker:hover,
         .editor-color-picker:focus-within {
-          border-color: rgba(255, 255, 255, 0.22);
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+          border-color: color-mix(in srgb, var(--primary-text-color) 22%, transparent);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 
         .editor-color-swatch {
           --editor-swatch: #71c0ff;
           background:
             linear-gradient(var(--editor-swatch), var(--editor-swatch)),
-            conic-gradient(from 90deg, rgba(255, 255, 255, 0.06) 25%, rgba(0, 0, 0, 0.12) 0 50%, rgba(255, 255, 255, 0.06) 0 75%, rgba(0, 0, 0, 0.12) 0);
+            conic-gradient(from 90deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 25%, rgba(0, 0, 0, 0.12) 0 50%, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 0 75%, rgba(0, 0, 0, 0.12) 0);
           background-position: center;
           background-size: cover, 10px 10px;
-          border: 1px solid rgba(255, 255, 255, 0.14);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
           border-radius: 999px;
           display: block;
           height: 18px;
@@ -2406,10 +2406,10 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
         }
 
         .editor-toggle__switch {
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           display: inline-flex;
           font-size: 0;
           height: 22px;
@@ -2447,8 +2447,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
         :is(.editor-toggle, .editor-checkbox) input:focus-visible + .editor-toggle__switch {
           box-shadow:
-            0 0 0 3px rgba(255, 255, 255, 0.14),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            0 0 0 3px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 </style>
       <div class="editor">
@@ -2633,7 +2633,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
                   ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
                   ${this._renderTextField("Tamaño burbuja entidad", "styles.icon.size", config.styles.icon.size)}
                   ${this._renderColorField("Fondo burbuja", "styles.icon.background", config.styles.icon.background, {
-                    fallbackValue: "rgba(255, 255, 255, 0.06)",
+                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
                   })}
                   ${this._renderColorField("Color icono", "styles.icon.color", config.styles.icon.color, {
                     fallbackValue: "var(--primary-text-color)",
@@ -2646,7 +2646,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
                   ${this._renderTextField("Grosor dial", "styles.gauge.stroke", config.styles.gauge.stroke)}
                   ${this._renderTextField("Tamaño thumb", "styles.gauge.thumb_size", config.styles.gauge.thumb_size)}
                   ${this._renderColorField("Fondo dial", "styles.gauge.background", config.styles.gauge.background, {
-                    fallbackValue: "rgba(255, 255, 255, 0.02)",
+                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
                   })}
                   ${this._renderColorField("Tinte mínimo gauge", "styles.gauge.min_tint_color", config.styles.gauge.min_tint_color, {
                     fallbackValue: DEFAULT_GAUGE_MIN_TINT_COLOR,
@@ -2658,7 +2658,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
                     fallbackValue: DEFAULT_GAUGE_MAX_TINT_COLOR,
                   })}
                   ${this._renderColorField("Track gauge", "styles.gauge.track_color", config.styles.gauge.track_color, {
-                    fallbackValue: "rgba(255, 255, 255, 0.08)",
+                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
                   })}
                   ${this._renderTextField("Tamaño chip", "styles.chip_height", config.styles.chip_height)}
                   ${this._renderTextField("Texto chip", "styles.chip_font_size", config.styles.chip_font_size)}

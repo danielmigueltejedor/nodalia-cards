@@ -52,10 +52,10 @@ const DEFAULT_CONFIG = {
     },
     icon: {
       size: "48px",
-      background: "rgba(255, 255, 255, 0.06)",
+      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       on_color: "var(--info-color, #71c0ff)",
-      off_color: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))",
+      off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
     },
     control: {
       size: "40px",
@@ -359,7 +359,7 @@ function getEditorColorFallbackValue(field) {
   const normalizedField = String(field ?? "");
 
   if (normalizedField.endsWith("off_color")) {
-    return "var(--state-inactive-color, rgba(255, 255, 255, 0.5))";
+    return "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))";
   }
 
   if (normalizedField.endsWith("accent_background")) {
@@ -1322,7 +1322,7 @@ class NodaliaEntityCard extends HTMLElement {
       : styles.card.background;
     const cardBorder = isActive
       ? `1px solid color-mix(in srgb, ${accentColor} 24%, var(--divider-color))`
-      : "1px solid rgba(255, 255, 255, 0.06)";
+      : "1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent)";
     const cardShadow = isActive
       ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`
       : styles.card.box_shadow;
@@ -1358,8 +1358,8 @@ class NodaliaEntityCard extends HTMLElement {
 
         ha-card::before {
           background: ${isActive
-            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, rgba(255, 255, 255, 0.05)), rgba(255, 255, 255, 0))`
-            : "linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0))"};
+            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0))`
+            : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 4%, transparent), rgba(255, 255, 255, 0))"};
           content: "";
           inset: 0;
           pointer-events: none;
@@ -1414,10 +1414,10 @@ class NodaliaEntityCard extends HTMLElement {
           align-items: center;
           appearance: none;
           background: ${styles.icon.background};
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: ${singleRowLayout ? "18px" : "24px"};
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
             0 12px 30px rgba(0, 0, 0, 0.18);
           color: ${isActive ? styles.icon.on_color : styles.icon.off_color};
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
@@ -1558,10 +1558,10 @@ class NodaliaEntityCard extends HTMLElement {
 
         .entity-card__chip {
           align-items: center;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           color: var(--secondary-text-color);
           display: inline-flex;
           flex: 0 0 auto;
@@ -1601,11 +1601,11 @@ class NodaliaEntityCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
             0 10px 24px rgba(0, 0, 0, 0.16);
           color: var(--primary-text-color);
           cursor: pointer;
@@ -2408,8 +2408,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
         }
 
         .editor-section {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 18px;
           display: grid;
           gap: 14px;
@@ -2463,8 +2463,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
         .editor-field select,
         .editor-field textarea {
           appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 12px;
           color: var(--primary-text-color);
           font: inherit;
@@ -2488,8 +2488,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
         .editor-color-picker {
           align-items: center;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           cursor: pointer;
           display: inline-flex;
@@ -2509,18 +2509,18 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
         .editor-color-picker:hover,
         .editor-color-picker:focus-within {
-          border-color: rgba(255, 255, 255, 0.22);
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+          border-color: color-mix(in srgb, var(--primary-text-color) 22%, transparent);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 
         .editor-color-swatch {
           --editor-swatch: #71c0ff;
           background:
             linear-gradient(var(--editor-swatch), var(--editor-swatch)),
-            conic-gradient(from 90deg, rgba(255, 255, 255, 0.06) 25%, rgba(0, 0, 0, 0.12) 0 50%, rgba(255, 255, 255, 0.06) 0 75%, rgba(0, 0, 0, 0.12) 0);
+            conic-gradient(from 90deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 25%, rgba(0, 0, 0, 0.12) 0 50%, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 0 75%, rgba(0, 0, 0, 0.12) 0);
           background-position: center;
           background-size: cover, 10px 10px;
-          border: 1px solid rgba(255, 255, 255, 0.14);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
           border-radius: 999px;
           display: block;
           height: 22px;
@@ -2551,8 +2551,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
         .editor-section__toggle-button {
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -2586,8 +2586,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
         .editor-actions-toolbar button,
         .editor-action__buttons button {
           appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 10px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -2597,8 +2597,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
         }
 
         .editor-action {
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 16px;
           display: grid;
           gap: 12px;
@@ -2660,10 +2660,10 @@ class NodaliaEntityCardEditor extends HTMLElement {
         }
 
         .editor-toggle__switch {
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           display: inline-flex;
           font-size: 0;
           height: 22px;
@@ -2701,8 +2701,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
         :is(.editor-toggle, .editor-checkbox) input:focus-visible + .editor-toggle__switch {
           box-shadow:
-            0 0 0 3px rgba(255, 255, 255, 0.14),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            0 0 0 3px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 </style>
       <div class="editor">
@@ -2898,13 +2898,13 @@ class NodaliaEntityCardEditor extends HTMLElement {
                   ${this._renderTextField("Separación interna", "styles.card.gap", config.styles.card.gap)}
                   ${this._renderTextField("Tamaño botón principal", "styles.icon.size", config.styles.icon.size)}
                   ${this._renderColorField("Fondo burbuja principal", "styles.icon.background", config.styles.icon.background, {
-                    fallbackValue: "rgba(255, 255, 255, 0.06)",
+                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
                   })}
                   ${this._renderColorField("Color icono activo", "styles.icon.on_color", config.styles.icon.on_color, {
                     fallbackValue: "var(--info-color, #71c0ff)",
                   })}
                   ${this._renderColorField("Color icono inactivo", "styles.icon.off_color", config.styles.icon.off_color, {
-                    fallbackValue: "var(--state-inactive-color, rgba(255, 255, 255, 0.5))",
+                    fallbackValue: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
                   })}
                   ${this._renderTextField("Tamaño botones auxiliares", "styles.control.size", config.styles.control.size)}
                   ${this._renderColorField("Fondo de acento", "styles.control.accent_background", config.styles.control.accent_background, {

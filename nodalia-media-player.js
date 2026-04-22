@@ -361,7 +361,7 @@ function getEditorColorFallbackValue(field) {
   const normalizedField = String(field ?? "");
 
   if (normalizedField.endsWith("off_color")) {
-    return "var(--state-inactive-color, rgba(255, 255, 255, 0.5))";
+    return "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))";
   }
 
   if (normalizedField.endsWith("accent_background")) {
@@ -373,7 +373,7 @@ function getEditorColorFallbackValue(field) {
   }
 
   if (normalizedField.endsWith("progress_background")) {
-    return "rgba(255, 255, 255, 0.12)";
+    return "color-mix(in srgb, var(--primary-text-color) 12%, transparent)";
   }
 
   if (normalizedField.endsWith("overlay_color")) {
@@ -3462,8 +3462,8 @@ class NodaliaMediaPlayer extends HTMLElement {
     const activeTintColor = playerStyles.active_tint_color || "var(--info-color, #71c0ff)";
     const activeCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} 18%, ${playerStyles.background}) 0%, color-mix(in srgb, ${activeTintColor} 10%, ${playerStyles.background}) 52%, ${playerStyles.background} 100%)`;
     const activeCardBorder = `color-mix(in srgb, ${activeTintColor} 34%, var(--divider-color))`;
-    const activeCardShadow = `${playerStyles.box_shadow}, 0 0 0 1px color-mix(in srgb, ${activeTintColor} 10%, rgba(255, 255, 255, 0.08)), 0 18px 38px color-mix(in srgb, ${activeTintColor} 18%, rgba(16, 34, 82, 0.18))`;
-    const activeCardHighlight = `linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} 22%, rgba(255, 255, 255, 0.06)), rgba(255, 255, 255, 0))`;
+    const activeCardShadow = `${playerStyles.box_shadow}, 0 0 0 1px color-mix(in srgb, ${activeTintColor} 10%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)), 0 18px 38px color-mix(in srgb, ${activeTintColor} 18%, rgba(16, 34, 82, 0.18))`;
+    const activeCardHighlight = `linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -3570,7 +3570,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card::before {
-          background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
+          background: linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0));
           content: "";
           inset: 0;
           pointer-events: none;
@@ -3711,10 +3711,10 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__artwork {
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 22px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 24px rgba(0, 0, 0, 0.18);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0, 0, 0, 0.18);
           color: inherit;
           cursor: default;
           display: flex;
@@ -3792,7 +3792,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           background: rgba(var(--rgb-primary-color), 0.14);
           border-color: rgba(var(--rgb-primary-color), 0.2);
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
             0 10px 24px rgba(0, 0, 0, 0.18),
             0 0 0 1px rgba(var(--rgb-primary-color), 0.1);
         }
@@ -3910,10 +3910,10 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__transport {
           align-items: center;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           display: inline-flex;
           gap: 6px;
           margin: 0 auto;
@@ -4209,8 +4209,8 @@ class NodaliaMediaPlayer extends HTMLElement {
           --media-player-slider-input-height: max(44px, var(--media-player-slider-thumb-size));
           --media-player-slider-thumb-size: calc(${playerStyles.slider_thumb_size} + 12px);
           align-items: center;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 999px;
           display: grid;
           min-height: ${playerStyles.slider_wrap_height};
@@ -4235,8 +4235,8 @@ class NodaliaMediaPlayer extends HTMLElement {
               90deg,
               ${playerStyles.progress_color} 0%,
               ${playerStyles.progress_color} calc(var(--media-volume, 0) * 1%),
-              rgba(255, 255, 255, 0.08) calc(var(--media-volume, 0) * 1%),
-              rgba(255, 255, 255, 0.08) 100%
+              color-mix(in srgb, var(--primary-text-color) 8%, transparent) calc(var(--media-volume, 0) * 1%),
+              color-mix(in srgb, var(--primary-text-color) 8%, transparent) 100%
             );
           border-radius: 999px;
           height: ${playerStyles.slider_height};
@@ -4314,8 +4314,8 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__chip {
           align-items: center;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 999px;
           color: var(--secondary-text-color);
           display: inline-flex;
@@ -4375,8 +4375,8 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__source-button {
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 999px;
           color: var(--secondary-text-color);
           cursor: pointer;
@@ -4428,8 +4428,8 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__volume-button {
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 999px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -4440,7 +4440,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__control {
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           height: ${playerStyles.control_size};
           width: ${playerStyles.control_size};
         }
@@ -4495,10 +4495,10 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__dots {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           display: inline-flex;
           gap: 4px;
           justify-content: center;
@@ -4521,7 +4521,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__dot::before {
-          background: rgba(255, 255, 255, 0.18);
+          background: color-mix(in srgb, var(--primary-text-color) 18%, transparent);
           border-radius: 999px;
           content: "";
           height: ${playerStyles.dot_size};
@@ -4599,8 +4599,8 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-browser__item-play {
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 999px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -4634,8 +4634,8 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-browser__item-main {
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.05);
+          background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           border-radius: 20px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -4655,7 +4655,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-browser__item-artwork {
           align-items: center;
-          background: rgba(255, 255, 255, 0.05);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           border-radius: 14px;
           display: inline-flex;
           height: 46px;
@@ -5590,8 +5590,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
         }
 
         .editor-section {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 18px;
           display: grid;
           gap: 14px;
@@ -5625,8 +5625,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
         .editor-section__toggle-button {
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -5674,8 +5674,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
         .editor-field select,
         .editor-field textarea {
           appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 12px;
           color: var(--primary-text-color);
           font: inherit;
@@ -5688,8 +5688,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
         .editor-control-host select,
         .editor-control-host textarea {
           appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 12px;
           color: var(--primary-text-color);
           font: inherit;
@@ -5708,8 +5708,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
         .editor-color-picker {
           align-items: center;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           cursor: pointer;
           display: inline-flex;
@@ -5729,18 +5729,18 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
         .editor-color-picker:hover,
         .editor-color-picker:focus-within {
-          border-color: rgba(255, 255, 255, 0.22);
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+          border-color: color-mix(in srgb, var(--primary-text-color) 22%, transparent);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 
         .editor-color-swatch {
           --editor-swatch: #71c0ff;
           background:
             linear-gradient(var(--editor-swatch), var(--editor-swatch)),
-            conic-gradient(from 90deg, rgba(255, 255, 255, 0.06) 25%, rgba(0, 0, 0, 0.12) 0 50%, rgba(255, 255, 255, 0.06) 0 75%, rgba(0, 0, 0, 0.12) 0);
+            conic-gradient(from 90deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 25%, rgba(0, 0, 0, 0.12) 0 50%, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 0 75%, rgba(0, 0, 0, 0.12) 0);
           background-position: center;
           background-size: cover, 10px 10px;
-          border: 1px solid rgba(255, 255, 255, 0.14);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
           border-radius: 999px;
           display: block;
           height: 18px;
@@ -5786,8 +5786,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
         button {
           appearance: none;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -5814,7 +5814,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
         .player-editor-card {
           background: rgba(255, 255, 255, 0.025);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 16px;
           display: grid;
           gap: 12px;
@@ -5822,8 +5822,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
         }
 
         .player-editor-subgroup {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.05);
+          background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           border-radius: 14px;
           display: grid;
           gap: 12px;
@@ -5901,10 +5901,10 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
         }
 
         .editor-toggle__switch {
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           display: inline-flex;
           font-size: 0;
           height: 22px;
@@ -5942,8 +5942,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
         :is(.editor-toggle, .editor-checkbox) input:focus-visible + .editor-toggle__switch {
           box-shadow:
-            0 0 0 3px rgba(255, 255, 255, 0.14),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            0 0 0 3px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 </style>
       <div class="editor">

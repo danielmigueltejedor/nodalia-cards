@@ -33,7 +33,7 @@ const DEFAULT_CONFIG = {
   styles: {
     card: {
       background: "var(--ha-card-background)",
-      border: "1px solid rgba(255, 255, 255, 0.06)",
+      border: "1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       border_radius: "999px",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "4px 8px",
@@ -41,9 +41,9 @@ const DEFAULT_CONFIG = {
     },
     icon: {
       size: "26px",
-      background: "rgba(255, 255, 255, 0.05)",
+      background: "color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
       on_color: "var(--info-color, #71c0ff)",
-      off_color: "var(--state-inactive-color, rgba(255, 255, 255, 0.55))",
+      off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
       icon_only_offset_y: "2px",
     },
     title_size: "12px",
@@ -527,7 +527,7 @@ class NodaliaInsigniaCard extends HTMLElement {
         purple: "#b59dff",
         pink: "#ff8fd1",
         teal: "#7fd0c8",
-        gray: "var(--state-inactive-color, rgba(255, 255, 255, 0.55))",
+        gray: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
       };
       return presets[preset] || presets.blue;
     }
@@ -539,7 +539,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     const unit = normalizeTextKey(rawUnit);
 
     if (domain === "light") {
-      return stateKey === "on" ? "var(--warning-color, #f6b04d)" : "var(--state-inactive-color, rgba(255, 255, 255, 0.5))";
+      return stateKey === "on" ? "var(--warning-color, #f6b04d)" : "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))";
     }
     if (domain === "fan") {
       return "var(--info-color, #71c0ff)";
@@ -797,12 +797,12 @@ class NodaliaInsigniaCard extends HTMLElement {
         .insignia-card__icon {
           align-items: center;
           background:
-            radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 60%),
+            radial-gradient(circle at top left, color-mix(in srgb, var(--primary-text-color) 6%, transparent), transparent 60%),
             ${styles.icon.background};
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent),
             0 8px 20px rgba(0, 0, 0, 0.14);
           color: ${active ? styles.icon.on_color : (dimIcon ? styles.icon.off_color : "var(--primary-text-color)")};
           display: inline-flex;
@@ -1080,8 +1080,8 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
           gap: 14px;
         }
         .editor-section {
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 18px;
           display: grid;
           gap: 12px;
@@ -1110,8 +1110,8 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
         .editor-field input,
         .editor-field select,
         .editor-field textarea {
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 12px;
           color: var(--primary-text-color);
           font: inherit;
@@ -1151,10 +1151,10 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
         }
 
         .editor-toggle__switch {
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           display: inline-flex;
           font-size: 0;
           height: 22px;
@@ -1192,8 +1192,8 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
 
         :is(.editor-toggle, .editor-checkbox) input:focus-visible + .editor-toggle__switch {
           box-shadow:
-            0 0 0 3px rgba(255, 255, 255, 0.14),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            0 0 0 3px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 </style>
       <div class="editor">

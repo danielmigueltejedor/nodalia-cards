@@ -108,10 +108,10 @@ const DEFAULT_CONFIG = {
     button: {
       size: "54px",
       border_radius: "999px",
-      background: "rgba(255, 255, 255, 0.05)",
+      background: "color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
       color: "var(--primary-text-color)",
       active_color: "var(--primary-text-color)",
-      active_background: "rgba(255, 255, 255, 0.08)",
+      active_background: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
       icon_size: "28px",
       icon_offset_x: "0px",
       icon_offset_y: "-1px",
@@ -2681,7 +2681,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           width: ${config.styles.button.size};
           height: ${config.styles.button.size};
           border-radius: ${config.styles.button.border_radius};
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 3%, transparent);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -2902,8 +2902,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
         .media-browser__item-play {
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 999px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -2937,8 +2937,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
         .media-browser__item-main {
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.05);
+          background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           border-radius: 20px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -2958,7 +2958,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .media-browser__item-artwork {
           align-items: center;
-          background: rgba(255, 255, 255, 0.05);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           border-radius: 14px;
           display: inline-flex;
           height: 46px;
@@ -3055,10 +3055,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
         .popup-item__icon-wrap {
           align-items: center;
           background: var(--popup-route-background);
-          border: 1px solid rgba(255, 255, 255, 0.02);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 2%, transparent);
           border-radius: ${config.styles.button.border_radius};
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.03),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 3%, transparent),
             0 8px 18px rgba(0, 0, 0, 0.12);
           display: flex;
           height: max(${config.styles.popup.item_size}, calc(${config.styles.button.icon_size} + 14px));
@@ -3146,7 +3146,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
         }
 
         .media-player-card::before {
-          background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
+          background: linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0));
           content: "";
           inset: 0;
           pointer-events: none;
@@ -3226,10 +3226,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .media-player__artwork {
           align-items: center;
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 22px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 24px rgba(0, 0, 0, 0.18);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0, 0, 0, 0.18);
           display: flex;
           height: ${config.styles.media_player.artwork_size};
           justify-content: center;
@@ -3341,18 +3341,18 @@ class NodaliaNavigationBarCard extends HTMLElement {
           display: inline-flex;
           gap: 8px;
           padding: 6px;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           margin: 0 auto;
         }
 
         .media-player__volume-button {
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 999px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -3384,8 +3384,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .media-player__chip {
           align-items: center;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 999px;
           color: var(--secondary-text-color);
           display: inline-flex;
@@ -3433,15 +3433,15 @@ class NodaliaNavigationBarCard extends HTMLElement {
         .media-player__control {
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 999px;
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
           height: ${config.styles.media_player.control_size};
           justify-content: center;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           line-height: 0;
           position: relative;
           width: ${config.styles.media_player.control_size};
@@ -3484,10 +3484,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
         }
 
         .media-player__dots {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           display: inline-flex;
           gap: 4px;
           justify-content: center;
@@ -3497,8 +3497,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
         .media-player__collapse {
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 999px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -3533,7 +3533,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
         }
 
         .media-player__dot::before {
-          background: rgba(255, 255, 255, 0.18);
+          background: color-mix(in srgb, var(--primary-text-color) 18%, transparent);
           border-radius: 999px;
           content: "";
           height: ${config.styles.media_player.dot_size};
@@ -3564,7 +3564,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .media-player-toggle__artwork {
           align-items: center;
-          background: rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           display: inline-flex;
           flex: 0 0 auto;

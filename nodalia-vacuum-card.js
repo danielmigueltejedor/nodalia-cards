@@ -113,7 +113,7 @@ const DEFAULT_CONFIG = {
     },
     icon: {
       size: "58px",
-      background: "rgba(255, 255, 255, 0.06)",
+      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       active_color: "#61c97a",
       washing_color: "#5aa7ff",
@@ -121,7 +121,7 @@ const DEFAULT_CONFIG = {
       emptying_color: "#9b6b4a",
       returning_color: "#f6b73c",
       error_color: "var(--error-color, #ff6b6b)",
-      docked_color: "var(--state-inactive-color, rgba(255, 255, 255, 0.55))",
+      docked_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
     },
     control: {
       size: "40px",
@@ -343,7 +343,7 @@ function getEditorColorFallbackValue(field) {
   const normalizedField = String(field ?? "");
 
   if (normalizedField.endsWith("off_color") || normalizedField.endsWith("docked_color")) {
-    return "var(--state-inactive-color, rgba(255, 255, 255, 0.55))";
+    return "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))";
   }
 
   if (normalizedField.endsWith("accent_background")) {
@@ -2531,8 +2531,8 @@ class NodaliaVacuumCard extends HTMLElement {
 
         ha-card::before {
           background: ${isTintedState
-            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, rgba(255, 255, 255, 0.06)), rgba(255, 255, 255, 0))`
-            : "linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0))"};
+            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`
+            : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"};
           content: "";
           inset: 0;
           pointer-events: none;
@@ -2594,11 +2594,11 @@ class NodaliaVacuumCard extends HTMLElement {
           align-items: center;
           appearance: none;
           background: ${isTintedState
-            ? `color-mix(in srgb, ${accentColor} 24%, rgba(255, 255, 255, 0.08))`
-            : "rgba(255, 255, 255, 0.06)"};
-          border: 1px solid color-mix(in srgb, ${accentColor} 22%, rgba(255, 255, 255, 0.08));
+            ? `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`
+            : "color-mix(in srgb, var(--primary-text-color) 6%, transparent)"};
+          border: 1px solid color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 24px rgba(0, 0, 0, 0.16);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16);
           color: ${isTintedState ? accentColor : styles.icon.color};
           cursor: pointer;
           display: inline-flex;
@@ -2687,10 +2687,10 @@ class NodaliaVacuumCard extends HTMLElement {
         .vacuum-card__chip {
           align-items: center;
           backdrop-filter: blur(18px);
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           color: var(--secondary-text-color);
           display: inline-flex;
           font-size: ${styles.chip_font_size};
@@ -2709,8 +2709,8 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card__chip--battery {
-          background: color-mix(in srgb, ${batteryChipColor} 16%, rgba(255, 255, 255, 0.04));
-          border-color: color-mix(in srgb, ${batteryChipColor} 38%, rgba(255, 255, 255, 0.08));
+          background: color-mix(in srgb, ${batteryChipColor} 16%, color-mix(in srgb, var(--primary-text-color) 4%, transparent));
+          border-color: color-mix(in srgb, ${batteryChipColor} 38%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
           color: ${batteryChipColor};
           gap: 6px;
         }
@@ -2749,10 +2749,10 @@ class NodaliaVacuumCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 24px rgba(0, 0, 0, 0.16);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16);
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
@@ -2770,7 +2770,7 @@ class NodaliaVacuumCard extends HTMLElement {
 
         .vacuum-card__control--active {
           background: color-mix(in srgb, ${accentColor} 18%, ${styles.control.accent_background});
-          border-color: color-mix(in srgb, ${accentColor} 48%, rgba(255, 255, 255, 0.12));
+          border-color: color-mix(in srgb, ${accentColor} 48%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
           color: ${styles.control.accent_color};
         }
 
@@ -2807,8 +2807,8 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card__mode-toggle--active {
-          background: color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.04));
-          border-color: color-mix(in srgb, ${accentColor} 42%, rgba(255, 255, 255, 0.12));
+          background: color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 4%, transparent));
+          border-color: color-mix(in srgb, ${accentColor} 42%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
           color: var(--primary-text-color);
         }
 
@@ -2820,10 +2820,10 @@ class NodaliaVacuumCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           color: var(--secondary-text-color);
           cursor: pointer;
           display: inline-flex;
@@ -2840,8 +2840,8 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card__preset--active {
-          background: color-mix(in srgb, ${accentColor} 18%, rgba(255, 255, 255, 0.04));
-          border-color: color-mix(in srgb, ${accentColor} 42%, rgba(255, 255, 255, 0.12));
+          background: color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 4%, transparent));
+          border-color: color-mix(in srgb, ${accentColor} 42%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
           color: var(--primary-text-color);
         }
 
@@ -3746,8 +3746,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         }
 
         .editor-section {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 18px;
           display: grid;
           gap: 14px;
@@ -3781,8 +3781,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         .editor-section__toggle-button {
           align-items: center;
           appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -3829,8 +3829,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         .editor-field input,
         .editor-field select {
           appearance: none;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 12px;
           color: var(--primary-text-color);
           font: inherit;
@@ -3849,8 +3849,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
         .editor-color-picker {
           align-items: center;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           cursor: pointer;
           display: inline-flex;
@@ -3870,18 +3870,18 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
         .editor-color-picker:hover,
         .editor-color-picker:focus-within {
-          border-color: rgba(255, 255, 255, 0.22);
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+          border-color: color-mix(in srgb, var(--primary-text-color) 22%, transparent);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 
         .editor-color-swatch {
           --editor-swatch: #71c0ff;
           background:
             linear-gradient(var(--editor-swatch), var(--editor-swatch)),
-            conic-gradient(from 90deg, rgba(255, 255, 255, 0.06) 25%, rgba(0, 0, 0, 0.12) 0 50%, rgba(255, 255, 255, 0.06) 0 75%, rgba(0, 0, 0, 0.12) 0);
+            conic-gradient(from 90deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 25%, rgba(0, 0, 0, 0.12) 0 50%, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 0 75%, rgba(0, 0, 0, 0.12) 0);
           background-position: center;
           background-size: cover, 10px 10px;
-          border: 1px solid rgba(255, 255, 255, 0.14);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
           border-radius: 999px;
           display: block;
           height: 22px;
@@ -3898,8 +3898,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         }
 
         .editor-subsection {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.05);
+          background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           border-radius: 14px;
           display: grid;
           gap: 10px;
@@ -3962,10 +3962,10 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         }
 
         .editor-toggle__switch {
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           display: inline-flex;
           font-size: 0;
           height: 22px;
@@ -4003,8 +4003,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
         :is(.editor-toggle, .editor-checkbox) input:focus-visible + .editor-toggle__switch {
           box-shadow:
-            0 0 0 3px rgba(255, 255, 255, 0.14),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            0 0 0 3px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 </style>
       <div class="editor">
@@ -4221,7 +4221,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
                   ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
                   ${this._renderTextField("Tamaño burbuja principal", "styles.icon.size", config.styles.icon.size)}
                   ${this._renderColorField("Fondo burbuja principal", "styles.icon.background", config.styles.icon.background, {
-                    fallbackValue: "rgba(255, 255, 255, 0.06)",
+                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
                   })}
                   ${this._renderColorField("Color icono base", "styles.icon.color", config.styles.icon.color, {
                     fallbackValue: "var(--primary-text-color)",
@@ -4242,7 +4242,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
                     fallbackValue: "#f6b73c",
                   })}
                   ${this._renderColorField("Color en base", "styles.icon.docked_color", config.styles.icon.docked_color, {
-                    fallbackValue: "var(--state-inactive-color, rgba(255, 255, 255, 0.55))",
+                    fallbackValue: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
                   })}
                   ${this._renderColorField("Color error", "styles.icon.error_color", config.styles.icon.error_color, {
                     fallbackValue: "var(--error-color, #ff6b6b)",
