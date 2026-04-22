@@ -1273,15 +1273,13 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           background: rgba(255, 255, 255, 0.96);
           border-radius: 50%;
           content: "";
-          box-shadow:
-            0 0 0 1px rgba(255, 255, 255, 0.08),
-            0 0 12px rgba(255, 255, 255, 0.22);
-          height: 76%;
+          box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+          height: 82%;
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: 76%;
+          width: 82%;
         }
 
         .gauge-card__dial-center {
