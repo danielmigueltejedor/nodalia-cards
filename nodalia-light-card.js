@@ -1043,6 +1043,7 @@ class NodaliaLightCard extends HTMLElement {
     this._clearModeSwitchTransition();
 
     const phaseDuration = Math.max(100, Math.round(animations.modeSwitchDuration / 2));
+    const settleDuration = phaseDuration + 34;
     const fromMode = currentMode;
     const toMode = nextMode;
 
@@ -1065,9 +1066,29 @@ class NodaliaLightCard extends HTMLElement {
 
       this._modeSwitchTimer = window.setTimeout(() => {
         this._modeSwitchTimer = 0;
-        this._modeTransition = null;
-        this._render();
-      }, phaseDuration);
+
+        const finalizeTransition = () => {
+          if (
+            !this._modeTransition ||
+            this._modeTransition.phase !== "expanding" ||
+            this._modeTransition.to !== toMode
+          ) {
+            return;
+          }
+
+          this._modeTransition = null;
+          this._render();
+        };
+
+        if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(finalizeTransition);
+          });
+          return;
+        }
+
+        finalizeTransition();
+      }, settleDuration);
     }, phaseDuration);
   }
 
@@ -2250,6 +2271,8 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__active-chip-inner {
           backface-visibility: hidden;
           display: inline-flex;
+          opacity: 1;
+          transform: none;
           will-change: opacity, transform;
           transform-origin: right center;
         }
@@ -2294,6 +2317,8 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__mode-panel-inner {
           backface-visibility: hidden;
           display: grid;
+          opacity: 1;
+          transform: none;
           will-change: opacity, transform;
           width: 100%;
         }

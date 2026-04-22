@@ -331,6 +331,10 @@ class NodaliaPersonCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
+    this._readyImageUrls = new Set();
+    this._failedImageUrls = new Set();
+    this._pendingImagePreloads = new Map();
+    this._displayPictureUrl = "";
     this._onShadowClick = this._onShadowClick.bind(this);
   }
 
@@ -403,6 +407,118 @@ class NodaliaPersonCard extends HTMLElement {
       || state?.attributes?.entity_picture
       || "",
     ).trim();
+  }
+
+  _isImageUrlReady(url) {
+    return Boolean(url) && this._readyImageUrls.has(url);
+  }
+
+  _isImageUrlFailed(url) {
+    return Boolean(url) && this._failedImageUrls.has(url);
+  }
+
+  _preloadImageUrl(url, onSettled = null) {
+    if (!url) {
+      return Promise.resolve(false);
+    }
+
+    if (this._isImageUrlReady(url)) {
+      onSettled?.(true);
+      return Promise.resolve(true);
+    }
+
+    if (this._isImageUrlFailed(url)) {
+      onSettled?.(false);
+      return Promise.resolve(false);
+    }
+
+    const existing = this._pendingImagePreloads.get(url);
+    if (existing) {
+      if (onSettled) {
+        existing.then(onSettled);
+      }
+      return existing;
+    }
+
+    if (typeof Image === "undefined") {
+      this._readyImageUrls.add(url);
+      onSettled?.(true);
+      return Promise.resolve(true);
+    }
+
+    const preloadPromise = new Promise(resolve => {
+      const image = new Image();
+      image.decoding = "async";
+
+      const settle = loaded => {
+        this._pendingImagePreloads.delete(url);
+        if (loaded) {
+          this._readyImageUrls.add(url);
+          this._failedImageUrls.delete(url);
+        } else {
+          this._failedImageUrls.add(url);
+        }
+        resolve(loaded);
+        onSettled?.(loaded);
+      };
+
+      image.onload = () => settle(true);
+      image.onerror = () => settle(false);
+      image.src = url;
+    });
+
+    this._pendingImagePreloads.set(url, preloadPromise);
+    return preloadPromise;
+  }
+
+  _ensurePersonPictureReady(url) {
+    if (!url) {
+      this._displayPictureUrl = "";
+      return true;
+    }
+
+    if (this._isImageUrlReady(url)) {
+      this._displayPictureUrl = url;
+      return true;
+    }
+
+    if (this._isImageUrlFailed(url)) {
+      this._displayPictureUrl = "";
+      return true;
+    }
+
+    this._preloadImageUrl(url, () => {
+      const currentPicture = this._getPersonPicture(this._getState());
+      if (currentPicture !== url) {
+        return;
+      }
+
+      this._displayPictureUrl = this._isImageUrlReady(url) ? url : "";
+      this._lastRenderSignature = "";
+      this._render();
+    });
+
+    return false;
+  }
+
+  _getRenderablePersonPicture(state) {
+    const desiredPicture = this._getPersonPicture(state);
+    if (!desiredPicture) {
+      this._displayPictureUrl = "";
+      return "";
+    }
+
+    if (this._isImageUrlReady(desiredPicture)) {
+      this._displayPictureUrl = desiredPicture;
+      return desiredPicture;
+    }
+
+    if (this._isImageUrlFailed(desiredPicture)) {
+      this._displayPictureUrl = "";
+      return "";
+    }
+
+    return this._displayPictureUrl || "";
   }
 
   _getFallbackIcon(state) {
@@ -527,7 +643,9 @@ class NodaliaPersonCard extends HTMLElement {
 
     const title = this._getTitle(state);
     const subtitle = this._config.show_state !== false ? this._translateState(state) : "";
-    const picture = this._getPersonPicture(state);
+    const desiredPicture = this._getPersonPicture(state);
+    const pictureReady = !desiredPicture || this._ensurePersonPictureReady(desiredPicture);
+    const picture = this._getRenderablePersonPicture(state);
     const fallbackIcon = this._getFallbackIcon(state);
     const badge = this._getBadgeDescriptor(state);
     const zoneState = this._getMatchingZoneState(state);
@@ -723,6 +841,7 @@ class NodaliaPersonCard extends HTMLElement {
       : `${styles.card.box_shadow}, 0 12px 28px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
+    const animateWithPicture = shouldAnimateEntrance && pictureReady;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1015,8 +1134,8 @@ class NodaliaPersonCard extends HTMLElement {
         `}
       </style>
       <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""}">
-        <div class="person-card__content ${shouldAnimateEntrance ? "person-card__content--entering" : ""}" ${canRunPrimaryAction ? 'data-person-action="primary"' : ""}>
-          <div class="person-card__avatar ${shouldAnimateEntrance ? "person-card__avatar--entering" : ""}">
+        <div class="person-card__content ${animateWithPicture ? "person-card__content--entering" : ""}" ${canRunPrimaryAction ? 'data-person-action="primary"' : ""}>
+          <div class="person-card__avatar ${animateWithPicture ? "person-card__avatar--entering" : ""}">
             ${
               picture
                 ? `<img src="${escapeHtml(picture)}" alt="${escapeHtml(title)}" />`
@@ -1028,15 +1147,15 @@ class NodaliaPersonCard extends HTMLElement {
                 : ""
             }
           </div>
-          <div class="person-card__copy ${shouldAnimateEntrance ? "person-card__copy--entering" : ""}">
+          <div class="person-card__copy ${animateWithPicture ? "person-card__copy--entering" : ""}">
             <div class="person-card__title">${escapeHtml(title)}</div>
-            ${subtitle ? `<div class="person-card__chips ${shouldAnimateEntrance ? "person-card__chips--entering" : ""}"><div class="person-card__state-chip">${escapeHtml(subtitle)}</div></div>` : ""}
+            ${subtitle ? `<div class="person-card__chips ${animateWithPicture ? "person-card__chips--entering" : ""}"><div class="person-card__state-chip">${escapeHtml(subtitle)}</div></div>` : ""}
           </div>
         </div>
       </ha-card>
     `;
 
-    if (shouldAnimateEntrance) {
+    if (animateWithPicture) {
       this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
     }
 

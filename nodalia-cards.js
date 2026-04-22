@@ -5388,6 +5388,10 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._tvVolumePanelAnimatingEntity = null;
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
+    this._readyArtworkUrls = new Set();
+    this._failedArtworkUrls = new Set();
+    this._pendingArtworkPreloads = new Map();
+    this._displayArtworkByEntity = new Map();
     this._onResize = () => {
       if (this._activeSliderDrag) {
         this._pendingRenderAfterDrag = true;
@@ -5672,6 +5676,132 @@ class NodaliaMediaPlayer extends HTMLElement {
       this._entranceAnimationResetTimer = 0;
       this._animateContentOnNextRender = false;
     }, safeDelay);
+  }
+
+  _isArtworkUrlReady(url) {
+    return Boolean(url) && this._readyArtworkUrls.has(url);
+  }
+
+  _isArtworkUrlFailed(url) {
+    return Boolean(url) && this._failedArtworkUrls.has(url);
+  }
+
+  _preloadArtworkUrl(url, onSettled = null) {
+    if (!url) {
+      return Promise.resolve(false);
+    }
+
+    if (this._isArtworkUrlReady(url)) {
+      onSettled?.(true);
+      return Promise.resolve(true);
+    }
+
+    if (this._isArtworkUrlFailed(url)) {
+      onSettled?.(false);
+      return Promise.resolve(false);
+    }
+
+    const existing = this._pendingArtworkPreloads.get(url);
+    if (existing) {
+      if (onSettled) {
+        existing.then(onSettled);
+      }
+      return existing;
+    }
+
+    if (typeof Image === "undefined") {
+      this._readyArtworkUrls.add(url);
+      onSettled?.(true);
+      return Promise.resolve(true);
+    }
+
+    const preloadPromise = new Promise(resolve => {
+      const image = new Image();
+      image.decoding = "async";
+
+      const settle = loaded => {
+        this._pendingArtworkPreloads.delete(url);
+        if (loaded) {
+          this._readyArtworkUrls.add(url);
+          this._failedArtworkUrls.delete(url);
+        } else {
+          this._failedArtworkUrls.add(url);
+        }
+        resolve(loaded);
+        onSettled?.(loaded);
+      };
+
+      image.onload = () => settle(true);
+      image.onerror = () => settle(false);
+      image.src = url;
+    });
+
+    this._pendingArtworkPreloads.set(url, preloadPromise);
+    return preloadPromise;
+  }
+
+  _ensureArtworkReady(entityId, url, { rerenderOnReady = false } = {}) {
+    if (!entityId) {
+      return !url;
+    }
+
+    if (!url) {
+      this._displayArtworkByEntity.delete(entityId);
+      return true;
+    }
+
+    if (this._isArtworkUrlReady(url)) {
+      this._displayArtworkByEntity.set(entityId, url);
+      return true;
+    }
+
+    if (this._isArtworkUrlFailed(url)) {
+      this._displayArtworkByEntity.delete(entityId);
+      return true;
+    }
+
+    this._preloadArtworkUrl(url, () => {
+      const currentPlayer = this._findPlayerConfig(entityId) || { entity: entityId };
+      const currentState = this._hass?.states?.[entityId];
+      const currentArtwork = currentState ? this._getPlayerArtwork(currentPlayer, currentState) : null;
+      if (currentArtwork !== url) {
+        return;
+      }
+
+      if (this._isArtworkUrlReady(url)) {
+        this._displayArtworkByEntity.set(entityId, url);
+      } else {
+        this._displayArtworkByEntity.delete(entityId);
+      }
+
+      if (rerenderOnReady) {
+        this._lastRenderSignature = "";
+        this._render();
+      }
+    });
+
+    return false;
+  }
+
+  _getRenderableArtwork(entityId, desiredArtworkUrl) {
+    if (!entityId || !desiredArtworkUrl) {
+      if (entityId) {
+        this._displayArtworkByEntity.delete(entityId);
+      }
+      return "";
+    }
+
+    if (this._isArtworkUrlReady(desiredArtworkUrl)) {
+      this._displayArtworkByEntity.set(entityId, desiredArtworkUrl);
+      return desiredArtworkUrl;
+    }
+
+    if (this._isArtworkUrlFailed(desiredArtworkUrl)) {
+      this._displayArtworkByEntity.delete(entityId);
+      return "";
+    }
+
+    return this._displayArtworkByEntity.get(entityId) || "";
   }
 
   _resolveMediaUrl(value, options = {}) {
@@ -7528,7 +7658,10 @@ class NodaliaMediaPlayer extends HTMLElement {
 
   _renderPlayerCard(players, { animateEntrance = false } = {}) {
     if (!players.length) {
-      return "";
+      return {
+        markup: "",
+        animateEntranceApplied: false,
+      };
     }
 
     this._activePlayerIndex = clamp(this._activePlayerIndex, 0, players.length - 1);
@@ -7536,10 +7669,34 @@ class NodaliaMediaPlayer extends HTMLElement {
     const player = players[this._activePlayerIndex];
     const state = this._hass?.states?.[player.entity];
     if (!state) {
-      return "";
+      return {
+        markup: "",
+        animateEntranceApplied: false,
+      };
     }
 
-    const artwork = this._getPlayerArtwork(player, state);
+    players.forEach((visiblePlayer, index) => {
+      const visibleState = this._hass?.states?.[visiblePlayer.entity];
+      if (!visibleState) {
+        return;
+      }
+
+      const visibleArtwork = this._getPlayerArtwork(visiblePlayer, visibleState);
+      if (!visibleArtwork) {
+        return;
+      }
+
+      this._ensureArtworkReady(visiblePlayer.entity, visibleArtwork, {
+        rerenderOnReady: index === this._activePlayerIndex,
+      });
+    });
+
+    const desiredArtwork = this._getPlayerArtwork(player, state);
+    const artworkReady = !desiredArtwork || this._ensureArtworkReady(player.entity, desiredArtwork, {
+      rerenderOnReady: true,
+    });
+    const artwork = this._getRenderableArtwork(player.entity, desiredArtwork);
+    const renderAnimateEntrance = animateEntrance && artworkReady;
     const safeArtwork = artwork ? escapeHtml(artwork) : "";
     const deviceType = this._getPlayerDeviceType(player, state);
     const isTvPlayer = deviceType === "tv";
@@ -7865,7 +8022,8 @@ class NodaliaMediaPlayer extends HTMLElement {
     `;
 
     if (useCompactIdleLayout) {
-      return `
+      return {
+        markup: `
         <div
           class="${playerCardClasses}"
           data-media-card-index="${this._activePlayerIndex}"
@@ -7875,7 +8033,7 @@ class NodaliaMediaPlayer extends HTMLElement {
               ? `<div class="media-player__album-bg" style="background-image:url('${safeArtwork}');"></div>`
               : ""
           }
-          <div class="media-player__content media-player__content--idle${animateEntrance ? " media-player__content--entering" : ""}">
+          <div class="media-player__content media-player__content--idle${renderAnimateEntrance ? " media-player__content--entering" : ""}">
             <div class="media-player__idle-hero">
               ${
                 artworkIsSourceToggle
@@ -7921,10 +8079,13 @@ class NodaliaMediaPlayer extends HTMLElement {
             ${dotsMarkup ? `<div class="media-player__switcher media-player__switcher--idle">${dotsMarkup}</div>` : ""}
           </div>
         </div>
-      `;
+      `,
+        animateEntranceApplied: renderAnimateEntrance,
+      };
     }
 
-    return `
+    return {
+      markup: `
       <div
         class="${playerCardClasses}"
         data-media-card-index="${this._activePlayerIndex}"
@@ -7943,7 +8104,7 @@ class NodaliaMediaPlayer extends HTMLElement {
             `
             : ""
         }
-        <div class="media-player__content${animateEntrance ? " media-player__content--entering" : ""}">
+        <div class="media-player__content${renderAnimateEntrance ? " media-player__content--entering" : ""}">
           <div class="media-player__hero">
             ${
               artworkIsSourceToggle
@@ -8043,7 +8204,9 @@ class NodaliaMediaPlayer extends HTMLElement {
           ${chipsMarkup ? `<div class="media-player__footer">${chipsMarkup}</div>` : ""}
         </div>
       </div>
-    `;
+    `,
+      animateEntranceApplied: renderAnimateEntrance,
+    };
   }
 
   _render() {
@@ -8074,10 +8237,14 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     this._syncTicker(hasPlayers ? players : []);
 
-    const contentMarkup = hasPlayers
+    const playerCardRender = hasPlayers
       ? this._renderPlayerCard(players, {
         animateEntrance: animations.enabled && this._animateContentOnNextRender,
       })
+      : { markup: "", animateEntranceApplied: false };
+
+    const contentMarkup = hasPlayers
+      ? playerCardRender.markup
       : inEditMode
         ? this._renderEmptyState()
         : "";
@@ -9441,7 +9608,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       };
     }
 
-    if (animations.enabled && this._animateContentOnNextRender) {
+    if (animations.enabled && playerCardRender.animateEntranceApplied) {
       this._scheduleEntranceAnimationReset(clamp(Math.round(animations.panelDuration * 0.9), 180, 900) + 120);
     }
   }
@@ -11833,6 +12000,7 @@ class NodaliaLightCard extends HTMLElement {
     this._clearModeSwitchTransition();
 
     const phaseDuration = Math.max(100, Math.round(animations.modeSwitchDuration / 2));
+    const settleDuration = phaseDuration + 34;
     const fromMode = currentMode;
     const toMode = nextMode;
 
@@ -11855,9 +12023,29 @@ class NodaliaLightCard extends HTMLElement {
 
       this._modeSwitchTimer = window.setTimeout(() => {
         this._modeSwitchTimer = 0;
-        this._modeTransition = null;
-        this._render();
-      }, phaseDuration);
+
+        const finalizeTransition = () => {
+          if (
+            !this._modeTransition ||
+            this._modeTransition.phase !== "expanding" ||
+            this._modeTransition.to !== toMode
+          ) {
+            return;
+          }
+
+          this._modeTransition = null;
+          this._render();
+        };
+
+        if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(finalizeTransition);
+          });
+          return;
+        }
+
+        finalizeTransition();
+      }, settleDuration);
     }, phaseDuration);
   }
 
@@ -13040,6 +13228,8 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__active-chip-inner {
           backface-visibility: hidden;
           display: inline-flex;
+          opacity: 1;
+          transform: none;
           will-change: opacity, transform;
           transform-origin: right center;
         }
@@ -13084,6 +13274,8 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__mode-panel-inner {
           backface-visibility: hidden;
           display: grid;
+          opacity: 1;
+          transform: none;
           will-change: opacity, transform;
           width: 100%;
         }
@@ -53201,6 +53393,10 @@ class NodaliaPersonCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
+    this._readyImageUrls = new Set();
+    this._failedImageUrls = new Set();
+    this._pendingImagePreloads = new Map();
+    this._displayPictureUrl = "";
     this._onShadowClick = this._onShadowClick.bind(this);
   }
 
@@ -53273,6 +53469,118 @@ class NodaliaPersonCard extends HTMLElement {
       || state?.attributes?.entity_picture
       || "",
     ).trim();
+  }
+
+  _isImageUrlReady(url) {
+    return Boolean(url) && this._readyImageUrls.has(url);
+  }
+
+  _isImageUrlFailed(url) {
+    return Boolean(url) && this._failedImageUrls.has(url);
+  }
+
+  _preloadImageUrl(url, onSettled = null) {
+    if (!url) {
+      return Promise.resolve(false);
+    }
+
+    if (this._isImageUrlReady(url)) {
+      onSettled?.(true);
+      return Promise.resolve(true);
+    }
+
+    if (this._isImageUrlFailed(url)) {
+      onSettled?.(false);
+      return Promise.resolve(false);
+    }
+
+    const existing = this._pendingImagePreloads.get(url);
+    if (existing) {
+      if (onSettled) {
+        existing.then(onSettled);
+      }
+      return existing;
+    }
+
+    if (typeof Image === "undefined") {
+      this._readyImageUrls.add(url);
+      onSettled?.(true);
+      return Promise.resolve(true);
+    }
+
+    const preloadPromise = new Promise(resolve => {
+      const image = new Image();
+      image.decoding = "async";
+
+      const settle = loaded => {
+        this._pendingImagePreloads.delete(url);
+        if (loaded) {
+          this._readyImageUrls.add(url);
+          this._failedImageUrls.delete(url);
+        } else {
+          this._failedImageUrls.add(url);
+        }
+        resolve(loaded);
+        onSettled?.(loaded);
+      };
+
+      image.onload = () => settle(true);
+      image.onerror = () => settle(false);
+      image.src = url;
+    });
+
+    this._pendingImagePreloads.set(url, preloadPromise);
+    return preloadPromise;
+  }
+
+  _ensurePersonPictureReady(url) {
+    if (!url) {
+      this._displayPictureUrl = "";
+      return true;
+    }
+
+    if (this._isImageUrlReady(url)) {
+      this._displayPictureUrl = url;
+      return true;
+    }
+
+    if (this._isImageUrlFailed(url)) {
+      this._displayPictureUrl = "";
+      return true;
+    }
+
+    this._preloadImageUrl(url, () => {
+      const currentPicture = this._getPersonPicture(this._getState());
+      if (currentPicture !== url) {
+        return;
+      }
+
+      this._displayPictureUrl = this._isImageUrlReady(url) ? url : "";
+      this._lastRenderSignature = "";
+      this._render();
+    });
+
+    return false;
+  }
+
+  _getRenderablePersonPicture(state) {
+    const desiredPicture = this._getPersonPicture(state);
+    if (!desiredPicture) {
+      this._displayPictureUrl = "";
+      return "";
+    }
+
+    if (this._isImageUrlReady(desiredPicture)) {
+      this._displayPictureUrl = desiredPicture;
+      return desiredPicture;
+    }
+
+    if (this._isImageUrlFailed(desiredPicture)) {
+      this._displayPictureUrl = "";
+      return "";
+    }
+
+    return this._displayPictureUrl || "";
   }
 
   _getFallbackIcon(state) {
@@ -53397,7 +53705,9 @@ class NodaliaPersonCard extends HTMLElement {
 
     const title = this._getTitle(state);
     const subtitle = this._config.show_state !== false ? this._translateState(state) : "";
-    const picture = this._getPersonPicture(state);
+    const desiredPicture = this._getPersonPicture(state);
+    const pictureReady = !desiredPicture || this._ensurePersonPictureReady(desiredPicture);
+    const picture = this._getRenderablePersonPicture(state);
     const fallbackIcon = this._getFallbackIcon(state);
     const badge = this._getBadgeDescriptor(state);
     const zoneState = this._getMatchingZoneState(state);
@@ -53593,6 +53903,7 @@ class NodaliaPersonCard extends HTMLElement {
       : `${styles.card.box_shadow}, 0 12px 28px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
+    const animateWithPicture = shouldAnimateEntrance && pictureReady;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -53885,8 +54196,8 @@ class NodaliaPersonCard extends HTMLElement {
         `}
       </style>
       <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""}">
-        <div class="person-card__content ${shouldAnimateEntrance ? "person-card__content--entering" : ""}" ${canRunPrimaryAction ? 'data-person-action="primary"' : ""}>
-          <div class="person-card__avatar ${shouldAnimateEntrance ? "person-card__avatar--entering" : ""}">
+        <div class="person-card__content ${animateWithPicture ? "person-card__content--entering" : ""}" ${canRunPrimaryAction ? 'data-person-action="primary"' : ""}>
+          <div class="person-card__avatar ${animateWithPicture ? "person-card__avatar--entering" : ""}">
             ${
               picture
                 ? `<img src="${escapeHtml(picture)}" alt="${escapeHtml(title)}" />`
@@ -53898,15 +54209,15 @@ class NodaliaPersonCard extends HTMLElement {
                 : ""
             }
           </div>
-          <div class="person-card__copy ${shouldAnimateEntrance ? "person-card__copy--entering" : ""}">
+          <div class="person-card__copy ${animateWithPicture ? "person-card__copy--entering" : ""}">
             <div class="person-card__title">${escapeHtml(title)}</div>
-            ${subtitle ? `<div class="person-card__chips ${shouldAnimateEntrance ? "person-card__chips--entering" : ""}"><div class="person-card__state-chip">${escapeHtml(subtitle)}</div></div>` : ""}
+            ${subtitle ? `<div class="person-card__chips ${animateWithPicture ? "person-card__chips--entering" : ""}"><div class="person-card__state-chip">${escapeHtml(subtitle)}</div></div>` : ""}
           </div>
         </div>
       </ha-card>
     `;
 
-    if (shouldAnimateEntrance) {
+    if (animateWithPicture) {
       this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
     }
 
