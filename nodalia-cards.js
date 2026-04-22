@@ -10969,6 +10969,7 @@ const HAPTIC_PATTERNS = {
 };
 const COMPACT_LAYOUT_THRESHOLD = 150;
 const OPTIMISTIC_TURN_ON_TIMEOUT = 3200;
+const OPTIMISTIC_TURN_OFF_TIMEOUT = 3200;
 const COLOR_PRESETS = [
   { color: "#ffd166", hs: [42, 60], label: "Calida" },
   { color: "#fff1c1", hs: [48, 18], label: "Suave" },
@@ -11393,6 +11394,7 @@ class NodaliaLightCard extends HTMLElement {
     this._draftBrightness = new Map();
     this._draftTemperature = new Map();
     this._draftHue = new Map();
+    this._lastKnownOnState = new Map();
     this._activeControlMode = "brightness";
     this._cardWidth = 0;
     this._isCompactLayout = false;
@@ -11406,6 +11408,8 @@ class NodaliaLightCard extends HTMLElement {
     this._lastControlsMarkup = "";
     this._optimisticTurnOn = null;
     this._optimisticTurnOnTimer = 0;
+    this._optimisticTurnOff = null;
+    this._optimisticTurnOffTimer = 0;
     this._animationCleanupTimer = 0;
     this._entranceAnimationResetTimer = 0;
     this._animateContentOnNextRender = true;
@@ -11474,6 +11478,7 @@ class NodaliaLightCard extends HTMLElement {
       window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
     }
     this._scheduleOptimisticTurnOnTimeout();
+    this._scheduleOptimisticTurnOffTimeout();
     this._animateContentOnNextRender = true;
     if (this._hass && this._config) {
       this._lastRenderSignature = "";
@@ -11503,6 +11508,7 @@ class NodaliaLightCard extends HTMLElement {
       this._animationCleanupTimer = 0;
     }
     this._clearOptimisticTurnOnTimer();
+    this._clearOptimisticTurnOffTimer();
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
@@ -11526,8 +11532,10 @@ class NodaliaLightCard extends HTMLElement {
   setConfig(config) {
     const previousEntityId = this._config?.entity || "";
     if (previousEntityId && previousEntityId !== config?.entity) {
+      this._lastKnownOnState.delete(previousEntityId);
       this._clearDraftValues(previousEntityId);
       this._clearOptimisticTurnOnState();
+      this._clearOptimisticTurnOffState();
     }
     this._config = normalizeConfig(config || {});
     this._isCompactLayout = this._shouldUseCompactLayout(
@@ -11558,7 +11566,10 @@ class NodaliaLightCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    this._syncOptimisticTurnOnState(this._getActualState());
+    const actualState = this._getActualState();
+    this._syncLastKnownOnState(actualState);
+    this._syncOptimisticTurnOnState(actualState);
+    this._syncOptimisticTurnOffState(actualState);
     const nextSignature = this._getRenderSignature(hass);
 
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
@@ -11690,6 +11701,10 @@ class NodaliaLightCard extends HTMLElement {
 
   _getState() {
     const actualState = this._getActualState();
+    if (this._isOptimisticTurnOffPending(actualState)) {
+      return this._buildOptimisticTurnOffState(actualState);
+    }
+
     if (this._isOptimisticTurnOnPending(actualState)) {
       return this._buildOptimisticTurnOnState(actualState);
     }
@@ -11703,6 +11718,32 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     return this._hass.states[this._config.entity] || null;
+  }
+
+  _createStateSnapshot(state) {
+    if (!state) {
+      return null;
+    }
+
+    return {
+      ...state,
+      attributes: {
+        ...(state.attributes || {}),
+      },
+    };
+  }
+
+  _syncLastKnownOnState(actualState) {
+    const entityId = this._config?.entity || "";
+    if (!entityId || !actualState || actualState.state !== "on") {
+      return;
+    }
+
+    this._lastKnownOnState.set(entityId, this._createStateSnapshot(actualState));
+  }
+
+  _getLastKnownOnState(entityId = this._config?.entity || "") {
+    return entityId ? this._lastKnownOnState.get(entityId) || null : null;
   }
 
   _clearDraftValues(entityId = this._config?.entity) {
@@ -11732,6 +11773,18 @@ class NodaliaLightCard extends HTMLElement {
     if (clearDrafts) {
       this._clearDraftValues(entityId);
     }
+  }
+
+  _clearOptimisticTurnOffTimer() {
+    if (this._optimisticTurnOffTimer) {
+      window.clearTimeout(this._optimisticTurnOffTimer);
+      this._optimisticTurnOffTimer = 0;
+    }
+  }
+
+  _clearOptimisticTurnOffState() {
+    this._clearOptimisticTurnOffTimer();
+    this._optimisticTurnOff = null;
   }
 
   _isOptimisticTurnOnPending(actualState = this._getActualState()) {
@@ -11778,18 +11831,12 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
+    const cachedState = this._getLastKnownOnState(this._config.entity);
     this._optimisticTurnOn = {
       entityId: this._config.entity,
       expiresAt: Date.now() + OPTIMISTIC_TURN_ON_TIMEOUT,
       queuedData: {},
-      stateSnapshot: actualState
-        ? {
-            ...actualState,
-            attributes: {
-              ...(actualState.attributes || {}),
-            },
-          }
-        : null,
+      stateSnapshot: this._createStateSnapshot(cachedState || actualState),
     };
 
     this._scheduleOptimisticTurnOnTimeout();
@@ -11826,8 +11873,8 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _buildOptimisticTurnOnState(actualState = this._getActualState()) {
-    const snapshot = this._optimisticTurnOn?.stateSnapshot || null;
-    const baseState = actualState || snapshot;
+    const snapshot = this._optimisticTurnOn?.stateSnapshot || this._getLastKnownOnState() || null;
+    const baseState = snapshot || actualState;
     if (!baseState) {
       return actualState;
     }
@@ -11895,13 +11942,8 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
-    if (actualState) {
-      this._optimisticTurnOn.stateSnapshot = {
-        ...actualState,
-        attributes: {
-          ...(actualState.attributes || {}),
-        },
-      };
+    if (actualState?.state === "on") {
+      this._optimisticTurnOn.stateSnapshot = this._createStateSnapshot(actualState);
     }
 
     if (["unavailable", "unknown"].includes(actualState?.state)) {
@@ -11915,6 +11957,103 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     this._scheduleOptimisticTurnOnTimeout();
+  }
+
+  _isOptimisticTurnOffPending(actualState = this._getActualState()) {
+    const entityId = this._config?.entity || "";
+    if (!entityId || !this._optimisticTurnOff || this._optimisticTurnOff.entityId !== entityId) {
+      return false;
+    }
+
+    if (actualState?.state === "off") {
+      return false;
+    }
+
+    return Date.now() < this._optimisticTurnOff.expiresAt;
+  }
+
+  _scheduleOptimisticTurnOffTimeout() {
+    this._clearOptimisticTurnOffTimer();
+
+    if (!this._optimisticTurnOff) {
+      return;
+    }
+
+    const remaining = Math.max(0, this._optimisticTurnOff.expiresAt - Date.now());
+    if (!remaining || typeof window === "undefined") {
+      this._clearOptimisticTurnOffState();
+      this._render();
+      return;
+    }
+
+    this._optimisticTurnOffTimer = window.setTimeout(() => {
+      this._optimisticTurnOffTimer = 0;
+
+      if (!this._isOptimisticTurnOffPending(this._getActualState())) {
+        return;
+      }
+
+      this._clearOptimisticTurnOffState();
+      this._render();
+    }, remaining);
+  }
+
+  _startOptimisticTurnOff(actualState = this._getActualState()) {
+    if (!this._config?.entity) {
+      return;
+    }
+
+    this._optimisticTurnOff = {
+      entityId: this._config.entity,
+      expiresAt: Date.now() + OPTIMISTIC_TURN_OFF_TIMEOUT,
+      stateSnapshot: this._createStateSnapshot(actualState || this._getLastKnownOnState(this._config.entity)),
+    };
+
+    this._scheduleOptimisticTurnOffTimeout();
+  }
+
+  _buildOptimisticTurnOffState(actualState = this._getActualState()) {
+    const baseState = this._optimisticTurnOff?.stateSnapshot || actualState || this._getLastKnownOnState();
+    if (!baseState) {
+      return actualState;
+    }
+
+    return {
+      ...baseState,
+      state: "off",
+      attributes: {
+        ...(baseState.attributes || {}),
+        _nodalia_optimistic_off: true,
+      },
+    };
+  }
+
+  _syncOptimisticTurnOffState(actualState) {
+    if (!this._optimisticTurnOff) {
+      return;
+    }
+
+    if (this._optimisticTurnOff.entityId !== (this._config?.entity || "")) {
+      this._clearOptimisticTurnOffState();
+      return;
+    }
+
+    if (actualState?.state === "off") {
+      this._clearOptimisticTurnOffState();
+      return;
+    }
+
+    if (["unavailable", "unknown"].includes(actualState?.state)) {
+      this._clearOptimisticTurnOffState();
+      return;
+    }
+
+    if (!this._isOptimisticTurnOffPending(actualState)) {
+      this._clearOptimisticTurnOffState();
+      return;
+    }
+
+    this._scheduleOptimisticTurnOffTimeout();
   }
 
   _supportsBrightness(state) {
@@ -12095,6 +12234,10 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _getStateLabel(state) {
+    if (state?.attributes?._nodalia_optimistic_off === true) {
+      return "Apagando";
+    }
+
     if (state?.attributes?._nodalia_optimistic_on === true) {
       return "Encendiendo";
     }
@@ -12316,10 +12459,19 @@ class NodaliaLightCard extends HTMLElement {
     if (effectiveState?.state === "on") {
       const shouldClearDrafts = this._isOptimisticTurnOnPending(actualState);
       this._clearOptimisticTurnOnState({ clearDrafts: shouldClearDrafts });
-      if (shouldClearDrafts) {
-        this._render();
+      if (actualState?.state === "on") {
+        this._startOptimisticTurnOff(actualState);
       }
       this._setLightOff();
+      this._render();
+      return;
+    }
+
+    const wasOptimisticallyTurningOff = this._isOptimisticTurnOffPending(actualState);
+    this._clearOptimisticTurnOffState();
+    if (wasOptimisticallyTurningOff && actualState?.state === "on") {
+      this._setLightState();
+      this._render();
       return;
     }
 
