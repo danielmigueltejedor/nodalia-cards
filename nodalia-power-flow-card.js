@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "0.13.4";
+const CARD_VERSION = "0.14.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -89,6 +89,11 @@ const DEFAULT_CONFIG = {
     enabled: true,
     style: "medium",
     fallback_vibrate: false,
+  },
+  animations: {
+    enabled: true,
+    content_duration: 460,
+    button_bounce_duration: 320,
   },
   styles: {
     card: {
@@ -247,6 +252,25 @@ function deleteByPath(target, path) {
   delete cursor[parts[parts.length - 1]];
 }
 
+function getByPath(target, path) {
+  const parts = String(path || "").split(".");
+  let cursor = target;
+
+  for (const key of parts) {
+    if (!key) {
+      return undefined;
+    }
+
+    if (!isObject(cursor) && !Array.isArray(cursor)) {
+      return undefined;
+    }
+
+    cursor = cursor[key];
+  }
+
+  return cursor;
+}
+
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
@@ -263,6 +287,95 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function escapeSelectorValue(value) {
+  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
+function resolveEditorColorValue(value) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || typeof document === "undefined") {
+    return "";
+  }
+
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.color = "";
+  probe.style.color = rawValue;
+  if (!probe.style.color) {
+    return rawValue;
+  }
+
+  (document.body || document.documentElement).appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  if (typeof probe.remove === "function") {
+    probe.remove();
+  } else if (probe.parentNode && typeof probe.parentNode.removeChild === "function") {
+    probe.parentNode.removeChild(probe);
+  }
+  return resolved || rawValue;
+}
+
+function formatEditorHexChannel(value) {
+  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+}
+
+function formatEditorColorFromHex(hex, alpha = 1) {
+  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+    return String(hex ?? "");
+  }
+
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+  const safeAlpha = clamp(Number(alpha), 0, 1);
+  if (safeAlpha >= 0.999) {
+    return `#${normalizedHex}`;
+  }
+
+  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+}
+
+function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const channels = resolvedValue.match(/[\d.]+/g) || [];
+  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+
+  return {
+    alpha,
+    hex,
+    resolved: resolvedValue,
+    source: sourceValue,
+    value: formatEditorColorFromHex(hex, alpha),
+  };
+}
+
+function getEditorColorFallbackValue(field) {
+  const normalizedField = String(field ?? "");
+  const nodeColorMatch = normalizedField.match(/entities\.(grid|home|solar|battery|water|gas)\.color$/);
+
+  if (nodeColorMatch) {
+    return NODE_DEFAULTS[nodeColorMatch[1]]?.color || "#71c0ff";
+  }
+
+  if (normalizedField.endsWith("display_zero_lines.grey_color")) {
+    return rgbArrayToColor(DEFAULT_CONFIG.display_zero_lines.grey_color);
+  }
+
+  if (normalizedField.endsWith(".color")) {
+    return "#71c0ff";
+  }
+
+  return "var(--info-color, #71c0ff)";
 }
 
 function fireEvent(node, type, detail, options) {
@@ -518,13 +631,34 @@ class NodaliaPowerFlowCard extends HTMLElement {
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._lastRenderSignature = "";
+    this._animateContentOnNextRender = true;
+    this._entranceAnimationResetTimer = 0;
     this._onShadowClick = this._onShadowClick.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
+  }
+
+  connectedCallback() {
+    this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this._animateContentOnNextRender = true;
+    if (this._hass && this._config) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
+  }
+
+  disconnectedCallback() {
+    this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
     this._lastRenderSignature = "";
+    this._animateContentOnNextRender = true;
     this._render();
   }
 
@@ -534,6 +668,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
     }
+    this._lastRenderSignature = nextSignature;
     this._render();
   }
 
@@ -598,6 +733,61 @@ class NodaliaPowerFlowCard extends HTMLElement {
     if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
       navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
     }
+  }
+
+  _scheduleEntranceAnimationReset(delay) {
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
+    if (!safeDelay || typeof window === "undefined") {
+      this._animateContentOnNextRender = false;
+      return;
+    }
+
+    this._entranceAnimationResetTimer = window.setTimeout(() => {
+      this._entranceAnimationResetTimer = 0;
+      this._animateContentOnNextRender = false;
+    }, safeDelay);
+  }
+
+  _getAnimationSettings() {
+    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+
+    return {
+      enabled: configuredAnimations.enabled !== false,
+      buttonBounceDuration: clamp(
+        Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+        120,
+        1200,
+      ),
+      contentDuration: clamp(
+        Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration,
+        160,
+        1800,
+      ),
+    };
+  }
+
+  _triggerPressAnimation(element, className = "is-pressing") {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+
+    element.classList.remove(className);
+    element.getBoundingClientRect();
+    element.classList.add(className);
+
+    window.setTimeout(() => {
+      element.classList.remove(className);
+    }, animations.buttonBounceDuration + 40);
   }
 
   _navigate(path) {
@@ -973,10 +1163,29 @@ class NodaliaPowerFlowCard extends HTMLElement {
     `;
   }
 
+  _getNodeAnimationDelay(node, index = 0) {
+    const delayByKind = {
+      home: 110,
+      grid: 150,
+      solar: 185,
+      battery: 215,
+      water: 245,
+      gas: 275,
+      individual: 245,
+    };
+
+    const baseDelay = delayByKind[node?.kind] || 150;
+    return node?.kind === "individual"
+      ? baseDelay + (Math.max(0, Number(index) || 0) * 34)
+      : baseDelay;
+  }
+
   _renderNode(node, options = {}) {
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
     const iconSizes = styles.icon || DEFAULT_CONFIG.styles.icon;
     const layoutPreset = options.layoutPreset || "full";
+    const animateEntrance = options.animateEntrance === true;
+    const enterDelay = Math.max(0, Number(options.enterDelay) || 0);
     const nodeSize = node.kind === "home"
       ? Math.max(92, parseSizeToPixels(iconSizes.home_size, 96))
       : node.kind === "individual"
@@ -1002,6 +1211,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
       ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>`
       : "";
     const isClickable = this._config?.clickable_entities !== false && node.entityId;
+    const nodeClassName = [
+      "power-flow-card__node",
+      `power-flow-card__node--${escapeHtml(node.kind)}`,
+      animateEntrance ? "power-flow-card__node--entering" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
 
     const valueMarkup = this._config?.show_values === false
       ? ""
@@ -1022,7 +1238,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
     if (node.kind === "home") {
       return `
-        <div class="power-flow-card__node power-flow-card__node--home" style="left:${node.position.x}%; top:${node.position.y}%;">
+        <div class="${nodeClassName}" style="left:${node.position.x}%; top:${node.position.y}%; --node-enter-delay:${enterDelay}ms;">
           <button
             class="power-flow-card__bubble power-flow-card__bubble--home ${isClickable ? "is-clickable" : ""}"
             data-node-entity="${escapeHtml(node.entityId)}"
@@ -1054,7 +1270,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
 
     return `
-      <div class="power-flow-card__node power-flow-card__node--${escapeHtml(node.kind)}" style="left:${node.position.x}%; top:${node.position.y}%; --chip-height:${chipHeight}px; --chip-font-size:${chipFontSize}px; --chip-padding:${escapeHtml(chipPadding)}; --secondary-size:${secondarySize}px;">
+      <div class="${nodeClassName}" style="left:${node.position.x}%; top:${node.position.y}%; --chip-height:${chipHeight}px; --chip-font-size:${chipFontSize}px; --chip-padding:${escapeHtml(chipPadding)}; --secondary-size:${secondarySize}px; --node-enter-delay:${enterDelay}ms;">
         <button
           class="power-flow-card__bubble ${node.kind === "individual" ? "power-flow-card__bubble--individual" : ""} ${isClickable ? "is-clickable" : ""}"
           data-node-entity="${escapeHtml(node.entityId)}"
@@ -1104,7 +1320,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
     `;
   }
 
-  _renderSimpleLayout(nodes, lines) {
+  _renderSimpleLayout(nodes, lines, options = {}) {
+    const animateEntrance = options.animateEntrance === true;
     const sourceNode = this._getSimpleSourceNode(nodes);
     const flowLine = lines.find(line => line.id === sourceNode.id || line.fromNode?.id === sourceNode.id || line.toNode?.id === sourceNode.id) || null;
     const lineColor = flowLine?.color || sourceNode.color || "#6da8ff";
@@ -1129,9 +1346,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const dashboardLabel = this._config?.dashboard_link_label || "Energia";
 
     return `
-      <div class="power-flow-card__simple-layout ${showDashboardButton ? "has-footer" : ""}">
+      <div class="power-flow-card__simple-layout ${showDashboardButton ? "has-footer" : ""} ${animateEntrance ? "power-flow-card__simple-layout--entering" : ""}">
         <div
-          class="power-flow-card__simple-top"
+          class="power-flow-card__simple-top ${animateEntrance ? "power-flow-card__simple-top--entering" : ""}"
           style="--simple-source-column:${nodeSize}px; --simple-home-column:${homeSize}px;"
         >
           <div class="power-flow-card__simple-column power-flow-card__simple-column--source-top">
@@ -1144,7 +1361,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         </div>
 
         <div
-          class="power-flow-card__simple-rail"
+          class="power-flow-card__simple-rail ${animateEntrance ? "power-flow-card__simple-rail--entering" : ""}"
           style="--simple-rail-height:${Math.max(nodeSize, homeSize)}px; --simple-source-column:${nodeSize}px; --simple-home-column:${homeSize}px;"
         >
           <div
@@ -1203,7 +1420,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         </div>
 
         <div
-          class="power-flow-card__simple-bottom"
+          class="power-flow-card__simple-bottom ${animateEntrance ? "power-flow-card__simple-bottom--entering" : ""}"
           style="--simple-source-column:${nodeSize}px; --simple-home-column:${homeSize}px;"
         >
           <div class="power-flow-card__simple-column power-flow-card__simple-column--source power-flow-card__simple-column--source-bottom">
@@ -1217,7 +1434,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         ${
           showDashboardButton
             ? `
-              <div class="power-flow-card__simple-footer">
+              <div class="power-flow-card__simple-footer ${animateEntrance ? "power-flow-card__simple-footer--entering" : ""}">
                 <button class="power-flow-card__dashboard-button power-flow-card__dashboard-button--footer" data-dashboard-action="navigate" title="${escapeHtml(dashboardLabel)}">
                   <ha-icon icon="mdi:lightning-bolt-circle"></ha-icon>
                   <span>${escapeHtml(dashboardLabel)}</span>
@@ -1235,6 +1452,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     if (dashboardButton) {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerPressAnimation(dashboardButton);
       this._triggerHaptic("selection");
       this._navigate(this._config?.dashboard_link);
       return;
@@ -1244,6 +1462,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     if (nodeAction && nodeAction.dataset?.nodeEntity) {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerPressAnimation(nodeAction);
       this._triggerHaptic("selection");
       fireEvent(this, "hass-more-info", {
         entityId: nodeAction.dataset.nodeEntity,
@@ -1256,6 +1475,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       if (content) {
         event.preventDefault();
         event.stopPropagation();
+        this._triggerPressAnimation(this.shadowRoot.querySelector(".power-flow-card__content"));
         this._triggerHaptic("selection");
         fireEvent(this, "hass-more-info", {
           entityId: this._config.entities.home.entity,
@@ -1283,6 +1503,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
     const titleText = this._config?.title || this._config?.name || (layoutPreset === "simple" ? "" : "Flujo");
     const hasHeader = this._config?.show_header !== false && (Boolean(titleText) || (showDashboardButton && layoutPreset !== "simple"));
+    const animations = this._getAnimationSettings();
+    const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const surfaceMinHeight = layoutPreset === "simple"
       ? 162
       : layoutPreset === "compact"
@@ -1292,6 +1514,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
+          --power-flow-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
+          --power-flow-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           display: block;
           height: 100%;
           min-height: 0;
@@ -1324,6 +1548,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
           overflow: hidden;
           padding: ${styles.card.padding};
           position: relative;
+          transform-origin: center;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 160ms ease;
+          will-change: transform;
         }
 
         .power-flow-card__header {
@@ -1331,6 +1558,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
           display: grid;
           gap: 10px;
           grid-template-columns: minmax(0, 1fr) auto;
+        }
+
+        .power-flow-card__header--entering {
+          animation: power-flow-card-fade-up calc(var(--power-flow-card-content-duration) * 0.82) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
         .power-flow-card__title {
@@ -1354,6 +1585,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
           gap: 8px;
           min-height: 34px;
           padding: 0 12px;
+          transform-origin: center;
+          transition: transform 160ms ease, border-color 160ms ease, box-shadow 180ms ease, background 180ms ease;
+          will-change: transform;
         }
 
         .power-flow-card__dashboard-button ha-icon {
@@ -1364,6 +1598,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
           flex: 1;
           min-height: 0;
           position: relative;
+          transform-origin: center;
+          will-change: opacity, transform;
+        }
+
+        .power-flow-card__content--entering {
+          animation: power-flow-card-fade-up var(--power-flow-card-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 34ms;
         }
 
         .power-flow-card--simple .power-flow-card__content {
@@ -1375,7 +1616,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__surface {
           min-height: ${surfaceMinHeight}px;
           position: relative;
+          transform-origin: center;
+          will-change: opacity, transform;
           width: 100%;
+        }
+
+        .power-flow-card__surface--entering {
+          animation: power-flow-card-surface-in calc(var(--power-flow-card-content-duration) * 0.94) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation-delay: 46ms;
         }
 
         .power-flow-card__svg {
@@ -1390,8 +1638,20 @@ class NodaliaPowerFlowCard extends HTMLElement {
           z-index: 0;
         }
 
+        .power-flow-card__surface--entering .power-flow-card__svg--lines {
+          animation: power-flow-card-lines-in calc(var(--power-flow-card-content-duration) * 0.92) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 82ms;
+          transform-origin: center;
+        }
+
         .power-flow-card__svg--dots {
           z-index: 3;
+        }
+
+        .power-flow-card__surface--entering .power-flow-card__svg--dots {
+          animation: power-flow-card-dots-in calc(var(--power-flow-card-content-duration) * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 124ms;
+          transform-origin: center;
         }
 
         .power-flow-card__line {
@@ -1425,7 +1685,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__node {
           position: absolute;
           transform: translate(-50%, -50%);
+          transform-origin: center;
+          will-change: opacity, transform;
           z-index: 1;
+        }
+
+        .power-flow-card__node--entering {
+          animation: power-flow-card-node-in calc(var(--power-flow-card-content-duration) * 0.86) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation-delay: var(--node-enter-delay, 0ms);
         }
 
         .power-flow-card__node-info {
@@ -1490,6 +1757,21 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__simple-layout.has-footer {
           padding-bottom: 42px;
+        }
+
+        .power-flow-card__simple-top--entering {
+          animation: power-flow-card-fade-up calc(var(--power-flow-card-content-duration) * 0.74) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 46ms;
+        }
+
+        .power-flow-card__simple-rail--entering {
+          animation: power-flow-card-surface-in calc(var(--power-flow-card-content-duration) * 0.88) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation-delay: 92ms;
+        }
+
+        .power-flow-card__simple-bottom--entering {
+          animation: power-flow-card-fade-up calc(var(--power-flow-card-content-duration) * 0.76) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 132ms;
         }
 
         .power-flow-card__simple-top,
@@ -1695,6 +1977,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
           height: var(--node-size);
           justify-content: center;
           position: relative;
+          transform-origin: center;
+          transition: transform 160ms ease, border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+          will-change: transform;
           z-index: 1;
           width: var(--node-size);
         }
@@ -1713,6 +1998,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
           justify-content: center;
           position: absolute;
           width: 100%;
+        }
+
+        .power-flow-card__simple-footer--entering {
+          animation: power-flow-card-fade-up calc(var(--power-flow-card-content-duration) * 0.74) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 168ms;
         }
 
         .power-flow-card__dashboard-button--footer {
@@ -1868,6 +2158,107 @@ class NodaliaPowerFlowCard extends HTMLElement {
           --mdc-icon-size: 11px;
         }
 
+        .power-flow-card__content.is-pressing {
+          animation: power-flow-card-content-bounce var(--power-flow-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+        }
+
+        :is(.power-flow-card__bubble, .power-flow-card__dashboard-button).is-pressing {
+          animation: power-flow-card-bubble-bounce var(--power-flow-card-button-bounce-duration) cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
+        }
+
+        @keyframes power-flow-card-fade-up {
+          0% {
+            opacity: 0;
+            transform: translateY(12px) scale(0.97);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes power-flow-card-surface-in {
+          0% {
+            opacity: 0;
+            transform: scale(0.975);
+          }
+          60% {
+            opacity: 1;
+            transform: scale(1.015);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes power-flow-card-lines-in {
+          0% {
+            opacity: 0;
+            transform: scale(0.985);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes power-flow-card-dots-in {
+          0% {
+            opacity: 0;
+            transform: scale(0.94);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes power-flow-card-node-in {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, calc(-50% + 10px)) scale(0.9);
+          }
+          62% {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.04);
+          }
+          100% {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+          }
+        }
+
+        @keyframes power-flow-card-content-bounce {
+          0% {
+            transform: scale(1);
+          }
+          45% {
+            transform: scale(1.015);
+          }
+          72% {
+            transform: scale(1.006);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+
+        @keyframes power-flow-card-bubble-bounce {
+          0% {
+            transform: scale(1);
+          }
+          48% {
+            transform: scale(1.1);
+          }
+          72% {
+            transform: scale(1.03);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+
         @media (max-width: 640px) {
           .power-flow-card__surface {
             min-height: ${
@@ -1884,12 +2275,22 @@ class NodaliaPowerFlowCard extends HTMLElement {
             padding: 0 12px;
           }
         }
+
+        ${animations.enabled ? "" : `
+        .power-flow-card,
+        .power-flow-card *,
+        .power-flow-card *::before,
+        .power-flow-card *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
       </style>
       <ha-card class="power-flow-card power-flow-card--${layoutPreset}">
         ${
           hasHeader
             ? `
-              <div class="power-flow-card__header">
+              <div class="power-flow-card__header ${shouldAnimateEntrance ? "power-flow-card__header--entering" : ""}">
                 <div class="power-flow-card__title">${escapeHtml(titleText)}</div>
                 ${
                   showDashboardButton && layoutPreset !== "simple"
@@ -1905,12 +2306,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
             `
             : ""
         }
-        <div class="power-flow-card__content" ${this._config?.tap_action === "more-info" ? 'data-card-action="primary"' : ""}>
+        <div class="power-flow-card__content ${shouldAnimateEntrance ? "power-flow-card__content--entering" : ""}" ${this._config?.tap_action === "more-info" ? 'data-card-action="primary"' : ""}>
           ${
             layoutPreset === "simple"
-              ? this._renderSimpleLayout(nodes, lines)
+              ? this._renderSimpleLayout(nodes, lines, {
+                animateEntrance: shouldAnimateEntrance,
+              })
               : `
-                <div class="power-flow-card__surface">
+                <div class="power-flow-card__surface ${shouldAnimateEntrance ? "power-flow-card__surface--entering" : ""}">
                   <svg class="power-flow-card__svg power-flow-card__svg--lines" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
                     <defs>
                       <filter id="power-flow-glow" x="-30%" y="-30%" width="160%" height="160%">
@@ -1925,13 +2328,41 @@ class NodaliaPowerFlowCard extends HTMLElement {
                       <path class="power-flow-card__line" d="${line.path}" stroke="${escapeHtml(line.color)}" opacity="${line.opacity}"></path>
                     `).join("")}
                   </svg>
-                  ${this._renderNode(nodes.home, { layoutPreset })}
-                  ${nodes.grid.entityId ? this._renderNode(nodes.grid, { layoutPreset }) : ""}
-                  ${nodes.solar.entityId ? this._renderNode(nodes.solar, { layoutPreset }) : ""}
-                  ${nodes.battery.entityId ? this._renderNode(nodes.battery, { layoutPreset }) : ""}
-                  ${nodes.water.entityId ? this._renderNode(nodes.water, { layoutPreset }) : ""}
-                  ${nodes.gas.entityId ? this._renderNode(nodes.gas, { layoutPreset }) : ""}
-                  ${nodes.individual.map(node => this._renderNode(node, { layoutPreset })).join("")}
+                  ${this._renderNode(nodes.home, {
+                    layoutPreset,
+                    animateEntrance: shouldAnimateEntrance,
+                    enterDelay: this._getNodeAnimationDelay(nodes.home),
+                  })}
+                  ${nodes.grid.entityId ? this._renderNode(nodes.grid, {
+                    layoutPreset,
+                    animateEntrance: shouldAnimateEntrance,
+                    enterDelay: this._getNodeAnimationDelay(nodes.grid),
+                  }) : ""}
+                  ${nodes.solar.entityId ? this._renderNode(nodes.solar, {
+                    layoutPreset,
+                    animateEntrance: shouldAnimateEntrance,
+                    enterDelay: this._getNodeAnimationDelay(nodes.solar),
+                  }) : ""}
+                  ${nodes.battery.entityId ? this._renderNode(nodes.battery, {
+                    layoutPreset,
+                    animateEntrance: shouldAnimateEntrance,
+                    enterDelay: this._getNodeAnimationDelay(nodes.battery),
+                  }) : ""}
+                  ${nodes.water.entityId ? this._renderNode(nodes.water, {
+                    layoutPreset,
+                    animateEntrance: shouldAnimateEntrance,
+                    enterDelay: this._getNodeAnimationDelay(nodes.water),
+                  }) : ""}
+                  ${nodes.gas.entityId ? this._renderNode(nodes.gas, {
+                    layoutPreset,
+                    animateEntrance: shouldAnimateEntrance,
+                    enterDelay: this._getNodeAnimationDelay(nodes.gas),
+                  }) : ""}
+                  ${nodes.individual.map((node, index) => this._renderNode(node, {
+                    layoutPreset,
+                    animateEntrance: shouldAnimateEntrance,
+                    enterDelay: this._getNodeAnimationDelay(node, index),
+                  })).join("")}
                   <svg class="power-flow-card__svg power-flow-card__svg--dots" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
                     ${lines.map(line => this._renderFlowDots(line)).join("")}
                   </svg>
@@ -1943,6 +2374,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
     `;
 
     this._lastRenderSignature = this._getRenderSignature();
+
+    if (shouldAnimateEntrance) {
+      this._scheduleEntranceAnimationReset(animations.contentDuration + 180);
+    }
   }
 }
 
@@ -2551,8 +2986,1028 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
   }
 }
 
+class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._config = normalizeConfig(STUB_CONFIG);
+    this._hass = null;
+    this._entityOptionsSignature = "";
+    this._showAnimationSection = false;
+    this._showStyleSection = false;
+    this._pendingEditorControlTags = new Set();
+    this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+    this._onShadowClick = this._onShadowClick.bind(this);
+    this.shadowRoot.addEventListener("input", this._onShadowInput);
+    this.shadowRoot.addEventListener("change", this._onShadowInput);
+    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.addEventListener("click", this._onShadowClick);
+  }
+
+  disconnectedCallback() {
+    this.shadowRoot.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot.removeEventListener("change", this._onShadowInput);
+    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.removeEventListener("click", this._onShadowClick);
+  }
+
+  set hass(hass) {
+    const nextSignature = this._getEntityOptionsSignature(hass);
+    const shouldRender =
+      !this._hass ||
+      nextSignature !== this._entityOptionsSignature ||
+      !this.shadowRoot?.innerHTML;
+
+    this._hass = hass;
+    this._entityOptionsSignature = nextSignature;
+
+    if (!shouldRender) {
+      return;
+    }
+
+    const focusState = this._captureFocusState();
+    this._render();
+    this._restoreFocusState(focusState);
+  }
+
+  setConfig(config) {
+    const focusState = this._captureFocusState();
+    this._config = normalizeConfig(config || {});
+    this._render();
+    this._restoreFocusState(focusState);
+  }
+
+  _getEntityOptionsSignature(hass = this._hass) {
+    return Object.entries(hass?.states || {})
+      .filter(([entityId]) => entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number."))
+      .map(([entityId, state]) => `${entityId}:${String(state?.attributes?.friendly_name || "")}:${String(state?.attributes?.icon || "")}`)
+      .sort((left, right) => left.localeCompare(right, "es", { sensitivity: "base" }))
+      .join("|");
+  }
+
+  _watchEditorControlTag(tagName) {
+    if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+      return;
+    }
+
+    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+      return;
+    }
+
+    this._pendingEditorControlTags.add(tagName);
+    customElements.whenDefined(tagName)
+      .then(() => {
+        this._pendingEditorControlTags.delete(tagName);
+
+        if (!this._hass || !this.shadowRoot) {
+          return;
+        }
+
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+      })
+      .catch(() => {
+        this._pendingEditorControlTags.delete(tagName);
+      });
+  }
+
+  _ensureEditorControlsReady() {
+    this._watchEditorControlTag("ha-entity-picker");
+    this._watchEditorControlTag("ha-icon-picker");
+  }
+
+  _getPowerEntityOptions(path = "entity") {
+    const options = Object.entries(this._hass?.states || {})
+      .filter(([entityId]) => entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number."))
+      .map(([entityId, state]) => {
+        const friendlyName = String(state?.attributes?.friendly_name || "").trim();
+        return {
+          value: entityId,
+          label: friendlyName || entityId,
+          displayLabel: friendlyName && friendlyName !== entityId
+            ? `${friendlyName} (${entityId})`
+            : entityId,
+        };
+      })
+      .sort((left, right) => (
+        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
+        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+      ));
+
+    const currentValue = String(getByPath(this._config, path) || "").trim();
+    if (currentValue && !options.some(option => option.value === currentValue)) {
+      options.unshift({
+        value: currentValue,
+        label: currentValue,
+        displayLabel: currentValue,
+      });
+    }
+
+    return options;
+  }
+
+  _captureFocusState() {
+    const activeElement = this.shadowRoot?.activeElement;
+
+    if (
+      !(
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement instanceof HTMLSelectElement
+      )
+    ) {
+      return null;
+    }
+
+    const dataset = activeElement.dataset || {};
+    const selector = dataset.field
+      ? `[data-field="${escapeSelectorValue(dataset.field)}"]`
+      : null;
+
+    if (!selector) {
+      return null;
+    }
+
+    const supportsSelection =
+      typeof activeElement.selectionStart === "number" &&
+      typeof activeElement.selectionEnd === "number";
+
+    return {
+      selector,
+      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
+      selectionStart: supportsSelection ? activeElement.selectionStart : null,
+      type: activeElement.type,
+    };
+  }
+
+  _restoreFocusState(focusState) {
+    if (!focusState?.selector || !this.shadowRoot) {
+      return;
+    }
+
+    const target = this.shadowRoot.querySelector(focusState.selector);
+    if (
+      !(
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      )
+    ) {
+      return;
+    }
+
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_error) {
+      target.focus();
+    }
+
+    const canRestoreSelection =
+      focusState.type !== "checkbox" &&
+      typeof focusState.selectionStart === "number" &&
+      typeof focusState.selectionEnd === "number" &&
+      typeof target.setSelectionRange === "function";
+
+    if (!canRestoreSelection) {
+      return;
+    }
+
+    try {
+      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+    } catch (_error) {
+      // Ignore unsupported inputs.
+    }
+  }
+
+  _emitConfig() {
+    const focusState = this._captureFocusState();
+    const nextConfig = deepClone(this._config);
+    this._config = normalizeConfig(compactConfig(nextConfig));
+    this._render();
+    this._restoreFocusState(focusState);
+    fireEvent(this, "config-changed", {
+      config: compactConfig(nextConfig),
+    });
+  }
+
+  _setEditorConfig() {
+    this._config = normalizeConfig(compactConfig(this._config));
+  }
+
+  _setFieldValue(path, value) {
+    if (value === undefined || value === null || value === "") {
+      deleteByPath(this._config, path);
+      return;
+    }
+
+    setByPath(this._config, path, value);
+  }
+
+  _readFieldValue(input) {
+    const valueType = input.dataset.valueType || "string";
+
+    switch (valueType) {
+      case "boolean":
+        return Boolean(input.checked);
+      case "color":
+        return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+      case "number": {
+        const numeric = Number(input.value);
+        return Number.isFinite(numeric) ? numeric : undefined;
+      }
+      case "rgb-array-color": {
+        const normalizedHex = String(input.value || "").trim().replace(/^#/, "");
+        if (!/^[0-9a-f]{6}$/i.test(normalizedHex)) {
+          return undefined;
+        }
+        return [
+          Number.parseInt(normalizedHex.slice(0, 2), 16),
+          Number.parseInt(normalizedHex.slice(2, 4), 16),
+          Number.parseInt(normalizedHex.slice(4, 6), 16),
+        ];
+      }
+      case "individuals":
+        return String(input.value || "")
+          .split("\n")
+          .map(line => line.trim())
+          .filter(Boolean)
+          .map(line => {
+            const [entity, name = "", icon = "", color = ""] = line.split("|").map(part => part.trim());
+            return { entity, name, icon, color };
+          })
+          .filter(item => item.entity);
+      default:
+        return input.value;
+    }
+  }
+
+  _onShadowInput(event) {
+    const input = event
+      .composedPath()
+      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+
+    if (!input?.dataset?.field) {
+      return;
+    }
+
+    event.stopPropagation();
+    const nextValue = this._readFieldValue(input);
+    this._setFieldValue(input.dataset.field, nextValue);
+    this._setEditorConfig();
+
+    if (event.type === "change") {
+      this._emitConfig();
+    }
+  }
+
+  _onShadowValueChanged(event) {
+    const control = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.field);
+
+    if (!control?.dataset?.field) {
+      return;
+    }
+
+    event.stopPropagation();
+
+    const nextValue = typeof event.detail?.value === "string"
+      ? event.detail.value
+      : control.value;
+    if (typeof control.dataset?.value === "string") {
+      control.dataset.value = String(nextValue || "");
+    }
+
+    this._setFieldValue(control.dataset.field, nextValue);
+    this._setEditorConfig();
+    this._emitConfig();
+  }
+
+  _onShadowClick(event) {
+    const toggleButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+
+    if (!toggleButton) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (toggleButton.dataset.editorToggle === "styles") {
+      this._showStyleSection = !this._showStyleSection;
+      this._render();
+    } else if (toggleButton.dataset.editorToggle === "animations") {
+      this._showAnimationSection = !this._showAnimationSection;
+      this._render();
+    }
+  }
+
+  _renderTextField(label, field, value, options = {}) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const valueType = options.valueType || "string";
+
+    return `
+      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <input
+          type="${escapeHtml(options.type || "text")}"
+          data-field="${escapeHtml(field)}"
+          data-value-type="${escapeHtml(valueType)}"
+          value="${escapeHtml(inputValue)}"
+          ${placeholder}
+        />
+      </label>
+    `;
+  }
+
+  _renderTextareaField(label, field, value, options = {}) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+
+    return `
+      <label class="editor-field editor-field--full">
+        <span>${escapeHtml(label)}</span>
+        <textarea
+          data-field="${escapeHtml(field)}"
+          data-value-type="${escapeHtml(options.valueType || "string")}"
+          rows="${escapeHtml(String(options.rows || 4))}"
+          ${placeholder}
+        >${escapeHtml(inputValue)}</textarea>
+      </label>
+    `;
+  }
+
+  _renderColorField(label, field, value, options = {}) {
+    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+    const currentValue = value === undefined || value === null || value === ""
+      ? fallbackValue
+      : String(value);
+    const colorModel = getEditorColorModel(currentValue, fallbackValue);
+
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="Color personalizado">
+            <input
+              type="color"
+              data-field="${escapeHtml(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml(String(colorModel.alpha))}"
+              value="${escapeHtml(colorModel.hex)}"
+              aria-label="${escapeHtml(label)}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
+          </label>
+        </div>
+      </div>
+    `;
+  }
+
+  _renderRgbArrayColorField(label, field, value, options = {}) {
+    const fallbackValue = arrayFromMaybe(options.fallbackValue || DEFAULT_CONFIG.display_zero_lines.grey_color);
+    const sourceValue = arrayFromMaybe(value);
+    const rgbValue = sourceValue.length >= 3 ? sourceValue : fallbackValue;
+    const hexValue = `#${rgbValue.slice(0, 3).map(channel => formatEditorHexChannel(channel)).join("")}`;
+    const swatchValue = rgbArrayToColor(rgbValue, fallbackValue);
+
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="Color personalizado">
+            <input
+              type="color"
+              data-field="${escapeHtml(field)}"
+              data-value-type="rgb-array-color"
+              value="${escapeHtml(hexValue)}"
+              aria-label="${escapeHtml(label)}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(swatchValue)};"></span>
+          </label>
+        </div>
+      </div>
+    `;
+  }
+
+  _renderCheckboxField(label, field, checked) {
+    return `
+      <label class="editor-toggle">
+        <input
+          type="checkbox"
+          data-field="${escapeHtml(field)}"
+          data-value-type="boolean"
+          ${checked ? "checked" : ""}
+        />
+        <span class="editor-toggle__switch" aria-hidden="true"></span>
+        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+      </label>
+    `;
+  }
+
+  _renderSelectField(label, field, value, options, renderOptions = {}) {
+    return `
+      <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <select data-field="${escapeHtml(field)}">
+          ${options.map(option => `
+            <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
+              ${escapeHtml(option.label)}
+            </option>
+          `).join("")}
+        </select>
+      </label>
+    `;
+  }
+
+  _renderEntityPickerField(label, field, value, options = {}) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    const placeholder = options.placeholder || "";
+
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <div
+          class="editor-control-host"
+          data-mounted-control="entity"
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+          data-placeholder="${escapeHtml(placeholder)}"
+        ></div>
+      </div>
+    `;
+  }
+
+  _renderIconPickerField(label, field, value, options = {}) {
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const inputValue = value === undefined || value === null ? "" : String(value);
+
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <ha-icon-picker
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+          value="${escapeHtml(inputValue)}"
+          ${placeholder}
+        ></ha-icon-picker>
+      </div>
+    `;
+  }
+
+  _serializeIndividuals() {
+    return resolveIndividualConfigs(this._config)
+      .map(entry => [entry.entity || "", entry.name || "", entry.icon || "", entry.color || ""].join("|"))
+      .join("\n");
+  }
+
+  _mountEntityPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const field = host.dataset.field || "entity";
+    const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || "";
+    let control = null;
+
+    if (customElements.get("ha-entity-picker")) {
+      control = document.createElement("ha-entity-picker");
+      control.includeDomains = ["sensor", "number", "input_number"];
+      control.allowCustomEntity = true;
+      control.entityFilter = stateObj => {
+        const entityId = String(stateObj?.entity_id || "");
+        return entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number.");
+      };
+      if (placeholder) {
+        control.setAttribute("placeholder", placeholder);
+      }
+    } else {
+      control = document.createElement("select");
+      const emptyOption = document.createElement("option");
+      emptyOption.value = "";
+      emptyOption.textContent = placeholder || "Selecciona una entidad";
+      control.appendChild(emptyOption);
+      this._getPowerEntityOptions(field).forEach(option => {
+        const optionElement = document.createElement("option");
+        optionElement.value = option.value;
+        optionElement.textContent = option.displayLabel;
+        control.appendChild(optionElement);
+      });
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+
+    host.replaceChildren(control);
+  }
+
+  _renderNodeSection(title, hint, prefix, values) {
+    return `
+      <section class="editor-section">
+        <div class="editor-section__header">
+          <div class="editor-section__title">${escapeHtml(title)}</div>
+          <div class="editor-section__hint">${escapeHtml(hint)}</div>
+        </div>
+        <div class="editor-grid editor-grid--stacked">
+          ${this._renderEntityPickerField("Entidad", `${prefix}.entity`, values.entity, {
+            placeholder: "sensor.mi_sensor",
+            fullWidth: true,
+          })}
+          ${this._renderTextField("Nombre", `${prefix}.name`, values.name)}
+          ${this._renderIconPickerField("Icono", `${prefix}.icon`, values.icon, {
+            placeholder: "mdi:flash",
+          })}
+          ${this._renderColorField("Color", `${prefix}.color`, values.color)}
+          ${this._renderEntityPickerField("Entidad secundaria", `${prefix}.secondary_info.entity`, values.secondary_info?.entity, {
+            placeholder: "sensor.mi_secundaria",
+            fullWidth: true,
+          })}
+          ${this._renderTextField("Atributo secundario", `${prefix}.secondary_info.attribute`, values.secondary_info?.attribute, {
+            placeholder: "battery_level",
+          })}
+          ${this._renderTextField("Unidad secundaria", `${prefix}.secondary_info.unit`, values.secondary_info?.unit, {
+            placeholder: "kWh",
+          })}
+          ${this._renderTextField("Decimales secundarios", `${prefix}.secondary_info.decimals`, values.secondary_info?.decimals, {
+            type: "number",
+            valueType: "number",
+            placeholder: "0",
+          })}
+        </div>
+      </section>
+    `;
+  }
+
+  _render() {
+    if (!this.shadowRoot) {
+      return;
+    }
+
+    const config = this._config || normalizeConfig(STUB_CONFIG);
+    const hapticStyle = config.haptics?.style || "medium";
+    const tapAction = config.tap_action || "none";
+    const animations = config.animations || DEFAULT_CONFIG.animations;
+    const grid = resolveNodeConfig("grid", config);
+    const home = resolveNodeConfig("home", config);
+    const solar = resolveNodeConfig("solar", config);
+    const battery = resolveNodeConfig("battery", config);
+    const water = resolveNodeConfig("water", config);
+    const gas = resolveNodeConfig("gas", config);
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        .editor {
+          color: var(--primary-text-color);
+          display: grid;
+          gap: 16px;
+        }
+
+        .editor-section {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 18px;
+          display: grid;
+          gap: 14px;
+          padding: 16px;
+        }
+
+        .editor-section__header {
+          display: grid;
+          gap: 4px;
+        }
+
+        .editor-section__title {
+          font-size: 15px;
+          font-weight: 700;
+        }
+
+        .editor-section__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .editor-grid {
+          display: grid;
+          gap: 12px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .editor-grid--stacked {
+          grid-template-columns: 1fr;
+        }
+
+        .editor-field,
+        .editor-toggle {
+          display: grid;
+          gap: 6px;
+          min-width: 0;
+        }
+
+        .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+        .editor-field > span,
+        .editor-toggle > span {
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .editor-field input,
+        .editor-field select,
+        .editor-field textarea {
+          appearance: none;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 14px;
+          color: var(--primary-text-color);
+          font: inherit;
+          min-width: 0;
+          outline: none;
+          padding: 10px 12px;
+          width: 100%;
+        }
+
+        .editor-field textarea {
+          min-height: 120px;
+          resize: vertical;
+        }
+
+        .editor-color-field {
+          align-items: center;
+          display: flex;
+          gap: 10px;
+          min-height: 46px;
+        }
+
+        .editor-color-picker {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 40px;
+          justify-content: center;
+          position: relative;
+          width: 40px;
+        }
+
+        .editor-color-picker input {
+          cursor: pointer;
+          inset: 0;
+          opacity: 0;
+          position: absolute;
+        }
+
+        .editor-color-picker:hover,
+        .editor-color-picker:focus-within {
+          border-color: rgba(255, 255, 255, 0.22);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .editor-color-swatch {
+          --editor-swatch: #71c0ff;
+          background:
+            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+            conic-gradient(from 90deg, rgba(255, 255, 255, 0.06) 25%, rgba(0, 0, 0, 0.12) 0 50%, rgba(255, 255, 255, 0.06) 0 75%, rgba(0, 0, 0, 0.12) 0);
+          background-position: center;
+          background-size: cover, 10px 10px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 999px;
+          display: block;
+          height: 22px;
+          width: 22px;
+        }
+
+        .editor-section__actions {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 2px;
+        }
+
+        .editor-section__toggle-button {
+          align-items: center;
+          appearance: none;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        .editor-section__toggle-button ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
+        .editor-field ha-icon-picker,
+        .editor-field ha-entity-picker,
+        .editor-control-host,
+        .editor-control-host > * {
+          display: block;
+          width: 100%;
+        }
+
+        :is(.editor-toggle, .editor-checkbox) {
+          align-items: center;
+          column-gap: 10px;
+          cursor: pointer;
+          grid-auto-flow: row;
+          grid-template-columns: auto minmax(0, 1fr);
+          justify-content: stretch;
+          min-height: 40px;
+          padding-top: 0;
+          position: relative;
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input {
+          block-size: 1px;
+          inline-size: 1px;
+          margin: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: absolute;
+        }
+
+        .editor-toggle__switch {
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+          display: inline-flex;
+          font-size: 0;
+          height: 22px;
+          line-height: 0;
+          position: relative;
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+          width: 40px;
+        }
+
+        .editor-toggle__switch::before {
+          background: rgba(255, 255, 255, 0.92);
+          border-radius: 999px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+          content: "";
+          height: 18px;
+          left: 1px;
+          position: absolute;
+          top: 1px;
+          transition: transform 160ms ease;
+          width: 18px;
+        }
+
+        .editor-toggle__label {
+          min-width: 0;
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch {
+          background: var(--primary-color);
+          border-color: var(--primary-color);
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch::before {
+          transform: translateX(18px);
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input:focus-visible + .editor-toggle__switch {
+          box-shadow:
+            0 0 0 3px rgba(255, 255, 255, 0.14),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        @media (max-width: 720px) {
+          .editor-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      </style>
+      <div class="editor">
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">General</div>
+            <div class="editor-section__hint">Titulo, enlace al panel de energia y comportamiento general de la tarjeta.</div>
+          </div>
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderTextField("Titulo", "title", config.title, { placeholder: "Energia", fullWidth: true })}
+            ${this._renderTextField("Enlace panel energia", "dashboard_link", config.dashboard_link, { placeholder: "/energy/overview", fullWidth: true })}
+            ${this._renderTextField("Etiqueta boton energia", "dashboard_link_label", config.dashboard_link_label, { placeholder: "Energia", fullWidth: true })}
+            ${this._renderSelectField("Tap card", "tap_action", tapAction, [
+              { value: "none", label: "Sin accion" },
+              { value: "more-info", label: "More info casa" },
+            ], { fullWidth: true })}
+            ${this._renderCheckboxField("Mostrar cabecera", "show_header", config.show_header !== false)}
+            ${this._renderCheckboxField("Mostrar boton energia", "show_dashboard_link_button", config.show_dashboard_link_button !== false)}
+            ${this._renderCheckboxField("Etiquetas", "show_labels", config.show_labels !== false)}
+            ${this._renderCheckboxField("Valores", "show_values", config.show_values !== false)}
+            ${this._renderCheckboxField("Info secundaria", "show_secondary_info", config.show_secondary_info !== false)}
+            ${this._renderCheckboxField("Click entidades", "clickable_entities", config.clickable_entities !== false)}
+            ${this._renderCheckboxField("Badge no disponible", "show_unavailable_badge", config.show_unavailable_badge !== false)}
+          </div>
+        </section>
+
+        ${this._renderNodeSection("Red", "Sensor de red con potencia positiva de consumo y negativa de exportacion.", "entities.grid", grid)}
+        ${this._renderNodeSection("Casa", "Entidad central del hogar y objetivo del more-info principal.", "entities.home", home)}
+        ${this._renderNodeSection("Solar", "Produccion solar instantanea.", "entities.solar", solar)}
+        ${this._renderNodeSection("Bateria", "Potencia de bateria. Positiva descarga, negativa carga.", "entities.battery", battery)}
+        ${this._renderNodeSection("Agua", "Caudal o consumo de agua hacia el hogar.", "entities.water", water)}
+        ${this._renderNodeSection("Gas", "Caudal o consumo de gas hacia el hogar.", "entities.gas", gas)}
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Individuales</div>
+            <div class="editor-section__hint">Una linea por entidad: \`entity|nombre|icono|color\`.</div>
+          </div>
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderTextareaField("Entidades individuales", "entities.individual", this._serializeIndividuals(), {
+              valueType: "individuals",
+              rows: 5,
+              placeholder: "sensor.cargador_coche|Cargador|mdi:car-electric|#42a5f5",
+            })}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Flujo</div>
+            <div class="editor-section__hint">Controla las lineas a cero y la velocidad del flujo.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderSelectField("Lineas a cero", "display_zero_lines.mode", config.display_zero_lines?.mode || "show", [
+              { value: "show", label: "Mostrar" },
+              { value: "hide", label: "Ocultar" },
+            ])}
+            ${this._renderTextField("Transparencia lineas cero", "display_zero_lines.transparency", config.display_zero_lines?.transparency, {
+              type: "number",
+              valueType: "number",
+              placeholder: "50",
+            })}
+            ${this._renderRgbArrayColorField("Color lineas cero", "display_zero_lines.grey_color", config.display_zero_lines?.grey_color)}
+            ${this._renderTextField("Flujo minimo (s)", "min_flow_rate", config.min_flow_rate, {
+              type: "number",
+              valueType: "number",
+              placeholder: "1.4",
+            })}
+            ${this._renderTextField("Flujo maximo (s)", "max_flow_rate", config.max_flow_rate, {
+              type: "number",
+              valueType: "number",
+              placeholder: "5.8",
+            })}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Haptics</div>
+            <div class="editor-section__hint">Respuesta tactil opcional al pulsar nodos o botones.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics?.enabled === true)}
+            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
+            ${this._renderSelectField("Estilo", "haptics.style", hapticStyle, [
+              { value: "selection", label: "Selection" },
+              { value: "light", label: "Light" },
+              { value: "medium", label: "Medium" },
+              { value: "heavy", label: "Heavy" },
+              { value: "success", label: "Success" },
+              { value: "warning", label: "Warning" },
+              { value: "failure", label: "Failure" },
+            ])}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Animaciones</div>
+            <div class="editor-section__hint">Entrada suave del flujo y rebote al pulsar nodos o acciones.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="animations"
+                aria-expanded="${this._showAnimationSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showAnimationSection ? "Ocultar ajustes de animacion" : "Mostrar ajustes de animacion"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showAnimationSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", animations.content_duration, {
+                    type: "number",
+                    valueType: "number",
+                  })}
+                  ${this._renderTextField("Rebote pulsacion (ms)", "animations.button_bounce_duration", animations.button_bounce_duration, {
+                    type: "number",
+                    valueType: "number",
+                  })}
+                </div>
+              `
+              : ""
+          }
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Estilo</div>
+            <div class="editor-section__hint">Ajustes visuales base de la tarjeta y las burbujas.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="styles"
+                aria-expanded="${this._showStyleSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showStyleSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderTextField("Background", "styles.card.background", config.styles?.card?.background)}
+                  ${this._renderTextField("Border", "styles.card.border", config.styles?.card?.border)}
+                  ${this._renderTextField("Radius", "styles.card.border_radius", config.styles?.card?.border_radius)}
+                  ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles?.card?.box_shadow)}
+                  ${this._renderTextField("Padding", "styles.card.padding", config.styles?.card?.padding)}
+                  ${this._renderTextField("Gap", "styles.card.gap", config.styles?.card?.gap)}
+                  ${this._renderTextField("Tamano nodo", "styles.icon.node_size", config.styles?.icon?.node_size)}
+                  ${this._renderTextField("Tamano casa", "styles.icon.home_size", config.styles?.icon?.home_size)}
+                  ${this._renderTextField("Tamano individual", "styles.icon.individual_size", config.styles?.icon?.individual_size)}
+                  ${this._renderTextField("Color iconos", "styles.icon.color", config.styles?.icon?.color)}
+                  ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles?.title_size)}
+                  ${this._renderTextField("Tamano chip", "styles.chip_height", config.styles?.chip_height)}
+                  ${this._renderTextField("Texto chip", "styles.chip_font_size", config.styles?.chip_font_size)}
+                  ${this._renderTextField("Padding chip", "styles.chip_padding", config.styles?.chip_padding)}
+                  ${this._renderTextField("Valor casa", "styles.home_value_size", config.styles?.home_value_size)}
+                  ${this._renderTextField("Unidad casa", "styles.home_unit_size", config.styles?.home_unit_size)}
+                  ${this._renderTextField("Valor nodo", "styles.node_value_size", config.styles?.node_value_size)}
+                  ${this._renderTextField("Texto secundario", "styles.secondary_size", config.styles?.secondary_size)}
+                  ${this._renderTextField("Grosor lineas", "styles.flow_width", config.styles?.flow_width)}
+                </div>
+              `
+              : ""
+          }
+        </section>
+      </div>
+    `;
+
+    this.shadowRoot
+      .querySelectorAll('[data-mounted-control="entity"]')
+      .forEach(host => this._mountEntityPicker(host));
+
+    this.shadowRoot
+      .querySelectorAll("ha-icon-picker[data-field]")
+      .forEach(control => {
+        control.hass = this._hass;
+        control.value = control.dataset.value || "";
+      });
+
+    this._ensureEditorControlsReady();
+  }
+}
+
 if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaPowerFlowCardEditor);
+  customElements.define(EDITOR_TAG, NodaliaPowerFlowCardVisualEditor);
 }
 
 window.customCards = window.customCards || [];
