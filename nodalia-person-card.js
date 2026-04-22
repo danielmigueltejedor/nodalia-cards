@@ -835,10 +835,10 @@ class NodaliaPersonCard extends HTMLElement {
       : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
     const cardBorder = isUnavailable
       ? styles.card.border
-      : `1px solid color-mix(in srgb, ${accentColor} 22%, var(--divider-color))`;
+      : `1px solid color-mix(in srgb, ${accentColor} 24%, var(--divider-color))`;
     const cardShadow = isUnavailable
       ? styles.card.box_shadow
-      : `${styles.card.box_shadow}, 0 12px 28px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
+      : `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`;
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const animateWithPicture = shouldAnimateEntrance && pictureReady;
@@ -871,7 +871,9 @@ class NodaliaPersonCard extends HTMLElement {
         }
 
         ha-card::before {
-          background: linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 4%, transparent), rgba(255, 255, 255, 0));
+          background: ${isUnavailable
+            ? "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 4%, transparent), rgba(255, 255, 255, 0))"
+            : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0))`};
           content: "";
           inset: 0;
           pointer-events: none;

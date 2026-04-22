@@ -3460,10 +3460,13 @@ class NodaliaMediaPlayer extends HTMLElement {
     const browserStyles = config.styles.browser;
     const tvArtworkSize = playerStyles.tv_artwork_size || playerStyles.artwork_size;
     const activeTintColor = playerStyles.active_tint_color || "var(--info-color, #71c0ff)";
-    const activeCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} 18%, ${playerStyles.background}) 0%, color-mix(in srgb, ${activeTintColor} 10%, ${playerStyles.background}) 52%, ${playerStyles.background} 100%)`;
+    const activeCardBackground = `
+      linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} 15%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
+      linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} 20%, ${playerStyles.background}) 0%, color-mix(in srgb, ${activeTintColor} 10%, ${playerStyles.background}) 52%, ${playerStyles.background} 100%)
+    `.trim();
     const activeCardBorder = `color-mix(in srgb, ${activeTintColor} 34%, var(--divider-color))`;
     const activeCardShadow = `${playerStyles.box_shadow}, 0 0 0 1px color-mix(in srgb, ${activeTintColor} 10%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)), 0 18px 38px color-mix(in srgb, ${activeTintColor} 18%, rgba(16, 34, 82, 0.18))`;
-    const activeCardHighlight = `linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`;
+    const activeCardHighlight = `linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} 18%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`;
 
     this.shadowRoot.innerHTML = `
       <style>

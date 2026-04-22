@@ -743,9 +743,11 @@ class NodaliaWeatherCard extends HTMLElement {
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const configuredBorder = String(styles.card.border || "").trim();
     const defaultBorder = String(DEFAULT_CONFIG.styles.card.border || "").trim();
+    const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 9%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
     const cardBorder = !configuredBorder || configuredBorder === defaultBorder
       ? `1px solid color-mix(in srgb, ${accentColor} 28%, var(--divider-color))`
       : configuredBorder;
+    const cardShadow = `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -761,11 +763,11 @@ class NodaliaWeatherCard extends HTMLElement {
 
         ha-card {
           background:
-            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 11%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)), rgba(255, 255, 255, 0) 44%),
-            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.card.background}) 56%, ${styles.card.background} 100%);
+            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 15%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0) 44%),
+            ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
-          box-shadow: ${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18));
+          box-shadow: ${cardShadow};
           color: var(--primary-text-color);
           overflow: hidden;
           position: relative;
@@ -773,7 +775,7 @@ class NodaliaWeatherCard extends HTMLElement {
         }
 
         ha-card::before {
-          background: linear-gradient(180deg, color-mix(in srgb, ${accentColor} 12%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0));
+          background: linear-gradient(180deg, color-mix(in srgb, ${accentColor} 16%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0));
           content: "";
           inset: 0;
           pointer-events: none;
