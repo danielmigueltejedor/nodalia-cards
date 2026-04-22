@@ -23175,12 +23175,12 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           box-shadow:
             0 0 0 1px rgba(255, 255, 255, 0.08),
             0 0 12px rgba(255, 255, 255, 0.22);
-          height: 52%;
+          height: 60%;
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: 52%;
+          width: 60%;
         }
 
         .gauge-card__dial-center {
@@ -32942,12 +32942,12 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__dial-thumb::after {
           content: "";
-          height: 52%;
+          height: 60%;
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: 52%;
+          width: 60%;
           background: rgba(255, 255, 255, 0.96);
           border-radius: 50%;
           box-shadow:
