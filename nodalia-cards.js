@@ -5111,6 +5111,87 @@ function resolveEditorColorValue(value) {
   return resolved || rawValue;
 }
 
+function resolveColorInContext(contextNode, value) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || typeof document === "undefined") {
+    return "";
+  }
+
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.color = "";
+  probe.style.color = rawValue;
+  if (!probe.style.color) {
+    return rawValue;
+  }
+
+  const root = contextNode?.shadowRoot instanceof ShadowRoot
+    ? contextNode.shadowRoot
+    : document.body || document.documentElement;
+  root.appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved || rawValue;
+}
+
+function parseRgbColor(value) {
+  const source = String(value ?? "").trim();
+  if (!source) {
+    return null;
+  }
+
+  const rgbMatch = source.match(/rgba?\(([^)]+)\)/i);
+  if (rgbMatch) {
+    const channels = rgbMatch[1]
+      .split(",")
+      .map(channel => Number.parseFloat(channel.trim()))
+      .filter(channel => Number.isFinite(channel));
+
+    if (channels.length >= 3) {
+      return {
+        red: clamp(channels[0], 0, 255),
+        green: clamp(channels[1], 0, 255),
+        blue: clamp(channels[2], 0, 255),
+      };
+    }
+  }
+
+  const hexMatch = source.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hexMatch) {
+    const hex = hexMatch[1].length === 3
+      ? hexMatch[1].split("").map(channel => channel + channel).join("")
+      : hexMatch[1];
+
+    return {
+      red: Number.parseInt(hex.slice(0, 2), 16),
+      green: Number.parseInt(hex.slice(2, 4), 16),
+      blue: Number.parseInt(hex.slice(4, 6), 16),
+    };
+  }
+
+  return null;
+}
+
+function getRelativeLuminance(color) {
+  if (!color) {
+    return null;
+  }
+
+  const toLinear = channel => {
+    const normalized = clamp(Number(channel) / 255, 0, 1);
+    return normalized <= 0.04045
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4;
+  };
+
+  const red = toLinear(color.red);
+  const green = toLinear(color.green);
+  const blue = toLinear(color.blue);
+  return (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
+}
+
 function formatEditorHexChannel(value) {
   return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
 }
@@ -5639,6 +5720,23 @@ class NodaliaMediaPlayer extends HTMLElement {
         1200,
       ),
     };
+  }
+
+  _isLightThemeSurface() {
+    const textColor = parseRgbColor(resolveColorInContext(this, "var(--primary-text-color)"));
+    const backgroundColor = parseRgbColor(resolveColorInContext(this, "var(--ha-card-background, var(--card-background-color, #ffffff))"));
+
+    const textLuminance = getRelativeLuminance(textColor);
+    if (textLuminance !== null) {
+      return textLuminance < 0.36;
+    }
+
+    const backgroundLuminance = getRelativeLuminance(backgroundColor);
+    if (backgroundLuminance !== null) {
+      return backgroundLuminance > 0.62;
+    }
+
+    return false;
   }
 
   _triggerButtonBounce(button) {
@@ -8254,6 +8352,23 @@ class NodaliaMediaPlayer extends HTMLElement {
     const browserStyles = config.styles.browser;
     const tvArtworkSize = playerStyles.tv_artwork_size || playerStyles.artwork_size;
     const activeTintColor = playerStyles.active_tint_color || "var(--info-color, #71c0ff)";
+    const isLightThemeSurface = this._isLightThemeSurface();
+    const albumOverlayColor = isLightThemeSurface
+      ? `color-mix(in srgb, ${playerStyles.overlay_color} 24%, var(--ha-card-background))`
+      : playerStyles.overlay_color;
+    const albumOverlayTop = isLightThemeSurface
+      ? `color-mix(in srgb, ${albumOverlayColor} 72%, transparent)`
+      : `color-mix(in srgb, ${albumOverlayColor} 64%, rgba(0, 0, 0, 0.08))`;
+    const albumOverlayBottom = isLightThemeSurface
+      ? `color-mix(in srgb, ${albumOverlayColor} 88%, color-mix(in srgb, var(--ha-card-background) 92%, transparent))`
+      : `color-mix(in srgb, ${albumOverlayColor} 86%, rgba(0, 0, 0, 0.16))`;
+    const albumBackgroundFilter = isLightThemeSurface
+      ? "blur(28px) saturate(0.94) brightness(1.06)"
+      : "blur(30px) saturate(0.82)";
+    const albumBackgroundOpacity = isLightThemeSurface ? "0.48" : "0.42";
+    const cardTopHighlight = isLightThemeSurface
+      ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))"
+      : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0))";
     const activeCardBackground = `
       linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} 15%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
       linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} 20%, ${playerStyles.background}) 0%, color-mix(in srgb, ${activeTintColor} 10%, ${playerStyles.background}) 52%, ${playerStyles.background} 100%)
@@ -8367,7 +8482,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card::before {
-          background: linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0));
+          background: ${cardTopHighlight};
           content: "";
           inset: 0;
           pointer-events: none;
@@ -8378,9 +8493,9 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player-card.has-album-background::after {
           background: linear-gradient(
             180deg,
-            rgba(0, 0, 0, 0.08),
-            ${playerStyles.overlay_color},
-            rgba(0, 0, 0, 0.16)
+            ${albumOverlayTop},
+            ${albumOverlayColor},
+            ${albumOverlayBottom}
           );
           content: "";
           inset: 0;
@@ -8391,9 +8506,9 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__album-bg {
           background-position: center;
           background-size: cover;
-          filter: blur(30px) saturate(0.82);
+          filter: ${albumBackgroundFilter};
           inset: -24px;
-          opacity: 0.42;
+          opacity: ${albumBackgroundOpacity};
           position: absolute;
           transform: scale(1.14);
           z-index: 0;
