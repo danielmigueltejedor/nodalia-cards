@@ -450,6 +450,8 @@ class NodaliaHumidifierCard extends HTMLElement {
     this._lastControlsMarkup = "";
     this._lastPanelMarkup = "";
     this._animationCleanupTimer = 0;
+    this._entranceAnimationResetTimer = 0;
+    this._animateContentOnNextRender = true;
     this._powerTransition = null;
     this._controlsTransition = null;
     this._panelTransition = null;
@@ -535,6 +537,10 @@ class NodaliaHumidifierCard extends HTMLElement {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
     }
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
     this._powerTransition = null;
     this._controlsTransition = null;
     this._panelTransition = null;
@@ -547,7 +553,26 @@ class NodaliaHumidifierCard extends HTMLElement {
       Math.round(this._cardWidth || this.clientWidth || 0),
     );
     this._lastRenderSignature = "";
+    this._animateContentOnNextRender = true;
     this._render();
+  }
+
+  _scheduleEntranceAnimationReset(delay) {
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
+    if (!safeDelay || typeof window === "undefined") {
+      this._animateContentOnNextRender = false;
+      return;
+    }
+
+    this._entranceAnimationResetTimer = window.setTimeout(() => {
+      this._entranceAnimationResetTimer = 0;
+      this._animateContentOnNextRender = false;
+    }, safeDelay);
   }
 
   set hass(hass) {
@@ -1837,6 +1862,8 @@ class NodaliaHumidifierCard extends HTMLElement {
     const cleanupDelay = shouldCleanupAfterAnimation
       ? Math.max(powerAnimationRemaining, controlsAnimationRemaining, panelAnimationRemaining) + 40
       : 0;
+    const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
+    const contentEntranceDuration = clamp(Math.round(animations.controlsDuration * 0.9), 180, 900);
 
     if (currentPanelMarkup) {
       this._lastPanelMarkup = currentPanelMarkup;
@@ -1849,6 +1876,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
+          --humidifier-card-content-duration: ${animations.enabled ? contentEntranceDuration : 0}ms;
           display: block;
         }
 
@@ -1928,6 +1956,10 @@ class NodaliaHumidifierCard extends HTMLElement {
         .humidifier-card__content {
           display: grid;
           gap: 0;
+        }
+
+        .humidifier-card__content--entering {
+          animation: humidifier-card-fade-up var(--humidifier-card-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
         .humidifier-card__hero {
@@ -2519,6 +2551,17 @@ class NodaliaHumidifierCard extends HTMLElement {
           }
         }
 
+        @keyframes humidifier-card-fade-up {
+          0% {
+            opacity: 0;
+            transform: translateY(12px) scale(0.97);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
         ${animations.enabled ? "" : `
         .humidifier-card,
         .humidifier-card::after,
@@ -2580,7 +2623,7 @@ class NodaliaHumidifierCard extends HTMLElement {
         data-humidifier-action="toggle"
         style="--accent-color:${escapeHtml(accentColor)};"
       >
-        <div class="humidifier-card__content">
+        <div class="humidifier-card__content ${shouldAnimateEntrance ? "humidifier-card__content--entering" : ""}">
           <div class="humidifier-card__hero">
             <button
               type="button"
@@ -2615,6 +2658,10 @@ class NodaliaHumidifierCard extends HTMLElement {
     } else if (this._animationCleanupTimer) {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
+    }
+
+    if (shouldAnimateEntrance) {
+      this._scheduleEntranceAnimationReset(contentEntranceDuration + 120);
     }
   }
 }

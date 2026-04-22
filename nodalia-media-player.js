@@ -592,6 +592,8 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._tvPanelScrollPositions = new Map();
     this._tvSourcePanelAnimatingEntity = null;
     this._tvVolumePanelAnimatingEntity = null;
+    this._animateContentOnNextRender = true;
+    this._entranceAnimationResetTimer = 0;
     this._onResize = () => {
       if (this._activeSliderDrag) {
         this._pendingRenderAfterDrag = true;
@@ -673,11 +675,16 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
     this._draftVolumeTimers.forEach(timerId => window.clearTimeout(timerId));
     this._draftVolumeTimers.clear();
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
   }
 
   setConfig(config) {
     this._config = normalizeConfig(config);
     this._lastRenderSignature = "";
+    this._animateContentOnNextRender = true;
     this._render();
   }
 
@@ -849,6 +856,24 @@ class NodaliaMediaPlayer extends HTMLElement {
     window.setTimeout(() => {
       button.classList.remove("is-pressing");
     }, animations.buttonBounceDuration + 40);
+  }
+
+  _scheduleEntranceAnimationReset(delay) {
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
+    if (!safeDelay || typeof window === "undefined") {
+      this._animateContentOnNextRender = false;
+      return;
+    }
+
+    this._entranceAnimationResetTimer = window.setTimeout(() => {
+      this._entranceAnimationResetTimer = 0;
+      this._animateContentOnNextRender = false;
+    }, safeDelay);
   }
 
   _resolveMediaUrl(value, options = {}) {
@@ -2501,6 +2526,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       this._triggerHaptic();
       this._triggerButtonBounce(mediaDotButton);
       this._activePlayerIndex = Number(mediaDotButton.dataset.mediaIndex);
+      this._animateContentOnNextRender = true;
       this._render();
       return;
     }
@@ -2702,7 +2728,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     `;
   }
 
-  _renderPlayerCard(players) {
+  _renderPlayerCard(players, { animateEntrance = false } = {}) {
     if (!players.length) {
       return "";
     }
@@ -3051,7 +3077,7 @@ class NodaliaMediaPlayer extends HTMLElement {
               ? `<div class="media-player__album-bg" style="background-image:url('${safeArtwork}');"></div>`
               : ""
           }
-          <div class="media-player__content media-player__content--idle">
+          <div class="media-player__content media-player__content--idle${animateEntrance ? " media-player__content--entering" : ""}">
             <div class="media-player__idle-hero">
               ${
                 artworkIsSourceToggle
@@ -3119,7 +3145,7 @@ class NodaliaMediaPlayer extends HTMLElement {
             `
             : ""
         }
-        <div class="media-player__content">
+        <div class="media-player__content${animateEntrance ? " media-player__content--entering" : ""}">
           <div class="media-player__hero">
             ${
               artworkIsSourceToggle
@@ -3250,7 +3276,9 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._syncTicker(hasPlayers ? players : []);
 
     const contentMarkup = hasPlayers
-      ? this._renderPlayerCard(players)
+      ? this._renderPlayerCard(players, {
+        animateEntrance: animations.enabled && this._animateContentOnNextRender,
+      })
       : inEditMode
         ? this._renderEmptyState()
         : "";
@@ -3272,6 +3300,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           --media-player-panel-duration: ${animations.enabled ? animations.panelDuration : 0}ms;
           --media-player-browser-duration: ${animations.enabled ? animations.browserDuration : 0}ms;
           --media-player-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
+          --media-player-content-duration: ${animations.enabled ? clamp(Math.round(animations.panelDuration * 0.9), 180, 900) : 0}ms;
           display: block;
           width: 100%;
         }
@@ -3430,6 +3459,10 @@ class NodaliaMediaPlayer extends HTMLElement {
           display: grid;
           gap: 10px;
           padding-bottom: 10px;
+        }
+
+        .media-player__content--entering {
+          animation: media-player-fade-up var(--media-player-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
         .media-player__content--idle {
@@ -4522,6 +4555,17 @@ class NodaliaMediaPlayer extends HTMLElement {
           }
         }
 
+        @keyframes media-player-fade-up {
+          0% {
+            opacity: 0;
+            transform: translateY(12px) scale(0.97);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
         @keyframes media-player-browser-backdrop-in {
           0% { opacity: 0; }
           100% { opacity: 1; }
@@ -4597,6 +4641,10 @@ class NodaliaMediaPlayer extends HTMLElement {
         ...this._mediaBrowserState,
         animateIn: false,
       };
+    }
+
+    if (animations.enabled && this._animateContentOnNextRender) {
+      this._scheduleEntranceAnimationReset(clamp(Math.round(animations.panelDuration * 0.9), 180, 900) + 120);
     }
   }
 }

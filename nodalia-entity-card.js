@@ -550,6 +550,7 @@ class NodaliaEntityCard extends HTMLElement {
     this._isCompactLayout = false;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
+    this._entranceAnimationResetTimer = 0;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -577,6 +578,10 @@ class NodaliaEntityCard extends HTMLElement {
 
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
   }
 
   setConfig(config) {
@@ -1165,6 +1170,24 @@ class NodaliaEntityCard extends HTMLElement {
     }, animations.buttonBounceDuration + 40);
   }
 
+  _scheduleEntranceAnimationReset(delay) {
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
+    if (!safeDelay || typeof window === "undefined") {
+      this._animateContentOnNextRender = false;
+      return;
+    }
+
+    this._entranceAnimationResetTimer = window.setTimeout(() => {
+      this._entranceAnimationResetTimer = 0;
+      this._animateContentOnNextRender = false;
+    }, safeDelay);
+  }
+
   _onShadowClick(event) {
     const actionTarget = event
       .composedPath()
@@ -1351,6 +1374,10 @@ class NodaliaEntityCard extends HTMLElement {
           transition: transform 160ms ease;
           will-change: transform;
           z-index: 1;
+        }
+
+        .entity-card__content--entering {
+          animation: entity-card-fade-up calc(var(--entity-card-content-duration) * 0.88) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
         .entity-card__content.is-pressing {
@@ -1701,7 +1728,7 @@ class NodaliaEntityCard extends HTMLElement {
         style="--accent-color:${escapeHtml(accentColor)};"
         ${canRunPrimaryAction ? 'data-entity-action="primary"' : ""}
       >
-        <div class="entity-card__content">
+        <div class="entity-card__content ${shouldAnimateEntrance ? "entity-card__content--entering" : ""}">
           <div class="entity-card__hero ${shouldAnimateEntrance ? "entity-card__hero--entering" : ""}">
             <button
               type="button"
@@ -1755,7 +1782,9 @@ class NodaliaEntityCard extends HTMLElement {
       </ha-card>
     `;
 
-    this._animateContentOnNextRender = false;
+    if (shouldAnimateEntrance) {
+      this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
+    }
   }
 }
 

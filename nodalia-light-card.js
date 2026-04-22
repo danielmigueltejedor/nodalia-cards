@@ -447,6 +447,8 @@ class NodaliaLightCard extends HTMLElement {
     this._lastRenderedIsOn = null;
     this._lastControlsMarkup = "";
     this._animationCleanupTimer = 0;
+    this._entranceAnimationResetTimer = 0;
+    this._animateContentOnNextRender = true;
     this._powerTransition = null;
     this._controlsTransition = null;
     this._modeSwitchTimer = 0;
@@ -534,6 +536,10 @@ class NodaliaLightCard extends HTMLElement {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
     }
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
     this._powerTransition = null;
     this._controlsTransition = null;
     if (this._modeSwitchTimer) {
@@ -554,7 +560,26 @@ class NodaliaLightCard extends HTMLElement {
       Math.round(this._cardWidth || this.clientWidth || 0),
     );
     this._lastRenderSignature = "";
+    this._animateContentOnNextRender = true;
     this._render();
+  }
+
+  _scheduleEntranceAnimationReset(delay) {
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
+    if (!safeDelay || typeof window === "undefined") {
+      this._animateContentOnNextRender = false;
+      return;
+    }
+
+    this._entranceAnimationResetTimer = window.setTimeout(() => {
+      this._entranceAnimationResetTimer = 0;
+      this._animateContentOnNextRender = false;
+    }, safeDelay);
   }
 
   set hass(hass) {
@@ -1670,6 +1695,8 @@ class NodaliaLightCard extends HTMLElement {
     const modeTransitionAxisClass = animations.modeSwitchHorizontal
       ? "light-card__mode-panel-inner--horizontal"
       : "light-card__mode-panel-inner--vertical";
+    const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
+    const contentEntranceDuration = clamp(Math.round(animations.controlsDuration * 0.9), 180, 900);
 
     if (!isMiniLayout && config.show_state === true) {
       stateChipMarkup = `<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`;
@@ -1923,6 +1950,7 @@ class NodaliaLightCard extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
+          --light-card-content-duration: ${animations.enabled ? contentEntranceDuration : 0}ms;
           display: block;
           width: 100%;
         }
@@ -2012,6 +2040,10 @@ class NodaliaLightCard extends HTMLElement {
           gap: 0;
           position: relative;
           z-index: 1;
+        }
+
+        .light-card__content--entering {
+          animation: light-card-fade-up var(--light-card-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
         .light-card--mini .light-card__content {
@@ -2814,6 +2846,17 @@ class NodaliaLightCard extends HTMLElement {
           }
         }
 
+        @keyframes light-card-fade-up {
+          0% {
+            opacity: 0;
+            transform: translateY(12px) scale(0.97);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
         ${animations.enabled ? "" : `
         .light-card,
         .light-card::after,
@@ -2871,7 +2914,7 @@ class NodaliaLightCard extends HTMLElement {
         style="--accent-color:${escapeHtml(accentColor)};"
         data-light-action="toggle"
       >
-        <div class="light-card__content">
+        <div class="light-card__content ${shouldAnimateEntrance ? "light-card__content--entering" : ""}">
           <div class="light-card__hero">
             <button
               type="button"
@@ -2905,6 +2948,10 @@ class NodaliaLightCard extends HTMLElement {
     } else if (this._animationCleanupTimer) {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
+    }
+
+    if (shouldAnimateEntrance) {
+      this._scheduleEntranceAnimationReset(contentEntranceDuration + 120);
     }
   }
 }

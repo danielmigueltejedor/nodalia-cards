@@ -462,6 +462,8 @@ class NodaliaVacuumCard extends HTMLElement {
       mop: 0,
     };
     this._lastRenderSignature = "";
+    this._animateContentOnNextRender = true;
+    this._entranceAnimationResetTimer = 0;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -489,6 +491,10 @@ class NodaliaVacuumCard extends HTMLElement {
 
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
     Object.keys(this._pendingModeSelectionTimers).forEach(kind => {
       if (this._pendingModeSelectionTimers[kind]) {
         window.clearTimeout(this._pendingModeSelectionTimers[kind]);
@@ -503,6 +509,7 @@ class NodaliaVacuumCard extends HTMLElement {
       Math.round(this._cardWidth || this.clientWidth || 0),
     );
     this._lastRenderSignature = "";
+    this._animateContentOnNextRender = true;
     this._render();
   }
 
@@ -550,6 +557,24 @@ class NodaliaVacuumCard extends HTMLElement {
     window.setTimeout(() => {
       this._notifyLayoutChange();
     }, Math.max(0, Number(delay) || 0));
+  }
+
+  _scheduleEntranceAnimationReset(delay) {
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
+    if (!safeDelay || typeof window === "undefined") {
+      this._animateContentOnNextRender = false;
+      return;
+    }
+
+    this._entranceAnimationResetTimer = window.setTimeout(() => {
+      this._entranceAnimationResetTimer = 0;
+      this._animateContentOnNextRender = false;
+    }, safeDelay);
   }
 
   _getEstimatedCardSize(state = this._getState()) {
@@ -2402,6 +2427,7 @@ class NodaliaVacuumCard extends HTMLElement {
     const isCompactLayout = this._isCompactLayout;
     const accentColor = this._getAccentColor(state);
     const animations = this._getAnimationSettings();
+    const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const controls = this._getControls(state);
     const isTintedState = this._shouldTintCard(state);
     const roomMappings = this._getRoomMappings(state);
@@ -2469,10 +2495,11 @@ class NodaliaVacuumCard extends HTMLElement {
           : "Iniciar limpieza";
 
     this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-        }
+        <style>
+          :host {
+            --vacuum-card-content-duration: ${animations.enabled ? clamp(Math.round(animations.panelDuration * 0.9), 180, 900) : 0}ms;
+            display: block;
+          }
 
         * {
           box-sizing: border-box;
@@ -2513,6 +2540,10 @@ class NodaliaVacuumCard extends HTMLElement {
           min-width: 0;
           position: relative;
           z-index: 1;
+        }
+
+        .vacuum-card--entering {
+          animation: vacuum-card-fade-up var(--vacuum-card-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
         .vacuum-card__icon-button,
@@ -2856,6 +2887,17 @@ class NodaliaVacuumCard extends HTMLElement {
           100% { transform: scale(1); }
         }
 
+        @keyframes vacuum-card-fade-up {
+          0% {
+            opacity: 0;
+            transform: translateY(12px) scale(0.97);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
         @keyframes vacuum-card-panel-shell-in {
           0% {
             max-height: 0;
@@ -2947,7 +2989,7 @@ class NodaliaVacuumCard extends HTMLElement {
       </style>
 
       <ha-card ${canRunCardTapAction ? 'data-vacuum-action="card_tap"' : ""}>
-        <div class="vacuum-card ${isCompactLayout ? "vacuum-card--compact" : ""}">
+        <div class="vacuum-card ${isCompactLayout ? "vacuum-card--compact" : ""} ${shouldAnimateEntrance ? "vacuum-card--entering" : ""}">
           <div class="vacuum-card__header">
             <button
               class="vacuum-card__icon-button"
@@ -3016,6 +3058,10 @@ class NodaliaVacuumCard extends HTMLElement {
         </div>
       </ha-card>
     `;
+
+    if (shouldAnimateEntrance) {
+      this._scheduleEntranceAnimationReset(clamp(Math.round(animations.panelDuration * 0.9), 180, 900) + 120);
+    }
   }
 }
 
