@@ -1649,13 +1649,18 @@ class NodaliaClimateCard extends HTMLElement {
     const currentActionMeta = getActionMeta(this._getCurrentAction(state) || currentMode);
     const cardBackground = isOff
       ? styles.card.background
-      : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
+      : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 9%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
     const cardBorder = isOff
       ? styles.card.border
       : `1px solid color-mix(in srgb, ${accentColor} 26%, var(--divider-color))`;
     const cardShadow = isOff
       ? styles.card.box_shadow
       : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
+    const dialSurfaceBackground = `
+      radial-gradient(circle at 24% 18%, color-mix(in srgb, ${accentColor} 16%, transparent), transparent 30%),
+      linear-gradient(180deg, color-mix(in srgb, ${accentColor} 10%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 42%),
+      linear-gradient(135deg, color-mix(in srgb, ${accentColor} 12%, ${styles.dial.background}) 0%, color-mix(in srgb, ${accentColor} 5%, ${styles.dial.background}) 60%, ${styles.dial.background} 100%)
+    `.trim();
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
 
@@ -1859,13 +1864,7 @@ class NodaliaClimateCard extends HTMLElement {
           --climate-thumb-size: ${thumbSizePx}px;
           -webkit-backdrop-filter: blur(18px);
           backdrop-filter: blur(18px);
-          background:
-            radial-gradient(circle at 24% 18%, color-mix(in srgb, var(--primary-text-color) 8%, transparent), transparent 30%),
-            linear-gradient(
-              180deg,
-              color-mix(in srgb, ${styles.dial.background} 94%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%,
-              color-mix(in srgb, ${styles.dial.background} 96%, rgba(0, 0, 0, 0.12)) 100%
-            );
+          background: ${dialSurfaceBackground};
           border: 1px solid color-mix(in srgb, ${accentColor} 10%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
           border-radius: 50%;
           box-shadow:
