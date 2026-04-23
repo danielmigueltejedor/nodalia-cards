@@ -2000,9 +2000,9 @@ class NodaliaHumidifierCard extends HTMLElement {
           align-items: center;
           appearance: none;
           background: ${isOn
-            ? `color-mix(in srgb, ${accentColor} 24%, ${styles.icon.background})`
-            : styles.icon.background};
-          border: 1px solid color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+            ? `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`
+            : "color-mix(in srgb, var(--primary-text-color) 6%, transparent)"};
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           box-shadow:
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
@@ -2019,7 +2019,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           position: relative;
           transform: scale(1);
           transform-origin: center;
-          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
           width: ${styles.icon.size};
         }
 
