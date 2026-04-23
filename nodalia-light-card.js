@@ -613,7 +613,7 @@ class NodaliaLightCard extends HTMLElement {
     this._syncLastKnownOnState(actualState);
     this._syncOptimisticTurnOnState(actualState);
     this._syncOptimisticTurnOffState(actualState);
-    const nextSignature = this._getRenderSignature();
+    const nextSignature = this._getRenderSignature(hass);
 
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
@@ -642,8 +642,9 @@ class NodaliaLightCard extends HTMLElement {
     };
   }
 
-  _getRenderSignature(state = this._getState()) {
+  _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
+    const state = entityId ? hass?.states?.[entityId] || null : null;
     const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
@@ -653,13 +654,10 @@ class NodaliaLightCard extends HTMLElement {
       brightness: Number(attrs.brightness ?? -1),
       colorTemp: Number(attrs.color_temp ?? -1),
       colorTempKelvin: Number(attrs.color_temp_kelvin ?? -1),
-      hsColor: Array.isArray(attrs.hs_color) ? attrs.hs_color.join(",") : "",
       rgbColor: Array.isArray(attrs.rgb_color) ? attrs.rgb_color.join(",") : "",
       effect: String(attrs.effect || ""),
       supportedColorModes: Array.isArray(attrs.supported_color_modes) ? attrs.supported_color_modes.join("|") : "",
-      supportedFeatures: Number(attrs.supported_features ?? -1),
       compact: Boolean(this._isCompactLayout),
-      mini: Boolean(this._shouldUseMiniLayout()),
       controlMode: String(this._activeControlMode || ""),
     });
   }
@@ -987,6 +985,10 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
+    if (actualState?.state === "on") {
+      this._optimisticTurnOn.stateSnapshot = this._createStateSnapshot(actualState);
+    }
+
     if (["unavailable", "unknown"].includes(actualState?.state)) {
       this._clearOptimisticTurnOnState({ clearDrafts: true });
       return;
@@ -1044,14 +1046,10 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
-    const stateSnapshotSource = actualState?.state === "on"
-      ? actualState
-      : this._getLastKnownOnState(this._config.entity) || actualState;
-
     this._optimisticTurnOff = {
       entityId: this._config.entity,
       expiresAt: Date.now() + OPTIMISTIC_TURN_OFF_TIMEOUT,
-      stateSnapshot: this._createStateSnapshot(stateSnapshotSource),
+      stateSnapshot: this._createStateSnapshot(actualState || this._getLastKnownOnState(this._config.entity)),
     };
 
     this._scheduleOptimisticTurnOffTimeout();
@@ -1504,7 +1502,7 @@ class NodaliaLightCard extends HTMLElement {
     if (effectiveState?.state === "on") {
       const shouldClearDrafts = this._isOptimisticTurnOnPending(actualState);
       this._clearOptimisticTurnOnState({ clearDrafts: shouldClearDrafts });
-      if (actualState?.state === "on" || shouldClearDrafts) {
+      if (actualState?.state === "on") {
         this._startOptimisticTurnOff(actualState);
       }
       this._setLightOff();
@@ -1515,7 +1513,6 @@ class NodaliaLightCard extends HTMLElement {
     const wasOptimisticallyTurningOff = this._isOptimisticTurnOffPending(actualState);
     this._clearOptimisticTurnOffState();
     if (wasOptimisticallyTurningOff && actualState?.state === "on") {
-      this._startOptimisticTurnOn(actualState);
       this._setLightState();
       this._render();
       return;
@@ -2030,7 +2027,6 @@ class NodaliaLightCard extends HTMLElement {
 
     if (!this._config) {
       this.shadowRoot.innerHTML = "";
-      this._lastRenderSignature = "";
       return;
     }
 
@@ -2073,7 +2069,6 @@ class NodaliaLightCard extends HTMLElement {
         </style>
         ${this._renderEmptyState()}
       `;
-      this._lastRenderSignature = this._getRenderSignature(state);
       return;
     }
 
@@ -3410,7 +3405,6 @@ class NodaliaLightCard extends HTMLElement {
     `;
 
     this._lastRenderedIsOn = isOn;
-    this._lastRenderSignature = this._getRenderSignature(state);
 
     if (shouldCleanupAfterAnimation) {
       this._scheduleAnimationCleanup(cleanupDelay);
