@@ -2980,6 +2980,7 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__controls-shell--entering {
           animation: light-card-controls-expand var(--light-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          overflow: visible;
           transform-origin: top;
         }
 
