@@ -2625,6 +2625,7 @@ class NodaliaLightCard extends HTMLElement {
           --light-card-power-duration: ${animations.powerDuration}ms;
           --light-card-brightness-fill-delay: 0ms;
           --light-card-brightness-fill-duration: ${brightnessFillDuration}ms;
+          --light-card-brightness-empty-duration: ${animations.controlsDuration}ms;
           --light-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           background: ${isOn ? onCardBackground : styles.card.background};
           border: ${isOn ? `1px solid ${onCardBorder}` : styles.card.border};
@@ -3137,6 +3138,10 @@ class NodaliaLightCard extends HTMLElement {
           animation: light-card-brightness-fill var(--light-card-brightness-fill-duration) cubic-bezier(0.2, 0.86, 0.18, 1) var(--light-card-brightness-fill-delay) both;
         }
 
+        .light-card__controls-shell--leaving .light-card__slider-track[data-light-control="brightness"]::before {
+          animation: light-card-brightness-empty var(--light-card-brightness-empty-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+        }
+
         .light-card__slider-track[data-light-control="temperature"] {
           background: linear-gradient(
             90deg,
@@ -3395,6 +3400,12 @@ class NodaliaLightCard extends HTMLElement {
           }
           100% {
             transform: scaleX(calc(var(--brightness-target, var(--brightness, ${brightnessPercent})) / 100));
+          }
+        }
+
+        @keyframes light-card-brightness-empty {
+          100% {
+            transform: scaleX(0.01);
           }
         }
 
