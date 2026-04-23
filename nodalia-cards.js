@@ -5192,6 +5192,23 @@ function getRelativeLuminance(color) {
   return (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
 }
 
+function isLightThemeSurface(contextNode) {
+  const textColor = parseRgbColor(resolveColorInContext(contextNode, "var(--primary-text-color)"));
+  const backgroundColor = parseRgbColor(resolveColorInContext(contextNode, "var(--ha-card-background, var(--card-background-color, #ffffff))"));
+
+  const textLuminance = getRelativeLuminance(textColor);
+  if (textLuminance !== null) {
+    return textLuminance < 0.36;
+  }
+
+  const backgroundLuminance = getRelativeLuminance(backgroundColor);
+  if (backgroundLuminance !== null) {
+    return backgroundLuminance > 0.62;
+  }
+
+  return false;
+}
+
 function formatEditorHexChannel(value) {
   return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
 }
@@ -5720,23 +5737,6 @@ class NodaliaMediaPlayer extends HTMLElement {
         1200,
       ),
     };
-  }
-
-  _isLightThemeSurface() {
-    const textColor = parseRgbColor(resolveColorInContext(this, "var(--primary-text-color)"));
-    const backgroundColor = parseRgbColor(resolveColorInContext(this, "var(--ha-card-background, var(--card-background-color, #ffffff))"));
-
-    const textLuminance = getRelativeLuminance(textColor);
-    if (textLuminance !== null) {
-      return textLuminance < 0.36;
-    }
-
-    const backgroundLuminance = getRelativeLuminance(backgroundColor);
-    if (backgroundLuminance !== null) {
-      return backgroundLuminance > 0.62;
-    }
-
-    return false;
   }
 
   _triggerButtonBounce(button) {
@@ -8352,32 +8352,36 @@ class NodaliaMediaPlayer extends HTMLElement {
     const browserStyles = config.styles.browser;
     const tvArtworkSize = playerStyles.tv_artwork_size || playerStyles.artwork_size;
     const activeTintColor = playerStyles.active_tint_color || "var(--info-color, #71c0ff)";
-    const isLightThemeSurface = this._isLightThemeSurface();
-    const albumOverlayColor = isLightThemeSurface
+    const lightThemeSurface = isLightThemeSurface(this);
+    const albumOverlayColor = lightThemeSurface
       ? `color-mix(in srgb, ${playerStyles.overlay_color} 24%, var(--ha-card-background))`
       : playerStyles.overlay_color;
-    const albumOverlayTop = isLightThemeSurface
+    const albumOverlayTop = lightThemeSurface
       ? `color-mix(in srgb, ${albumOverlayColor} 72%, transparent)`
       : `color-mix(in srgb, ${albumOverlayColor} 64%, rgba(0, 0, 0, 0.08))`;
-    const albumOverlayBottom = isLightThemeSurface
+    const albumOverlayBottom = lightThemeSurface
       ? `color-mix(in srgb, ${albumOverlayColor} 88%, color-mix(in srgb, var(--ha-card-background) 92%, transparent))`
       : `color-mix(in srgb, ${albumOverlayColor} 86%, rgba(0, 0, 0, 0.16))`;
-    const albumBackgroundFilter = isLightThemeSurface
+    const albumBackgroundFilter = lightThemeSurface
       ? "blur(28px) saturate(0.94) brightness(1.06)"
       : "blur(30px) saturate(0.82)";
-    const albumBackgroundOpacity = isLightThemeSurface ? "0.48" : "0.42";
-    const cardTopHighlight = isLightThemeSurface
+    const albumBackgroundOpacity = lightThemeSurface ? "0.48" : "0.42";
+    const cardTopHighlight = lightThemeSurface
       ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))"
       : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0))";
+    const activeTintPrimaryStrength = lightThemeSurface ? 42 : 38;
+    const activeTintSecondaryStrength = lightThemeSurface ? 24 : 20;
+    const activeTintTopStrength = lightThemeSurface ? 30 : 26;
+    const activeTintBaseStrength = lightThemeSurface ? 40 : 36;
     const activeCardBackground = `
-      radial-gradient(circle at top left, color-mix(in srgb, ${activeTintColor} 34%, transparent) 0%, transparent 62%),
-      radial-gradient(circle at 50% 38%, color-mix(in srgb, ${activeTintColor} 18%, transparent) 0%, transparent 68%),
-      linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} 24%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
-      linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} 34%, ${playerStyles.background}) 0%, color-mix(in srgb, ${activeTintColor} 18%, ${playerStyles.background}) 56%, ${playerStyles.background} 100%)
+      radial-gradient(circle at top left, color-mix(in srgb, ${activeTintColor} ${activeTintPrimaryStrength}%, transparent) 0%, transparent 62%),
+      radial-gradient(circle at 50% 38%, color-mix(in srgb, ${activeTintColor} ${activeTintSecondaryStrength}%, transparent) 0%, transparent 68%),
+      linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} ${activeTintTopStrength}%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
+      linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} ${activeTintBaseStrength}%, ${playerStyles.background}) 0%, color-mix(in srgb, ${activeTintColor} 22%, ${playerStyles.background}) 56%, ${playerStyles.background} 100%)
     `.trim();
-    const activeCardBorder = `color-mix(in srgb, ${activeTintColor} 46%, var(--divider-color))`;
-    const activeCardShadow = `${playerStyles.box_shadow}, 0 0 0 1px color-mix(in srgb, ${activeTintColor} 18%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)), 0 18px 38px color-mix(in srgb, ${activeTintColor} 30%, rgba(16, 34, 82, 0.18))`;
-    const activeCardHighlight = `linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} 24%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0))`;
+    const activeCardBorder = `color-mix(in srgb, ${activeTintColor} 52%, var(--divider-color))`;
+    const activeCardShadow = `${playerStyles.box_shadow}, 0 0 0 1px color-mix(in srgb, ${activeTintColor} 22%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)), 0 18px 38px color-mix(in srgb, ${activeTintColor} 34%, rgba(16, 34, 82, 0.18))`;
+    const activeCardHighlight = `linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} ${activeTintTopStrength}%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0))`;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -23769,6 +23773,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       18,
       Math.min(parseSizeToPixels(styles.gauge.thumb_size, 22), compactLayout ? 20 : 22),
     );
+    const lightThemeSurface = isLightThemeSurface(this);
     const effectiveCardPadding = compactLayout ? "14px" : styles.card.padding;
     const effectiveGap = compactLayout ? "12px" : styles.card.gap;
     const effectiveIconSize = `${Math.max(50, Math.min(parseSizeToPixels(styles.icon.size, 58), compactLayout ? 54 : 58))}px`;
@@ -23782,20 +23787,22 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const cardBackground = value === null
       ? styles.card.background
       : `
-        radial-gradient(circle at 50% 42%, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 58%),
-        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 32%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 16%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
+        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 22%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 12%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
       `.trim();
     const cardBorder = value === null
       ? styles.card.border
-      : `1px solid color-mix(in srgb, ${accentColor} 26%, var(--divider-color))`;
+      : `1px solid color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
     const cardShadow = value === null
       ? styles.card.box_shadow
-      : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
+      : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.16))`;
     const dialSurfaceBackground = `
-      radial-gradient(circle at 24% 18%, color-mix(in srgb, ${accentColor} 16%, transparent), transparent 30%),
-      linear-gradient(180deg, color-mix(in srgb, ${accentColor} 10%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 42%),
-      linear-gradient(135deg, color-mix(in srgb, ${accentColor} 12%, ${styles.gauge.background}) 0%, color-mix(in srgb, ${accentColor} 5%, ${styles.gauge.background}) 60%, ${styles.gauge.background} 100%)
+      radial-gradient(circle at 24% 18%, color-mix(in srgb, ${accentColor} 20%, transparent), transparent 30%),
+      linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 42%),
+      linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.gauge.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.gauge.background}) 60%, ${styles.gauge.background} 100%)
     `.trim();
+    const dialTrackColor = lightThemeSurface
+      ? `color-mix(in srgb, ${styles.gauge.track_color} 58%, color-mix(in srgb, var(--primary-text-color) 44%, var(--ha-card-background)))`
+      : styles.gauge.track_color;
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const previousVisualState = animations.enabled && !shouldAnimateEntrance ? this._lastGaugeVisualState : null;
@@ -23833,9 +23840,9 @@ class NodaliaCircularGaugeCard extends HTMLElement {
 
         .gauge-card {
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 30%, transparent) 0%, transparent 60%),
-            radial-gradient(circle at 50% 38%, color-mix(in srgb, ${accentColor} 12%, transparent) 0%, transparent 64%),
-            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 20%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
+            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 34%, transparent) 0%, transparent 60%),
+            radial-gradient(circle at 50% 38%, color-mix(in srgb, ${accentColor} 16%, transparent) 0%, transparent 64%),
+            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
             ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -24055,7 +24062,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         .gauge-card__dial-track {
           stroke-dasharray: ${DIAL_VISIBLE_LENGTH} ${DIAL_HIDDEN_LENGTH};
           stroke-linecap: round;
-          stroke: ${styles.gauge.track_color};
+          stroke: ${dialTrackColor};
         }
 
         .gauge-card__dial-progress-segment {
@@ -35049,23 +35056,26 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     const currentActionMeta = getActionMeta(this._getCurrentAction(state) || currentMode);
+    const lightThemeSurface = isLightThemeSurface(this);
     const cardBackground = isOff
       ? styles.card.background
       : `
-        radial-gradient(circle at 50% 42%, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 58%),
-        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 32%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 16%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
+        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 22%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 12%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
       `.trim();
     const cardBorder = isOff
       ? styles.card.border
-      : `1px solid color-mix(in srgb, ${accentColor} 26%, var(--divider-color))`;
+      : `1px solid color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
     const cardShadow = isOff
       ? styles.card.box_shadow
-      : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
+      : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.16))`;
     const dialSurfaceBackground = `
-      radial-gradient(circle at 24% 18%, color-mix(in srgb, ${accentColor} 16%, transparent), transparent 30%),
-      linear-gradient(180deg, color-mix(in srgb, ${accentColor} 10%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 42%),
-      linear-gradient(135deg, color-mix(in srgb, ${accentColor} 12%, ${styles.dial.background}) 0%, color-mix(in srgb, ${accentColor} 5%, ${styles.dial.background}) 60%, ${styles.dial.background} 100%)
+      radial-gradient(circle at 24% 18%, color-mix(in srgb, ${accentColor} 20%, transparent), transparent 30%),
+      linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 42%),
+      linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.dial.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.dial.background}) 60%, ${styles.dial.background} 100%)
     `.trim();
+    const dialTrackColor = lightThemeSurface
+      ? `color-mix(in srgb, ${styles.dial.track_color} 58%, color-mix(in srgb, var(--primary-text-color) 44%, var(--ha-card-background)))`
+      : styles.dial.track_color;
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
 
@@ -35093,9 +35103,9 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card {
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 30%, transparent) 0%, transparent 60%),
-            radial-gradient(circle at 50% 38%, color-mix(in srgb, ${accentColor} 12%, transparent) 0%, transparent 64%),
-            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 20%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
+            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 34%, transparent) 0%, transparent 60%),
+            radial-gradient(circle at 50% 38%, color-mix(in srgb, ${accentColor} 16%, transparent) 0%, transparent 64%),
+            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
             ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -35316,7 +35326,7 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__dial-track {
-          stroke: ${styles.dial.track_color};
+          stroke: ${dialTrackColor};
         }
 
         .climate-card__dial-hit {

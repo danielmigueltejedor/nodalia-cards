@@ -339,6 +339,80 @@ function fireEvent(node, type, detail, options) {
   return event;
 }
 
+function resolveColorInContext(contextNode, value) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || typeof document === "undefined") {
+    return rawValue;
+  }
+
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.color = "";
+  probe.style.color = rawValue;
+  (contextNode || document.body || document.documentElement).appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved || rawValue;
+}
+
+function parseRgbColor(value) {
+  const source = String(value ?? "").trim();
+  if (!source) {
+    return null;
+  }
+
+  const rgbMatch = source.match(/^rgba?\(([^)]+)\)$/i);
+  if (rgbMatch) {
+    const channels = rgbMatch[1]
+      .split(",")
+      .map(channel => Number.parseFloat(channel.trim()))
+      .filter(channel => Number.isFinite(channel));
+
+    if (channels.length >= 3) {
+      return {
+        red: clamp(channels[0], 0, 255),
+        green: clamp(channels[1], 0, 255),
+        blue: clamp(channels[2], 0, 255),
+      };
+    }
+  }
+
+  const hexMatch = source.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hexMatch) {
+    const hex = hexMatch[1].length === 3
+      ? hexMatch[1].split("").map(channel => channel + channel).join("")
+      : hexMatch[1];
+
+    return {
+      red: Number.parseInt(hex.slice(0, 2), 16),
+      green: Number.parseInt(hex.slice(2, 4), 16),
+      blue: Number.parseInt(hex.slice(4, 6), 16),
+    };
+  }
+
+  return null;
+}
+
+function getRelativeLuminance(color) {
+  if (!color) {
+    return null;
+  }
+
+  const toLinear = channel => {
+    const normalized = clamp(Number(channel) / 255, 0, 1);
+    return normalized <= 0.04045
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4;
+  };
+
+  const red = toLinear(color.red);
+  const green = toLinear(color.green);
+  const blue = toLinear(color.blue);
+  return (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
+}
+
 function normalizeTextKey(value) {
   return String(value ?? "")
     .normalize("NFD")
@@ -791,6 +865,23 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     };
   }
 
+  _isLightThemeSurface() {
+    const textColor = parseRgbColor(resolveColorInContext(this, "var(--primary-text-color)"));
+    const backgroundColor = parseRgbColor(resolveColorInContext(this, "var(--ha-card-background, var(--card-background-color, #ffffff))"));
+
+    const textLuminance = getRelativeLuminance(textColor);
+    if (textLuminance !== null) {
+      return textLuminance < 0.36;
+    }
+
+    const backgroundLuminance = getRelativeLuminance(backgroundColor);
+    if (backgroundLuminance !== null) {
+      return backgroundLuminance > 0.62;
+    }
+
+    return false;
+  }
+
   _canRunTapAction() {
     return (this._config?.tap_action || "more-info") !== "none" && Boolean(this._config?.entity);
   }
@@ -961,6 +1052,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       18,
       Math.min(parseSizeToPixels(styles.gauge.thumb_size, 22), compactLayout ? 20 : 22),
     );
+    const isLightThemeSurface = this._isLightThemeSurface();
     const effectiveCardPadding = compactLayout ? "14px" : styles.card.padding;
     const effectiveGap = compactLayout ? "12px" : styles.card.gap;
     const effectiveIconSize = `${Math.max(50, Math.min(parseSizeToPixels(styles.icon.size, 58), compactLayout ? 54 : 58))}px`;
@@ -974,20 +1066,22 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const cardBackground = value === null
       ? styles.card.background
       : `
-        radial-gradient(circle at 50% 42%, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 58%),
-        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 32%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 16%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
+        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 22%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 12%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
       `.trim();
     const cardBorder = value === null
       ? styles.card.border
-      : `1px solid color-mix(in srgb, ${accentColor} 26%, var(--divider-color))`;
+      : `1px solid color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
     const cardShadow = value === null
       ? styles.card.box_shadow
-      : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.16))`;
+      : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.16))`;
     const dialSurfaceBackground = `
-      radial-gradient(circle at 24% 18%, color-mix(in srgb, ${accentColor} 16%, transparent), transparent 30%),
-      linear-gradient(180deg, color-mix(in srgb, ${accentColor} 10%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 42%),
-      linear-gradient(135deg, color-mix(in srgb, ${accentColor} 12%, ${styles.gauge.background}) 0%, color-mix(in srgb, ${accentColor} 5%, ${styles.gauge.background}) 60%, ${styles.gauge.background} 100%)
+      radial-gradient(circle at 24% 18%, color-mix(in srgb, ${accentColor} 20%, transparent), transparent 30%),
+      linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 42%),
+      linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.gauge.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.gauge.background}) 60%, ${styles.gauge.background} 100%)
     `.trim();
+    const dialTrackColor = isLightThemeSurface
+      ? `color-mix(in srgb, ${styles.gauge.track_color} 58%, color-mix(in srgb, var(--primary-text-color) 44%, var(--ha-card-background)))`
+      : styles.gauge.track_color;
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const previousVisualState = animations.enabled && !shouldAnimateEntrance ? this._lastGaugeVisualState : null;
@@ -1025,9 +1119,9 @@ class NodaliaCircularGaugeCard extends HTMLElement {
 
         .gauge-card {
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 30%, transparent) 0%, transparent 60%),
-            radial-gradient(circle at 50% 38%, color-mix(in srgb, ${accentColor} 12%, transparent) 0%, transparent 64%),
-            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 20%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
+            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 34%, transparent) 0%, transparent 60%),
+            radial-gradient(circle at 50% 38%, color-mix(in srgb, ${accentColor} 16%, transparent) 0%, transparent 64%),
+            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
             ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -1247,7 +1341,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         .gauge-card__dial-track {
           stroke-dasharray: ${DIAL_VISIBLE_LENGTH} ${DIAL_HIDDEN_LENGTH};
           stroke-linecap: round;
-          stroke: ${styles.gauge.track_color};
+          stroke: ${dialTrackColor};
         }
 
         .gauge-card__dial-progress-segment {
