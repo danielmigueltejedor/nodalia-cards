@@ -3589,7 +3589,11 @@ class NodaliaMediaPlayer extends HTMLElement {
     `.trim();
     const activeCardBorder = `color-mix(in srgb, ${activeTintColor} 52%, var(--divider-color))`;
     const activeCardShadow = `${playerStyles.box_shadow}, 0 0 0 1px color-mix(in srgb, ${activeTintColor} 22%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)), 0 18px 38px color-mix(in srgb, ${activeTintColor} 34%, rgba(16, 34, 82, 0.18))`;
-    const activeCardHighlight = `linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} ${activeTintTopStrength}%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0))`;
+    const activeCardHighlight = `
+      radial-gradient(circle at 18% 20%, color-mix(in srgb, ${activeTintColor} 34%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 54%),
+      linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} 24%, transparent) 0%, transparent 68%),
+      linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} ${activeTintTopStrength}%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0))
+    `.trim();
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -3673,10 +3677,6 @@ class NodaliaMediaPlayer extends HTMLElement {
           box-shadow: ${activeCardShadow};
         }
 
-        .media-player-card--active::before {
-          background: ${activeCardHighlight};
-        }
-
         .empty-card {
           display: grid;
           gap: 6px;
@@ -3702,6 +3702,10 @@ class NodaliaMediaPlayer extends HTMLElement {
           pointer-events: none;
           position: absolute;
           z-index: 1;
+        }
+
+        .media-player-card.media-player-card--active::before {
+          background: ${activeCardHighlight};
         }
 
         .media-player-card.has-album-background::after {
