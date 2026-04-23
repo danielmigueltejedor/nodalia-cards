@@ -1452,11 +1452,20 @@ class NodaliaFanCard extends HTMLElement {
       }
     }
 
+    const shouldAnimatePercentageFill = animations.enabled &&
+      powerAnimationState === "powering-up" &&
+      isOn &&
+      supportsPercentage;
+    const percentageFillDuration = shouldAnimatePercentageFill
+      ? clamp(Math.round(animations.controlsDuration * 0.82), 220, 1100)
+      : 0;
+    const percentageSliderShellClass = shouldAnimatePercentageFill ? " fan-card__slider-shell--percentage-fill" : "";
+
     const mainControlsMarkup = isOn && supportsPercentage
       ? `
         <div class="fan-card__slider-row ${hasSecondaryControls ? "" : "fan-card__slider-row--solo"}">
           <div class="fan-card__slider-wrap">
-            <div class="fan-card__slider-shell" style="--percentage:${currentPercentage};">
+            <div class="fan-card__slider-shell${percentageSliderShellClass}" style="--percentage:${currentPercentage}; --percentage-target:${currentPercentage};">
               <div class="fan-card__slider-track"></div>
               <input
                 type="range"
@@ -1612,9 +1621,12 @@ class NodaliaFanCard extends HTMLElement {
     const presetAnimationRemaining = presetPanelAnimationState && this._presetPanelTransition
       ? Math.max(0, this._presetPanelTransition.endsAt - now)
       : 0;
-    const shouldCleanupAfterAnimation = Boolean(powerAnimationRemaining || controlsAnimationRemaining || presetAnimationRemaining);
+    const percentageFillAnimationRemaining = shouldAnimatePercentageFill
+      ? percentageFillDuration
+      : 0;
+    const shouldCleanupAfterAnimation = Boolean(powerAnimationRemaining || controlsAnimationRemaining || presetAnimationRemaining || percentageFillAnimationRemaining);
     const cleanupDelay = shouldCleanupAfterAnimation
-      ? Math.max(powerAnimationRemaining, controlsAnimationRemaining, presetAnimationRemaining) + 40
+      ? Math.max(powerAnimationRemaining, controlsAnimationRemaining, presetAnimationRemaining, percentageFillAnimationRemaining) + 40
       : 0;
 
     if (currentPresetPanelMarkup) {
@@ -1641,6 +1653,8 @@ class NodaliaFanCard extends HTMLElement {
           --fan-card-controls-duration: ${animations.controlsDuration}ms;
           --fan-card-panel-duration: ${animations.presetDuration}ms;
           --fan-card-power-duration: ${animations.powerDuration}ms;
+          --fan-card-percentage-fill-duration: ${percentageFillDuration}ms;
+          --fan-card-percentage-empty-duration: ${animations.controlsDuration}ms;
           --fan-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           background: ${isOn ? onCardBackground : styles.card.background};
           border: ${isOn ? `1px solid ${onCardBorder}` : styles.card.border};
@@ -1874,6 +1888,7 @@ class NodaliaFanCard extends HTMLElement {
 
         .fan-card__controls-shell--entering {
           animation: fan-card-controls-expand var(--fan-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          overflow: visible;
           transform-origin: top;
         }
 
@@ -1979,20 +1994,34 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card__slider-track {
-          background:
-            linear-gradient(
-              90deg,
-              ${styles.slider_color} calc(var(--percentage, ${currentPercentage}) * 1%),
-              color-mix(in srgb, var(--primary-text-color) 8%, transparent) calc(var(--percentage, ${currentPercentage}) * 1%)
-            );
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           height: ${styles.slider_height};
           left: 0;
+          overflow: hidden;
           pointer-events: none;
           position: absolute;
           right: 0;
           top: 50%;
           transform: translateY(-50%);
+        }
+
+        .fan-card__slider-track::before {
+          background: ${styles.slider_color};
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          position: absolute;
+          transform: scaleX(calc(var(--percentage, ${currentPercentage}) / 100));
+          transform-origin: left center;
+        }
+
+        .fan-card__slider-shell--percentage-fill .fan-card__slider-track::before {
+          animation: fan-card-percentage-fill var(--fan-card-percentage-fill-duration) cubic-bezier(0.2, 0.86, 0.18, 1) both;
+        }
+
+        .fan-card__controls-shell--leaving .fan-card__slider-track::before {
+          animation: fan-card-percentage-empty var(--fan-card-percentage-empty-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
         }
 
         .fan-card__slider-row--solo {
@@ -2202,6 +2231,21 @@ class NodaliaFanCard extends HTMLElement {
             margin-top: var(--fan-card-controls-gap);
             max-height: var(--fan-card-controls-max-height);
             opacity: 1;
+          }
+        }
+
+        @keyframes fan-card-percentage-fill {
+          0% {
+            transform: scaleX(0.01);
+          }
+          100% {
+            transform: scaleX(calc(var(--percentage-target, var(--percentage, ${currentPercentage})) / 100));
+          }
+        }
+
+        @keyframes fan-card-percentage-empty {
+          100% {
+            transform: scaleX(0.01);
           }
         }
 
