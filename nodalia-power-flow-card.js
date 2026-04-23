@@ -1526,9 +1526,23 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         ha-card {
+          background-color: var(--ha-card-background, var(--card-background-color, #fff));
+          border-radius: ${styles.card.border_radius};
           height: 100%;
+          isolation: isolate;
           min-height: 0;
           overflow: hidden;
+          position: relative;
+        }
+
+        ha-card::before {
+          background: color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 95%, transparent);
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
         }
 
         .power-flow-card {
@@ -1544,6 +1558,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           flex-direction: column;
           gap: ${styles.card.gap};
           height: 100%;
+          isolation: isolate;
           min-height: 0;
           overflow: hidden;
           padding: ${styles.card.padding};
@@ -1614,6 +1629,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__surface {
+          background: linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 18%, transparent) 0%, transparent 100%);
+          border-radius: calc(${styles.card.border_radius} - 6px);
           min-height: ${surfaceMinHeight}px;
           position: relative;
           transform-origin: center;
@@ -1967,7 +1984,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           appearance: none;
           background:
             radial-gradient(circle at top left, color-mix(in srgb, var(--node-tint) 12%, transparent) 0%, transparent 48%),
-            linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%);
+            linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 88%, rgba(255,255,255,0.07)) 0%, color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 72%, rgba(255,255,255,0.03)) 100%);
           border: 1px solid color-mix(in srgb, var(--node-tint) 24%, rgba(255,255,255,0.09));
           border-radius: 999px;
           box-shadow: 0 10px 20px color-mix(in srgb, var(--node-tint) 7%, rgba(0,0,0,0.14));

@@ -76,6 +76,13 @@ const MUSIC_ASSISTANT_LABEL_TRANSLATIONS = {
 const DEFAULT_CONFIG = {
   title: "",
   show_labels: false,
+  animations: {
+    enabled: true,
+    bar_duration: 160,
+    popup_duration: 220,
+    media_duration: 240,
+    button_bounce_duration: 220,
+  },
   haptics: {
     enabled: true,
     style: "medium",
@@ -2452,6 +2459,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
 
     const config = this._config;
+    const animations = {
+      enabled: config.animations?.enabled !== false,
+      barDuration: clamp(Number(config.animations?.bar_duration) || DEFAULT_CONFIG.animations.bar_duration, 120, 1600),
+      popupDuration: clamp(Number(config.animations?.popup_duration) || DEFAULT_CONFIG.animations.popup_duration, 120, 2400),
+      mediaDuration: clamp(Number(config.animations?.media_duration) || DEFAULT_CONFIG.animations.media_duration, 120, 2400),
+      buttonBounceDuration: clamp(Number(config.animations?.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1600),
+    };
     const inEditMode = this._isInEditMode();
     const shouldHide = this._shouldHideForScreen(config);
 
@@ -2609,14 +2623,32 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         ha-card {
           background: ${config.styles.bar.background};
+          background-color: var(--ha-card-background, var(--card-background-color, #fff));
           border: ${config.styles.bar.border};
           border-radius: ${config.styles.bar.border_radius};
           box-shadow: ${config.styles.bar.box_shadow};
           backdrop-filter: ${config.styles.bar.backdrop_filter};
+          isolation: isolate;
           padding: ${config.styles.bar.padding};
           min-height: ${config.styles.bar.min_height};
           overflow: hidden;
           pointer-events: none;
+          position: relative;
+        }
+
+        ha-card::before {
+          background: color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, transparent);
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        ha-card > * {
+          position: relative;
+          z-index: 1;
         }
 
         .navbar-title {
@@ -2661,7 +2693,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
           padding: 0;
           position: relative;
           width: ${showRouteLabels ? "auto" : config.styles.button.size};
-          transition: background 160ms ease, color 160ms ease;
+          transition:
+            background ${animations.enabled ? animations.barDuration : 0}ms ease,
+            color ${animations.enabled ? animations.barDuration : 0}ms ease,
+            transform ${animations.enabled ? animations.buttonBounceDuration : 0}ms ease;
         }
 
         .nav-item:focus-visible {
@@ -2688,7 +2723,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
           justify-content: center;
           line-height: 0;
           position: relative;
-          transition: background 160ms ease, box-shadow 160ms ease;
+          transition:
+            background ${animations.enabled ? animations.barDuration : 0}ms ease,
+            box-shadow ${animations.enabled ? animations.barDuration : 0}ms ease,
+            transform ${animations.enabled ? animations.buttonBounceDuration : 0}ms ease;
         }
 
         .nav-icon,
@@ -2805,6 +2843,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           transform-origin: center bottom;
           width: min(${config.styles.popup.max_width}, calc(100vw - 24px));
           z-index: ${Number(config.layout.z_index) + 2};
+          ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.popupDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
 
         .popup-panel--down {
@@ -2868,6 +2907,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           padding: 14px;
           position: fixed;
           z-index: ${Number(config.layout.z_index) + 4};
+          ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.mediaDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
 
         .media-browser__header {
@@ -3035,7 +3075,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
           min-height: calc(${config.styles.popup.item_size} + 36px);
           padding: 10px 8px;
           text-align: center;
-          transition: background 160ms ease, transform 160ms ease;
+          transition:
+            background ${animations.enabled ? animations.barDuration : 0}ms ease,
+            transform ${animations.enabled ? animations.buttonBounceDuration : 0}ms ease;
           width: 100%;
         }
 
@@ -3144,6 +3186,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           overflow: hidden;
           padding: ${config.styles.media_player.padding};
           position: relative;
+          ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.mediaDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
 
         .media-player-card::before {
@@ -3538,7 +3581,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
           border-radius: 999px;
           content: "";
           height: ${config.styles.media_player.dot_size};
-          transition: background 160ms ease, width 160ms ease;
+          transition:
+            background ${animations.enabled ? animations.barDuration : 0}ms ease,
+            width ${animations.enabled ? animations.barDuration : 0}ms ease;
           width: ${config.styles.media_player.dot_size};
         }
 
@@ -3561,6 +3606,11 @@ class NodaliaNavigationBarCard extends HTMLElement {
           max-width: min(100%, 280px);
           min-height: 44px;
           padding: 6px 10px 6px 6px;
+          transition:
+            background ${animations.enabled ? animations.barDuration : 0}ms ease,
+            box-shadow ${animations.enabled ? animations.barDuration : 0}ms ease,
+            transform ${animations.enabled ? animations.buttonBounceDuration : 0}ms ease;
+          ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.mediaDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
 
         .media-player-toggle__artwork {
@@ -3620,6 +3670,30 @@ class NodaliaNavigationBarCard extends HTMLElement {
           font-size: 18px;
         }
 
+        @keyframes nodalia-navbar-surface-in {
+          0% {
+            opacity: 0;
+            transform: translateY(10px) scale(0.985);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        ${animations.enabled ? "" : `
+        .nav-item,
+        .nav-icon-wrap,
+        .popup-panel,
+        .popup-item,
+        .media-player-card,
+        .media-player-toggle,
+        .media-browser-panel {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
+
         @media (max-width: 520px) {
           .media-player__footer {
             justify-content: center;
@@ -3662,6 +3736,8 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     super();
     this.attachShadow({ mode: "open" });
     this._config = deepClone(STUB_CONFIG);
+    this._showStyleSection = false;
+    this._showAnimationSection = false;
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
@@ -3676,6 +3752,10 @@ class NodaliaNavigationBarEditor extends HTMLElement {
 
     if (!isObject(config.haptics)) {
       config.haptics = {};
+    }
+
+    if (!isObject(config.animations)) {
+      config.animations = {};
     }
 
     if (!isObject(config.media_player)) {
@@ -3956,6 +4036,25 @@ class NodaliaNavigationBarEditor extends HTMLElement {
   }
 
   _onShadowClick(event) {
+    const toggleButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+
+    if (toggleButton) {
+      if (toggleButton.dataset.editorToggle === "styles") {
+        this._showStyleSection = !this._showStyleSection;
+        this._render();
+        return;
+      }
+
+      if (toggleButton.dataset.editorToggle === "animations") {
+        this._showAnimationSection = !this._showAnimationSection;
+        this._render();
+      }
+
+      return;
+    }
+
     const actionButton = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.editorAction);
@@ -4205,6 +4304,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-unchecked-delete="true"
               ${popupItem.match === "prefix" ? "checked" : ""}
             />
+            <span class="toggle-switch" aria-hidden="true"></span>
             <span>Activa por prefijo</span>
           </label>
         </div>
@@ -4316,6 +4416,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-unchecked-delete="true"
               ${player.show === true ? "checked" : ""}
             />
+            <span class="toggle-switch" aria-hidden="true"></span>
             <span>Mostrar siempre</span>
           </label>
         </div>
@@ -4410,6 +4511,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-unchecked-delete="true"
               ${route.match === "prefix" ? "checked" : ""}
             />
+            <span class="toggle-switch" aria-hidden="true"></span>
             <span>Marcar activa por prefijo</span>
           </label>
         </div>
@@ -4432,6 +4534,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     const playersMarkup = (config.media_player?.players || [])
       .map((player, index) => this._renderMediaPlayerPlayer(player, index))
       .join("");
+    const animationEnabled = config.animations?.enabled !== false;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -4449,16 +4552,64 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           padding: 8px 0;
         }
 
+        .editor-section,
         .panel,
         .route-card,
         .sub-card {
-          background: var(--card-background-color, var(--ha-card-background, #fff));
-          border: 1px solid var(--divider-color);
-          border-radius: 16px;
+          background: color-mix(in srgb, var(--primary-text-color) 2%, var(--card-background-color, var(--ha-card-background, #fff)));
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 18px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           padding: 16px;
         }
 
-        .panel-title,
+        .editor-section__header,
+        .panel-title {
+          display: grid;
+          gap: 4px;
+          margin-bottom: 12px;
+        }
+
+        .editor-section__title {
+          font-size: 15px;
+          font-weight: 700;
+        }
+
+        .editor-section__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .editor-section__actions {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 2px;
+        }
+
+        .editor-section__toggle-button {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        .editor-section__toggle-button ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
         .route-head {
           align-items: center;
           display: flex;
@@ -4479,10 +4630,11 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           justify-content: flex-end;
         }
 
+        .editor-grid,
         .grid {
           display: grid;
           gap: 12px;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
         .subsection {
@@ -4500,35 +4652,87 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           color: var(--primary-text-color);
           display: grid;
           gap: 6px;
-          font-size: 13px;
+          font-size: 12px;
+          font-weight: 600;
+          min-width: 0;
         }
 
         label span {
           color: var(--secondary-text-color);
-          font-weight: 500;
+          font-weight: 600;
         }
 
         input,
         select {
-          background: var(--secondary-background-color);
-          border: 1px solid var(--divider-color);
-          border-radius: 10px;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 12px;
           color: var(--primary-text-color);
-          min-height: 38px;
-          padding: 8px 10px;
+          font: inherit;
+          min-height: 40px;
+          padding: 10px 12px;
           width: 100%;
         }
 
         .checkbox {
           align-items: center;
-          grid-template-columns: auto 1fr;
-          min-height: 38px;
+          column-gap: 10px;
+          cursor: pointer;
+          grid-template-columns: auto minmax(0, 1fr);
+          min-height: 40px;
+          position: relative;
         }
 
         .checkbox input {
-          width: 18px;
-          min-height: 18px;
           margin: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: absolute;
+          width: 1px;
+          min-height: 1px;
+        }
+
+        .checkbox .toggle-switch {
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          display: inline-flex;
+          font-size: 0;
+          height: 22px;
+          line-height: 0;
+          position: relative;
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+          width: 40px;
+        }
+
+        .checkbox .toggle-switch::before {
+          background: rgba(255, 255, 255, 0.92);
+          border-radius: 999px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+          content: "";
+          height: 18px;
+          left: 1px;
+          position: absolute;
+          top: 1px;
+          transition: transform 160ms ease;
+          width: 18px;
+        }
+
+        .checkbox input:checked + .toggle-switch {
+          background: var(--primary-color);
+          border-color: var(--primary-color);
+        }
+
+        .checkbox input:checked + .toggle-switch::before {
+          transform: translateX(18px);
+        }
+
+        .checkbox input:focus-visible + .toggle-switch {
+          box-shadow:
+            0 0 0 3px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 
         button {
@@ -4561,6 +4765,13 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           font-size: 12px;
           line-height: 1.4;
         }
+
+        @media (max-width: 640px) {
+          .editor-grid,
+          .grid {
+            grid-template-columns: 1fr;
+          }
+        }
       </style>
       <div class="editor">
         <div class="panel">
@@ -4574,6 +4785,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="haptics.enabled" ${config.haptics.enabled ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
               <span>Respuesta haptica</span>
             </label>
             <label>
@@ -4590,6 +4802,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="haptics.fallback_vibrate" ${config.haptics.fallback_vibrate ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
               <span>Fallback con vibracion</span>
             </label>
             <label>
@@ -4686,18 +4899,22 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="show_labels" ${config.show_labels ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
               <span>Mostrar etiquetas</span>
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="layout.fixed" ${config.layout.fixed ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
               <span>Fijar a pantalla</span>
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="layout.reserve_space" ${config.layout.reserve_space ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
               <span>Reservar espacio</span>
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="layout.show_desktop" ${config.layout.show_desktop ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
               <span>Mostrar tambien en escritorio</span>
             </label>
           </div>
@@ -4713,10 +4930,12 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           <div class="grid">
             <label class="checkbox">
               <input type="checkbox" data-field="media_player.show_desktop" ${config.media_player.show_desktop ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
               <span>Mostrar tambien en escritorio</span>
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="media_player.album_cover_background" ${config.media_player.album_cover_background ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
               <span>Usar caratula de fondo</span>
             </label>
             <label>
@@ -30913,9 +31132,23 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         ha-card {
+          background-color: var(--ha-card-background, var(--card-background-color, #fff));
+          border-radius: ${styles.card.border_radius};
           height: 100%;
+          isolation: isolate;
           min-height: 0;
           overflow: hidden;
+          position: relative;
+        }
+
+        ha-card::before {
+          background: color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 95%, transparent);
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
         }
 
         .power-flow-card {
@@ -30931,6 +31164,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           flex-direction: column;
           gap: ${styles.card.gap};
           height: 100%;
+          isolation: isolate;
           min-height: 0;
           overflow: hidden;
           padding: ${styles.card.padding};
@@ -31001,6 +31235,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__surface {
+          background: linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 18%, transparent) 0%, transparent 100%);
+          border-radius: calc(${styles.card.border_radius} - 6px);
           min-height: ${surfaceMinHeight}px;
           position: relative;
           transform-origin: center;
@@ -31354,7 +31590,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           appearance: none;
           background:
             radial-gradient(circle at top left, color-mix(in srgb, var(--node-tint) 12%, transparent) 0%, transparent 48%),
-            linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%);
+            linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 88%, rgba(255,255,255,0.07)) 0%, color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 72%, rgba(255,255,255,0.03)) 100%);
           border: 1px solid color-mix(in srgb, var(--node-tint) 24%, rgba(255,255,255,0.09));
           border-radius: 999px;
           box-shadow: 0 10px 20px color-mix(in srgb, var(--node-tint) 7%, rgba(0,0,0,0.14));

@@ -75,6 +75,13 @@ const MUSIC_ASSISTANT_LABEL_TRANSLATIONS = {
 const DEFAULT_CONFIG = {
   title: "",
   show_labels: false,
+  animations: {
+    enabled: true,
+    bar_duration: 160,
+    popup_duration: 220,
+    media_duration: 240,
+    button_bounce_duration: 220,
+  },
   haptics: {
     enabled: true,
     style: "medium",
@@ -2451,6 +2458,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
 
     const config = this._config;
+    const animations = {
+      enabled: config.animations?.enabled !== false,
+      barDuration: clamp(Number(config.animations?.bar_duration) || DEFAULT_CONFIG.animations.bar_duration, 120, 1600),
+      popupDuration: clamp(Number(config.animations?.popup_duration) || DEFAULT_CONFIG.animations.popup_duration, 120, 2400),
+      mediaDuration: clamp(Number(config.animations?.media_duration) || DEFAULT_CONFIG.animations.media_duration, 120, 2400),
+      buttonBounceDuration: clamp(Number(config.animations?.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1600),
+    };
     const inEditMode = this._isInEditMode();
     const shouldHide = this._shouldHideForScreen(config);
 
@@ -2608,14 +2622,32 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         ha-card {
           background: ${config.styles.bar.background};
+          background-color: var(--ha-card-background, var(--card-background-color, #fff));
           border: ${config.styles.bar.border};
           border-radius: ${config.styles.bar.border_radius};
           box-shadow: ${config.styles.bar.box_shadow};
           backdrop-filter: ${config.styles.bar.backdrop_filter};
+          isolation: isolate;
           padding: ${config.styles.bar.padding};
           min-height: ${config.styles.bar.min_height};
           overflow: hidden;
           pointer-events: none;
+          position: relative;
+        }
+
+        ha-card::before {
+          background: color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, transparent);
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        ha-card > * {
+          position: relative;
+          z-index: 1;
         }
 
         .navbar-title {
@@ -2660,7 +2692,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
           padding: 0;
           position: relative;
           width: ${showRouteLabels ? "auto" : config.styles.button.size};
-          transition: background 160ms ease, color 160ms ease;
+          transition:
+            background ${animations.enabled ? animations.barDuration : 0}ms ease,
+            color ${animations.enabled ? animations.barDuration : 0}ms ease,
+            transform ${animations.enabled ? animations.buttonBounceDuration : 0}ms ease;
         }
 
         .nav-item:focus-visible {
@@ -2687,7 +2722,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
           justify-content: center;
           line-height: 0;
           position: relative;
-          transition: background 160ms ease, box-shadow 160ms ease;
+          transition:
+            background ${animations.enabled ? animations.barDuration : 0}ms ease,
+            box-shadow ${animations.enabled ? animations.barDuration : 0}ms ease,
+            transform ${animations.enabled ? animations.buttonBounceDuration : 0}ms ease;
         }
 
         .nav-icon,
@@ -2804,6 +2842,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           transform-origin: center bottom;
           width: min(${config.styles.popup.max_width}, calc(100vw - 24px));
           z-index: ${Number(config.layout.z_index) + 2};
+          ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.popupDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
 
         .popup-panel--down {
@@ -2867,6 +2906,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           padding: 14px;
           position: fixed;
           z-index: ${Number(config.layout.z_index) + 4};
+          ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.mediaDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
 
         .media-browser__header {
@@ -3034,7 +3074,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
           min-height: calc(${config.styles.popup.item_size} + 36px);
           padding: 10px 8px;
           text-align: center;
-          transition: background 160ms ease, transform 160ms ease;
+          transition:
+            background ${animations.enabled ? animations.barDuration : 0}ms ease,
+            transform ${animations.enabled ? animations.buttonBounceDuration : 0}ms ease;
           width: 100%;
         }
 
@@ -3143,6 +3185,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           overflow: hidden;
           padding: ${config.styles.media_player.padding};
           position: relative;
+          ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.mediaDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
 
         .media-player-card::before {
@@ -3537,7 +3580,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
           border-radius: 999px;
           content: "";
           height: ${config.styles.media_player.dot_size};
-          transition: background 160ms ease, width 160ms ease;
+          transition:
+            background ${animations.enabled ? animations.barDuration : 0}ms ease,
+            width ${animations.enabled ? animations.barDuration : 0}ms ease;
           width: ${config.styles.media_player.dot_size};
         }
 
@@ -3560,6 +3605,11 @@ class NodaliaNavigationBarCard extends HTMLElement {
           max-width: min(100%, 280px);
           min-height: 44px;
           padding: 6px 10px 6px 6px;
+          transition:
+            background ${animations.enabled ? animations.barDuration : 0}ms ease,
+            box-shadow ${animations.enabled ? animations.barDuration : 0}ms ease,
+            transform ${animations.enabled ? animations.buttonBounceDuration : 0}ms ease;
+          ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.mediaDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
 
         .media-player-toggle__artwork {
@@ -3619,6 +3669,30 @@ class NodaliaNavigationBarCard extends HTMLElement {
           font-size: 18px;
         }
 
+        @keyframes nodalia-navbar-surface-in {
+          0% {
+            opacity: 0;
+            transform: translateY(10px) scale(0.985);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        ${animations.enabled ? "" : `
+        .nav-item,
+        .nav-icon-wrap,
+        .popup-panel,
+        .popup-item,
+        .media-player-card,
+        .media-player-toggle,
+        .media-browser-panel {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
+
         @media (max-width: 520px) {
           .media-player__footer {
             justify-content: center;
@@ -3661,6 +3735,8 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     super();
     this.attachShadow({ mode: "open" });
     this._config = deepClone(STUB_CONFIG);
+    this._showStyleSection = false;
+    this._showAnimationSection = false;
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
@@ -3675,6 +3751,10 @@ class NodaliaNavigationBarEditor extends HTMLElement {
 
     if (!isObject(config.haptics)) {
       config.haptics = {};
+    }
+
+    if (!isObject(config.animations)) {
+      config.animations = {};
     }
 
     if (!isObject(config.media_player)) {
@@ -3955,6 +4035,25 @@ class NodaliaNavigationBarEditor extends HTMLElement {
   }
 
   _onShadowClick(event) {
+    const toggleButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+
+    if (toggleButton) {
+      if (toggleButton.dataset.editorToggle === "styles") {
+        this._showStyleSection = !this._showStyleSection;
+        this._render();
+        return;
+      }
+
+      if (toggleButton.dataset.editorToggle === "animations") {
+        this._showAnimationSection = !this._showAnimationSection;
+        this._render();
+      }
+
+      return;
+    }
+
     const actionButton = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.editorAction);
@@ -4204,6 +4303,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-unchecked-delete="true"
               ${popupItem.match === "prefix" ? "checked" : ""}
             />
+            <span class="toggle-switch" aria-hidden="true"></span>
             <span>Activa por prefijo</span>
           </label>
         </div>
@@ -4315,6 +4415,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-unchecked-delete="true"
               ${player.show === true ? "checked" : ""}
             />
+            <span class="toggle-switch" aria-hidden="true"></span>
             <span>Mostrar siempre</span>
           </label>
         </div>
@@ -4409,6 +4510,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-unchecked-delete="true"
               ${route.match === "prefix" ? "checked" : ""}
             />
+            <span class="toggle-switch" aria-hidden="true"></span>
             <span>Marcar activa por prefijo</span>
           </label>
         </div>
@@ -4431,6 +4533,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     const playersMarkup = (config.media_player?.players || [])
       .map((player, index) => this._renderMediaPlayerPlayer(player, index))
       .join("");
+    const animationEnabled = config.animations?.enabled !== false;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -4448,16 +4551,62 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           padding: 8px 0;
         }
 
-        .panel,
+        .editor-section,
         .route-card,
         .sub-card {
-          background: var(--card-background-color, var(--ha-card-background, #fff));
-          border: 1px solid var(--divider-color);
-          border-radius: 16px;
+          background: color-mix(in srgb, var(--primary-text-color) 2%, var(--card-background-color, var(--ha-card-background, #fff)));
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 18px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           padding: 16px;
         }
 
-        .panel-title,
+        .editor-section__header {
+          display: grid;
+          gap: 4px;
+          margin-bottom: 12px;
+        }
+
+        .editor-section__title {
+          font-size: 15px;
+          font-weight: 700;
+        }
+
+        .editor-section__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .editor-section__actions {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 2px;
+        }
+
+        .editor-section__toggle-button {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        .editor-section__toggle-button ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
         .route-head {
           align-items: center;
           display: flex;
@@ -4478,10 +4627,11 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           justify-content: flex-end;
         }
 
+        .editor-grid,
         .grid {
           display: grid;
           gap: 12px;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
         .subsection {
@@ -4499,35 +4649,87 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           color: var(--primary-text-color);
           display: grid;
           gap: 6px;
-          font-size: 13px;
+          font-size: 12px;
+          font-weight: 600;
+          min-width: 0;
         }
 
         label span {
           color: var(--secondary-text-color);
-          font-weight: 500;
+          font-weight: 600;
         }
 
         input,
         select {
-          background: var(--secondary-background-color);
-          border: 1px solid var(--divider-color);
-          border-radius: 10px;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 12px;
           color: var(--primary-text-color);
-          min-height: 38px;
-          padding: 8px 10px;
+          font: inherit;
+          min-height: 40px;
+          padding: 10px 12px;
           width: 100%;
         }
 
         .checkbox {
           align-items: center;
-          grid-template-columns: auto 1fr;
-          min-height: 38px;
+          column-gap: 10px;
+          cursor: pointer;
+          grid-template-columns: auto minmax(0, 1fr);
+          min-height: 40px;
+          position: relative;
         }
 
         .checkbox input {
-          width: 18px;
-          min-height: 18px;
           margin: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: absolute;
+          width: 1px;
+          min-height: 1px;
+        }
+
+        .checkbox .toggle-switch {
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          display: inline-flex;
+          font-size: 0;
+          height: 22px;
+          line-height: 0;
+          position: relative;
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+          width: 40px;
+        }
+
+        .checkbox .toggle-switch::before {
+          background: rgba(255, 255, 255, 0.92);
+          border-radius: 999px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+          content: "";
+          height: 18px;
+          left: 1px;
+          position: absolute;
+          top: 1px;
+          transition: transform 160ms ease;
+          width: 18px;
+        }
+
+        .checkbox input:checked + .toggle-switch {
+          background: var(--primary-color);
+          border-color: var(--primary-color);
+        }
+
+        .checkbox input:checked + .toggle-switch::before {
+          transform: translateX(18px);
+        }
+
+        .checkbox input:focus-visible + .toggle-switch {
+          box-shadow:
+            0 0 0 3px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 
         button {
@@ -4560,19 +4762,28 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           font-size: 12px;
           line-height: 1.4;
         }
+
+        @media (max-width: 640px) {
+          .editor-grid,
+          .grid {
+            grid-template-columns: 1fr;
+          }
+        }
       </style>
       <div class="editor">
-        <div class="panel">
-          <div class="panel-title">
-            <strong>General</strong>
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">General</div>
+            <div class="editor-section__hint">Opciones base de la barra, layout y visibilidad general.</div>
           </div>
-          <div class="grid">
+          <div class="editor-grid">
             <label>
               <span>Titulo</span>
               <input type="text" data-field="title" data-optional="true" value="${escapeHtml(config.title || "")}" />
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="haptics.enabled" ${config.haptics.enabled ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
               <span>Respuesta haptica</span>
             </label>
             <label>
@@ -4589,6 +4800,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="haptics.fallback_vibrate" ${config.haptics.fallback_vibrate ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
               <span>Fallback con vibracion</span>
             </label>
             <label>
@@ -4596,126 +4808,208 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               <input type="number" data-field="layout.mobile_breakpoint" value="${escapeHtml(config.layout.mobile_breakpoint || 1279)}" />
             </label>
             <label>
-              <span>Fondo</span>
-              <input type="text" data-field="styles.bar.background" value="${escapeHtml(config.styles.bar.background || "")}" />
-            </label>
-            <label>
-              <span>Fondo botones</span>
-              <input type="text" data-field="styles.button.background" value="${escapeHtml(config.styles.button.background || "")}" />
-            </label>
-            <label>
-              <span>Color activo</span>
-              <input type="text" data-field="styles.button.active_color" value="${escapeHtml(config.styles.button.active_color || "")}" />
-            </label>
-            <label>
-              <span>Fondo activo</span>
-              <input type="text" data-field="styles.button.active_background" value="${escapeHtml(config.styles.button.active_background || "")}" />
-            </label>
-            <label>
-              <span>Radio barra</span>
-              <input type="text" data-field="styles.bar.border_radius" value="${escapeHtml(config.styles.bar.border_radius || "")}" />
-            </label>
-            <label>
-              <span>Padding barra</span>
-              <input type="text" data-field="styles.bar.padding" value="${escapeHtml(config.styles.bar.padding || "")}" />
-            </label>
-            <label>
-              <span>Tamano icono</span>
-              <input type="text" data-field="styles.button.icon_size" value="${escapeHtml(config.styles.button.icon_size || "")}" />
-            </label>
-            <label>
-              <span>Offset icono X</span>
-              <input type="text" data-field="styles.button.icon_offset_x" value="${escapeHtml(config.styles.button.icon_offset_x || "")}" />
-            </label>
-            <label>
-              <span>Offset icono Y</span>
-              <input type="text" data-field="styles.button.icon_offset_y" value="${escapeHtml(config.styles.button.icon_offset_y || "")}" />
-            </label>
-            <label>
-              <span>Tamano boton</span>
-              <input type="text" data-field="styles.button.size" value="${escapeHtml(config.styles.button.size || "")}" />
-            </label>
-            <label>
-              <span>Tamano etiqueta navbar</span>
-              <input type="text" data-field="styles.button.label_size" value="${escapeHtml(config.styles.button.label_size || "")}" />
-            </label>
-            <label>
-              <span>Ancho popup</span>
-              <input
-                type="text"
-                data-field="styles.popup.max_width"
-                data-optional="true"
-                value="${escapeHtml(config.styles.popup.max_width || "")}"
-              />
-            </label>
-            <label>
-              <span>Tamano item popup</span>
-              <input
-                type="text"
-                data-field="styles.popup.item_size"
-                data-optional="true"
-                value="${escapeHtml(config.styles.popup.item_size || "")}"
-              />
-            </label>
-            <label>
-              <span>Tamano etiqueta popup</span>
-              <input
-                type="text"
-                data-field="styles.popup.label_size"
-                data-optional="true"
-                value="${escapeHtml(config.styles.popup.label_size || "")}"
-              />
-            </label>
-            <label>
-              <span>Separacion popup</span>
-              <input
-                type="text"
-                data-field="styles.popup.item_gap"
-                data-optional="true"
-                value="${escapeHtml(config.styles.popup.item_gap || "")}"
-              />
-            </label>
-            <label>
-              <span>Layout popup por defecto</span>
-              <select data-field="styles.popup.layout" data-optional="true">
-                <option value="" ${!config.styles.popup.layout || config.styles.popup.layout === "auto" ? "selected" : ""}>Auto</option>
-                <option value="vertical" ${config.styles.popup.layout === "vertical" ? "selected" : ""}>Vertical</option>
-                <option value="horizontal" ${config.styles.popup.layout === "horizontal" ? "selected" : ""}>Horizontal</option>
+              <span>Posicion</span>
+              <select data-field="layout.position">
+                <option value="bottom" ${config.layout.position === "bottom" ? "selected" : ""}>Inferior</option>
+                <option value="top" ${config.layout.position === "top" ? "selected" : ""}>Superior</option>
               </select>
+            </label>
+            <label>
+              <span>Offset</span>
+              <input type="text" data-field="layout.offset" value="${escapeHtml(config.layout.offset || "")}" />
+            </label>
+            <label>
+              <span>Margen lateral</span>
+              <input type="text" data-field="layout.side_margin" value="${escapeHtml(config.layout.side_margin || "")}" />
+            </label>
+            <label>
+              <span>Separacion stack</span>
+              <input type="text" data-field="layout.stack_gap" value="${escapeHtml(config.layout.stack_gap || "")}" />
+            </label>
+            <label>
+              <span>Altura reservada</span>
+              <input type="text" data-field="layout.reserve_height" value="${escapeHtml(config.layout.reserve_height || "")}" />
+            </label>
+            <label>
+              <span>Z-index</span>
+              <input type="number" data-field="layout.z_index" value="${escapeHtml(config.layout.z_index || 2)}" />
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="show_labels" ${config.show_labels ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
               <span>Mostrar etiquetas</span>
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="layout.fixed" ${config.layout.fixed ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
               <span>Fijar a pantalla</span>
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="layout.reserve_space" ${config.layout.reserve_space ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
               <span>Reservar espacio</span>
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="layout.show_desktop" ${config.layout.show_desktop ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
               <span>Mostrar tambien en escritorio</span>
             </label>
           </div>
           <p class="hint">
             Aqui ya puedes editar popup y media player. Para acciones muy avanzadas, sigue siendo mejor completar el YAML.
           </p>
-        </div>
-        <div class="panel">
-          <div class="panel-title">
-            <strong>Media Player</strong>
-            <button type="button" data-editor-action="add-player">Anadir player</button>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Animaciones</div>
+            <div class="editor-section__hint">Controla transiciones de barra, popup, media player y respuestas visuales.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="animations"
+                aria-expanded="${this._showAnimationSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showAnimationSection ? "Ocultar ajustes de animación" : "Mostrar ajustes de animación"}</span>
+              </button>
+            </div>
           </div>
-          <div class="grid">
+          ${
+            this._showAnimationSection
+              ? `
+                <div class="editor-grid">
+                  <label class="checkbox">
+                    <input type="checkbox" data-field="animations.enabled" ${animationEnabled ? "checked" : ""} />
+                    <span class="toggle-switch" aria-hidden="true"></span>
+                    <span>Activar animaciones</span>
+                  </label>
+                  <label>
+                    <span>Barra y hover (ms)</span>
+                    <input type="number" data-field="animations.bar_duration" value="${escapeHtml(config.animations.bar_duration || DEFAULT_CONFIG.animations.bar_duration)}" />
+                  </label>
+                  <label>
+                    <span>Popup (ms)</span>
+                    <input type="number" data-field="animations.popup_duration" value="${escapeHtml(config.animations.popup_duration || DEFAULT_CONFIG.animations.popup_duration)}" />
+                  </label>
+                  <label>
+                    <span>Media player (ms)</span>
+                    <input type="number" data-field="animations.media_duration" value="${escapeHtml(config.animations.media_duration || DEFAULT_CONFIG.animations.media_duration)}" />
+                  </label>
+                  <label>
+                    <span>Respuesta botones (ms)</span>
+                    <input type="number" data-field="animations.button_bounce_duration" value="${escapeHtml(config.animations.button_bounce_duration || DEFAULT_CONFIG.animations.button_bounce_duration)}" />
+                  </label>
+                </div>
+              `
+              : ""
+          }
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Estilos</div>
+            <div class="editor-section__hint">Ajustes visuales de barra, botones, popup y media player.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="styles"
+                aria-expanded="${this._showStyleSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showStyleSection
+              ? `
+                <div class="editor-grid">
+                  <label><span>Fondo barra</span><input type="text" data-field="styles.bar.background" value="${escapeHtml(config.styles.bar.background || "")}" /></label>
+                  <label><span>Borde barra</span><input type="text" data-field="styles.bar.border" value="${escapeHtml(config.styles.bar.border || "")}" /></label>
+                  <label><span>Radio barra</span><input type="text" data-field="styles.bar.border_radius" value="${escapeHtml(config.styles.bar.border_radius || "")}" /></label>
+                  <label><span>Sombra barra</span><input type="text" data-field="styles.bar.box_shadow" value="${escapeHtml(config.styles.bar.box_shadow || "")}" /></label>
+                  <label><span>Padding barra</span><input type="text" data-field="styles.bar.padding" value="${escapeHtml(config.styles.bar.padding || "")}" /></label>
+                  <label><span>Altura minima</span><input type="text" data-field="styles.bar.min_height" value="${escapeHtml(config.styles.bar.min_height || "")}" /></label>
+                  <label><span>Separacion botones</span><input type="text" data-field="styles.bar.gap" value="${escapeHtml(config.styles.bar.gap || "")}" /></label>
+                  <label><span>Justificacion</span><input type="text" data-field="styles.bar.justify_content" value="${escapeHtml(config.styles.bar.justify_content || "")}" /></label>
+                  <label><span>Ancho maximo barra</span><input type="text" data-field="styles.bar.max_width" value="${escapeHtml(config.styles.bar.max_width || "")}" /></label>
+                  <label><span>Backdrop filter</span><input type="text" data-field="styles.bar.backdrop_filter" value="${escapeHtml(config.styles.bar.backdrop_filter || "")}" /></label>
+                  <label><span>Fondo botones</span><input type="text" data-field="styles.button.background" value="${escapeHtml(config.styles.button.background || "")}" /></label>
+                  <label><span>Color botones</span><input type="text" data-field="styles.button.color" value="${escapeHtml(config.styles.button.color || "")}" /></label>
+                  <label><span>Color activo</span><input type="text" data-field="styles.button.active_color" value="${escapeHtml(config.styles.button.active_color || "")}" /></label>
+                  <label><span>Fondo activo</span><input type="text" data-field="styles.button.active_background" value="${escapeHtml(config.styles.button.active_background || "")}" /></label>
+                  <label><span>Radio boton</span><input type="text" data-field="styles.button.border_radius" value="${escapeHtml(config.styles.button.border_radius || "")}" /></label>
+                  <label><span>Tamano boton</span><input type="text" data-field="styles.button.size" value="${escapeHtml(config.styles.button.size || "")}" /></label>
+                  <label><span>Tamano icono</span><input type="text" data-field="styles.button.icon_size" value="${escapeHtml(config.styles.button.icon_size || "")}" /></label>
+                  <label><span>Offset icono X</span><input type="text" data-field="styles.button.icon_offset_x" value="${escapeHtml(config.styles.button.icon_offset_x || "")}" /></label>
+                  <label><span>Offset icono Y</span><input type="text" data-field="styles.button.icon_offset_y" value="${escapeHtml(config.styles.button.icon_offset_y || "")}" /></label>
+                  <label><span>Color etiqueta</span><input type="text" data-field="styles.button.label_color" value="${escapeHtml(config.styles.button.label_color || "")}" /></label>
+                  <label><span>Color etiqueta activa</span><input type="text" data-field="styles.button.active_label_color" value="${escapeHtml(config.styles.button.active_label_color || "")}" /></label>
+                  <label><span>Tamano etiqueta</span><input type="text" data-field="styles.button.label_size" value="${escapeHtml(config.styles.button.label_size || "")}" /></label>
+                  <label><span>Separacion etiqueta</span><input type="text" data-field="styles.button.label_gap" value="${escapeHtml(config.styles.button.label_gap || "")}" /></label>
+                  <label><span>Fondo badge</span><input type="text" data-field="styles.badge.background" value="${escapeHtml(config.styles.badge.background || "")}" /></label>
+                  <label><span>Color badge</span><input type="text" data-field="styles.badge.color" value="${escapeHtml(config.styles.badge.color || "")}" /></label>
+                  <label><span>Tamano minimo badge</span><input type="text" data-field="styles.badge.min_size" value="${escapeHtml(config.styles.badge.min_size || "")}" /></label>
+                  <label><span>Tamano texto badge</span><input type="text" data-field="styles.badge.font_size" value="${escapeHtml(config.styles.badge.font_size || "")}" /></label>
+                  <label><span>Fondo popup</span><input type="text" data-field="styles.popup.background" value="${escapeHtml(config.styles.popup.background || "")}" /></label>
+                  <label><span>Borde popup</span><input type="text" data-field="styles.popup.border" value="${escapeHtml(config.styles.popup.border || "")}" /></label>
+                  <label><span>Radio popup</span><input type="text" data-field="styles.popup.border_radius" value="${escapeHtml(config.styles.popup.border_radius || "")}" /></label>
+                  <label><span>Sombra popup</span><input type="text" data-field="styles.popup.box_shadow" value="${escapeHtml(config.styles.popup.box_shadow || "")}" /></label>
+                  <label>
+                    <span>Layout popup</span>
+                    <select data-field="styles.popup.layout" data-optional="true">
+                      <option value="" ${!config.styles.popup.layout || config.styles.popup.layout === "auto" ? "selected" : ""}>Auto</option>
+                      <option value="vertical" ${config.styles.popup.layout === "vertical" ? "selected" : ""}>Vertical</option>
+                      <option value="horizontal" ${config.styles.popup.layout === "horizontal" ? "selected" : ""}>Horizontal</option>
+                    </select>
+                  </label>
+                  <label><span>Padding popup</span><input type="text" data-field="styles.popup.padding" value="${escapeHtml(config.styles.popup.padding || "")}" /></label>
+                  <label><span>Ancho minimo popup</span><input type="text" data-field="styles.popup.min_width" value="${escapeHtml(config.styles.popup.min_width || "")}" /></label>
+                  <label><span>Ancho maximo popup</span><input type="text" data-field="styles.popup.max_width" value="${escapeHtml(config.styles.popup.max_width || "")}" /></label>
+                  <label><span>Tamano item popup</span><input type="text" data-field="styles.popup.item_size" value="${escapeHtml(config.styles.popup.item_size || "")}" /></label>
+                  <label><span>Tamano etiqueta popup</span><input type="text" data-field="styles.popup.label_size" value="${escapeHtml(config.styles.popup.label_size || "")}" /></label>
+                  <label><span>Separacion popup</span><input type="text" data-field="styles.popup.item_gap" value="${escapeHtml(config.styles.popup.item_gap || "")}" /></label>
+                  <label><span>Veladura popup</span><input type="text" data-field="styles.popup.backdrop" value="${escapeHtml(config.styles.popup.backdrop || "")}" /></label>
+                  <label><span>Fondo media player</span><input type="text" data-field="styles.media_player.background" value="${escapeHtml(config.styles.media_player.background || "")}" /></label>
+                  <label><span>Borde media player</span><input type="text" data-field="styles.media_player.border" value="${escapeHtml(config.styles.media_player.border || "")}" /></label>
+                  <label><span>Radio media player</span><input type="text" data-field="styles.media_player.border_radius" value="${escapeHtml(config.styles.media_player.border_radius || "")}" /></label>
+                  <label><span>Sombra media player</span><input type="text" data-field="styles.media_player.box_shadow" value="${escapeHtml(config.styles.media_player.box_shadow || "")}" /></label>
+                  <label><span>Padding media player</span><input type="text" data-field="styles.media_player.padding" value="${escapeHtml(config.styles.media_player.padding || "")}" /></label>
+                  <label><span>Altura minima media player</span><input type="text" data-field="styles.media_player.min_height" value="${escapeHtml(config.styles.media_player.min_height || "")}" /></label>
+                  <label><span>Tamano portada</span><input type="text" data-field="styles.media_player.artwork_size" value="${escapeHtml(config.styles.media_player.artwork_size || "")}" /></label>
+                  <label><span>Tamano controles</span><input type="text" data-field="styles.media_player.control_size" value="${escapeHtml(config.styles.media_player.control_size || "")}" /></label>
+                  <label><span>Tamano titulo</span><input type="text" data-field="styles.media_player.title_size" value="${escapeHtml(config.styles.media_player.title_size || "")}" /></label>
+                  <label><span>Tamano subtitulo</span><input type="text" data-field="styles.media_player.subtitle_size" value="${escapeHtml(config.styles.media_player.subtitle_size || "")}" /></label>
+                  <label><span>Color progreso</span><input type="text" data-field="styles.media_player.progress_color" value="${escapeHtml(config.styles.media_player.progress_color || "")}" /></label>
+                  <label><span>Fondo progreso</span><input type="text" data-field="styles.media_player.progress_background" value="${escapeHtml(config.styles.media_player.progress_background || "")}" /></label>
+                  <label><span>Overlay portada</span><input type="text" data-field="styles.media_player.overlay_color" value="${escapeHtml(config.styles.media_player.overlay_color || "")}" /></label>
+                  <label><span>Tamano indicadores</span><input type="text" data-field="styles.media_player.dot_size" value="${escapeHtml(config.styles.media_player.dot_size || "")}" /></label>
+                </div>
+              `
+              : ""
+          }
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Media Player</div>
+            <div class="editor-section__hint">Opciones generales del reproductor integrado y lista de players visibles.</div>
+            <div class="editor-section__actions">
+              <button type="button" data-editor-action="add-player">Anadir player</button>
+            </div>
+          </div>
+          <div class="editor-grid">
             <label class="checkbox">
               <input type="checkbox" data-field="media_player.show_desktop" ${config.media_player.show_desktop ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
               <span>Mostrar tambien en escritorio</span>
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="media_player.album_cover_background" ${config.media_player.album_cover_background ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
               <span>Usar caratula de fondo</span>
             </label>
             <label>
@@ -4725,14 +5019,6 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             <label>
               <span>Separacion con navbar</span>
               <input type="text" data-field="media_player.gap" value="${escapeHtml(config.media_player.gap || "")}" />
-            </label>
-            <label>
-              <span>Radio player</span>
-              <input type="text" data-field="styles.media_player.border_radius" value="${escapeHtml(config.styles.media_player.border_radius || "")}" />
-            </label>
-            <label>
-              <span>Padding player</span>
-              <input type="text" data-field="styles.media_player.padding" value="${escapeHtml(config.styles.media_player.padding || "")}" />
             </label>
             <label>
               <span>Tamano portada</span>
@@ -4754,14 +5040,17 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           <div class="subsection">
             ${playersMarkup || '<p class="hint">No hay reproductores configurados.</p>'}
           </div>
-        </div>
-        <div class="panel">
-          <div class="panel-title">
-            <strong>Rutas</strong>
-            <button type="button" data-editor-action="add-route">Anadir ruta</button>
+        </section>
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Rutas</div>
+            <div class="editor-section__hint">Añade, reordena y personaliza los destinos de la barra y sus popups.</div>
+            <div class="editor-section__actions">
+              <button type="button" data-editor-action="add-route">Anadir ruta</button>
+            </div>
           </div>
           ${routesMarkup || '<p class="hint">No hay rutas todavia.</p>'}
-        </div>
+        </section>
       </div>
     `;
   }
