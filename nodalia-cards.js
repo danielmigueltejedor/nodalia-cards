@@ -8607,15 +8607,17 @@ class NodaliaMediaPlayer extends HTMLElement {
     const cardTopHighlight = lightThemeSurface
       ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))"
       : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0))";
-    const activeTintPrimaryStrength = lightThemeSurface ? 42 : 38;
-    const activeTintSecondaryStrength = lightThemeSurface ? 24 : 20;
-    const activeTintTopStrength = lightThemeSurface ? 30 : 26;
-    const activeTintBaseStrength = lightThemeSurface ? 40 : 36;
+    const activeTintPrimaryStrength = lightThemeSurface ? 52 : 46;
+    const activeTintSecondaryStrength = lightThemeSurface ? 34 : 30;
+    const activeTintTopStrength = lightThemeSurface ? 40 : 34;
+    const activeTintBaseStrength = lightThemeSurface ? 56 : 48;
+    const activeTintMidStrength = lightThemeSurface ? 34 : 30;
     const activeCardBackground = `
+      radial-gradient(circle at 18% 20%, color-mix(in srgb, ${activeTintColor} ${activeTintPrimaryStrength}%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 56%),
       radial-gradient(circle at top left, color-mix(in srgb, ${activeTintColor} ${activeTintPrimaryStrength}%, transparent) 0%, transparent 62%),
       radial-gradient(circle at 50% 38%, color-mix(in srgb, ${activeTintColor} ${activeTintSecondaryStrength}%, transparent) 0%, transparent 68%),
       linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} ${activeTintTopStrength}%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
-      linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} ${activeTintBaseStrength}%, ${playerStyles.background}) 0%, color-mix(in srgb, ${activeTintColor} 22%, ${playerStyles.background}) 56%, ${playerStyles.background} 100%)
+      linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} ${activeTintBaseStrength}%, ${playerStyles.background}) 0%, color-mix(in srgb, ${activeTintColor} ${activeTintMidStrength}%, ${playerStyles.background}) 58%, ${playerStyles.background} 100%)
     `.trim();
     const activeCardBorder = `color-mix(in srgb, ${activeTintColor} 52%, var(--divider-color))`;
     const activeCardShadow = `${playerStyles.box_shadow}, 0 0 0 1px color-mix(in srgb, ${activeTintColor} 22%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)), 0 18px 38px color-mix(in srgb, ${activeTintColor} 34%, rgba(16, 34, 82, 0.18))`;
@@ -24281,8 +24283,33 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
+          isolation: isolate;
+          overflow: hidden;
           position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        .gauge-card::before {
+          background: ${value === null
+            ? "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"
+            : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 28%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`};
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .gauge-card::after {
+          background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 28%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 54%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, transparent 68%);
+          content: "";
+          inset: 0;
+          opacity: ${value === null ? "0" : "1"};
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
         }
 
         .gauge-card__content {
@@ -35557,7 +35584,33 @@ class NodaliaClimateCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
+          isolation: isolate;
+          overflow: hidden;
+          position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        .climate-card::before {
+          background: ${isOff
+            ? "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"
+            : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 28%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`};
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .climate-card::after {
+          background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 28%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 54%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, transparent 68%);
+          content: "";
+          inset: 0;
+          opacity: ${isOff ? "0" : "1"};
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
         }
 
         .climate-card__content {
@@ -35567,6 +35620,8 @@ class NodaliaClimateCard extends HTMLElement {
           height: 100%;
           min-height: 0;
           padding: ${effectiveCardPadding};
+          position: relative;
+          z-index: 1;
         }
 
         .climate-card__hero {
