@@ -2342,6 +2342,15 @@ class NodaliaLightCard extends HTMLElement {
       : "light-card__mode-panel-inner--vertical";
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const contentEntranceDuration = clamp(Math.round(animations.controlsDuration * 0.9), 180, 900);
+    const shouldAnimateBrightnessFill = animations.enabled &&
+      powerAnimationState === "powering-up" &&
+      isOn &&
+      supportsBrightness &&
+      !isMiniLayout;
+    const brightnessFillDuration = shouldAnimateBrightnessFill
+      ? clamp(Math.round(animations.controlsDuration * 0.82), 220, 1100)
+      : 0;
+    const brightnessSliderShellClass = shouldAnimateBrightnessFill ? " light-card__slider-shell--brightness-fill" : "";
 
     if (!isMiniLayout && config.show_state === true) {
       stateChipMarkup = `<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`;
@@ -2416,7 +2425,7 @@ class NodaliaLightCard extends HTMLElement {
               `
               : `
                 <div class="light-card__slider-wrap">
-                  <div class="light-card__slider-shell" style="--brightness:${brightnessPercent};">
+                  <div class="light-card__slider-shell${brightnessSliderShellClass}" style="--brightness:${brightnessPercent}; --brightness-target:${brightnessPercent};">
                     <div class="light-card__slider-track" data-light-control="brightness"></div>
                     <input
                       type="range"
@@ -2583,9 +2592,12 @@ class NodaliaLightCard extends HTMLElement {
     const controlsAnimationRemaining = controlsAnimationState && this._controlsTransition
       ? Math.max(0, this._controlsTransition.endsAt - now)
       : 0;
-    const shouldCleanupAfterAnimation = Boolean(powerAnimationRemaining || controlsAnimationRemaining);
+    const brightnessFillAnimationRemaining = shouldAnimateBrightnessFill
+      ? powerAnimationRemaining + brightnessFillDuration
+      : 0;
+    const shouldCleanupAfterAnimation = Boolean(powerAnimationRemaining || controlsAnimationRemaining || brightnessFillAnimationRemaining);
     const cleanupDelay = shouldCleanupAfterAnimation
-      ? Math.max(powerAnimationRemaining, controlsAnimationRemaining) + 40
+      ? Math.max(powerAnimationRemaining, controlsAnimationRemaining, brightnessFillAnimationRemaining) + 40
       : 0;
 
     if (isOn && currentControlsMarkup) {
@@ -2611,6 +2623,8 @@ class NodaliaLightCard extends HTMLElement {
           --light-card-mode-duration: ${Math.max(100, Math.round(animations.modeSwitchDuration / 2))}ms;
           --light-card-mode-shell-height: ${styles.slider_wrap_height};
           --light-card-power-duration: ${animations.powerDuration}ms;
+          --light-card-brightness-fill-delay: ${powerAnimationRemaining}ms;
+          --light-card-brightness-fill-duration: ${brightnessFillDuration}ms;
           --light-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           background: ${isOn ? onCardBackground : styles.card.background};
           border: ${isOn ? `1px solid ${onCardBorder}` : styles.card.border};
@@ -3104,14 +3118,22 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         .light-card__slider-track[data-light-control="brightness"] {
-          background:
-            linear-gradient(
-              90deg,
-              ${styles.slider_color} 0%,
-              ${styles.slider_color} calc(var(--brightness, ${brightnessPercent}) * 1%),
-              color-mix(in srgb, var(--primary-text-color) 8%, transparent) calc(var(--brightness, ${brightnessPercent}) * 1%),
-              color-mix(in srgb, var(--primary-text-color) 8%, transparent) 100%
-            );
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          overflow: hidden;
+        }
+
+        .light-card__slider-track[data-light-control="brightness"]::before {
+          background: ${styles.slider_color};
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          position: absolute;
+          transform: scaleX(calc(var(--brightness, ${brightnessPercent}) / 100));
+          transform-origin: left center;
+        }
+
+        .light-card__slider-shell--brightness-fill .light-card__slider-track[data-light-control="brightness"]::before {
+          animation: light-card-brightness-fill var(--light-card-brightness-fill-duration) cubic-bezier(0.2, 0.86, 0.18, 1) var(--light-card-brightness-fill-delay) both;
         }
 
         .light-card__slider-track[data-light-control="temperature"] {
@@ -3363,6 +3385,15 @@ class NodaliaLightCard extends HTMLElement {
           }
           100% {
             opacity: 0;
+          }
+        }
+
+        @keyframes light-card-brightness-fill {
+          0% {
+            transform: scaleX(0.01);
+          }
+          100% {
+            transform: scaleX(calc(var(--brightness-target, var(--brightness, ${brightnessPercent})) / 100));
           }
         }
 
