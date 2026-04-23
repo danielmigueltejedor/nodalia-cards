@@ -2593,7 +2593,7 @@ class NodaliaLightCard extends HTMLElement {
       ? Math.max(0, this._controlsTransition.endsAt - now)
       : 0;
     const brightnessFillAnimationRemaining = shouldAnimateBrightnessFill
-      ? powerAnimationRemaining + brightnessFillDuration
+      ? brightnessFillDuration
       : 0;
     const shouldCleanupAfterAnimation = Boolean(powerAnimationRemaining || controlsAnimationRemaining || brightnessFillAnimationRemaining);
     const cleanupDelay = shouldCleanupAfterAnimation
@@ -2623,7 +2623,7 @@ class NodaliaLightCard extends HTMLElement {
           --light-card-mode-duration: ${Math.max(100, Math.round(animations.modeSwitchDuration / 2))}ms;
           --light-card-mode-shell-height: ${styles.slider_wrap_height};
           --light-card-power-duration: ${animations.powerDuration}ms;
-          --light-card-brightness-fill-delay: ${powerAnimationRemaining}ms;
+          --light-card-brightness-fill-delay: 0ms;
           --light-card-brightness-fill-duration: ${brightnessFillDuration}ms;
           --light-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           background: ${isOn ? onCardBackground : styles.card.background};
