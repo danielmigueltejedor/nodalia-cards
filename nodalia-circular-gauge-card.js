@@ -1052,7 +1052,6 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       18,
       Math.min(parseSizeToPixels(styles.gauge.thumb_size, 22), compactLayout ? 20 : 22),
     );
-    const isLightThemeSurface = this._isLightThemeSurface();
     const effectiveCardPadding = compactLayout ? "14px" : styles.card.padding;
     const effectiveGap = compactLayout ? "12px" : styles.card.gap;
     const effectiveIconSize = `${Math.max(50, Math.min(parseSizeToPixels(styles.icon.size, 58), compactLayout ? 54 : 58))}px`;
@@ -1079,9 +1078,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 42%),
       linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.gauge.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.gauge.background}) 60%, ${styles.gauge.background} 100%)
     `.trim();
-    const dialTrackColor = isLightThemeSurface
-      ? `color-mix(in srgb, ${styles.gauge.track_color} 58%, color-mix(in srgb, var(--primary-text-color) 44%, var(--ha-card-background)))`
-      : styles.gauge.track_color;
+    const dialTrackColor = `color-mix(in srgb, ${styles.gauge.track_color} 68%, var(--primary-text-color) 32%)`;
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const previousVisualState = animations.enabled && !shouldAnimateEntrance ? this._lastGaugeVisualState : null;

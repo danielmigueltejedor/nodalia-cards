@@ -2829,6 +2829,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .popup-panel {
           background: ${config.styles.popup.background};
+          background-color: var(--ha-card-background, var(--card-background-color, #fff));
           border: ${config.styles.popup.border};
           border-radius: ${config.styles.popup.border_radius};
           box-shadow: ${config.styles.bar.box_shadow}, ${config.styles.popup.box_shadow};
@@ -2836,6 +2837,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           --popup-item-min: calc(${config.styles.popup.item_size} + 24px);
           max-height: calc(100vh - 24px);
           min-width: min(${config.styles.popup.min_width}, calc(100vw - 24px));
+          isolation: isolate;
           overflow: auto;
           padding: ${config.styles.popup.padding};
           position: fixed;
@@ -2843,6 +2845,21 @@ class NodaliaNavigationBarCard extends HTMLElement {
           width: min(${config.styles.popup.max_width}, calc(100vw - 24px));
           z-index: ${Number(config.layout.z_index) + 2};
           ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.popupDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
+        }
+
+        .popup-panel::before {
+          background: color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 96%, transparent);
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .popup-panel > * {
+          position: relative;
+          z-index: 1;
         }
 
         .popup-panel--down {
@@ -2893,6 +2910,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .media-browser-panel {
           background: ${config.styles.media_player.background};
+          background-color: var(--ha-card-background, var(--card-background-color, #fff));
           border: ${config.styles.media_player.border};
           border-radius: ${config.styles.media_player.border_radius};
           box-shadow: ${config.styles.bar.box_shadow}, ${config.styles.popup.box_shadow};
@@ -2900,6 +2918,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           flex-direction: column;
           gap: 14px;
           inset: max(16px, calc(env(safe-area-inset-top, 0px) + 12px)) 12px max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px)) 12px;
+          isolation: isolate;
           max-width: 560px;
           margin: 0 auto;
           overflow: hidden;

@@ -4671,6 +4671,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-browser-panel {
           background: ${browserStyles.background};
+          background-color: var(--ha-card-background, var(--card-background-color, #fff));
           border: ${browserStyles.border};
           border-radius: ${browserStyles.border_radius};
           box-shadow: ${playerStyles.box_shadow}, ${browserStyles.box_shadow};
@@ -4678,12 +4679,28 @@ class NodaliaMediaPlayer extends HTMLElement {
           flex-direction: column;
           gap: 14px;
           inset: max(16px, calc(env(safe-area-inset-top, 0px) + 12px)) 12px max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px)) 12px;
+          isolation: isolate;
           margin: 0 auto;
           max-width: 560px;
           overflow: hidden;
           padding: 14px;
           position: fixed;
           z-index: ${Number(config.layout.z_index) + 11};
+        }
+
+        .media-browser-panel::before {
+          background: color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 96%, transparent);
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .media-browser-panel > * {
+          position: relative;
+          z-index: 1;
         }
 
         .media-browser-panel--entering {

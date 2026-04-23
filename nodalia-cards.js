@@ -2830,6 +2830,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .popup-panel {
           background: ${config.styles.popup.background};
+          background-color: var(--ha-card-background, var(--card-background-color, #fff));
           border: ${config.styles.popup.border};
           border-radius: ${config.styles.popup.border_radius};
           box-shadow: ${config.styles.bar.box_shadow}, ${config.styles.popup.box_shadow};
@@ -2837,6 +2838,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           --popup-item-min: calc(${config.styles.popup.item_size} + 24px);
           max-height: calc(100vh - 24px);
           min-width: min(${config.styles.popup.min_width}, calc(100vw - 24px));
+          isolation: isolate;
           overflow: auto;
           padding: ${config.styles.popup.padding};
           position: fixed;
@@ -2844,6 +2846,21 @@ class NodaliaNavigationBarCard extends HTMLElement {
           width: min(${config.styles.popup.max_width}, calc(100vw - 24px));
           z-index: ${Number(config.layout.z_index) + 2};
           ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.popupDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
+        }
+
+        .popup-panel::before {
+          background: color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 96%, transparent);
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .popup-panel > * {
+          position: relative;
+          z-index: 1;
         }
 
         .popup-panel--down {
@@ -2894,6 +2911,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .media-browser-panel {
           background: ${config.styles.media_player.background};
+          background-color: var(--ha-card-background, var(--card-background-color, #fff));
           border: ${config.styles.media_player.border};
           border-radius: ${config.styles.media_player.border_radius};
           box-shadow: ${config.styles.bar.box_shadow}, ${config.styles.popup.box_shadow};
@@ -2901,6 +2919,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           flex-direction: column;
           gap: 14px;
           inset: max(16px, calc(env(safe-area-inset-top, 0px) + 12px)) 12px max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px)) 12px;
+          isolation: isolate;
           max-width: 560px;
           margin: 0 auto;
           overflow: hidden;
@@ -9684,6 +9703,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-browser-panel {
           background: ${browserStyles.background};
+          background-color: var(--ha-card-background, var(--card-background-color, #fff));
           border: ${browserStyles.border};
           border-radius: ${browserStyles.border_radius};
           box-shadow: ${playerStyles.box_shadow}, ${browserStyles.box_shadow};
@@ -9691,12 +9711,28 @@ class NodaliaMediaPlayer extends HTMLElement {
           flex-direction: column;
           gap: 14px;
           inset: max(16px, calc(env(safe-area-inset-top, 0px) + 12px)) 12px max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px)) 12px;
+          isolation: isolate;
           margin: 0 auto;
           max-width: 560px;
           overflow: hidden;
           padding: 14px;
           position: fixed;
           z-index: ${Number(config.layout.z_index) + 11};
+        }
+
+        .media-browser-panel::before {
+          background: color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 96%, transparent);
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .media-browser-panel > * {
+          position: relative;
+          z-index: 1;
         }
 
         .media-browser-panel--entering {
@@ -23992,7 +24028,6 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       18,
       Math.min(parseSizeToPixels(styles.gauge.thumb_size, 22), compactLayout ? 20 : 22),
     );
-    const lightThemeSurface = isLightThemeSurface(this);
     const effectiveCardPadding = compactLayout ? "14px" : styles.card.padding;
     const effectiveGap = compactLayout ? "12px" : styles.card.gap;
     const effectiveIconSize = `${Math.max(50, Math.min(parseSizeToPixels(styles.icon.size, 58), compactLayout ? 54 : 58))}px`;
@@ -24019,9 +24054,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 42%),
       linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.gauge.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.gauge.background}) 60%, ${styles.gauge.background} 100%)
     `.trim();
-    const dialTrackColor = lightThemeSurface
-      ? `color-mix(in srgb, ${styles.gauge.track_color} 58%, color-mix(in srgb, var(--primary-text-color) 44%, var(--ha-card-background)))`
-      : styles.gauge.track_color;
+    const dialTrackColor = `color-mix(in srgb, ${styles.gauge.track_color} 68%, var(--primary-text-color) 32%)`;
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const previousVisualState = animations.enabled && !shouldAnimateEntrance ? this._lastGaugeVisualState : null;
@@ -27555,8 +27588,7 @@ class NodaliaGraphCard extends HTMLElement {
           backdrop-filter: blur(18px);
           background:
             radial-gradient(circle at top left, color-mix(in srgb, var(--tooltip-tint) 18%, transparent) 0%, transparent 48%),
-            linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0%, color-mix(in srgb, var(--primary-text-color) 2%, transparent) 100%),
-            linear-gradient(180deg, rgba(42, 43, 53, 0.96) 0%, rgba(31, 32, 41, 0.97) 100%);
+            linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, rgba(255, 255, 255, 0.055)) 0%, color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 96%, var(--primary-text-color)) 100%);
           border: 1px solid color-mix(in srgb, var(--tooltip-tint) 26%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
           border-radius: 22px;
           box-shadow:
@@ -35292,7 +35324,6 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     const currentActionMeta = getActionMeta(this._getCurrentAction(state) || currentMode);
-    const lightThemeSurface = isLightThemeSurface(this);
     const cardBackground = isOff
       ? styles.card.background
       : `
@@ -35309,9 +35340,7 @@ class NodaliaClimateCard extends HTMLElement {
       linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 42%),
       linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.dial.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.dial.background}) 60%, ${styles.dial.background} 100%)
     `.trim();
-    const dialTrackColor = lightThemeSurface
-      ? `color-mix(in srgb, ${styles.dial.track_color} 58%, color-mix(in srgb, var(--primary-text-color) 44%, var(--ha-card-background)))`
-      : styles.dial.track_color;
+    const dialTrackColor = `color-mix(in srgb, ${styles.dial.track_color} 68%, var(--primary-text-color) 32%)`;
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
 

@@ -1738,7 +1738,6 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     const currentActionMeta = getActionMeta(this._getCurrentAction(state) || currentMode);
-    const isLightThemeSurface = this._isLightThemeSurface();
     const cardBackground = isOff
       ? styles.card.background
       : `
@@ -1755,9 +1754,7 @@ class NodaliaClimateCard extends HTMLElement {
       linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 42%),
       linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.dial.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.dial.background}) 60%, ${styles.dial.background} 100%)
     `.trim();
-    const dialTrackColor = isLightThemeSurface
-      ? `color-mix(in srgb, ${styles.dial.track_color} 58%, color-mix(in srgb, var(--primary-text-color) 44%, var(--ha-card-background)))`
-      : styles.dial.track_color;
+    const dialTrackColor = `color-mix(in srgb, ${styles.dial.track_color} 68%, var(--primary-text-color) 32%)`;
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
 

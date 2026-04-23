@@ -1819,8 +1819,7 @@ class NodaliaGraphCard extends HTMLElement {
           backdrop-filter: blur(18px);
           background:
             radial-gradient(circle at top left, color-mix(in srgb, var(--tooltip-tint) 18%, transparent) 0%, transparent 48%),
-            linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0%, color-mix(in srgb, var(--primary-text-color) 2%, transparent) 100%),
-            linear-gradient(180deg, rgba(42, 43, 53, 0.96) 0%, rgba(31, 32, 41, 0.97) 100%);
+            linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, rgba(255, 255, 255, 0.055)) 0%, color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 96%, var(--primary-text-color)) 100%);
           border: 1px solid color-mix(in srgb, var(--tooltip-tint) 26%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
           border-radius: 22px;
           box-shadow:
