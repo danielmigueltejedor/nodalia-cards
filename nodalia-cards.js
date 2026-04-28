@@ -58788,6 +58788,11 @@ function getForecastTemperatureValue(item, type) {
   return null;
 }
 
+function getForecastTemperatureSeriesValue(item, series) {
+  const value = Number(series === "low" ? item?.templow : item?.temperature);
+  return Number.isFinite(value) ? value : null;
+}
+
 function getForecastPrecipitationLabel(item, unit = "") {
   const probability = formatNumber(item?.precipitation_probability);
   if (probability) {
@@ -59533,28 +59538,43 @@ class NodaliaWeatherCard extends HTMLElement {
   }
 
   _renderForecastChart(items, type, state) {
-    const points = items
-      .map((item, index) => ({
-        index,
-        item,
-        value: getForecastTemperatureValue(item, type),
-      }))
-      .filter(point => Number.isFinite(point.value));
+    const sourcePoints = items
+      .map((item, index) => ({ index, item }))
+      .filter(point => Number.isFinite(getForecastTemperatureValue(point.item, type)));
 
-    if (points.length < 2) {
+    if (sourcePoints.length < 2) {
       return `<div class="weather-card__forecast-empty">No hay suficientes datos para mostrar el gráfico.</div>`;
     }
 
-    const values = points.map(point => point.value);
+    const hasDailyLow = type === "daily" && sourcePoints.some(point => Number.isFinite(Number(point.item?.templow)));
+    const rawHighPoints = sourcePoints.map(point => ({
+      ...point,
+      value: getForecastTemperatureSeriesValue(point.item, "high"),
+    })).filter(point => Number.isFinite(point.value));
+    const rawLowPoints = hasDailyLow
+      ? sourcePoints.map(point => ({
+        ...point,
+        value: getForecastTemperatureSeriesValue(point.item, "low"),
+      })).filter(point => Number.isFinite(point.value))
+      : [];
+    const highPoints = rawHighPoints.length >= 2 ? rawHighPoints : rawLowPoints;
+    const lowPoints = rawHighPoints.length >= 2 ? rawLowPoints : [];
+
+    if (highPoints.length < 2) {
+      return `<div class="weather-card__forecast-empty">No hay suficientes datos para mostrar el gráfico.</div>`;
+    }
+
+    const values = [...highPoints, ...lowPoints].map(point => point.value);
     const minValue = Math.min(...values);
     const maxValue = Math.max(...values);
     const valueRange = Math.max(maxValue - minValue, 1);
-    const width = 320;
-    const height = 148;
-    const padding = { top: 18, right: 18, bottom: 36, left: 26 };
+    const width = 640;
+    const height = 188;
+    const padding = { top: 28, right: 18, bottom: 58, left: 18 };
     const plotWidth = width - padding.left - padding.right;
     const plotHeight = height - padding.top - padding.bottom;
-    const coordinatePoints = points.map((point, pointIndex) => {
+
+    const getCoordinates = points => points.map((point, pointIndex) => {
       const x = padding.left + (points.length === 1 ? plotWidth / 2 : (plotWidth * pointIndex) / (points.length - 1));
       const y = padding.top + plotHeight - ((point.value - minValue) / valueRange) * plotHeight;
       return {
@@ -59563,13 +59583,24 @@ class NodaliaWeatherCard extends HTMLElement {
         y,
       };
     });
-    const linePath = coordinatePoints
+
+    const highCoordinates = getCoordinates(highPoints);
+    const lowCoordinates = getCoordinates(lowPoints);
+    const pathFromCoordinates = coordinates => coordinates
       .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
       .join(" ");
-    const areaPath = `${linePath} L ${coordinatePoints[coordinatePoints.length - 1].x.toFixed(1)} ${height - padding.bottom} L ${coordinatePoints[0].x.toFixed(1)} ${height - padding.bottom} Z`;
-    const labelEvery = coordinatePoints.length > 6 ? 2 : 1;
+    const highPath = pathFromCoordinates(highCoordinates);
+    const lowPath = pathFromCoordinates(lowCoordinates);
+    const areaPath = lowCoordinates.length === highCoordinates.length
+      ? `${highPath} L ${[...lowCoordinates].reverse().map(point => `${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(" L ")} Z`
+      : `${highPath} L ${highCoordinates[highCoordinates.length - 1].x.toFixed(1)} ${height - padding.bottom} L ${highCoordinates[0].x.toFixed(1)} ${height - padding.bottom} Z`;
+    const labelEvery = highCoordinates.length > 7 ? 2 : 1;
     const unit = String(state?.attributes?.temperature_unit || "°").trim() || "°";
     const unitLabel = unit.startsWith("°") ? unit : ` ${unit}`;
+    const precipitationUnit = String(state?.attributes?.precipitation_unit || "").trim();
+    const conditionItems = sourcePoints.filter((point, index) => (
+      index % labelEvery === 0 || index === sourcePoints.length - 1
+    ));
 
     return `
       <div class="weather-card__forecast-chart" role="img" aria-label="Gráfico de previsión ${type === "hourly" ? "por horas" : "semanal"}">
@@ -59578,19 +59609,38 @@ class NodaliaWeatherCard extends HTMLElement {
           <line class="weather-card__forecast-chart-grid" x1="${padding.left}" y1="${padding.top + plotHeight / 2}" x2="${width - padding.right}" y2="${padding.top + plotHeight / 2}"></line>
           <line class="weather-card__forecast-chart-grid" x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}"></line>
           <path class="weather-card__forecast-chart-area" d="${areaPath}"></path>
-          <path class="weather-card__forecast-chart-line" d="${linePath}"></path>
-          ${coordinatePoints.map(point => `
+          ${lowPath ? `<path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--low" d="${lowPath}"></path>` : ""}
+          <path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--high" d="${highPath}"></path>
+          ${highCoordinates.map(point => `
             <g>
-              <circle class="weather-card__forecast-chart-point" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="3.5"></circle>
+              <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--high" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="3.5"></circle>
               <text class="weather-card__forecast-chart-value" x="${point.x.toFixed(1)}" y="${Math.max(11, point.y - 9).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>
               ${
-                point.index % labelEvery === 0 || point.index === coordinatePoints[coordinatePoints.length - 1].index
-                  ? `<text class="weather-card__forecast-chart-label" x="${point.x.toFixed(1)}" y="${height - 12}">${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}</text>`
+                point.index % labelEvery === 0 || point.index === highCoordinates[highCoordinates.length - 1].index
+                  ? `<text class="weather-card__forecast-chart-label" x="${point.x.toFixed(1)}" y="${height - 28}">${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}</text>`
                   : ""
               }
             </g>
           `).join("")}
+          ${lowCoordinates.map(point => `
+            <g>
+              <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--low" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="3"></circle>
+              <text class="weather-card__forecast-chart-value weather-card__forecast-chart-value--low" x="${point.x.toFixed(1)}" y="${Math.min(height - padding.bottom - 4, point.y + 16).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>
+            </g>
+          `).join("")}
         </svg>
+        <div class="weather-card__forecast-chart-meta">
+          ${conditionItems.map(point => {
+            const precipitationLabel = getForecastPrecipitationLabel(point.item, precipitationUnit);
+            return `
+              <div class="weather-card__forecast-chart-chip" style="--forecast-accent:${escapeHtml(getConditionAccent(point.item?.condition || state?.state))};">
+                <ha-icon icon="${escapeHtml(getConditionIcon(point.item?.condition || state?.state))}"></ha-icon>
+                <span>${escapeHtml(translateCondition(point.item?.condition || ""))}</span>
+                ${precipitationLabel ? `<small><ha-icon icon="mdi:weather-rainy"></ha-icon>${escapeHtml(precipitationLabel)}</small>` : ""}
+              </div>
+            `;
+          }).join("")}
+        </div>
       </div>
     `;
   }
@@ -59792,6 +59842,10 @@ class NodaliaWeatherCard extends HTMLElement {
           display: grid;
           gap: 12px;
           min-width: 0;
+        }
+
+        .weather-card__hero--no-alert {
+          gap: 6px;
         }
 
         .weather-card__topline {
@@ -60280,12 +60334,12 @@ class NodaliaWeatherCard extends HTMLElement {
           border-radius: 18px;
           min-height: 148px;
           overflow: hidden;
-          padding: 8px;
+          padding: 6px 8px 8px;
         }
 
         .weather-card__forecast-chart svg {
           display: block;
-          height: 148px;
+          height: 188px;
           overflow: visible;
           width: 100%;
         }
@@ -60301,16 +60355,32 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__forecast-chart-line {
           fill: none;
-          stroke: ${accentColor};
           stroke-linecap: round;
           stroke-linejoin: round;
           stroke-width: 3;
         }
 
+        .weather-card__forecast-chart-line--high {
+          stroke: ${accentColor};
+        }
+
+        .weather-card__forecast-chart-line--low {
+          stroke: color-mix(in srgb, ${accentColor} 48%, var(--secondary-text-color));
+          stroke-dasharray: 6 5;
+          stroke-width: 2.5;
+        }
+
         .weather-card__forecast-chart-point {
           fill: var(--ha-card-background);
-          stroke: ${accentColor};
           stroke-width: 2;
+        }
+
+        .weather-card__forecast-chart-point--high {
+          stroke: ${accentColor};
+        }
+
+        .weather-card__forecast-chart-point--low {
+          stroke: color-mix(in srgb, ${accentColor} 48%, var(--secondary-text-color));
         }
 
         .weather-card__forecast-chart-value,
@@ -60329,6 +60399,55 @@ class NodaliaWeatherCard extends HTMLElement {
           fill: var(--secondary-text-color);
           font-size: 9px;
           text-transform: capitalize;
+        }
+
+        .weather-card__forecast-chart-value--low {
+          fill: var(--secondary-text-color);
+          font-size: 9px;
+        }
+
+        .weather-card__forecast-chart-meta {
+          display: grid;
+          gap: 6px;
+          grid-auto-columns: minmax(88px, 1fr);
+          grid-auto-flow: column;
+          min-width: 0;
+          overflow-x: auto;
+          padding: 0 2px 2px;
+          scrollbar-width: thin;
+        }
+
+        .weather-card__forecast-chart-chip {
+          align-items: center;
+          background: color-mix(in srgb, var(--forecast-accent) 10%, color-mix(in srgb, var(--primary-text-color) 5%, transparent));
+          border: 1px solid color-mix(in srgb, var(--forecast-accent) 20%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          border-radius: 14px;
+          color: var(--secondary-text-color);
+          display: grid;
+          font-size: 9px;
+          font-weight: 800;
+          gap: 3px;
+          justify-items: center;
+          min-height: 56px;
+          padding: 6px;
+          text-align: center;
+        }
+
+        .weather-card__forecast-chart-chip > ha-icon {
+          --mdc-icon-size: 18px;
+          color: var(--forecast-accent);
+        }
+
+        .weather-card__forecast-chart-chip small {
+          align-items: center;
+          display: inline-flex;
+          font-size: 9px;
+          gap: 3px;
+          line-height: 1;
+        }
+
+        .weather-card__forecast-chart-chip small ha-icon {
+          --mdc-icon-size: 10px;
         }
 
         .weather-card__forecast-empty {
@@ -60438,7 +60557,7 @@ class NodaliaWeatherCard extends HTMLElement {
       </style>
       <ha-card class="weather-card ${tapEnabled ? "weather-card--clickable" : ""}" style="--accent-color:${escapeHtml(accentColor)};">
         <div class="weather-card__content" data-weather-card="root">
-          <div class="weather-card__hero ${shouldAnimateEntrance ? "weather-card__hero--entering" : ""}">
+          <div class="weather-card__hero ${meteoalarmChipRowMarkup ? "" : "weather-card__hero--no-alert"} ${shouldAnimateEntrance ? "weather-card__hero--entering" : ""}">
             <div class="weather-card__topline">
               <div class="weather-card__title">${escapeHtml(title)}</div>
               ${chips.length ? `<div class="weather-card__chips ${shouldAnimateEntrance ? "weather-card__chips--entering" : ""}">${chips.join("")}</div>` : ""}
