@@ -150,6 +150,18 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
+  )) || "";
+}
+
+function getStubFriendlyName(hass, entityId) {
+  return hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -634,12 +646,13 @@ class NodaliaMediaPlayer extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
+  static getStubConfig(hass) {
+    const entityId = getStubEntityId(hass, ["media_player"]);
     return {
       players: [
         {
-          entity: "media_player.spotify",
-          label: "Spotify",
+          entity: entityId || "media_player.spotify",
+          label: entityId ? getStubFriendlyName(hass, entityId) : "Spotify",
         },
       ],
       layout: {

@@ -102,6 +102,25 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
+  )) || "";
+}
+
+function applyStubEntity(config, hass, domains) {
+  const entityId = getStubEntityId(hass, domains);
+  if (!entityId) {
+    return config;
+  }
+
+  config.entity = entityId;
+  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+  return config;
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -537,8 +556,8 @@ class NodaliaEntityCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
+  static getStubConfig(hass) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, []);
   }
 
   constructor() {

@@ -158,6 +158,14 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
+  )) || "";
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -621,8 +629,16 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
+  static getStubConfig(hass) {
+    const config = deepClone(STUB_CONFIG);
+    const entityId = getStubEntityId(hass, ["sensor"]);
+    if (!entityId) {
+      return config;
+    }
+
+    config.entities.grid.entity = entityId;
+    config.entities.home.entity = entityId;
+    return config;
   }
 
   constructor() {

@@ -5182,6 +5182,18 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+  )) || "";
+}
+
+function getStubFriendlyName(hass, entityId) {
+  return hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -5683,12 +5695,13 @@ class NodaliaMediaPlayer extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
+  static getStubConfig(hass) {
+    const entityId = getStubEntityId(hass, ["media_player"]);
     return {
       players: [
         {
-          entity: "media_player.spotify",
-          label: "Spotify",
+          entity: entityId || "media_player.spotify",
+          label: entityId ? getStubFriendlyName(hass, entityId) : "Spotify",
         },
       ],
       layout: {
@@ -11441,6 +11454,25 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+  )) || "";
+}
+
+function applyStubEntity(config, hass, domains) {
+  const entityId = getStubEntityId(hass, domains);
+  if (!entityId) {
+    return config;
+  }
+
+  config.entity = entityId;
+  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+  return config;
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -11770,8 +11802,8 @@ class NodaliaLightCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
+  static getStubConfig(hass) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["light"]);
   }
 
   constructor() {
@@ -16058,6 +16090,25 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+  )) || "";
+}
+
+function applyStubEntity(config, hass, domains) {
+  const entityId = getStubEntityId(hass, domains);
+  if (!entityId) {
+    return config;
+  }
+
+  config.entity = entityId;
+  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+  return config;
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -16370,8 +16421,8 @@ class NodaliaFanCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
+  static getStubConfig(hass) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["fan"]);
   }
 
   constructor() {
@@ -19557,6 +19608,25 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+  )) || "";
+}
+
+function applyStubEntity(config, hass, domains) {
+  const entityId = getStubEntityId(hass, domains);
+  if (!entityId) {
+    return config;
+  }
+
+  config.entity = entityId;
+  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+  return config;
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -19893,8 +19963,8 @@ class NodaliaHumidifierCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
+  static getStubConfig(hass) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["humidifier"]);
   }
 
   constructor() {
@@ -23492,6 +23562,25 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+  )) || "";
+}
+
+function applyStubEntity(config, hass, domains) {
+  const entityId = getStubEntityId(hass, domains);
+  if (!entityId) {
+    return config;
+  }
+
+  config.entity = entityId;
+  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+  return config;
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -23914,8 +24003,8 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
+  static getStubConfig(hass) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["sensor","number","input_number"]);
   }
 
   constructor() {
@@ -26210,6 +26299,20 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityIds(hass, domains = [], limit = 1) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states)
+    .filter(entityId => (
+      !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+    ))
+    .slice(0, limit);
+}
+
+function getStubFriendlyName(hass, entityId) {
+  return hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -26627,8 +26730,19 @@ class NodaliaGraphCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
+  static getStubConfig(hass) {
+    const config = deepClone(STUB_CONFIG);
+    const entityIds = getStubEntityIds(hass, ["sensor", "number", "input_number"], 2);
+    if (!entityIds.length) {
+      return config;
+    }
+
+    config.entities = entityIds.map((entityId, index) => ({
+      ...(config.entities?.[index] || {}),
+      entity: entityId,
+      name: getStubFriendlyName(hass, entityId),
+    }));
+    return config;
   }
 
   constructor() {
@@ -30140,6 +30254,14 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+  )) || "";
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -30603,8 +30725,16 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
+  static getStubConfig(hass) {
+    const config = deepClone(STUB_CONFIG);
+    const entityId = getStubEntityId(hass, ["sensor"]);
+    if (!entityId) {
+      return config;
+    }
+
+    config.entities.grid.entity = entityId;
+    config.entities.home.entity = entityId;
+    return config;
   }
 
   constructor() {
@@ -34127,6 +34257,25 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+  )) || "";
+}
+
+function applyStubEntity(config, hass, domains) {
+  const entityId = getStubEntityId(hass, domains);
+  if (!entityId) {
+    return config;
+  }
+
+  config.entity = entityId;
+  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+  return config;
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -34501,8 +34650,8 @@ class NodaliaClimateCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
+  static getStubConfig(hass) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["climate"]);
   }
 
   constructor() {
@@ -38189,6 +38338,25 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+  )) || "";
+}
+
+function applyStubEntity(config, hass, domains) {
+  const entityId = getStubEntityId(hass, domains);
+  if (!entityId) {
+    return config;
+  }
+
+  config.entity = entityId;
+  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+  return config;
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -38447,8 +38615,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
+  static getStubConfig(hass) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["alarm_control_panel"]);
   }
 
   constructor() {
@@ -40944,6 +41112,25 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+  )) || "";
+}
+
+function applyStubEntity(config, hass, domains) {
+  const entityId = getStubEntityId(hass, domains);
+  if (!entityId) {
+    return config;
+  }
+
+  config.entity = entityId;
+  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+  return config;
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -41962,8 +42149,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
+  static getStubConfig(hass) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["vacuum"]);
   }
 
   constructor() {
@@ -48621,6 +48808,25 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+  )) || "";
+}
+
+function applyStubEntity(config, hass, domains) {
+  const entityId = getStubEntityId(hass, domains);
+  if (!entityId) {
+    return config;
+  }
+
+  config.entity = entityId;
+  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+  return config;
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -49056,8 +49262,8 @@ class NodaliaEntityCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
+  static getStubConfig(hass) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, []);
   }
 
   constructor() {
@@ -51575,6 +51781,25 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+  )) || "";
+}
+
+function applyStubEntity(config, hass, domains) {
+  const entityId = getStubEntityId(hass, domains);
+  if (!entityId) {
+    return config;
+  }
+
+  config.entity = entityId;
+  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+  return config;
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -52036,8 +52261,8 @@ class NodaliaFavCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
+  static getStubConfig(hass) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["light","switch"]);
   }
 
   constructor() {
@@ -54531,6 +54756,25 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+  )) || "";
+}
+
+function applyStubEntity(config, hass, domains) {
+  const entityId = getStubEntityId(hass, domains);
+  if (!entityId) {
+    return config;
+  }
+
+  config.entity = entityId;
+  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+  return config;
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -54778,8 +55022,8 @@ class NodaliaInsigniaCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
+  static getStubConfig(hass) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["sensor","binary_sensor"]);
   }
 
   constructor() {
@@ -55827,6 +56071,25 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+  )) || "";
+}
+
+function applyStubEntity(config, hass, domains) {
+  const entityId = getStubEntityId(hass, domains);
+  if (!entityId) {
+    return config;
+  }
+
+  config.entity = entityId;
+  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+  return config;
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -56077,8 +56340,8 @@ class NodaliaPersonCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
+  static getStubConfig(hass) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["person"]);
   }
 
   constructor() {
@@ -57899,6 +58162,25 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+  )) || "";
+}
+
+function applyStubEntity(config, hass, domains) {
+  const entityId = getStubEntityId(hass, domains);
+  if (!entityId) {
+    return config;
+  }
+
+  config.entity = entityId;
+  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+  return config;
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -58265,8 +58547,8 @@ class NodaliaWeatherCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
+  static getStubConfig(hass) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["weather"]);
   }
 
   constructor() {
@@ -59946,6 +60228,25 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+  )) || "";
+}
+
+function applyStubEntity(config, hass, domains) {
+  const entityId = getStubEntityId(hass, domains);
+  if (!entityId) {
+    return config;
+  }
+
+  config.entity = entityId;
+  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+  return config;
+}
+
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
     return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
@@ -60229,8 +60530,8 @@ class NodaliaVacuumCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
+  static getStubConfig(hass) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["vacuum"]);
   }
 
   constructor() {
