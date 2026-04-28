@@ -59789,6 +59789,20 @@ class NodaliaWeatherCard extends HTMLElement {
         }
 
         .weather-card__hero {
+          display: grid;
+          gap: 12px;
+          min-width: 0;
+        }
+
+        .weather-card__topline {
+          align-items: flex-start;
+          display: flex;
+          gap: 12px;
+          justify-content: space-between;
+          min-width: 0;
+        }
+
+        .weather-card__main {
           align-items: center;
           display: grid;
           gap: 12px;
@@ -59866,15 +59880,8 @@ class NodaliaWeatherCard extends HTMLElement {
           animation-delay: 70ms;
         }
 
-        .weather-card__header {
-          align-items: start;
-          display: flex;
-          gap: 10px;
-          justify-content: space-between;
-          min-width: 0;
-        }
-
         .weather-card__title {
+          flex: 1 1 auto;
           font-size: ${styles.title_size};
           font-weight: 700;
           line-height: 1.2;
@@ -59883,9 +59890,12 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__chips {
           display: flex;
+          flex: 0 1 auto;
           flex-wrap: wrap;
           gap: 8px;
           justify-content: flex-end;
+          margin-left: auto;
+          min-width: 0;
         }
 
         .weather-card__chips--entering {
@@ -60405,13 +60415,15 @@ class NodaliaWeatherCard extends HTMLElement {
         }
 
         @media (max-width: 520px) {
-          .weather-card__header {
-            align-items: start;
-            flex-direction: column;
+          .weather-card__topline {
+            align-items: flex-start;
+            flex-wrap: nowrap;
           }
 
           .weather-card__chips {
-            justify-content: flex-start;
+            flex: 0 1 auto;
+            justify-content: flex-end;
+            max-width: 58%;
           }
         }
 
@@ -60427,19 +60439,21 @@ class NodaliaWeatherCard extends HTMLElement {
       <ha-card class="weather-card ${tapEnabled ? "weather-card--clickable" : ""}" style="--accent-color:${escapeHtml(accentColor)};">
         <div class="weather-card__content" data-weather-card="root">
           <div class="weather-card__hero ${shouldAnimateEntrance ? "weather-card__hero--entering" : ""}">
-            <div class="weather-card__icon ${shouldAnimateEntrance ? "weather-card__icon--entering" : ""}">
-              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
-              ${showUnavailableBadge ? `<span class="weather-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
+            <div class="weather-card__topline">
+              <div class="weather-card__title">${escapeHtml(title)}</div>
+              ${chips.length ? `<div class="weather-card__chips ${shouldAnimateEntrance ? "weather-card__chips--entering" : ""}">${chips.join("")}</div>` : ""}
             </div>
-            <div class="weather-card__copy ${shouldAnimateEntrance ? "weather-card__copy--entering" : ""}">
-              <div class="weather-card__header">
-                <div class="weather-card__title">${escapeHtml(title)}</div>
-                ${chips.length ? `<div class="weather-card__chips ${shouldAnimateEntrance ? "weather-card__chips--entering" : ""}">${chips.join("")}</div>` : ""}
+            <div class="weather-card__main">
+              <div class="weather-card__icon ${shouldAnimateEntrance ? "weather-card__icon--entering" : ""}">
+                <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+                ${showUnavailableBadge ? `<span class="weather-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
               </div>
-              ${meteoalarmChipRowMarkup}
-              <div class="weather-card__metrics ${shouldAnimateEntrance ? "weather-card__metrics--entering" : ""}">
-                <div class="weather-card__temperature">${escapeHtml(temperatureLabel)}</div>
-                ${config.show_condition !== false ? `<div class="weather-card__condition">${escapeHtml(conditionLabel)}</div>` : ""}
+              <div class="weather-card__copy ${shouldAnimateEntrance ? "weather-card__copy--entering" : ""}">
+                ${meteoalarmChipRowMarkup}
+                <div class="weather-card__metrics ${shouldAnimateEntrance ? "weather-card__metrics--entering" : ""}">
+                  <div class="weather-card__temperature">${escapeHtml(temperatureLabel)}</div>
+                  ${config.show_condition !== false ? `<div class="weather-card__condition">${escapeHtml(conditionLabel)}</div>` : ""}
+                </div>
               </div>
             </div>
           </div>
