@@ -4572,7 +4572,6 @@ class NodaliaNavigationBarEditor extends HTMLElement {
         }
 
         .editor-section,
-        .panel,
         .route-card,
         .sub-card {
           background: color-mix(in srgb, var(--primary-text-color) 2%, var(--card-background-color, var(--ha-card-background, #fff)));
@@ -4582,8 +4581,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           padding: 16px;
         }
 
-        .editor-section__header,
-        .panel-title {
+        .editor-section__header {
           display: grid;
           gap: 4px;
           margin-bottom: 12px;
@@ -4793,11 +4791,12 @@ class NodaliaNavigationBarEditor extends HTMLElement {
         }
       </style>
       <div class="editor">
-        <div class="panel">
-          <div class="panel-title">
-            <strong>General</strong>
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">General</div>
+            <div class="editor-section__hint">Opciones base de la barra, layout y visibilidad general.</div>
           </div>
-          <div class="grid">
+          <div class="editor-grid">
             <label>
               <span>Titulo</span>
               <input type="text" data-field="title" data-optional="true" value="${escapeHtml(config.title || "")}" />
@@ -4829,92 +4828,31 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               <input type="number" data-field="layout.mobile_breakpoint" value="${escapeHtml(config.layout.mobile_breakpoint || 1279)}" />
             </label>
             <label>
-              <span>Fondo</span>
-              <input type="text" data-field="styles.bar.background" value="${escapeHtml(config.styles.bar.background || "")}" />
-            </label>
-            <label>
-              <span>Fondo botones</span>
-              <input type="text" data-field="styles.button.background" value="${escapeHtml(config.styles.button.background || "")}" />
-            </label>
-            <label>
-              <span>Color activo</span>
-              <input type="text" data-field="styles.button.active_color" value="${escapeHtml(config.styles.button.active_color || "")}" />
-            </label>
-            <label>
-              <span>Fondo activo</span>
-              <input type="text" data-field="styles.button.active_background" value="${escapeHtml(config.styles.button.active_background || "")}" />
-            </label>
-            <label>
-              <span>Radio barra</span>
-              <input type="text" data-field="styles.bar.border_radius" value="${escapeHtml(config.styles.bar.border_radius || "")}" />
-            </label>
-            <label>
-              <span>Padding barra</span>
-              <input type="text" data-field="styles.bar.padding" value="${escapeHtml(config.styles.bar.padding || "")}" />
-            </label>
-            <label>
-              <span>Tamano icono</span>
-              <input type="text" data-field="styles.button.icon_size" value="${escapeHtml(config.styles.button.icon_size || "")}" />
-            </label>
-            <label>
-              <span>Offset icono X</span>
-              <input type="text" data-field="styles.button.icon_offset_x" value="${escapeHtml(config.styles.button.icon_offset_x || "")}" />
-            </label>
-            <label>
-              <span>Offset icono Y</span>
-              <input type="text" data-field="styles.button.icon_offset_y" value="${escapeHtml(config.styles.button.icon_offset_y || "")}" />
-            </label>
-            <label>
-              <span>Tamano boton</span>
-              <input type="text" data-field="styles.button.size" value="${escapeHtml(config.styles.button.size || "")}" />
-            </label>
-            <label>
-              <span>Tamano etiqueta navbar</span>
-              <input type="text" data-field="styles.button.label_size" value="${escapeHtml(config.styles.button.label_size || "")}" />
-            </label>
-            <label>
-              <span>Ancho popup</span>
-              <input
-                type="text"
-                data-field="styles.popup.max_width"
-                data-optional="true"
-                value="${escapeHtml(config.styles.popup.max_width || "")}"
-              />
-            </label>
-            <label>
-              <span>Tamano item popup</span>
-              <input
-                type="text"
-                data-field="styles.popup.item_size"
-                data-optional="true"
-                value="${escapeHtml(config.styles.popup.item_size || "")}"
-              />
-            </label>
-            <label>
-              <span>Tamano etiqueta popup</span>
-              <input
-                type="text"
-                data-field="styles.popup.label_size"
-                data-optional="true"
-                value="${escapeHtml(config.styles.popup.label_size || "")}"
-              />
-            </label>
-            <label>
-              <span>Separacion popup</span>
-              <input
-                type="text"
-                data-field="styles.popup.item_gap"
-                data-optional="true"
-                value="${escapeHtml(config.styles.popup.item_gap || "")}"
-              />
-            </label>
-            <label>
-              <span>Layout popup por defecto</span>
-              <select data-field="styles.popup.layout" data-optional="true">
-                <option value="" ${!config.styles.popup.layout || config.styles.popup.layout === "auto" ? "selected" : ""}>Auto</option>
-                <option value="vertical" ${config.styles.popup.layout === "vertical" ? "selected" : ""}>Vertical</option>
-                <option value="horizontal" ${config.styles.popup.layout === "horizontal" ? "selected" : ""}>Horizontal</option>
+              <span>Posicion</span>
+              <select data-field="layout.position">
+                <option value="bottom" ${config.layout.position === "bottom" ? "selected" : ""}>Inferior</option>
+                <option value="top" ${config.layout.position === "top" ? "selected" : ""}>Superior</option>
               </select>
+            </label>
+            <label>
+              <span>Offset</span>
+              <input type="text" data-field="layout.offset" value="${escapeHtml(config.layout.offset || "")}" />
+            </label>
+            <label>
+              <span>Margen lateral</span>
+              <input type="text" data-field="layout.side_margin" value="${escapeHtml(config.layout.side_margin || "")}" />
+            </label>
+            <label>
+              <span>Separacion stack</span>
+              <input type="text" data-field="layout.stack_gap" value="${escapeHtml(config.layout.stack_gap || "")}" />
+            </label>
+            <label>
+              <span>Altura reservada</span>
+              <input type="text" data-field="layout.reserve_height" value="${escapeHtml(config.layout.reserve_height || "")}" />
+            </label>
+            <label>
+              <span>Z-index</span>
+              <input type="number" data-field="layout.z_index" value="${escapeHtml(config.layout.z_index || 2)}" />
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="show_labels" ${config.show_labels ? "checked" : ""} />
@@ -4940,13 +4878,150 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           <p class="hint">
             Aqui ya puedes editar popup y media player. Para acciones muy avanzadas, sigue siendo mejor completar el YAML.
           </p>
-        </div>
-        <div class="panel">
-          <div class="panel-title">
-            <strong>Media Player</strong>
-            <button type="button" data-editor-action="add-player">Anadir player</button>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Animaciones</div>
+            <div class="editor-section__hint">Controla transiciones de barra, popup, media player y respuestas visuales.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="animations"
+                aria-expanded="${this._showAnimationSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showAnimationSection ? "Ocultar ajustes de animación" : "Mostrar ajustes de animación"}</span>
+              </button>
+            </div>
           </div>
-          <div class="grid">
+          ${
+            this._showAnimationSection
+              ? `
+                <div class="editor-grid">
+                  <label class="checkbox">
+                    <input type="checkbox" data-field="animations.enabled" ${animationEnabled ? "checked" : ""} />
+                    <span class="toggle-switch" aria-hidden="true"></span>
+                    <span>Activar animaciones</span>
+                  </label>
+                  <label>
+                    <span>Barra y hover (ms)</span>
+                    <input type="number" data-field="animations.bar_duration" value="${escapeHtml(config.animations.bar_duration || DEFAULT_CONFIG.animations.bar_duration)}" />
+                  </label>
+                  <label>
+                    <span>Popup (ms)</span>
+                    <input type="number" data-field="animations.popup_duration" value="${escapeHtml(config.animations.popup_duration || DEFAULT_CONFIG.animations.popup_duration)}" />
+                  </label>
+                  <label>
+                    <span>Media player (ms)</span>
+                    <input type="number" data-field="animations.media_duration" value="${escapeHtml(config.animations.media_duration || DEFAULT_CONFIG.animations.media_duration)}" />
+                  </label>
+                  <label>
+                    <span>Respuesta botones (ms)</span>
+                    <input type="number" data-field="animations.button_bounce_duration" value="${escapeHtml(config.animations.button_bounce_duration || DEFAULT_CONFIG.animations.button_bounce_duration)}" />
+                  </label>
+                </div>
+              `
+              : ""
+          }
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Estilos</div>
+            <div class="editor-section__hint">Ajustes visuales de barra, botones, popup y media player.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="styles"
+                aria-expanded="${this._showStyleSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showStyleSection
+              ? `
+                <div class="editor-grid">
+                  <label><span>Fondo barra</span><input type="text" data-field="styles.bar.background" value="${escapeHtml(config.styles.bar.background || "")}" /></label>
+                  <label><span>Borde barra</span><input type="text" data-field="styles.bar.border" value="${escapeHtml(config.styles.bar.border || "")}" /></label>
+                  <label><span>Radio barra</span><input type="text" data-field="styles.bar.border_radius" value="${escapeHtml(config.styles.bar.border_radius || "")}" /></label>
+                  <label><span>Sombra barra</span><input type="text" data-field="styles.bar.box_shadow" value="${escapeHtml(config.styles.bar.box_shadow || "")}" /></label>
+                  <label><span>Padding barra</span><input type="text" data-field="styles.bar.padding" value="${escapeHtml(config.styles.bar.padding || "")}" /></label>
+                  <label><span>Altura minima</span><input type="text" data-field="styles.bar.min_height" value="${escapeHtml(config.styles.bar.min_height || "")}" /></label>
+                  <label><span>Separacion botones</span><input type="text" data-field="styles.bar.gap" value="${escapeHtml(config.styles.bar.gap || "")}" /></label>
+                  <label><span>Justificacion</span><input type="text" data-field="styles.bar.justify_content" value="${escapeHtml(config.styles.bar.justify_content || "")}" /></label>
+                  <label><span>Ancho maximo barra</span><input type="text" data-field="styles.bar.max_width" value="${escapeHtml(config.styles.bar.max_width || "")}" /></label>
+                  <label><span>Backdrop filter</span><input type="text" data-field="styles.bar.backdrop_filter" value="${escapeHtml(config.styles.bar.backdrop_filter || "")}" /></label>
+                  <label><span>Fondo botones</span><input type="text" data-field="styles.button.background" value="${escapeHtml(config.styles.button.background || "")}" /></label>
+                  <label><span>Color botones</span><input type="text" data-field="styles.button.color" value="${escapeHtml(config.styles.button.color || "")}" /></label>
+                  <label><span>Color activo</span><input type="text" data-field="styles.button.active_color" value="${escapeHtml(config.styles.button.active_color || "")}" /></label>
+                  <label><span>Fondo activo</span><input type="text" data-field="styles.button.active_background" value="${escapeHtml(config.styles.button.active_background || "")}" /></label>
+                  <label><span>Radio boton</span><input type="text" data-field="styles.button.border_radius" value="${escapeHtml(config.styles.button.border_radius || "")}" /></label>
+                  <label><span>Tamano boton</span><input type="text" data-field="styles.button.size" value="${escapeHtml(config.styles.button.size || "")}" /></label>
+                  <label><span>Tamano icono</span><input type="text" data-field="styles.button.icon_size" value="${escapeHtml(config.styles.button.icon_size || "")}" /></label>
+                  <label><span>Offset icono X</span><input type="text" data-field="styles.button.icon_offset_x" value="${escapeHtml(config.styles.button.icon_offset_x || "")}" /></label>
+                  <label><span>Offset icono Y</span><input type="text" data-field="styles.button.icon_offset_y" value="${escapeHtml(config.styles.button.icon_offset_y || "")}" /></label>
+                  <label><span>Color etiqueta</span><input type="text" data-field="styles.button.label_color" value="${escapeHtml(config.styles.button.label_color || "")}" /></label>
+                  <label><span>Color etiqueta activa</span><input type="text" data-field="styles.button.active_label_color" value="${escapeHtml(config.styles.button.active_label_color || "")}" /></label>
+                  <label><span>Tamano etiqueta</span><input type="text" data-field="styles.button.label_size" value="${escapeHtml(config.styles.button.label_size || "")}" /></label>
+                  <label><span>Separacion etiqueta</span><input type="text" data-field="styles.button.label_gap" value="${escapeHtml(config.styles.button.label_gap || "")}" /></label>
+                  <label><span>Fondo badge</span><input type="text" data-field="styles.badge.background" value="${escapeHtml(config.styles.badge.background || "")}" /></label>
+                  <label><span>Color badge</span><input type="text" data-field="styles.badge.color" value="${escapeHtml(config.styles.badge.color || "")}" /></label>
+                  <label><span>Tamano minimo badge</span><input type="text" data-field="styles.badge.min_size" value="${escapeHtml(config.styles.badge.min_size || "")}" /></label>
+                  <label><span>Tamano texto badge</span><input type="text" data-field="styles.badge.font_size" value="${escapeHtml(config.styles.badge.font_size || "")}" /></label>
+                  <label><span>Fondo popup</span><input type="text" data-field="styles.popup.background" value="${escapeHtml(config.styles.popup.background || "")}" /></label>
+                  <label><span>Borde popup</span><input type="text" data-field="styles.popup.border" value="${escapeHtml(config.styles.popup.border || "")}" /></label>
+                  <label><span>Radio popup</span><input type="text" data-field="styles.popup.border_radius" value="${escapeHtml(config.styles.popup.border_radius || "")}" /></label>
+                  <label><span>Sombra popup</span><input type="text" data-field="styles.popup.box_shadow" value="${escapeHtml(config.styles.popup.box_shadow || "")}" /></label>
+                  <label>
+                    <span>Layout popup</span>
+                    <select data-field="styles.popup.layout" data-optional="true">
+                      <option value="" ${!config.styles.popup.layout || config.styles.popup.layout === "auto" ? "selected" : ""}>Auto</option>
+                      <option value="vertical" ${config.styles.popup.layout === "vertical" ? "selected" : ""}>Vertical</option>
+                      <option value="horizontal" ${config.styles.popup.layout === "horizontal" ? "selected" : ""}>Horizontal</option>
+                    </select>
+                  </label>
+                  <label><span>Padding popup</span><input type="text" data-field="styles.popup.padding" value="${escapeHtml(config.styles.popup.padding || "")}" /></label>
+                  <label><span>Ancho minimo popup</span><input type="text" data-field="styles.popup.min_width" value="${escapeHtml(config.styles.popup.min_width || "")}" /></label>
+                  <label><span>Ancho maximo popup</span><input type="text" data-field="styles.popup.max_width" value="${escapeHtml(config.styles.popup.max_width || "")}" /></label>
+                  <label><span>Tamano item popup</span><input type="text" data-field="styles.popup.item_size" value="${escapeHtml(config.styles.popup.item_size || "")}" /></label>
+                  <label><span>Tamano etiqueta popup</span><input type="text" data-field="styles.popup.label_size" value="${escapeHtml(config.styles.popup.label_size || "")}" /></label>
+                  <label><span>Separacion popup</span><input type="text" data-field="styles.popup.item_gap" value="${escapeHtml(config.styles.popup.item_gap || "")}" /></label>
+                  <label><span>Veladura popup</span><input type="text" data-field="styles.popup.backdrop" value="${escapeHtml(config.styles.popup.backdrop || "")}" /></label>
+                  <label><span>Fondo media player</span><input type="text" data-field="styles.media_player.background" value="${escapeHtml(config.styles.media_player.background || "")}" /></label>
+                  <label><span>Borde media player</span><input type="text" data-field="styles.media_player.border" value="${escapeHtml(config.styles.media_player.border || "")}" /></label>
+                  <label><span>Radio media player</span><input type="text" data-field="styles.media_player.border_radius" value="${escapeHtml(config.styles.media_player.border_radius || "")}" /></label>
+                  <label><span>Sombra media player</span><input type="text" data-field="styles.media_player.box_shadow" value="${escapeHtml(config.styles.media_player.box_shadow || "")}" /></label>
+                  <label><span>Padding media player</span><input type="text" data-field="styles.media_player.padding" value="${escapeHtml(config.styles.media_player.padding || "")}" /></label>
+                  <label><span>Altura minima media player</span><input type="text" data-field="styles.media_player.min_height" value="${escapeHtml(config.styles.media_player.min_height || "")}" /></label>
+                  <label><span>Tamano portada</span><input type="text" data-field="styles.media_player.artwork_size" value="${escapeHtml(config.styles.media_player.artwork_size || "")}" /></label>
+                  <label><span>Tamano controles</span><input type="text" data-field="styles.media_player.control_size" value="${escapeHtml(config.styles.media_player.control_size || "")}" /></label>
+                  <label><span>Tamano titulo</span><input type="text" data-field="styles.media_player.title_size" value="${escapeHtml(config.styles.media_player.title_size || "")}" /></label>
+                  <label><span>Tamano subtitulo</span><input type="text" data-field="styles.media_player.subtitle_size" value="${escapeHtml(config.styles.media_player.subtitle_size || "")}" /></label>
+                  <label><span>Color progreso</span><input type="text" data-field="styles.media_player.progress_color" value="${escapeHtml(config.styles.media_player.progress_color || "")}" /></label>
+                  <label><span>Fondo progreso</span><input type="text" data-field="styles.media_player.progress_background" value="${escapeHtml(config.styles.media_player.progress_background || "")}" /></label>
+                  <label><span>Overlay portada</span><input type="text" data-field="styles.media_player.overlay_color" value="${escapeHtml(config.styles.media_player.overlay_color || "")}" /></label>
+                  <label><span>Tamano indicadores</span><input type="text" data-field="styles.media_player.dot_size" value="${escapeHtml(config.styles.media_player.dot_size || "")}" /></label>
+                </div>
+              `
+              : ""
+          }
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Media Player</div>
+            <div class="editor-section__hint">Opciones generales del reproductor integrado y lista de players visibles.</div>
+            <div class="editor-section__actions">
+              <button type="button" data-editor-action="add-player">Anadir player</button>
+            </div>
+          </div>
+          <div class="editor-grid">
             <label class="checkbox">
               <input type="checkbox" data-field="media_player.show_desktop" ${config.media_player.show_desktop ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
@@ -4964,14 +5039,6 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             <label>
               <span>Separacion con navbar</span>
               <input type="text" data-field="media_player.gap" value="${escapeHtml(config.media_player.gap || "")}" />
-            </label>
-            <label>
-              <span>Radio player</span>
-              <input type="text" data-field="styles.media_player.border_radius" value="${escapeHtml(config.styles.media_player.border_radius || "")}" />
-            </label>
-            <label>
-              <span>Padding player</span>
-              <input type="text" data-field="styles.media_player.padding" value="${escapeHtml(config.styles.media_player.padding || "")}" />
             </label>
             <label>
               <span>Tamano portada</span>
@@ -4993,14 +5060,17 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           <div class="subsection">
             ${playersMarkup || '<p class="hint">No hay reproductores configurados.</p>'}
           </div>
-        </div>
-        <div class="panel">
-          <div class="panel-title">
-            <strong>Rutas</strong>
-            <button type="button" data-editor-action="add-route">Anadir ruta</button>
+        </section>
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Rutas</div>
+            <div class="editor-section__hint">Añade, reordena y personaliza los destinos de la barra y sus popups.</div>
+            <div class="editor-section__actions">
+              <button type="button" data-editor-action="add-route">Anadir ruta</button>
+            </div>
           </div>
           ${routesMarkup || '<p class="hint">No hay rutas todavia.</p>'}
-        </div>
+        </section>
       </div>
     `;
   }
@@ -5027,7 +5097,6 @@ console.info(
   "background:#2f4858;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;",
   "background:#4f7c82;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;",
 );
-
 }
 {
 const CARD_TAG = "nodalia-media-player";
@@ -5186,7 +5255,7 @@ function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
   const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
   return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
   )) || "";
 }
 
@@ -5440,23 +5509,6 @@ function getRelativeLuminance(color) {
   const green = toLinear(color.green);
   const blue = toLinear(color.blue);
   return (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
-}
-
-function isLightThemeSurface(contextNode) {
-  const textColor = parseRgbColor(resolveColorInContext(contextNode, "var(--primary-text-color)"));
-  const backgroundColor = parseRgbColor(resolveColorInContext(contextNode, "var(--ha-card-background, var(--card-background-color, #ffffff))"));
-
-  const textLuminance = getRelativeLuminance(textColor);
-  if (textLuminance !== null) {
-    return textLuminance < 0.36;
-  }
-
-  const backgroundLuminance = getRelativeLuminance(backgroundColor);
-  if (backgroundLuminance !== null) {
-    return backgroundLuminance > 0.62;
-  }
-
-  return false;
 }
 
 function formatEditorHexChannel(value) {
@@ -5988,6 +6040,23 @@ class NodaliaMediaPlayer extends HTMLElement {
         1200,
       ),
     };
+  }
+
+  _isLightThemeSurface() {
+    const textColor = parseRgbColor(resolveColorInContext(this, "var(--primary-text-color)"));
+    const backgroundColor = parseRgbColor(resolveColorInContext(this, "var(--ha-card-background, var(--card-background-color, #ffffff))"));
+
+    const textLuminance = getRelativeLuminance(textColor);
+    if (textLuminance !== null) {
+      return textLuminance < 0.36;
+    }
+
+    const backgroundLuminance = getRelativeLuminance(backgroundColor);
+    if (backgroundLuminance !== null) {
+      return backgroundLuminance > 0.62;
+    }
+
+    return false;
   }
 
   _triggerButtonBounce(button) {
@@ -8603,28 +8672,28 @@ class NodaliaMediaPlayer extends HTMLElement {
     const browserStyles = config.styles.browser;
     const tvArtworkSize = playerStyles.tv_artwork_size || playerStyles.artwork_size;
     const activeTintColor = playerStyles.active_tint_color || "var(--info-color, #71c0ff)";
-    const lightThemeSurface = isLightThemeSurface(this);
-    const albumOverlayColor = lightThemeSurface
+    const isLightThemeSurface = this._isLightThemeSurface();
+    const albumOverlayColor = isLightThemeSurface
       ? `color-mix(in srgb, ${playerStyles.overlay_color} 24%, var(--ha-card-background))`
       : playerStyles.overlay_color;
-    const albumOverlayTop = lightThemeSurface
+    const albumOverlayTop = isLightThemeSurface
       ? `color-mix(in srgb, ${albumOverlayColor} 72%, transparent)`
       : `color-mix(in srgb, ${albumOverlayColor} 64%, rgba(0, 0, 0, 0.08))`;
-    const albumOverlayBottom = lightThemeSurface
+    const albumOverlayBottom = isLightThemeSurface
       ? `color-mix(in srgb, ${albumOverlayColor} 88%, color-mix(in srgb, var(--ha-card-background) 92%, transparent))`
       : `color-mix(in srgb, ${albumOverlayColor} 86%, rgba(0, 0, 0, 0.16))`;
-    const albumBackgroundFilter = lightThemeSurface
+    const albumBackgroundFilter = isLightThemeSurface
       ? "blur(28px) saturate(0.94) brightness(1.06)"
       : "blur(30px) saturate(0.82)";
-    const albumBackgroundOpacity = lightThemeSurface ? "0.48" : "0.42";
-    const cardTopHighlight = lightThemeSurface
+    const albumBackgroundOpacity = isLightThemeSurface ? "0.48" : "0.42";
+    const cardTopHighlight = isLightThemeSurface
       ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))"
       : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0))";
-    const activeTintPrimaryStrength = lightThemeSurface ? 52 : 46;
-    const activeTintSecondaryStrength = lightThemeSurface ? 34 : 30;
-    const activeTintTopStrength = lightThemeSurface ? 40 : 34;
-    const activeTintBaseStrength = lightThemeSurface ? 56 : 48;
-    const activeTintMidStrength = lightThemeSurface ? 34 : 30;
+    const activeTintPrimaryStrength = isLightThemeSurface ? 52 : 46;
+    const activeTintSecondaryStrength = isLightThemeSurface ? 34 : 30;
+    const activeTintTopStrength = isLightThemeSurface ? 40 : 34;
+    const activeTintBaseStrength = isLightThemeSurface ? 56 : 48;
+    const activeTintMidStrength = isLightThemeSurface ? 34 : 30;
     const activeCardBaseBackground = "var(--ha-card-background, var(--card-background-color, #111827))";
     const activeCardBackground = `
       radial-gradient(circle at 18% 20%, color-mix(in srgb, ${activeTintColor} ${activeTintPrimaryStrength}%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 56%),
@@ -8634,7 +8703,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} ${activeTintBaseStrength}%, ${activeCardBaseBackground}) 0%, color-mix(in srgb, ${activeTintColor} ${activeTintMidStrength}%, ${activeCardBaseBackground}) 58%, ${activeCardBaseBackground} 100%)
     `.trim();
     const activeCardBorder = `color-mix(in srgb, ${activeTintColor} 52%, var(--divider-color))`;
-    const activeCardShadow = `${playerStyles.box_shadow}, inset 0 0 0 999px color-mix(in srgb, ${activeTintColor} ${lightThemeSurface ? 18 : 16}%, transparent), 0 0 0 1px color-mix(in srgb, ${activeTintColor} 22%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)), 0 18px 38px color-mix(in srgb, ${activeTintColor} 34%, rgba(16, 34, 82, 0.18))`;
+    const activeCardShadow = `${playerStyles.box_shadow}, inset 0 0 0 999px color-mix(in srgb, ${activeTintColor} ${isLightThemeSurface ? 18 : 16}%, transparent), 0 0 0 1px color-mix(in srgb, ${activeTintColor} 22%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)), 0 18px 38px color-mix(in srgb, ${activeTintColor} 34%, rgba(16, 34, 82, 0.18))`;
     const activeCardHighlight = `
       radial-gradient(circle at 18% 20%, color-mix(in srgb, ${activeTintColor} 34%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 54%),
       linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} 24%, transparent) 0%, transparent 68%),
@@ -11351,7 +11420,6 @@ window.customCards.push({
   description: "Media player fijo con estetica Nodalia y editor visual.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-light-card";
@@ -16010,7 +16078,6 @@ window.customCards.push({
   description: "Tarjeta de luz con estilo Nodalia, presets y editor visual.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-fan-card";
@@ -16104,7 +16171,7 @@ function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
   const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
   return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
   )) || "";
 }
 
@@ -19524,7 +19591,6 @@ window.customCards.push({
   description: "Tarjeta de ventilador con slider de velocidad, oscilacion y modos.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-humidifier-card";
@@ -23476,7 +23542,6 @@ window.customCards.push({
   description: "Tarjeta de humidificador o deshumidificador con control visual de humedad y modos.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-circular-gauge-card";
@@ -23591,7 +23656,7 @@ function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
   const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
   return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
   )) || "";
 }
 
@@ -23851,6 +23916,80 @@ function fireEvent(node, type, detail, options) {
   return event;
 }
 
+function resolveColorInContext(contextNode, value) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || typeof document === "undefined") {
+    return rawValue;
+  }
+
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.color = "";
+  probe.style.color = rawValue;
+  (contextNode || document.body || document.documentElement).appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved || rawValue;
+}
+
+function parseRgbColor(value) {
+  const source = String(value ?? "").trim();
+  if (!source) {
+    return null;
+  }
+
+  const rgbMatch = source.match(/^rgba?\(([^)]+)\)$/i);
+  if (rgbMatch) {
+    const channels = rgbMatch[1]
+      .split(",")
+      .map(channel => Number.parseFloat(channel.trim()))
+      .filter(channel => Number.isFinite(channel));
+
+    if (channels.length >= 3) {
+      return {
+        red: clamp(channels[0], 0, 255),
+        green: clamp(channels[1], 0, 255),
+        blue: clamp(channels[2], 0, 255),
+      };
+    }
+  }
+
+  const hexMatch = source.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hexMatch) {
+    const hex = hexMatch[1].length === 3
+      ? hexMatch[1].split("").map(channel => channel + channel).join("")
+      : hexMatch[1];
+
+    return {
+      red: Number.parseInt(hex.slice(0, 2), 16),
+      green: Number.parseInt(hex.slice(2, 4), 16),
+      blue: Number.parseInt(hex.slice(4, 6), 16),
+    };
+  }
+
+  return null;
+}
+
+function getRelativeLuminance(color) {
+  if (!color) {
+    return null;
+  }
+
+  const toLinear = channel => {
+    const normalized = clamp(Number(channel) / 255, 0, 1);
+    return normalized <= 0.04045
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4;
+  };
+
+  const red = toLinear(color.red);
+  const green = toLinear(color.green);
+  const blue = toLinear(color.blue);
+  return (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
+}
+
 function normalizeTextKey(value) {
   return String(value ?? "")
     .normalize("NFD")
@@ -24041,7 +24180,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
   }
 
   static getStubConfig(hass) {
-    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["sensor","number","input_number"]);
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["sensor", "number", "input_number"]);
   }
 
   constructor() {
@@ -24301,6 +24440,23 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         1800,
       ),
     };
+  }
+
+  _isLightThemeSurface() {
+    const textColor = parseRgbColor(resolveColorInContext(this, "var(--primary-text-color)"));
+    const backgroundColor = parseRgbColor(resolveColorInContext(this, "var(--ha-card-background, var(--card-background-color, #ffffff))"));
+
+    const textLuminance = getRelativeLuminance(textColor);
+    if (textLuminance !== null) {
+      return textLuminance < 0.36;
+    }
+
+    const backgroundLuminance = getRelativeLuminance(backgroundColor);
+    if (backgroundLuminance !== null) {
+      return backgroundLuminance > 0.62;
+    }
+
+    return false;
   }
 
   _canRunTapAction() {
@@ -26234,7 +26390,6 @@ window.customCards.push({
   description: "Tarjeta circular para sensores y valores numericos con estetica Nodalia.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-graph-card";
@@ -26341,7 +26496,7 @@ function getStubEntityIds(hass, domains = [], limit = 1) {
   const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
   return Object.keys(states)
     .filter(entityId => (
-      !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+      !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
     ))
     .slice(0, limit);
 }
@@ -30128,7 +30283,6 @@ window.customCards.push({
   description: "Tarjeta de grafica elegante para una o varias entidades numericas con estilo Nodalia.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-power-flow-card";
@@ -30295,7 +30449,7 @@ function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
   const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
   return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
   )) || "";
 }
 
@@ -34183,7 +34337,6 @@ window.customCards.push({
   description: "Tarjeta Nodalia de flujo energetico para red, solar, bateria, agua, gas y consumos individuales.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-climate-card";
@@ -34298,7 +34451,7 @@ function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
   const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
   return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
   )) || "";
 }
 
@@ -34544,6 +34697,80 @@ function fireEvent(node, type, detail, options) {
   });
   node.dispatchEvent(event);
   return event;
+}
+
+function resolveColorInContext(contextNode, value) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || typeof document === "undefined") {
+    return rawValue;
+  }
+
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.color = "";
+  probe.style.color = rawValue;
+  (contextNode || document.body || document.documentElement).appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved || rawValue;
+}
+
+function parseRgbColor(value) {
+  const source = String(value ?? "").trim();
+  if (!source) {
+    return null;
+  }
+
+  const rgbMatch = source.match(/^rgba?\(([^)]+)\)$/i);
+  if (rgbMatch) {
+    const channels = rgbMatch[1]
+      .split(",")
+      .map(channel => Number.parseFloat(channel.trim()))
+      .filter(channel => Number.isFinite(channel));
+
+    if (channels.length >= 3) {
+      return {
+        red: clamp(channels[0], 0, 255),
+        green: clamp(channels[1], 0, 255),
+        blue: clamp(channels[2], 0, 255),
+      };
+    }
+  }
+
+  const hexMatch = source.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hexMatch) {
+    const hex = hexMatch[1].length === 3
+      ? hexMatch[1].split("").map(channel => channel + channel).join("")
+      : hexMatch[1];
+
+    return {
+      red: Number.parseInt(hex.slice(0, 2), 16),
+      green: Number.parseInt(hex.slice(2, 4), 16),
+      blue: Number.parseInt(hex.slice(4, 6), 16),
+    };
+  }
+
+  return null;
+}
+
+function getRelativeLuminance(color) {
+  if (!color) {
+    return null;
+  }
+
+  const toLinear = channel => {
+    const normalized = clamp(Number(channel) / 255, 0, 1);
+    return normalized <= 0.04045
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4;
+  };
+
+  const red = toLinear(color.red);
+  const green = toLinear(color.green);
+  const blue = toLinear(color.blue);
+  return (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
 }
 
 function normalizeTextKey(value) {
@@ -35326,6 +35553,23 @@ class NodaliaClimateCard extends HTMLElement {
         1800,
       ),
     };
+  }
+
+  _isLightThemeSurface() {
+    const textColor = parseRgbColor(resolveColorInContext(this, "var(--primary-text-color)"));
+    const backgroundColor = parseRgbColor(resolveColorInContext(this, "var(--ha-card-background, var(--card-background-color, #ffffff))"));
+
+    const textLuminance = getRelativeLuminance(textColor);
+    if (textLuminance !== null) {
+      return textLuminance < 0.36;
+    }
+
+    const backgroundLuminance = getRelativeLuminance(backgroundColor);
+    if (backgroundLuminance !== null) {
+      return backgroundLuminance > 0.62;
+    }
+
+    return false;
   }
 
   _triggerButtonBounce(button) {
@@ -38268,7 +38512,6 @@ window.customCards.push({
   description: "Tarjeta de clima con dial circular, modos HVAC y control rapido de temperatura.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-alarm-panel-card";
@@ -38379,7 +38622,7 @@ function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
   const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
   return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
   )) || "";
 }
 
@@ -40791,7 +41034,6 @@ window.customCards.push({
   description: "Tarjeta elegante para paneles de alarma",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-advance-vacuum-card";
@@ -41153,7 +41395,7 @@ function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
   const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
   return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
   )) || "";
 }
 
@@ -48738,7 +48980,6 @@ window.customCards.push({
   description: "Tarjeta de mapa avanzada para robots con estilo Nodalia y seleccion de habitaciones, zonas y puntos.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-entity-card";
@@ -48849,7 +49090,7 @@ function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
   const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
   return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
   )) || "";
 }
 
@@ -51724,7 +51965,6 @@ window.customCards.push({
   description: "Tarjeta todoterreno para entidades, información y botones rápidos.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-fav-card";
@@ -51822,7 +52062,7 @@ function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
   const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
   return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
   )) || "";
 }
 
@@ -52299,7 +52539,7 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   static getStubConfig(hass) {
-    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["light","switch"]);
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["light", "switch"]);
   }
 
   constructor() {
@@ -54716,7 +54956,6 @@ window.customCards.push({
   description: "Tarjeta mini y elegante para favoritos y controles rapidos en movil.",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-insignia-card";
@@ -54797,7 +55036,7 @@ function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
   const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
   return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
   )) || "";
 }
 
@@ -55060,7 +55299,7 @@ class NodaliaInsigniaCard extends HTMLElement {
   }
 
   static getStubConfig(hass) {
-    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["sensor","binary_sensor"]);
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["sensor", "binary_sensor"]);
   }
 
   constructor() {
@@ -56034,7 +56273,6 @@ if (!window.customBadges.some(item => item?.type === CARD_TAG)) {
     documentationURL: "https://developers.home-assistant.io/docs/frontend/custom-ui/custom-badge/",
   });
 }
-
 }
 {
 const CARD_TAG = "nodalia-person-card";
@@ -58125,7 +58363,6 @@ window.customCards.push({
   description: "Tarjeta compacta de persona con foto y zona",
   preview: true,
 });
-
 }
 {
 const CARD_TAG = "nodalia-weather-card";
@@ -58153,6 +58390,7 @@ const DEFAULT_CONFIG = {
   show_meteoalarm_chip: false,
   meteoalarm_entity: "binary_sensor.meteoalarm",
   show_forecast_details: false,
+  show_forecast_toggle: true,
   forecast_type: "hourly",
   forecast_slots_hourly: 8,
   forecast_slots_daily: 5,
@@ -58593,6 +58831,54 @@ function formatMeteoalarmDate(value) {
     minute: "2-digit",
     month: "short",
   });
+}
+
+function translateMeteoalarmValue(value) {
+  const text = String(value || "").trim();
+  switch (normalizeTextKey(text)) {
+    case "moderate":
+      return "Moderado";
+    case "severe":
+      return "Severo";
+    case "high":
+      return "Alto";
+    case "extreme":
+      return "Extremo";
+    case "minor":
+      return "Menor";
+    case "yellow":
+      return "Amarillo";
+    case "orange":
+      return "Naranja";
+    case "red":
+      return "Rojo";
+    case "green":
+      return "Verde";
+    case "future":
+      return "Futuro";
+    case "immediate":
+      return "Inmediato";
+    case "expected":
+      return "Esperado";
+    case "past":
+      return "Pasado";
+    case "likely":
+      return "Probable";
+    case "observed":
+      return "Observado";
+    case "possible":
+      return "Posible";
+    case "unlikely":
+      return "Improbable";
+    case "unknown":
+      return "Desconocido";
+    case "met":
+      return "Meteorologico";
+    case "monitor":
+      return "Monitorizar";
+    default:
+      return text;
+  }
 }
 
 function translateCondition(value) {
@@ -59141,6 +59427,15 @@ class NodaliaWeatherCard extends HTMLElement {
     `;
   }
 
+  _renderMeteoalarmChipRow(shouldAnimateEntrance) {
+    const chipMarkup = this._renderMeteoalarmChip();
+    if (!chipMarkup) {
+      return "";
+    }
+
+    return `<div class="weather-card__alert-row ${shouldAnimateEntrance ? "weather-card__alert-row--entering" : ""}">${chipMarkup}</div>`;
+  }
+
   _renderMeteoalarmPopup() {
     if (!this._meteoalarmPopupOpen || this._config?.show_meteoalarm_chip !== true) {
       return "";
@@ -59156,13 +59451,13 @@ class NodaliaWeatherCard extends HTMLElement {
         ? "Sin alertas meteorologicas"
         : "Meteoalarm";
     const rows = [
-      ["Nivel", awareness.label || attrs.severity || ""],
+      ["Nivel", translateMeteoalarmValue(awareness.label || attrs.severity || "")],
       ["Tipo", attrs.event || attrs.awareness_type || ""],
       ["Inicio", formatMeteoalarmDate(attrs.onset || attrs.effective)],
       ["Fin", formatMeteoalarmDate(attrs.expires)],
-      ["Severidad", attrs.severity || ""],
-      ["Urgencia", attrs.urgency || ""],
-      ["Certeza", attrs.certainty || ""],
+      ["Severidad", translateMeteoalarmValue(attrs.severity || "")],
+      ["Urgencia", translateMeteoalarmValue(attrs.urgency || "")],
+      ["Certeza", translateMeteoalarmValue(attrs.certainty || "")],
     ].filter(([, value]) => String(value || "").trim());
     const description = String(attrs.description || "").trim();
     const instruction = String(attrs.instruction || "").trim();
@@ -59227,11 +59522,17 @@ class NodaliaWeatherCard extends HTMLElement {
 
     return `
       <section class="weather-card__forecast ${shouldAnimateEntrance ? "weather-card__forecast--entering" : ""}">
-        <div class="weather-card__forecast-header">
-          <button type="button" class="weather-card__forecast-toggle" data-weather-action="toggle-forecast" aria-expanded="${this._forecastExpanded ? "true" : "false"}">
-            <ha-icon icon="${this._forecastExpanded ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-            <span>Previsión</span>
-          </button>
+        <div class="weather-card__forecast-header ${this._config.show_forecast_toggle === false ? "weather-card__forecast-header--tabs-only" : ""}">
+          ${
+            this._config.show_forecast_toggle === false
+              ? ""
+              : `
+                <button type="button" class="weather-card__forecast-toggle" data-weather-action="toggle-forecast" aria-expanded="${this._forecastExpanded ? "true" : "false"}">
+                  <ha-icon icon="${this._forecastExpanded ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                  <span>Previsión</span>
+                </button>
+              `
+          }
           ${
             this._forecastExpanded
               ? `
@@ -59313,7 +59614,6 @@ class NodaliaWeatherCard extends HTMLElement {
       config.show_pressure_chip === true
         ? this._renderChip("mdi:gauge", this._formatPressure(state), accentColor)
         : "",
-      this._renderMeteoalarmChip(),
     ].filter(Boolean);
     const tapEnabled = String(config.tap_action || "more-info") !== "none";
     const animations = this._getAnimationSettings();
@@ -59326,6 +59626,7 @@ class NodaliaWeatherCard extends HTMLElement {
       : configuredBorder;
     const cardShadow = `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`;
     const forecastMarkup = this._renderForecastDetails(state, accentColor, shouldAnimateEntrance);
+    const meteoalarmChipRowMarkup = this._renderMeteoalarmChipRow(shouldAnimateEntrance);
     const meteoalarmPopupMarkup = this._renderMeteoalarmPopup();
 
     this.shadowRoot.innerHTML = `
@@ -59488,6 +59789,17 @@ class NodaliaWeatherCard extends HTMLElement {
           animation-delay: 110ms;
         }
 
+        .weather-card__alert-row {
+          display: flex;
+          justify-content: flex-start;
+          min-width: 0;
+        }
+
+        .weather-card__alert-row--entering {
+          animation: weather-card-fade-up calc(var(--weather-card-content-duration) * 0.94) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 88ms;
+        }
+
         .weather-card__chip {
           align-items: center;
           appearance: none;
@@ -59508,7 +59820,7 @@ class NodaliaWeatherCard extends HTMLElement {
         .weather-card__chip--button {
           cursor: pointer;
           font: inherit;
-          max-width: 180px;
+          max-width: min(100%, 320px);
           min-width: 0;
           overflow: hidden;
           transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
@@ -59525,6 +59837,10 @@ class NodaliaWeatherCard extends HTMLElement {
         .weather-card__chip--alert-active {
           background: color-mix(in srgb, var(--chip-accent) 18%, color-mix(in srgb, var(--primary-text-color) 5%, transparent));
           border-color: color-mix(in srgb, var(--chip-accent) 45%, transparent);
+        }
+
+        .weather-card__chip--meteoalarm {
+          max-width: 100%;
         }
 
         .weather-card__chip ha-icon {
@@ -59706,6 +60022,10 @@ class NodaliaWeatherCard extends HTMLElement {
           gap: 10px;
           justify-content: space-between;
           min-width: 0;
+        }
+
+        .weather-card__forecast-header--tabs-only {
+          justify-content: flex-end;
         }
 
         .weather-card__forecast-toggle,
@@ -59951,6 +60271,7 @@ class NodaliaWeatherCard extends HTMLElement {
                 <div class="weather-card__title">${escapeHtml(title)}</div>
                 ${chips.length ? `<div class="weather-card__chips ${shouldAnimateEntrance ? "weather-card__chips--entering" : ""}">${chips.join("")}</div>` : ""}
               </div>
+              ${meteoalarmChipRowMarkup}
               <div class="weather-card__metrics ${shouldAnimateEntrance ? "weather-card__metrics--entering" : ""}">
                 <div class="weather-card__temperature">${escapeHtml(temperatureLabel)}</div>
                 ${config.show_condition !== false ? `<div class="weather-card__condition">${escapeHtml(conditionLabel)}</div>` : ""}
@@ -60729,6 +61050,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
             }) : ""}
             ${this._renderCheckboxField("Mostrar prediccion ampliada", "show_forecast_details", config.show_forecast_details === true)}
             ${config.show_forecast_details === true ? `
+              ${this._renderCheckboxField("Mostrar boton de prevision", "show_forecast_toggle", config.show_forecast_toggle !== false)}
               ${this._renderSelectField(
                 "Vista inicial",
                 "forecast_type",
@@ -60879,7 +61201,8 @@ window.customCards.push({
   description: "Tarjeta de tiempo elegante para Home Assistant",
   preview: true,
 });
-}{
+}
+{
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
 const CARD_VERSION = "0.6.0";
@@ -61038,7 +61361,7 @@ function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
   const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
   return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
   )) || "";
 }
 
@@ -65203,5 +65526,4 @@ window.customCards.push({
   description: "Tarjeta de aspirador con look Nodalia, acciones rápidas y editor visual.",
   preview: true,
 });
-
 }

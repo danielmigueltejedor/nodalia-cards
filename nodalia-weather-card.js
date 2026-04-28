@@ -23,6 +23,7 @@ const DEFAULT_CONFIG = {
   show_meteoalarm_chip: false,
   meteoalarm_entity: "binary_sensor.meteoalarm",
   show_forecast_details: false,
+  show_forecast_toggle: true,
   forecast_type: "hourly",
   forecast_slots_hourly: 8,
   forecast_slots_daily: 5,
@@ -463,6 +464,54 @@ function formatMeteoalarmDate(value) {
     minute: "2-digit",
     month: "short",
   });
+}
+
+function translateMeteoalarmValue(value) {
+  const text = String(value || "").trim();
+  switch (normalizeTextKey(text)) {
+    case "moderate":
+      return "Moderado";
+    case "severe":
+      return "Severo";
+    case "high":
+      return "Alto";
+    case "extreme":
+      return "Extremo";
+    case "minor":
+      return "Menor";
+    case "yellow":
+      return "Amarillo";
+    case "orange":
+      return "Naranja";
+    case "red":
+      return "Rojo";
+    case "green":
+      return "Verde";
+    case "future":
+      return "Futuro";
+    case "immediate":
+      return "Inmediato";
+    case "expected":
+      return "Esperado";
+    case "past":
+      return "Pasado";
+    case "likely":
+      return "Probable";
+    case "observed":
+      return "Observado";
+    case "possible":
+      return "Posible";
+    case "unlikely":
+      return "Improbable";
+    case "unknown":
+      return "Desconocido";
+    case "met":
+      return "Meteorologico";
+    case "monitor":
+      return "Monitorizar";
+    default:
+      return text;
+  }
 }
 
 function translateCondition(value) {
@@ -1011,6 +1060,15 @@ class NodaliaWeatherCard extends HTMLElement {
     `;
   }
 
+  _renderMeteoalarmChipRow(shouldAnimateEntrance) {
+    const chipMarkup = this._renderMeteoalarmChip();
+    if (!chipMarkup) {
+      return "";
+    }
+
+    return `<div class="weather-card__alert-row ${shouldAnimateEntrance ? "weather-card__alert-row--entering" : ""}">${chipMarkup}</div>`;
+  }
+
   _renderMeteoalarmPopup() {
     if (!this._meteoalarmPopupOpen || this._config?.show_meteoalarm_chip !== true) {
       return "";
@@ -1026,13 +1084,13 @@ class NodaliaWeatherCard extends HTMLElement {
         ? "Sin alertas meteorologicas"
         : "Meteoalarm";
     const rows = [
-      ["Nivel", awareness.label || attrs.severity || ""],
+      ["Nivel", translateMeteoalarmValue(awareness.label || attrs.severity || "")],
       ["Tipo", attrs.event || attrs.awareness_type || ""],
       ["Inicio", formatMeteoalarmDate(attrs.onset || attrs.effective)],
       ["Fin", formatMeteoalarmDate(attrs.expires)],
-      ["Severidad", attrs.severity || ""],
-      ["Urgencia", attrs.urgency || ""],
-      ["Certeza", attrs.certainty || ""],
+      ["Severidad", translateMeteoalarmValue(attrs.severity || "")],
+      ["Urgencia", translateMeteoalarmValue(attrs.urgency || "")],
+      ["Certeza", translateMeteoalarmValue(attrs.certainty || "")],
     ].filter(([, value]) => String(value || "").trim());
     const description = String(attrs.description || "").trim();
     const instruction = String(attrs.instruction || "").trim();
@@ -1097,11 +1155,17 @@ class NodaliaWeatherCard extends HTMLElement {
 
     return `
       <section class="weather-card__forecast ${shouldAnimateEntrance ? "weather-card__forecast--entering" : ""}">
-        <div class="weather-card__forecast-header">
-          <button type="button" class="weather-card__forecast-toggle" data-weather-action="toggle-forecast" aria-expanded="${this._forecastExpanded ? "true" : "false"}">
-            <ha-icon icon="${this._forecastExpanded ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-            <span>Previsión</span>
-          </button>
+        <div class="weather-card__forecast-header ${this._config.show_forecast_toggle === false ? "weather-card__forecast-header--tabs-only" : ""}">
+          ${
+            this._config.show_forecast_toggle === false
+              ? ""
+              : `
+                <button type="button" class="weather-card__forecast-toggle" data-weather-action="toggle-forecast" aria-expanded="${this._forecastExpanded ? "true" : "false"}">
+                  <ha-icon icon="${this._forecastExpanded ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                  <span>Previsión</span>
+                </button>
+              `
+          }
           ${
             this._forecastExpanded
               ? `
@@ -1183,7 +1247,6 @@ class NodaliaWeatherCard extends HTMLElement {
       config.show_pressure_chip === true
         ? this._renderChip("mdi:gauge", this._formatPressure(state), accentColor)
         : "",
-      this._renderMeteoalarmChip(),
     ].filter(Boolean);
     const tapEnabled = String(config.tap_action || "more-info") !== "none";
     const animations = this._getAnimationSettings();
@@ -1196,6 +1259,7 @@ class NodaliaWeatherCard extends HTMLElement {
       : configuredBorder;
     const cardShadow = `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`;
     const forecastMarkup = this._renderForecastDetails(state, accentColor, shouldAnimateEntrance);
+    const meteoalarmChipRowMarkup = this._renderMeteoalarmChipRow(shouldAnimateEntrance);
     const meteoalarmPopupMarkup = this._renderMeteoalarmPopup();
 
     this.shadowRoot.innerHTML = `
@@ -1358,6 +1422,17 @@ class NodaliaWeatherCard extends HTMLElement {
           animation-delay: 110ms;
         }
 
+        .weather-card__alert-row {
+          display: flex;
+          justify-content: flex-start;
+          min-width: 0;
+        }
+
+        .weather-card__alert-row--entering {
+          animation: weather-card-fade-up calc(var(--weather-card-content-duration) * 0.94) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 88ms;
+        }
+
         .weather-card__chip {
           align-items: center;
           appearance: none;
@@ -1378,7 +1453,7 @@ class NodaliaWeatherCard extends HTMLElement {
         .weather-card__chip--button {
           cursor: pointer;
           font: inherit;
-          max-width: 180px;
+          max-width: min(100%, 320px);
           min-width: 0;
           overflow: hidden;
           transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
@@ -1395,6 +1470,10 @@ class NodaliaWeatherCard extends HTMLElement {
         .weather-card__chip--alert-active {
           background: color-mix(in srgb, var(--chip-accent) 18%, color-mix(in srgb, var(--primary-text-color) 5%, transparent));
           border-color: color-mix(in srgb, var(--chip-accent) 45%, transparent);
+        }
+
+        .weather-card__chip--meteoalarm {
+          max-width: 100%;
         }
 
         .weather-card__chip ha-icon {
@@ -1576,6 +1655,10 @@ class NodaliaWeatherCard extends HTMLElement {
           gap: 10px;
           justify-content: space-between;
           min-width: 0;
+        }
+
+        .weather-card__forecast-header--tabs-only {
+          justify-content: flex-end;
         }
 
         .weather-card__forecast-toggle,
@@ -1821,6 +1904,7 @@ class NodaliaWeatherCard extends HTMLElement {
                 <div class="weather-card__title">${escapeHtml(title)}</div>
                 ${chips.length ? `<div class="weather-card__chips ${shouldAnimateEntrance ? "weather-card__chips--entering" : ""}">${chips.join("")}</div>` : ""}
               </div>
+              ${meteoalarmChipRowMarkup}
               <div class="weather-card__metrics ${shouldAnimateEntrance ? "weather-card__metrics--entering" : ""}">
                 <div class="weather-card__temperature">${escapeHtml(temperatureLabel)}</div>
                 ${config.show_condition !== false ? `<div class="weather-card__condition">${escapeHtml(conditionLabel)}</div>` : ""}
@@ -2599,6 +2683,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
             }) : ""}
             ${this._renderCheckboxField("Mostrar prediccion ampliada", "show_forecast_details", config.show_forecast_details === true)}
             ${config.show_forecast_details === true ? `
+              ${this._renderCheckboxField("Mostrar boton de prevision", "show_forecast_toggle", config.show_forecast_toggle !== false)}
               ${this._renderSelectField(
                 "Vista inicial",
                 "forecast_type",
