@@ -11458,7 +11458,7 @@ function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
   const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
   return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
   )) || "";
 }
 
@@ -13677,6 +13677,7 @@ class NodaliaLightCard extends HTMLElement {
       powerAnimationState = isOn ? "powering-up" : "powering-down";
       this._powerTransition = {
         endsAt: now + animations.powerDuration,
+        startedAt: now,
         state: powerAnimationState,
       };
 
@@ -13684,6 +13685,7 @@ class NodaliaLightCard extends HTMLElement {
         controlsAnimationState = isOn ? "entering" : "leaving";
         this._controlsTransition = {
           endsAt: now + animations.controlsDuration,
+          startedAt: now,
           state: controlsAnimationState,
         };
       } else {
@@ -13964,8 +13966,14 @@ class NodaliaLightCard extends HTMLElement {
     const powerAnimationRemaining = powerAnimationState && this._powerTransition
       ? Math.max(0, this._powerTransition.endsAt - now)
       : 0;
+    const powerAnimationDelay = powerAnimationState && this._powerTransition
+      ? -clamp(now - Number(this._powerTransition.startedAt || now), 0, animations.powerDuration)
+      : 0;
     const controlsAnimationRemaining = controlsAnimationState && this._controlsTransition
       ? Math.max(0, this._controlsTransition.endsAt - now)
+      : 0;
+    const controlsAnimationDelay = controlsAnimationState && this._controlsTransition
+      ? -clamp(now - Number(this._controlsTransition.startedAt || now), 0, animations.controlsDuration)
       : 0;
     const brightnessFillAnimationRemaining = shouldAnimateBrightnessFill
       ? brightnessFillDuration
@@ -13998,6 +14006,8 @@ class NodaliaLightCard extends HTMLElement {
           --light-card-mode-duration: ${Math.max(100, Math.round(animations.modeSwitchDuration / 2))}ms;
           --light-card-mode-shell-height: ${styles.slider_wrap_height};
           --light-card-power-duration: ${animations.powerDuration}ms;
+          --light-card-power-delay: ${powerAnimationDelay}ms;
+          --light-card-controls-delay: ${controlsAnimationDelay}ms;
           --light-card-brightness-fill-delay: 0ms;
           --light-card-brightness-fill-duration: ${brightnessFillDuration}ms;
           --light-card-brightness-empty-duration: ${animations.controlsDuration}ms;
@@ -14055,19 +14065,19 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         .light-card--powering-up {
-          animation: light-card-power-up var(--light-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) both;
+          animation: light-card-power-up var(--light-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) var(--light-card-power-delay) both;
         }
 
         .light-card--powering-down {
-          animation: light-card-power-down var(--light-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) both;
+          animation: light-card-power-down var(--light-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) var(--light-card-power-delay) both;
         }
 
         .light-card--powering-up::after {
-          animation: light-card-power-glow-in var(--light-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) both;
+          animation: light-card-power-glow-in var(--light-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) var(--light-card-power-delay) both;
         }
 
         .light-card--powering-down::after {
-          animation: light-card-power-glow-out var(--light-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) both;
+          animation: light-card-power-glow-out var(--light-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) var(--light-card-power-delay) both;
         }
 
         .light-card__content {
@@ -14355,24 +14365,24 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         .light-card__controls-shell--entering {
-          animation: light-card-controls-expand var(--light-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: light-card-controls-expand var(--light-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--light-card-controls-delay) both;
           overflow: visible;
           transform-origin: top;
         }
 
         .light-card__controls-shell--entering .light-card__controls-inner {
-          animation: light-card-controls-content-in var(--light-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: light-card-controls-content-in var(--light-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--light-card-controls-delay) both;
           transform-origin: top;
         }
 
         .light-card__controls-shell--leaving {
-          animation: light-card-controls-collapse var(--light-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          animation: light-card-controls-collapse var(--light-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--light-card-controls-delay) both;
           pointer-events: none;
           transform-origin: top;
         }
 
         .light-card__controls-shell--leaving .light-card__controls-inner {
-          animation: light-card-controls-content-out var(--light-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          animation: light-card-controls-content-out var(--light-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--light-card-controls-delay) both;
           transform-origin: top;
         }
 
@@ -19612,7 +19622,7 @@ function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
   const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
   return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
   )) || "";
 }
 
@@ -21625,10 +21635,15 @@ class NodaliaHumidifierCard extends HTMLElement {
 
         .humidifier-card__title {
           color: var(--primary-text-color);
+          display: -webkit-box;
           font-size: ${styles.title_size};
           font-weight: 700;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
           line-height: 1.2;
           min-width: 0;
+          overflow: hidden;
+          overflow-wrap: anywhere;
         }
 
         .humidifier-card__chips {
@@ -22183,6 +22198,16 @@ class NodaliaHumidifierCard extends HTMLElement {
           .humidifier-card__option {
             animation: none !important;
             transition: none !important;
+          }
+        }
+
+        @media (max-width: 620px) {
+          .humidifier-card__headline {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          .humidifier-card__chips {
+            justify-content: flex-start;
           }
         }
 
@@ -23577,7 +23602,19 @@ function applyStubEntity(config, hass, domains) {
   }
 
   config.entity = entityId;
-  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+  const state = hass?.states?.[entityId];
+  const unit = String(state?.attributes?.unit_of_measurement || "").trim();
+  const numericState = Number(state?.state);
+  config.name = state?.attributes?.friendly_name || entityId;
+
+  if (unit === "%") {
+    config.min = 0;
+    config.max = 100;
+  } else if (Number.isFinite(numericState) && numericState > Number(config.max || 0)) {
+    config.min = 0;
+    config.max = Math.ceil(numericState * 1.25);
+  }
+
   return config;
 }
 
@@ -56075,7 +56112,7 @@ function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
   const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
   return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(domain + "."))
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
   )) || "";
 }
 
@@ -56870,7 +56907,7 @@ class NodaliaPersonCard extends HTMLElement {
           --person-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --person-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
           display: block;
-          height: 100%;
+          height: ${singleRowLayout ? "auto" : "100%"};
           min-height: 0;
         }
 
@@ -56884,7 +56921,7 @@ class NodaliaPersonCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
-          height: 100%;
+          height: ${singleRowLayout ? "auto" : "100%"};
           min-height: 0;
           overflow: hidden;
           position: relative;
@@ -56910,7 +56947,7 @@ class NodaliaPersonCard extends HTMLElement {
           gap: ${effectiveGap};
           grid-template-columns: ${avatarTrackSize} minmax(0, 1fr);
           grid-template-rows: 1fr;
-          height: 100%;
+          height: ${singleRowLayout ? "auto" : "100%"};
           min-height: ${effectiveContentMinHeight};
           min-width: 0;
           padding: ${effectivePadding};
@@ -56931,7 +56968,7 @@ class NodaliaPersonCard extends HTMLElement {
         }
 
         .person-card--single-row {
-          height: 100%;
+          height: auto;
           min-height: ${effectiveCardHeightPx}px;
         }
 

@@ -121,7 +121,19 @@ function applyStubEntity(config, hass, domains) {
   }
 
   config.entity = entityId;
-  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+  const state = hass?.states?.[entityId];
+  const unit = String(state?.attributes?.unit_of_measurement || "").trim();
+  const numericState = Number(state?.state);
+  config.name = state?.attributes?.friendly_name || entityId;
+
+  if (unit === "%") {
+    config.min = 0;
+    config.max = 100;
+  } else if (Number.isFinite(numericState) && numericState > Number(config.max || 0)) {
+    config.min = 0;
+    config.max = Math.ceil(numericState * 1.25);
+  }
+
   return config;
 }
 

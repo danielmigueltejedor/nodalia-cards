@@ -2321,6 +2321,7 @@ class NodaliaLightCard extends HTMLElement {
       powerAnimationState = isOn ? "powering-up" : "powering-down";
       this._powerTransition = {
         endsAt: now + animations.powerDuration,
+        startedAt: now,
         state: powerAnimationState,
       };
 
@@ -2328,6 +2329,7 @@ class NodaliaLightCard extends HTMLElement {
         controlsAnimationState = isOn ? "entering" : "leaving";
         this._controlsTransition = {
           endsAt: now + animations.controlsDuration,
+          startedAt: now,
           state: controlsAnimationState,
         };
       } else {
@@ -2608,8 +2610,14 @@ class NodaliaLightCard extends HTMLElement {
     const powerAnimationRemaining = powerAnimationState && this._powerTransition
       ? Math.max(0, this._powerTransition.endsAt - now)
       : 0;
+    const powerAnimationDelay = powerAnimationState && this._powerTransition
+      ? -clamp(now - Number(this._powerTransition.startedAt || now), 0, animations.powerDuration)
+      : 0;
     const controlsAnimationRemaining = controlsAnimationState && this._controlsTransition
       ? Math.max(0, this._controlsTransition.endsAt - now)
+      : 0;
+    const controlsAnimationDelay = controlsAnimationState && this._controlsTransition
+      ? -clamp(now - Number(this._controlsTransition.startedAt || now), 0, animations.controlsDuration)
       : 0;
     const brightnessFillAnimationRemaining = shouldAnimateBrightnessFill
       ? brightnessFillDuration
@@ -2642,6 +2650,8 @@ class NodaliaLightCard extends HTMLElement {
           --light-card-mode-duration: ${Math.max(100, Math.round(animations.modeSwitchDuration / 2))}ms;
           --light-card-mode-shell-height: ${styles.slider_wrap_height};
           --light-card-power-duration: ${animations.powerDuration}ms;
+          --light-card-power-delay: ${powerAnimationDelay}ms;
+          --light-card-controls-delay: ${controlsAnimationDelay}ms;
           --light-card-brightness-fill-delay: 0ms;
           --light-card-brightness-fill-duration: ${brightnessFillDuration}ms;
           --light-card-brightness-empty-duration: ${animations.controlsDuration}ms;
@@ -2699,19 +2709,19 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         .light-card--powering-up {
-          animation: light-card-power-up var(--light-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) both;
+          animation: light-card-power-up var(--light-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) var(--light-card-power-delay) both;
         }
 
         .light-card--powering-down {
-          animation: light-card-power-down var(--light-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) both;
+          animation: light-card-power-down var(--light-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) var(--light-card-power-delay) both;
         }
 
         .light-card--powering-up::after {
-          animation: light-card-power-glow-in var(--light-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) both;
+          animation: light-card-power-glow-in var(--light-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) var(--light-card-power-delay) both;
         }
 
         .light-card--powering-down::after {
-          animation: light-card-power-glow-out var(--light-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) both;
+          animation: light-card-power-glow-out var(--light-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) var(--light-card-power-delay) both;
         }
 
         .light-card__content {
@@ -2999,24 +3009,24 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         .light-card__controls-shell--entering {
-          animation: light-card-controls-expand var(--light-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: light-card-controls-expand var(--light-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--light-card-controls-delay) both;
           overflow: visible;
           transform-origin: top;
         }
 
         .light-card__controls-shell--entering .light-card__controls-inner {
-          animation: light-card-controls-content-in var(--light-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: light-card-controls-content-in var(--light-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--light-card-controls-delay) both;
           transform-origin: top;
         }
 
         .light-card__controls-shell--leaving {
-          animation: light-card-controls-collapse var(--light-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          animation: light-card-controls-collapse var(--light-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--light-card-controls-delay) both;
           pointer-events: none;
           transform-origin: top;
         }
 
         .light-card__controls-shell--leaving .light-card__controls-inner {
-          animation: light-card-controls-content-out var(--light-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          animation: light-card-controls-content-out var(--light-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--light-card-controls-delay) both;
           transform-origin: top;
         }
 

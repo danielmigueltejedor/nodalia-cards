@@ -2106,10 +2106,15 @@ class NodaliaHumidifierCard extends HTMLElement {
 
         .humidifier-card__title {
           color: var(--primary-text-color);
+          display: -webkit-box;
           font-size: ${styles.title_size};
           font-weight: 700;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
           line-height: 1.2;
           min-width: 0;
+          overflow: hidden;
+          overflow-wrap: anywhere;
         }
 
         .humidifier-card__chips {
@@ -2664,6 +2669,16 @@ class NodaliaHumidifierCard extends HTMLElement {
           .humidifier-card__option {
             animation: none !important;
             transition: none !important;
+          }
+        }
+
+        @media (max-width: 620px) {
+          .humidifier-card__headline {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          .humidifier-card__chips {
+            justify-content: flex-start;
           }
         }
 

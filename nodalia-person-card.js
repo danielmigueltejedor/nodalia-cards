@@ -868,7 +868,7 @@ class NodaliaPersonCard extends HTMLElement {
           --person-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --person-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
           display: block;
-          height: 100%;
+          height: ${singleRowLayout ? "auto" : "100%"};
           min-height: 0;
         }
 
@@ -882,7 +882,7 @@ class NodaliaPersonCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
-          height: 100%;
+          height: ${singleRowLayout ? "auto" : "100%"};
           min-height: 0;
           overflow: hidden;
           position: relative;
@@ -908,7 +908,7 @@ class NodaliaPersonCard extends HTMLElement {
           gap: ${effectiveGap};
           grid-template-columns: ${avatarTrackSize} minmax(0, 1fr);
           grid-template-rows: 1fr;
-          height: 100%;
+          height: ${singleRowLayout ? "auto" : "100%"};
           min-height: ${effectiveContentMinHeight};
           min-width: 0;
           padding: ${effectivePadding};
@@ -929,7 +929,7 @@ class NodaliaPersonCard extends HTMLElement {
         }
 
         .person-card--single-row {
-          height: 100%;
+          height: auto;
           min-height: ${effectiveCardHeightPx}px;
         }
 
