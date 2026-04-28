@@ -59039,6 +59039,7 @@ class NodaliaWeatherCard extends HTMLElement {
     this._forecastEvents = {};
     this._forecastSubscription = null;
     this._forecastSubscriptionKey = "";
+    this._animateForecastOnNextRender = false;
     this._meteoalarmPopupOpen = false;
     this._onShadowClick = this._onShadowClick.bind(this);
   }
@@ -59386,11 +59387,13 @@ class NodaliaWeatherCard extends HTMLElement {
         this._render();
       } else if (actionButton.dataset.weatherAction === "set-forecast-type") {
         this._activeForecastType = normalizeForecastType(actionButton.dataset.forecastType);
+        this._animateForecastOnNextRender = true;
         this._ensureForecastSubscription();
         this._lastRenderSignature = "";
         this._render();
       } else if (actionButton.dataset.weatherAction === "set-forecast-view") {
         this._activeForecastView = normalizeForecastView(actionButton.dataset.forecastView);
+        this._animateForecastOnNextRender = true;
         this._lastRenderSignature = "";
         this._render();
       } else if (actionButton.dataset.weatherAction === "open-meteoalarm") {
@@ -59609,11 +59612,11 @@ class NodaliaWeatherCard extends HTMLElement {
           <line class="weather-card__forecast-chart-grid" x1="${padding.left}" y1="${padding.top + plotHeight / 2}" x2="${width - padding.right}" y2="${padding.top + plotHeight / 2}"></line>
           <line class="weather-card__forecast-chart-grid" x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}"></line>
           <path class="weather-card__forecast-chart-area" d="${areaPath}"></path>
-          ${lowPath ? `<path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--low" d="${lowPath}"></path>` : ""}
-          <path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--high" d="${highPath}"></path>
+          ${lowPath ? `<path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--low" pathLength="1" d="${lowPath}"></path>` : ""}
+          <path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--high" pathLength="1" d="${highPath}"></path>
           ${highCoordinates.map(point => `
             <g>
-              <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--high" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="3.5"></circle>
+              <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--high" style="--forecast-delay:${Math.min(point.index, 8) * 34}ms;" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="3.5"></circle>
               <text class="weather-card__forecast-chart-value" x="${point.x.toFixed(1)}" y="${Math.max(11, point.y - 9).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>
               ${
                 point.index % labelEvery === 0 || point.index === highCoordinates[highCoordinates.length - 1].index
@@ -59624,7 +59627,7 @@ class NodaliaWeatherCard extends HTMLElement {
           `).join("")}
           ${lowCoordinates.map(point => `
             <g>
-              <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--low" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="3"></circle>
+              <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--low" style="--forecast-delay:${Math.min(point.index, 8) * 34}ms;" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="3"></circle>
               <text class="weather-card__forecast-chart-value weather-card__forecast-chart-value--low" x="${point.x.toFixed(1)}" y="${Math.min(height - padding.bottom - 4, point.y + 16).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>
             </g>
           `).join("")}
@@ -59633,7 +59636,7 @@ class NodaliaWeatherCard extends HTMLElement {
           ${conditionItems.map(point => {
             const precipitationLabel = getForecastPrecipitationLabel(point.item, precipitationUnit);
             return `
-              <div class="weather-card__forecast-chart-chip" style="--forecast-accent:${escapeHtml(getConditionAccent(point.item?.condition || state?.state))};">
+              <div class="weather-card__forecast-chart-chip" style="--forecast-accent:${escapeHtml(getConditionAccent(point.item?.condition || state?.state))}; --forecast-delay:${Math.min(point.index, 8) * 30}ms;">
                 <ha-icon icon="${escapeHtml(getConditionIcon(point.item?.condition || state?.state))}"></ha-icon>
                 <span>${escapeHtml(translateCondition(point.item?.condition || ""))}</span>
                 ${precipitationLabel ? `<small><ha-icon icon="mdi:weather-rainy"></ha-icon>${escapeHtml(precipitationLabel)}</small>` : ""}
@@ -59645,7 +59648,7 @@ class NodaliaWeatherCard extends HTMLElement {
     `;
   }
 
-  _renderForecastDetails(state, accentColor, shouldAnimateEntrance) {
+  _renderForecastDetails(state, accentColor, shouldAnimateEntrance, shouldAnimateForecast = false) {
     if (this._config?.show_forecast_details !== true) {
       return "";
     }
@@ -59663,7 +59666,7 @@ class NodaliaWeatherCard extends HTMLElement {
     const activeView = normalizeForecastView(this._activeForecastView);
 
     return `
-      <section class="weather-card__forecast ${shouldAnimateEntrance ? "weather-card__forecast--entering" : ""}">
+      <section class="weather-card__forecast ${shouldAnimateEntrance ? "weather-card__forecast--entering" : ""} ${shouldAnimateForecast ? "weather-card__forecast--switching" : ""}">
         <div class="weather-card__forecast-header ${this._config.show_forecast_toggle === false ? "weather-card__forecast-header--tabs-only" : ""}">
           ${
             this._config.show_forecast_toggle === false
@@ -59706,10 +59709,10 @@ class NodaliaWeatherCard extends HTMLElement {
                     <div class="weather-card__forecast-strip">
                       ${
                         visibleItems.length
-                          ? visibleItems.map(item => {
+                          ? visibleItems.map((item, index) => {
                             const precipitationLabel = getForecastPrecipitationLabel(item, precipitationUnit);
                             return `
-                              <article class="weather-card__forecast-item" style="--forecast-accent:${escapeHtml(getConditionAccent(item?.condition || state?.state))};">
+                              <article class="weather-card__forecast-item" style="--forecast-accent:${escapeHtml(getConditionAccent(item?.condition || state?.state))}; --forecast-delay:${Math.min(index, 8) * 28}ms;">
                                 <div class="weather-card__forecast-time">${escapeHtml(formatForecastDateTime(item?.datetime, activeType))}</div>
                                 <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
                                 <div class="weather-card__forecast-temp">${escapeHtml(formatForecastTemperature(item, activeType))}</div>
@@ -59772,6 +59775,7 @@ class NodaliaWeatherCard extends HTMLElement {
     const tapEnabled = String(config.tap_action || "more-info") !== "none";
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
+    const shouldAnimateForecast = animations.enabled && this._animateForecastOnNextRender;
     const configuredBorder = String(styles.card.border || "").trim();
     const defaultBorder = String(DEFAULT_CONFIG.styles.card.border || "").trim();
     const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 9%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
@@ -59779,7 +59783,7 @@ class NodaliaWeatherCard extends HTMLElement {
       ? `1px solid color-mix(in srgb, ${accentColor} 28%, var(--divider-color))`
       : configuredBorder;
     const cardShadow = `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`;
-    const forecastMarkup = this._renderForecastDetails(state, accentColor, shouldAnimateEntrance);
+    const forecastMarkup = this._renderForecastDetails(state, accentColor, shouldAnimateEntrance, shouldAnimateForecast);
     const meteoalarmChipRowMarkup = this._renderMeteoalarmChipRow(shouldAnimateEntrance);
     const meteoalarmPopupMarkup = this._renderMeteoalarmPopup();
 
@@ -59957,6 +59961,18 @@ class NodaliaWeatherCard extends HTMLElement {
           animation-delay: 110ms;
         }
 
+        .weather-card__chips--entering .weather-card__chip {
+          animation: weather-card-chip-pop calc(var(--weather-card-content-duration) * 0.58) cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
+        }
+
+        .weather-card__chips--entering .weather-card__chip:nth-child(2) {
+          animation-delay: 35ms;
+        }
+
+        .weather-card__chips--entering .weather-card__chip:nth-child(3) {
+          animation-delay: 70ms;
+        }
+
         .weather-card__alert-row {
           display: flex;
           justify-content: flex-start;
@@ -59982,7 +59998,12 @@ class NodaliaWeatherCard extends HTMLElement {
           line-height: 1;
           margin: 0;
           padding: ${styles.chip_padding};
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 180ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.24, 1);
           white-space: nowrap;
+        }
+
+        .weather-card__chip:hover {
+          transform: translateY(-1px);
         }
 
         .weather-card__chip--button {
@@ -60026,6 +60047,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-alert-backdrop {
           align-items: center;
+          animation: weather-card-alert-backdrop 180ms ease both;
           background: rgba(0, 0, 0, 0.46);
           display: flex;
           inset: 0;
@@ -60036,6 +60058,7 @@ class NodaliaWeatherCard extends HTMLElement {
         }
 
         .weather-alert-panel {
+          animation: weather-card-alert-panel calc(var(--weather-card-content-duration) * 0.72) cubic-bezier(0.2, 0.9, 0.24, 1) both;
           background: color-mix(in srgb, var(--alert-accent) 10%, var(--ha-card-background, #1f1f24));
           border: 1px solid color-mix(in srgb, var(--alert-accent) 35%, var(--divider-color));
           border-radius: 24px;
@@ -60184,6 +60207,11 @@ class NodaliaWeatherCard extends HTMLElement {
           animation-delay: 130ms;
         }
 
+        .weather-card__forecast--switching .weather-card__forecast-strip,
+        .weather-card__forecast--switching .weather-card__forecast-chart {
+          animation: weather-card-panel-swap calc(var(--weather-card-content-duration) * 0.72) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+        }
+
         .weather-card__forecast-header {
           align-items: center;
           display: flex;
@@ -60214,13 +60242,15 @@ class NodaliaWeatherCard extends HTMLElement {
           justify-content: center;
           line-height: 1;
           padding: 0 10px;
-          transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 180ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.24, 1);
           white-space: nowrap;
         }
 
         .weather-card__forecast-toggle:hover,
         .weather-card__forecast-tab:hover {
           background: color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
+          box-shadow: 0 8px 18px color-mix(in srgb, ${accentColor} 12%, transparent);
+          transform: translateY(-1px);
         }
 
         .weather-card__forecast-toggle:active,
@@ -60255,6 +60285,7 @@ class NodaliaWeatherCard extends HTMLElement {
         .weather-card__forecast-tab--active {
           background: color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 7%, transparent));
           border-color: color-mix(in srgb, ${accentColor} 35%, transparent);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent);
         }
 
         .weather-card__forecast-strip {
@@ -60280,6 +60311,19 @@ class NodaliaWeatherCard extends HTMLElement {
           min-width: 74px;
           padding: 9px 7px;
           text-align: center;
+          transform-origin: center bottom;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.24, 1);
+        }
+
+        .weather-card__forecast-item:hover {
+          box-shadow: 0 10px 22px color-mix(in srgb, var(--forecast-accent) 12%, transparent);
+          transform: translateY(-2px) scale(1.015);
+        }
+
+        .weather-card__forecast--entering .weather-card__forecast-item,
+        .weather-card__forecast--switching .weather-card__forecast-item {
+          animation: weather-card-item-rise calc(var(--weather-card-content-duration) * 0.74) cubic-bezier(0.18, 0.9, 0.22, 1.08) both;
+          animation-delay: calc(70ms + var(--forecast-delay, 0ms));
         }
 
         .weather-card__forecast-time {
@@ -60360,6 +60404,13 @@ class NodaliaWeatherCard extends HTMLElement {
           stroke-width: 3;
         }
 
+        .weather-card__forecast--entering .weather-card__forecast-chart-line,
+        .weather-card__forecast--switching .weather-card__forecast-chart-line {
+          animation: weather-card-line-draw calc(var(--weather-card-content-duration) * 0.95) cubic-bezier(0.25, 0.85, 0.25, 1) both;
+          stroke-dasharray: 1;
+          stroke-dashoffset: 1;
+        }
+
         .weather-card__forecast-chart-line--high {
           stroke: ${accentColor};
         }
@@ -60372,7 +60423,15 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__forecast-chart-point {
           fill: var(--ha-card-background);
+          transform-box: fill-box;
+          transform-origin: center;
           stroke-width: 2;
+        }
+
+        .weather-card__forecast--entering .weather-card__forecast-chart-point,
+        .weather-card__forecast--switching .weather-card__forecast-chart-point {
+          animation: weather-card-point-pop calc(var(--weather-card-content-duration) * 0.58) cubic-bezier(0.18, 0.9, 0.22, 1.2) both;
+          animation-delay: calc(90ms + var(--forecast-delay, 0ms));
         }
 
         .weather-card__forecast-chart-point--high {
@@ -60431,6 +60490,19 @@ class NodaliaWeatherCard extends HTMLElement {
           min-height: 56px;
           padding: 6px;
           text-align: center;
+          transform-origin: center bottom;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.24, 1);
+        }
+
+        .weather-card__forecast-chart-chip:hover {
+          box-shadow: 0 8px 18px color-mix(in srgb, var(--forecast-accent) 12%, transparent);
+          transform: translateY(-2px);
+        }
+
+        .weather-card__forecast--entering .weather-card__forecast-chart-chip,
+        .weather-card__forecast--switching .weather-card__forecast-chart-chip {
+          animation: weather-card-item-rise calc(var(--weather-card-content-duration) * 0.74) cubic-bezier(0.18, 0.9, 0.22, 1.08) both;
+          animation-delay: calc(110ms + var(--forecast-delay, 0ms));
         }
 
         .weather-card__forecast-chart-chip > ha-icon {
@@ -60496,6 +60568,96 @@ class NodaliaWeatherCard extends HTMLElement {
           0% {
             opacity: 0;
             transform: translateY(12px) scale(0.97);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes weather-card-panel-swap {
+          0% {
+            opacity: 0;
+            transform: translateY(10px) scale(0.985);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes weather-card-item-rise {
+          0% {
+            opacity: 0;
+            transform: translateY(10px) scale(0.94);
+          }
+          62% {
+            opacity: 1;
+            transform: translateY(-1px) scale(1.015);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes weather-card-line-draw {
+          0% {
+            opacity: 0;
+            stroke-dashoffset: 1;
+          }
+          35% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 1;
+            stroke-dashoffset: 0;
+          }
+        }
+
+        @keyframes weather-card-point-pop {
+          0% {
+            opacity: 0;
+            transform: scale(0.2);
+          }
+          65% {
+            opacity: 1;
+            transform: scale(1.25);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes weather-card-chip-pop {
+          0% {
+            opacity: 0;
+            transform: translateY(-4px) scale(0.86);
+          }
+          70% {
+            opacity: 1;
+            transform: translateY(1px) scale(1.05);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes weather-card-alert-backdrop {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes weather-card-alert-panel {
+          0% {
+            opacity: 0;
+            transform: translateY(16px) scale(0.96);
           }
           100% {
             opacity: 1;
@@ -60584,6 +60746,10 @@ class NodaliaWeatherCard extends HTMLElement {
 
     if (shouldAnimateEntrance) {
       this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
+    }
+
+    if (shouldAnimateForecast) {
+      this._animateForecastOnNextRender = false;
     }
   }
 }
