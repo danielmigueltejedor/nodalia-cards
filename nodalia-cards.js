@@ -58113,6 +58113,10 @@ const DEFAULT_CONFIG = {
   show_humidity_chip: true,
   show_wind_chip: true,
   show_pressure_chip: false,
+  show_forecast_details: false,
+  forecast_type: "hourly",
+  forecast_slots_hourly: 8,
+  forecast_slots_daily: 5,
   haptics: {
     enabled: true,
     style: "medium",
@@ -58433,6 +58437,73 @@ function formatNumber(value) {
   return numeric.toFixed(1);
 }
 
+function normalizeForecastType(value) {
+  return ["hourly", "daily"].includes(value) ? value : "hourly";
+}
+
+function getWeatherSupportedFeature(state, feature) {
+  return Boolean((Number(state?.attributes?.supported_features) || 0) & feature);
+}
+
+function getSupportedForecastTypes(state) {
+  const types = [];
+  if (getWeatherSupportedFeature(state, 2)) {
+    types.push("hourly");
+  }
+  if (getWeatherSupportedFeature(state, 1)) {
+    types.push("daily");
+  }
+  return types.length ? types : ["hourly", "daily"];
+}
+
+function formatForecastDateTime(value, type) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  if (type === "hourly") {
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  return date.toLocaleDateString([], {
+    weekday: "short",
+    day: "numeric",
+  });
+}
+
+function formatForecastTemperature(item, type) {
+  const temperature = formatNumber(item?.temperature);
+  const low = formatNumber(item?.templow);
+
+  if (!temperature) {
+    return "--";
+  }
+
+  if (type === "daily" && low) {
+    return `${temperature}° / ${low}°`;
+  }
+
+  return `${temperature}°`;
+}
+
+function getForecastPrecipitationLabel(item, unit = "") {
+  const probability = formatNumber(item?.precipitation_probability);
+  if (probability) {
+    return `${probability}%`;
+  }
+
+  const precipitation = formatNumber(item?.precipitation);
+  if (precipitation) {
+    return unit ? `${precipitation} ${unit}` : precipitation;
+  }
+
+  return "";
+}
+
 function translateCondition(value) {
   switch (normalizeTextKey(value)) {
     case "clear_night":
@@ -58559,12 +58630,18 @@ class NodaliaWeatherCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
+    this._forecastExpanded = false;
+    this._activeForecastType = DEFAULT_CONFIG.forecast_type;
+    this._forecastEvents = {};
+    this._forecastSubscription = null;
+    this._forecastSubscriptionKey = "";
     this._onShadowClick = this._onShadowClick.bind(this);
   }
 
   connectedCallback() {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
     this._animateContentOnNextRender = true;
+    this._ensureForecastSubscription();
     if (this._hass && this._config) {
       this._lastRenderSignature = "";
       this._render();
@@ -58577,12 +58654,17 @@ class NodaliaWeatherCard extends HTMLElement {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
+    this._unsubscribeForecast();
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
   }
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
+    this._activeForecastType = normalizeForecastType(this._config.forecast_type);
+    this._forecastExpanded = this._config.show_forecast_details === true;
+    this._forecastEvents = {};
+    this._unsubscribeForecast();
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._render();
@@ -58591,6 +58673,7 @@ class NodaliaWeatherCard extends HTMLElement {
   set hass(hass) {
     const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+    this._ensureForecastSubscription();
 
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
@@ -58601,7 +58684,7 @@ class NodaliaWeatherCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 2;
+    return this._config?.show_forecast_details === true ? 4 : 2;
   }
 
   getGridOptions() {
@@ -58633,6 +58716,72 @@ class NodaliaWeatherCard extends HTMLElement {
       windBearing: Number(attrs.wind_bearing ?? -1),
       visibility: Number(attrs.visibility ?? -1),
       precipitation: Number(attrs.precipitation ?? -1),
+      showForecastDetails: this._config?.show_forecast_details === true,
+      forecastExpanded: this._forecastExpanded,
+      activeForecastType: this._activeForecastType,
+      forecastUpdated: String(this._forecastEvents?.[this._activeForecastType]?.forecast?.[0]?.datetime || ""),
+    });
+  }
+
+  _unsubscribeForecast() {
+    if (!this._forecastSubscription) {
+      return;
+    }
+
+    this._forecastSubscription.then(unsubscribe => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    }).catch(() => {});
+    this._forecastSubscription = null;
+    this._forecastSubscriptionKey = "";
+  }
+
+  _ensureForecastSubscription() {
+    if (!this.isConnected || !this._hass || !this._config?.entity || this._config.show_forecast_details !== true) {
+      this._unsubscribeForecast();
+      return;
+    }
+
+    const state = this._hass.states?.[this._config.entity];
+    if (!state) {
+      this._unsubscribeForecast();
+      return;
+    }
+
+    const supportedTypes = getSupportedForecastTypes(state);
+    const forecastType = supportedTypes.includes(this._activeForecastType)
+      ? this._activeForecastType
+      : supportedTypes[0] || "daily";
+    if (forecastType !== this._activeForecastType) {
+      this._activeForecastType = forecastType;
+    }
+
+    const subscriptionKey = `${this._config.entity}:${forecastType}`;
+    if (subscriptionKey === this._forecastSubscriptionKey && this._forecastSubscription) {
+      return;
+    }
+
+    this._unsubscribeForecast();
+    if (!this._hass.connection?.subscribeMessage) {
+      return;
+    }
+
+    this._forecastSubscriptionKey = subscriptionKey;
+    this._forecastSubscription = this._hass.connection.subscribeMessage(event => {
+      this._forecastEvents = {
+        ...this._forecastEvents,
+        [forecastType]: event,
+      };
+      this._lastRenderSignature = "";
+      this._render();
+    }, {
+      type: "weather/subscribe_forecast",
+      entity_id: this._config.entity,
+      forecast_type: forecastType,
+    }).catch(() => {
+      this._forecastSubscription = null;
+      this._forecastSubscriptionKey = "";
     });
   }
 
@@ -58786,6 +58935,26 @@ class NodaliaWeatherCard extends HTMLElement {
   }
 
   _onShadowClick(event) {
+    const actionButton = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.weatherAction);
+    if (actionButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._triggerHaptic("selection");
+
+      if (actionButton.dataset.weatherAction === "toggle-forecast") {
+        this._forecastExpanded = !this._forecastExpanded;
+        this._ensureForecastSubscription();
+        this._lastRenderSignature = "";
+        this._render();
+      } else if (actionButton.dataset.weatherAction === "set-forecast-type") {
+        this._activeForecastType = normalizeForecastType(actionButton.dataset.forecastType);
+        this._ensureForecastSubscription();
+        this._lastRenderSignature = "";
+        this._render();
+      }
+      return;
+    }
+
     const card = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.weatherCard === "root");
     if (!card || String(this._config?.tap_action || "more-info") === "none") {
       return;
@@ -58808,6 +58977,82 @@ class NodaliaWeatherCard extends HTMLElement {
         <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
         <span>${escapeHtml(label)}</span>
       </div>
+    `;
+  }
+
+  _getForecastItems(type, state) {
+    const eventForecast = this._forecastEvents?.[type]?.forecast;
+    if (Array.isArray(eventForecast) && eventForecast.length) {
+      return eventForecast;
+    }
+
+    const legacyForecast = state?.attributes?.forecast;
+    return Array.isArray(legacyForecast) ? legacyForecast : [];
+  }
+
+  _renderForecastDetails(state, accentColor, shouldAnimateEntrance) {
+    if (this._config?.show_forecast_details !== true) {
+      return "";
+    }
+
+    const supportedTypes = getSupportedForecastTypes(state);
+    const activeType = supportedTypes.includes(this._activeForecastType)
+      ? this._activeForecastType
+      : supportedTypes[0] || "daily";
+    const forecastItems = this._getForecastItems(activeType, state);
+    const slotCount = activeType === "hourly"
+      ? clamp(Number(this._config?.forecast_slots_hourly) || DEFAULT_CONFIG.forecast_slots_hourly, 3, 24)
+      : clamp(Number(this._config?.forecast_slots_daily) || DEFAULT_CONFIG.forecast_slots_daily, 3, 14);
+    const visibleItems = forecastItems.slice(0, slotCount);
+    const precipitationUnit = String(state?.attributes?.precipitation_unit || "").trim();
+
+    return `
+      <section class="weather-card__forecast ${shouldAnimateEntrance ? "weather-card__forecast--entering" : ""}">
+        <div class="weather-card__forecast-header">
+          <button type="button" class="weather-card__forecast-toggle" data-weather-action="toggle-forecast" aria-expanded="${this._forecastExpanded ? "true" : "false"}">
+            <ha-icon icon="${this._forecastExpanded ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+            <span>Previsión</span>
+          </button>
+          ${
+            this._forecastExpanded
+              ? `
+                <div class="weather-card__forecast-tabs" role="tablist">
+                  ${supportedTypes.includes("hourly") ? `
+                    <button type="button" class="weather-card__forecast-tab ${activeType === "hourly" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-type" data-forecast-type="hourly" role="tab" aria-selected="${activeType === "hourly" ? "true" : "false"}">Horas</button>
+                  ` : ""}
+                  ${supportedTypes.includes("daily") ? `
+                    <button type="button" class="weather-card__forecast-tab ${activeType === "daily" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-type" data-forecast-type="daily" role="tab" aria-selected="${activeType === "daily" ? "true" : "false"}">Semana</button>
+                  ` : ""}
+                </div>
+              `
+              : ""
+          }
+        </div>
+        ${
+          this._forecastExpanded
+            ? `
+              <div class="weather-card__forecast-strip">
+                ${
+                  visibleItems.length
+                    ? visibleItems.map(item => {
+                      const precipitationLabel = getForecastPrecipitationLabel(item, precipitationUnit);
+                      return `
+                        <article class="weather-card__forecast-item" style="--forecast-accent:${escapeHtml(getConditionAccent(item?.condition || state?.state))};">
+                          <div class="weather-card__forecast-time">${escapeHtml(formatForecastDateTime(item?.datetime, activeType))}</div>
+                          <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
+                          <div class="weather-card__forecast-temp">${escapeHtml(formatForecastTemperature(item, activeType))}</div>
+                          <div class="weather-card__forecast-condition">${escapeHtml(translateCondition(item?.condition || ""))}</div>
+                          ${precipitationLabel ? `<div class="weather-card__forecast-rain"><ha-icon icon="mdi:weather-rainy"></ha-icon><span>${escapeHtml(precipitationLabel)}</span></div>` : ""}
+                        </article>
+                      `;
+                    }).join("")
+                    : `<div class="weather-card__forecast-empty">Sin previsión ${activeType === "hourly" ? "por horas" : "semanal"} disponible.</div>`
+                }
+              </div>
+            `
+            : ""
+        }
+      </section>
     `;
   }
 
@@ -58860,6 +59105,7 @@ class NodaliaWeatherCard extends HTMLElement {
       ? `1px solid color-mix(in srgb, ${accentColor} 28%, var(--divider-color))`
       : configuredBorder;
     const cardShadow = `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`;
+    const forecastMarkup = this._renderForecastDetails(state, accentColor, shouldAnimateEntrance);
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -59071,6 +59317,163 @@ class NodaliaWeatherCard extends HTMLElement {
           line-height: 1.3;
         }
 
+        .weather-card__forecast {
+          display: grid;
+          gap: 10px;
+          min-width: 0;
+        }
+
+        .weather-card__forecast--entering {
+          animation: weather-card-fade-up calc(var(--weather-card-content-duration) * 0.96) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 130ms;
+        }
+
+        .weather-card__forecast-header {
+          align-items: center;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+          min-width: 0;
+        }
+
+        .weather-card__forecast-toggle,
+        .weather-card__forecast-tab {
+          -webkit-tap-highlight-color: transparent;
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, ${accentColor} 16%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 11px;
+          font-weight: 800;
+          gap: 5px;
+          height: 28px;
+          justify-content: center;
+          line-height: 1;
+          padding: 0 10px;
+          transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+          white-space: nowrap;
+        }
+
+        .weather-card__forecast-toggle:hover,
+        .weather-card__forecast-tab:hover {
+          background: color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
+        }
+
+        .weather-card__forecast-toggle:active,
+        .weather-card__forecast-tab:active {
+          transform: scale(0.97);
+        }
+
+        .weather-card__forecast-toggle ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
+        .weather-card__forecast-tabs {
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          border-radius: 999px;
+          display: inline-flex;
+          gap: 3px;
+          padding: 3px;
+        }
+
+        .weather-card__forecast-tab {
+          background: transparent;
+          border-color: transparent;
+          height: 24px;
+          padding: 0 9px;
+        }
+
+        .weather-card__forecast-tab--active {
+          background: color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 7%, transparent));
+          border-color: color-mix(in srgb, ${accentColor} 35%, transparent);
+        }
+
+        .weather-card__forecast-strip {
+          display: grid;
+          gap: 8px;
+          grid-auto-columns: minmax(74px, 1fr);
+          grid-auto-flow: column;
+          min-width: 0;
+          overflow-x: auto;
+          padding-bottom: 2px;
+          scrollbar-width: thin;
+        }
+
+        .weather-card__forecast-item {
+          align-content: start;
+          background: color-mix(in srgb, var(--forecast-accent) 9%, color-mix(in srgb, var(--primary-text-color) 5%, transparent));
+          border: 1px solid color-mix(in srgb, var(--forecast-accent) 18%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          border-radius: 18px;
+          display: grid;
+          gap: 5px;
+          justify-items: center;
+          min-height: 114px;
+          min-width: 74px;
+          padding: 9px 7px;
+          text-align: center;
+        }
+
+        .weather-card__forecast-time {
+          color: var(--secondary-text-color);
+          font-size: 10px;
+          font-weight: 800;
+          line-height: 1.2;
+          min-height: 24px;
+          text-transform: capitalize;
+        }
+
+        .weather-card__forecast-item > ha-icon {
+          --mdc-icon-size: 22px;
+          color: var(--forecast-accent);
+        }
+
+        .weather-card__forecast-temp {
+          font-size: 14px;
+          font-weight: 900;
+          line-height: 1.1;
+        }
+
+        .weather-card__forecast-condition {
+          color: var(--secondary-text-color);
+          font-size: 9px;
+          font-weight: 700;
+          line-height: 1.15;
+          max-width: 100%;
+          min-height: 20px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .weather-card__forecast-rain {
+          align-items: center;
+          color: var(--secondary-text-color);
+          display: inline-flex;
+          font-size: 9px;
+          font-weight: 800;
+          gap: 3px;
+          line-height: 1;
+        }
+
+        .weather-card__forecast-rain ha-icon {
+          --mdc-icon-size: 11px;
+          color: var(--forecast-accent);
+        }
+
+        .weather-card__forecast-empty {
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px dashed color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 16px;
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          font-weight: 700;
+          padding: 12px;
+        }
+
         .weather-card--empty {
           display: grid;
           gap: 8px;
@@ -59182,6 +59585,7 @@ class NodaliaWeatherCard extends HTMLElement {
               </div>
             </div>
           </div>
+          ${forecastMarkup}
         </div>
       </ha-card>
     `;
@@ -59937,6 +60341,24 @@ class NodaliaWeatherCardEditor extends HTMLElement {
             ${this._renderCheckboxField("Mostrar chip humedad", "show_humidity_chip", config.show_humidity_chip !== false)}
             ${this._renderCheckboxField("Mostrar chip viento", "show_wind_chip", config.show_wind_chip !== false)}
             ${this._renderCheckboxField("Mostrar chip presion", "show_pressure_chip", config.show_pressure_chip === true)}
+            ${this._renderCheckboxField("Mostrar prediccion ampliada", "show_forecast_details", config.show_forecast_details === true)}
+            ${config.show_forecast_details === true ? `
+              ${this._renderSelectField(
+                "Vista inicial",
+                "forecast_type",
+                normalizeForecastType(config.forecast_type),
+                [
+                  { value: "hourly", label: "Por horas" },
+                  { value: "daily", label: "Semanal" },
+                ],
+              )}
+              ${this._renderTextField("Horas visibles", "forecast_slots_hourly", config.forecast_slots_hourly, {
+                type: "number",
+              })}
+              ${this._renderTextField("Dias visibles", "forecast_slots_daily", config.forecast_slots_daily, {
+                type: "number",
+              })}
+            ` : ""}
           </div>
         </section>
 
