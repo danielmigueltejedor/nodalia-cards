@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.9.7";
+const CARD_VERSION = "0.9.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1240,8 +1240,8 @@ class NodaliaWeatherCard extends HTMLElement {
     const maxValue = Math.max(...values);
     const valueRange = Math.max(maxValue - minValue, 1);
     const width = 640;
-    const height = 146;
-    const padding = { top: 25, right: 16, bottom: 34, left: 16 };
+    const height = 154;
+    const padding = { top: 27, right: 16, bottom: 42, left: 16 };
     const plotWidth = width - padding.left - padding.right;
     const plotHeight = height - padding.top - padding.bottom;
 
@@ -1360,7 +1360,7 @@ class NodaliaWeatherCard extends HTMLElement {
               <text class="weather-card__forecast-chart-value" x="${point.x.toFixed(1)}" y="${Math.max(13, point.y - 14).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>
               ${
                 point.index % labelEvery === 0 || point.index === highCoordinates[highCoordinates.length - 1].index
-                  ? `<text class="weather-card__forecast-chart-label" x="${point.x.toFixed(1)}" y="${height - 13}">${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}</text>`
+                  ? `<text class="weather-card__forecast-chart-label" x="${point.x.toFixed(1)}" y="${height - 6}">${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}</text>`
                   : ""
               }
             </g>
@@ -1369,7 +1369,7 @@ class NodaliaWeatherCard extends HTMLElement {
             <g class="weather-card__forecast-chart-hit" data-weather-action="open-forecast-point" data-forecast-type="${escapeHtml(type)}" data-forecast-series="low" data-forecast-index="${point.index}" role="button" tabindex="0" aria-label="${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}: ${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}">
               <circle class="weather-card__forecast-chart-touch" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="21"></circle>
               <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--low" style="--forecast-delay:${Math.min(point.index, 8) * 34}ms;" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="5"></circle>
-              <text class="weather-card__forecast-chart-value weather-card__forecast-chart-value--low" x="${point.x.toFixed(1)}" y="${Math.min(height - padding.bottom - 3, point.y + 21).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>
+              <text class="weather-card__forecast-chart-value weather-card__forecast-chart-value--low" x="${point.x.toFixed(1)}" y="${Math.min(height - padding.bottom - 17, point.y + 25).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>
             </g>
           `).join("")}
         </svg>
@@ -2107,7 +2107,7 @@ class NodaliaWeatherCard extends HTMLElement {
             color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           border: 1px solid color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 7%, transparent));
           border-radius: 17px;
-          min-height: 156px;
+          min-height: 164px;
           overflow: hidden;
           padding: 6px 8px 4px;
           position: relative;
@@ -2115,7 +2115,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__forecast-chart svg {
           display: block;
-          height: 146px;
+          height: 154px;
           overflow: visible;
           width: 100%;
         }
@@ -2204,7 +2204,8 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__forecast-chart-label {
           fill: var(--secondary-text-color);
-          font-size: 12px;
+          font-size: 13.5px;
+          font-weight: 850;
           text-transform: capitalize;
         }
 
