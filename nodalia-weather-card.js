@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.11.3";
+const CARD_VERSION = "0.11.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2628,19 +2628,19 @@ class NodaliaWeatherCard extends HTMLElement {
 
         @keyframes weather-card-popup-in {
           0% {
-            clip-path: inset(0 46% 84% 46% round 16px);
+            clip-path: inset(0 48% 86% 48% round 16px);
             opacity: 0;
-            transform: var(--weather-popup-transform) scale(0.84);
+            transform: var(--weather-popup-transform);
           }
           62% {
             clip-path: inset(0 5% 0 5% round 16px);
             opacity: 1;
-            transform: var(--weather-popup-transform) scale(1);
+            transform: var(--weather-popup-transform);
           }
           100% {
             clip-path: inset(0 0 0 0 round 16px);
             opacity: 1;
-            transform: var(--weather-popup-transform) scale(1);
+            transform: var(--weather-popup-transform);
           }
         }
 
@@ -2678,17 +2678,17 @@ class NodaliaWeatherCard extends HTMLElement {
           0% {
             clip-path: inset(0 44% 88% 44% round 24px);
             opacity: 0;
-            transform: translateY(-8px) scale(0.86);
+            transform: translateY(0);
           }
           64% {
             clip-path: inset(0 5% 0 5% round 24px);
             opacity: 1;
-            transform: translateY(0) scale(1);
+            transform: translateY(0);
           }
           100% {
             clip-path: inset(0 0 0 0 round 24px);
             opacity: 1;
-            transform: translateY(0) scale(1);
+            transform: translateY(0);
           }
         }
 
