@@ -26400,7 +26400,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.8";
+const CARD_VERSION = "0.12.9";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -28054,7 +28054,7 @@ class NodaliaGraphCard extends HTMLElement {
         ha-card {
           height: 100%;
           min-height: 0;
-          overflow: ${hover ? "visible" : "hidden"};
+          overflow: hidden;
         }
 
         .graph-card {
@@ -58576,7 +58576,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.11.0";
+const CARD_VERSION = "0.11.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -59678,9 +59678,10 @@ class NodaliaWeatherCard extends HTMLElement {
           || (typeof document !== "undefined" ? document.documentElement?.clientHeight : 0)
           || (typeof window !== "undefined" ? window.innerHeight : 0)
           || 480;
-        const bounds = actionButton.getBoundingClientRect();
-        const pointerX = Number(event.clientX) || bounds.left + (bounds.width / 2);
-        const pointerY = Number(event.clientY) || bounds.top + (bounds.height / 2);
+        const pointElement = actionButton.querySelector?.(".weather-card__forecast-chart-point");
+        const bounds = (pointElement instanceof Element ? pointElement : actionButton).getBoundingClientRect();
+        const pointerX = bounds.left + (bounds.width / 2);
+        const pointerY = bounds.top + (bounds.height / 2);
         const left = clamp(pointerX, viewportLeft + (popupWidth / 2) + 12, viewportLeft + viewportWidth - (popupWidth / 2) - 12);
         const vertical = pointerY < viewportTop + popupHeight + 34 ? "below" : "above";
         const top = vertical === "below"
@@ -59931,10 +59932,10 @@ class NodaliaWeatherCard extends HTMLElement {
       ...highCoordinates.map(point => ({ ...point, series: "high" })),
       ...lowCoordinates.map(point => ({ ...point, series: "low" })),
     ];
-    const renderGradientStops = coordinates => coordinates.map((point, index) => {
+    const renderGradientStops = (coordinates, opacity = "") => coordinates.map((point, index) => {
       const offset = coordinates.length <= 1 ? 0 : (index / (coordinates.length - 1)) * 100;
       const color = getForecastChartPointColor(point, colorChartMode, state?.state);
-      return `<stop offset="${offset.toFixed(2)}%" stop-color="${escapeHtml(color)}"></stop>`;
+      return `<stop offset="${offset.toFixed(2)}%" stop-color="${escapeHtml(color)}"${opacity ? ` stop-opacity="${opacity}"` : ""}></stop>`;
     }).join("");
     const popupPoint = allCoordinates.find(point => (
       this._forecastPopup?.forecastType === type
@@ -59992,11 +59993,17 @@ class NodaliaWeatherCard extends HTMLElement {
       <div class="weather-card__forecast-chart" role="img" aria-label="Gráfico de previsión ${type === "hourly" ? "por horas" : "semanal"}">
         <svg viewBox="0 0 ${width} ${height}">
           <defs>
-            <linearGradient id="${chartFillId}" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stop-color="${escapeHtml(chartAccent)}" stop-opacity="0.26"></stop>
-              <stop offset="58%" stop-color="${escapeHtml(chartAccent)}" stop-opacity="0.11"></stop>
-              <stop offset="100%" stop-color="${escapeHtml(chartAccent)}" stop-opacity="0"></stop>
-            </linearGradient>
+            ${
+              colorChartEnabled
+                ? `<linearGradient id="${chartFillId}" x1="0" x2="1" y1="0" y2="0">
+                    ${renderGradientStops(highCoordinates, "0.18")}
+                  </linearGradient>`
+                : `<linearGradient id="${chartFillId}" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stop-color="${escapeHtml(chartAccent)}" stop-opacity="0.26"></stop>
+                    <stop offset="58%" stop-color="${escapeHtml(chartAccent)}" stop-opacity="0.11"></stop>
+                    <stop offset="100%" stop-color="${escapeHtml(chartAccent)}" stop-opacity="0"></stop>
+                  </linearGradient>`
+            }
             ${colorChartEnabled ? `
               <linearGradient id="${highGradientId}" x1="0" x2="1" y1="0" y2="0">
                 ${renderGradientStops(highCoordinates)}

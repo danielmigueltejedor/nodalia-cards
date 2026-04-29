@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.8";
+const CARD_VERSION = "0.12.9";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1654,7 +1654,7 @@ class NodaliaGraphCard extends HTMLElement {
         ha-card {
           height: 100%;
           min-height: 0;
-          overflow: ${hover ? "visible" : "hidden"};
+          overflow: hidden;
         }
 
         .graph-card {
