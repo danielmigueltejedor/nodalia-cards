@@ -26400,7 +26400,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.4";
+const CARD_VERSION = "0.12.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -27407,7 +27407,8 @@ class NodaliaGraphCard extends HTMLElement {
     if (!this._touchHoverActive) {
       const deltaX = touch.clientX - this._touchPressState.startX;
       const deltaY = touch.clientY - this._touchPressState.startY;
-      if (Math.hypot(deltaX, deltaY) > TOUCH_MOVE_CANCEL_DISTANCE) {
+      const isVerticalScroll = Math.abs(deltaY) > TOUCH_MOVE_CANCEL_DISTANCE && Math.abs(deltaY) > Math.abs(deltaX) * 1.2;
+      if (isVerticalScroll) {
         this._clearTouchHover({ shouldRender: false, clearHover: false });
       }
       return;
@@ -28284,20 +28285,20 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__tooltip {
           backdrop-filter: blur(18px);
           background:
-            radial-gradient(circle at top left, color-mix(in srgb, var(--tooltip-tint) 18%, transparent) 0%, transparent 48%),
-            linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, rgba(255, 255, 255, 0.055)) 0%, color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 96%, var(--primary-text-color)) 100%);
-          border: 1px solid color-mix(in srgb, var(--tooltip-tint) 26%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
-          border-radius: 22px;
-          box-shadow:
-            0 22px 38px rgba(0, 0, 0, 0.28),
-            0 10px 26px color-mix(in srgb, var(--tooltip-tint) 12%, rgba(0, 0, 0, 0.18));
+            linear-gradient(180deg, color-mix(in srgb, var(--tooltip-tint) 18%, rgba(255,255,255,0.08)), rgba(255,255,255,0.02)),
+            color-mix(in srgb, var(--ha-card-background, #1f1f24) 90%, rgba(0,0,0,0.12));
+          border: 1px solid color-mix(in srgb, var(--tooltip-tint) 36%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
+          border-radius: 16px;
+          box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
           color: var(--primary-text-color);
-          max-width: min(320px, calc(100% - 20px));
-          min-width: 210px;
-          padding: 13px 15px;
+          display: grid;
+          gap: 8px;
+          max-width: min(260px, calc(100% - 20px));
+          min-width: 186px;
+          padding: 10px 12px 11px;
           pointer-events: none;
           position: absolute;
-          top: -110px;
+          top: -108px;
           transform: translateX(-50%);
           will-change: left, transform;
           z-index: 3;
@@ -28309,23 +28310,22 @@ class NodaliaGraphCard extends HTMLElement {
 
         .graph-card__tooltip-time {
           color: var(--secondary-text-color);
-          font-size: 11px;
-          font-weight: 600;
-          letter-spacing: 0.02em;
-          margin-bottom: 8px;
+          font-size: 10px;
+          font-weight: 800;
           text-transform: uppercase;
         }
 
         .graph-card__tooltip-values {
           display: grid;
-          gap: 6px;
+          gap: 5px;
         }
 
         .graph-card__tooltip-row {
           align-items: center;
           display: grid;
-          gap: 8px;
+          gap: 7px;
           grid-template-columns: auto minmax(0, 1fr) auto;
+          min-width: 0;
         }
 
         .graph-card__tooltip-dot {
@@ -28336,8 +28336,9 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__tooltip-name {
-          font-size: 12px;
-          font-weight: 500;
+          color: var(--secondary-text-color);
+          font-size: 10px;
+          font-weight: 750;
           min-width: 0;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -28346,7 +28347,10 @@ class NodaliaGraphCard extends HTMLElement {
 
         .graph-card__tooltip-value {
           font-size: 12px;
-          font-weight: 700;
+          font-weight: 850;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
           white-space: nowrap;
         }
 
