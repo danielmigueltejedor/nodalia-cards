@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.9.1";
+const CARD_VERSION = "0.9.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1040,13 +1040,14 @@ class NodaliaWeatherCard extends HTMLElement {
         const index = Number(actionButton.dataset.forecastIndex);
         const key = `${forecastType}:${series}:${index}`;
         const popupWidth = 214;
+        const popupHeight = forecastType === "daily" ? 194 : 166;
         const viewportWidth = typeof window === "undefined" ? popupWidth + 24 : window.innerWidth;
         const viewportHeight = typeof window === "undefined" ? 480 : window.innerHeight;
         const left = clamp(Number(event.clientX) || viewportWidth / 2, popupWidth / 2 + 12, viewportWidth - popupWidth / 2 - 12);
-        const vertical = (Number(event.clientY) || 0) < Math.min(220, viewportHeight * 0.42) ? "below" : "above";
+        const vertical = (Number(event.clientY) || 0) < popupHeight + 34 ? "below" : "above";
         const top = vertical === "below"
-          ? clamp((Number(event.clientY) || 0) + 14, 12, viewportHeight - 24)
-          : clamp((Number(event.clientY) || 0) - 14, 120, viewportHeight - 12);
+          ? clamp((Number(event.clientY) || 0) + 14, 12, viewportHeight - popupHeight - 12)
+          : clamp((Number(event.clientY) || 0) - 14, popupHeight + 28, viewportHeight - 12);
         this._forecastPopup = this._forecastPopup?.key === key ? null : {
           key,
           forecastType,
@@ -1258,11 +1259,26 @@ class NodaliaWeatherCard extends HTMLElement {
     const pathFromCoordinates = coordinates => coordinates
       .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
       .join(" ");
-    const highPath = pathFromCoordinates(highCoordinates);
-    const lowPath = pathFromCoordinates(lowCoordinates);
-    const areaPath = lowCoordinates.length === highCoordinates.length
-      ? `${highPath} L ${[...lowCoordinates].reverse().map(point => `${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(" L ")} Z`
-      : `${highPath} L ${highCoordinates[highCoordinates.length - 1].x.toFixed(1)} ${height - padding.bottom} L ${highCoordinates[0].x.toFixed(1)} ${height - padding.bottom} Z`;
+    const smoothPathFromCoordinates = coordinates => {
+      if (coordinates.length < 3) {
+        return pathFromCoordinates(coordinates);
+      }
+
+      return coordinates.reduce((path, point, index) => {
+        if (index === 0) {
+          return `M ${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
+        }
+
+        const previous = coordinates[index - 1];
+        const controlOffset = Math.max(18, Math.min(54, (point.x - previous.x) * 0.42));
+        return `${path} C ${(previous.x + controlOffset).toFixed(1)} ${previous.y.toFixed(1)} ${(point.x - controlOffset).toFixed(1)} ${point.y.toFixed(1)} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
+      }, "");
+    };
+    const highPath = smoothPathFromCoordinates(highCoordinates);
+    const lowPath = smoothPathFromCoordinates(lowCoordinates);
+    const areaPath = `${highPath} L ${highCoordinates[highCoordinates.length - 1].x.toFixed(1)} ${height - padding.bottom} L ${highCoordinates[0].x.toFixed(1)} ${height - padding.bottom} Z`;
+    const chartAccent = getConditionAccent(state?.state);
+    const chartFillId = `weather-chart-fill-${type}`;
     const labelEvery = highCoordinates.length > 7 ? 2 : 1;
     const unit = String(state?.attributes?.temperature_unit || "°").trim() || "°";
     const unitLabel = unit.startsWith("°") ? unit : ` ${unit}`;
@@ -1326,7 +1342,14 @@ class NodaliaWeatherCard extends HTMLElement {
     return `
       <div class="weather-card__forecast-chart" role="img" aria-label="Gráfico de previsión ${type === "hourly" ? "por horas" : "semanal"}">
         <svg viewBox="0 0 ${width} ${height}">
-          <path class="weather-card__forecast-chart-area" d="${areaPath}"></path>
+          <defs>
+            <linearGradient id="${chartFillId}" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="${escapeHtml(chartAccent)}" stop-opacity="0.26"></stop>
+              <stop offset="58%" stop-color="${escapeHtml(chartAccent)}" stop-opacity="0.11"></stop>
+              <stop offset="100%" stop-color="${escapeHtml(chartAccent)}" stop-opacity="0"></stop>
+            </linearGradient>
+          </defs>
+          <path class="weather-card__forecast-chart-area" style="fill:url(#${chartFillId});" d="${areaPath}"></path>
           ${lowPath ? `<path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--low" pathLength="1" d="${lowPath}"></path>` : ""}
           <path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--high" pathLength="1" d="${highPath}"></path>
           ${highCoordinates.map(point => `
@@ -2214,27 +2237,6 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__forecast-popup--below {
           transform: translate(-50%, 16px);
-        }
-
-        .weather-card__forecast-popup::after {
-          background: color-mix(in srgb, var(--forecast-accent) 22%, var(--ha-card-background, #1f1f24));
-          border-bottom: 1px solid color-mix(in srgb, var(--forecast-accent) 36%, transparent);
-          border-right: 1px solid color-mix(in srgb, var(--forecast-accent) 36%, transparent);
-          content: "";
-          height: 10px;
-          left: 50%;
-          position: absolute;
-          top: calc(100% - 5px);
-          transform: translateX(-50%) rotate(45deg);
-          width: 10px;
-        }
-
-        .weather-card__forecast-popup--below::after {
-          border: 0;
-          border-left: 1px solid color-mix(in srgb, var(--forecast-accent) 36%, transparent);
-          border-top: 1px solid color-mix(in srgb, var(--forecast-accent) 36%, transparent);
-          bottom: calc(100% - 5px);
-          top: auto;
         }
 
         .weather-card__forecast-popup-close {
