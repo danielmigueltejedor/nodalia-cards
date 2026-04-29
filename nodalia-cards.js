@@ -26400,7 +26400,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.5";
+const CARD_VERSION = "0.12.6";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -27867,28 +27867,50 @@ class NodaliaGraphCard extends HTMLElement {
       return;
     }
 
-    const visibleInset = clamp(Number(chartWrap.dataset.visibleInset || 0), 0, wrapWidth / 2);
-    const usableWidth = Math.max(160, wrapWidth - (visibleInset * 2) - 20);
-    tooltip.style.maxWidth = `${usableWidth}px`;
+    const viewport = typeof window === "undefined" ? null : window.visualViewport;
+    const viewportLeft = viewport?.offsetLeft ?? 0;
+    const viewportTop = viewport?.offsetTop ?? 0;
+    const viewportWidth = viewport?.width
+      || (typeof document !== "undefined" ? document.documentElement?.clientWidth : 0)
+      || (typeof window !== "undefined" ? window.innerWidth : 0)
+      || 360;
+    const viewportHeight = viewport?.height
+      || (typeof document !== "undefined" ? document.documentElement?.clientHeight : 0)
+      || (typeof window !== "undefined" ? window.innerHeight : 0)
+      || 640;
+    const chartRect = chartWrap.getBoundingClientRect();
+    const anchorPx = clamp((anchorX / chartWidth) * chartRect.width, 0, chartRect.width);
+    const anchorViewportX = chartRect.left + anchorPx;
+    const anchorViewportY = chartRect.top + Math.max(22, chartRect.height * 0.28);
+    const maxTooltipWidth = Math.min(260, viewportWidth - 24);
 
-    const tooltipWidth = Math.min(
-      Math.round(tooltip.getBoundingClientRect().width || tooltip.offsetWidth || 0) || usableWidth,
-      usableWidth,
-    );
-    if (!tooltipWidth) {
+    tooltip.style.maxWidth = `${maxTooltipWidth}px`;
+
+    const tooltipBox = tooltip.getBoundingClientRect();
+    const tooltipWidth = Math.min(Math.round(tooltipBox.width || tooltip.offsetWidth || 0) || maxTooltipWidth, maxTooltipWidth);
+    const tooltipHeight = Math.round(tooltipBox.height || tooltip.offsetHeight || 0) || 112;
+    if (!tooltipWidth || !tooltipHeight) {
       if (retries > 0) {
         this._scheduleTooltipPositionSync(retries - 1);
       }
       return;
     }
 
-    const anchorPx = clamp((anchorX / chartWidth) * wrapWidth, 0, wrapWidth);
-    const minCenter = visibleInset + (tooltipWidth / 2) + 10;
-    const maxCenter = wrapWidth - visibleInset - (tooltipWidth / 2) - 10;
-    const resolvedCenter = minCenter <= maxCenter
-      ? clamp(anchorPx, minCenter, maxCenter)
-      : wrapWidth / 2;
+    const resolvedCenter = clamp(
+      anchorViewportX,
+      viewportLeft + (tooltipWidth / 2) + 12,
+      viewportLeft + viewportWidth - (tooltipWidth / 2) - 12,
+    );
+    const shouldShowBelow = anchorViewportY - tooltipHeight - 14 < viewportTop + 12;
+    const resolvedTop = shouldShowBelow
+      ? clamp(anchorViewportY + 14, viewportTop + 12, viewportTop + viewportHeight - tooltipHeight - 12)
+      : clamp(anchorViewportY - 14, viewportTop + tooltipHeight + 12, viewportTop + viewportHeight - 12);
+
     tooltip.style.left = `${resolvedCenter}px`;
+    tooltip.style.top = `${resolvedTop}px`;
+    tooltip.style.setProperty("--graph-tooltip-transform", shouldShowBelow
+      ? "translate(-50%, 0)"
+      : "translate(-50%, -100%)");
   }
 
   _getSeriesData() {
@@ -28001,7 +28023,7 @@ class NodaliaGraphCard extends HTMLElement {
         ha-card {
           height: 100%;
           min-height: 0;
-          overflow: hidden;
+          overflow: ${hover ? "visible" : "hidden"};
         }
 
         .graph-card {
@@ -28285,8 +28307,8 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__tooltip {
           backdrop-filter: blur(18px);
           background:
-            linear-gradient(180deg, color-mix(in srgb, var(--tooltip-tint) 18%, rgba(255,255,255,0.08)), rgba(255,255,255,0.02)),
-            color-mix(in srgb, var(--ha-card-background, #1f1f24) 90%, rgba(0,0,0,0.12));
+            linear-gradient(180deg, color-mix(in srgb, var(--tooltip-tint) 18%, rgba(255,255,255,0.08)), rgba(255,255,255,0.015)),
+            color-mix(in srgb, var(--ha-card-background, #1f1f24) 78%, rgba(0,0,0,0.10));
           border: 1px solid color-mix(in srgb, var(--tooltip-tint) 36%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
           border-radius: 16px;
           box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
@@ -28297,11 +28319,10 @@ class NodaliaGraphCard extends HTMLElement {
           min-width: 186px;
           padding: 10px 12px 11px;
           pointer-events: none;
-          position: absolute;
-          top: -108px;
-          transform: translateX(-50%);
-          will-change: left, transform;
-          z-index: 3;
+          position: fixed;
+          transform: var(--graph-tooltip-transform, translate(-50%, -100%));
+          will-change: left, top, transform;
+          z-index: 2147483001;
         }
 
         .graph-card__tooltip--entering {
@@ -28498,11 +28519,9 @@ class NodaliaGraphCard extends HTMLElement {
         @keyframes graph-card-tooltip-in {
           0% {
             opacity: 0;
-            transform: translate(-50%, 8px) scale(0.98);
           }
           100% {
             opacity: 1;
-            transform: translate(-50%, 0) scale(1);
           }
         }
 
