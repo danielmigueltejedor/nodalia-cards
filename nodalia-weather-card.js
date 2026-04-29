@@ -1039,7 +1039,23 @@ class NodaliaWeatherCard extends HTMLElement {
         const series = String(actionButton.dataset.forecastSeries || "high");
         const index = Number(actionButton.dataset.forecastIndex);
         const key = `${forecastType}:${series}:${index}`;
-        this._forecastPopup = this._forecastPopup?.key === key ? null : { key, forecastType, index, series };
+        const popupWidth = 214;
+        const viewportWidth = typeof window === "undefined" ? popupWidth + 24 : window.innerWidth;
+        const viewportHeight = typeof window === "undefined" ? 480 : window.innerHeight;
+        const left = clamp(Number(event.clientX) || viewportWidth / 2, popupWidth / 2 + 12, viewportWidth - popupWidth / 2 - 12);
+        const vertical = (Number(event.clientY) || 0) < Math.min(220, viewportHeight * 0.42) ? "below" : "above";
+        const top = vertical === "below"
+          ? clamp((Number(event.clientY) || 0) + 14, 12, viewportHeight - 24)
+          : clamp((Number(event.clientY) || 0) - 14, 120, viewportHeight - 12);
+        this._forecastPopup = this._forecastPopup?.key === key ? null : {
+          key,
+          forecastType,
+          index,
+          left: `${Math.round(left)}px`,
+          series,
+          top: `${Math.round(top)}px`,
+          vertical,
+        };
         this._lastRenderSignature = "";
         this._render();
       } else if (actionButton.dataset.weatherAction === "close-forecast-popup") {
@@ -1222,8 +1238,8 @@ class NodaliaWeatherCard extends HTMLElement {
     const maxValue = Math.max(...values);
     const valueRange = Math.max(maxValue - minValue, 1);
     const width = 640;
-    const height = 188;
-    const padding = { top: 28, right: 18, bottom: 58, left: 18 };
+    const height = 146;
+    const padding = { top: 25, right: 16, bottom: 34, left: 16 };
     const plotWidth = width - padding.left - padding.right;
     const plotHeight = height - padding.top - padding.bottom;
 
@@ -1277,15 +1293,14 @@ class NodaliaWeatherCard extends HTMLElement {
         humidityLabel ? ["Humedad", `${humidityLabel}%`] : null,
         windLabel ? ["Viento", windUnit ? `${windLabel} ${windUnit}` : windLabel] : null,
       ].filter(Boolean);
-      const left = (popupPoint.x / width) * 100;
-      const top = (popupPoint.y / height) * 100;
-      const align = left < 24 ? "left" : left > 76 ? "right" : "center";
-      const vertical = top < 38 ? "below" : "above";
+      const vertical = this._forecastPopup?.vertical === "below" ? "below" : "above";
+      const popupLeft = this._forecastPopup?.left || "50vw";
+      const popupTop = this._forecastPopup?.top || "50vh";
 
       return `
         <div
-          class="weather-card__forecast-popup weather-card__forecast-popup--${align} weather-card__forecast-popup--${vertical}"
-          style="--forecast-accent:${escapeHtml(accent)}; --forecast-popup-left:${left.toFixed(2)}%; --forecast-popup-top:${top.toFixed(2)}%;"
+          class="weather-card__forecast-popup weather-card__forecast-popup--${vertical}"
+          style="--forecast-accent:${escapeHtml(accent)}; --forecast-popup-left:${escapeHtml(popupLeft)}; --forecast-popup-top:${escapeHtml(popupTop)};"
           data-weather-action="noop"
         >
           <button type="button" class="weather-card__forecast-popup-close" data-weather-action="close-forecast-popup" aria-label="Cerrar detalle">
@@ -1321,7 +1336,7 @@ class NodaliaWeatherCard extends HTMLElement {
               <text class="weather-card__forecast-chart-value" x="${point.x.toFixed(1)}" y="${Math.max(11, point.y - 9).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>
               ${
                 point.index % labelEvery === 0 || point.index === highCoordinates[highCoordinates.length - 1].index
-                  ? `<text class="weather-card__forecast-chart-label" x="${point.x.toFixed(1)}" y="${height - 28}">${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}</text>`
+                  ? `<text class="weather-card__forecast-chart-label" x="${point.x.toFixed(1)}" y="${height - 13}">${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}</text>`
                   : ""
               }
             </g>
@@ -1889,7 +1904,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__forecast {
           display: grid;
-          gap: 10px;
+          gap: 8px;
           min-width: 0;
         }
 
@@ -2064,18 +2079,20 @@ class NodaliaWeatherCard extends HTMLElement {
         }
 
         .weather-card__forecast-chart {
-          background: color-mix(in srgb, ${accentColor} 8%, color-mix(in srgb, var(--primary-text-color) 5%, transparent));
-          border: 1px solid color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
-          border-radius: 18px;
-          min-height: 188px;
-          overflow: visible;
-          padding: 8px 8px 10px;
+          background:
+            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, rgba(255,255,255,0.04)), rgba(255,255,255,0)),
+            color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 7%, transparent));
+          border-radius: 17px;
+          min-height: 156px;
+          overflow: hidden;
+          padding: 6px 8px 4px;
           position: relative;
         }
 
         .weather-card__forecast-chart svg {
           display: block;
-          height: 188px;
+          height: 146px;
           overflow: visible;
           width: 100%;
         }
@@ -2086,14 +2103,14 @@ class NodaliaWeatherCard extends HTMLElement {
         }
 
         .weather-card__forecast-chart-area {
-          fill: color-mix(in srgb, ${accentColor} 20%, transparent);
+          fill: color-mix(in srgb, ${accentColor} 16%, transparent);
         }
 
         .weather-card__forecast-chart-line {
           fill: none;
           stroke-linecap: round;
           stroke-linejoin: round;
-          stroke-width: 3;
+          stroke-width: 3.4;
         }
 
         .weather-card__forecast--entering .weather-card__forecast-chart-line,
@@ -2114,7 +2131,7 @@ class NodaliaWeatherCard extends HTMLElement {
         }
 
         .weather-card__forecast-chart-point {
-          fill: var(--ha-card-background);
+          fill: color-mix(in srgb, var(--ha-card-background, #1f1f24) 88%, ${accentColor});
           transform-box: fill-box;
           transform-origin: center;
           stroke-width: 2;
@@ -2153,7 +2170,7 @@ class NodaliaWeatherCard extends HTMLElement {
         .weather-card__forecast-chart-value,
         .weather-card__forecast-chart-label {
           fill: var(--primary-text-color);
-          font-size: 12px;
+          font-size: 12.5px;
           font-weight: 800;
           paint-order: stroke;
           stroke: color-mix(in srgb, var(--ha-card-background) 88%, transparent);
@@ -2186,32 +2203,17 @@ class NodaliaWeatherCard extends HTMLElement {
           gap: 8px;
           left: var(--forecast-popup-left);
           min-width: 150px;
+          max-width: min(214px, calc(100vw - 24px));
           padding: 10px 12px 11px;
-          position: absolute;
+          position: fixed;
           top: var(--forecast-popup-top);
           transform: translate(-50%, calc(-100% - 16px));
           width: max-content;
-          z-index: 4;
+          z-index: 2147483001;
         }
 
         .weather-card__forecast-popup--below {
           transform: translate(-50%, 16px);
-        }
-
-        .weather-card__forecast-popup--left {
-          transform: translate(-14px, calc(-100% - 16px));
-        }
-
-        .weather-card__forecast-popup--left.weather-card__forecast-popup--below {
-          transform: translate(-14px, 16px);
-        }
-
-        .weather-card__forecast-popup--right {
-          transform: translate(calc(-100% + 14px), calc(-100% - 16px));
-        }
-
-        .weather-card__forecast-popup--right.weather-card__forecast-popup--below {
-          transform: translate(calc(-100% + 14px), 16px);
         }
 
         .weather-card__forecast-popup::after {
