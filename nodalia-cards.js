@@ -58576,7 +58576,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.11.7";
+const CARD_VERSION = "0.11.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -58602,6 +58602,7 @@ const DEFAULT_CONFIG = {
   show_forecast_toggle: true,
   forecast_view: "cards",
   forecast_type: "hourly",
+  forecast_chart_labels: false,
   forecast_chart_color_enabled: false,
   forecast_chart_color_mode: "temperature",
   forecast_slots_hourly: 8,
@@ -58924,6 +58925,15 @@ function formatNumber(value) {
   }
 
   return numeric.toFixed(1);
+}
+
+function formatCompactTemperature(value, unitLabel = "°") {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "";
+  }
+
+  return `${Math.round(numeric)}${unitLabel}`;
 }
 
 function normalizeForecastType(value) {
@@ -59640,26 +59650,20 @@ class NodaliaWeatherCard extends HTMLElement {
   }
 
   _getForecastPointOverlayPosition(actionButton, width, height) {
-    const viewport = typeof window === "undefined" ? null : window.visualViewport;
-    const viewportLeft = viewport?.offsetLeft ?? 0;
-    const viewportTop = viewport?.offsetTop ?? 0;
-    const viewportWidth = viewport?.width
-      || (typeof document !== "undefined" ? document.documentElement?.clientWidth : 0)
-      || (typeof window !== "undefined" ? window.innerWidth : 0)
-      || width + 24;
-    const viewportHeight = viewport?.height
-      || (typeof document !== "undefined" ? document.documentElement?.clientHeight : 0)
-      || (typeof window !== "undefined" ? window.innerHeight : 0)
-      || 480;
+    const chartElement = actionButton.closest?.(".weather-card__forecast-chart");
     const pointElement = actionButton.querySelector?.(".weather-card__forecast-chart-point");
     const bounds = (pointElement instanceof Element ? pointElement : actionButton).getBoundingClientRect();
-    const pointerX = bounds.left + (bounds.width / 2);
-    const pointerY = bounds.top + (bounds.height / 2);
-    const left = clamp(pointerX, viewportLeft + (width / 2) + 12, viewportLeft + viewportWidth - (width / 2) - 12);
-    const vertical = pointerY < viewportTop + height + 34 ? "below" : "above";
+    const chartBounds = chartElement instanceof Element
+      ? chartElement.getBoundingClientRect()
+      : { left: 0, top: 0, width: width + 24, height: height + 24 };
+    const pointerX = bounds.left + (bounds.width / 2) - chartBounds.left;
+    const pointerY = bounds.top + (bounds.height / 2) - chartBounds.top;
+    const safeHalfWidth = Math.min(width / 2, Math.max(chartBounds.width / 2 - 10, 0));
+    const left = clamp(pointerX, safeHalfWidth + 10, Math.max(safeHalfWidth + 10, chartBounds.width - safeHalfWidth - 10));
+    const vertical = pointerY < Math.min(height + 12, 58) ? "below" : "above";
     const top = vertical === "below"
-      ? clamp(pointerY + 14, viewportTop + 12, viewportTop + viewportHeight - height - 12)
-      : clamp(pointerY - 14, viewportTop + height + 28, viewportTop + viewportHeight - 12);
+      ? pointerY + 14
+      : pointerY - 14;
 
     return {
       left: `${Math.round(left)}px`,
@@ -59683,12 +59687,12 @@ class NodaliaWeatherCard extends HTMLElement {
       return;
     }
 
-      if (shouldToggle && this._forecastPopup?.key === key) {
-        this._forecastPopup = null;
-        this._forecastHoverPreview = null;
-        this._lastRenderSignature = "";
-        this._render();
-        return;
+    if (shouldToggle && this._forecastPopup?.key === key) {
+      this._forecastPopup = null;
+      this._forecastHoverPreview = null;
+      this._lastRenderSignature = "";
+      this._render();
+      return;
     }
 
     const popupWidth = 206;
@@ -59722,7 +59726,8 @@ class NodaliaWeatherCard extends HTMLElement {
       return;
     }
 
-    const position = this._getForecastPointOverlayPosition(actionButton, 148, 48);
+    const previewWidth = forecastType === "daily" ? 190 : 168;
+    const position = this._getForecastPointOverlayPosition(actionButton, previewWidth, 48);
     this._forecastHoverPreview = {
       key,
       forecastType,
@@ -59977,13 +59982,14 @@ class NodaliaWeatherCard extends HTMLElement {
       return `<div class="weather-card__forecast-empty">No hay suficientes datos para mostrar el gráfico.</div>`;
     }
 
+    const showChartLabels = this._config?.forecast_chart_labels === true;
     const values = [...highPoints, ...lowPoints].map(point => point.value);
     const minValue = Math.min(...values);
     const maxValue = Math.max(...values);
     const valueRange = Math.max(maxValue - minValue, 1);
     const width = 640;
-    const height = 150;
-    const padding = { top: 24, right: 16, bottom: 56, left: 16 };
+    const height = showChartLabels ? 150 : 122;
+    const padding = { top: 24, right: 16, bottom: showChartLabels ? 56 : 24, left: 16 };
     const plotWidth = width - padding.left - padding.right;
     const plotHeight = height - padding.top - padding.bottom;
     const dateLabelY = height - 10;
@@ -60074,8 +60080,8 @@ class NodaliaWeatherCard extends HTMLElement {
         windLabel ? ["Viento", windUnit ? `${windLabel} ${windUnit}` : windLabel] : null,
       ].filter(Boolean);
       const vertical = this._forecastPopup?.vertical === "below" ? "below" : "above";
-      const popupLeft = this._forecastPopup?.left || "50vw";
-      const popupTop = this._forecastPopup?.top || "50vh";
+      const popupLeft = this._forecastPopup?.left || "50%";
+      const popupTop = this._forecastPopup?.top || "50%";
 
       return `
         <div
@@ -60106,8 +60112,13 @@ class NodaliaWeatherCard extends HTMLElement {
       const item = hoverPreviewPoint.item || {};
       const accent = getConditionAccent(item?.condition || state?.state);
       const vertical = this._forecastHoverPreview?.vertical === "below" ? "below" : "above";
-      const left = this._forecastHoverPreview?.left || "50vw";
-      const top = this._forecastHoverPreview?.top || "50vh";
+      const left = this._forecastHoverPreview?.left || "50%";
+      const top = this._forecastHoverPreview?.top || "50%";
+      const highValue = getForecastTemperatureSeriesValue(item, "high");
+      const lowValue = getForecastTemperatureSeriesValue(item, "low");
+      const temperatureLabel = type === "daily" && Number.isFinite(highValue) && Number.isFinite(lowValue)
+        ? `${formatCompactTemperature(highValue, unitLabel)} / ${formatCompactTemperature(lowValue, unitLabel)}`
+        : formatCompactTemperature(hoverPreviewPoint.value, unitLabel);
 
       return `
         <div
@@ -60117,18 +60128,19 @@ class NodaliaWeatherCard extends HTMLElement {
         >
           <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
           <span>${escapeHtml(formatForecastDateTime(item?.datetime, type))}</span>
+          ${temperatureLabel ? `<strong>${escapeHtml(temperatureLabel)}</strong>` : ""}
         </div>
       `;
     })() : "";
 
     return `
-      <div class="weather-card__forecast-chart" role="img" aria-label="Gráfico de previsión ${type === "hourly" ? "por horas" : "semanal"}">
+      <div class="weather-card__forecast-chart" style="--forecast-chart-height:${height + 10}px; --forecast-chart-svg-height:${height}px;" role="img" aria-label="Gráfico de previsión ${type === "hourly" ? "por horas" : "semanal"}">
         <svg viewBox="0 0 ${width} ${height}">
           <defs>
             ${
               colorChartEnabled
                 ? `<linearGradient id="${chartFillId}" x1="0" x2="1" y1="0" y2="0">
-                    ${renderGradientStops(highCoordinates, "0.26")}
+                    ${renderGradientStops(highCoordinates, "0.2")}
                   </linearGradient>`
                 : `<linearGradient id="${chartFillId}" x1="0" x2="0" y1="0" y2="1">
                     <stop offset="0%" stop-color="${escapeHtml(chartAccent)}" stop-opacity="0.26"></stop>
@@ -60137,9 +60149,10 @@ class NodaliaWeatherCard extends HTMLElement {
                   </linearGradient>`
             }
             ${colorChartEnabled ? `
-              <linearGradient id="${highFillMaskId}-fade" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stop-color="#fff" stop-opacity="1"></stop>
-                <stop offset="45%" stop-color="#fff" stop-opacity="0.5"></stop>
+              <linearGradient id="${highFillMaskId}-fade" gradientUnits="userSpaceOnUse" x1="0" y1="${padding.top}" x2="0" y2="${height - padding.bottom}">
+                <stop offset="0%" stop-color="#fff" stop-opacity="0.86"></stop>
+                <stop offset="34%" stop-color="#fff" stop-opacity="0.34"></stop>
+                <stop offset="70%" stop-color="#fff" stop-opacity="0.08"></stop>
                 <stop offset="100%" stop-color="#fff" stop-opacity="0"></stop>
               </linearGradient>
               <mask id="${highFillMaskId}" x="0" y="0" width="${width}" height="${height}" maskUnits="userSpaceOnUse">
@@ -60149,9 +60162,10 @@ class NodaliaWeatherCard extends HTMLElement {
                 ${renderGradientStops(highCoordinates)}
               </linearGradient>
               ${lowCoordinates.length ? `
-                <linearGradient id="${lowFillMaskId}-fade" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stop-color="#fff" stop-opacity="1"></stop>
-                  <stop offset="45%" stop-color="#fff" stop-opacity="0.5"></stop>
+                <linearGradient id="${lowFillMaskId}-fade" gradientUnits="userSpaceOnUse" x1="0" y1="${padding.top}" x2="0" y2="${height - padding.bottom}">
+                  <stop offset="0%" stop-color="#fff" stop-opacity="0.86"></stop>
+                  <stop offset="34%" stop-color="#fff" stop-opacity="0.34"></stop>
+                  <stop offset="70%" stop-color="#fff" stop-opacity="0.08"></stop>
                   <stop offset="100%" stop-color="#fff" stop-opacity="0"></stop>
                 </linearGradient>
                 <mask id="${lowFillMaskId}" x="0" y="0" width="${width}" height="${height}" maskUnits="userSpaceOnUse">
@@ -60161,7 +60175,7 @@ class NodaliaWeatherCard extends HTMLElement {
                   ${renderGradientStops(lowCoordinates)}
                 </linearGradient>
                 <linearGradient id="${lowFillId}" x1="0" x2="1" y1="0" y2="0">
-                  ${renderGradientStops(lowCoordinates, "0.26")}
+                  ${renderGradientStops(lowCoordinates, "0.2")}
                 </linearGradient>
               ` : ""}
             ` : ""}
@@ -60174,19 +60188,17 @@ class NodaliaWeatherCard extends HTMLElement {
             <g class="weather-card__forecast-chart-hit" data-weather-action="open-forecast-point" data-forecast-type="${escapeHtml(type)}" data-forecast-series="high" data-forecast-index="${point.index}" role="button" tabindex="0" aria-label="${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}: ${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}">
               <circle class="weather-card__forecast-chart-touch" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="22"></circle>
               <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--high" style="--forecast-delay:${Math.min(point.index, 8) * 34}ms; ${colorChartEnabled ? `--forecast-point-color:${escapeHtml(getForecastChartPointColor(point, colorChartMode, state?.state))};` : ""}" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="5.7"></circle>
-              <text class="weather-card__forecast-chart-value" x="${point.x.toFixed(1)}" y="${Math.max(13, point.y - 14).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>
-              ${
-                coordinateIndex === 0 || coordinateIndex === highCoordinates.length - 1
-                  ? `<text class="weather-card__forecast-chart-label" x="${point.x.toFixed(1)}" y="${dateLabelY}">${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}</text>`
-                  : ""
-              }
+              ${showChartLabels ? `<text class="weather-card__forecast-chart-value" x="${point.x.toFixed(1)}" y="${Math.max(13, point.y - 14).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>` : ""}
+              ${showChartLabels && (coordinateIndex === 0 || coordinateIndex === highCoordinates.length - 1)
+                ? `<text class="weather-card__forecast-chart-label" x="${point.x.toFixed(1)}" y="${dateLabelY}">${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}</text>`
+                : ""}
             </g>
           `).join("")}
           ${lowCoordinates.map(point => `
             <g class="weather-card__forecast-chart-hit" data-weather-action="open-forecast-point" data-forecast-type="${escapeHtml(type)}" data-forecast-series="low" data-forecast-index="${point.index}" role="button" tabindex="0" aria-label="${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}: ${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}">
               <circle class="weather-card__forecast-chart-touch" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="21"></circle>
               <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--low" style="--forecast-delay:${Math.min(point.index, 8) * 34}ms; ${colorChartEnabled ? `--forecast-point-color:${escapeHtml(getForecastChartPointColor(point, colorChartMode, state?.state))};` : ""}" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="5"></circle>
-              <text class="weather-card__forecast-chart-value weather-card__forecast-chart-value--low" x="${point.x.toFixed(1)}" y="${Math.min(lowLabelY, point.y + 31).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>
+              ${showChartLabels ? `<text class="weather-card__forecast-chart-value weather-card__forecast-chart-value--low" x="${point.x.toFixed(1)}" y="${Math.min(lowLabelY, point.y + 31).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>` : ""}
             </g>
           `).join("")}
         </svg>
@@ -60355,7 +60367,7 @@ class NodaliaWeatherCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
-          overflow: ${this._forecastPopup ? "visible" : "hidden"};
+          overflow: ${this._forecastPopup || this._forecastHoverPreview ? "visible" : "hidden"};
           position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
@@ -60559,7 +60571,7 @@ class NodaliaWeatherCard extends HTMLElement {
           font: inherit;
           max-width: min(100%, 320px);
           min-width: 0;
-          overflow: hidden;
+          overflow: visible;
           transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
         }
 
@@ -60589,7 +60601,7 @@ class NodaliaWeatherCard extends HTMLElement {
           font-size: ${styles.chip_font_size};
           font-weight: 700;
           min-width: 0;
-          overflow: hidden;
+          overflow: visible;
           text-overflow: ellipsis;
         }
 
@@ -60600,7 +60612,7 @@ class NodaliaWeatherCard extends HTMLElement {
           inset: 0;
           justify-content: center;
           padding: 16px;
-          position: fixed;
+          position: absolute;
           z-index: 2147483000;
         }
 
@@ -60927,16 +60939,16 @@ class NodaliaWeatherCard extends HTMLElement {
           border: 1px solid color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 7%, transparent));
           border-radius: 17px;
           align-self: start;
-          height: 160px;
+          height: var(--forecast-chart-height, 160px);
           min-height: 0;
-          overflow: hidden;
+          overflow: visible;
           padding: 6px 8px 4px;
           position: relative;
         }
 
         .weather-card__forecast-chart svg {
           display: block;
-          height: 150px;
+          height: var(--forecast-chart-svg-height, 150px);
           overflow: visible;
           width: 100%;
         }
@@ -61049,13 +61061,13 @@ class NodaliaWeatherCard extends HTMLElement {
           gap: 8px;
           left: var(--forecast-popup-left);
           min-width: 150px;
-          max-width: min(206px, calc(100vw - 24px));
+          max-width: min(206px, calc(100% - 20px));
           padding: 10px 12px 11px;
-          position: fixed;
+          position: absolute;
           top: var(--forecast-popup-top);
           transform: var(--weather-popup-transform);
           transform-origin: 50% 100%;
-          width: min(206px, calc(100vw - 24px));
+          width: min(206px, calc(100% - 20px));
           z-index: 2147483001;
         }
 
@@ -61079,11 +61091,11 @@ class NodaliaWeatherCard extends HTMLElement {
           display: inline-flex;
           gap: 7px;
           left: var(--forecast-preview-left);
-          max-width: min(148px, calc(100vw - 24px));
+          max-width: min(190px, calc(100% - 20px));
           min-height: 34px;
           padding: 7px 11px;
           pointer-events: none;
-          position: fixed;
+          position: absolute;
           top: var(--forecast-preview-top);
           transform: translate(-50%, calc(-100% - 12px));
           white-space: nowrap;
@@ -61105,6 +61117,14 @@ class NodaliaWeatherCard extends HTMLElement {
           font-weight: 850;
           overflow: hidden;
           text-overflow: ellipsis;
+        }
+
+        .weather-card__forecast-hover-preview strong {
+          color: var(--primary-text-color);
+          flex: 0 0 auto;
+          font-size: 12px;
+          font-weight: 900;
+          line-height: 1;
         }
 
         .weather-card__forecast-popup-close {
@@ -62285,6 +62305,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
                   { value: "daily", label: "Semanal" },
                 ],
               )}
+              ${this._renderCheckboxField("Mostrar etiquetas del grafico", "forecast_chart_labels", config.forecast_chart_labels === true)}
               ${this._renderCheckboxField("Grafico en color", "forecast_chart_color_enabled", config.forecast_chart_color_enabled === true)}
               ${config.forecast_chart_color_enabled === true ? this._renderSelectField(
                 "Color del grafico",
