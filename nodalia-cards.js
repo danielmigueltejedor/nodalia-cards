@@ -26400,7 +26400,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.2";
+const CARD_VERSION = "0.12.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -27986,6 +27986,7 @@ class NodaliaGraphCard extends HTMLElement {
       <style>
         :host {
           --graph-card-hover-duration: ${animations.enabled ? animations.hoverDuration : 0}ms;
+          --graph-card-line-draw-duration: ${animations.enabled ? Math.max(560, Math.round(animations.hoverDuration * 2.7)) : 0}ms;
           --graph-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           display: block;
           height: 100%;
@@ -28361,14 +28362,15 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__chart-series-fill {
-          opacity: 0.34;
+          opacity: 0;
           transform-origin: center bottom;
         }
 
         .graph-card__chart-series-glow {
+          display: none;
           fill: none;
           filter: url(#graph-glow);
-          opacity: 0.14;
+          opacity: 0;
           stroke-linecap: round;
           stroke-linejoin: round;
           stroke-width: calc(${lineWidth} * 1.8);
@@ -28382,20 +28384,8 @@ class NodaliaGraphCard extends HTMLElement {
           stroke-width: ${lineWidth};
         }
 
-        .graph-card__chart-wrap--entering .graph-card__chart-series-fill {
-          animation: graph-card-area-in calc(var(--graph-card-hover-duration) * 2.35) cubic-bezier(0.18, 0.9, 0.22, 1) both;
-          animation-delay: calc(90ms + var(--series-delay, 0ms));
-        }
-
-        .graph-card__chart-wrap--entering .graph-card__chart-series-line {
-          animation: graph-card-line-draw calc(var(--graph-card-hover-duration) * 2.7) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-          animation-delay: calc(70ms + var(--series-delay, 0ms));
-          stroke-dasharray: 1;
-          stroke-dashoffset: 1;
-        }
-
-        .graph-card__chart-wrap--entering .graph-card__chart-series-glow {
-          animation: graph-card-glow-draw calc(var(--graph-card-hover-duration) * 2.7) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        .graph-card__chart-series-line--entering {
+          animation: graph-card-line-draw var(--graph-card-line-draw-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: calc(70ms + var(--series-delay, 0ms));
           stroke-dasharray: 1;
           stroke-dashoffset: 1;
@@ -28468,7 +28458,7 @@ class NodaliaGraphCard extends HTMLElement {
             transform: scaleY(0.74);
           }
           100% {
-            opacity: 0.34;
+            opacity: 0;
             transform: scaleY(1);
           }
         }
@@ -28663,7 +28653,7 @@ class NodaliaGraphCard extends HTMLElement {
                     : ""
                 }
                 <path class="graph-card__chart-series-glow" style="--series-delay:${Math.min(index, 8) * 42}ms;" pathLength="1" d="${entry.linePath}" stroke="${escapeHtml(entry.color)}"></path>
-                <path class="graph-card__chart-series-line" style="--series-delay:${Math.min(index, 8) * 42}ms;" pathLength="1" d="${entry.linePath}" stroke="${escapeHtml(entry.color)}"></path>
+                <path class="graph-card__chart-series-line ${shouldAnimateChart ? "graph-card__chart-series-line--entering" : ""}" style="--series-delay:${Math.min(index, 8) * 42}ms;" pathLength="1" d="${entry.linePath}" stroke="${escapeHtml(entry.color)}"></path>
               `).join("")}
             </svg>
             ${
@@ -58551,7 +58541,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.10.0";
+const CARD_VERSION = "0.10.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -59803,8 +59793,8 @@ class NodaliaWeatherCard extends HTMLElement {
     const maxValue = Math.max(...values);
     const valueRange = Math.max(maxValue - minValue, 1);
     const width = 640;
-    const height = 174;
-    const padding = { top: 29, right: 16, bottom: 48, left: 16 };
+    const height = 190;
+    const padding = { top: 31, right: 16, bottom: 68, left: 16 };
     const plotWidth = width - padding.left - padding.right;
     const plotHeight = height - padding.top - padding.bottom;
     const dateLabelY = height - 9;
@@ -59933,7 +59923,7 @@ class NodaliaWeatherCard extends HTMLElement {
             <g class="weather-card__forecast-chart-hit" data-weather-action="open-forecast-point" data-forecast-type="${escapeHtml(type)}" data-forecast-series="low" data-forecast-index="${point.index}" role="button" tabindex="0" aria-label="${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}: ${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}">
               <circle class="weather-card__forecast-chart-touch" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="21"></circle>
               <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--low" style="--forecast-delay:${Math.min(point.index, 8) * 34}ms;" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="5"></circle>
-              <text class="weather-card__forecast-chart-value weather-card__forecast-chart-value--low" x="${point.x.toFixed(1)}" y="${Math.min(dateLabelY - 21, point.y + 25).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>
+              <text class="weather-card__forecast-chart-value weather-card__forecast-chart-value--low" x="${point.x.toFixed(1)}" y="${Math.min(dateLabelY - 28, point.y + 29).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>
             </g>
           `).join("")}
         </svg>
@@ -60671,7 +60661,7 @@ class NodaliaWeatherCard extends HTMLElement {
             color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           border: 1px solid color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 7%, transparent));
           border-radius: 17px;
-          min-height: 184px;
+          min-height: 200px;
           overflow: hidden;
           padding: 6px 8px 4px;
           position: relative;
@@ -60679,7 +60669,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__forecast-chart svg {
           display: block;
-          height: 174px;
+          height: 190px;
           overflow: visible;
           width: 100%;
         }

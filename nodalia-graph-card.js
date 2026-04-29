@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.2";
+const CARD_VERSION = "0.12.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1586,6 +1586,7 @@ class NodaliaGraphCard extends HTMLElement {
       <style>
         :host {
           --graph-card-hover-duration: ${animations.enabled ? animations.hoverDuration : 0}ms;
+          --graph-card-line-draw-duration: ${animations.enabled ? Math.max(560, Math.round(animations.hoverDuration * 2.7)) : 0}ms;
           --graph-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           display: block;
           height: 100%;
@@ -1961,14 +1962,15 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__chart-series-fill {
-          opacity: 0.34;
+          opacity: 0;
           transform-origin: center bottom;
         }
 
         .graph-card__chart-series-glow {
+          display: none;
           fill: none;
           filter: url(#graph-glow);
-          opacity: 0.14;
+          opacity: 0;
           stroke-linecap: round;
           stroke-linejoin: round;
           stroke-width: calc(${lineWidth} * 1.8);
@@ -1982,20 +1984,8 @@ class NodaliaGraphCard extends HTMLElement {
           stroke-width: ${lineWidth};
         }
 
-        .graph-card__chart-wrap--entering .graph-card__chart-series-fill {
-          animation: graph-card-area-in calc(var(--graph-card-hover-duration) * 2.35) cubic-bezier(0.18, 0.9, 0.22, 1) both;
-          animation-delay: calc(90ms + var(--series-delay, 0ms));
-        }
-
-        .graph-card__chart-wrap--entering .graph-card__chart-series-line {
-          animation: graph-card-line-draw calc(var(--graph-card-hover-duration) * 2.7) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-          animation-delay: calc(70ms + var(--series-delay, 0ms));
-          stroke-dasharray: 1;
-          stroke-dashoffset: 1;
-        }
-
-        .graph-card__chart-wrap--entering .graph-card__chart-series-glow {
-          animation: graph-card-glow-draw calc(var(--graph-card-hover-duration) * 2.7) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        .graph-card__chart-series-line--entering {
+          animation: graph-card-line-draw var(--graph-card-line-draw-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: calc(70ms + var(--series-delay, 0ms));
           stroke-dasharray: 1;
           stroke-dashoffset: 1;
@@ -2068,7 +2058,7 @@ class NodaliaGraphCard extends HTMLElement {
             transform: scaleY(0.74);
           }
           100% {
-            opacity: 0.34;
+            opacity: 0;
             transform: scaleY(1);
           }
         }
@@ -2263,7 +2253,7 @@ class NodaliaGraphCard extends HTMLElement {
                     : ""
                 }
                 <path class="graph-card__chart-series-glow" style="--series-delay:${Math.min(index, 8) * 42}ms;" pathLength="1" d="${entry.linePath}" stroke="${escapeHtml(entry.color)}"></path>
-                <path class="graph-card__chart-series-line" style="--series-delay:${Math.min(index, 8) * 42}ms;" pathLength="1" d="${entry.linePath}" stroke="${escapeHtml(entry.color)}"></path>
+                <path class="graph-card__chart-series-line ${shouldAnimateChart ? "graph-card__chart-series-line--entering" : ""}" style="--series-delay:${Math.min(index, 8) * 42}ms;" pathLength="1" d="${entry.linePath}" stroke="${escapeHtml(entry.color)}"></path>
               `).join("")}
             </svg>
             ${
