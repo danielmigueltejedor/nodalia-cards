@@ -1810,19 +1810,6 @@ class NodaliaGraphCard extends HTMLElement {
           width: calc(100% + ${chartBleed * 2}px);
         }
 
-        .graph-card__chart-wrap::before {
-          background:
-            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 7%, rgba(255,255,255,0.04)), rgba(255,255,255,0)),
-            linear-gradient(90deg, color-mix(in srgb, ${accentColor} 8%, transparent), transparent 20%, transparent 80%, color-mix(in srgb, ${accentColor} 6%, transparent));
-          border-radius: 24px;
-          content: "";
-          inset: 0 ${Math.max(2, chartBleed - 8)}px;
-          opacity: 0.55;
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
-        }
-
         .graph-card__chart-wrap--entering {
           animation: graph-card-chart-panel-in calc(var(--graph-card-hover-duration) * 2.25) cubic-bezier(0.18, 0.9, 0.22, 1.02) both;
         }
@@ -1981,10 +1968,10 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__chart-series-glow {
           fill: none;
           filter: url(#graph-glow);
-          opacity: 0.18;
+          opacity: 0.14;
           stroke-linecap: round;
           stroke-linejoin: round;
-          stroke-width: calc(${lineWidth} * 2.1);
+          stroke-width: calc(${lineWidth} * 1.8);
         }
 
         .graph-card__chart-series-line {
@@ -2000,9 +1987,15 @@ class NodaliaGraphCard extends HTMLElement {
           animation-delay: calc(90ms + var(--series-delay, 0ms));
         }
 
-        .graph-card__chart-wrap--entering .graph-card__chart-series-glow,
         .graph-card__chart-wrap--entering .graph-card__chart-series-line {
           animation: graph-card-line-draw calc(var(--graph-card-hover-duration) * 2.7) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: calc(70ms + var(--series-delay, 0ms));
+          stroke-dasharray: 1;
+          stroke-dashoffset: 1;
+        }
+
+        .graph-card__chart-wrap--entering .graph-card__chart-series-glow {
+          animation: graph-card-glow-draw calc(var(--graph-card-hover-duration) * 2.7) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: calc(70ms + var(--series-delay, 0ms));
           stroke-dasharray: 1;
           stroke-dashoffset: 1;
@@ -2090,6 +2083,20 @@ class NodaliaGraphCard extends HTMLElement {
           }
           100% {
             opacity: 1;
+            stroke-dashoffset: 0;
+          }
+        }
+
+        @keyframes graph-card-glow-draw {
+          0% {
+            opacity: 0;
+            stroke-dashoffset: 1;
+          }
+          36% {
+            opacity: 0.14;
+          }
+          100% {
+            opacity: 0.14;
             stroke-dashoffset: 0;
           }
         }
