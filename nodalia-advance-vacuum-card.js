@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.12.4";
+const CARD_VERSION = "0.13.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -292,6 +292,12 @@ const DEFAULT_CONFIG = {
     enabled: true,
     style: "medium",
     fallback_vibrate: false,
+  },
+  animations: {
+    enabled: true,
+    content_duration: 520,
+    panel_duration: 420,
+    button_bounce_duration: 320,
   },
   styles: {
     card: {
@@ -1443,6 +1449,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._lastSubmittedSharedCleaningSessionValue = null;
     this._selectionUpdatedAt = 0;
     this._lastRenderSignature = "";
+    this._animateContentOnNextRender = true;
+    this._entranceAnimationResetTimer = 0;
 
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
@@ -1476,6 +1484,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const image = this.shadowRoot?.querySelector("[data-map-image]");
     if (image) {
       image.removeEventListener("load", this._onMapImageLoad);
+    }
+    if (this._entranceAnimationResetTimer) {
+      clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
     }
   }
 
@@ -1514,6 +1526,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._suppressedRoomSelectionClick = null;
     this._lastSubmittedSharedCleaningSessionValue = null;
     this._selectionUpdatedAt = 0;
+    this._animateContentOnNextRender = true;
     this._activeMode = this._getAvailableModes()[0]?.id || "all";
     this._ensurePersistedCleaningSessionStateLoaded();
     this._updateCalibration();
@@ -1564,6 +1577,76 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
       navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
     }
+  }
+
+  _getAnimationSettings() {
+    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+
+    return {
+      enabled: configuredAnimations.enabled !== false,
+      contentDuration: clamp(Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration, 120, 2400),
+      panelDuration: clamp(Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration, 120, 2000),
+      buttonBounceDuration: clamp(Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1200),
+    };
+  }
+
+  _scheduleEntranceAnimationReset(delay = 0) {
+    if (this._entranceAnimationResetTimer) {
+      clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
+    if (!safeDelay || typeof window === "undefined") {
+      this._animateContentOnNextRender = false;
+      return;
+    }
+
+    this._entranceAnimationResetTimer = window.setTimeout(() => {
+      this._entranceAnimationResetTimer = 0;
+      this._animateContentOnNextRender = false;
+    }, safeDelay);
+  }
+
+  _triggerPressAnimation(element) {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+
+    element.classList.remove("is-pressing");
+    element.getBoundingClientRect();
+    element.classList.add("is-pressing");
+
+    window.setTimeout(() => {
+      element.classList.remove("is-pressing");
+    }, animations.buttonBounceDuration + 40);
+  }
+
+  _getPressTargetFromEvent(event) {
+    return event.composedPath().find(node => (
+      node instanceof HTMLElement
+      && (
+        node.dataset?.zoneHandleIndex
+        || node.dataset?.roomId
+        || node.dataset?.zoneId
+        || node.dataset?.gotoId
+        || node.dataset?.modeId
+        || node.dataset?.headerActionIndex
+        || node.dataset?.manualZoneIndex
+        || node.dataset?.controlAction
+        || node.dataset?.modePresetId
+        || node.dataset?.modeOptionKind
+        || node.dataset?.dockSectionId
+        || node.dataset?.dockActionId
+        || node.dataset?.routineIndex
+        || node.dataset?.customMenuIndex
+      )
+    ));
   }
 
   _getVacuumState() {
@@ -5045,6 +5128,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _onShadowClick(event) {
+    this._triggerPressAnimation(this._getPressTargetFromEvent(event));
+
     const zoneHandleTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.zoneHandleIndex && node.dataset?.zoneHandleAction);
     if (zoneHandleTarget) {
       event.preventDefault();
@@ -6291,6 +6376,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const state = this._getVacuumState();
       const accentColor = this._getAccentColor(state);
       const styles = config.styles || DEFAULT_CONFIG.styles;
+      const animations = this._getAnimationSettings();
+      const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
       this._syncActiveCleaningSession(state);
       const rooms = this._getRoomSegments();
       const gotoPoints = this._getGotoPoints();
@@ -6389,6 +6476,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this.shadowRoot.innerHTML = `
       <style>
         :host {
+          --advance-vacuum-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
+          --advance-vacuum-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
+          --advance-vacuum-card-panel-duration: ${animations.enabled ? animations.panelDuration : 0}ms;
           display: block;
         }
 
@@ -6414,6 +6504,18 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           overflow: hidden;
           padding: ${styles.card.padding};
           position: relative;
+        }
+
+        .advance-vacuum-card--entering {
+          animation: advance-vacuum-card-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        .advance-vacuum-card--entering .advance-vacuum-card__map {
+          animation: advance-vacuum-map-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) 70ms both;
+        }
+
+        .advance-vacuum-card--entering .advance-vacuum-card__footer {
+          animation: advance-vacuum-footer-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) 120ms both;
         }
 
         .advance-vacuum-card__footer {
@@ -6468,6 +6570,20 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           transform: translateY(-1px);
         }
 
+        :is(
+          .advance-vacuum-card__control,
+          .advance-vacuum-card__mode-button,
+          .advance-vacuum-card__map-tool,
+          .advance-vacuum-card__room-marker,
+          .advance-vacuum-card__goto-marker,
+          .advance-vacuum-card__routine-button,
+          .advance-vacuum-card__utility-option,
+          .advance-vacuum-card__selection-chip,
+          .advance-vacuum-card__zone-handle
+        ).is-pressing:not(.is-disabled):not(:disabled) {
+          animation: advance-vacuum-button-bounce var(--advance-vacuum-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+        }
+
         .advance-vacuum-card__control ha-icon {
           --mdc-icon-size: ${Math.round(controlSize * 0.48)}px;
         }
@@ -6506,7 +6622,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         }
 
         .advance-vacuum-card__utility-panel {
-          animation: advance-vacuum-utility-panel-in 180ms ease forwards;
+          animation: advance-vacuum-utility-panel-in var(--advance-vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) forwards;
           display: grid;
           gap: 10px;
           justify-items: center;
@@ -7135,8 +7251,48 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
             transform: translateY(0);
           }
         }
+
+        @keyframes advance-vacuum-card-enter {
+          0% {
+            opacity: 0;
+            transform: translateY(10px) scale(0.988);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes advance-vacuum-map-enter {
+          0% {
+            opacity: 0;
+            transform: translateY(14px) scale(0.985);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes advance-vacuum-footer-enter {
+          0% {
+            opacity: 0;
+            transform: translateY(12px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes advance-vacuum-button-bounce {
+          0% { transform: scale(1); }
+          34% { transform: scale(0.94); }
+          68% { transform: scale(1.04); }
+          100% { transform: scale(1); }
+        }
       </style>
-      <ha-card class="advance-vacuum-card">
+      <ha-card class="advance-vacuum-card ${shouldAnimateEntrance ? "advance-vacuum-card--entering" : ""}">
         <div class="advance-vacuum-card__map">
           <div class="advance-vacuum-card__map-surface" data-map-surface="main">
             <div class="advance-vacuum-card__map-viewport">
@@ -7328,6 +7484,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         backButton.addEventListener("click", this._onMapBackClick);
       }
 
+      if (shouldAnimateEntrance) {
+        this._scheduleEntranceAnimationReset(animations.contentDuration + 160);
+      }
+
       this._lastRenderSignature = this._getRenderSignature();
     } catch (error) {
       this._handleCardError(error, "_render");
@@ -7352,7 +7512,10 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = normalizeConfig({});
     this._entityOptionsSignature = "";
+    this._pendingEditorControlTags = new Set();
     this._onInputChange = this._onInputChange.bind(this);
+    this._onValueChanged = this._onValueChanged.bind(this);
+    this.shadowRoot.addEventListener("value-changed", this._onValueChanged);
   }
 
   setConfig(config) {
@@ -7470,6 +7633,63 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     });
   }
 
+  _watchEditorControlTag(tagName) {
+    if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+      return;
+    }
+
+    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+      return;
+    }
+
+    this._pendingEditorControlTags.add(tagName);
+    customElements.whenDefined(tagName)
+      .then(() => {
+        this._pendingEditorControlTags.delete(tagName);
+
+        if (!this._hass || !this.shadowRoot) {
+          return;
+        }
+
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+      })
+      .catch(() => {
+        this._pendingEditorControlTags.delete(tagName);
+      });
+  }
+
+  _ensureEditorControlsReady() {
+    this._watchEditorControlTag("ha-entity-picker");
+    this._watchEditorControlTag("ha-icon-picker");
+  }
+
+  _onValueChanged(event) {
+    const control = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.field);
+
+    if (!control?.dataset?.field) {
+      return;
+    }
+
+    event.stopPropagation();
+
+    const nextValue = typeof event.detail?.value === "string"
+      ? event.detail.value
+      : control.value;
+    const nextConfig = deepClone(this._config);
+
+    if (nextValue === "" || nextValue === null || nextValue === undefined) {
+      deleteByPath(nextConfig, control.dataset.field);
+    } else {
+      setByPath(nextConfig, control.dataset.field, nextValue);
+    }
+
+    this._notifyConfigChange(nextConfig);
+  }
+
   _onInputChange(event) {
     const target = event.currentTarget;
     const field = target.dataset.field;
@@ -7543,6 +7763,37 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     `;
   }
 
+  _renderEntityPickerField(label, field, value, options = {}) {
+    const domains = arrayFromMaybe(options.domains).map(domain => String(domain).trim()).filter(Boolean);
+
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <ha-entity-picker
+          class="editor-control-host"
+          data-field="${escapeHtml(field)}"
+          data-domains="${escapeHtml(domains.join(","))}"
+          value="${escapeHtml(value || "")}"
+          allow-custom-entity
+        ></ha-entity-picker>
+      </div>
+    `;
+  }
+
+  _renderIconPickerField(label, field, value, options = {}) {
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <ha-icon-picker
+          class="editor-control-host"
+          data-field="${escapeHtml(field)}"
+          value="${escapeHtml(value || "")}"
+          placeholder="${escapeHtml(options.placeholder || "mdi:robot-vacuum")}"
+        ></ha-icon-picker>
+      </div>
+    `;
+  }
+
   _renderSelectField(label, field, value, items, options = {}) {
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
@@ -7603,6 +7854,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
     const config = this._config || normalizeConfig({});
     const hapticStyle = config.haptics?.style || "medium";
+    const animations = config.animations || DEFAULT_CONFIG.animations;
+    this._ensureEditorControlsReady();
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -7679,6 +7932,14 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
           font: inherit;
           min-height: 40px;
           padding: 10px 12px;
+          width: 100%;
+        }
+
+        .editor-field ha-icon-picker,
+        .editor-field ha-entity-picker,
+        .editor-control-host {
+          display: block;
+          min-height: 40px;
           width: 100%;
         }
 
@@ -7781,19 +8042,19 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad del robot y fuente principal del mapa.</div>
+          <div class="editor-section__hint">Entidad del robot y fuente principal del mapa.</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("Entidad vacuum", "entity", config.entity, { placeholder: "vacuum.roborock_qrevo_s" })}
+            ${this._renderEntityPickerField("Entidad vacuum", "entity", config.entity, { domains: ["vacuum"] })}
             ${this._renderTextField("Nombre", "name", config.name, { placeholder: "Roborock Qrevo S" })}
-            ${this._renderTextField("Icono", "icon", config.icon, { placeholder: "mdi:robot-vacuum" })}
-            ${this._renderTextField("Entidad mapa (camera/image)", "map_source.camera", config.map_source?.camera, { placeholder: "image.roborock_qrevo_s_custom" })}
+            ${this._renderIconPickerField("Icono", "icon", config.icon, { placeholder: "mdi:robot-vacuum" })}
+            ${this._renderEntityPickerField("Entidad mapa (camera/image)", "map_source.camera", config.map_source?.camera, { domains: ["camera", "image"] })}
             ${this._renderSelectField("Plataforma", "vacuum_platform", config.vacuum_platform || "Roborock", [
               { value: "Roborock", label: "Roborock" },
               { value: "send_command", label: "Send command" },
             ])}
-            ${this._renderTextField("Entidad calibracion", "calibration_source.entity", config.calibration_source?.entity, { placeholder: "image.roborock_qrevo_s_custom" })}
-            ${this._renderTextField("Helper sesion compartida", "shared_cleaning_session_entity", config.shared_cleaning_session_entity, { placeholder: "input_text.roborock_qrevo_s_cleaning_session" })}
+            ${this._renderEntityPickerField("Entidad calibracion", "calibration_source.entity", config.calibration_source?.entity, { domains: ["camera", "image", "sensor"] })}
+            ${this._renderEntityPickerField("Helper sesion compartida", "shared_cleaning_session_entity", config.shared_cleaning_session_entity, { domains: ["input_text"] })}
           </div>
         </section>
 
@@ -7822,19 +8083,13 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Modo todo", "show_all_mode", config.show_all_mode !== false)}
-            ${this._renderTextField("Select aspirado", "suction_select_entity", config.suction_select_entity, {
-              placeholder: "select.robot_salon_suction",
-            })}
-            ${this._renderTextField("Select fregado", "mop_select_entity", config.mop_select_entity, {
-              placeholder: "select.robot_salon_mop_mode",
-            })}
-            ${this._renderTextField("Select modo mopa", "mop_mode_select_entity", config.mop_mode_select_entity, {
-              placeholder: "select.roborock_qrevo_s_modo_mopa",
-            })}
+            ${this._renderEntityPickerField("Select aspirado", "suction_select_entity", config.suction_select_entity, { domains: ["select"] })}
+            ${this._renderEntityPickerField("Select fregado", "mop_select_entity", config.mop_select_entity, { domains: ["select"] })}
+            ${this._renderEntityPickerField("Select modo mopa", "mop_mode_select_entity", config.mop_mode_select_entity, { domains: ["select"] })}
             ${this._renderTextField("Etiqueta menu derecho", "custom_menu.label", config.custom_menu?.label, {
               placeholder: "Base",
             })}
-            ${this._renderTextField("Icono menu derecho", "custom_menu.icon", config.custom_menu?.icon, {
+            ${this._renderIconPickerField("Icono menu derecho", "custom_menu.icon", config.custom_menu?.icon, {
               placeholder: "mdi:home-import-outline",
             })}
             ${this._renderTextareaField("Items del menu derecho (JSON)", "custom_menu.items", JSON.stringify(config.custom_menu?.items || [], null, 2), {
@@ -7889,6 +8144,28 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
+            <div class="editor-section__title">Animaciones</div>
+            <div class="editor-section__hint">Entrada suave de la tarjeta, paneles y respuesta visual al pulsar controles.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
+            ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", animations.content_duration, {
+              type: "number",
+              valueType: "number",
+            })}
+            ${this._renderTextField("Paneles (ms)", "animations.panel_duration", animations.panel_duration, {
+              type: "number",
+              valueType: "number",
+            })}
+            ${this._renderTextField("Rebote botones (ms)", "animations.button_bounce_duration", animations.button_bounce_duration, {
+              type: "number",
+              valueType: "number",
+            })}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
             <div class="editor-section__title">Estilo</div>
             <div class="editor-section__hint">Ajustes visuales base del mapa y las burbujas.</div>
           </div>
@@ -7920,6 +8197,27 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
         input.tagName === "TEXTAREA"
       ) {
         input.addEventListener("input", this._onInputChange);
+      }
+    });
+
+    this.shadowRoot.querySelectorAll("ha-entity-picker").forEach(control => {
+      const domains = String(control.dataset.domains || "")
+        .split(",")
+        .map(domain => domain.trim())
+        .filter(Boolean);
+      if ("hass" in control) {
+        control.hass = this._hass;
+      }
+      if (domains.length) {
+        control.includeDomains = domains;
+        control.entityFilter = stateObj => domains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+      }
+      control.allowCustomEntity = true;
+    });
+
+    this.shadowRoot.querySelectorAll("ha-icon-picker").forEach(control => {
+      if ("hass" in control) {
+        control.hass = this._hass;
       }
     });
 
