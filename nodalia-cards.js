@@ -5097,6 +5097,7 @@ console.info(
   "background:#2f4858;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;",
   "background:#4f7c82;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;",
 );
+
 }
 {
 const CARD_TAG = "nodalia-media-player";
@@ -11420,6 +11421,7 @@ window.customCards.push({
   description: "Media player fijo con estetica Nodalia y editor visual.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-light-card";
@@ -16078,6 +16080,7 @@ window.customCards.push({
   description: "Tarjeta de luz con estilo Nodalia, presets y editor visual.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-fan-card";
@@ -19591,6 +19594,7 @@ window.customCards.push({
   description: "Tarjeta de ventilador con slider de velocidad, oscilacion y modos.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-humidifier-card";
@@ -23542,6 +23546,7 @@ window.customCards.push({
   description: "Tarjeta de humidificador o deshumidificador con control visual de humedad y modos.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-circular-gauge-card";
@@ -26390,11 +26395,12 @@ window.customCards.push({
   description: "Tarjeta circular para sensores y valores numericos con estetica Nodalia.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.1";
+const CARD_VERSION = "0.12.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -28204,19 +28210,6 @@ class NodaliaGraphCard extends HTMLElement {
           width: calc(100% + ${chartBleed * 2}px);
         }
 
-        .graph-card__chart-wrap::before {
-          background:
-            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 7%, rgba(255,255,255,0.04)), rgba(255,255,255,0)),
-            linear-gradient(90deg, color-mix(in srgb, ${accentColor} 8%, transparent), transparent 20%, transparent 80%, color-mix(in srgb, ${accentColor} 6%, transparent));
-          border-radius: 24px;
-          content: "";
-          inset: 0 ${Math.max(2, chartBleed - 8)}px;
-          opacity: 0.55;
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
-        }
-
         .graph-card__chart-wrap--entering {
           animation: graph-card-chart-panel-in calc(var(--graph-card-hover-duration) * 2.25) cubic-bezier(0.18, 0.9, 0.22, 1.02) both;
         }
@@ -28375,10 +28368,10 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__chart-series-glow {
           fill: none;
           filter: url(#graph-glow);
-          opacity: 0.18;
+          opacity: 0.14;
           stroke-linecap: round;
           stroke-linejoin: round;
-          stroke-width: calc(${lineWidth} * 2.1);
+          stroke-width: calc(${lineWidth} * 1.8);
         }
 
         .graph-card__chart-series-line {
@@ -28394,9 +28387,15 @@ class NodaliaGraphCard extends HTMLElement {
           animation-delay: calc(90ms + var(--series-delay, 0ms));
         }
 
-        .graph-card__chart-wrap--entering .graph-card__chart-series-glow,
         .graph-card__chart-wrap--entering .graph-card__chart-series-line {
           animation: graph-card-line-draw calc(var(--graph-card-hover-duration) * 2.7) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: calc(70ms + var(--series-delay, 0ms));
+          stroke-dasharray: 1;
+          stroke-dashoffset: 1;
+        }
+
+        .graph-card__chart-wrap--entering .graph-card__chart-series-glow {
+          animation: graph-card-glow-draw calc(var(--graph-card-hover-duration) * 2.7) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: calc(70ms + var(--series-delay, 0ms));
           stroke-dasharray: 1;
           stroke-dashoffset: 1;
@@ -28484,6 +28483,20 @@ class NodaliaGraphCard extends HTMLElement {
           }
           100% {
             opacity: 1;
+            stroke-dashoffset: 0;
+          }
+        }
+
+        @keyframes graph-card-glow-draw {
+          0% {
+            opacity: 0;
+            stroke-dashoffset: 1;
+          }
+          36% {
+            opacity: 0.14;
+          }
+          100% {
+            opacity: 0.14;
             stroke-dashoffset: 0;
           }
         }
@@ -30445,6 +30458,7 @@ window.customCards.push({
   description: "Tarjeta de grafica elegante para una o varias entidades numericas con estilo Nodalia.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-power-flow-card";
@@ -34499,6 +34513,7 @@ window.customCards.push({
   description: "Tarjeta Nodalia de flujo energetico para red, solar, bateria, agua, gas y consumos individuales.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-climate-card";
@@ -38674,6 +38689,7 @@ window.customCards.push({
   description: "Tarjeta de clima con dial circular, modos HVAC y control rapido de temperatura.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-alarm-panel-card";
@@ -41196,6 +41212,7 @@ window.customCards.push({
   description: "Tarjeta elegante para paneles de alarma",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-advance-vacuum-card";
@@ -49142,6 +49159,7 @@ window.customCards.push({
   description: "Tarjeta de mapa avanzada para robots con estilo Nodalia y seleccion de habitaciones, zonas y puntos.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-entity-card";
@@ -52127,6 +52145,7 @@ window.customCards.push({
   description: "Tarjeta todoterreno para entidades, información y botones rápidos.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-fav-card";
@@ -55118,6 +55137,7 @@ window.customCards.push({
   description: "Tarjeta mini y elegante para favoritos y controles rapidos en movil.",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-insignia-card";
@@ -56435,6 +56455,7 @@ if (!window.customBadges.some(item => item?.type === CARD_TAG)) {
     documentationURL: "https://developers.home-assistant.io/docs/frontend/custom-ui/custom-badge/",
   });
 }
+
 }
 {
 const CARD_TAG = "nodalia-person-card";
@@ -58525,11 +58546,12 @@ window.customCards.push({
   description: "Tarjeta compacta de persona con foto y zona",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.9.8";
+const CARD_VERSION = "0.10.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -59569,15 +59591,27 @@ class NodaliaWeatherCard extends HTMLElement {
         const series = String(actionButton.dataset.forecastSeries || "high");
         const index = Number(actionButton.dataset.forecastIndex);
         const key = `${forecastType}:${series}:${index}`;
-        const popupWidth = 214;
+        const popupWidth = 206;
         const popupHeight = forecastType === "daily" ? 194 : 166;
-        const viewportWidth = typeof window === "undefined" ? popupWidth + 24 : window.innerWidth;
-        const viewportHeight = typeof window === "undefined" ? 480 : window.innerHeight;
-        const left = clamp(Number(event.clientX) || viewportWidth / 2, popupWidth / 2 + 12, viewportWidth - popupWidth / 2 - 12);
-        const vertical = (Number(event.clientY) || 0) < popupHeight + 34 ? "below" : "above";
+        const viewport = typeof window === "undefined" ? null : window.visualViewport;
+        const viewportLeft = viewport?.offsetLeft ?? 0;
+        const viewportTop = viewport?.offsetTop ?? 0;
+        const viewportWidth = viewport?.width
+          || (typeof document !== "undefined" ? document.documentElement?.clientWidth : 0)
+          || (typeof window !== "undefined" ? window.innerWidth : 0)
+          || popupWidth + 24;
+        const viewportHeight = viewport?.height
+          || (typeof document !== "undefined" ? document.documentElement?.clientHeight : 0)
+          || (typeof window !== "undefined" ? window.innerHeight : 0)
+          || 480;
+        const bounds = actionButton.getBoundingClientRect();
+        const pointerX = Number(event.clientX) || bounds.left + (bounds.width / 2);
+        const pointerY = Number(event.clientY) || bounds.top + (bounds.height / 2);
+        const left = clamp(pointerX, viewportLeft + (popupWidth / 2) + 12, viewportLeft + viewportWidth - (popupWidth / 2) - 12);
+        const vertical = pointerY < viewportTop + popupHeight + 34 ? "below" : "above";
         const top = vertical === "below"
-          ? clamp((Number(event.clientY) || 0) + 14, 12, viewportHeight - popupHeight - 12)
-          : clamp((Number(event.clientY) || 0) - 14, popupHeight + 28, viewportHeight - 12);
+          ? clamp(pointerY + 14, viewportTop + 12, viewportTop + viewportHeight - popupHeight - 12)
+          : clamp(pointerY - 14, viewportTop + popupHeight + 28, viewportTop + viewportHeight - 12);
         this._forecastPopup = this._forecastPopup?.key === key ? null : {
           key,
           forecastType,
@@ -59769,10 +59803,11 @@ class NodaliaWeatherCard extends HTMLElement {
     const maxValue = Math.max(...values);
     const valueRange = Math.max(maxValue - minValue, 1);
     const width = 640;
-    const height = 154;
-    const padding = { top: 27, right: 16, bottom: 42, left: 16 };
+    const height = 174;
+    const padding = { top: 29, right: 16, bottom: 48, left: 16 };
     const plotWidth = width - padding.left - padding.right;
     const plotHeight = height - padding.top - padding.bottom;
+    const dateLabelY = height - 9;
 
     const getCoordinates = points => points.map((point, pointIndex) => {
       const x = padding.left + (points.length === 1 ? plotWidth / 2 : (plotWidth * pointIndex) / (points.length - 1));
@@ -59889,7 +59924,7 @@ class NodaliaWeatherCard extends HTMLElement {
               <text class="weather-card__forecast-chart-value" x="${point.x.toFixed(1)}" y="${Math.max(13, point.y - 14).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>
               ${
                 point.index % labelEvery === 0 || point.index === highCoordinates[highCoordinates.length - 1].index
-                  ? `<text class="weather-card__forecast-chart-label" x="${point.x.toFixed(1)}" y="${height - 6}">${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}</text>`
+                  ? `<text class="weather-card__forecast-chart-label" x="${point.x.toFixed(1)}" y="${dateLabelY}">${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}</text>`
                   : ""
               }
             </g>
@@ -59898,7 +59933,7 @@ class NodaliaWeatherCard extends HTMLElement {
             <g class="weather-card__forecast-chart-hit" data-weather-action="open-forecast-point" data-forecast-type="${escapeHtml(type)}" data-forecast-series="low" data-forecast-index="${point.index}" role="button" tabindex="0" aria-label="${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}: ${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}">
               <circle class="weather-card__forecast-chart-touch" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="21"></circle>
               <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--low" style="--forecast-delay:${Math.min(point.index, 8) * 34}ms;" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="5"></circle>
-              <text class="weather-card__forecast-chart-value weather-card__forecast-chart-value--low" x="${point.x.toFixed(1)}" y="${Math.min(height - padding.bottom - 17, point.y + 25).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>
+              <text class="weather-card__forecast-chart-value weather-card__forecast-chart-value--low" x="${point.x.toFixed(1)}" y="${Math.min(dateLabelY - 21, point.y + 25).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>
             </g>
           `).join("")}
         </svg>
@@ -60066,7 +60101,7 @@ class NodaliaWeatherCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
-          overflow: hidden;
+          overflow: ${this._forecastPopup ? "visible" : "hidden"};
           position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
@@ -60636,7 +60671,7 @@ class NodaliaWeatherCard extends HTMLElement {
             color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           border: 1px solid color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 7%, transparent));
           border-radius: 17px;
-          min-height: 164px;
+          min-height: 184px;
           overflow: hidden;
           padding: 6px 8px 4px;
           position: relative;
@@ -60644,7 +60679,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__forecast-chart svg {
           display: block;
-          height: 154px;
+          height: 174px;
           overflow: visible;
           width: 100%;
         }
@@ -60756,12 +60791,12 @@ class NodaliaWeatherCard extends HTMLElement {
           gap: 8px;
           left: var(--forecast-popup-left);
           min-width: 150px;
-          max-width: min(214px, calc(100vw - 24px));
+          max-width: min(206px, calc(100vw - 24px));
           padding: 10px 12px 11px;
           position: fixed;
           top: var(--forecast-popup-top);
           transform: translate(-50%, calc(-100% - 16px));
-          width: max-content;
+          width: min(206px, calc(100vw - 24px));
           z-index: 2147483001;
         }
 
@@ -60826,8 +60861,9 @@ class NodaliaWeatherCard extends HTMLElement {
         .weather-card__forecast-popup-rows div {
           align-items: center;
           display: flex;
-          gap: 14px;
+          gap: 10px;
           justify-content: space-between;
+          min-width: 0;
         }
 
         .weather-card__forecast-popup-rows span {
@@ -60839,6 +60875,9 @@ class NodaliaWeatherCard extends HTMLElement {
         .weather-card__forecast-popup-rows strong {
           font-size: 12px;
           font-weight: 850;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
           white-space: nowrap;
         }
 
@@ -62053,6 +62092,7 @@ window.customCards.push({
   description: "Tarjeta de tiempo elegante para Home Assistant",
   preview: true,
 });
+
 }
 {
 const CARD_TAG = "nodalia-vacuum-card";
@@ -66378,4 +66418,5 @@ window.customCards.push({
   description: "Tarjeta de aspirador con look Nodalia, acciones rápidas y editor visual.",
   preview: true,
 });
+
 }
