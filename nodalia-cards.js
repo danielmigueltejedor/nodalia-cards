@@ -58367,7 +58367,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.9.0";
+const CARD_VERSION = "0.9.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
