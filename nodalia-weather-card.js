@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.9.3";
+const CARD_VERSION = "0.9.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -843,6 +843,7 @@ class NodaliaWeatherCard extends HTMLElement {
         ...this._forecastEvents,
         [forecastType]: event,
       };
+      this._animateForecastOnNextRender = true;
       this._lastRenderSignature = "";
       this._render();
     }, {
@@ -1776,7 +1777,6 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-alert-backdrop {
           align-items: center;
-          animation: weather-card-alert-backdrop 180ms ease both;
           background: rgba(0, 0, 0, 0.46);
           display: flex;
           inset: 0;
@@ -1938,7 +1938,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__forecast--switching .weather-card__forecast-strip,
         .weather-card__forecast--switching .weather-card__forecast-chart {
-          animation: weather-card-panel-swap calc(var(--weather-card-content-duration) * 0.72) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation: weather-card-panel-swap calc(var(--weather-card-content-duration) * 0.86) cubic-bezier(0.18, 0.9, 0.22, 1.08) both;
         }
 
         .weather-card__forecast-header {
@@ -2024,7 +2024,7 @@ class NodaliaWeatherCard extends HTMLElement {
           grid-auto-flow: column;
           min-width: 0;
           overflow-x: auto;
-          padding-bottom: 2px;
+          padding: 5px 0 3px;
           scrollbar-width: thin;
         }
 
@@ -2040,7 +2040,7 @@ class NodaliaWeatherCard extends HTMLElement {
           min-width: 74px;
           padding: 9px 7px;
           text-align: center;
-          transform-origin: center bottom;
+          transform-origin: center;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.24, 1);
         }
 
@@ -2425,7 +2425,11 @@ class NodaliaWeatherCard extends HTMLElement {
         @keyframes weather-card-panel-swap {
           0% {
             opacity: 0;
-            transform: translateY(10px) scale(0.985);
+            transform: translateY(8px) scale(0.975);
+          }
+          64% {
+            opacity: 1;
+            transform: translateY(0) scale(1.012);
           }
           100% {
             opacity: 1;
@@ -2436,11 +2440,11 @@ class NodaliaWeatherCard extends HTMLElement {
         @keyframes weather-card-item-rise {
           0% {
             opacity: 0;
-            transform: translateY(10px) scale(0.94);
+            transform: translateY(8px) scale(0.94);
           }
           62% {
             opacity: 1;
-            transform: translateY(-1px) scale(1.015);
+            transform: translateY(0) scale(1.018);
           }
           100% {
             opacity: 1;
@@ -2464,11 +2468,9 @@ class NodaliaWeatherCard extends HTMLElement {
 
         @keyframes weather-card-popup-in {
           from {
-            opacity: 0;
             scale: 0.94;
           }
           to {
-            opacity: 1;
             scale: 1;
           }
         }
@@ -2503,22 +2505,11 @@ class NodaliaWeatherCard extends HTMLElement {
           }
         }
 
-        @keyframes weather-card-alert-backdrop {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-
         @keyframes weather-card-alert-panel {
           0% {
-            opacity: 0;
             transform: translateY(16px) scale(0.96);
           }
           100% {
-            opacity: 1;
             transform: translateY(0) scale(1);
           }
         }
