@@ -58576,7 +58576,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.11.9";
+const CARD_VERSION = "0.12.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -59991,7 +59991,7 @@ class NodaliaWeatherCard extends HTMLElement {
     const height = showChartLabels ? 150 : 102;
     const padding = showChartLabels
       ? { top: 24, right: 16, bottom: 56, left: 16 }
-      : { top: 12, right: 8, bottom: 12, left: 8 };
+      : { top: 12, right: 5, bottom: 12, left: 5 };
     const plotWidth = width - padding.left - padding.right;
     const plotHeight = height - padding.top - padding.bottom;
     const dateLabelY = height - 10;
@@ -60137,7 +60137,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
     return `
       <div class="weather-card__forecast-chart" style="--forecast-chart-height:${height + 8}px; --forecast-chart-svg-height:${height}px;" role="img" aria-label="Gráfico de previsión ${type === "hourly" ? "por horas" : "semanal"}">
-        <svg viewBox="0 0 ${width} ${height}">
+        <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
           <defs>
             ${
               colorChartEnabled
@@ -60944,7 +60944,7 @@ class NodaliaWeatherCard extends HTMLElement {
           height: var(--forecast-chart-height, 160px);
           min-height: 0;
           overflow: visible;
-          padding: 4px 4px 4px;
+          padding: 4px 2px;
           position: relative;
         }
 
