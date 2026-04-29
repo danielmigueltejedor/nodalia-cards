@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.12.0";
+const CARD_VERSION = "0.12.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1411,7 +1411,7 @@ class NodaliaWeatherCard extends HTMLElement {
     const minValue = Math.min(...values);
     const maxValue = Math.max(...values);
     const valueRange = Math.max(maxValue - minValue, 1);
-    const width = 640;
+    const width = showChartLabels ? 640 : 820;
     const height = showChartLabels ? 150 : 102;
     const padding = showChartLabels
       ? { top: 24, right: 16, bottom: 56, left: 16 }
@@ -1561,7 +1561,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
     return `
       <div class="weather-card__forecast-chart" style="--forecast-chart-height:${height + 8}px; --forecast-chart-svg-height:${height}px;" role="img" aria-label="Gráfico de previsión ${type === "hourly" ? "por horas" : "semanal"}">
-        <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+        <svg viewBox="0 0 ${width} ${height}">
           <defs>
             ${
               colorChartEnabled
