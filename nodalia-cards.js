@@ -58576,7 +58576,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.12.1";
+const CARD_VERSION = "0.12.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -60376,6 +60376,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
         ha-card::before {
           background: linear-gradient(180deg, color-mix(in srgb, ${accentColor} 16%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0));
+          border-radius: inherit;
           content: "";
           inset: 0;
           pointer-events: none;
@@ -60614,7 +60615,7 @@ class NodaliaWeatherCard extends HTMLElement {
           inset: 0;
           justify-content: center;
           padding: 16px;
-          position: absolute;
+          position: fixed;
           z-index: 2147483000;
         }
 
