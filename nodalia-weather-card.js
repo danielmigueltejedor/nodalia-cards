@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.11.1";
+const CARD_VERSION = "0.11.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -725,10 +725,14 @@ class NodaliaWeatherCard extends HTMLElement {
     this._meteoalarmPopupOpen = false;
     this._forecastPopup = null;
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
+    this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
   }
 
   connectedCallback() {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this.shadowRoot?.addEventListener("pointermove", this._onShadowPointerMove);
+    this.shadowRoot?.addEventListener("pointerleave", this._onShadowPointerLeave);
     this._animateContentOnNextRender = true;
     this._ensureForecastSubscription();
     if (this._hass && this._config) {
@@ -739,6 +743,8 @@ class NodaliaWeatherCard extends HTMLElement {
 
   disconnectedCallback() {
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+    this.shadowRoot?.removeEventListener("pointermove", this._onShadowPointerMove);
+    this.shadowRoot?.removeEventListener("pointerleave", this._onShadowPointerLeave);
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
@@ -1054,6 +1060,89 @@ class NodaliaWeatherCard extends HTMLElement {
     }
   }
 
+  _setForecastPopupFromPoint(actionButton, options = {}) {
+    if (!(actionButton instanceof Element)) {
+      return;
+    }
+
+    const forecastType = normalizeForecastType(actionButton.dataset.forecastType);
+    const series = String(actionButton.dataset.forecastSeries || "high");
+    const index = Number(actionButton.dataset.forecastIndex);
+    const key = `${forecastType}:${series}:${index}`;
+    const shouldToggle = options.toggle === true;
+
+    if (!shouldToggle && this._forecastPopup?.key === key) {
+      return;
+    }
+
+    if (shouldToggle && this._forecastPopup?.key === key) {
+      this._forecastPopup = null;
+      this._lastRenderSignature = "";
+      this._render();
+      return;
+    }
+
+    const popupWidth = 206;
+    const popupHeight = forecastType === "daily" ? 194 : 166;
+    const viewport = typeof window === "undefined" ? null : window.visualViewport;
+    const viewportLeft = viewport?.offsetLeft ?? 0;
+    const viewportTop = viewport?.offsetTop ?? 0;
+    const viewportWidth = viewport?.width
+      || (typeof document !== "undefined" ? document.documentElement?.clientWidth : 0)
+      || (typeof window !== "undefined" ? window.innerWidth : 0)
+      || popupWidth + 24;
+    const viewportHeight = viewport?.height
+      || (typeof document !== "undefined" ? document.documentElement?.clientHeight : 0)
+      || (typeof window !== "undefined" ? window.innerHeight : 0)
+      || 480;
+    const pointElement = actionButton.querySelector?.(".weather-card__forecast-chart-point");
+    const bounds = (pointElement instanceof Element ? pointElement : actionButton).getBoundingClientRect();
+    const pointerX = bounds.left + (bounds.width / 2);
+    const pointerY = bounds.top + (bounds.height / 2);
+    const left = clamp(pointerX, viewportLeft + (popupWidth / 2) + 12, viewportLeft + viewportWidth - (popupWidth / 2) - 12);
+    const vertical = pointerY < viewportTop + popupHeight + 34 ? "below" : "above";
+    const top = vertical === "below"
+      ? clamp(pointerY + 14, viewportTop + 12, viewportTop + viewportHeight - popupHeight - 12)
+      : clamp(pointerY - 14, viewportTop + popupHeight + 28, viewportTop + viewportHeight - 12);
+
+    this._forecastPopup = {
+      key,
+      forecastType,
+      index,
+      left: `${Math.round(left)}px`,
+      series,
+      top: `${Math.round(top)}px`,
+      vertical,
+    };
+    this._lastRenderSignature = "";
+    this._render();
+  }
+
+  _onShadowPointerMove(event) {
+    if (event.pointerType && event.pointerType !== "mouse") {
+      return;
+    }
+
+    const actionButton = event.composedPath().find(node => (
+      node instanceof Element && node.dataset?.weatherAction === "open-forecast-point"
+    ));
+    if (!actionButton) {
+      return;
+    }
+
+    this._setForecastPopupFromPoint(actionButton);
+  }
+
+  _onShadowPointerLeave() {
+    if (!this._forecastPopup) {
+      return;
+    }
+
+    this._forecastPopup = null;
+    this._lastRenderSignature = "";
+    this._render();
+  }
+
   _onShadowClick(event) {
     const actionButton = event.composedPath().find(node => node instanceof Element && node.dataset?.weatherAction);
     if (actionButton) {
@@ -1085,43 +1174,7 @@ class NodaliaWeatherCard extends HTMLElement {
         this._lastRenderSignature = "";
         this._render();
       } else if (actionButton.dataset.weatherAction === "open-forecast-point") {
-        const forecastType = normalizeForecastType(actionButton.dataset.forecastType);
-        const series = String(actionButton.dataset.forecastSeries || "high");
-        const index = Number(actionButton.dataset.forecastIndex);
-        const key = `${forecastType}:${series}:${index}`;
-        const popupWidth = 206;
-        const popupHeight = forecastType === "daily" ? 194 : 166;
-        const viewport = typeof window === "undefined" ? null : window.visualViewport;
-        const viewportLeft = viewport?.offsetLeft ?? 0;
-        const viewportTop = viewport?.offsetTop ?? 0;
-        const viewportWidth = viewport?.width
-          || (typeof document !== "undefined" ? document.documentElement?.clientWidth : 0)
-          || (typeof window !== "undefined" ? window.innerWidth : 0)
-          || popupWidth + 24;
-        const viewportHeight = viewport?.height
-          || (typeof document !== "undefined" ? document.documentElement?.clientHeight : 0)
-          || (typeof window !== "undefined" ? window.innerHeight : 0)
-          || 480;
-        const pointElement = actionButton.querySelector?.(".weather-card__forecast-chart-point");
-        const bounds = (pointElement instanceof Element ? pointElement : actionButton).getBoundingClientRect();
-        const pointerX = bounds.left + (bounds.width / 2);
-        const pointerY = bounds.top + (bounds.height / 2);
-        const left = clamp(pointerX, viewportLeft + (popupWidth / 2) + 12, viewportLeft + viewportWidth - (popupWidth / 2) - 12);
-        const vertical = pointerY < viewportTop + popupHeight + 34 ? "below" : "above";
-        const top = vertical === "below"
-          ? clamp(pointerY + 14, viewportTop + 12, viewportTop + viewportHeight - popupHeight - 12)
-          : clamp(pointerY - 14, viewportTop + popupHeight + 28, viewportTop + viewportHeight - 12);
-        this._forecastPopup = this._forecastPopup?.key === key ? null : {
-          key,
-          forecastType,
-          index,
-          left: `${Math.round(left)}px`,
-          series,
-          top: `${Math.round(top)}px`,
-          vertical,
-        };
-        this._lastRenderSignature = "";
-        this._render();
+        this._setForecastPopupFromPoint(actionButton, { toggle: true });
       } else if (actionButton.dataset.weatherAction === "close-forecast-popup") {
         this._forecastPopup = null;
         this._lastRenderSignature = "";
@@ -1342,13 +1395,16 @@ class NodaliaWeatherCard extends HTMLElement {
     const highPath = smoothPathFromCoordinates(highCoordinates);
     const lowPath = smoothPathFromCoordinates(lowCoordinates);
     const areaPath = `${highPath} L ${highCoordinates[highCoordinates.length - 1].x.toFixed(1)} ${height - padding.bottom} L ${highCoordinates[0].x.toFixed(1)} ${height - padding.bottom} Z`;
+    const lowAreaPath = lowPath
+      ? `${lowPath} L ${lowCoordinates[lowCoordinates.length - 1].x.toFixed(1)} ${height - padding.bottom} L ${lowCoordinates[0].x.toFixed(1)} ${height - padding.bottom} Z`
+      : "";
     const chartAccent = getConditionAccent(state?.state);
     const chartFillId = `weather-chart-fill-${type}`;
     const colorChartEnabled = this._config?.forecast_chart_color_enabled === true;
     const colorChartMode = normalizeForecastChartColorMode(this._config?.forecast_chart_color_mode);
     const highGradientId = `weather-chart-line-${type}-high`;
     const lowGradientId = `weather-chart-line-${type}-low`;
-    const labelEvery = highCoordinates.length > 7 ? 2 : 1;
+    const lowFillId = `weather-chart-fill-${type}-low`;
     const unit = String(state?.attributes?.temperature_unit || "°").trim() || "°";
     const unitLabel = unit.startsWith("°") ? unit : ` ${unit}`;
     const precipitationUnit = String(state?.attributes?.precipitation_unit || "").trim();
@@ -1436,19 +1492,23 @@ class NodaliaWeatherCard extends HTMLElement {
                 <linearGradient id="${lowGradientId}" x1="0" x2="1" y1="0" y2="0">
                   ${renderGradientStops(lowCoordinates)}
                 </linearGradient>
+                <linearGradient id="${lowFillId}" x1="0" x2="1" y1="0" y2="0">
+                  ${renderGradientStops(lowCoordinates, "0.18")}
+                </linearGradient>
               ` : ""}
             ` : ""}
           </defs>
           <path class="weather-card__forecast-chart-area" style="fill:url(#${chartFillId});" d="${areaPath}"></path>
+          ${colorChartEnabled && lowAreaPath ? `<path class="weather-card__forecast-chart-area weather-card__forecast-chart-area--low" style="fill:url(#${lowFillId});" d="${lowAreaPath}"></path>` : ""}
           ${lowPath ? `<path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--low" style="${colorChartEnabled ? `stroke:url(#${lowGradientId});` : ""}" pathLength="1" d="${lowPath}"></path>` : ""}
           <path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--high" style="${colorChartEnabled ? `stroke:url(#${highGradientId});` : ""}" pathLength="1" d="${highPath}"></path>
-          ${highCoordinates.map(point => `
+          ${highCoordinates.map((point, coordinateIndex) => `
             <g class="weather-card__forecast-chart-hit" data-weather-action="open-forecast-point" data-forecast-type="${escapeHtml(type)}" data-forecast-series="high" data-forecast-index="${point.index}" role="button" tabindex="0" aria-label="${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}: ${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}">
               <circle class="weather-card__forecast-chart-touch" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="22"></circle>
               <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--high" style="--forecast-delay:${Math.min(point.index, 8) * 34}ms; ${colorChartEnabled ? `--forecast-point-color:${escapeHtml(getForecastChartPointColor(point, colorChartMode, state?.state))};` : ""}" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="5.7"></circle>
               <text class="weather-card__forecast-chart-value" x="${point.x.toFixed(1)}" y="${Math.max(13, point.y - 14).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>
               ${
-                point.index % labelEvery === 0 || point.index === highCoordinates[highCoordinates.length - 1].index
+                coordinateIndex === 0 || coordinateIndex === highCoordinates.length - 1
                   ? `<text class="weather-card__forecast-chart-label" x="${point.x.toFixed(1)}" y="${dateLabelY}">${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}</text>`
                   : ""
               }
@@ -1876,7 +1936,7 @@ class NodaliaWeatherCard extends HTMLElement {
         }
 
         .weather-alert-panel {
-          animation: weather-card-alert-panel calc(var(--weather-card-content-duration) * 0.72) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation: weather-card-alert-panel calc(var(--weather-card-content-duration) * 0.68) cubic-bezier(0.16, 0.84, 0.22, 1) both;
           background: color-mix(in srgb, var(--alert-accent) 10%, var(--ha-card-background, #1f1f24));
           border: 1px solid color-mix(in srgb, var(--alert-accent) 35%, var(--divider-color));
           border-radius: 24px;
@@ -1889,6 +1949,7 @@ class NodaliaWeatherCard extends HTMLElement {
           overflow: auto;
           padding: 16px;
           width: min(520px, calc(100vw - 32px));
+          transform-origin: 50% 0%;
         }
 
         .weather-alert-panel__header {
@@ -2306,7 +2367,8 @@ class NodaliaWeatherCard extends HTMLElement {
         }
 
         .weather-card__forecast-popup {
-          animation: weather-card-popup-in calc(var(--weather-card-content-duration) * 0.46) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          --weather-popup-transform: translate(-50%, calc(-100% - 16px));
+          animation: weather-card-popup-in calc(var(--weather-card-content-duration) * 0.58) cubic-bezier(0.16, 0.84, 0.22, 1) both;
           background:
             linear-gradient(180deg, color-mix(in srgb, var(--forecast-accent) 18%, rgba(255,255,255,0.08)), rgba(255,255,255,0.02)),
             color-mix(in srgb, var(--ha-card-background, #1f1f24) 90%, rgba(0,0,0,0.12));
@@ -2322,13 +2384,15 @@ class NodaliaWeatherCard extends HTMLElement {
           padding: 10px 12px 11px;
           position: fixed;
           top: var(--forecast-popup-top);
-          transform: translate(-50%, calc(-100% - 16px));
+          transform: var(--weather-popup-transform);
+          transform-origin: 50% 100%;
           width: min(206px, calc(100vw - 24px));
           z-index: 2147483001;
         }
 
         .weather-card__forecast-popup--below {
-          transform: translate(-50%, 16px);
+          --weather-popup-transform: translate(-50%, 16px);
+          transform-origin: 50% 0%;
         }
 
         .weather-card__forecast-popup-close {
@@ -2563,11 +2627,20 @@ class NodaliaWeatherCard extends HTMLElement {
         }
 
         @keyframes weather-card-popup-in {
-          from {
-            scale: 0.94;
+          0% {
+            clip-path: inset(0 46% 84% 46% round 16px);
+            opacity: 0;
+            transform: var(--weather-popup-transform) scale(0.84);
           }
-          to {
-            scale: 1;
+          62% {
+            clip-path: inset(0 5% 0 5% round 16px);
+            opacity: 1;
+            transform: var(--weather-popup-transform) scale(1);
+          }
+          100% {
+            clip-path: inset(0 0 0 0 round 16px);
+            opacity: 1;
+            transform: var(--weather-popup-transform) scale(1);
           }
         }
 
@@ -2603,9 +2676,18 @@ class NodaliaWeatherCard extends HTMLElement {
 
         @keyframes weather-card-alert-panel {
           0% {
-            transform: translateY(16px) scale(0.96);
+            clip-path: inset(0 44% 88% 44% round 24px);
+            opacity: 0;
+            transform: translateY(-8px) scale(0.86);
+          }
+          64% {
+            clip-path: inset(0 5% 0 5% round 24px);
+            opacity: 1;
+            transform: translateY(0) scale(1);
           }
           100% {
+            clip-path: inset(0 0 0 0 round 24px);
+            opacity: 1;
             transform: translateY(0) scale(1);
           }
         }
