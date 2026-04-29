@@ -26400,7 +26400,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.7";
+const CARD_VERSION = "0.12.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -26997,6 +26997,15 @@ class NodaliaGraphCard extends HTMLElement {
     this._clearTouchPressTimer();
     this._touchPressState = null;
     this._touchHoverActive = false;
+  }
+
+  connectedCallback() {
+    this._animateContentOnNextRender = true;
+    this._animateChartOnNextRender = true;
+    this._lastRenderSignature = "";
+    if (this._hass && this._config) {
+      this._render();
+    }
   }
 
   setConfig(config) {
@@ -27983,6 +27992,7 @@ class NodaliaGraphCard extends HTMLElement {
     this._hoverChart = chart;
     const hasGraphData = chart.entries.some(entry => entry.linePath);
     const hover = hasGraphData ? this._getHoverPayload(chart) : null;
+    const hoverLineX = hover ? clamp(hover.x, 0, chart.width) : 0;
     const icon = this._getIcon();
     const title = this._getTitle();
     const accentColor = chart.entries[0]?.color || legendEntries[0]?.color || "var(--primary-color)";
@@ -28246,7 +28256,7 @@ class NodaliaGraphCard extends HTMLElement {
           min-height: ${chartHeight};
           margin-inline: -${chartBleed}px;
           margin-top: 8px;
-          overflow: visible;
+          overflow: hidden;
           padding: 2px 0 0;
           position: relative;
           touch-action: pan-y;
@@ -28261,6 +28271,7 @@ class NodaliaGraphCard extends HTMLElement {
 
         .graph-card__hover-points-layer {
           inset: 0;
+          overflow: hidden;
           pointer-events: none;
           position: absolute;
           z-index: 2;
@@ -28283,33 +28294,33 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__hover-point {
           align-items: center;
           display: inline-flex;
-          height: 10px;
+          height: 12px;
           justify-content: center;
           left: 0;
           pointer-events: none;
           position: absolute;
           top: 0;
           transform: translate(-50%, -50%);
-          width: 10px;
+          width: 12px;
           z-index: 3;
         }
 
         .graph-card__hover-point-halo {
-          background: color-mix(in srgb, var(--hover-color) 10%, transparent);
+          background: radial-gradient(circle, color-mix(in srgb, var(--hover-color) 24%, transparent) 0 42%, transparent 72%);
           border-radius: 999px;
-          inset: -4px;
-          opacity: 0.82;
+          inset: -8px;
+          opacity: 0.9;
           position: absolute;
         }
 
         .graph-card__hover-point-outer {
           background:
-            radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.92) 0 26%, color-mix(in srgb, var(--hover-color) 24%, rgba(255, 255, 255, 0.76)) 27% 100%);
-          border: 1px solid color-mix(in srgb, var(--hover-color) 24%, rgba(255, 255, 255, 0.42));
+            linear-gradient(180deg, color-mix(in srgb, var(--hover-color) 32%, rgba(255,255,255,0.76)), color-mix(in srgb, var(--ha-card-background, #1f1f24) 72%, var(--hover-color)));
+          border: 1px solid color-mix(in srgb, var(--hover-color) 52%, rgba(255, 255, 255, 0.34));
           border-radius: 999px;
           box-shadow:
-            0 6px 12px rgba(0, 0, 0, 0.12),
-            0 0 0 1px color-mix(in srgb, var(--hover-color) 10%, transparent) inset;
+            0 8px 18px rgba(0, 0, 0, 0.18),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
           inset: 0;
           position: absolute;
         }
@@ -28317,12 +28328,13 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__hover-point-ring {
           background: color-mix(in srgb, var(--hover-color) 82%, rgba(255, 255, 255, 0.86));
           border-radius: 999px;
-          height: 4px;
+          box-shadow: 0 0 10px color-mix(in srgb, var(--hover-color) 34%, transparent);
+          height: 4.5px;
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: 4px;
+          width: 4.5px;
         }
 
         .graph-card__tooltip {
@@ -28665,7 +28677,7 @@ class NodaliaGraphCard extends HTMLElement {
               </defs>
               ${
                 hover
-                  ? `<line class="graph-card__hover-line ${this._hoverEntering && animations.enabled ? "graph-card__hover-line--entering" : ""}" x1="${hover.x.toFixed(2)}" y1="0" x2="${hover.x.toFixed(2)}" y2="${chart.height}"></line>`
+                  ? `<line class="graph-card__hover-line ${this._hoverEntering && animations.enabled ? "graph-card__hover-line--entering" : ""}" x1="${hoverLineX.toFixed(2)}" y1="0" x2="${hoverLineX.toFixed(2)}" y2="${chart.height}"></line>`
                   : ""
               }
               ${chart.entries.map((entry, index) => `
@@ -28687,8 +28699,8 @@ class NodaliaGraphCard extends HTMLElement {
                       if (!point) {
                         return "";
                       }
-                      const left = (point.x / chart.width) * 100;
-                      const top = (point.y / chart.height) * 100;
+                      const left = clamp((point.x / chart.width) * 100, 1.8, 98.2);
+                      const top = clamp((point.y / chart.height) * 100, 4, 96);
                       return `
                         <span class="graph-card__hover-point" style="left:${left}%; top:${top}%; --hover-color:${escapeHtml(entry.color)};">
                           <span class="graph-card__hover-point-halo"></span>
@@ -58564,7 +58576,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.10.3";
+const CARD_VERSION = "0.11.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -58590,6 +58602,8 @@ const DEFAULT_CONFIG = {
   show_forecast_toggle: true,
   forecast_view: "cards",
   forecast_type: "hourly",
+  forecast_chart_color_enabled: false,
+  forecast_chart_color_mode: "temperature",
   forecast_slots_hourly: 8,
   forecast_slots_daily: 5,
   haptics: {
@@ -58918,6 +58932,53 @@ function normalizeForecastType(value) {
 
 function normalizeForecastView(value) {
   return String(value || "cards").toLowerCase() === "chart" ? "chart" : "cards";
+}
+
+function normalizeForecastChartColorMode(value) {
+  return String(value || "").toLowerCase() === "condition" ? "condition" : "temperature";
+}
+
+function getTemperatureScaleColor(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "var(--info-color, #71c0ff)";
+  }
+
+  const stops = [
+    { value: -5, color: [22, 58, 143] },
+    { value: 2, color: [43, 128, 211] },
+    { value: 10, color: [74, 177, 126] },
+    { value: 18, color: [238, 206, 76] },
+    { value: 26, color: [231, 87, 53] },
+    { value: 36, color: [140, 28, 28] },
+  ];
+
+  let lower = stops[0];
+  let upper = stops[stops.length - 1];
+  for (const stop of stops) {
+    if (numeric >= stop.value) {
+      lower = stop;
+    }
+    if (numeric <= stop.value) {
+      upper = stop;
+      break;
+    }
+  }
+  if (lower === upper) {
+    return `rgb(${lower.color.join(", ")})`;
+  }
+
+  const progress = clamp((numeric - lower.value) / Math.max(upper.value - lower.value, 1), 0, 1);
+  const channels = lower.color.map((channel, index) => Math.round(channel + ((upper.color[index] - channel) * progress)));
+  return `rgb(${channels.join(", ")})`;
+}
+
+function getForecastChartPointColor(point, mode, fallbackCondition) {
+  if (mode === "condition") {
+    return getConditionAccent(point?.item?.condition || fallbackCondition);
+  }
+
+  return getTemperatureScaleColor(point?.value);
 }
 
 function getWeatherSupportedFeature(state, feature) {
@@ -59858,6 +59919,10 @@ class NodaliaWeatherCard extends HTMLElement {
     const areaPath = `${highPath} L ${highCoordinates[highCoordinates.length - 1].x.toFixed(1)} ${height - padding.bottom} L ${highCoordinates[0].x.toFixed(1)} ${height - padding.bottom} Z`;
     const chartAccent = getConditionAccent(state?.state);
     const chartFillId = `weather-chart-fill-${type}`;
+    const colorChartEnabled = this._config?.forecast_chart_color_enabled === true;
+    const colorChartMode = normalizeForecastChartColorMode(this._config?.forecast_chart_color_mode);
+    const highGradientId = `weather-chart-line-${type}-high`;
+    const lowGradientId = `weather-chart-line-${type}-low`;
     const labelEvery = highCoordinates.length > 7 ? 2 : 1;
     const unit = String(state?.attributes?.temperature_unit || "°").trim() || "°";
     const unitLabel = unit.startsWith("°") ? unit : ` ${unit}`;
@@ -59866,6 +59931,11 @@ class NodaliaWeatherCard extends HTMLElement {
       ...highCoordinates.map(point => ({ ...point, series: "high" })),
       ...lowCoordinates.map(point => ({ ...point, series: "low" })),
     ];
+    const renderGradientStops = coordinates => coordinates.map((point, index) => {
+      const offset = coordinates.length <= 1 ? 0 : (index / (coordinates.length - 1)) * 100;
+      const color = getForecastChartPointColor(point, colorChartMode, state?.state);
+      return `<stop offset="${offset.toFixed(2)}%" stop-color="${escapeHtml(color)}"></stop>`;
+    }).join("");
     const popupPoint = allCoordinates.find(point => (
       this._forecastPopup?.forecastType === type
       && this._forecastPopup?.series === point.series
@@ -59927,14 +59997,24 @@ class NodaliaWeatherCard extends HTMLElement {
               <stop offset="58%" stop-color="${escapeHtml(chartAccent)}" stop-opacity="0.11"></stop>
               <stop offset="100%" stop-color="${escapeHtml(chartAccent)}" stop-opacity="0"></stop>
             </linearGradient>
+            ${colorChartEnabled ? `
+              <linearGradient id="${highGradientId}" x1="0" x2="1" y1="0" y2="0">
+                ${renderGradientStops(highCoordinates)}
+              </linearGradient>
+              ${lowCoordinates.length ? `
+                <linearGradient id="${lowGradientId}" x1="0" x2="1" y1="0" y2="0">
+                  ${renderGradientStops(lowCoordinates)}
+                </linearGradient>
+              ` : ""}
+            ` : ""}
           </defs>
           <path class="weather-card__forecast-chart-area" style="fill:url(#${chartFillId});" d="${areaPath}"></path>
-          ${lowPath ? `<path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--low" pathLength="1" d="${lowPath}"></path>` : ""}
-          <path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--high" pathLength="1" d="${highPath}"></path>
+          ${lowPath ? `<path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--low" style="${colorChartEnabled ? `stroke:url(#${lowGradientId});` : ""}" pathLength="1" d="${lowPath}"></path>` : ""}
+          <path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--high" style="${colorChartEnabled ? `stroke:url(#${highGradientId});` : ""}" pathLength="1" d="${highPath}"></path>
           ${highCoordinates.map(point => `
             <g class="weather-card__forecast-chart-hit" data-weather-action="open-forecast-point" data-forecast-type="${escapeHtml(type)}" data-forecast-series="high" data-forecast-index="${point.index}" role="button" tabindex="0" aria-label="${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}: ${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}">
               <circle class="weather-card__forecast-chart-touch" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="22"></circle>
-              <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--high" style="--forecast-delay:${Math.min(point.index, 8) * 34}ms;" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="5.7"></circle>
+              <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--high" style="--forecast-delay:${Math.min(point.index, 8) * 34}ms; ${colorChartEnabled ? `--forecast-point-color:${escapeHtml(getForecastChartPointColor(point, colorChartMode, state?.state))};` : ""}" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="5.7"></circle>
               <text class="weather-card__forecast-chart-value" x="${point.x.toFixed(1)}" y="${Math.max(13, point.y - 14).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>
               ${
                 point.index % labelEvery === 0 || point.index === highCoordinates[highCoordinates.length - 1].index
@@ -59946,7 +60026,7 @@ class NodaliaWeatherCard extends HTMLElement {
           ${lowCoordinates.map(point => `
             <g class="weather-card__forecast-chart-hit" data-weather-action="open-forecast-point" data-forecast-type="${escapeHtml(type)}" data-forecast-series="low" data-forecast-index="${point.index}" role="button" tabindex="0" aria-label="${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}: ${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}">
               <circle class="weather-card__forecast-chart-touch" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="21"></circle>
-              <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--low" style="--forecast-delay:${Math.min(point.index, 8) * 34}ms;" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="5"></circle>
+              <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--low" style="--forecast-delay:${Math.min(point.index, 8) * 34}ms; ${colorChartEnabled ? `--forecast-point-color:${escapeHtml(getForecastChartPointColor(point, colorChartMode, state?.state))};` : ""}" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="5"></circle>
               <text class="weather-card__forecast-chart-value weather-card__forecast-chart-value--low" x="${point.x.toFixed(1)}" y="${Math.min(lowLabelY, point.y + 31).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>
             </g>
           `).join("")}
@@ -60734,7 +60814,7 @@ class NodaliaWeatherCard extends HTMLElement {
         }
 
         .weather-card__forecast-chart-point {
-          fill: color-mix(in srgb, var(--ha-card-background, #1f1f24) 88%, ${accentColor});
+          fill: color-mix(in srgb, var(--ha-card-background, #1f1f24) 82%, var(--forecast-point-color, ${accentColor}));
           transform-box: fill-box;
           transform-origin: center;
           stroke-width: 2.6;
@@ -60763,11 +60843,11 @@ class NodaliaWeatherCard extends HTMLElement {
         }
 
         .weather-card__forecast-chart-point--high {
-          stroke: ${accentColor};
+          stroke: var(--forecast-point-color, ${accentColor});
         }
 
         .weather-card__forecast-chart-point--low {
-          stroke: color-mix(in srgb, ${accentColor} 48%, var(--secondary-text-color));
+          stroke: color-mix(in srgb, var(--forecast-point-color, ${accentColor}) 58%, var(--secondary-text-color));
         }
 
         .weather-card__forecast-chart-value,
@@ -61967,6 +62047,16 @@ class NodaliaWeatherCardEditor extends HTMLElement {
                   { value: "daily", label: "Semanal" },
                 ],
               )}
+              ${this._renderCheckboxField("Grafico en color", "forecast_chart_color_enabled", config.forecast_chart_color_enabled === true)}
+              ${config.forecast_chart_color_enabled === true ? this._renderSelectField(
+                "Color del grafico",
+                "forecast_chart_color_mode",
+                normalizeForecastChartColorMode(config.forecast_chart_color_mode),
+                [
+                  { value: "temperature", label: "Por temperatura" },
+                  { value: "condition", label: "Por condicion" },
+                ],
+              ) : ""}
               ${this._renderTextField("Horas visibles", "forecast_slots_hourly", config.forecast_slots_hourly, {
                 type: "number",
               })}

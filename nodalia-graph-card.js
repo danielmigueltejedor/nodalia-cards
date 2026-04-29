@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.7";
+const CARD_VERSION = "0.12.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -597,6 +597,15 @@ class NodaliaGraphCard extends HTMLElement {
     this._clearTouchPressTimer();
     this._touchPressState = null;
     this._touchHoverActive = false;
+  }
+
+  connectedCallback() {
+    this._animateContentOnNextRender = true;
+    this._animateChartOnNextRender = true;
+    this._lastRenderSignature = "";
+    if (this._hass && this._config) {
+      this._render();
+    }
   }
 
   setConfig(config) {
@@ -1583,6 +1592,7 @@ class NodaliaGraphCard extends HTMLElement {
     this._hoverChart = chart;
     const hasGraphData = chart.entries.some(entry => entry.linePath);
     const hover = hasGraphData ? this._getHoverPayload(chart) : null;
+    const hoverLineX = hover ? clamp(hover.x, 0, chart.width) : 0;
     const icon = this._getIcon();
     const title = this._getTitle();
     const accentColor = chart.entries[0]?.color || legendEntries[0]?.color || "var(--primary-color)";
@@ -1846,7 +1856,7 @@ class NodaliaGraphCard extends HTMLElement {
           min-height: ${chartHeight};
           margin-inline: -${chartBleed}px;
           margin-top: 8px;
-          overflow: visible;
+          overflow: hidden;
           padding: 2px 0 0;
           position: relative;
           touch-action: pan-y;
@@ -1861,6 +1871,7 @@ class NodaliaGraphCard extends HTMLElement {
 
         .graph-card__hover-points-layer {
           inset: 0;
+          overflow: hidden;
           pointer-events: none;
           position: absolute;
           z-index: 2;
@@ -1883,33 +1894,33 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__hover-point {
           align-items: center;
           display: inline-flex;
-          height: 10px;
+          height: 12px;
           justify-content: center;
           left: 0;
           pointer-events: none;
           position: absolute;
           top: 0;
           transform: translate(-50%, -50%);
-          width: 10px;
+          width: 12px;
           z-index: 3;
         }
 
         .graph-card__hover-point-halo {
-          background: color-mix(in srgb, var(--hover-color) 10%, transparent);
+          background: radial-gradient(circle, color-mix(in srgb, var(--hover-color) 24%, transparent) 0 42%, transparent 72%);
           border-radius: 999px;
-          inset: -4px;
-          opacity: 0.82;
+          inset: -8px;
+          opacity: 0.9;
           position: absolute;
         }
 
         .graph-card__hover-point-outer {
           background:
-            radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.92) 0 26%, color-mix(in srgb, var(--hover-color) 24%, rgba(255, 255, 255, 0.76)) 27% 100%);
-          border: 1px solid color-mix(in srgb, var(--hover-color) 24%, rgba(255, 255, 255, 0.42));
+            linear-gradient(180deg, color-mix(in srgb, var(--hover-color) 32%, rgba(255,255,255,0.76)), color-mix(in srgb, var(--ha-card-background, #1f1f24) 72%, var(--hover-color)));
+          border: 1px solid color-mix(in srgb, var(--hover-color) 52%, rgba(255, 255, 255, 0.34));
           border-radius: 999px;
           box-shadow:
-            0 6px 12px rgba(0, 0, 0, 0.12),
-            0 0 0 1px color-mix(in srgb, var(--hover-color) 10%, transparent) inset;
+            0 8px 18px rgba(0, 0, 0, 0.18),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
           inset: 0;
           position: absolute;
         }
@@ -1917,12 +1928,13 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__hover-point-ring {
           background: color-mix(in srgb, var(--hover-color) 82%, rgba(255, 255, 255, 0.86));
           border-radius: 999px;
-          height: 4px;
+          box-shadow: 0 0 10px color-mix(in srgb, var(--hover-color) 34%, transparent);
+          height: 4.5px;
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: 4px;
+          width: 4.5px;
         }
 
         .graph-card__tooltip {
@@ -2265,7 +2277,7 @@ class NodaliaGraphCard extends HTMLElement {
               </defs>
               ${
                 hover
-                  ? `<line class="graph-card__hover-line ${this._hoverEntering && animations.enabled ? "graph-card__hover-line--entering" : ""}" x1="${hover.x.toFixed(2)}" y1="0" x2="${hover.x.toFixed(2)}" y2="${chart.height}"></line>`
+                  ? `<line class="graph-card__hover-line ${this._hoverEntering && animations.enabled ? "graph-card__hover-line--entering" : ""}" x1="${hoverLineX.toFixed(2)}" y1="0" x2="${hoverLineX.toFixed(2)}" y2="${chart.height}"></line>`
                   : ""
               }
               ${chart.entries.map((entry, index) => `
@@ -2287,8 +2299,8 @@ class NodaliaGraphCard extends HTMLElement {
                       if (!point) {
                         return "";
                       }
-                      const left = (point.x / chart.width) * 100;
-                      const top = (point.y / chart.height) * 100;
+                      const left = clamp((point.x / chart.width) * 100, 1.8, 98.2);
+                      const top = clamp((point.y / chart.height) * 100, 4, 96);
                       return `
                         <span class="graph-card__hover-point" style="left:${left}%; top:${top}%; --hover-color:${escapeHtml(entry.color)};">
                           <span class="graph-card__hover-point-halo"></span>
