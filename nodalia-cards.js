@@ -58576,7 +58576,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.11.4";
+const CARD_VERSION = "0.11.7";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -59300,6 +59300,7 @@ class NodaliaWeatherCard extends HTMLElement {
     this._animateForecastOnNextRender = false;
     this._meteoalarmPopupOpen = false;
     this._forecastPopup = null;
+    this._forecastHoverPreview = null;
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
     this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
@@ -59337,6 +59338,7 @@ class NodaliaWeatherCard extends HTMLElement {
     this._forecastExpanded = this._config.show_forecast_details === true;
     this._forecastEvents = {};
     this._forecastPopup = null;
+    this._forecastHoverPreview = null;
     this._unsubscribeForecast();
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
@@ -59394,6 +59396,7 @@ class NodaliaWeatherCard extends HTMLElement {
       activeForecastView: this._activeForecastView,
       activeForecastType: this._activeForecastType,
       forecastPopup: this._forecastPopup?.key || "",
+      forecastHoverPreview: this._forecastHoverPreview?.key || "",
       forecastUpdated: String(this._forecastEvents?.[this._activeForecastType]?.forecast?.[0]?.datetime || ""),
       meteoalarm: this._getMeteoalarmSignature(hass),
       meteoalarmPopupOpen: this._meteoalarmPopupOpen,
@@ -59636,6 +59639,35 @@ class NodaliaWeatherCard extends HTMLElement {
     }
   }
 
+  _getForecastPointOverlayPosition(actionButton, width, height) {
+    const viewport = typeof window === "undefined" ? null : window.visualViewport;
+    const viewportLeft = viewport?.offsetLeft ?? 0;
+    const viewportTop = viewport?.offsetTop ?? 0;
+    const viewportWidth = viewport?.width
+      || (typeof document !== "undefined" ? document.documentElement?.clientWidth : 0)
+      || (typeof window !== "undefined" ? window.innerWidth : 0)
+      || width + 24;
+    const viewportHeight = viewport?.height
+      || (typeof document !== "undefined" ? document.documentElement?.clientHeight : 0)
+      || (typeof window !== "undefined" ? window.innerHeight : 0)
+      || 480;
+    const pointElement = actionButton.querySelector?.(".weather-card__forecast-chart-point");
+    const bounds = (pointElement instanceof Element ? pointElement : actionButton).getBoundingClientRect();
+    const pointerX = bounds.left + (bounds.width / 2);
+    const pointerY = bounds.top + (bounds.height / 2);
+    const left = clamp(pointerX, viewportLeft + (width / 2) + 12, viewportLeft + viewportWidth - (width / 2) - 12);
+    const vertical = pointerY < viewportTop + height + 34 ? "below" : "above";
+    const top = vertical === "below"
+      ? clamp(pointerY + 14, viewportTop + 12, viewportTop + viewportHeight - height - 12)
+      : clamp(pointerY - 14, viewportTop + height + 28, viewportTop + viewportHeight - 12);
+
+    return {
+      left: `${Math.round(left)}px`,
+      top: `${Math.round(top)}px`,
+      vertical,
+    };
+  }
+
   _setForecastPopupFromPoint(actionButton, options = {}) {
     if (!(actionButton instanceof Element)) {
       return;
@@ -59651,45 +59683,65 @@ class NodaliaWeatherCard extends HTMLElement {
       return;
     }
 
-    if (shouldToggle && this._forecastPopup?.key === key) {
-      this._forecastPopup = null;
-      this._lastRenderSignature = "";
-      this._render();
-      return;
+      if (shouldToggle && this._forecastPopup?.key === key) {
+        this._forecastPopup = null;
+        this._forecastHoverPreview = null;
+        this._lastRenderSignature = "";
+        this._render();
+        return;
     }
 
     const popupWidth = 206;
     const popupHeight = forecastType === "daily" ? 194 : 166;
-    const viewport = typeof window === "undefined" ? null : window.visualViewport;
-    const viewportLeft = viewport?.offsetLeft ?? 0;
-    const viewportTop = viewport?.offsetTop ?? 0;
-    const viewportWidth = viewport?.width
-      || (typeof document !== "undefined" ? document.documentElement?.clientWidth : 0)
-      || (typeof window !== "undefined" ? window.innerWidth : 0)
-      || popupWidth + 24;
-    const viewportHeight = viewport?.height
-      || (typeof document !== "undefined" ? document.documentElement?.clientHeight : 0)
-      || (typeof window !== "undefined" ? window.innerHeight : 0)
-      || 480;
-    const pointElement = actionButton.querySelector?.(".weather-card__forecast-chart-point");
-    const bounds = (pointElement instanceof Element ? pointElement : actionButton).getBoundingClientRect();
-    const pointerX = bounds.left + (bounds.width / 2);
-    const pointerY = bounds.top + (bounds.height / 2);
-    const left = clamp(pointerX, viewportLeft + (popupWidth / 2) + 12, viewportLeft + viewportWidth - (popupWidth / 2) - 12);
-    const vertical = pointerY < viewportTop + popupHeight + 34 ? "below" : "above";
-    const top = vertical === "below"
-      ? clamp(pointerY + 14, viewportTop + 12, viewportTop + viewportHeight - popupHeight - 12)
-      : clamp(pointerY - 14, viewportTop + popupHeight + 28, viewportTop + viewportHeight - 12);
+    const position = this._getForecastPointOverlayPosition(actionButton, popupWidth, popupHeight);
 
     this._forecastPopup = {
       key,
       forecastType,
       index,
-      left: `${Math.round(left)}px`,
+      left: position.left,
       series,
-      top: `${Math.round(top)}px`,
-      vertical,
+      top: position.top,
+      vertical: position.vertical,
     };
+    this._forecastHoverPreview = null;
+    this._lastRenderSignature = "";
+    this._render();
+  }
+
+  _setForecastHoverPreviewFromPoint(actionButton) {
+    if (!(actionButton instanceof Element) || this._forecastPopup) {
+      return;
+    }
+
+    const forecastType = normalizeForecastType(actionButton.dataset.forecastType);
+    const series = String(actionButton.dataset.forecastSeries || "high");
+    const index = Number(actionButton.dataset.forecastIndex);
+    const key = `${forecastType}:${series}:${index}`;
+    if (this._forecastHoverPreview?.key === key) {
+      return;
+    }
+
+    const position = this._getForecastPointOverlayPosition(actionButton, 148, 48);
+    this._forecastHoverPreview = {
+      key,
+      forecastType,
+      index,
+      left: position.left,
+      series,
+      top: position.top,
+      vertical: position.vertical,
+    };
+    this._lastRenderSignature = "";
+    this._render();
+  }
+
+  _clearForecastHoverPreview() {
+    if (!this._forecastHoverPreview) {
+      return;
+    }
+
+    this._forecastHoverPreview = null;
     this._lastRenderSignature = "";
     this._render();
   }
@@ -59703,20 +59755,15 @@ class NodaliaWeatherCard extends HTMLElement {
       node instanceof Element && node.dataset?.weatherAction === "open-forecast-point"
     ));
     if (!actionButton) {
+      this._clearForecastHoverPreview();
       return;
     }
 
-    this._setForecastPopupFromPoint(actionButton);
+    this._setForecastHoverPreviewFromPoint(actionButton);
   }
 
   _onShadowPointerLeave() {
-    if (!this._forecastPopup) {
-      return;
-    }
-
-    this._forecastPopup = null;
-    this._lastRenderSignature = "";
-    this._render();
+    this._clearForecastHoverPreview();
   }
 
   _onShadowClick(event) {
@@ -59733,6 +59780,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
       if (actionButton.dataset.weatherAction === "toggle-forecast") {
         this._forecastExpanded = !this._forecastExpanded;
+        this._forecastHoverPreview = null;
         this._ensureForecastSubscription();
         this._lastRenderSignature = "";
         this._render();
@@ -59740,6 +59788,7 @@ class NodaliaWeatherCard extends HTMLElement {
         this._activeForecastType = normalizeForecastType(actionButton.dataset.forecastType);
         this._animateForecastOnNextRender = true;
         this._forecastPopup = null;
+        this._forecastHoverPreview = null;
         this._ensureForecastSubscription();
         this._lastRenderSignature = "";
         this._render();
@@ -59747,12 +59796,14 @@ class NodaliaWeatherCard extends HTMLElement {
         this._activeForecastView = normalizeForecastView(actionButton.dataset.forecastView);
         this._animateForecastOnNextRender = true;
         this._forecastPopup = null;
+        this._forecastHoverPreview = null;
         this._lastRenderSignature = "";
         this._render();
       } else if (actionButton.dataset.weatherAction === "open-forecast-point") {
         this._setForecastPopupFromPoint(actionButton, { toggle: true });
       } else if (actionButton.dataset.weatherAction === "close-forecast-popup") {
         this._forecastPopup = null;
+        this._forecastHoverPreview = null;
         this._lastRenderSignature = "";
         this._render();
       } else if (actionButton.dataset.weatherAction === "open-meteoalarm") {
@@ -59981,6 +60032,8 @@ class NodaliaWeatherCard extends HTMLElement {
     const highGradientId = `weather-chart-line-${type}-high`;
     const lowGradientId = `weather-chart-line-${type}-low`;
     const lowFillId = `weather-chart-fill-${type}-low`;
+    const highFillMaskId = `weather-chart-fill-mask-${type}-high`;
+    const lowFillMaskId = `weather-chart-fill-mask-${type}-low`;
     const unit = String(state?.attributes?.temperature_unit || "°").trim() || "°";
     const unitLabel = unit.startsWith("°") ? unit : ` ${unit}`;
     const precipitationUnit = String(state?.attributes?.precipitation_unit || "").trim();
@@ -59997,6 +60050,11 @@ class NodaliaWeatherCard extends HTMLElement {
       this._forecastPopup?.forecastType === type
       && this._forecastPopup?.series === point.series
       && this._forecastPopup?.index === point.index
+    ));
+    const hoverPreviewPoint = allCoordinates.find(point => (
+      this._forecastHoverPreview?.forecastType === type
+      && this._forecastHoverPreview?.series === point.series
+      && this._forecastHoverPreview?.index === point.index
     ));
     const popupMarkup = popupPoint ? (() => {
       const item = popupPoint.item || {};
@@ -60044,6 +60102,24 @@ class NodaliaWeatherCard extends HTMLElement {
         </div>
       `;
     })() : "";
+    const hoverPreviewMarkup = hoverPreviewPoint ? (() => {
+      const item = hoverPreviewPoint.item || {};
+      const accent = getConditionAccent(item?.condition || state?.state);
+      const vertical = this._forecastHoverPreview?.vertical === "below" ? "below" : "above";
+      const left = this._forecastHoverPreview?.left || "50vw";
+      const top = this._forecastHoverPreview?.top || "50vh";
+
+      return `
+        <div
+          class="weather-card__forecast-hover-preview weather-card__forecast-hover-preview--${vertical}"
+          style="--forecast-accent:${escapeHtml(accent)}; --forecast-preview-left:${escapeHtml(left)}; --forecast-preview-top:${escapeHtml(top)};"
+          data-weather-action="noop"
+        >
+          <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
+          <span>${escapeHtml(formatForecastDateTime(item?.datetime, type))}</span>
+        </div>
+      `;
+    })() : "";
 
     return `
       <div class="weather-card__forecast-chart" role="img" aria-label="Gráfico de previsión ${type === "hourly" ? "por horas" : "semanal"}">
@@ -60052,7 +60128,7 @@ class NodaliaWeatherCard extends HTMLElement {
             ${
               colorChartEnabled
                 ? `<linearGradient id="${chartFillId}" x1="0" x2="1" y1="0" y2="0">
-                    ${renderGradientStops(highCoordinates, "0.18")}
+                    ${renderGradientStops(highCoordinates, "0.26")}
                   </linearGradient>`
                 : `<linearGradient id="${chartFillId}" x1="0" x2="0" y1="0" y2="1">
                     <stop offset="0%" stop-color="${escapeHtml(chartAccent)}" stop-opacity="0.26"></stop>
@@ -60061,21 +60137,37 @@ class NodaliaWeatherCard extends HTMLElement {
                   </linearGradient>`
             }
             ${colorChartEnabled ? `
+              <linearGradient id="${highFillMaskId}-fade" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#fff" stop-opacity="1"></stop>
+                <stop offset="45%" stop-color="#fff" stop-opacity="0.5"></stop>
+                <stop offset="100%" stop-color="#fff" stop-opacity="0"></stop>
+              </linearGradient>
+              <mask id="${highFillMaskId}" x="0" y="0" width="${width}" height="${height}" maskUnits="userSpaceOnUse">
+                <rect x="0" y="0" width="${width}" height="${height}" fill="url(#${highFillMaskId}-fade)"></rect>
+              </mask>
               <linearGradient id="${highGradientId}" x1="0" x2="1" y1="0" y2="0">
                 ${renderGradientStops(highCoordinates)}
               </linearGradient>
               ${lowCoordinates.length ? `
+                <linearGradient id="${lowFillMaskId}-fade" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#fff" stop-opacity="1"></stop>
+                  <stop offset="45%" stop-color="#fff" stop-opacity="0.5"></stop>
+                  <stop offset="100%" stop-color="#fff" stop-opacity="0"></stop>
+                </linearGradient>
+                <mask id="${lowFillMaskId}" x="0" y="0" width="${width}" height="${height}" maskUnits="userSpaceOnUse">
+                  <rect x="0" y="0" width="${width}" height="${height}" fill="url(#${lowFillMaskId}-fade)"></rect>
+                </mask>
                 <linearGradient id="${lowGradientId}" x1="0" x2="1" y1="0" y2="0">
                   ${renderGradientStops(lowCoordinates)}
                 </linearGradient>
                 <linearGradient id="${lowFillId}" x1="0" x2="1" y1="0" y2="0">
-                  ${renderGradientStops(lowCoordinates, "0.18")}
+                  ${renderGradientStops(lowCoordinates, "0.26")}
                 </linearGradient>
               ` : ""}
             ` : ""}
           </defs>
-          <path class="weather-card__forecast-chart-area" style="fill:url(#${chartFillId});" d="${areaPath}"></path>
-          ${colorChartEnabled && lowAreaPath ? `<path class="weather-card__forecast-chart-area weather-card__forecast-chart-area--low" style="fill:url(#${lowFillId});" d="${lowAreaPath}"></path>` : ""}
+          <path class="weather-card__forecast-chart-area" style="fill:url(#${chartFillId});" ${colorChartEnabled ? `mask="url(#${highFillMaskId})"` : ""} d="${areaPath}"></path>
+          ${colorChartEnabled && lowAreaPath ? `<path class="weather-card__forecast-chart-area weather-card__forecast-chart-area--low" style="fill:url(#${lowFillId});" mask="url(#${lowFillMaskId})" d="${lowAreaPath}"></path>` : ""}
           ${lowPath ? `<path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--low" style="${colorChartEnabled ? `stroke:url(#${lowGradientId});` : ""}" pathLength="1" d="${lowPath}"></path>` : ""}
           <path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--high" style="${colorChartEnabled ? `stroke:url(#${highGradientId});` : ""}" pathLength="1" d="${highPath}"></path>
           ${highCoordinates.map((point, coordinateIndex) => `
@@ -60099,6 +60191,7 @@ class NodaliaWeatherCard extends HTMLElement {
           `).join("")}
         </svg>
         ${popupMarkup}
+        ${hoverPreviewMarkup}
       </div>
     `;
   }
@@ -60971,6 +61064,49 @@ class NodaliaWeatherCard extends HTMLElement {
           transform-origin: 50% 0%;
         }
 
+        .weather-card__forecast-hover-preview {
+          -webkit-backdrop-filter: blur(14px);
+          align-items: center;
+          animation: weather-card-hover-preview-in calc(var(--weather-card-content-duration) * 0.34) cubic-bezier(0.16, 0.84, 0.22, 1) both;
+          backdrop-filter: blur(14px);
+          background:
+            linear-gradient(180deg, color-mix(in srgb, var(--forecast-accent) 18%, rgba(255,255,255,0.09)), rgba(255,255,255,0.025)),
+            color-mix(in srgb, var(--ha-card-background, #1f1f24) 72%, transparent);
+          border: 1px solid color-mix(in srgb, var(--forecast-accent) 34%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
+          border-radius: 999px;
+          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+          color: var(--primary-text-color);
+          display: inline-flex;
+          gap: 7px;
+          left: var(--forecast-preview-left);
+          max-width: min(148px, calc(100vw - 24px));
+          min-height: 34px;
+          padding: 7px 11px;
+          pointer-events: none;
+          position: fixed;
+          top: var(--forecast-preview-top);
+          transform: translate(-50%, calc(-100% - 12px));
+          white-space: nowrap;
+          z-index: 2147483000;
+        }
+
+        .weather-card__forecast-hover-preview--below {
+          transform: translate(-50%, 12px);
+        }
+
+        .weather-card__forecast-hover-preview ha-icon {
+          --mdc-icon-size: 17px;
+          color: var(--forecast-accent);
+          flex: 0 0 auto;
+        }
+
+        .weather-card__forecast-hover-preview span {
+          font-size: 11px;
+          font-weight: 850;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
         .weather-card__forecast-popup-close {
           align-items: center;
           appearance: none;
@@ -61220,6 +61356,17 @@ class NodaliaWeatherCard extends HTMLElement {
           }
         }
 
+        @keyframes weather-card-hover-preview-in {
+          0% {
+            clip-path: inset(0 42% 0 42% round 999px);
+            opacity: 0;
+          }
+          100% {
+            clip-path: inset(0 0 0 0 round 999px);
+            opacity: 1;
+          }
+        }
+
         @keyframes weather-card-point-pop {
           0% {
             opacity: 0;
@@ -61354,6 +61501,8 @@ class NodaliaWeatherCard extends HTMLElement {
     if (shouldAnimateForecast) {
       this._animateForecastOnNextRender = false;
     }
+
+    this._lastRenderSignature = this._getRenderSignature();
   }
 }
 
