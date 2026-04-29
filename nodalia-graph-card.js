@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.6";
+const CARD_VERSION = "0.12.7";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1604,6 +1604,27 @@ class NodaliaGraphCard extends HTMLElement {
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const shouldAnimateChart = animations.enabled && (shouldAnimateEntrance || this._animateChartOnNextRender);
+    const tooltipMarkup = hover
+      ? `
+        <div
+          class="graph-card__tooltip ${this._hoverEntering && animations.enabled ? "graph-card__tooltip--entering" : ""}"
+          data-anchor-x="${hover.x.toFixed(2)}"
+          data-chart-width="${chart.width}"
+          style="left:${((hover.x / chart.width) * 100).toFixed(2)}%; --tooltip-tint:${escapeHtml(tooltipTint)};"
+        >
+          <div class="graph-card__tooltip-time">${escapeHtml(hover.label)}</div>
+          <div class="graph-card__tooltip-values">
+            ${hover.values.map(item => `
+              <div class="graph-card__tooltip-row">
+                <span class="graph-card__tooltip-dot" style="background:${escapeHtml(item.color)};"></span>
+                <span class="graph-card__tooltip-name">${escapeHtml(item.name)}</span>
+                <span class="graph-card__tooltip-value">${escapeHtml(item.value)}${item.unit ? ` ${escapeHtml(item.unit)}` : ""}</span>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      `
+      : "";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1905,10 +1926,11 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__tooltip {
+          -webkit-backdrop-filter: blur(18px);
           backdrop-filter: blur(18px);
           background:
-            linear-gradient(180deg, color-mix(in srgb, var(--tooltip-tint) 18%, rgba(255,255,255,0.08)), rgba(255,255,255,0.015)),
-            color-mix(in srgb, var(--ha-card-background, #1f1f24) 78%, rgba(0,0,0,0.10));
+            linear-gradient(180deg, color-mix(in srgb, var(--tooltip-tint) 24%, rgba(255,255,255,0.10)), rgba(255,255,255,0.03)),
+            color-mix(in srgb, var(--ha-card-background, #1f1f24) 66%, transparent);
           border: 1px solid color-mix(in srgb, var(--tooltip-tint) 36%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
           border-radius: 16px;
           box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
@@ -2228,29 +2250,6 @@ class NodaliaGraphCard extends HTMLElement {
           }
 
           <div class="graph-card__chart-wrap ${shouldAnimateChart ? "graph-card__chart-wrap--entering" : ""}" data-graph-surface="chart" data-visible-inset="${chartBleed}">
-            ${
-              hover
-                ? `
-                  <div
-                    class="graph-card__tooltip ${this._hoverEntering && animations.enabled ? "graph-card__tooltip--entering" : ""}"
-                    data-anchor-x="${hover.x.toFixed(2)}"
-                    data-chart-width="${chart.width}"
-                    style="left:${((hover.x / chart.width) * 100).toFixed(2)}%; --tooltip-tint:${escapeHtml(tooltipTint)};"
-                  >
-                    <div class="graph-card__tooltip-time">${escapeHtml(hover.label)}</div>
-                    <div class="graph-card__tooltip-values">
-                      ${hover.values.map(item => `
-                        <div class="graph-card__tooltip-row">
-                          <span class="graph-card__tooltip-dot" style="background:${escapeHtml(item.color)};"></span>
-                          <span class="graph-card__tooltip-name">${escapeHtml(item.name)}</span>
-                          <span class="graph-card__tooltip-value">${escapeHtml(item.value)}${item.unit ? ` ${escapeHtml(item.unit)}` : ""}</span>
-                        </div>
-                      `).join("")}
-                    </div>
-                  </div>
-                `
-                : ""
-            }
             <svg class="graph-card__chart" viewBox="0 0 ${chart.width} ${chart.height}" preserveAspectRatio="none">
               <defs>
                 <filter id="graph-glow" x="-30%" y="-30%" width="160%" height="160%">
@@ -2306,6 +2305,7 @@ class NodaliaGraphCard extends HTMLElement {
           </div>
         </div>
       </ha-card>
+      ${tooltipMarkup}
     `;
 
     this._scheduleTooltipPositionSync(4);
