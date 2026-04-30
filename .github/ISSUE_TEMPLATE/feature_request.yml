@@ -1,0 +1,38 @@
+name: ✨ Feature request
+description: Suggest an idea or improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your idea! 🚀  
+        Please describe it as clearly as possible.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature description
+      description: What would you like to see?
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem it solves
+      description: What problem does this solve?
+      placeholder: This would help because...
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Possible solution
+      description: How do you imagine it working?
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
