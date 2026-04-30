@@ -30,8 +30,8 @@ The goal is not only to provide beautiful cards, but to build a consistent UI sy
 Animations and interactions in action:
 
 <p align="center">
-  <img src="docs/gifs/animations1.gif" width="280"/>
-  <img src="docs/gifs/animations2.gif" width="280"/>
+  <img src="docs/gifs/animations1.optimized.gif" width="280"/>
+  <img src="docs/gifs/animations2.optimized.gif" width="280"/>
 </p>
 
 ---
