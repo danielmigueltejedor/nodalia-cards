@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.13.1";
+const CARD_VERSION = "0.13.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -7674,6 +7674,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
   }
 
   _ensureEditorControlsReady() {
+    this._watchEditorControlTag("ha-selector");
     this._watchEditorControlTag("ha-entity-picker");
     this._watchEditorControlTag("ha-icon-picker");
   }
@@ -7859,7 +7860,16 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
       .filter(Boolean);
     let control = null;
 
-    if (customElements.get("ha-entity-picker")) {
+    if (customElements.get("ha-selector")) {
+      const entitySelector = domains.length
+        ? { domain: domains.length === 1 ? domains[0] : domains }
+        : {};
+      control = document.createElement("ha-selector");
+      control.selector = { entity: entitySelector };
+      if (placeholder) {
+        control.setAttribute("label", placeholder);
+      }
+    } else if (customElements.get("ha-entity-picker")) {
       control = document.createElement("ha-entity-picker");
       control.includeDomains = domains;
       control.allowCustomEntity = true;
@@ -8077,6 +8087,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
         }
 
         .editor-field ha-icon-picker,
+        .editor-field ha-selector,
         .editor-field ha-entity-picker,
         .editor-control-host {
           display: block;
