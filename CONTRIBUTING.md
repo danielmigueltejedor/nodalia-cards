@@ -108,8 +108,6 @@ Community help is especially useful for languages other than Spanish and English
 
 Some features may be experimental.
 
-In the future, a beta channel will be introduced to test new ideas before they reach the stable version.
-
 ---
 
 ## 💬 Communication
