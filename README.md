@@ -84,8 +84,7 @@ Currently optimized for Spanish. English and more languages will be added over t
 - Redesign graph card  
 - Improve energy flow card  
 - Refine navigation bar  
-- Improve multilingual support  
-- Prepare beta channel  
+- Improve multilingual support 
 
 ---
 
