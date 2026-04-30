@@ -111,3 +111,43 @@ Nodalia Cards `1.0.0` should feel:
 - Easy to configure
 - Visually consistent
 - Ready for daily use
+
+## After 1.0.0 — New cards and ecosystem expansion
+
+Once the first stable 1.0.0 release is polished and reliable, the goal will be to slowly expand the Nodalia ecosystem with new cards while keeping the same design language and quality standards.
+
+### Planned cards
+
+#### Calendar Card
+A modern calendar card for Home Assistant.
+
+Possible features:
+- Upcoming events
+- Daily / weekly view
+- Clean mobile-first layout
+- Event color support
+- Compact and expanded modes
+
+#### Notifications Card
+A dynamic notification card for important home states.
+
+Possible features:
+- Show messages when a sensor is below or above a value
+- Show messages when a binary sensor changes state
+- Support for priority levels
+- Custom icons and colors
+- Empty state text when there are no active notifications
+
+Example empty state:
+No active notifications
+
+#### Section / Header Card
+A custom alternative to the default Home Assistant heading / section card.
+
+Possible features:
+- Cleaner visual style
+- Optional subtitle
+- Icon support
+- Action button support
+- Better spacing control
+- Nodalia-style consistency
