@@ -41242,7 +41242,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.13.0";
+const CARD_VERSION = "0.13.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -41709,6 +41709,12 @@ function deleteByPath(target, path) {
   }
 
   delete cursor[parts[parts.length - 1]];
+}
+
+function getByPath(target, path) {
+  return path.split(".").reduce((cursor, key) => (
+    cursor === undefined || cursor === null ? undefined : cursor[key]
+  ), target);
 }
 
 function clamp(value, min, max) {
@@ -42719,6 +42725,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   connectedCallback() {
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
     this._render();
   }
 
@@ -46531,6 +46539,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _onShadowPointerDown(event) {
+    this._triggerPressAnimation(this._getPressTargetFromEvent(event));
+
     if (this._touchPinchGesture && event.pointerType === "touch") {
       event.preventDefault();
       event.stopPropagation();
@@ -48755,9 +48765,12 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     this._config = normalizeConfig({});
     this._entityOptionsSignature = "";
     this._pendingEditorControlTags = new Set();
+    this._showStyleSection = false;
     this._onInputChange = this._onInputChange.bind(this);
     this._onValueChanged = this._onValueChanged.bind(this);
+    this._onEditorClick = this._onEditorClick.bind(this);
     this.shadowRoot.addEventListener("value-changed", this._onValueChanged);
+    this.shadowRoot.addEventListener("click", this._onEditorClick);
   }
 
   setConfig(config) {
@@ -48932,6 +48945,24 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     this._notifyConfigChange(nextConfig);
   }
 
+  _onEditorClick(event) {
+    const toggleButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+
+    if (!toggleButton) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (toggleButton.dataset.editorToggle === "styles") {
+      this._showStyleSection = !this._showStyleSection;
+      this._render();
+    }
+  }
+
   _onInputChange(event) {
     const target = event.currentTarget;
     const field = target.dataset.field;
@@ -49006,20 +49037,105 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
   }
 
   _renderEntityPickerField(label, field, value, options = {}) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    const placeholder = options.placeholder || "";
     const domains = arrayFromMaybe(options.domains).map(domain => String(domain).trim()).filter(Boolean);
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(label)}</span>
-        <ha-entity-picker
+        <div
           class="editor-control-host"
+          data-mounted-control="entity"
           data-field="${escapeHtml(field)}"
           data-domains="${escapeHtml(domains.join(","))}"
-          value="${escapeHtml(value || "")}"
-          allow-custom-entity
-        ></ha-entity-picker>
+          data-value="${escapeHtml(inputValue)}"
+          data-placeholder="${escapeHtml(placeholder)}"
+        ></div>
       </div>
     `;
+  }
+
+  _getEntityOptions(field = "entity", domains = []) {
+    const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+    const options = Object.entries(this._hass?.states || {})
+      .filter(([entityId]) => !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`)))
+      .map(([entityId, state]) => {
+        const friendlyName = String(state?.attributes?.friendly_name || "").trim();
+        return {
+          value: entityId,
+          label: friendlyName || entityId,
+          displayLabel: friendlyName && friendlyName !== entityId
+            ? `${friendlyName} (${entityId})`
+            : entityId,
+        };
+      })
+      .sort((left, right) => (
+        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
+        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+      ));
+
+    const currentValue = String(getByPath(this._config, field) || "").trim();
+    if (currentValue && !options.some(option => option.value === currentValue)) {
+      options.unshift({
+        value: currentValue,
+        label: currentValue,
+        displayLabel: currentValue,
+      });
+    }
+
+    return options;
+  }
+
+  _mountEntityPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const field = host.dataset.field || "entity";
+    const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || "";
+    const domains = String(host.dataset.domains || "")
+      .split(",")
+      .map(domain => domain.trim())
+      .filter(Boolean);
+    let control = null;
+
+    if (customElements.get("ha-entity-picker")) {
+      control = document.createElement("ha-entity-picker");
+      control.includeDomains = domains;
+      control.allowCustomEntity = true;
+      control.entityFilter = stateObj => !domains.length || domains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+      if (placeholder) {
+        control.setAttribute("placeholder", placeholder);
+      }
+    } else {
+      control = document.createElement("select");
+      const emptyOption = document.createElement("option");
+      emptyOption.value = "";
+      emptyOption.textContent = placeholder || "Selecciona una entidad";
+      control.appendChild(emptyOption);
+      this._getEntityOptions(field, domains).forEach(option => {
+        const optionElement = document.createElement("option");
+        optionElement.value = option.value;
+        optionElement.textContent = option.displayLabel;
+        control.appendChild(optionElement);
+      });
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+    control.hass = this._hass;
+
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+
+    if (control instanceof HTMLSelectElement) {
+      control.addEventListener("change", this._onInputChange);
+    }
+
+    host.replaceChildren(control);
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
@@ -49138,6 +49254,31 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
           color: var(--secondary-text-color);
           font-size: 12px;
           line-height: 1.45;
+        }
+
+        .editor-section__actions {
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        .editor-section__toggle-button {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          gap: 6px;
+          min-height: 30px;
+          padding: 0 10px;
+        }
+
+        .editor-section__toggle-button ha-icon {
+          --mdc-icon-size: 15px;
         }
 
         .editor-grid {
@@ -49410,23 +49551,35 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
           <div class="editor-section__header">
             <div class="editor-section__title">Estilo</div>
             <div class="editor-section__hint">Ajustes visuales base del mapa y las burbujas.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="styles"
+              >
+                <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showStyleSection ? "Ocultar" : "Mostrar"}</span>
+              </button>
+            </div>
           </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles?.card?.background)}
-            ${this._renderTextField("Border", "styles.card.border", config.styles?.card?.border)}
-            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles?.card?.border_radius)}
-            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles?.card?.box_shadow)}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles?.card?.padding)}
-            ${this._renderTextField("Separacion", "styles.card.gap", config.styles?.card?.gap)}
-            ${this._renderTextField("Tamano burbuja entidad", "styles.icon.size", config.styles?.icon?.size)}
-            ${this._renderTextField("Tamano chips", "styles.chip_height", config.styles?.chip_height)}
-            ${this._renderTextField("Texto chips", "styles.chip_font_size", config.styles?.chip_font_size)}
-            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles?.title_size)}
-            ${this._renderTextField("Tamano botones", "styles.control.size", config.styles?.control?.size)}
-            ${this._renderTextField("Radius mapa", "styles.map.radius", config.styles?.map?.radius)}
-            ${this._renderTextField("Tamano marcadores", "styles.map.marker_size", config.styles?.map?.marker_size)}
-            ${this._renderTextField("Texto marcadores", "styles.map.label_size", config.styles?.map?.label_size)}
-          </div>
+          ${this._showStyleSection ? `
+            <div class="editor-grid">
+              ${this._renderTextField("Background", "styles.card.background", config.styles?.card?.background)}
+              ${this._renderTextField("Border", "styles.card.border", config.styles?.card?.border)}
+              ${this._renderTextField("Radius", "styles.card.border_radius", config.styles?.card?.border_radius)}
+              ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles?.card?.box_shadow)}
+              ${this._renderTextField("Padding", "styles.card.padding", config.styles?.card?.padding)}
+              ${this._renderTextField("Separacion", "styles.card.gap", config.styles?.card?.gap)}
+              ${this._renderTextField("Tamano burbuja entidad", "styles.icon.size", config.styles?.icon?.size)}
+              ${this._renderTextField("Tamano chips", "styles.chip_height", config.styles?.chip_height)}
+              ${this._renderTextField("Texto chips", "styles.chip_font_size", config.styles?.chip_font_size)}
+              ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles?.title_size)}
+              ${this._renderTextField("Tamano botones", "styles.control.size", config.styles?.control?.size)}
+              ${this._renderTextField("Radius mapa", "styles.map.radius", config.styles?.map?.radius)}
+              ${this._renderTextField("Tamano marcadores", "styles.map.marker_size", config.styles?.map?.marker_size)}
+              ${this._renderTextField("Texto marcadores", "styles.map.label_size", config.styles?.map?.label_size)}
+            </div>
+          ` : ""}
         </section>
         ${this._getEntityOptionsMarkup()}
       </div>
@@ -49442,25 +49595,10 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
       }
     });
 
-    this.shadowRoot.querySelectorAll("ha-entity-picker").forEach(control => {
-      const domains = String(control.dataset.domains || "")
-        .split(",")
-        .map(domain => domain.trim())
-        .filter(Boolean);
-      if ("hass" in control) {
-        control.hass = this._hass;
-      }
-      if (domains.length) {
-        control.includeDomains = domains;
-        control.entityFilter = stateObj => domains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
-      }
-      control.allowCustomEntity = true;
-    });
+    this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
 
     this.shadowRoot.querySelectorAll("ha-icon-picker").forEach(control => {
-      if ("hass" in control) {
-        control.hass = this._hass;
-      }
+      control.hass = this._hass;
     });
 
     this.shadowRoot.querySelectorAll('input[data-field="entity"]').forEach(input => input.setAttribute("list", "advance-vacuum-card-vacuum-entities"));
