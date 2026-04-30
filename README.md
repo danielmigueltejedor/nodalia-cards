@@ -27,6 +27,7 @@ The goal is not only to provide beautiful cards, but to build a consistent UI sy
 ---
 
 ## 📸 Preview
+Animations and interactions in action:
 
 <p align="center">
   <img src="docs/gifs/animations1.gif" width="280"/>
