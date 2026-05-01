@@ -2313,7 +2313,7 @@ class NodaliaGraphCard extends HTMLElement {
                 `
                 : ""
             }
-            ${hasGraphData ? "" : `<div class="graph-card__chart-empty">Sin historial disponible</div>`}
+            ${hasGraphData ? "" : `<div class="graph-card__chart-empty">${escapeHtml(window.NodaliaI18n?.translateGraphEmptyHistory?.(this._hass, this._config?.language ?? "auto") || "Sin historial disponible")}</div>`}
           </div>
         </div>
       </ha-card>

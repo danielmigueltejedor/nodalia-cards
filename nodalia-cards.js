@@ -389,6 +389,74 @@
           poor: "Malo",
         },
       },
+      weatherCard: {
+        conditions: {
+          clear_night: "Despejado",
+          cloudy: "Nublado",
+          exceptional: "Excepcional",
+          fog: "Niebla",
+          hail: "Granizo",
+          lightning: "Tormenta",
+          lightning_rainy: "Tormenta con lluvia",
+          partlycloudy: "Parcialmente nublado",
+          pouring: "Lluvia intensa",
+          rainy: "Lluvia",
+          snowy: "Nieve",
+          snowy_rainy: "Aguanieve",
+          sunny: "Soleado",
+          windy: "Ventoso",
+          windy_variant: "Viento variable",
+        },
+        defaultCondition: "Tiempo",
+        forecast: {
+          chartAriaHourly: "Gráfico de previsión por horas",
+          chartAriaDaily: "Gráfico de previsión semanal",
+          tabsAria: "Vista de la previsión",
+          tabCards: "Tarjetas",
+          tabChart: "Gráfico",
+          hoursTab: "Horas",
+          weekTab: "Semana",
+          emptyHourly: "Sin previsión por horas disponible.",
+          emptyDaily: "Sin previsión semanal disponible.",
+          chartInsufficientData: "No hay suficientes datos para mostrar el gráfico.",
+          closeDetail: "Cerrar detalle",
+          maxLabel: "Máxima",
+          minLabel: "Mínima",
+          temperatureLabel: "Temperatura",
+          rainLabel: "Lluvia",
+          humidityLabel: "Humedad",
+          windLabel: "Viento",
+        },
+      },
+      humidifierCard: {
+        modes: {
+          auto: "Auto",
+          automatic: "Auto",
+          smart: "Inteligente",
+          smart_mode: "Inteligente",
+          sleep: "Noche",
+          night: "Noche",
+          eco: "Eco",
+          quiet: "Silencioso",
+          silent: "Silencioso",
+          low: "Baja",
+          medium: "Media",
+          mid: "Media",
+          high: "Alta",
+          boost: "Boost",
+          turbo: "Turbo",
+          normal: "Normal",
+          balanced: "Normal",
+          dry: "Secado",
+          drying: "Secado",
+          continuous: "Continuo",
+          clothes_dry: "Ropa",
+          laundry: "Ropa",
+        },
+      },
+      graphCard: {
+        emptyHistory: "Sin historial disponible",
+      },
       favCard: {
         disarmedF: "Desarmada",
         armed_home: "En casa",
@@ -701,6 +769,74 @@
           fair: "Fair",
           poor: "Poor",
         },
+      },
+      weatherCard: {
+        conditions: {
+          clear_night: "Clear night",
+          cloudy: "Cloudy",
+          exceptional: "Exceptional",
+          fog: "Fog",
+          hail: "Hail",
+          lightning: "Lightning",
+          lightning_rainy: "Lightning & rain",
+          partlycloudy: "Partly cloudy",
+          pouring: "Heavy rain",
+          rainy: "Rainy",
+          snowy: "Snowy",
+          snowy_rainy: "Sleet",
+          sunny: "Sunny",
+          windy: "Windy",
+          windy_variant: "Variable wind",
+        },
+        defaultCondition: "Weather",
+        forecast: {
+          chartAriaHourly: "Hourly forecast chart",
+          chartAriaDaily: "Weekly forecast chart",
+          tabsAria: "Forecast view",
+          tabCards: "Cards",
+          tabChart: "Chart",
+          hoursTab: "Hours",
+          weekTab: "Week",
+          emptyHourly: "No hourly forecast available.",
+          emptyDaily: "No weekly forecast available.",
+          chartInsufficientData: "Not enough data to display the chart.",
+          closeDetail: "Close detail",
+          maxLabel: "High",
+          minLabel: "Low",
+          temperatureLabel: "Temperature",
+          rainLabel: "Rain",
+          humidityLabel: "Humidity",
+          windLabel: "Wind",
+        },
+      },
+      humidifierCard: {
+        modes: {
+          auto: "Auto",
+          automatic: "Auto",
+          smart: "Smart",
+          smart_mode: "Smart",
+          sleep: "Night",
+          night: "Night",
+          eco: "Eco",
+          quiet: "Quiet",
+          silent: "Quiet",
+          low: "Low",
+          medium: "Medium",
+          mid: "Medium",
+          high: "High",
+          boost: "Boost",
+          turbo: "Turbo",
+          normal: "Normal",
+          balanced: "Normal",
+          dry: "Dry",
+          drying: "Drying",
+          continuous: "Continuous",
+          clothes_dry: "Laundry",
+          laundry: "Laundry",
+        },
+      },
+      graphCard: {
+        emptyHistory: "No history available",
       },
       favCard: {
         disarmedF: "Disarmed",
@@ -1970,7 +2106,106 @@
   };
 
   function strings(langCode) {
-    return PACK[langCode] || PACK.es;
+    const code = PACK[langCode] ? langCode : "es";
+    const p = PACK[code];
+    if (p.weatherCard && p.humidifierCard && p.graphCard) {
+      return p;
+    }
+    const fb = code === "es" ? PACK.es : PACK.en;
+    return {
+      ...p,
+      weatherCard: p.weatherCard || fb.weatherCard,
+      humidifierCard: p.humidifierCard || fb.humidifierCard,
+      graphCard: p.graphCard || fb.graphCard,
+    };
+  }
+
+  function normalizeHumidifierModeKey(value) {
+    return String(value ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+  }
+
+  function translateWeatherCondition(hass, configLang, value) {
+    const lang = resolveLanguage(hass, configLang);
+    const key = normalizeTextKey(String(value || ""));
+    const cond = strings(lang).weatherCard.conditions;
+    if (key && cond[key]) {
+      return cond[key];
+    }
+    const raw = String(value || "").trim();
+    if (raw) {
+      return raw;
+    }
+    return strings(lang).weatherCard.defaultCondition;
+  }
+
+  function translateWeatherForecastUi(hass, configLang, uiKey) {
+    const lang = resolveLanguage(hass, configLang);
+    const f = strings(lang).weatherCard.forecast;
+    if (f && f[uiKey]) {
+      return f[uiKey];
+    }
+    return PACK.en.weatherCard.forecast[uiKey] || "";
+  }
+
+  function translateGraphEmptyHistory(hass, configLang) {
+    const lang = resolveLanguage(hass, configLang);
+    return strings(lang).graphCard.emptyHistory;
+  }
+
+  function translateHumidifierMode(hass, configLang, value) {
+    const lang = resolveLanguage(hass, configLang);
+    const key = normalizeHumidifierModeKey(value);
+    const modes = strings(lang).humidifierCard.modes;
+    if (key && modes[key]) {
+      return modes[key];
+    }
+    return String(value ?? "").trim();
+  }
+
+  function translateAdvanceVacuumReportedState(hass, configLang, stateKey, rawFallback) {
+    const lang = resolveLanguage(hass, configLang);
+    const k = normalizeTextKey(stateKey);
+    const rs = strings(lang).advanceVacuum.reportedStates;
+    if (rs[k]) {
+      return rs[k];
+    }
+    const es = PACK.es.advanceVacuum.reportedStates;
+    if (es[k]) {
+      return rs[k] || strings("en").advanceVacuum.reportedStates[k] || es[k];
+    }
+    if (rawFallback != null && rawFallback !== "") {
+      return String(rawFallback);
+    }
+    return rs.unknown || es.unknown;
+  }
+
+  function translateAdvanceVacuumVacuumMode(hass, configLang, rawValue, kind = "generic") {
+    const raw = String(rawValue || "").trim();
+    if (!raw) {
+      return "";
+    }
+    const lang = resolveLanguage(hass, configLang);
+    const key = normalizeTextKey(raw);
+    const av = strings(lang).advanceVacuum;
+    if (key === "off" && kind === "suction") {
+      return av.offSuction;
+    }
+    if (av.vacuumModes[key]) {
+      return av.vacuumModes[key];
+    }
+    const esm = PACK.es.advanceVacuum.vacuumModes;
+    if (esm[key]) {
+      return av.vacuumModes[key] || strings("en").advanceVacuum.vacuumModes[key] || esm[key];
+    }
+    return raw
+      .replaceAll("_", " ")
+      .replace(/\bplus\b/gi, "+")
+      .replace(/\b\w/g, match => match.toUpperCase());
   }
 
   function translateEntityState(langCode, state, numberDecimals, formatNumericValueWithUnit, formatNumericValue, parseNumericValue) {
@@ -2152,8 +2387,15 @@
     resolveLanguage,
     localeTag,
     normalizeTextKey,
+    normalizeHumidifierModeKey,
     strings,
     translateEntityState,
+    translateWeatherCondition,
+    translateWeatherForecastUi,
+    translateGraphEmptyHistory,
+    translateHumidifierMode,
+    translateAdvanceVacuumReportedState,
+    translateAdvanceVacuumVacuumMode,
     translateFavState(langCode, key) {
       const raw = normalizeTextKey(key);
       const fd = strings(langCode).favCard;
@@ -27375,7 +27617,12 @@ function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
-function translateModeLabel(value) {
+function translateModeLabel(value, hass = null, configLang = null) {
+  const h = hass ?? (typeof window !== "undefined" ? window.NodaliaI18n?.resolveHass?.(null) : null);
+  if (window.NodaliaI18n?.translateHumidifierMode) {
+    return window.NodaliaI18n.translateHumidifierMode(h, configLang ?? "auto", value);
+  }
+
   const normalized = normalizeTextKey(value);
 
   switch (normalized) {
@@ -28021,7 +28268,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                 data-humidifier-action="mode"
                 data-mode="${escapeHtml(mode)}"
               >
-                ${escapeHtml(translateModeLabel(mode))}
+                ${escapeHtml(translateModeLabel(mode, this._hass, this._config?.language ?? "auto"))}
               </button>
             `)
             .join("")}
@@ -28047,7 +28294,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                 data-humidifier-action="fan-mode"
                 data-mode="${escapeHtml(mode)}"
               >
-                ${escapeHtml(translateModeLabel(mode))}
+                ${escapeHtml(translateModeLabel(mode, this._hass, this._config?.language ?? "auto"))}
               </button>
             `)
             .join("")}
@@ -28628,11 +28875,11 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
 
     if (config.show_mode_chip !== false && currentMode) {
-      chips.push(`<div class="humidifier-card__chip">${escapeHtml(translateModeLabel(currentMode))}</div>`);
+      chips.push(`<div class="humidifier-card__chip">${escapeHtml(translateModeLabel(currentMode, this._hass, config.language ?? "auto"))}</div>`);
     }
 
     if (config.show_fan_mode_chip !== false && currentFanMode) {
-      chips.push(`<div class="humidifier-card__chip">${escapeHtml(translateModeLabel(currentFanMode))}</div>`);
+      chips.push(`<div class="humidifier-card__chip">${escapeHtml(translateModeLabel(currentFanMode, this._hass, config.language ?? "auto"))}</div>`);
     }
 
     const showCopyBlock = !isCompactLayout || chips.length > 0;
@@ -28818,7 +29065,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                 data-humidifier-action="mode"
                 data-mode="${escapeHtml(mode)}"
               >
-                ${escapeHtml(translateModeLabel(mode))}
+                ${escapeHtml(translateModeLabel(mode, this._hass, config.language ?? "auto"))}
               </button>
             `)
             .join("")}
@@ -28835,7 +29082,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                   data-humidifier-action="fan-mode"
                   data-mode="${escapeHtml(mode)}"
                 >
-                  ${escapeHtml(translateModeLabel(mode))}
+                  ${escapeHtml(translateModeLabel(mode, this._hass, config.language ?? "auto"))}
                 </button>
               `)
               .join("")}
@@ -30239,7 +30486,8 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
   }
 
   _renderModeVisibilityField(field, modeValue) {
-    const translatedLabel = translateModeLabel(modeValue);
+    const hass = this._hass ?? this.hass;
+    const translatedLabel = translateModeLabel(modeValue, hass, this._config?.language ?? "auto");
     const showRawValue = normalizeTextKey(translatedLabel) !== normalizeTextKey(modeValue);
     const label = showRawValue ? `${translatedLabel} (${modeValue})` : translatedLabel;
 
@@ -36142,7 +36390,7 @@ class NodaliaGraphCard extends HTMLElement {
                 `
                 : ""
             }
-            ${hasGraphData ? "" : `<div class="graph-card__chart-empty">Sin historial disponible</div>`}
+            ${hasGraphData ? "" : `<div class="graph-card__chart-empty">${escapeHtml(window.NodaliaI18n?.translateGraphEmptyHistory?.(this._hass, this._config?.language ?? "auto") || "Sin historial disponible")}</div>`}
           </div>
         </div>
       </ha-card>
@@ -49684,7 +49932,11 @@ function sortByOrder(items) {
   return [...items].sort((left, right) => Number(left.order || 0) - Number(right.order || 0));
 }
 
-function humanizeModeLabel(value, kind = "generic") {
+function humanizeModeLabel(value, kind = "generic", hass = null, configLang = null) {
+  if (hass && window.NodaliaI18n?.translateAdvanceVacuumVacuumMode) {
+    return window.NodaliaI18n.translateAdvanceVacuumVacuumMode(hass, configLang ?? "auto", value, kind);
+  }
+
   const raw = String(value || "").trim();
   if (!raw) {
     return "";
@@ -49705,8 +49957,8 @@ function humanizeModeLabel(value, kind = "generic") {
     .replace(/\b\w/g, match => match.toUpperCase());
 }
 
-function humanizeSelectOptionLabel(value, kind = "generic") {
-  const baseLabel = humanizeModeLabel(value, kind);
+function humanizeSelectOptionLabel(value, kind = "generic", hass = null, configLang = null) {
+  const baseLabel = humanizeModeLabel(value, kind, hass, configLang);
   if (!baseLabel) {
     return "";
   }
@@ -50505,6 +50757,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   _getStateLabel(state) {
     const key = this._getReportedStateKey(state);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    if (window.NodaliaI18n?.translateAdvanceVacuumReportedState) {
+      return window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, langCfg, key, state?.state);
+    }
+
     const labels = {
       docked: "En base",
       charging: "Cargando",
@@ -50533,6 +50791,22 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     };
 
     return labels[key] || (state?.state ? String(state.state) : "Desconocido");
+  }
+
+  _descriptorLabel(kind) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    if (!window.NodaliaI18n?.strings) {
+      if (kind === "mop_mode") {
+        return "Modo de mopa";
+      }
+      return kind === "mop" ? "Fregado" : "Aspirado";
+    }
+    const d = window.NodaliaI18n.strings(lang).advanceVacuum.descriptorLabels;
+    if (kind === "mop_mode") {
+      return d.mop_mode;
+    }
+    return kind === "mop" ? d.mop : d.suction;
   }
 
   _getAccentColor(state) {
@@ -50581,6 +50855,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getMapStatusIndicator(state = this._getVacuumState()) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const ms = window.NodaliaI18n?.strings?.(lang)?.advanceVacuum?.mapStatus;
     const activeDockControlIds = DOCK_CONTROL_DEFINITIONS
       .map(definition => this._getDockControlDescriptor(definition, state))
       .filter(descriptor => descriptor?.active)
@@ -50589,7 +50866,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (activeDockControlIds.includes("wash") || this._isWashingMops(state)) {
       return {
         icon: "mdi:water",
-        title: "Lavando la mopa",
+        title: ms?.washing_mop ?? "Lavando la mopa",
         tone: "wash",
       };
     }
@@ -50597,7 +50874,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (activeDockControlIds.includes("dry") || this._isDryingMops(state)) {
       return {
         icon: "mdi:white-balance-sunny",
-        title: "Secando la mopa",
+        title: ms?.drying_mop ?? "Secando la mopa",
         tone: "dry",
       };
     }
@@ -50605,7 +50882,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (activeDockControlIds.includes("empty") || this._isAutoEmptying(state)) {
       return {
         icon: "mdi:delete-empty-outline",
-        title: "Vaciando el polvo",
+        title: ms?.emptying_dust ?? "Vaciando el polvo",
         tone: "empty",
       };
     }
@@ -50614,7 +50891,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (this._isDocked(state) && Number.isFinite(batteryLevel) && batteryLevel < 100) {
       return {
         icon: "mdi:lightning-bolt",
-        title: "Cargando",
+        title: ms?.charging ?? "Cargando",
         tone: "charging",
       };
     }
@@ -51941,7 +52218,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (descriptor.entityId && descriptor.options.length) {
       return {
         kind,
-        label: kind === "mop" ? "Fregado" : "Aspirado",
+        label: this._descriptorLabel(kind),
         target: descriptor.entityId,
         options: descriptor.options,
         current: descriptor.value,
@@ -51972,7 +52249,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     return {
       kind,
-      label: kind === "mop" ? "Fregado" : "Aspirado",
+      label: this._descriptorLabel(kind),
       target: this._config?.entity,
       options,
       current: this._getCurrentFanSpeed(state),
@@ -52007,7 +52284,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     return {
       kind: "mop_mode",
-      label: "Modo de mopa",
+      label: this._descriptorLabel("mop_mode"),
       target: descriptor.entityId,
       options: descriptor.options,
       current: descriptor.value,
@@ -52176,7 +52453,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const entityId = String(item?.entity || "").trim();
     const objectId = entityId.includes(".") ? entityId.split(".").slice(1).join(".") : entityId;
-    return humanizeModeLabel(objectId || "Rutina");
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    if (!String(objectId || "").trim()) {
+      const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "es";
+      return window.NodaliaI18n?.strings?.(lang)?.advanceVacuum?.utility?.routineDefault || "Rutina";
+    }
+    return humanizeModeLabel(objectId, "generic", hass, langCfg);
   }
 
   _getRoutineIcon(item, entityState = this._getRoutineEntityState(item)) {
@@ -54948,12 +55231,15 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   _renderModePanel(state) {
     const activePreset = this._getActiveModePanelPreset(state);
     const descriptors = this._getVisibleModePanelDescriptors(state, activePreset);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    const u = window.NodaliaI18n?.strings?.(window.NodaliaI18n.resolveLanguage(hass, langCfg))?.advanceVacuum?.utility;
     const utilityMetaContent = [
       ["smart", "custom"].includes(activePreset)
         ? ""
         : `
           <div class="advance-vacuum-card__utility-chip-group">
-            <div class="advance-vacuum-card__utility-label">Contador de limpiezas</div>
+            <div class="advance-vacuum-card__utility-label">${escapeHtml(u?.cleaningCounter ?? "Contador de limpiezas")}</div>
             <button class="advance-vacuum-card__selection-chip" data-control-action="repeats">
               <ha-icon icon="mdi:repeat"></ha-icon>
               <strong>x${this._repeats}</strong>
@@ -54961,9 +55247,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           </div>
         `,
       this._activeMode === "zone"
-        ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._manualZones.length + this._selectedPredefinedZoneIds.length}</strong><span>zonas</span></div>`
+        ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._manualZones.length + this._selectedPredefinedZoneIds.length}</strong><span>${escapeHtml(u?.zonesWord ?? "zonas")}</span></div>`
         : this._activeMode === "goto"
-          ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._gotoPoint ? "1" : "0"}</strong><span>punto</span></div>`
+          ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._gotoPoint ? "1" : "0"}</strong><span>${escapeHtml(u?.pointWord ?? "punto")}</span></div>`
           : "",
     ].filter(Boolean).join("");
     if (!PANEL_MODE_PRESETS.length && !descriptors.length && this._activeMode === "all") {
@@ -54973,7 +55259,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return `
       <div class="advance-vacuum-card__utility-panel">
         <div class="advance-vacuum-card__utility-group">
-          <div class="advance-vacuum-card__utility-label">Modo de limpieza</div>
+          <div class="advance-vacuum-card__utility-label">${escapeHtml(u?.cleaningMode ?? "Modo de limpieza")}</div>
           <div class="advance-vacuum-card__utility-options advance-vacuum-card__utility-options--presets">
             ${PANEL_MODE_PRESETS.map(preset => `
               <button
@@ -54995,7 +55281,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                   data-mode-option-kind="${escapeHtml(descriptor.kind)}"
                   data-mode-option-value="${escapeHtml(option)}"
                 >
-                  ${escapeHtml(humanizeModeLabel(option, descriptor.kind))}
+                  ${escapeHtml(humanizeModeLabel(option, descriptor.kind, hass, langCfg))}
                 </button>
               `).join("")}
             </div>
@@ -55014,7 +55300,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     return `
       <div class="advance-vacuum-card__utility-group">
-        <div class="advance-vacuum-card__utility-label">Acciones de base</div>
+        <div class="advance-vacuum-card__utility-label">${escapeHtml(window.NodaliaI18n?.strings?.(window.NodaliaI18n.resolveLanguage(this._hass ?? window.NodaliaI18n?.resolveHass?.(null), this._config?.language ?? "auto"))?.advanceVacuum?.utility?.dockActions ?? "Acciones de base")}</div>
         <div class="advance-vacuum-card__utility-options advance-vacuum-card__utility-options--menu">
           ${descriptors.map(descriptor => `
             <button
@@ -55036,13 +55322,16 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return "";
     }
 
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+
     return descriptors.map(descriptor => `
       <label class="advance-vacuum-card__utility-field">
         <span class="advance-vacuum-card__utility-label">${escapeHtml(descriptor.label)}</span>
         <select class="advance-vacuum-card__utility-select" data-dock-setting-id="${escapeHtml(descriptor.id)}">
           ${descriptor.options.map(option => `
             <option value="${escapeHtml(option)}" ${normalizeTextKey(descriptor.current) === normalizeTextKey(option) ? "selected" : ""}>
-              ${escapeHtml(humanizeSelectOptionLabel(option, descriptor.id === "mop_mode" ? "mop_mode" : "generic"))}
+              ${escapeHtml(humanizeSelectOptionLabel(option, descriptor.id === "mop_mode" ? "mop_mode" : "generic", hass, langCfg))}
             </option>
           `).join("")}
         </select>
@@ -67053,7 +67342,10 @@ function translateMeteoalarmValue(value) {
   }
 }
 
-function translateCondition(value) {
+function translateCondition(value, hass = null, configLang = null) {
+  if (hass && window.NodaliaI18n?.translateWeatherCondition) {
+    return window.NodaliaI18n.translateWeatherCondition(hass, configLang ?? "auto", value);
+  }
   switch (normalizeTextKey(value)) {
     case "clear_night":
       return "Despejado";
@@ -67834,12 +68126,19 @@ class NodaliaWeatherCard extends HTMLElement {
   }
 
   _renderForecastChart(items, type, state) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const cfgLang = this._config?.language ?? "auto";
+    const wf = key => (window.NodaliaI18n?.translateWeatherForecastUi
+      ? window.NodaliaI18n.translateWeatherForecastUi(hass, cfgLang, key)
+      : "");
+
     const sourcePoints = items
       .map((item, index) => ({ index, item }))
       .filter(point => Number.isFinite(getForecastTemperatureValue(point.item, type)));
 
     if (sourcePoints.length < 2) {
-      return `<div class="weather-card__forecast-empty">No hay suficientes datos para mostrar el gráfico.</div>`;
+      const emptyChart = wf("chartInsufficientData") || "No hay suficientes datos para mostrar el gráfico.";
+      return `<div class="weather-card__forecast-empty">${escapeHtml(emptyChart)}</div>`;
     }
 
     const hasDailyLow = type === "daily" && sourcePoints.some(point => Number.isFinite(Number(point.item?.templow)));
@@ -67857,7 +68156,8 @@ class NodaliaWeatherCard extends HTMLElement {
     const lowPoints = rawHighPoints.length >= 2 ? rawLowPoints : [];
 
     if (highPoints.length < 2) {
-      return `<div class="weather-card__forecast-empty">No hay suficientes datos para mostrar el gráfico.</div>`;
+      const emptyChart = wf("chartInsufficientData") || "No hay suficientes datos para mostrar el gráfico.";
+      return `<div class="weather-card__forecast-empty">${escapeHtml(emptyChart)}</div>`;
     }
 
     const showChartLabels = this._config?.forecast_chart_labels === true;
@@ -67952,12 +68252,12 @@ class NodaliaWeatherCard extends HTMLElement {
       const windLabel = formatNumber(item?.wind_speed);
       const windUnit = String(state?.attributes?.wind_speed_unit || item?.wind_speed_unit || "").trim();
       const popupRows = [
-        type === "daily" && highLabel ? ["Máxima", `${highLabel}${unitLabel}`] : null,
-        type === "daily" && lowLabel ? ["Mínima", `${lowLabel}${unitLabel}`] : null,
-        type !== "daily" ? ["Temperatura", `${formatNumber(popupPoint.value)}${unitLabel}`] : null,
-        precipitationLabel ? ["Lluvia", precipitationLabel] : null,
-        humidityLabel ? ["Humedad", `${humidityLabel}%`] : null,
-        windLabel ? ["Viento", windUnit ? `${windLabel} ${windUnit}` : windLabel] : null,
+        type === "daily" && highLabel ? [wf("maxLabel") || "Máxima", `${highLabel}${unitLabel}`] : null,
+        type === "daily" && lowLabel ? [wf("minLabel") || "Mínima", `${lowLabel}${unitLabel}`] : null,
+        type !== "daily" ? [wf("temperatureLabel") || "Temperatura", `${formatNumber(popupPoint.value)}${unitLabel}`] : null,
+        precipitationLabel ? [wf("rainLabel") || "Lluvia", precipitationLabel] : null,
+        humidityLabel ? [wf("humidityLabel") || "Humedad", `${humidityLabel}%`] : null,
+        windLabel ? [wf("windLabel") || "Viento", windUnit ? `${windLabel} ${windUnit}` : windLabel] : null,
       ].filter(Boolean);
       const vertical = this._forecastPopup?.vertical === "below" ? "below" : "above";
       const popupLeft = this._forecastPopup?.left || "50%";
@@ -67969,13 +68269,13 @@ class NodaliaWeatherCard extends HTMLElement {
           style="--forecast-accent:${escapeHtml(accent)}; --forecast-popup-left:${escapeHtml(popupLeft)}; --forecast-popup-top:${escapeHtml(popupTop)};"
           data-weather-action="noop"
         >
-          <button type="button" class="weather-card__forecast-popup-close" data-weather-action="close-forecast-popup" aria-label="Cerrar detalle">
+          <button type="button" class="weather-card__forecast-popup-close" data-weather-action="close-forecast-popup" aria-label="${escapeHtml(wf("closeDetail") || "Cerrar detalle")}">
             <ha-icon icon="mdi:close"></ha-icon>
           </button>
           <div class="weather-card__forecast-popup-time">${escapeHtml(formatForecastDateTime(item?.datetime, type))}</div>
           <div class="weather-card__forecast-popup-main">
             <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
-            <span>${escapeHtml(translateCondition(item?.condition || ""))}</span>
+            <span>${escapeHtml(translateCondition(item?.condition || "", this._hass, this._config?.language ?? "auto"))}</span>
           </div>
           <div class="weather-card__forecast-popup-rows">
             ${popupRows.map(([label, value]) => `
@@ -68014,7 +68314,7 @@ class NodaliaWeatherCard extends HTMLElement {
     })() : "";
 
     return `
-      <div class="weather-card__forecast-chart" style="--forecast-chart-height:${height + 8}px; --forecast-chart-svg-height:${height}px;" role="img" aria-label="Gráfico de previsión ${type === "hourly" ? "por horas" : "semanal"}">
+      <div class="weather-card__forecast-chart" style="--forecast-chart-height:${height + 8}px; --forecast-chart-svg-height:${height}px;" role="img" aria-label="${escapeHtml(type === "hourly" ? (wf("chartAriaHourly") || "Gráfico de previsión por horas") : (wf("chartAriaDaily") || "Gráfico de previsión semanal"))}">
         <svg viewBox="0 0 ${width} ${height}">
           <defs>
             ${
@@ -68104,6 +68404,14 @@ class NodaliaWeatherCard extends HTMLElement {
     const visibleItems = forecastItems.slice(0, slotCount);
     const precipitationUnit = String(state?.attributes?.precipitation_unit || "").trim();
     const activeView = normalizeForecastView(this._activeForecastView);
+    const hassFc = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const cfgLangFc = this._config?.language ?? "auto";
+    const wfFc = key => (window.NodaliaI18n?.translateWeatherForecastUi
+      ? window.NodaliaI18n.translateWeatherForecastUi(hassFc, cfgLangFc, key)
+      : "");
+    const emptyForecastMsg = activeType === "hourly"
+      ? (wfFc("emptyHourly") || "Sin previsión por horas disponible.")
+      : (wfFc("emptyDaily") || "Sin previsión semanal disponible.");
 
     return `
       <section class="weather-card__forecast ${shouldAnimateEntrance ? "weather-card__forecast--entering" : ""} ${shouldAnimateForecast ? "weather-card__forecast--switching" : ""}">
@@ -68112,14 +68420,14 @@ class NodaliaWeatherCard extends HTMLElement {
             this._config.show_forecast_toggle === false
               ? ""
               : `
-                <div class="weather-card__forecast-tabs" role="tablist" aria-label="Vista de la previsión">
+                <div class="weather-card__forecast-tabs" role="tablist" aria-label="${escapeHtml(wfFc("tabsAria") || "Vista de la previsión")}">
                   <button type="button" class="weather-card__forecast-tab ${activeView === "cards" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-view" data-forecast-view="cards" role="tab" aria-selected="${activeView === "cards" ? "true" : "false"}">
                     <ha-icon icon="mdi:view-grid-outline"></ha-icon>
-                    <span>Tarjetas</span>
+                    <span>${escapeHtml(wfFc("tabCards") || "Tarjetas")}</span>
                   </button>
                   <button type="button" class="weather-card__forecast-tab ${activeView === "chart" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-view" data-forecast-view="chart" role="tab" aria-selected="${activeView === "chart" ? "true" : "false"}">
                     <ha-icon icon="mdi:chart-line"></ha-icon>
-                    <span>Gráfico</span>
+                    <span>${escapeHtml(wfFc("tabChart") || "Gráfico")}</span>
                   </button>
                 </div>
               `
@@ -68129,10 +68437,10 @@ class NodaliaWeatherCard extends HTMLElement {
               ? `
                 <div class="weather-card__forecast-tabs" role="tablist">
                   ${supportedTypes.includes("hourly") ? `
-                    <button type="button" class="weather-card__forecast-tab ${activeType === "hourly" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-type" data-forecast-type="hourly" role="tab" aria-selected="${activeType === "hourly" ? "true" : "false"}">Horas</button>
+                    <button type="button" class="weather-card__forecast-tab ${activeType === "hourly" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-type" data-forecast-type="hourly" role="tab" aria-selected="${activeType === "hourly" ? "true" : "false"}">${escapeHtml(wfFc("hoursTab") || "Horas")}</button>
                   ` : ""}
                   ${supportedTypes.includes("daily") ? `
-                    <button type="button" class="weather-card__forecast-tab ${activeType === "daily" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-type" data-forecast-type="daily" role="tab" aria-selected="${activeType === "daily" ? "true" : "false"}">Semana</button>
+                    <button type="button" class="weather-card__forecast-tab ${activeType === "daily" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-type" data-forecast-type="daily" role="tab" aria-selected="${activeType === "daily" ? "true" : "false"}">${escapeHtml(wfFc("weekTab") || "Semana")}</button>
                   ` : ""}
                 </div>
               `
@@ -68156,12 +68464,12 @@ class NodaliaWeatherCard extends HTMLElement {
                                 <div class="weather-card__forecast-time">${escapeHtml(formatForecastDateTime(item?.datetime, activeType))}</div>
                                 <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
                                 <div class="weather-card__forecast-temp">${escapeHtml(formatForecastTemperature(item, activeType))}</div>
-                                <div class="weather-card__forecast-condition">${escapeHtml(translateCondition(item?.condition || ""))}</div>
+                                <div class="weather-card__forecast-condition">${escapeHtml(translateCondition(item?.condition || "", this._hass, this._config?.language ?? "auto"))}</div>
                                 ${precipitationLabel ? `<div class="weather-card__forecast-rain"><ha-icon icon="mdi:weather-rainy"></ha-icon><span>${escapeHtml(precipitationLabel)}</span></div>` : ""}
                               </article>
                             `;
                           }).join("")
-                          : `<div class="weather-card__forecast-empty">Sin previsión ${activeType === "hourly" ? "por horas" : "semanal"} disponible.</div>`
+                          : `<div class="weather-card__forecast-empty">${escapeHtml(emptyForecastMsg)}</div>`
                       }
                     </div>
                   `
@@ -68199,7 +68507,7 @@ class NodaliaWeatherCard extends HTMLElement {
     const icon = this._getIcon(state);
     const accentColor = this._getAccentColor(state);
     const showUnavailableBadge = isUnavailableState(state);
-    const conditionLabel = translateCondition(state?.state);
+    const conditionLabel = translateCondition(state?.state, this._hass, this._config?.language ?? "auto");
     const temperatureLabel = this._formatTemperature(state);
     const chips = [
       config.show_humidity_chip !== false

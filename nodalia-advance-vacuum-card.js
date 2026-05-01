@@ -917,7 +917,11 @@ function sortByOrder(items) {
   return [...items].sort((left, right) => Number(left.order || 0) - Number(right.order || 0));
 }
 
-function humanizeModeLabel(value, kind = "generic") {
+function humanizeModeLabel(value, kind = "generic", hass = null, configLang = null) {
+  if (hass && window.NodaliaI18n?.translateAdvanceVacuumVacuumMode) {
+    return window.NodaliaI18n.translateAdvanceVacuumVacuumMode(hass, configLang ?? "auto", value, kind);
+  }
+
   const raw = String(value || "").trim();
   if (!raw) {
     return "";
@@ -938,8 +942,8 @@ function humanizeModeLabel(value, kind = "generic") {
     .replace(/\b\w/g, match => match.toUpperCase());
 }
 
-function humanizeSelectOptionLabel(value, kind = "generic") {
-  const baseLabel = humanizeModeLabel(value, kind);
+function humanizeSelectOptionLabel(value, kind = "generic", hass = null, configLang = null) {
+  const baseLabel = humanizeModeLabel(value, kind, hass, configLang);
   if (!baseLabel) {
     return "";
   }
@@ -1738,6 +1742,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   _getStateLabel(state) {
     const key = this._getReportedStateKey(state);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    if (window.NodaliaI18n?.translateAdvanceVacuumReportedState) {
+      return window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, langCfg, key, state?.state);
+    }
+
     const labels = {
       docked: "En base",
       charging: "Cargando",
@@ -1766,6 +1776,22 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     };
 
     return labels[key] || (state?.state ? String(state.state) : "Desconocido");
+  }
+
+  _descriptorLabel(kind) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    if (!window.NodaliaI18n?.strings) {
+      if (kind === "mop_mode") {
+        return "Modo de mopa";
+      }
+      return kind === "mop" ? "Fregado" : "Aspirado";
+    }
+    const d = window.NodaliaI18n.strings(lang).advanceVacuum.descriptorLabels;
+    if (kind === "mop_mode") {
+      return d.mop_mode;
+    }
+    return kind === "mop" ? d.mop : d.suction;
   }
 
   _getAccentColor(state) {
@@ -1814,6 +1840,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getMapStatusIndicator(state = this._getVacuumState()) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const ms = window.NodaliaI18n?.strings?.(lang)?.advanceVacuum?.mapStatus;
     const activeDockControlIds = DOCK_CONTROL_DEFINITIONS
       .map(definition => this._getDockControlDescriptor(definition, state))
       .filter(descriptor => descriptor?.active)
@@ -1822,7 +1851,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (activeDockControlIds.includes("wash") || this._isWashingMops(state)) {
       return {
         icon: "mdi:water",
-        title: "Lavando la mopa",
+        title: ms?.washing_mop ?? "Lavando la mopa",
         tone: "wash",
       };
     }
@@ -1830,7 +1859,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (activeDockControlIds.includes("dry") || this._isDryingMops(state)) {
       return {
         icon: "mdi:white-balance-sunny",
-        title: "Secando la mopa",
+        title: ms?.drying_mop ?? "Secando la mopa",
         tone: "dry",
       };
     }
@@ -1838,7 +1867,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (activeDockControlIds.includes("empty") || this._isAutoEmptying(state)) {
       return {
         icon: "mdi:delete-empty-outline",
-        title: "Vaciando el polvo",
+        title: ms?.emptying_dust ?? "Vaciando el polvo",
         tone: "empty",
       };
     }
@@ -1847,7 +1876,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (this._isDocked(state) && Number.isFinite(batteryLevel) && batteryLevel < 100) {
       return {
         icon: "mdi:lightning-bolt",
-        title: "Cargando",
+        title: ms?.charging ?? "Cargando",
         tone: "charging",
       };
     }
@@ -3174,7 +3203,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (descriptor.entityId && descriptor.options.length) {
       return {
         kind,
-        label: kind === "mop" ? "Fregado" : "Aspirado",
+        label: this._descriptorLabel(kind),
         target: descriptor.entityId,
         options: descriptor.options,
         current: descriptor.value,
@@ -3205,7 +3234,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     return {
       kind,
-      label: kind === "mop" ? "Fregado" : "Aspirado",
+      label: this._descriptorLabel(kind),
       target: this._config?.entity,
       options,
       current: this._getCurrentFanSpeed(state),
@@ -3240,7 +3269,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     return {
       kind: "mop_mode",
-      label: "Modo de mopa",
+      label: this._descriptorLabel("mop_mode"),
       target: descriptor.entityId,
       options: descriptor.options,
       current: descriptor.value,
@@ -3409,7 +3438,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const entityId = String(item?.entity || "").trim();
     const objectId = entityId.includes(".") ? entityId.split(".").slice(1).join(".") : entityId;
-    return humanizeModeLabel(objectId || "Rutina");
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    if (!String(objectId || "").trim()) {
+      const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "es";
+      return window.NodaliaI18n?.strings?.(lang)?.advanceVacuum?.utility?.routineDefault || "Rutina";
+    }
+    return humanizeModeLabel(objectId, "generic", hass, langCfg);
   }
 
   _getRoutineIcon(item, entityState = this._getRoutineEntityState(item)) {
@@ -6181,12 +6216,15 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   _renderModePanel(state) {
     const activePreset = this._getActiveModePanelPreset(state);
     const descriptors = this._getVisibleModePanelDescriptors(state, activePreset);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    const u = window.NodaliaI18n?.strings?.(window.NodaliaI18n.resolveLanguage(hass, langCfg))?.advanceVacuum?.utility;
     const utilityMetaContent = [
       ["smart", "custom"].includes(activePreset)
         ? ""
         : `
           <div class="advance-vacuum-card__utility-chip-group">
-            <div class="advance-vacuum-card__utility-label">Contador de limpiezas</div>
+            <div class="advance-vacuum-card__utility-label">${escapeHtml(u?.cleaningCounter ?? "Contador de limpiezas")}</div>
             <button class="advance-vacuum-card__selection-chip" data-control-action="repeats">
               <ha-icon icon="mdi:repeat"></ha-icon>
               <strong>x${this._repeats}</strong>
@@ -6194,9 +6232,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           </div>
         `,
       this._activeMode === "zone"
-        ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._manualZones.length + this._selectedPredefinedZoneIds.length}</strong><span>zonas</span></div>`
+        ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._manualZones.length + this._selectedPredefinedZoneIds.length}</strong><span>${escapeHtml(u?.zonesWord ?? "zonas")}</span></div>`
         : this._activeMode === "goto"
-          ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._gotoPoint ? "1" : "0"}</strong><span>punto</span></div>`
+          ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._gotoPoint ? "1" : "0"}</strong><span>${escapeHtml(u?.pointWord ?? "punto")}</span></div>`
           : "",
     ].filter(Boolean).join("");
     if (!PANEL_MODE_PRESETS.length && !descriptors.length && this._activeMode === "all") {
@@ -6206,7 +6244,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return `
       <div class="advance-vacuum-card__utility-panel">
         <div class="advance-vacuum-card__utility-group">
-          <div class="advance-vacuum-card__utility-label">Modo de limpieza</div>
+          <div class="advance-vacuum-card__utility-label">${escapeHtml(u?.cleaningMode ?? "Modo de limpieza")}</div>
           <div class="advance-vacuum-card__utility-options advance-vacuum-card__utility-options--presets">
             ${PANEL_MODE_PRESETS.map(preset => `
               <button
@@ -6228,7 +6266,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                   data-mode-option-kind="${escapeHtml(descriptor.kind)}"
                   data-mode-option-value="${escapeHtml(option)}"
                 >
-                  ${escapeHtml(humanizeModeLabel(option, descriptor.kind))}
+                  ${escapeHtml(humanizeModeLabel(option, descriptor.kind, hass, langCfg))}
                 </button>
               `).join("")}
             </div>
@@ -6247,7 +6285,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     return `
       <div class="advance-vacuum-card__utility-group">
-        <div class="advance-vacuum-card__utility-label">Acciones de base</div>
+        <div class="advance-vacuum-card__utility-label">${escapeHtml(window.NodaliaI18n?.strings?.(window.NodaliaI18n.resolveLanguage(this._hass ?? window.NodaliaI18n?.resolveHass?.(null), this._config?.language ?? "auto"))?.advanceVacuum?.utility?.dockActions ?? "Acciones de base")}</div>
         <div class="advance-vacuum-card__utility-options advance-vacuum-card__utility-options--menu">
           ${descriptors.map(descriptor => `
             <button
@@ -6269,13 +6307,16 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return "";
     }
 
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+
     return descriptors.map(descriptor => `
       <label class="advance-vacuum-card__utility-field">
         <span class="advance-vacuum-card__utility-label">${escapeHtml(descriptor.label)}</span>
         <select class="advance-vacuum-card__utility-select" data-dock-setting-id="${escapeHtml(descriptor.id)}">
           ${descriptor.options.map(option => `
             <option value="${escapeHtml(option)}" ${normalizeTextKey(descriptor.current) === normalizeTextKey(option) ? "selected" : ""}>
-              ${escapeHtml(humanizeSelectOptionLabel(option, descriptor.id === "mop_mode" ? "mop_mode" : "generic"))}
+              ${escapeHtml(humanizeSelectOptionLabel(option, descriptor.id === "mop_mode" ? "mop_mode" : "generic", hass, langCfg))}
             </option>
           `).join("")}
         </select>

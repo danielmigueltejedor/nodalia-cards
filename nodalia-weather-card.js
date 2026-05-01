@@ -599,7 +599,10 @@ function translateMeteoalarmValue(value) {
   }
 }
 
-function translateCondition(value) {
+function translateCondition(value, hass = null, configLang = null) {
+  if (hass && window.NodaliaI18n?.translateWeatherCondition) {
+    return window.NodaliaI18n.translateWeatherCondition(hass, configLang ?? "auto", value);
+  }
   switch (normalizeTextKey(value)) {
     case "clear_night":
       return "Despejado";
@@ -1380,12 +1383,19 @@ class NodaliaWeatherCard extends HTMLElement {
   }
 
   _renderForecastChart(items, type, state) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const cfgLang = this._config?.language ?? "auto";
+    const wf = key => (window.NodaliaI18n?.translateWeatherForecastUi
+      ? window.NodaliaI18n.translateWeatherForecastUi(hass, cfgLang, key)
+      : "");
+
     const sourcePoints = items
       .map((item, index) => ({ index, item }))
       .filter(point => Number.isFinite(getForecastTemperatureValue(point.item, type)));
 
     if (sourcePoints.length < 2) {
-      return `<div class="weather-card__forecast-empty">No hay suficientes datos para mostrar el gráfico.</div>`;
+      const emptyChart = wf("chartInsufficientData") || "No hay suficientes datos para mostrar el gráfico.";
+      return `<div class="weather-card__forecast-empty">${escapeHtml(emptyChart)}</div>`;
     }
 
     const hasDailyLow = type === "daily" && sourcePoints.some(point => Number.isFinite(Number(point.item?.templow)));
@@ -1403,7 +1413,8 @@ class NodaliaWeatherCard extends HTMLElement {
     const lowPoints = rawHighPoints.length >= 2 ? rawLowPoints : [];
 
     if (highPoints.length < 2) {
-      return `<div class="weather-card__forecast-empty">No hay suficientes datos para mostrar el gráfico.</div>`;
+      const emptyChart = wf("chartInsufficientData") || "No hay suficientes datos para mostrar el gráfico.";
+      return `<div class="weather-card__forecast-empty">${escapeHtml(emptyChart)}</div>`;
     }
 
     const showChartLabels = this._config?.forecast_chart_labels === true;
@@ -1498,12 +1509,12 @@ class NodaliaWeatherCard extends HTMLElement {
       const windLabel = formatNumber(item?.wind_speed);
       const windUnit = String(state?.attributes?.wind_speed_unit || item?.wind_speed_unit || "").trim();
       const popupRows = [
-        type === "daily" && highLabel ? ["Máxima", `${highLabel}${unitLabel}`] : null,
-        type === "daily" && lowLabel ? ["Mínima", `${lowLabel}${unitLabel}`] : null,
-        type !== "daily" ? ["Temperatura", `${formatNumber(popupPoint.value)}${unitLabel}`] : null,
-        precipitationLabel ? ["Lluvia", precipitationLabel] : null,
-        humidityLabel ? ["Humedad", `${humidityLabel}%`] : null,
-        windLabel ? ["Viento", windUnit ? `${windLabel} ${windUnit}` : windLabel] : null,
+        type === "daily" && highLabel ? [wf("maxLabel") || "Máxima", `${highLabel}${unitLabel}`] : null,
+        type === "daily" && lowLabel ? [wf("minLabel") || "Mínima", `${lowLabel}${unitLabel}`] : null,
+        type !== "daily" ? [wf("temperatureLabel") || "Temperatura", `${formatNumber(popupPoint.value)}${unitLabel}`] : null,
+        precipitationLabel ? [wf("rainLabel") || "Lluvia", precipitationLabel] : null,
+        humidityLabel ? [wf("humidityLabel") || "Humedad", `${humidityLabel}%`] : null,
+        windLabel ? [wf("windLabel") || "Viento", windUnit ? `${windLabel} ${windUnit}` : windLabel] : null,
       ].filter(Boolean);
       const vertical = this._forecastPopup?.vertical === "below" ? "below" : "above";
       const popupLeft = this._forecastPopup?.left || "50%";
@@ -1515,13 +1526,13 @@ class NodaliaWeatherCard extends HTMLElement {
           style="--forecast-accent:${escapeHtml(accent)}; --forecast-popup-left:${escapeHtml(popupLeft)}; --forecast-popup-top:${escapeHtml(popupTop)};"
           data-weather-action="noop"
         >
-          <button type="button" class="weather-card__forecast-popup-close" data-weather-action="close-forecast-popup" aria-label="Cerrar detalle">
+          <button type="button" class="weather-card__forecast-popup-close" data-weather-action="close-forecast-popup" aria-label="${escapeHtml(wf("closeDetail") || "Cerrar detalle")}">
             <ha-icon icon="mdi:close"></ha-icon>
           </button>
           <div class="weather-card__forecast-popup-time">${escapeHtml(formatForecastDateTime(item?.datetime, type))}</div>
           <div class="weather-card__forecast-popup-main">
             <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
-            <span>${escapeHtml(translateCondition(item?.condition || ""))}</span>
+            <span>${escapeHtml(translateCondition(item?.condition || "", this._hass, this._config?.language ?? "auto"))}</span>
           </div>
           <div class="weather-card__forecast-popup-rows">
             ${popupRows.map(([label, value]) => `
@@ -1560,7 +1571,7 @@ class NodaliaWeatherCard extends HTMLElement {
     })() : "";
 
     return `
-      <div class="weather-card__forecast-chart" style="--forecast-chart-height:${height + 8}px; --forecast-chart-svg-height:${height}px;" role="img" aria-label="Gráfico de previsión ${type === "hourly" ? "por horas" : "semanal"}">
+      <div class="weather-card__forecast-chart" style="--forecast-chart-height:${height + 8}px; --forecast-chart-svg-height:${height}px;" role="img" aria-label="${escapeHtml(type === "hourly" ? (wf("chartAriaHourly") || "Gráfico de previsión por horas") : (wf("chartAriaDaily") || "Gráfico de previsión semanal"))}">
         <svg viewBox="0 0 ${width} ${height}">
           <defs>
             ${
@@ -1650,6 +1661,14 @@ class NodaliaWeatherCard extends HTMLElement {
     const visibleItems = forecastItems.slice(0, slotCount);
     const precipitationUnit = String(state?.attributes?.precipitation_unit || "").trim();
     const activeView = normalizeForecastView(this._activeForecastView);
+    const hassFc = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const cfgLangFc = this._config?.language ?? "auto";
+    const wfFc = key => (window.NodaliaI18n?.translateWeatherForecastUi
+      ? window.NodaliaI18n.translateWeatherForecastUi(hassFc, cfgLangFc, key)
+      : "");
+    const emptyForecastMsg = activeType === "hourly"
+      ? (wfFc("emptyHourly") || "Sin previsión por horas disponible.")
+      : (wfFc("emptyDaily") || "Sin previsión semanal disponible.");
 
     return `
       <section class="weather-card__forecast ${shouldAnimateEntrance ? "weather-card__forecast--entering" : ""} ${shouldAnimateForecast ? "weather-card__forecast--switching" : ""}">
@@ -1658,14 +1677,14 @@ class NodaliaWeatherCard extends HTMLElement {
             this._config.show_forecast_toggle === false
               ? ""
               : `
-                <div class="weather-card__forecast-tabs" role="tablist" aria-label="Vista de la previsión">
+                <div class="weather-card__forecast-tabs" role="tablist" aria-label="${escapeHtml(wfFc("tabsAria") || "Vista de la previsión")}">
                   <button type="button" class="weather-card__forecast-tab ${activeView === "cards" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-view" data-forecast-view="cards" role="tab" aria-selected="${activeView === "cards" ? "true" : "false"}">
                     <ha-icon icon="mdi:view-grid-outline"></ha-icon>
-                    <span>Tarjetas</span>
+                    <span>${escapeHtml(wfFc("tabCards") || "Tarjetas")}</span>
                   </button>
                   <button type="button" class="weather-card__forecast-tab ${activeView === "chart" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-view" data-forecast-view="chart" role="tab" aria-selected="${activeView === "chart" ? "true" : "false"}">
                     <ha-icon icon="mdi:chart-line"></ha-icon>
-                    <span>Gráfico</span>
+                    <span>${escapeHtml(wfFc("tabChart") || "Gráfico")}</span>
                   </button>
                 </div>
               `
@@ -1675,10 +1694,10 @@ class NodaliaWeatherCard extends HTMLElement {
               ? `
                 <div class="weather-card__forecast-tabs" role="tablist">
                   ${supportedTypes.includes("hourly") ? `
-                    <button type="button" class="weather-card__forecast-tab ${activeType === "hourly" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-type" data-forecast-type="hourly" role="tab" aria-selected="${activeType === "hourly" ? "true" : "false"}">Horas</button>
+                    <button type="button" class="weather-card__forecast-tab ${activeType === "hourly" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-type" data-forecast-type="hourly" role="tab" aria-selected="${activeType === "hourly" ? "true" : "false"}">${escapeHtml(wfFc("hoursTab") || "Horas")}</button>
                   ` : ""}
                   ${supportedTypes.includes("daily") ? `
-                    <button type="button" class="weather-card__forecast-tab ${activeType === "daily" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-type" data-forecast-type="daily" role="tab" aria-selected="${activeType === "daily" ? "true" : "false"}">Semana</button>
+                    <button type="button" class="weather-card__forecast-tab ${activeType === "daily" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-type" data-forecast-type="daily" role="tab" aria-selected="${activeType === "daily" ? "true" : "false"}">${escapeHtml(wfFc("weekTab") || "Semana")}</button>
                   ` : ""}
                 </div>
               `
@@ -1702,12 +1721,12 @@ class NodaliaWeatherCard extends HTMLElement {
                                 <div class="weather-card__forecast-time">${escapeHtml(formatForecastDateTime(item?.datetime, activeType))}</div>
                                 <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
                                 <div class="weather-card__forecast-temp">${escapeHtml(formatForecastTemperature(item, activeType))}</div>
-                                <div class="weather-card__forecast-condition">${escapeHtml(translateCondition(item?.condition || ""))}</div>
+                                <div class="weather-card__forecast-condition">${escapeHtml(translateCondition(item?.condition || "", this._hass, this._config?.language ?? "auto"))}</div>
                                 ${precipitationLabel ? `<div class="weather-card__forecast-rain"><ha-icon icon="mdi:weather-rainy"></ha-icon><span>${escapeHtml(precipitationLabel)}</span></div>` : ""}
                               </article>
                             `;
                           }).join("")
-                          : `<div class="weather-card__forecast-empty">Sin previsión ${activeType === "hourly" ? "por horas" : "semanal"} disponible.</div>`
+                          : `<div class="weather-card__forecast-empty">${escapeHtml(emptyForecastMsg)}</div>`
                       }
                     </div>
                   `
@@ -1745,7 +1764,7 @@ class NodaliaWeatherCard extends HTMLElement {
     const icon = this._getIcon(state);
     const accentColor = this._getAccentColor(state);
     const showUnavailableBadge = isUnavailableState(state);
-    const conditionLabel = translateCondition(state?.state);
+    const conditionLabel = translateCondition(state?.state, this._hass, this._config?.language ?? "auto");
     const temperatureLabel = this._formatTemperature(state);
     const chips = [
       config.show_humidity_chip !== false

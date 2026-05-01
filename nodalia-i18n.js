@@ -388,6 +388,74 @@
           poor: "Malo",
         },
       },
+      weatherCard: {
+        conditions: {
+          clear_night: "Despejado",
+          cloudy: "Nublado",
+          exceptional: "Excepcional",
+          fog: "Niebla",
+          hail: "Granizo",
+          lightning: "Tormenta",
+          lightning_rainy: "Tormenta con lluvia",
+          partlycloudy: "Parcialmente nublado",
+          pouring: "Lluvia intensa",
+          rainy: "Lluvia",
+          snowy: "Nieve",
+          snowy_rainy: "Aguanieve",
+          sunny: "Soleado",
+          windy: "Ventoso",
+          windy_variant: "Viento variable",
+        },
+        defaultCondition: "Tiempo",
+        forecast: {
+          chartAriaHourly: "Gráfico de previsión por horas",
+          chartAriaDaily: "Gráfico de previsión semanal",
+          tabsAria: "Vista de la previsión",
+          tabCards: "Tarjetas",
+          tabChart: "Gráfico",
+          hoursTab: "Horas",
+          weekTab: "Semana",
+          emptyHourly: "Sin previsión por horas disponible.",
+          emptyDaily: "Sin previsión semanal disponible.",
+          chartInsufficientData: "No hay suficientes datos para mostrar el gráfico.",
+          closeDetail: "Cerrar detalle",
+          maxLabel: "Máxima",
+          minLabel: "Mínima",
+          temperatureLabel: "Temperatura",
+          rainLabel: "Lluvia",
+          humidityLabel: "Humedad",
+          windLabel: "Viento",
+        },
+      },
+      humidifierCard: {
+        modes: {
+          auto: "Auto",
+          automatic: "Auto",
+          smart: "Inteligente",
+          smart_mode: "Inteligente",
+          sleep: "Noche",
+          night: "Noche",
+          eco: "Eco",
+          quiet: "Silencioso",
+          silent: "Silencioso",
+          low: "Baja",
+          medium: "Media",
+          mid: "Media",
+          high: "Alta",
+          boost: "Boost",
+          turbo: "Turbo",
+          normal: "Normal",
+          balanced: "Normal",
+          dry: "Secado",
+          drying: "Secado",
+          continuous: "Continuo",
+          clothes_dry: "Ropa",
+          laundry: "Ropa",
+        },
+      },
+      graphCard: {
+        emptyHistory: "Sin historial disponible",
+      },
       favCard: {
         disarmedF: "Desarmada",
         armed_home: "En casa",
@@ -700,6 +768,74 @@
           fair: "Fair",
           poor: "Poor",
         },
+      },
+      weatherCard: {
+        conditions: {
+          clear_night: "Clear night",
+          cloudy: "Cloudy",
+          exceptional: "Exceptional",
+          fog: "Fog",
+          hail: "Hail",
+          lightning: "Lightning",
+          lightning_rainy: "Lightning & rain",
+          partlycloudy: "Partly cloudy",
+          pouring: "Heavy rain",
+          rainy: "Rainy",
+          snowy: "Snowy",
+          snowy_rainy: "Sleet",
+          sunny: "Sunny",
+          windy: "Windy",
+          windy_variant: "Variable wind",
+        },
+        defaultCondition: "Weather",
+        forecast: {
+          chartAriaHourly: "Hourly forecast chart",
+          chartAriaDaily: "Weekly forecast chart",
+          tabsAria: "Forecast view",
+          tabCards: "Cards",
+          tabChart: "Chart",
+          hoursTab: "Hours",
+          weekTab: "Week",
+          emptyHourly: "No hourly forecast available.",
+          emptyDaily: "No weekly forecast available.",
+          chartInsufficientData: "Not enough data to display the chart.",
+          closeDetail: "Close detail",
+          maxLabel: "High",
+          minLabel: "Low",
+          temperatureLabel: "Temperature",
+          rainLabel: "Rain",
+          humidityLabel: "Humidity",
+          windLabel: "Wind",
+        },
+      },
+      humidifierCard: {
+        modes: {
+          auto: "Auto",
+          automatic: "Auto",
+          smart: "Smart",
+          smart_mode: "Smart",
+          sleep: "Night",
+          night: "Night",
+          eco: "Eco",
+          quiet: "Quiet",
+          silent: "Quiet",
+          low: "Low",
+          medium: "Medium",
+          mid: "Medium",
+          high: "High",
+          boost: "Boost",
+          turbo: "Turbo",
+          normal: "Normal",
+          balanced: "Normal",
+          dry: "Dry",
+          drying: "Drying",
+          continuous: "Continuous",
+          clothes_dry: "Laundry",
+          laundry: "Laundry",
+        },
+      },
+      graphCard: {
+        emptyHistory: "No history available",
       },
       favCard: {
         disarmedF: "Disarmed",
@@ -1969,7 +2105,106 @@
   };
 
   function strings(langCode) {
-    return PACK[langCode] || PACK.es;
+    const code = PACK[langCode] ? langCode : "es";
+    const p = PACK[code];
+    if (p.weatherCard && p.humidifierCard && p.graphCard) {
+      return p;
+    }
+    const fb = code === "es" ? PACK.es : PACK.en;
+    return {
+      ...p,
+      weatherCard: p.weatherCard || fb.weatherCard,
+      humidifierCard: p.humidifierCard || fb.humidifierCard,
+      graphCard: p.graphCard || fb.graphCard,
+    };
+  }
+
+  function normalizeHumidifierModeKey(value) {
+    return String(value ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+  }
+
+  function translateWeatherCondition(hass, configLang, value) {
+    const lang = resolveLanguage(hass, configLang);
+    const key = normalizeTextKey(String(value || ""));
+    const cond = strings(lang).weatherCard.conditions;
+    if (key && cond[key]) {
+      return cond[key];
+    }
+    const raw = String(value || "").trim();
+    if (raw) {
+      return raw;
+    }
+    return strings(lang).weatherCard.defaultCondition;
+  }
+
+  function translateWeatherForecastUi(hass, configLang, uiKey) {
+    const lang = resolveLanguage(hass, configLang);
+    const f = strings(lang).weatherCard.forecast;
+    if (f && f[uiKey]) {
+      return f[uiKey];
+    }
+    return PACK.en.weatherCard.forecast[uiKey] || "";
+  }
+
+  function translateGraphEmptyHistory(hass, configLang) {
+    const lang = resolveLanguage(hass, configLang);
+    return strings(lang).graphCard.emptyHistory;
+  }
+
+  function translateHumidifierMode(hass, configLang, value) {
+    const lang = resolveLanguage(hass, configLang);
+    const key = normalizeHumidifierModeKey(value);
+    const modes = strings(lang).humidifierCard.modes;
+    if (key && modes[key]) {
+      return modes[key];
+    }
+    return String(value ?? "").trim();
+  }
+
+  function translateAdvanceVacuumReportedState(hass, configLang, stateKey, rawFallback) {
+    const lang = resolveLanguage(hass, configLang);
+    const k = normalizeTextKey(stateKey);
+    const rs = strings(lang).advanceVacuum.reportedStates;
+    if (rs[k]) {
+      return rs[k];
+    }
+    const es = PACK.es.advanceVacuum.reportedStates;
+    if (es[k]) {
+      return rs[k] || strings("en").advanceVacuum.reportedStates[k] || es[k];
+    }
+    if (rawFallback != null && rawFallback !== "") {
+      return String(rawFallback);
+    }
+    return rs.unknown || es.unknown;
+  }
+
+  function translateAdvanceVacuumVacuumMode(hass, configLang, rawValue, kind = "generic") {
+    const raw = String(rawValue || "").trim();
+    if (!raw) {
+      return "";
+    }
+    const lang = resolveLanguage(hass, configLang);
+    const key = normalizeTextKey(raw);
+    const av = strings(lang).advanceVacuum;
+    if (key === "off" && kind === "suction") {
+      return av.offSuction;
+    }
+    if (av.vacuumModes[key]) {
+      return av.vacuumModes[key];
+    }
+    const esm = PACK.es.advanceVacuum.vacuumModes;
+    if (esm[key]) {
+      return av.vacuumModes[key] || strings("en").advanceVacuum.vacuumModes[key] || esm[key];
+    }
+    return raw
+      .replaceAll("_", " ")
+      .replace(/\bplus\b/gi, "+")
+      .replace(/\b\w/g, match => match.toUpperCase());
   }
 
   function translateEntityState(langCode, state, numberDecimals, formatNumericValueWithUnit, formatNumericValue, parseNumericValue) {
@@ -2151,8 +2386,15 @@
     resolveLanguage,
     localeTag,
     normalizeTextKey,
+    normalizeHumidifierModeKey,
     strings,
     translateEntityState,
+    translateWeatherCondition,
+    translateWeatherForecastUi,
+    translateGraphEmptyHistory,
+    translateHumidifierMode,
+    translateAdvanceVacuumReportedState,
+    translateAdvanceVacuumVacuumMode,
     translateFavState(langCode, key) {
       const raw = normalizeTextKey(key);
       const fd = strings(langCode).favCard;

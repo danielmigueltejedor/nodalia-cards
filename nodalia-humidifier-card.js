@@ -376,7 +376,12 @@ function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
-function translateModeLabel(value) {
+function translateModeLabel(value, hass = null, configLang = null) {
+  const h = hass ?? (typeof window !== "undefined" ? window.NodaliaI18n?.resolveHass?.(null) : null);
+  if (window.NodaliaI18n?.translateHumidifierMode) {
+    return window.NodaliaI18n.translateHumidifierMode(h, configLang ?? "auto", value);
+  }
+
   const normalized = normalizeTextKey(value);
 
   switch (normalized) {
@@ -1022,7 +1027,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                 data-humidifier-action="mode"
                 data-mode="${escapeHtml(mode)}"
               >
-                ${escapeHtml(translateModeLabel(mode))}
+                ${escapeHtml(translateModeLabel(mode, this._hass, this._config?.language ?? "auto"))}
               </button>
             `)
             .join("")}
@@ -1048,7 +1053,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                 data-humidifier-action="fan-mode"
                 data-mode="${escapeHtml(mode)}"
               >
-                ${escapeHtml(translateModeLabel(mode))}
+                ${escapeHtml(translateModeLabel(mode, this._hass, this._config?.language ?? "auto"))}
               </button>
             `)
             .join("")}
@@ -1629,11 +1634,11 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
 
     if (config.show_mode_chip !== false && currentMode) {
-      chips.push(`<div class="humidifier-card__chip">${escapeHtml(translateModeLabel(currentMode))}</div>`);
+      chips.push(`<div class="humidifier-card__chip">${escapeHtml(translateModeLabel(currentMode, this._hass, config.language ?? "auto"))}</div>`);
     }
 
     if (config.show_fan_mode_chip !== false && currentFanMode) {
-      chips.push(`<div class="humidifier-card__chip">${escapeHtml(translateModeLabel(currentFanMode))}</div>`);
+      chips.push(`<div class="humidifier-card__chip">${escapeHtml(translateModeLabel(currentFanMode, this._hass, config.language ?? "auto"))}</div>`);
     }
 
     const showCopyBlock = !isCompactLayout || chips.length > 0;
@@ -1819,7 +1824,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                 data-humidifier-action="mode"
                 data-mode="${escapeHtml(mode)}"
               >
-                ${escapeHtml(translateModeLabel(mode))}
+                ${escapeHtml(translateModeLabel(mode, this._hass, config.language ?? "auto"))}
               </button>
             `)
             .join("")}
@@ -1836,7 +1841,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                   data-humidifier-action="fan-mode"
                   data-mode="${escapeHtml(mode)}"
                 >
-                  ${escapeHtml(translateModeLabel(mode))}
+                  ${escapeHtml(translateModeLabel(mode, this._hass, config.language ?? "auto"))}
                 </button>
               `)
               .join("")}
@@ -3240,7 +3245,8 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
   }
 
   _renderModeVisibilityField(field, modeValue) {
-    const translatedLabel = translateModeLabel(modeValue);
+    const hass = this._hass ?? this.hass;
+    const translatedLabel = translateModeLabel(modeValue, hass, this._config?.language ?? "auto");
     const showRawValue = normalizeTextKey(translatedLabel) !== normalizeTextKey(modeValue);
     const label = showRawValue ? `${translatedLabel} (${modeValue})` : translatedLabel;
 
