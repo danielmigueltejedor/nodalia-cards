@@ -5370,7 +5370,16 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const tag = options.multiline ? "textarea" : "input";
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -5380,7 +5389,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     if (tag === "textarea") {
       return `
         <label class="editor-field editor-field--full">
-          <span>${escapeHtml(label)}</span>
+          <span>${escapeHtml(tLabel)}</span>
           <textarea data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(valueType)}" rows="${options.rows || 2}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
         </label>
       `;
@@ -5388,7 +5397,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -5401,6 +5410,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -5409,16 +5420,16 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -5428,6 +5439,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _renderTextareaField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     return this._renderTextField(label, field, value, {
       ...options,
       multiline: true,
@@ -5436,6 +5448,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -5445,15 +5458,16 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options, valueType = "string") {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(valueType)}">
           ${options
             .map(option => {
@@ -5464,7 +5478,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
               return `
                 <option value="${escapeHtml(optionValue)}" ${isSelected ? "selected" : ""}>
-                  ${escapeHtml(option.label)}
+                  ${escapeHtml(this._editorLabel(option.label))}
                 </option>
               `;
             })
@@ -5477,7 +5491,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   _renderActionConfigFields(title, path, action = {}) {
     return `
       <div class="player-editor-subgroup">
-        <div class="player-editor-subgroup__title">${escapeHtml(title)}</div>
+        <div class="player-editor-subgroup__title">${escapeHtml(this._editorLabel(title))}</div>
         <div class="editor-grid">
           ${this._renderSelectField(
             "Acción",
@@ -5514,13 +5528,14 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _renderEntityField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const domains = Array.isArray(options.domains)
       ? options.domains.map(domain => String(domain || "").trim()).filter(Boolean).join(",")
       : "";
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity-picker"
@@ -5534,10 +5549,11 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="icon-picker"
@@ -5553,15 +5569,15 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     return `
       <div class="player-editor-card">
         <div class="player-editor-card__header">
-          <div class="player-editor-card__title">Reproductor ${index + 1}</div>
+          <div class="player-editor-card__title">${escapeHtml(this._editorLabel("Reproductor"))} ${index + 1}</div>
           <div class="player-editor-card__actions">
-            <button type="button" data-action="move-player-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>Subir</button>
-            <button type="button" data-action="move-player-down" data-index="${index}" ${index === this._config.players.length - 1 ? "disabled" : ""}>Bajar</button>
-            <button type="button" data-action="remove-player" data-index="${index}" class="danger">Eliminar</button>
+            <button type="button" data-action="move-player-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>${escapeHtml(this._editorLabel("Subir"))}</button>
+            <button type="button" data-action="move-player-down" data-index="${index}" ${index === this._config.players.length - 1 ? "disabled" : ""}>${escapeHtml(this._editorLabel("Bajar"))}</button>
+            <button type="button" data-action="remove-player" data-index="${index}" class="danger">${escapeHtml(this._editorLabel("Eliminar"))}</button>
           </div>
         </div>
         <div class="player-editor-subgroup">
-          <div class="player-editor-subgroup__title">Principal</div>
+          <div class="player-editor-subgroup__title">${escapeHtml(this._editorLabel("Principal"))}</div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityField("Entidad", `players.${index}.entity`, player.entity, {
               domains: ["media_player"],
@@ -6110,8 +6126,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Opciones generales del reproductor y cuándo debe mostrarse la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Opciones generales del reproductor y cuándo debe mostrarse la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -6134,8 +6150,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Layout</div>
-            <div class="editor-section__hint">Ideal si quieres usarlo fijo arriba o abajo del dashboard.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Layout"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ideal si quieres usarlo fijo arriba o abajo del dashboard."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Tarjeta fija", "layout.fixed", config.layout.fixed === true)}
@@ -6166,8 +6182,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Reproductores</div>
-            <div class="editor-section__hint">Añade, reordena y personaliza cada reproductor visible en la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Reproductores"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Añade, reordena y personaliza cada reproductor visible en la tarjeta."))}</div>
           </div>
           <div class="player-editor-list">
             ${
@@ -6183,8 +6199,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Respuesta háptica</div>
-            <div class="editor-section__hint">Respuesta táctil opcional para los controles del reproductor.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta háptica"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta táctil opcional para los controles del reproductor."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar respuesta háptica", "haptics.enabled", config.haptics.enabled === true)}
@@ -6208,8 +6224,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Ajusta la apertura de paneles, navegador y el rebote de los botones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajusta la apertura de paneles, navegador y el rebote de los botones."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -6244,8 +6260,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales del reproductor principal y del navegador de medios.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales del reproductor principal y del navegador de medios."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"

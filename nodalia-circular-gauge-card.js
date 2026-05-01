@@ -2119,7 +2119,16 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const tag = options.multiline ? "textarea" : "input";
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -2129,7 +2138,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     if (tag === "textarea") {
       return `
         <label class="editor-field ${options.fullWidth !== false ? "editor-field--full" : ""}">
-          <span>${escapeHtml(label)}</span>
+          <span>${escapeHtml(tLabel)}</span>
           <textarea data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(valueType)}" rows="${options.rows || 2}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
         </label>
       `;
@@ -2137,7 +2146,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -2150,6 +2159,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -2158,16 +2169,16 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch:${escapeHtml(currentValue)};"></span>
           </label>
@@ -2177,6 +2188,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -2186,20 +2198,21 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options
             .map(option => `
               <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
+                ${escapeHtml(this._editorLabel(option.label))}
               </option>
             `)
             .join("")}
@@ -2209,11 +2222,12 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
   }
 
   _renderEntityField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity-picker"
@@ -2226,11 +2240,12 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="icon-picker"
@@ -2604,8 +2619,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad numérica principal, nombre, icono y rango del gauge.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad numérica principal, nombre, icono y rango del gauge."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderEntityField("Entidad numérica", "entity", config.entity, {
@@ -2658,8 +2673,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Layout</div>
-            <div class="editor-section__hint">Ayuda a compactar el gauge según el espacio disponible en la vista.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Layout"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ayuda a compactar el gauge según el espacio disponible en la vista."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Rows de grid", "grid_options.rows", config.grid_options?.rows, {
@@ -2675,8 +2690,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Ajustes de cabecera, chips y rango visible.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes de cabecera, chips y rango visible."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Empezar desde cero", "start_from_zero", config.start_from_zero !== false)}
@@ -2693,8 +2708,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica opcional al tocar la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta haptica opcional al tocar la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -2718,8 +2733,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Controla la transición del dial, la entrada del contenido y el rebote al tocar la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla la transición del dial, la entrada del contenido y el rebote al tocar la tarjeta."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -2757,8 +2772,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Personaliza el look Nodalia, el dial circular, la nueva burbuja del thumb y la escala de tinte del gauge.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Personaliza el look Nodalia, el dial circular, la nueva burbuja del thumb y la escala de tinte del gauge."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"

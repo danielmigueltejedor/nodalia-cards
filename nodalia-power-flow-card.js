@@ -2597,7 +2597,16 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
@@ -2605,7 +2614,7 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -2618,12 +2627,13 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
   }
 
   _renderTextareaField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
 
     return `
       <label class="editor-field editor-field--full">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <textarea
           data-field="${escapeHtml(field)}"
           data-value-type="${escapeHtml(options.valueType || "string")}"
@@ -2635,6 +2645,7 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -2644,19 +2655,20 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options.map(option => `
             <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-              ${escapeHtml(option.label)}
+              ${escapeHtml(this._editorLabel(option.label))}
             </option>
           `).join("")}
         </select>
@@ -2891,8 +2903,8 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Titulo, enlace al panel de energia y comportamiento general de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Titulo, enlace al panel de energia y comportamiento general de la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Titulo", "title", config.title, { placeholder: "Energia" })}
@@ -2921,8 +2933,8 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Individuales</div>
-            <div class="editor-section__hint">Una linea por entidad: \`entity|nombre|icono|color\`.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Individuales"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Una linea por entidad: \\`entity|nombre|icono|color\\`."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextareaField("Entidades individuales", "entities.individual", this._serializeIndividuals(), {
@@ -2935,8 +2947,8 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Flujo</div>
-            <div class="editor-section__hint">Controla la visualizacion de lineas sin consumo y la velocidad de animacion.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Flujo"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla la visualizacion de lineas sin consumo y la velocidad de animacion."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField("Lineas a cero", "display_zero_lines.mode", config.display_zero_lines?.mode || "show", [
@@ -2967,8 +2979,8 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilo</div>
-            <div class="editor-section__hint">Ajustes visuales base de la tarjeta y las burbujas.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilo"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base de la tarjeta y las burbujas."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Background", "styles.card.background", config.styles?.card?.background)}
@@ -2992,8 +3004,8 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta tactil opcional al pulsar nodos o botones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional al pulsar nodos o botones."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics?.enabled === true)}
@@ -3339,14 +3351,23 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(options.type || "text")}"
           data-field="${escapeHtml(field)}"
@@ -3359,12 +3380,13 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
   }
 
   _renderTextareaField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
 
     return `
       <label class="editor-field editor-field--full">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <textarea
           data-field="${escapeHtml(field)}"
           data-value-type="${escapeHtml(options.valueType || "string")}"
@@ -3376,6 +3398,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -3384,16 +3408,16 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -3429,6 +3453,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -3438,19 +3463,20 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options, renderOptions = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options.map(option => `
             <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-              ${escapeHtml(option.label)}
+              ${escapeHtml(this._editorLabel(option.label))}
             </option>
           `).join("")}
         </select>
@@ -3459,12 +3485,13 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
   }
 
   _renderEntityPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder || "";
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity"
@@ -3477,12 +3504,13 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
@@ -3851,8 +3879,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Titulo, enlace al panel de energia y comportamiento general de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Titulo, enlace al panel de energia y comportamiento general de la tarjeta."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderTextField("Titulo", "title", config.title, { placeholder: "Energia", fullWidth: true })}
@@ -3881,8 +3909,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Individuales</div>
-            <div class="editor-section__hint">Una linea por entidad: \`entity|nombre|icono|color\`.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Individuales"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Una linea por entidad: \\`entity|nombre|icono|color\\`."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderTextareaField("Entidades individuales", "entities.individual", this._serializeIndividuals(), {
@@ -3895,8 +3923,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Flujo</div>
-            <div class="editor-section__hint">Controla las lineas a cero y la velocidad del flujo.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Flujo"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla las lineas a cero y la velocidad del flujo."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField("Lineas a cero", "display_zero_lines.mode", config.display_zero_lines?.mode || "show", [
@@ -3924,8 +3952,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta tactil opcional al pulsar nodos o botones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional al pulsar nodos o botones."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics?.enabled === true)}
@@ -3944,8 +3972,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Entrada suave del flujo y rebote al pulsar nodos o acciones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave del flujo y rebote al pulsar nodos o acciones."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -3979,8 +4007,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilo</div>
-            <div class="editor-section__hint">Ajustes visuales base de la tarjeta y las burbujas.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilo"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base de la tarjeta y las burbujas."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"

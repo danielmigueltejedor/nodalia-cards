@@ -3988,7 +3988,16 @@ class NodaliaLightCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const min = options.min !== undefined ? `min="${escapeHtml(String(options.min))}"` : "";
@@ -3999,7 +4008,7 @@ class NodaliaLightCardEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -4015,6 +4024,8 @@ class NodaliaLightCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -4023,16 +4034,16 @@ class NodaliaLightCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -4042,6 +4053,7 @@ class NodaliaLightCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -4051,20 +4063,21 @@ class NodaliaLightCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options
             .map(option => `
               <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
+                ${escapeHtml(this._editorLabel(option.label))}
               </option>
             `)
             .join("")}
@@ -4089,11 +4102,12 @@ class NodaliaLightCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
@@ -4444,8 +4458,8 @@ class NodaliaLightCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal, nombre visible e icono de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal, nombre visible e icono de la tarjeta."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderLightEntityField("Entidad de luz", "entity", config.entity, {
@@ -4476,8 +4490,8 @@ class NodaliaLightCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Qué bloques quieres mostrar dentro de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Qué bloques quieres mostrar dentro de la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -4501,8 +4515,8 @@ class NodaliaLightCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta háptica opcional para los controles.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta háptica opcional para los controles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -4526,8 +4540,8 @@ class NodaliaLightCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles, cambiar entre sliders y dar respuesta visual a los botones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Transiciones suaves al encender, apagar, desplegar controles, cambiar entre sliders y dar respuesta visual a los botones."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4582,8 +4596,8 @@ class NodaliaLightCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales básicos del look Nodalia.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales básicos del look Nodalia."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"

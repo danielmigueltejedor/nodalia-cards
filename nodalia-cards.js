@@ -1,4 +1,7324 @@
 {
+(() => {
+  function baseLang(code) {
+    if (!code || typeof code !== "string") {
+      return null;
+    }
+    const trimmed = code.trim();
+    const lower = trimmed.toLowerCase();
+    if (lower === "auto") {
+      return null;
+    }
+    const two = lower.slice(0, 2);
+    return PACK[two] ? two : null;
+  }
+
+  function resolveLanguage(hass, configLang) {
+    const configured = baseLang(configLang);
+    if (configured) {
+      return configured;
+    }
+    const ha = baseLang(hass?.locale?.language || hass?.language || "");
+    return ha || "es";
+  }
+
+  function localeTag(langCode) {
+    const map = {
+      es: "es",
+      en: "en",
+      de: "de",
+      fr: "fr",
+      it: "it",
+      nl: "nl",
+    };
+    return map[langCode] || "es";
+  }
+
+  function normalizeTextKey(value) {
+    return String(value ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/-/g, "_");
+  }
+
+  function getEntityDomain(state) {
+    const entityId = String(state?.entity_id || "").trim();
+    const dot = entityId.indexOf(".");
+    return dot > 0 ? entityId.slice(0, dot) : "";
+  }
+
+  const PACK = {
+    es: {
+      advanceVacuum: {
+        modeLabels: {
+          all: "Todo",
+          rooms: "Habitaciones",
+          zone: "Zona",
+          routines: "Rutinas",
+          goto: "Ir a punto",
+        },
+        panelModes: {
+          smart: "Inteligente",
+          vacuum_mop: "Aspirado y fregado",
+          vacuum: "Aspirado",
+          mop: "Fregado",
+          custom: "Personalizado",
+        },
+        dockSections: {
+          control: "Control de base",
+          settings: "Ajuste de base de carga",
+        },
+        dockSettings: {
+          mop_wash_frequency: "Frecuencia de lavado de la mopa",
+          mop_mode: "Modo de fregado",
+          auto_empty_frequency: "Frecuencia de vaciado automático",
+          empty_mode: "Modo de vaciado",
+          drying_duration: "Duración de secado",
+        },
+        dockControls: {
+          empty: { label: "Vaciar depósito", active: "Parar vaciado" },
+          wash: { label: "Lavar el paño", active: "Parar lavado de paño" },
+          dry: { label: "Secar la mopa", active: "Detener el secado" },
+        },
+        vacuumModes: {
+          quiet: "Silencioso",
+          silent: "Silencioso",
+          balanced: "Equilibrado",
+          standard: "Estándar",
+          normal: "Normal",
+          turbo: "Turbo",
+          max: "Max",
+          maxplus: "Max+",
+          max_plus: "Max+",
+          gentle: "Suave",
+          strong: "Fuerte",
+          smart: "Inteligente",
+          smartmode: "Inteligente",
+          smart_mode: "Inteligente",
+          intelligent: "Inteligente",
+          custom: "Personalizado",
+          custommode: "Personalizado",
+          custom_mode: "Personalizado",
+          custom_water_flow: "Caudal de agua personalizado",
+          custom_watter_flow: "Caudal de agua personalizado",
+          off: "Sin fregado",
+          low: "Baja",
+          medium: "Media",
+          high: "Alta",
+          intense: "Intenso",
+          deep: "Profundo",
+          deep_plus: "Profundo+",
+          deepplus: "Profundo+",
+          fast: "Rápido",
+          rapido: "Rápido",
+        },
+        offSuction: "Off",
+        reportedStates: {
+          docked: "En base",
+          charging: "Cargando",
+          charging_completed: "Cargando",
+          cleaning: "Limpiando",
+          spot_cleaning: "Limpiando",
+          segment_cleaning: "Limpiando",
+          room_cleaning: "Limpiando",
+          zone_cleaning: "Limpiando",
+          clean_area: "Limpiando",
+          paused: "Pausado",
+          returning: "Volviendo a la base",
+          return_to_base: "Volviendo a la base",
+          returning_home: "Volviendo a la base",
+          washing: "Lavando mopas",
+          wash_mop: "Lavando mopas",
+          washing_mop: "Lavando mopas",
+          washing_pads: "Lavando mopas",
+          drying: "Secando",
+          drying_mop: "Secando",
+          emptying: "Autovaciando",
+          self_emptying: "Autovaciando",
+          unavailable: "No disponible",
+          unknown: "Desconocido",
+          error: "Error",
+          fallback: "Desconocido",
+        },
+        mapStatus: {
+          washing_mop: "Lavando la mopa",
+          drying_mop: "Secando la mopa",
+          emptying_dust: "Vaciando el polvo",
+          charging: "Cargando",
+        },
+        descriptorLabels: {
+          suction: "Aspirado",
+          mop: "Fregado",
+          mop_mode: "Modo de mopa",
+        },
+        utility: {
+          cleaningMode: "Modo de limpieza",
+          cleaningCounter: "Contador de limpiezas",
+          dockActions: "Acciones de base",
+          chargingStation: "Base de carga",
+          zonesWord: "zonas",
+          pointWord: "punto",
+          zoneTool: "Zona",
+          routineDefault: "Rutina",
+          customMenuDefault: "Base",
+          modesFallbackTitle: "Modos de aspirado y fregado",
+        },
+        actions: {
+          returnToBase: "Volver a base",
+          locate: "Localizar",
+          stop: "Parar",
+          run: "Ejecutar",
+          addZoneToClean: "Añadir zona a la limpieza",
+          cleanZone: "Limpiar zona",
+        },
+        handles: {
+          moveZone: "Mover zona",
+          deleteZone: "Eliminar zona",
+          resizeZone: "Redimensionar zona",
+        },
+        titles: {
+          editZone: "Editar zona",
+          backPanel: "Volver al panel principal",
+          addZone: "Añadir zona",
+          gotoFallback: "Punto",
+        },
+      },
+      navigationMusicAssist: {
+        artist: "Artistas",
+        artists: "Artistas",
+        album: "Álbumes",
+        albums: "Álbumes",
+        track: "Canciones",
+        tracks: "Canciones",
+        song: "Canciones",
+        songs: "Canciones",
+        playlist: "Listas de reproducción",
+        playlists: "Listas de reproducción",
+        "radio station": "Emisoras",
+        "radio stations": "Emisoras",
+        podcast: "Podcasts",
+        podcasts: "Podcasts",
+        audiobook: "Audiolibros",
+        audiobooks: "Audiolibros",
+        genre: "Géneros",
+        genres: "Géneros",
+        favorite: "Favoritos",
+        favorites: "Favoritos",
+        favourites: "Favoritos",
+        search: "Buscar",
+        "recently played": "Reproducido recientemente",
+        "recently added": "Añadido recientemente",
+        "recently played tracks": "Canciones reproducidas recientemente",
+        browseFallback: "Elemento",
+      },
+      vacuumSimple: {
+        quiet: "Silencioso",
+        silent: "Silencioso",
+        balanced: "Equilibrado",
+        standard: "Estándar",
+        normal: "Normal",
+        turbo: "Turbo",
+        max: "Max",
+        maxplus: "Max+",
+        max_plus: "Max+",
+        gentle: "Suave",
+        strong: "Fuerte",
+        smart: "Inteligente",
+        smartmode: "Inteligente",
+        smart_mode: "Inteligente",
+        intelligent: "Inteligente",
+        custom: "Personalizado",
+        custommode: "Personalizado",
+        custom_mode: "Personalizado",
+        custom_water_flow: "Caudal de agua personalizado",
+        custom_watter_flow: "Caudal de agua personalizado",
+        off: "Sin fregado",
+        low: "Baja",
+        medium: "Media",
+        high: "Alta",
+        intense: "Intenso",
+        deep: "Profundo",
+      },
+      fan: {
+        off: "Apagado",
+        on: "Encendido",
+        unavailable: "No disponible",
+        unknown: "Desconocido",
+        noState: "Sin estado",
+        fallbackName: "Ventilador",
+      },
+      alarmPanel: {
+        defaultTitle: "Alarma",
+        noState: "Sin estado",
+        states: {
+          disarmed: "Desarmada",
+          armed_home: "En casa",
+          armed_away: "Ausente",
+          armed_night: "Noche",
+          armed_vacation: "Vacaciones",
+          armed_custom_bypass: "Personalizada",
+          armed: "Armada",
+          arming: "Armando",
+          disarming: "Desarmando",
+          pending: "Pendiente",
+          triggered: "Disparada",
+          unavailable: "No disponible",
+          unknown: "Desconocida",
+        },
+      },
+      person: {
+        home: "En casa",
+        notHome: "Fuera",
+        work: "Trabajo",
+        school: "Colegio",
+        unavailable: "No disponible",
+        unknown: "Desconocido",
+        locationUnknown: "Ubicacion desconocida",
+      },
+      entityCard: {
+        binarySensor: {
+          doorOpen: "Abierta",
+          doorClosed: "Cerrada",
+          motionOn: "Detectado",
+          motionOff: "No detectado",
+        },
+        boolean: {
+          yes: "Sí",
+          no: "No",
+        },
+        states: {
+          on: "Encendido",
+          off: "Apagado",
+          open: "Abierto",
+          opening: "Abriendo",
+          closed: "Cerrado",
+          closing: "Cerrando",
+          playing: "Reproduciendo",
+          paused: "En pausa",
+          idle: "En espera",
+          standby: "Standby",
+          home: "En casa",
+          not_home: "Fuera",
+          detected: "Detectado",
+          clear: "Libre",
+          unavailable: "No disponible",
+          unknown: "Desconocido",
+          locked: "Bloqueado",
+          unlocked: "Desbloqueado",
+          locking: "Bloqueando",
+          unlocking: "Desbloqueando",
+          locking_failed: "Bloqueo fallido",
+          unlocking_failed: "Desbloqueo fallido",
+          jammed: "Atascado",
+          pending: "Pendiente",
+          stopped: "Detenido",
+          armed_away: "Armado fuera",
+          armed_home: "Armado en casa",
+          disarmed: "Desarmado",
+          triggered: "Disparado",
+          comfortable: "Cómodo",
+          very_comfortable: "Muy cómodo",
+          slightly_uncomfortable: "Ligeramente incómodo",
+          somewhat_uncomfortable: "Algo incómodo",
+          quite_uncomfortable: "Bastante incómodo",
+          extremely_uncomfortable: "Muy incómodo",
+          ok_but_humid: "Bien, pero húmedo",
+          little_or_no_discomfort: "Poco o ningún malestar",
+          some_discomfort: "Algo de malestar",
+          great_discomfort_avoid_exertion: "Gran malestar",
+          dangerous_discomfort: "Malestar peligroso",
+          heat_stroke_imminent: "Golpe de calor inminente",
+          dry: "Seco",
+          very_dry: "Muy seco",
+          too_dry: "Demasiado seco",
+          humid: "Húmedo",
+          very_humid: "Muy húmedo",
+          too_humid: "Demasiado húmedo",
+          wet: "Mojado",
+          low: "Bajo",
+          medium: "Medio",
+          moderate: "Moderado",
+          high: "Alto",
+          very_high: "Muy alto",
+          severely_high: "Extremadamente alto",
+          critical: "Crítico",
+          excellent: "Excelente",
+          good: "Bueno",
+          fair: "Aceptable",
+          poor: "Malo",
+        },
+      },
+      favCard: {
+        disarmedF: "Desarmada",
+        armed_home: "En casa",
+        armed_away: "Ausente",
+        armed_night: "Noche",
+        armed_vacation: "Vacaciones",
+        armed_custom_bypass: "Personalizada",
+        arming: "Armando",
+        disarming: "Desarmando",
+        pending: "Pendiente",
+        triggered: "Disparada",
+      },
+    },
+    en: {
+      advanceVacuum: {
+        modeLabels: {
+          all: "All",
+          rooms: "Rooms",
+          zone: "Zone",
+          routines: "Routines",
+          goto: "Go to point",
+        },
+        panelModes: {
+          smart: "Smart",
+          vacuum_mop: "Vacuum & mop",
+          vacuum: "Vacuum",
+          mop: "Mop",
+          custom: "Custom",
+        },
+        dockSections: {
+          control: "Dock controls",
+          settings: "Dock settings",
+        },
+        dockSettings: {
+          mop_wash_frequency: "Mop wash frequency",
+          mop_mode: "Mopping mode",
+          auto_empty_frequency: "Auto-empty frequency",
+          empty_mode: "Emptying mode",
+          drying_duration: "Drying duration",
+        },
+        dockControls: {
+          empty: { label: "Empty bin", active: "Stop emptying" },
+          wash: { label: "Wash pad", active: "Stop pad wash" },
+          dry: { label: "Dry mop", active: "Stop drying" },
+        },
+        vacuumModes: {
+          quiet: "Quiet",
+          silent: "Silent",
+          balanced: "Balanced",
+          standard: "Standard",
+          normal: "Normal",
+          turbo: "Turbo",
+          max: "Max",
+          maxplus: "Max+",
+          max_plus: "Max+",
+          gentle: "Gentle",
+          strong: "Strong",
+          smart: "Smart",
+          smartmode: "Smart",
+          smart_mode: "Smart",
+          intelligent: "Smart",
+          custom: "Custom",
+          custommode: "Custom",
+          custom_mode: "Custom",
+          custom_water_flow: "Custom water flow",
+          custom_watter_flow: "Custom water flow",
+          off: "Mop off",
+          low: "Low",
+          medium: "Medium",
+          high: "High",
+          intense: "Intense",
+          deep: "Deep",
+          deep_plus: "Deep+",
+          deepplus: "Deep+",
+          fast: "Fast",
+          rapido: "Fast",
+        },
+        offSuction: "Off",
+        reportedStates: {
+          docked: "Docked",
+          charging: "Charging",
+          charging_completed: "Charging",
+          cleaning: "Cleaning",
+          spot_cleaning: "Cleaning",
+          segment_cleaning: "Cleaning",
+          room_cleaning: "Cleaning",
+          zone_cleaning: "Cleaning",
+          clean_area: "Cleaning",
+          paused: "Paused",
+          returning: "Returning to dock",
+          return_to_base: "Returning to dock",
+          returning_home: "Returning to dock",
+          washing: "Washing mop",
+          wash_mop: "Washing mop",
+          washing_mop: "Washing mop",
+          washing_pads: "Washing mop",
+          drying: "Drying",
+          drying_mop: "Drying",
+          emptying: "Auto-emptying",
+          self_emptying: "Auto-emptying",
+          unavailable: "Unavailable",
+          unknown: "Unknown",
+          error: "Error",
+          fallback: "Unknown",
+        },
+        mapStatus: {
+          washing_mop: "Washing mop",
+          drying_mop: "Drying mop",
+          emptying_dust: "Emptying dust bin",
+          charging: "Charging",
+        },
+        descriptorLabels: {
+          suction: "Vacuum",
+          mop: "Mop",
+          mop_mode: "Mop mode",
+        },
+        utility: {
+          cleaningMode: "Cleaning mode",
+          cleaningCounter: "Cleaning passes",
+          dockActions: "Dock actions",
+          chargingStation: "Charging dock",
+          zonesWord: "zones",
+          pointWord: "point",
+          zoneTool: "Zone",
+          routineDefault: "Routine",
+          customMenuDefault: "Dock",
+          modesFallbackTitle: "Vacuum & mop modes",
+        },
+        actions: {
+          returnToBase: "Return to dock",
+          locate: "Locate",
+          stop: "Stop",
+          run: "Run",
+          addZoneToClean: "Add zone to clean",
+          cleanZone: "Clean zone",
+        },
+        handles: {
+          moveZone: "Move zone",
+          deleteZone: "Delete zone",
+          resizeZone: "Resize zone",
+        },
+        titles: {
+          editZone: "Edit zone",
+          backPanel: "Back to main panel",
+          addZone: "Add zone",
+          gotoFallback: "Point",
+        },
+      },
+      navigationMusicAssist: {
+        artist: "Artists",
+        artists: "Artists",
+        album: "Albums",
+        albums: "Albums",
+        track: "Tracks",
+        tracks: "Tracks",
+        song: "Tracks",
+        songs: "Tracks",
+        playlist: "Playlists",
+        playlists: "Playlists",
+        "radio station": "Radio stations",
+        "radio stations": "Radio stations",
+        podcast: "Podcasts",
+        podcasts: "Podcasts",
+        audiobook: "Audiobooks",
+        audiobooks: "Audiobooks",
+        genre: "Genres",
+        genres: "Genres",
+        favorite: "Favorites",
+        favorites: "Favorites",
+        favourites: "Favorites",
+        search: "Search",
+        "recently played": "Recently played",
+        "recently added": "Recently added",
+        "recently played tracks": "Recently played tracks",
+        browseFallback: "Item",
+      },
+      vacuumSimple: {
+        quiet: "Quiet",
+        silent: "Silent",
+        balanced: "Balanced",
+        standard: "Standard",
+        normal: "Normal",
+        turbo: "Turbo",
+        max: "Max",
+        maxplus: "Max+",
+        max_plus: "Max+",
+        gentle: "Gentle",
+        strong: "Strong",
+        smart: "Smart",
+        smartmode: "Smart",
+        smart_mode: "Smart",
+        intelligent: "Smart",
+        custom: "Custom",
+        custommode: "Custom",
+        custom_mode: "Custom",
+        custom_water_flow: "Custom water flow",
+        custom_watter_flow: "Custom water flow",
+        off: "Mop off",
+        low: "Low",
+        medium: "Medium",
+        high: "High",
+        intense: "Intense",
+        deep: "Deep",
+      },
+      fan: {
+        off: "Off",
+        on: "On",
+        unavailable: "Unavailable",
+        unknown: "Unknown",
+        noState: "No state",
+        fallbackName: "Fan",
+      },
+      alarmPanel: {
+        defaultTitle: "Alarm",
+        noState: "No state",
+        states: {
+          disarmed: "Disarmed",
+          armed_home: "Home",
+          armed_away: "Away",
+          armed_night: "Night",
+          armed_vacation: "Vacation",
+          armed_custom_bypass: "Custom",
+          armed: "Armed",
+          arming: "Arming",
+          disarming: "Disarming",
+          pending: "Pending",
+          triggered: "Triggered",
+          unavailable: "Unavailable",
+          unknown: "Unknown",
+        },
+      },
+      person: {
+        home: "Home",
+        notHome: "Away",
+        work: "Work",
+        school: "School",
+        unavailable: "Unavailable",
+        unknown: "Unknown",
+        locationUnknown: "Unknown location",
+      },
+      entityCard: {
+        binarySensor: {
+          doorOpen: "Open",
+          doorClosed: "Closed",
+          motionOn: "Detected",
+          motionOff: "Clear",
+        },
+        boolean: {
+          yes: "Yes",
+          no: "No",
+        },
+        states: {
+          on: "On",
+          off: "Off",
+          open: "Open",
+          opening: "Opening",
+          closed: "Closed",
+          closing: "Closing",
+          playing: "Playing",
+          paused: "Paused",
+          idle: "Idle",
+          standby: "Standby",
+          home: "Home",
+          not_home: "Away",
+          detected: "Detected",
+          clear: "Clear",
+          unavailable: "Unavailable",
+          unknown: "Unknown",
+          locked: "Locked",
+          unlocked: "Unlocked",
+          locking: "Locking",
+          unlocking: "Unlocking",
+          locking_failed: "Lock failed",
+          unlocking_failed: "Unlock failed",
+          jammed: "Jammed",
+          pending: "Pending",
+          stopped: "Stopped",
+          armed_away: "Armed away",
+          armed_home: "Armed home",
+          disarmed: "Disarmed",
+          triggered: "Triggered",
+          comfortable: "Comfortable",
+          very_comfortable: "Very comfortable",
+          slightly_uncomfortable: "Slightly uncomfortable",
+          somewhat_uncomfortable: "Somewhat uncomfortable",
+          quite_uncomfortable: "Quite uncomfortable",
+          extremely_uncomfortable: "Extremely uncomfortable",
+          ok_but_humid: "OK but humid",
+          little_or_no_discomfort: "Little or no discomfort",
+          some_discomfort: "Some discomfort",
+          great_discomfort_avoid_exertion: "Great discomfort",
+          dangerous_discomfort: "Dangerous discomfort",
+          heat_stroke_imminent: "Heat stroke imminent",
+          dry: "Dry",
+          very_dry: "Very dry",
+          too_dry: "Too dry",
+          humid: "Humid",
+          very_humid: "Very humid",
+          too_humid: "Too humid",
+          wet: "Wet",
+          low: "Low",
+          medium: "Medium",
+          moderate: "Moderate",
+          high: "High",
+          very_high: "Very high",
+          severely_high: "Severely high",
+          critical: "Critical",
+          excellent: "Excellent",
+          good: "Good",
+          fair: "Fair",
+          poor: "Poor",
+        },
+      },
+      favCard: {
+        disarmedF: "Disarmed",
+        armed_home: "Home",
+        armed_away: "Away",
+        armed_night: "Night",
+        armed_vacation: "Vacation",
+        armed_custom_bypass: "Custom",
+        arming: "Arming",
+        disarming: "Disarming",
+        pending: "Pending",
+        triggered: "Triggered",
+      },
+    },
+    de: {
+      advanceVacuum: {
+        modeLabels: {
+          all: "Alle",
+          rooms: "Räume",
+          zone: "Zone",
+          routines: "Routinen",
+          goto: "Punkt anfahren",
+        },
+        panelModes: {
+          smart: "Smart",
+          vacuum_mop: "Saugen & Wischen",
+          vacuum: "Saugen",
+          mop: "Wischen",
+          custom: "Benutzerdefiniert",
+        },
+        dockSections: {
+          control: "Dock-Steuerung",
+          settings: "Dock-Einstellungen",
+        },
+        dockSettings: {
+          mop_wash_frequency: "Wischtuch-Washintervall",
+          mop_mode: "Wischmodus",
+          auto_empty_frequency: "Auto-Entleerungsintervall",
+          empty_mode: "Entleerungsmodus",
+          drying_duration: "Trocknungsdauer",
+        },
+        dockControls: {
+          empty: { label: "Staubbehälter leeren", active: "Entleeren stoppen" },
+          wash: { label: "Wischtuch waschen", active: "Waschen stoppen" },
+          dry: { label: "Wischtuch trocknen", active: "Trocknen stoppen" },
+        },
+        vacuumModes: {
+          quiet: "Leise",
+          silent: "Still",
+          balanced: "Ausgewogen",
+          standard: "Standard",
+          normal: "Normal",
+          turbo: "Turbo",
+          max: "Max",
+          maxplus: "Max+",
+          max_plus: "Max+",
+          gentle: "Sanft",
+          strong: "Stark",
+          smart: "Smart",
+          smartmode: "Smart",
+          smart_mode: "Smart",
+          intelligent: "Smart",
+          custom: "Benutzerdefiniert",
+          custommode: "Benutzerdefiniert",
+          custom_mode: "Benutzerdefiniert",
+          custom_water_flow: "Benutzerdefinierte Wassermenge",
+          custom_watter_flow: "Benutzerdefinierte Wassermenge",
+          off: "Wischen aus",
+          low: "Niedrig",
+          medium: "Mittel",
+          high: "Hoch",
+          intense: "Intensiv",
+          deep: "Tief",
+          deep_plus: "Tief+",
+          deepplus: "Tief+",
+          fast: "Schnell",
+          rapido: "Schnell",
+        },
+        offSuction: "Aus",
+        reportedStates: {
+          docked: "Angedockt",
+          charging: "Lädt",
+          charging_completed: "Lädt",
+          cleaning: "Reinigt",
+          spot_cleaning: "Reinigt",
+          segment_cleaning: "Reinigt",
+          room_cleaning: "Reinigt",
+          zone_cleaning: "Reinigt",
+          clean_area: "Reinigt",
+          paused: "Pausiert",
+          returning: "Zurück zur Station",
+          return_to_base: "Zurück zur Station",
+          returning_home: "Zurück zur Station",
+          washing: "Wischtücher waschen",
+          wash_mop: "Wischtücher waschen",
+          washing_mop: "Wischtücher waschen",
+          washing_pads: "Wischtücher waschen",
+          drying: "Trocknet",
+          drying_mop: "Trocknet",
+          emptying: "Auto-Entleerung",
+          self_emptying: "Auto-Entleerung",
+          unavailable: "Nicht verfügbar",
+          unknown: "Unbekannt",
+          error: "Fehler",
+          fallback: "Unbekannt",
+        },
+        mapStatus: {
+          washing_mop: "Wischtuch wird gewaschen",
+          drying_mop: "Wischtuch wird getrocknet",
+          emptying_dust: "Staubbehälter wird geleert",
+          charging: "Lädt",
+        },
+        descriptorLabels: {
+          suction: "Saugen",
+          mop: "Wischen",
+          mop_mode: "Wischmodus",
+        },
+        utility: {
+          cleaningMode: "Reinigungsmodus",
+          cleaningCounter: "Durchläufe",
+          dockActions: "Dock-Aktionen",
+          chargingStation: "Ladestation",
+          zonesWord: "Zonen",
+          pointWord: "Punkt",
+          zoneTool: "Zone",
+          routineDefault: "Routine",
+          customMenuDefault: "Dock",
+          modesFallbackTitle: "Saug- und Wischmodi",
+        },
+        actions: {
+          returnToBase: "Zur Station",
+          locate: "Finden",
+          stop: "Stopp",
+          run: "Start",
+          addZoneToClean: "Zone zur Reinigung hinzufügen",
+          cleanZone: "Zone reinigen",
+        },
+        handles: {
+          moveZone: "Zone verschieben",
+          deleteZone: "Zone löschen",
+          resizeZone: "Zone skalieren",
+        },
+        titles: {
+          editZone: "Zone bearbeiten",
+          backPanel: "Zurück zum Hauptpanel",
+          addZone: "Zone hinzufügen",
+          gotoFallback: "Punkt",
+        },
+      },
+      navigationMusicAssist: {
+        artist: "Künstler",
+        artists: "Künstler",
+        album: "Alben",
+        albums: "Alben",
+        track: "Titel",
+        tracks: "Titel",
+        song: "Titel",
+        songs: "Titel",
+        playlist: "Wiedergabelisten",
+        playlists: "Wiedergabelisten",
+        "radio station": "Radiosender",
+        "radio stations": "Radiosender",
+        podcast: "Podcasts",
+        podcasts: "Podcasts",
+        audiobook: "Hörbücher",
+        audiobooks: "Hörbücher",
+        genre: "Genres",
+        genres: "Genres",
+        favorite: "Favoriten",
+        favorites: "Favoriten",
+        favourites: "Favoriten",
+        search: "Suche",
+        "recently played": "Zuletzt gespielt",
+        "recently added": "Zuletzt hinzugefügt",
+        "recently played tracks": "Zuletzt gespielte Titel",
+        browseFallback: "Eintrag",
+      },
+      vacuumSimple: {
+        quiet: "Leise",
+        silent: "Still",
+        balanced: "Ausgewogen",
+        standard: "Standard",
+        normal: "Normal",
+        turbo: "Turbo",
+        max: "Max",
+        maxplus: "Max+",
+        max_plus: "Max+",
+        gentle: "Sanft",
+        strong: "Stark",
+        smart: "Smart",
+        smartmode: "Smart",
+        smart_mode: "Smart",
+        intelligent: "Smart",
+        custom: "Benutzerdefiniert",
+        custommode: "Benutzerdefiniert",
+        custom_mode: "Benutzerdefiniert",
+        custom_water_flow: "Benutzerdefinierte Wassermenge",
+        custom_watter_flow: "Benutzerdefinierte Wassermenge",
+        off: "Wischen aus",
+        low: "Niedrig",
+        medium: "Mittel",
+        high: "Hoch",
+        intense: "Intensiv",
+        deep: "Tief",
+      },
+      fan: {
+        off: "Aus",
+        on: "Ein",
+        unavailable: "Nicht verfügbar",
+        unknown: "Unbekannt",
+        noState: "Kein Status",
+        fallbackName: "Ventilator",
+      },
+      alarmPanel: {
+        defaultTitle: "Alarm",
+        noState: "Kein Status",
+        states: {
+          disarmed: "Entschärft",
+          armed_home: "Zuhause",
+          armed_away: "Abwesend",
+          armed_night: "Nacht",
+          armed_vacation: "Urlaub",
+          armed_custom_bypass: "Benutzerdefiniert",
+          armed: "Scharf",
+          arming: "Scharfschalten",
+          disarming: "Entschärfen",
+          pending: "Ausstehend",
+          triggered: "Ausgelöst",
+          unavailable: "Nicht verfügbar",
+          unknown: "Unbekannt",
+        },
+      },
+      person: {
+        home: "Zuhause",
+        notHome: "Abwesend",
+        work: "Arbeit",
+        school: "Schule",
+        unavailable: "Nicht verfügbar",
+        unknown: "Unbekannt",
+        locationUnknown: "Unbekannter Ort",
+      },
+      entityCard: {
+        binarySensor: {
+          doorOpen: "Offen",
+          doorClosed: "Geschlossen",
+          motionOn: "Erkannt",
+          motionOff: "Frei",
+        },
+        boolean: {
+          yes: "Ja",
+          no: "Nein",
+        },
+        states: {
+          on: "Ein",
+          off: "Aus",
+          open: "Offen",
+          opening: "Öffnet",
+          closed: "Geschlossen",
+          closing: "Schließt",
+          playing: "Wiedergabe",
+          paused: "Pause",
+          idle: "Leerlauf",
+          standby: "Standby",
+          home: "Zuhause",
+          not_home: "Abwesend",
+          detected: "Erkannt",
+          clear: "Frei",
+          unavailable: "Nicht verfügbar",
+          unknown: "Unbekannt",
+          locked: "Verriegelt",
+          unlocked: "Entriegelt",
+          locking: "Verriegelt…",
+          unlocking: "Entriegelt…",
+          locking_failed: "Verriegeln fehlgeschlagen",
+          unlocking_failed: "Entriegeln fehlgeschlagen",
+          jammed: "Blockiert",
+          pending: "Ausstehend",
+          stopped: "Gestoppt",
+          armed_away: "Scharf (abwesend)",
+          armed_home: "Scharf (zuhause)",
+          disarmed: "Entschärft",
+          triggered: "Ausgelöst",
+          comfortable: "Angenehm",
+          very_comfortable: "Sehr angenehm",
+          slightly_uncomfortable: "Leicht unangenehm",
+          somewhat_uncomfortable: "Etwas unangenehm",
+          quite_uncomfortable: "Ziemlich unangenehm",
+          extremely_uncomfortable: "Sehr unangenehm",
+          ok_but_humid: "OK, aber feucht",
+          little_or_no_discomfort: "Kaum Beschwerden",
+          some_discomfort: "Einige Beschwerden",
+          great_discomfort_avoid_exertion: "Starke Beschwerden",
+          dangerous_discomfort: "Gefährliche Beschwerden",
+          heat_stroke_imminent: "Hitzschlag droht",
+          dry: "Trocken",
+          very_dry: "Sehr trocken",
+          too_dry: "Zu trocken",
+          humid: "Feucht",
+          very_humid: "Sehr feucht",
+          too_humid: "Zu feucht",
+          wet: "Nass",
+          low: "Niedrig",
+          medium: "Mittel",
+          moderate: "Mäßig",
+          high: "Hoch",
+          very_high: "Sehr hoch",
+          severely_high: "Extrem hoch",
+          critical: "Kritisch",
+          excellent: "Ausgezeichnet",
+          good: "Gut",
+          fair: "Mäßig",
+          poor: "Schlecht",
+        },
+      },
+      favCard: {
+        disarmedF: "Entschärft",
+        armed_home: "Zuhause",
+        armed_away: "Abwesend",
+        armed_night: "Nacht",
+        armed_vacation: "Urlaub",
+        armed_custom_bypass: "Benutzerdefiniert",
+        arming: "Scharfschalten",
+        disarming: "Entschärfen",
+        pending: "Ausstehend",
+        triggered: "Ausgelöst",
+      },
+    },
+    fr: {
+      advanceVacuum: {
+        modeLabels: {
+          all: "Tout",
+          rooms: "Pièces",
+          zone: "Zone",
+          routines: "Routines",
+          goto: "Aller au point",
+        },
+        panelModes: {
+          smart: "Intelligent",
+          vacuum_mop: "Aspiration et lavage",
+          vacuum: "Aspiration",
+          mop: "Lavage",
+          custom: "Personnalisé",
+        },
+        dockSections: {
+          control: "Commandes station",
+          settings: "Réglages station",
+        },
+        dockSettings: {
+          mop_wash_frequency: "Fréquence lavage serpillière",
+          mop_mode: "Mode lavage",
+          auto_empty_frequency: "Fréquence vidange auto",
+          empty_mode: "Mode vidange",
+          drying_duration: "Durée séchage",
+        },
+        dockControls: {
+          empty: { label: "Vider le bac", active: "Arrêter vidange" },
+          wash: { label: "Laver la serpillière", active: "Arrêter lavage" },
+          dry: { label: "Sécher la serpillière", active: "Arrêter séchage" },
+        },
+        vacuumModes: {
+          quiet: "Silencieux",
+          silent: "Silencieux",
+          balanced: "Équilibré",
+          standard: "Standard",
+          normal: "Normal",
+          turbo: "Turbo",
+          max: "Max",
+          maxplus: "Max+",
+          max_plus: "Max+",
+          gentle: "Doux",
+          strong: "Fort",
+          smart: "Intelligent",
+          smartmode: "Intelligent",
+          smart_mode: "Intelligent",
+          intelligent: "Intelligent",
+          custom: "Personnalisé",
+          custommode: "Personnalisé",
+          custom_mode: "Personnalisé",
+          custom_water_flow: "Débit d'eau perso.",
+          custom_watter_flow: "Débit d'eau perso.",
+          off: "Sans lavage",
+          low: "Faible",
+          medium: "Moyen",
+          high: "Élevé",
+          intense: "Intense",
+          deep: "Profond",
+          deep_plus: "Profond+",
+          deepplus: "Profond+",
+          fast: "Rapide",
+          rapido: "Rapide",
+        },
+        offSuction: "Arrêt",
+        reportedStates: {
+          docked: "À la station",
+          charging: "Charge",
+          charging_completed: "Charge",
+          cleaning: "Nettoyage",
+          spot_cleaning: "Nettoyage",
+          segment_cleaning: "Nettoyage",
+          room_cleaning: "Nettoyage",
+          zone_cleaning: "Nettoyage",
+          clean_area: "Nettoyage",
+          paused: "En pause",
+          returning: "Retour station",
+          return_to_base: "Retour station",
+          returning_home: "Retour station",
+          washing: "Lavage serpillière",
+          wash_mop: "Lavage serpillière",
+          washing_mop: "Lavage serpillière",
+          washing_pads: "Lavage serpillière",
+          drying: "Séchage",
+          drying_mop: "Séchage",
+          emptying: "Vidange auto",
+          self_emptying: "Vidange auto",
+          unavailable: "Indisponible",
+          unknown: "Inconnu",
+          error: "Erreur",
+          fallback: "Inconnu",
+        },
+        mapStatus: {
+          washing_mop: "Lavage serpillière",
+          drying_mop: "Séchage serpillière",
+          emptying_dust: "Vidange poussière",
+          charging: "Charge",
+        },
+        descriptorLabels: {
+          suction: "Aspiration",
+          mop: "Lavage",
+          mop_mode: "Mode serpillière",
+        },
+        utility: {
+          cleaningMode: "Mode nettoyage",
+          cleaningCounter: "Passes",
+          dockActions: "Actions station",
+          chargingStation: "Station de charge",
+          zonesWord: "zones",
+          pointWord: "point",
+          zoneTool: "Zone",
+          routineDefault: "Routine",
+          customMenuDefault: "Station",
+          modesFallbackTitle: "Modes aspiration et lavage",
+        },
+        actions: {
+          returnToBase: "Retour station",
+          locate: "Localiser",
+          stop: "Arrêt",
+          run: "Lancer",
+          addZoneToClean: "Ajouter zone au nettoyage",
+          cleanZone: "Nettoyer zone",
+        },
+        handles: {
+          moveZone: "Déplacer zone",
+          deleteZone: "Supprimer zone",
+          resizeZone: "Redimensionner zone",
+        },
+        titles: {
+          editZone: "Modifier zone",
+          backPanel: "Retour au panneau",
+          addZone: "Ajouter zone",
+          gotoFallback: "Point",
+        },
+      },
+      navigationMusicAssist: {
+        artist: "Artistes",
+        artists: "Artistes",
+        album: "Albums",
+        albums: "Albums",
+        track: "Titres",
+        tracks: "Titres",
+        song: "Titres",
+        songs: "Titres",
+        playlist: "Playlists",
+        playlists: "Playlists",
+        "radio station": "Radios",
+        "radio stations": "Radios",
+        podcast: "Podcasts",
+        podcasts: "Podcasts",
+        audiobook: "Livres audio",
+        audiobooks: "Livres audio",
+        genre: "Genres",
+        genres: "Genres",
+        favorite: "Favoris",
+        favorites: "Favoris",
+        favourites: "Favoris",
+        search: "Rechercher",
+        "recently played": "Récemment écouté",
+        "recently added": "Récemment ajouté",
+        "recently played tracks": "Titres récents",
+        browseFallback: "Élément",
+      },
+      vacuumSimple: {
+        quiet: "Silencieux",
+        silent: "Silencieux",
+        balanced: "Équilibré",
+        standard: "Standard",
+        normal: "Normal",
+        turbo: "Turbo",
+        max: "Max",
+        maxplus: "Max+",
+        max_plus: "Max+",
+        gentle: "Doux",
+        strong: "Fort",
+        smart: "Intelligent",
+        smartmode: "Intelligent",
+        smart_mode: "Intelligent",
+        intelligent: "Intelligent",
+        custom: "Personnalisé",
+        custommode: "Personnalisé",
+        custom_mode: "Personnalisé",
+        custom_water_flow: "Débit d'eau perso.",
+        custom_watter_flow: "Débit d'eau perso.",
+        off: "Sans lavage",
+        low: "Faible",
+        medium: "Moyen",
+        high: "Élevé",
+        intense: "Intense",
+        deep: "Profond",
+      },
+      fan: {
+        off: "Éteint",
+        on: "Allumé",
+        unavailable: "Indisponible",
+        unknown: "Inconnu",
+        noState: "Pas d'état",
+        fallbackName: "Ventilateur",
+      },
+      alarmPanel: {
+        defaultTitle: "Alarme",
+        noState: "Pas d'état",
+        states: {
+          disarmed: "Désactivée",
+          armed_home: "Maison",
+          armed_away: "Absent",
+          armed_night: "Nuit",
+          armed_vacation: "Vacances",
+          armed_custom_bypass: "Perso.",
+          armed: "Armée",
+          arming: "Armement",
+          disarming: "Désarmement",
+          pending: "En attente",
+          triggered: "Déclenchée",
+          unavailable: "Indisponible",
+          unknown: "Inconnue",
+        },
+      },
+      person: {
+        home: "À la maison",
+        notHome: "Absent",
+        work: "Travail",
+        school: "École",
+        unavailable: "Indisponible",
+        unknown: "Inconnu",
+        locationUnknown: "Lieu inconnu",
+      },
+      entityCard: {
+        binarySensor: {
+          doorOpen: "Ouverte",
+          doorClosed: "Fermée",
+          motionOn: "Détecté",
+          motionOff: "Libre",
+        },
+        boolean: {
+          yes: "Oui",
+          no: "Non",
+        },
+        states: {
+          on: "Allumé",
+          off: "Éteint",
+          open: "Ouvert",
+          opening: "Ouverture",
+          closed: "Fermé",
+          closing: "Fermeture",
+          playing: "Lecture",
+          paused: "Pause",
+          idle: "Inactif",
+          standby: "Veille",
+          home: "À la maison",
+          not_home: "Absent",
+          detected: "Détecté",
+          clear: "Libre",
+          unavailable: "Indisponible",
+          unknown: "Inconnu",
+          locked: "Verrouillé",
+          unlocked: "Déverrouillé",
+          locking: "Verrouillage",
+          unlocking: "Déverrouillage",
+          locking_failed: "Verrouillage échoué",
+          unlocking_failed: "Déverrouillage échoué",
+          jammed: "Bloqué",
+          pending: "En attente",
+          stopped: "Arrêté",
+          armed_away: "Armé absent",
+          armed_home: "Armé maison",
+          disarmed: "Désactivé",
+          triggered: "Déclenché",
+          comfortable: "Confortable",
+          very_comfortable: "Très confortable",
+          slightly_uncomfortable: "Peu inconfortable",
+          somewhat_uncomfortable: "Assez inconfortable",
+          quite_uncomfortable: "Plutôt inconfortable",
+          extremely_uncomfortable: "Très inconfortable",
+          ok_but_humid: "OK mais humide",
+          little_or_no_discomfort: "Peu ou pas d'inconfort",
+          some_discomfort: "Un peu d'inconfort",
+          great_discomfort_avoid_exertion: "Grand inconfort",
+          dangerous_discomfort: "Inconfort dangereux",
+          heat_stroke_imminent: "Coup de chaleur imminent",
+          dry: "Sec",
+          very_dry: "Très sec",
+          too_dry: "Trop sec",
+          humid: "Humide",
+          very_humid: "Très humide",
+          too_humid: "Trop humide",
+          wet: "Mouillé",
+          low: "Faible",
+          medium: "Moyen",
+          moderate: "Modéré",
+          high: "Élevé",
+          very_high: "Très élevé",
+          severely_high: "Extrêmement élevé",
+          critical: "Critique",
+          excellent: "Excellent",
+          good: "Bon",
+          fair: "Correct",
+          poor: "Mauvais",
+        },
+      },
+      favCard: {
+        disarmedF: "Désactivée",
+        armed_home: "Maison",
+        armed_away: "Absent",
+        armed_night: "Nuit",
+        armed_vacation: "Vacances",
+        armed_custom_bypass: "Perso.",
+        arming: "Armement",
+        disarming: "Désarmement",
+        pending: "En attente",
+        triggered: "Déclenchée",
+      },
+    },
+    it: {
+      advanceVacuum: {
+        modeLabels: {
+          all: "Tutto",
+          rooms: "Stanze",
+          zone: "Zona",
+          routines: "Routine",
+          goto: "Vai al punto",
+        },
+        panelModes: {
+          smart: "Smart",
+          vacuum_mop: "Aspira e lava",
+          vacuum: "Aspirazione",
+          mop: "Lavaggio",
+          custom: "Personalizzato",
+        },
+        dockSections: {
+          control: "Comandi base",
+          settings: "Impostazioni base",
+        },
+        dockSettings: {
+          mop_wash_frequency: "Frequenza lavaggio panno",
+          mop_mode: "Modalità lavaggio",
+          auto_empty_frequency: "Frequenza svuotamento auto",
+          empty_mode: "Modalità svuotamento",
+          drying_duration: "Durata asciugatura",
+        },
+        dockControls: {
+          empty: { label: "Svuota contenitore", active: "Stop svuotamento" },
+          wash: { label: "Lava panno", active: "Stop lavaggio" },
+          dry: { label: "Asciuga mopa", active: "Stop asciugatura" },
+        },
+        vacuumModes: {
+          quiet: "Silenzioso",
+          silent: "Silenzioso",
+          balanced: "Bilanciato",
+          standard: "Standard",
+          normal: "Normale",
+          turbo: "Turbo",
+          max: "Max",
+          maxplus: "Max+",
+          max_plus: "Max+",
+          gentle: "Delicato",
+          strong: "Forte",
+          smart: "Smart",
+          smartmode: "Smart",
+          smart_mode: "Smart",
+          intelligent: "Smart",
+          custom: "Personalizzato",
+          custommode: "Personalizzato",
+          custom_mode: "Personalizzato",
+          custom_water_flow: "Portata acqua personalizzata",
+          custom_watter_flow: "Portata acqua personalizzata",
+          off: "Senza lavaggio",
+          low: "Bassa",
+          medium: "Media",
+          high: "Alta",
+          intense: "Intenso",
+          deep: "Profondo",
+          deep_plus: "Profondo+",
+          deepplus: "Profondo+",
+          fast: "Veloce",
+          rapido: "Veloce",
+        },
+        offSuction: "Off",
+        reportedStates: {
+          docked: "In base",
+          charging: "In carica",
+          charging_completed: "In carica",
+          cleaning: "Pulizia",
+          spot_cleaning: "Pulizia",
+          segment_cleaning: "Pulizia",
+          room_cleaning: "Pulizia",
+          zone_cleaning: "Pulizia",
+          clean_area: "Pulizia",
+          paused: "In pausa",
+          returning: "Ritorno alla base",
+          return_to_base: "Ritorno alla base",
+          returning_home: "Ritorno alla base",
+          washing: "Lavaggio mop",
+          wash_mop: "Lavaggio mop",
+          washing_mop: "Lavaggio mop",
+          washing_pads: "Lavaggio mop",
+          drying: "Asciugatura",
+          drying_mop: "Asciugatura",
+          emptying: "Svuotamento auto",
+          self_emptying: "Svuotamento auto",
+          unavailable: "Non disponibile",
+          unknown: "Sconosciuto",
+          error: "Errore",
+          fallback: "Sconosciuto",
+        },
+        mapStatus: {
+          washing_mop: "Lavaggio mopa",
+          drying_mop: "Asciugatura mopa",
+          emptying_dust: "Svuotamento polvere",
+          charging: "In carica",
+        },
+        descriptorLabels: {
+          suction: "Aspirazione",
+          mop: "Lavaggio",
+          mop_mode: "Modalità mopa",
+        },
+        utility: {
+          cleaningMode: "Modalità pulizia",
+          cleaningCounter: "Passaggi",
+          dockActions: "Azioni base",
+          chargingStation: "Base di ricarica",
+          zonesWord: "zone",
+          pointWord: "punto",
+          zoneTool: "Zona",
+          routineDefault: "Routine",
+          customMenuDefault: "Base",
+          modesFallbackTitle: "Modalità aspirazione e lavaggio",
+        },
+        actions: {
+          returnToBase: "Torna alla base",
+          locate: "Localizza",
+          stop: "Stop",
+          run: "Avvia",
+          addZoneToClean: "Aggiungi zona alla pulizia",
+          cleanZone: "Pulisci zona",
+        },
+        handles: {
+          moveZone: "Sposta zona",
+          deleteZone: "Elimina zona",
+          resizeZone: "Ridimensiona zona",
+        },
+        titles: {
+          editZone: "Modifica zona",
+          backPanel: "Torna al pannello",
+          addZone: "Aggiungi zona",
+          gotoFallback: "Punto",
+        },
+      },
+      navigationMusicAssist: {
+        artist: "Artisti",
+        artists: "Artisti",
+        album: "Album",
+        albums: "Album",
+        track: "Brani",
+        tracks: "Brani",
+        song: "Brani",
+        songs: "Brani",
+        playlist: "Playlist",
+        playlists: "Playlist",
+        "radio station": "Radio",
+        "radio stations": "Radio",
+        podcast: "Podcast",
+        podcasts: "Podcast",
+        audiobook: "Audiolibri",
+        audiobooks: "Audiolibri",
+        genre: "Generi",
+        genres: "Generi",
+        favorite: "Preferiti",
+        favorites: "Preferiti",
+        favourites: "Preferiti",
+        search: "Cerca",
+        "recently played": "Riprodotti di recente",
+        "recently added": "Aggiunti di recente",
+        "recently played tracks": "Brani recenti",
+        browseFallback: "Elemento",
+      },
+      vacuumSimple: {
+        quiet: "Silenzioso",
+        silent: "Silenzioso",
+        balanced: "Bilanciato",
+        standard: "Standard",
+        normal: "Normale",
+        turbo: "Turbo",
+        max: "Max",
+        maxplus: "Max+",
+        max_plus: "Max+",
+        gentle: "Delicato",
+        strong: "Forte",
+        smart: "Smart",
+        smartmode: "Smart",
+        smart_mode: "Smart",
+        intelligent: "Smart",
+        custom: "Personalizzato",
+        custommode: "Personalizzato",
+        custom_mode: "Personalizzato",
+        custom_water_flow: "Portata acqua personalizzata",
+        custom_watter_flow: "Portata acqua personalizzata",
+        off: "Senza lavaggio",
+        low: "Bassa",
+        medium: "Media",
+        high: "Alta",
+        intense: "Intenso",
+        deep: "Profondo",
+      },
+      fan: {
+        off: "Spento",
+        on: "Acceso",
+        unavailable: "Non disponibile",
+        unknown: "Sconosciuto",
+        noState: "Nessuno stato",
+        fallbackName: "Ventilatore",
+      },
+      alarmPanel: {
+        defaultTitle: "Allarme",
+        noState: "Nessuno stato",
+        states: {
+          disarmed: "Disattivato",
+          armed_home: "Casa",
+          armed_away: "Fuori",
+          armed_night: "Notte",
+          armed_vacation: "Vacanza",
+          armed_custom_bypass: "Personalizzato",
+          armed: "Attivo",
+          arming: "Attivazione",
+          disarming: "Disattivazione",
+          pending: "In attesa",
+          triggered: "Scattato",
+          unavailable: "Non disponibile",
+          unknown: "Sconosciuto",
+        },
+      },
+      person: {
+        home: "A casa",
+        notHome: "Fuori",
+        work: "Lavoro",
+        school: "Scuola",
+        unavailable: "Non disponibile",
+        unknown: "Sconosciuto",
+        locationUnknown: "Posizione sconosciuta",
+      },
+      entityCard: {
+        binarySensor: {
+          doorOpen: "Aperta",
+          doorClosed: "Chiusa",
+          motionOn: "Rilevato",
+          motionOff: "Libero",
+        },
+        boolean: {
+          yes: "Sì",
+          no: "No",
+        },
+        states: {
+          on: "Acceso",
+          off: "Spento",
+          open: "Aperto",
+          opening: "Apertura",
+          closed: "Chiuso",
+          closing: "Chiusura",
+          playing: "In riproduzione",
+          paused: "In pausa",
+          idle: "Inattivo",
+          standby: "Standby",
+          home: "A casa",
+          not_home: "Fuori",
+          detected: "Rilevato",
+          clear: "Libero",
+          unavailable: "Non disponibile",
+          unknown: "Sconosciuto",
+          locked: "Bloccato",
+          unlocked: "Sbloccato",
+          locking: "Blocco…",
+          unlocking: "Sblocco…",
+          locking_failed: "Blocco fallito",
+          unlocking_failed: "Sblocco fallito",
+          jammed: "Inceppato",
+          pending: "In attesa",
+          stopped: "Fermato",
+          armed_away: "Armato fuori",
+          armed_home: "Armato casa",
+          disarmed: "Disattivato",
+          triggered: "Scattato",
+          comfortable: "Comodo",
+          very_comfortable: "Molto comodo",
+          slightly_uncomfortable: "Leggermente scomodo",
+          somewhat_uncomfortable: "Abbastanza scomodo",
+          quite_uncomfortable: "Piuttosto scomodo",
+          extremely_uncomfortable: "Molto scomodo",
+          ok_but_humid: "OK ma umido",
+          little_or_no_discomfort: "Poco o nessun disagio",
+          some_discomfort: "Qualche disagio",
+          great_discomfort_avoid_exertion: "Grande disagio",
+          dangerous_discomfort: "Disagio pericoloso",
+          heat_stroke_imminent: "Colpo di calore imminente",
+          dry: "Asciutto",
+          very_dry: "Molto asciutto",
+          too_dry: "Troppo asciutto",
+          humid: "Umido",
+          very_humid: "Molto umido",
+          too_humid: "Troppo umido",
+          wet: "Bagnato",
+          low: "Basso",
+          medium: "Medio",
+          moderate: "Moderato",
+          high: "Alto",
+          very_high: "Molto alto",
+          severely_high: "Estremamente alto",
+          critical: "Critico",
+          excellent: "Eccellente",
+          good: "Buono",
+          fair: "Discreto",
+          poor: "Scarso",
+        },
+      },
+      favCard: {
+        disarmedF: "Disattivato",
+        armed_home: "Casa",
+        armed_away: "Fuori",
+        armed_night: "Notte",
+        armed_vacation: "Vacanza",
+        armed_custom_bypass: "Personalizzato",
+        arming: "Attivazione",
+        disarming: "Disattivazione",
+        pending: "In attesa",
+        triggered: "Scattato",
+      },
+    },
+    nl: {
+      advanceVacuum: {
+        modeLabels: {
+          all: "Alles",
+          rooms: "Kamers",
+          zone: "Zone",
+          routines: "Routes",
+          goto: "Ga naar punt",
+        },
+        panelModes: {
+          smart: "Slim",
+          vacuum_mop: "Zuigen & dweilen",
+          vacuum: "Zuigen",
+          mop: "Dweilen",
+          custom: "Aangepast",
+        },
+        dockSections: {
+          control: "Dock-bediening",
+          settings: "Dock-instellingen",
+        },
+        dockSettings: {
+          mop_wash_frequency: "Wasfrequentie dweil",
+          mop_mode: "Dweilmodus",
+          auto_empty_frequency: "Automatisch legen frequentie",
+          empty_mode: "Ledigmodus",
+          drying_duration: "Droogduur",
+        },
+        dockControls: {
+          empty: { label: "Reservoir legen", active: "Legen stoppen" },
+          wash: { label: "Dweil wassen", active: "Wassen stoppen" },
+          dry: { label: "Dweil drogen", active: "Drogen stoppen" },
+        },
+        vacuumModes: {
+          quiet: "Stil",
+          silent: "Stil",
+          balanced: "Gebalanceerd",
+          standard: "Standaard",
+          normal: "Normaal",
+          turbo: "Turbo",
+          max: "Max",
+          maxplus: "Max+",
+          max_plus: "Max+",
+          gentle: "Zacht",
+          strong: "Sterk",
+          smart: "Slim",
+          smartmode: "Slim",
+          smart_mode: "Slim",
+          intelligent: "Slim",
+          custom: "Aangepast",
+          custommode: "Aangepast",
+          custom_mode: "Aangepast",
+          custom_water_flow: "Aangepast waterdebiet",
+          custom_watter_flow: "Aangepast waterdebiet",
+          off: "Geen dweilen",
+          low: "Laag",
+          medium: "Gemiddeld",
+          high: "Hoog",
+          intense: "Intens",
+          deep: "Diep",
+          deep_plus: "Diep+",
+          deepplus: "Diep+",
+          fast: "Snel",
+          rapido: "Snel",
+        },
+        offSuction: "Uit",
+        reportedStates: {
+          docked: "In dock",
+          charging: "Laden",
+          charging_completed: "Laden",
+          cleaning: "Schoonmaken",
+          spot_cleaning: "Schoonmaken",
+          segment_cleaning: "Schoonmaken",
+          room_cleaning: "Schoonmaken",
+          zone_cleaning: "Schoonmaken",
+          clean_area: "Schoonmaken",
+          paused: "Gepauzeerd",
+          returning: "Terug naar dock",
+          return_to_base: "Terug naar dock",
+          returning_home: "Terug naar dock",
+          washing: "Dweilen wassen",
+          wash_mop: "Dweilen wassen",
+          washing_mop: "Dweilen wassen",
+          washing_pads: "Dweilen wassen",
+          drying: "Drogen",
+          drying_mop: "Drogen",
+          emptying: "Automatisch legen",
+          self_emptying: "Automatisch legen",
+          unavailable: "Niet beschikbaar",
+          unknown: "Onbekend",
+          error: "Fout",
+          fallback: "Onbekend",
+        },
+        mapStatus: {
+          washing_mop: "Dweil wordt gewassen",
+          drying_mop: "Dweil wordt gedroogd",
+          emptying_dust: "Stofreservoir legen",
+          charging: "Laden",
+        },
+        descriptorLabels: {
+          suction: "Zuigen",
+          mop: "Dweilen",
+          mop_mode: "Dweilmodus",
+        },
+        utility: {
+          cleaningMode: "Schoonmaakmodus",
+          cleaningCounter: "Rondes",
+          dockActions: "Dock-acties",
+          chargingStation: "Laadstation",
+          zonesWord: "zones",
+          pointWord: "punt",
+          zoneTool: "Zone",
+          routineDefault: "Routine",
+          customMenuDefault: "Dock",
+          modesFallbackTitle: "Zuig- en dweilmodi",
+        },
+        actions: {
+          returnToBase: "Terug naar dock",
+          locate: "Zoeken",
+          stop: "Stop",
+          run: "Start",
+          addZoneToClean: "Zone toevoegen aan schoonmaak",
+          cleanZone: "Zone schoonmaken",
+        },
+        handles: {
+          moveZone: "Zone verplaatsen",
+          deleteZone: "Zone verwijderen",
+          resizeZone: "Zone formaat",
+        },
+        titles: {
+          editZone: "Zone bewerken",
+          backPanel: "Terug naar hoofdpaneel",
+          addZone: "Zone toevoegen",
+          gotoFallback: "Punt",
+        },
+      },
+      navigationMusicAssist: {
+        artist: "Artiesten",
+        artists: "Artiesten",
+        album: "Albums",
+        albums: "Albums",
+        track: "Nummers",
+        tracks: "Nummers",
+        song: "Nummers",
+        songs: "Nummers",
+        playlist: "Afspeellijsten",
+        playlists: "Afspeellijsten",
+        "radio station": "Radiozenders",
+        "radio stations": "Radiozenders",
+        podcast: "Podcasts",
+        podcasts: "Podcasts",
+        audiobook: "Luisterboeken",
+        audiobooks: "Luisterboeken",
+        genre: "Genres",
+        genres: "Genres",
+        favorite: "Favorieten",
+        favorites: "Favorieten",
+        favourites: "Favorieten",
+        search: "Zoeken",
+        "recently played": "Onlangs afgespeeld",
+        "recently added": "Onlangs toegevoegd",
+        "recently played tracks": "Onlangs afgespeelde nummers",
+        browseFallback: "Item",
+      },
+      vacuumSimple: {
+        quiet: "Stil",
+        silent: "Stil",
+        balanced: "Gebalanceerd",
+        standard: "Standaard",
+        normal: "Normaal",
+        turbo: "Turbo",
+        max: "Max",
+        maxplus: "Max+",
+        max_plus: "Max+",
+        gentle: "Zacht",
+        strong: "Sterk",
+        smart: "Slim",
+        smartmode: "Slim",
+        smart_mode: "Slim",
+        intelligent: "Slim",
+        custom: "Aangepast",
+        custommode: "Aangepast",
+        custom_mode: "Aangepast",
+        custom_water_flow: "Aangepast waterdebiet",
+        custom_watter_flow: "Aangepast waterdebiet",
+        off: "Geen dweilen",
+        low: "Laag",
+        medium: "Gemiddeld",
+        high: "Hoog",
+        intense: "Intens",
+        deep: "Diep",
+      },
+      fan: {
+        off: "Uit",
+        on: "Aan",
+        unavailable: "Niet beschikbaar",
+        unknown: "Onbekend",
+        noState: "Geen status",
+        fallbackName: "Ventilator",
+      },
+      alarmPanel: {
+        defaultTitle: "Alarm",
+        noState: "Geen status",
+        states: {
+          disarmed: "Uitgeschakeld",
+          armed_home: "Thuis",
+          armed_away: "Afwezig",
+          armed_night: "Nacht",
+          armed_vacation: "Vakantie",
+          armed_custom_bypass: "Aangepast",
+          armed: "Ingeschakeld",
+          arming: "Inschakelen",
+          disarming: "Uitschakelen",
+          pending: "In behandeling",
+          triggered: "Getriggerd",
+          unavailable: "Niet beschikbaar",
+          unknown: "Onbekend",
+        },
+      },
+      person: {
+        home: "Thuis",
+        notHome: "Afwezig",
+        work: "Werk",
+        school: "School",
+        unavailable: "Niet beschikbaar",
+        unknown: "Onbekend",
+        locationUnknown: "Locatie onbekend",
+      },
+      entityCard: {
+        binarySensor: {
+          doorOpen: "Open",
+          doorClosed: "Gesloten",
+          motionOn: "Gedetecteerd",
+          motionOff: "Vrij",
+        },
+        boolean: {
+          yes: "Ja",
+          no: "Nee",
+        },
+        states: {
+          on: "Aan",
+          off: "Uit",
+          open: "Open",
+          opening: "Openen",
+          closed: "Gesloten",
+          closing: "Sluiten",
+          playing: "Afspelen",
+          paused: "Gepauzeerd",
+          idle: "Inactief",
+          standby: "Stand-by",
+          home: "Thuis",
+          not_home: "Afwezig",
+          detected: "Gedetecteerd",
+          clear: "Vrij",
+          unavailable: "Niet beschikbaar",
+          unknown: "Onbekend",
+          locked: "Vergrendeld",
+          unlocked: "Ontgrendeld",
+          locking: "Vergrendelen",
+          unlocking: "Ontgrendelen",
+          locking_failed: "Vergrendelen mislukt",
+          unlocking_failed: "Ontgrendelen mislukt",
+          jammed: "Vastgelopen",
+          pending: "In behandeling",
+          stopped: "Gestopt",
+          armed_away: "Actief afwezig",
+          armed_home: "Actief thuis",
+          disarmed: "Uitgeschakeld",
+          triggered: "Getriggerd",
+          comfortable: "Comfortabel",
+          very_comfortable: "Zeer comfortabel",
+          slightly_uncomfortable: "Licht oncomfortabel",
+          somewhat_uncomfortable: "Enigszins oncomfortabel",
+          quite_uncomfortable: "Behoorlijk oncomfortabel",
+          extremely_uncomfortable: "Zeer oncomfortabel",
+          ok_but_humid: "OK maar vochtig",
+          little_or_no_discomfort: "Weinig of geen ongemak",
+          some_discomfort: "Enig ongemak",
+          great_discomfort_avoid_exertion: "Groot ongemak",
+          dangerous_discomfort: "Gevaarlijk ongemak",
+          heat_stroke_imminent: "Hitteberoerte dreigt",
+          dry: "Droog",
+          very_dry: "Zeer droog",
+          too_dry: "Te droog",
+          humid: "Vochtig",
+          very_humid: "Zeer vochtig",
+          too_humid: "Te vochtig",
+          wet: "Nat",
+          low: "Laag",
+          medium: "Gemiddeld",
+          moderate: "Matig",
+          high: "Hoog",
+          very_high: "Zeer hoog",
+          severely_high: "Extreem hoog",
+          critical: "Kritiek",
+          excellent: "Uitstekend",
+          good: "Goed",
+          fair: "Redelijk",
+          poor: "Slecht",
+        },
+      },
+      favCard: {
+        disarmedF: "Uitgeschakeld",
+        armed_home: "Thuis",
+        armed_away: "Afwezig",
+        armed_night: "Nacht",
+        armed_vacation: "Vakantie",
+        armed_custom_bypass: "Aangepast",
+        arming: "Inschakelen",
+        disarming: "Uitschakelen",
+        pending: "In behandeling",
+        triggered: "Getriggerd",
+      },
+    },
+  };
+
+  function strings(langCode) {
+    return PACK[langCode] || PACK.es;
+  }
+
+  function translateEntityState(langCode, state, numberDecimals, formatNumericValueWithUnit, formatNumericValue, parseNumericValue) {
+    const dict = strings(langCode).entityCard;
+    if (!state) {
+      return null;
+    }
+
+    const rawState = String(state.state ?? "").trim();
+    const unit = String(
+      state.attributes?.unit_of_measurement || state.attributes?.native_unit_of_measurement || "",
+    ).trim();
+    const key = normalizeTextKey(rawState);
+    const domain = getEntityDomain(state);
+    const deviceClass = normalizeTextKey(state.attributes?.device_class);
+
+    if (parseNumericValue(rawState) !== null) {
+      return unit
+        ? formatNumericValueWithUnit(rawState, unit, numberDecimals)
+        : formatNumericValue(rawState, numberDecimals);
+    }
+
+    if (domain === "binary_sensor") {
+      const isOpenState = ["on", "open", "opening"].includes(key);
+      const isClosedState = ["off", "closed", "closing"].includes(key);
+
+      if (["door", "opening", "window", "garage_door"].includes(deviceClass)) {
+        if (isOpenState) {
+          return dict.binarySensor.doorOpen;
+        }
+        if (isClosedState) {
+          return dict.binarySensor.doorClosed;
+        }
+      }
+
+      if (["motion", "occupancy", "presence", "moving"].includes(deviceClass)) {
+        if (isOpenState) {
+          return dict.binarySensor.motionOn;
+        }
+        if (isClosedState) {
+          return dict.binarySensor.motionOff;
+        }
+      }
+    }
+
+    if (domain === "lock") {
+      if (key === "locking") {
+        return dict.states.locking;
+      }
+      if (key === "unlocking") {
+        return dict.states.unlocking;
+      }
+    }
+
+    const st = dict.states;
+    switch (key) {
+      case "on":
+        return st.on;
+      case "off":
+        return st.off;
+      case "open":
+        return st.open;
+      case "opening":
+        return st.opening;
+      case "closed":
+        return st.closed;
+      case "closing":
+        return st.closing;
+      case "playing":
+        return st.playing;
+      case "paused":
+        return st.paused;
+      case "idle":
+        return st.idle;
+      case "standby":
+        return st.standby;
+      case "home":
+        return st.home;
+      case "not_home":
+        return st.not_home;
+      case "detected":
+        return st.detected;
+      case "clear":
+        return st.clear;
+      case "unavailable":
+        return st.unavailable;
+      case "unknown":
+        return st.unknown;
+      case "locked":
+        return st.locked;
+      case "unlocked":
+        return st.unlocked;
+      case "locking_failed":
+        return st.locking_failed;
+      case "unlocking_failed":
+        return st.unlocking_failed;
+      case "jammed":
+        return st.jammed;
+      case "pending":
+        return st.pending;
+      case "stopped":
+        return st.stopped;
+      case "armed_away":
+        return st.armed_away;
+      case "armed_home":
+        return st.armed_home;
+      case "disarmed":
+        return st.disarmed;
+      case "triggered":
+        return st.triggered;
+      case "comfortable":
+        return st.comfortable;
+      case "very_comfortable":
+        return st.very_comfortable;
+      case "slightly_uncomfortable":
+        return st.slightly_uncomfortable;
+      case "somewhat_uncomfortable":
+        return st.somewhat_uncomfortable;
+      case "quite_uncomfortable":
+        return st.quite_uncomfortable;
+      case "extremely_uncomfortable":
+        return st.extremely_uncomfortable;
+      case "ok_but_humid":
+        return st.ok_but_humid;
+      case "little_or_no_discomfort":
+        return st.little_or_no_discomfort;
+      case "some_discomfort":
+        return st.some_discomfort;
+      case "great_discomfort_avoid_exertion":
+        return st.great_discomfort_avoid_exertion;
+      case "dangerous_discomfort":
+        return st.dangerous_discomfort;
+      case "heat_stroke_imminent":
+        return st.heat_stroke_imminent;
+      case "dry":
+        return st.dry;
+      case "very_dry":
+        return st.very_dry;
+      case "too_dry":
+        return st.too_dry;
+      case "humid":
+        return st.humid;
+      case "very_humid":
+        return st.very_humid;
+      case "too_humid":
+        return st.too_humid;
+      case "wet":
+        return st.wet;
+      case "low":
+        return st.low;
+      case "medium":
+        return st.medium;
+      case "moderate":
+        return st.moderate;
+      case "high":
+        return st.high;
+      case "very_high":
+        return st.very_high;
+      case "severely_high":
+        return st.severely_high;
+      case "critical":
+        return st.critical;
+      case "excellent":
+        return st.excellent;
+      case "good":
+        return st.good;
+      case "fair":
+        return st.fair;
+      case "poor":
+        return st.poor;
+      default:
+        return rawState || null;
+    }
+  }
+
+  window.NodaliaI18n = {
+    PACK,
+    resolveLanguage,
+    localeTag,
+    normalizeTextKey,
+    strings,
+    translateEntityState,
+    translateFavState(langCode, key) {
+      const raw = normalizeTextKey(key);
+      const fd = strings(langCode).favCard;
+      const ed = strings(langCode).entityCard.states;
+      switch (raw) {
+        case "on":
+          return ed.on;
+        case "off":
+          return ed.off;
+        case "open":
+          return ed.open;
+        case "closed":
+          return ed.closed;
+        case "playing":
+          return ed.playing;
+        case "paused":
+          return ed.paused;
+        case "idle":
+          return ed.idle;
+        case "standby":
+          return ed.standby;
+        case "home":
+          return ed.home;
+        case "not_home":
+          return ed.not_home;
+        case "disarmed":
+          return fd.disarmedF;
+        case "armed_home":
+          return fd.armed_home;
+        case "armed_away":
+          return fd.armed_away;
+        case "armed_night":
+          return fd.armed_night;
+        case "armed_vacation":
+          return fd.armed_vacation;
+        case "armed_custom_bypass":
+          return fd.armed_custom_bypass;
+        case "arming":
+          return fd.arming;
+        case "disarming":
+          return fd.disarming;
+        case "pending":
+          return fd.pending;
+        case "triggered":
+          return fd.triggered;
+        case "detected":
+          return ed.detected;
+        case "clear":
+          return ed.clear;
+        case "locked":
+          return ed.locked;
+        case "unlocked":
+          return ed.unlocked;
+        case "unavailable":
+          return ed.unavailable;
+        case "unknown":
+          return ed.unknown;
+        default:
+          return null;
+      }
+    },
+  };
+})();
+
+}
+{
+/* eslint-disable max-len */
+/* Auto-generated by scripts/gen-editor-ui.mjs — run: node scripts/gen-editor-ui.mjs */
+(() => {
+  const ROWS = [
+  {
+    "es": "Abrir URL en nueva pestana",
+    "en": "Open URL in new tab",
+    "de": "Öffnen: URL in new tab",
+    "fr": "Ouvrir URL in new tab",
+    "it": "Apri URL in new tab",
+    "nl": "Open URL in new tab"
+  },
+  {
+    "es": "Abrir URL en pestaña nueva",
+    "en": "Open URL in new tab",
+    "de": "Öffnen: URL in new tab",
+    "fr": "Ouvrir URL in new tab",
+    "it": "Apri URL in new tab",
+    "nl": "Open URL in new tab"
+  },
+  {
+    "es": "Abrir en pestaña nueva",
+    "en": "Open in new tab",
+    "de": "Öffnen: in new tab",
+    "fr": "Ouvrir in new tab",
+    "it": "Apri in new tab",
+    "nl": "Open in new tab"
+  },
+  {
+    "es": "Activar animaciones",
+    "en": "Enable animations",
+    "de": "Aktivieren: animations",
+    "fr": "Activer animations",
+    "it": "Abilita animations",
+    "nl": "Schakel animations"
+  },
+  {
+    "es": "Activar haptics",
+    "en": "Enable haptics",
+    "de": "Aktivieren: haptics",
+    "fr": "Activer haptics",
+    "it": "Abilita haptics",
+    "nl": "Schakel haptics"
+  },
+  {
+    "es": "Activar respuesta háptica",
+    "en": "Enable haptic feedback",
+    "de": "Aktivieren: haptic feedback",
+    "fr": "Activer haptic feedback",
+    "it": "Abilita haptic feedback",
+    "nl": "Schakel haptic feedback"
+  },
+  {
+    "es": "Ajuste icono (solo icono)",
+    "en": "Icon fit (icon only)",
+    "de": "Icon fit (icon only)",
+    "fr": "Icon fit (icon only)",
+    "it": "Icon fit (icon only)",
+    "nl": "Icon fit (icon only)"
+  },
+  {
+    "es": "Alto burbuja info",
+    "en": "Info bubble height",
+    "de": "Info bubble height",
+    "fr": "Info bubble height",
+    "it": "Info bubble height",
+    "nl": "Info bubble height"
+  },
+  {
+    "es": "Alto burbuja informativa",
+    "en": "Info bubble heightrmativa",
+    "de": "Info bubble heightrmativa",
+    "fr": "Info bubble heightrmativa",
+    "it": "Info bubble heightrmativa",
+    "nl": "Info bubble heightrmativa"
+  },
+  {
+    "es": "Alto chip",
+    "en": "Chip height",
+    "de": "Chip height",
+    "fr": "Chip height",
+    "it": "Chip height",
+    "nl": "Chip height"
+  },
+  {
+    "es": "Alto chips",
+    "en": "Chip heights",
+    "de": "Chip heights",
+    "fr": "Chip heights",
+    "it": "Chip heights",
+    "nl": "Chip heights"
+  },
+  {
+    "es": "Alto contenedor slider",
+    "en": "Slider container height",
+    "de": "Slider container height",
+    "fr": "Slider container height",
+    "it": "Slider container height",
+    "nl": "Slider container height"
+  },
+  {
+    "es": "Alto de chips",
+    "en": "Chip height",
+    "de": "Chip height",
+    "fr": "Chip height",
+    "it": "Chip height",
+    "nl": "Chip height"
+  },
+  {
+    "es": "Alto del contenedor del slider",
+    "en": "Slider container height",
+    "de": "Slider container height",
+    "fr": "Slider container height",
+    "it": "Slider container height",
+    "nl": "Slider container height"
+  },
+  {
+    "es": "Alto grafica",
+    "en": "Chart height",
+    "de": "Chart height",
+    "fr": "Chart height",
+    "it": "Chart height",
+    "nl": "Chart height"
+  },
+  {
+    "es": "Alto grafico",
+    "en": "Chart height",
+    "de": "Chart height",
+    "fr": "Chart height",
+    "it": "Chart height",
+    "nl": "Chart height"
+  },
+  {
+    "es": "Alto input codigo",
+    "en": "Code input height",
+    "de": "Code input height",
+    "fr": "Code input height",
+    "it": "Code input height",
+    "nl": "Code input height"
+  },
+  {
+    "es": "Altura mínima",
+    "en": "Minimum height",
+    "de": "Minimum height",
+    "fr": "Minimum height",
+    "it": "Minimum height",
+    "nl": "Minimum height"
+  },
+  {
+    "es": "Altura reservada",
+    "en": "Reserved height",
+    "de": "Reserved height",
+    "fr": "Reserved height",
+    "it": "Reserved height",
+    "nl": "Reserved height"
+  },
+  {
+    "es": "Ancho burbuja slider",
+    "en": "Slider bubble width",
+    "de": "Slider bubble width",
+    "fr": "Slider bubble width",
+    "it": "Slider bubble width",
+    "nl": "Slider bubble width"
+  },
+  {
+    "es": "Ancho máximo",
+    "en": "Maximum width",
+    "de": "Maximum width",
+    "fr": "Maximum width",
+    "it": "Maximum width",
+    "nl": "Maximum width"
+  },
+  {
+    "es": "Atributo a mostrar",
+    "en": "Attribute to show",
+    "de": "Attribute to show",
+    "fr": "Attribute to show",
+    "it": "Attribute to show",
+    "nl": "Attribute to show"
+  },
+  {
+    "es": "Atributo chip principal",
+    "en": "Primary chip attribute",
+    "de": "Primary chip attribute",
+    "fr": "Primary chip attribute",
+    "it": "Primary chip attribute",
+    "nl": "Primary chip attribute"
+  },
+  {
+    "es": "Atributo chip secundario",
+    "en": "Secondary chip attribute",
+    "de": "Secondary chip attribute",
+    "fr": "Secondary chip attribute",
+    "it": "Secondary chip attribute",
+    "nl": "Secondary chip attribute"
+  },
+  {
+    "es": "Atributo de estado",
+    "en": "State attribute",
+    "de": "State attribute",
+    "fr": "State attribute",
+    "it": "State attribute",
+    "nl": "State attribute"
+  },
+  {
+    "es": "Atributo secundario",
+    "en": "Secondary attribute",
+    "de": "Secondary attribute",
+    "fr": "Secondary attribute",
+    "it": "Secondary attribute",
+    "nl": "Secondary attribute"
+  },
+  {
+    "es": "Background",
+    "en": "Background",
+    "de": "Background",
+    "fr": "Background",
+    "it": "Background",
+    "nl": "Background"
+  },
+  {
+    "es": "Badge de no disponible",
+    "en": "Unavailable badge",
+    "de": "Unavailable badge",
+    "fr": "Unavailable badge",
+    "it": "Unavailable badge",
+    "nl": "Unavailable badge"
+  },
+  {
+    "es": "Badge no disponible",
+    "en": "Unavailable badge",
+    "de": "Unavailable badge",
+    "fr": "Unavailable badge",
+    "it": "Unavailable badge",
+    "nl": "Unavailable badge"
+  },
+  {
+    "es": "Borde",
+    "en": "Border",
+    "de": "Rahmen",
+    "fr": "Bordure",
+    "it": "Bordo",
+    "nl": "Rand"
+  },
+  {
+    "es": "Borde de la tarjeta",
+    "en": "Card Borderr",
+    "de": "Card Borderr",
+    "fr": "Card Borderr",
+    "it": "Card Borderr",
+    "nl": "Card Borderr"
+  },
+  {
+    "es": "Borde del navegador",
+    "en": "Browser Borderr",
+    "de": "Browser Borderr",
+    "fr": "Browser Borderr",
+    "it": "Browser Borderr",
+    "nl": "Browser Borderr"
+  },
+  {
+    "es": "Borde del reproductor",
+    "en": "Player Borderr",
+    "de": "Player Borderr",
+    "fr": "Player Borderr",
+    "it": "Player Borderr",
+    "nl": "Player Borderr"
+  },
+  {
+    "es": "Borde tarjeta",
+    "en": "Card Borderr",
+    "de": "Card Borderr",
+    "fr": "Card Borderr",
+    "it": "Card Borderr",
+    "nl": "Card Borderr"
+  },
+  {
+    "es": "Border",
+    "en": "Border",
+    "de": "Rahmen",
+    "fr": "Bordure",
+    "it": "Bordo",
+    "nl": "Rand"
+  },
+  {
+    "es": "Boton localizar",
+    "en": "Locate button",
+    "de": "Locate button",
+    "fr": "Locate button",
+    "it": "Locate button",
+    "nl": "Locate button"
+  },
+  {
+    "es": "Boton parar",
+    "en": "Stop button",
+    "de": "Stop button",
+    "fr": "Stop button",
+    "it": "Stop button",
+    "nl": "Stop button"
+  },
+  {
+    "es": "Boton volver a base",
+    "en": "Return to dock button",
+    "de": "Return to dock button",
+    "fr": "Return to dock button",
+    "it": "Return to dock button",
+    "nl": "Return to dock button"
+  },
+  {
+    "es": "Botones + / -",
+    "en": "+ / − buttons",
+    "de": "+ / − buttons",
+    "fr": "+ / − buttons",
+    "it": "+ / − buttons",
+    "nl": "+ / − buttons"
+  },
+  {
+    "es": "Botones de modo",
+    "en": "Mode buttons",
+    "de": "Mode buttons",
+    "fr": "Mode buttons",
+    "it": "Mode buttons",
+    "nl": "Mode buttons"
+  },
+  {
+    "es": "Botones de modo junto al slider",
+    "en": "Mode buttons next to slider",
+    "de": "Mode buttons next to slider",
+    "fr": "Mode buttons next to slider",
+    "it": "Mode buttons next to slider",
+    "nl": "Mode buttons next to slider"
+  },
+  {
+    "es": "Botón localizar",
+    "en": "Locate button",
+    "de": "Locate button",
+    "fr": "Locate button",
+    "it": "Locate button",
+    "nl": "Locate button"
+  },
+  {
+    "es": "Botón parar",
+    "en": "Stop button",
+    "de": "Stop button",
+    "fr": "Stop button",
+    "it": "Stop button",
+    "nl": "Stop button"
+  },
+  {
+    "es": "Botón volver a base",
+    "en": "Return to dock button",
+    "de": "Return to dock button",
+    "fr": "Return to dock button",
+    "it": "Return to dock button",
+    "nl": "Return to dock button"
+  },
+  {
+    "es": "Breakpoint móvil",
+    "en": "Mobile breakpoint",
+    "de": "Mobile breakpoint",
+    "fr": "Mobile breakpoint",
+    "it": "Mobile breakpoint",
+    "nl": "Mobile breakpoint"
+  },
+  {
+    "es": "Calibracion desde camera",
+    "en": "Calibration from camera",
+    "de": "Calibration from camera",
+    "fr": "Calibration from camera",
+    "it": "Calibration from camera",
+    "nl": "Calibration from camera"
+  },
+  {
+    "es": "Cambio entre sliders (ms)",
+    "en": "Slider switch (ms)",
+    "de": "Slider switch (ms)",
+    "fr": "Slider switch (ms)",
+    "it": "Slider switch (ms)",
+    "nl": "Slider switch (ms)"
+  },
+  {
+    "es": "Chip de bateria",
+    "en": "Battery chip",
+    "de": "Battery chip",
+    "fr": "Battery chip",
+    "it": "Battery chip",
+    "nl": "Battery chip"
+  },
+  {
+    "es": "Chip de batería",
+    "en": "Battery chip",
+    "de": "Battery chip",
+    "fr": "Battery chip",
+    "it": "Battery chip",
+    "nl": "Battery chip"
+  },
+  {
+    "es": "Chip de estado",
+    "en": "State chip",
+    "de": "State chip",
+    "fr": "State chip",
+    "it": "State chip",
+    "nl": "State chip"
+  },
+  {
+    "es": "Chip de humedad",
+    "en": "Humidity chip",
+    "de": "Humidity chip",
+    "fr": "Humidity chip",
+    "it": "Humidity chip",
+    "nl": "Humidity chip"
+  },
+  {
+    "es": "Chip de temperatura actual",
+    "en": "Current temperature chip",
+    "de": "Current temperature chip",
+    "fr": "Current temperature chip",
+    "it": "Current temperature chip",
+    "nl": "Current temperature chip"
+  },
+  {
+    "es": "Click entidades",
+    "en": "Entity click",
+    "de": "Entity click",
+    "fr": "Entity click",
+    "it": "Entity click",
+    "nl": "Entity click"
+  },
+  {
+    "es": "Color",
+    "en": "Color",
+    "de": "Farbe",
+    "fr": "Couleur",
+    "it": "Colore",
+    "nl": "Kleur"
+  },
+  {
+    "es": "Color auto",
+    "en": "Auto Color",
+    "de": "Auto Color",
+    "fr": "Auto Color",
+    "it": "Auto Color",
+    "nl": "Auto Color"
+  },
+  {
+    "es": "Color calor",
+    "en": "Heat Color",
+    "de": "Heat Color",
+    "fr": "Heat Color",
+    "it": "Heat Color",
+    "nl": "Heat Color"
+  },
+  {
+    "es": "Color frio",
+    "en": "Cool Color",
+    "de": "Cool Color",
+    "fr": "Cool Color",
+    "it": "Cool Color",
+    "nl": "Cool Color"
+  },
+  {
+    "es": "Color gris RGB",
+    "en": "Gray RGB Color",
+    "de": "Gray RGB Color",
+    "fr": "Gray RGB Color",
+    "it": "Gray RGB Color",
+    "nl": "Gray RGB Color"
+  },
+  {
+    "es": "Color iconos",
+    "en": "Icon Color",
+    "de": "Icon Color",
+    "fr": "Icon Color",
+    "it": "Icon Color",
+    "nl": "Icon Color"
+  },
+  {
+    "es": "Color secado",
+    "en": "Dry Color",
+    "de": "Dry Color",
+    "fr": "Dry Color",
+    "it": "Dry Color",
+    "nl": "Dry Color"
+  },
+  {
+    "es": "Color ventilador",
+    "en": "Fan Color",
+    "de": "Fan Color",
+    "fr": "Fan Color",
+    "it": "Fan Color",
+    "nl": "Fan Color"
+  },
+  {
+    "es": "Columnas de grid",
+    "en": "Grid columns",
+    "de": "Grid columns",
+    "fr": "Grid columns",
+    "it": "Grid columns",
+    "nl": "Grid columns"
+  },
+  {
+    "es": "Contracción horizontal del slider",
+    "en": "Slider horizontal shrink",
+    "de": "Slider horizontal shrink",
+    "fr": "Slider horizontal shrink",
+    "it": "Slider horizontal shrink",
+    "nl": "Slider horizontal shrink"
+  },
+  {
+    "es": "Controles de color",
+    "en": "Color controls",
+    "de": "Color controls",
+    "fr": "Color controls",
+    "it": "Color controls",
+    "nl": "Color controls"
+  },
+  {
+    "es": "Controles de modo",
+    "en": "Mode controls",
+    "de": "Mode controls",
+    "fr": "Mode controls",
+    "it": "Mode controls",
+    "nl": "Mode controls"
+  },
+  {
+    "es": "Controles de temperatura",
+    "en": "Temperature controls",
+    "de": "Temperature controls",
+    "fr": "Temperature controls",
+    "it": "Temperature controls",
+    "nl": "Temperature controls"
+  },
+  {
+    "es": "Datos del servicio (JSON)",
+    "en": "Service data (JSON)",
+    "de": "Service data (JSON)",
+    "fr": "Service data (JSON)",
+    "it": "Service data (JSON)",
+    "nl": "Service data (JSON)"
+  },
+  {
+    "es": "Decimales",
+    "en": "Decimals",
+    "de": "Decimals",
+    "fr": "Decimals",
+    "it": "Decimals",
+    "nl": "Decimals"
+  },
+  {
+    "es": "Decimales en estado y chips",
+    "en": "Decimals in state and chips",
+    "de": "Decimals in state and chips",
+    "fr": "Decimals in state and chips",
+    "it": "Decimals in state and chips",
+    "nl": "Decimals in state and chips"
+  },
+  {
+    "es": "Decimales secundarios",
+    "en": "Secondary decimals",
+    "de": "Secondary decimals",
+    "fr": "Secondary decimals",
+    "it": "Secondary decimals",
+    "nl": "Secondary decimals"
+  },
+  {
+    "es": "Dial (ms)",
+    "en": "Dial (ms)",
+    "de": "Dial (ms)",
+    "fr": "Dial (ms)",
+    "it": "Dial (ms)",
+    "nl": "Dial (ms)"
+  },
+  {
+    "es": "Dias visibles",
+    "en": "Visible days",
+    "de": "Visible days",
+    "fr": "Visible days",
+    "it": "Visible days",
+    "nl": "Visible days"
+  },
+  {
+    "es": "Empezar desde cero",
+    "en": "Start from zero",
+    "de": "Start from zero",
+    "fr": "Start from zero",
+    "it": "Start from zero",
+    "nl": "Start from zero"
+  },
+  {
+    "es": "Encendido y apagado (ms)",
+    "en": "Power on/off (ms)",
+    "de": "Power on/off (ms)",
+    "fr": "Power on/off (ms)",
+    "it": "Power on/off (ms)",
+    "nl": "Power on/off (ms)"
+  },
+  {
+    "es": "Enlace panel energia",
+    "en": "Energy panel link",
+    "de": "Energy panel link",
+    "fr": "Energy panel link",
+    "it": "Energy panel link",
+    "nl": "Energy panel link"
+  },
+  {
+    "es": "Entidad",
+    "en": "Entity",
+    "de": "Entität",
+    "fr": "Entité",
+    "it": "Entità",
+    "nl": "Entiteit"
+  },
+  {
+    "es": "Entidad Meteoalarm",
+    "en": "Meteoalarm entity",
+    "de": "Meteoalarm entity",
+    "fr": "Meteoalarm entity",
+    "it": "Meteoalarm entity",
+    "nl": "Meteoalarm entity"
+  },
+  {
+    "es": "Entidad calibracion",
+    "en": "Calibration entity",
+    "de": "Calibration entity",
+    "fr": "Calibration entity",
+    "it": "Calibration entity",
+    "nl": "Calibration entity"
+  },
+  {
+    "es": "Entidad del robot",
+    "en": "Robot entity",
+    "de": "Robot entity",
+    "fr": "Robot entity",
+    "it": "Robot entity",
+    "nl": "Robot entity"
+  },
+  {
+    "es": "Entidad mapa (camera/image)",
+    "en": "Map entity (camera/image)",
+    "de": "Map entity (camera/image)",
+    "fr": "Map entity (camera/image)",
+    "it": "Map entity (camera/image)",
+    "nl": "Map entity (camera/image)"
+  },
+  {
+    "es": "Entidad principal",
+    "en": "Main entity",
+    "de": "Main entity",
+    "fr": "Main entity",
+    "it": "Main entity",
+    "nl": "Main entity"
+  },
+  {
+    "es": "Entidad secundaria",
+    "en": "Secondary entity",
+    "de": "Secondary entity",
+    "fr": "Secondary entity",
+    "it": "Secondary entity",
+    "nl": "Secondary entity"
+  },
+  {
+    "es": "Entidad vacuum",
+    "en": "Vacuum entity",
+    "de": "Vacuum entity",
+    "fr": "Vacuum entity",
+    "it": "Vacuum entity",
+    "nl": "Vacuum entity"
+  },
+  {
+    "es": "Entidades",
+    "en": "Entities",
+    "de": "Entities",
+    "fr": "Entities",
+    "it": "Entities",
+    "nl": "Entities"
+  },
+  {
+    "es": "Entidades individuales",
+    "en": "Individual entities",
+    "de": "Individual entities",
+    "fr": "Individual entities",
+    "it": "Individual entities",
+    "nl": "Individual entities"
+  },
+  {
+    "es": "Entrada contenido (ms)",
+    "en": "Content entrance (ms)",
+    "de": "Content entrance (ms)",
+    "fr": "Content entrance (ms)",
+    "it": "Content entrance (ms)",
+    "nl": "Content entrance (ms)"
+  },
+  {
+    "es": "Entrada del contenido (ms)",
+    "en": "Content entrance (ms)",
+    "de": "Content entrance (ms)",
+    "fr": "Content entrance (ms)",
+    "it": "Content entrance (ms)",
+    "nl": "Content entrance (ms)"
+  },
+  {
+    "es": "Estado a la derecha del nombre",
+    "en": "State on title row",
+    "de": "State on title row",
+    "fr": "State on title row",
+    "it": "State on title row",
+    "nl": "State on title row"
+  },
+  {
+    "es": "Estados visibles",
+    "en": "Visible states",
+    "de": "Visible states",
+    "fr": "Visible states",
+    "it": "Visible states",
+    "nl": "Visible states"
+  },
+  {
+    "es": "Estilo",
+    "en": "Style",
+    "de": "Style",
+    "fr": "Style",
+    "it": "Style",
+    "nl": "Style"
+  },
+  {
+    "es": "Etiqueta",
+    "en": "Label",
+    "de": "Label",
+    "fr": "Label",
+    "it": "Label",
+    "nl": "Label"
+  },
+  {
+    "es": "Etiqueta boton energia",
+    "en": "Energy button label",
+    "de": "Energy button label",
+    "fr": "Energy button label",
+    "it": "Energy button label",
+    "nl": "Energy button label"
+  },
+  {
+    "es": "Etiqueta maximo",
+    "en": "Maximum label",
+    "de": "Maximum label",
+    "fr": "Maximum label",
+    "it": "Maximum label",
+    "nl": "Maximum label"
+  },
+  {
+    "es": "Etiqueta menu derecho",
+    "en": "Right menu label",
+    "de": "Right menu label",
+    "fr": "Right menu label",
+    "it": "Right menu label",
+    "nl": "Right menu label"
+  },
+  {
+    "es": "Etiqueta minimo",
+    "en": "Minimum label",
+    "de": "Minimum label",
+    "fr": "Minimum label",
+    "it": "Minimum label",
+    "nl": "Minimum label"
+  },
+  {
+    "es": "Etiquetas",
+    "en": "Labels",
+    "de": "Labels",
+    "fr": "Labels",
+    "it": "Labels",
+    "nl": "Labels"
+  },
+  {
+    "es": "Expansión de controles (ms)",
+    "en": "Controls expand (ms)",
+    "de": "Controls expand (ms)",
+    "fr": "Controls expand (ms)",
+    "it": "Controls expand (ms)",
+    "nl": "Controls expand (ms)"
+  },
+  {
+    "es": "Fallback con vibracion",
+    "en": "Vibration fallback",
+    "de": "Vibration fallback",
+    "fr": "Vibration fallback",
+    "it": "Vibration fallback",
+    "nl": "Vibration fallback"
+  },
+  {
+    "es": "Fallback con vibración",
+    "en": "Vibration fallback",
+    "de": "Vibration fallback",
+    "fr": "Vibration fallback",
+    "it": "Vibration fallback",
+    "nl": "Vibration fallback"
+  },
+  {
+    "es": "Flujo maximo (s)",
+    "en": "Maximum flow (s)",
+    "de": "Maximum flow (s)",
+    "fr": "Maximum flow (s)",
+    "it": "Maximum flow (s)",
+    "nl": "Maximum flow (s)"
+  },
+  {
+    "es": "Flujo minimo (s)",
+    "en": "Minimum flow (s)",
+    "de": "Minimum flow (s)",
+    "fr": "Minimum flow (s)",
+    "it": "Minimum flow (s)",
+    "nl": "Minimum flow (s)"
+  },
+  {
+    "es": "Gap",
+    "en": "Gap",
+    "de": "Gap",
+    "fr": "Gap",
+    "it": "Gap",
+    "nl": "Gap"
+  },
+  {
+    "es": "Grafico en color",
+    "en": "Color chart",
+    "de": "Color chart",
+    "fr": "Color chart",
+    "it": "Color chart",
+    "nl": "Color chart"
+  },
+  {
+    "es": "Grosor del slider",
+    "en": "Slider thickness",
+    "de": "Slider thickness",
+    "fr": "Slider thickness",
+    "it": "Slider thickness",
+    "nl": "Slider thickness"
+  },
+  {
+    "es": "Grosor dial",
+    "en": "Dial thickness",
+    "de": "Dial thickness",
+    "fr": "Dial thickness",
+    "it": "Dial thickness",
+    "nl": "Dial thickness"
+  },
+  {
+    "es": "Grosor linea",
+    "en": "Line thickness",
+    "de": "Line thickness",
+    "fr": "Line thickness",
+    "it": "Line thickness",
+    "nl": "Line thickness"
+  },
+  {
+    "es": "Grosor lineas",
+    "en": "Line thicknesss",
+    "de": "Line thicknesss",
+    "fr": "Line thicknesss",
+    "it": "Line thicknesss",
+    "nl": "Line thicknesss"
+  },
+  {
+    "es": "Grosor slider",
+    "en": "Slider thickness",
+    "de": "Slider thickness",
+    "fr": "Slider thickness",
+    "it": "Slider thickness",
+    "nl": "Slider thickness"
+  },
+  {
+    "es": "Helper codigo",
+    "en": "Code helper",
+    "de": "Code helper",
+    "fr": "Code helper",
+    "it": "Code helper",
+    "nl": "Code helper"
+  },
+  {
+    "es": "Helper sesion compartida",
+    "en": "Shared session helper",
+    "de": "Shared session helper",
+    "fr": "Shared session helper",
+    "it": "Shared session helper",
+    "nl": "Shared session helper"
+  },
+  {
+    "es": "Horas a mostrar",
+    "en": "Hours to show",
+    "de": "Hours to show",
+    "fr": "Hours to show",
+    "it": "Hours to show",
+    "nl": "Hours to show"
+  },
+  {
+    "es": "Horas visibles",
+    "en": "Visible hours",
+    "de": "Visible hours",
+    "fr": "Visible hours",
+    "it": "Visible hours",
+    "nl": "Visible hours"
+  },
+  {
+    "es": "Icono",
+    "en": "Icon",
+    "de": "Symbol",
+    "fr": "Icône",
+    "it": "Icona",
+    "nl": "Pictogram"
+  },
+  {
+    "es": "Icono fallback",
+    "en": "Fallback icon",
+    "de": "Fallback icon",
+    "fr": "Fallback icon",
+    "it": "Fallback icon",
+    "nl": "Fallback icon"
+  },
+  {
+    "es": "Icono menu derecho",
+    "en": "Right menu icon",
+    "de": "Right menu icon",
+    "fr": "Right menu icon",
+    "it": "Right menu icon",
+    "nl": "Right menu icon"
+  },
+  {
+    "es": "Iconos cabecera",
+    "en": "Icons cabecera",
+    "de": "Icons cabecera",
+    "fr": "Icons cabecera",
+    "it": "Icons cabecera",
+    "nl": "Icons cabecera"
+  },
+  {
+    "es": "Imagen personalizada",
+    "en": "Custom image",
+    "de": "Custom image",
+    "fr": "Custom image",
+    "it": "Custom image",
+    "nl": "Custom image"
+  },
+  {
+    "es": "Info secundaria",
+    "en": "Secondary info",
+    "de": "Secondary info",
+    "fr": "Secondary info",
+    "it": "Secondary info",
+    "nl": "Secondary info"
+  },
+  {
+    "es": "Items del menu derecho (JSON)",
+    "en": "Right menu items (JSON)",
+    "de": "Right menu items (JSON)",
+    "fr": "Right menu items (JSON)",
+    "it": "Right menu items (JSON)",
+    "nl": "Right menu items (JSON)"
+  },
+  {
+    "es": "Lineas a cero",
+    "en": "Lines to zero",
+    "de": "Lines to zero",
+    "fr": "Lines to zero",
+    "it": "Lines to zero",
+    "nl": "Lines to zero"
+  },
+  {
+    "es": "Mapa bloqueado",
+    "en": "Map locked",
+    "de": "Map locked",
+    "fr": "Map locked",
+    "it": "Map locked",
+    "nl": "Map locked"
+  },
+  {
+    "es": "Margen lateral",
+    "en": "Side margin",
+    "de": "Side margin",
+    "fr": "Side margin",
+    "it": "Side margin",
+    "nl": "Side margin"
+  },
+  {
+    "es": "Max repeticiones",
+    "en": "Max repeats",
+    "de": "Max repeats",
+    "fr": "Max repeats",
+    "it": "Max repeats",
+    "nl": "Max repeats"
+  },
+  {
+    "es": "Max zonas",
+    "en": "Max zones",
+    "de": "Max zones",
+    "fr": "Max zones",
+    "it": "Max zones",
+    "nl": "Max zones"
+  },
+  {
+    "es": "Maximo",
+    "en": "Maximum",
+    "de": "Maximum",
+    "fr": "Maximum",
+    "it": "Maximum",
+    "nl": "Maximum"
+  },
+  {
+    "es": "Minimo",
+    "en": "Minimum",
+    "de": "Minimum",
+    "fr": "Minimum",
+    "it": "Minimum",
+    "nl": "Minimum"
+  },
+  {
+    "es": "Modo TV / Apple TV",
+    "en": "TV / Apple TV mode",
+    "de": "TV / Apple TV mode",
+    "fr": "TV / Apple TV mode",
+    "it": "TV / Apple TV mode",
+    "nl": "TV / Apple TV mode"
+  },
+  {
+    "es": "Modo habitaciones",
+    "en": "Rooms mode",
+    "de": "Rooms mode",
+    "fr": "Rooms mode",
+    "it": "Rooms mode",
+    "nl": "Rooms mode"
+  },
+  {
+    "es": "Modo ir a punto",
+    "en": "Go-to-point mode",
+    "de": "Go-to-point mode",
+    "fr": "Go-to-point mode",
+    "it": "Go-to-point mode",
+    "nl": "Go-to-point mode"
+  },
+  {
+    "es": "Modo todo",
+    "en": "All mode",
+    "de": "All mode",
+    "fr": "All mode",
+    "it": "All mode",
+    "nl": "All mode"
+  },
+  {
+    "es": "Modo zona",
+    "en": "Zone mode",
+    "de": "Zone mode",
+    "fr": "Zone mode",
+    "it": "Zone mode",
+    "nl": "Zone mode"
+  },
+  {
+    "es": "Modos rápidos de potencia",
+    "en": "Quick power presets",
+    "de": "Quick power presets",
+    "fr": "Quick power presets",
+    "it": "Quick power presets",
+    "nl": "Quick power presets"
+  },
+  {
+    "es": "Mostrar ausente",
+    "en": "Show away",
+    "de": "Anzeigen: away",
+    "fr": "Afficher away",
+    "it": "Mostra away",
+    "nl": "Toon away"
+  },
+  {
+    "es": "Mostrar badge de no disponible",
+    "en": "Mostrar Unavailable badge",
+    "de": "Mostrar Unavailable badge",
+    "fr": "Mostrar Unavailable badge",
+    "it": "Mostrar Unavailable badge",
+    "nl": "Mostrar Unavailable badge"
+  },
+  {
+    "es": "Mostrar badge de zona",
+    "en": "Show zone badge",
+    "de": "Anzeigen: zone badge",
+    "fr": "Afficher zone badge",
+    "it": "Mostra zone badge",
+    "nl": "Toon zone badge"
+  },
+  {
+    "es": "Mostrar boton energia",
+    "en": "Show energy button",
+    "de": "Anzeigen: energy button",
+    "fr": "Afficher energy button",
+    "it": "Mostra energy button",
+    "nl": "Toon energy button"
+  },
+  {
+    "es": "Mostrar botones +/-",
+    "en": "Mostrar botones +/-",
+    "de": "Mostrar botones +/-",
+    "fr": "Mostrar botones +/-",
+    "it": "Mostrar botones +/-",
+    "nl": "Mostrar botones +/-"
+  },
+  {
+    "es": "Mostrar botones de modo",
+    "en": "Mostrar Mode buttons",
+    "de": "Mostrar Mode buttons",
+    "fr": "Mostrar Mode buttons",
+    "it": "Mostrar Mode buttons",
+    "nl": "Mostrar Mode buttons"
+  },
+  {
+    "es": "Mostrar botón de modo",
+    "en": "Show mode button",
+    "de": "Anzeigen: mode button",
+    "fr": "Afficher mode button",
+    "it": "Mostra mode button",
+    "nl": "Toon mode button"
+  },
+  {
+    "es": "Mostrar botón de oscilación",
+    "en": "Show oscillate button",
+    "de": "Anzeigen: oscillate button",
+    "fr": "Afficher oscillate button",
+    "it": "Mostra oscillate button",
+    "nl": "Toon oscillate button"
+  },
+  {
+    "es": "Mostrar botón de ventilación",
+    "en": "Show fan mode button",
+    "de": "Anzeigen: fan mode button",
+    "fr": "Afficher fan mode button",
+    "it": "Mostra fan mode button",
+    "nl": "Toon fan mode button"
+  },
+  {
+    "es": "Mostrar brillo",
+    "en": "Show brightness",
+    "de": "Anzeigen: brightness",
+    "fr": "Afficher brightness",
+    "it": "Mostra brightness",
+    "nl": "Toon brightness"
+  },
+  {
+    "es": "Mostrar burbuja de estado",
+    "en": "Show state bubble",
+    "de": "Anzeigen: state bubble",
+    "fr": "Afficher state bubble",
+    "it": "Mostra state bubble",
+    "nl": "Toon state bubble"
+  },
+  {
+    "es": "Mostrar cabecera",
+    "en": "Show header",
+    "de": "Anzeigen: header",
+    "fr": "Afficher header",
+    "it": "Mostra header",
+    "nl": "Toon header"
+  },
+  {
+    "es": "Mostrar chip Meteoalarm",
+    "en": "Show Meteoalarm chip",
+    "de": "Anzeigen: Meteoalarm chip",
+    "fr": "Afficher Meteoalarm chip",
+    "it": "Mostra Meteoalarm chip",
+    "nl": "Toon Meteoalarm chip"
+  },
+  {
+    "es": "Mostrar chip de estado",
+    "en": "Mostrar State chip",
+    "de": "Mostrar State chip",
+    "fr": "Mostrar State chip",
+    "it": "Mostrar State chip",
+    "nl": "Mostrar State chip"
+  },
+  {
+    "es": "Mostrar chip de humedad",
+    "en": "Mostrar Humidity chip",
+    "de": "Mostrar Humidity chip",
+    "fr": "Mostrar Humidity chip",
+    "it": "Mostrar Humidity chip",
+    "nl": "Mostrar Humidity chip"
+  },
+  {
+    "es": "Mostrar chip de humedad objetivo",
+    "en": "Mostrar Humidity chip objetivo",
+    "de": "Mostrar Humidity chip objetivo",
+    "fr": "Mostrar Humidity chip objetivo",
+    "it": "Mostrar Humidity chip objetivo",
+    "nl": "Mostrar Humidity chip objetivo"
+  },
+  {
+    "es": "Mostrar chip de modo",
+    "en": "Show mode chip",
+    "de": "Anzeigen: mode chip",
+    "fr": "Afficher mode chip",
+    "it": "Mostra mode chip",
+    "nl": "Toon mode chip"
+  },
+  {
+    "es": "Mostrar chip de porcentaje",
+    "en": "Show percentage chip",
+    "de": "Anzeigen: percentage chip",
+    "fr": "Afficher percentage chip",
+    "it": "Mostra percentage chip",
+    "nl": "Toon percentage chip"
+  },
+  {
+    "es": "Mostrar chip de temperatura actual",
+    "en": "Mostrar Current temperature chip",
+    "de": "Mostrar Current temperature chip",
+    "fr": "Mostrar Current temperature chip",
+    "it": "Mostrar Current temperature chip",
+    "nl": "Mostrar Current temperature chip"
+  },
+  {
+    "es": "Mostrar chip de velocidad",
+    "en": "Show speed chip",
+    "de": "Anzeigen: speed chip",
+    "fr": "Afficher speed chip",
+    "it": "Mostra speed chip",
+    "nl": "Toon speed chip"
+  },
+  {
+    "es": "Mostrar chip de ventilación",
+    "en": "Show fan chip",
+    "de": "Anzeigen: fan chip",
+    "fr": "Afficher fan chip",
+    "it": "Mostra fan chip",
+    "nl": "Toon fan chip"
+  },
+  {
+    "es": "Mostrar chip humedad",
+    "en": "Show humidity chip",
+    "de": "Anzeigen: humidity chip",
+    "fr": "Afficher humidity chip",
+    "it": "Mostra humidity chip",
+    "nl": "Toon humidity chip"
+  },
+  {
+    "es": "Mostrar chip presion",
+    "en": "Show pressure chip",
+    "de": "Anzeigen: pressure chip",
+    "fr": "Afficher pressure chip",
+    "it": "Mostra pressure chip",
+    "nl": "Toon pressure chip"
+  },
+  {
+    "es": "Mostrar chip principal",
+    "en": "Show primary chip",
+    "de": "Anzeigen: primary chip",
+    "fr": "Afficher primary chip",
+    "it": "Mostra primary chip",
+    "nl": "Toon primary chip"
+  },
+  {
+    "es": "Mostrar chip secundario",
+    "en": "Show secondary chip",
+    "de": "Anzeigen: secondary chip",
+    "fr": "Afficher secondary chip",
+    "it": "Mostra secondary chip",
+    "nl": "Toon secondary chip"
+  },
+  {
+    "es": "Mostrar chip viento",
+    "en": "Show wind chip",
+    "de": "Anzeigen: wind chip",
+    "fr": "Afficher wind chip",
+    "it": "Mostra wind chip",
+    "nl": "Toon wind chip"
+  },
+  {
+    "es": "Mostrar condicion",
+    "en": "Show condition",
+    "de": "Anzeigen: condition",
+    "fr": "Afficher condition",
+    "it": "Mostra condition",
+    "nl": "Toon condition"
+  },
+  {
+    "es": "Mostrar control deslizante",
+    "en": "Show slider",
+    "de": "Anzeigen: slider",
+    "fr": "Afficher slider",
+    "it": "Mostra slider",
+    "nl": "Toon slider"
+  },
+  {
+    "es": "Mostrar cuadro de texto del PIN",
+    "en": "Show PIN text field",
+    "de": "Anzeigen: PIN text field",
+    "fr": "Afficher PIN text field",
+    "it": "Mostra PIN text field",
+    "nl": "Toon PIN text field"
+  },
+  {
+    "es": "Mostrar desarmar",
+    "en": "Show disarm",
+    "de": "Anzeigen: disarm",
+    "fr": "Afficher disarm",
+    "it": "Mostra disarm",
+    "nl": "Toon disarm"
+  },
+  {
+    "es": "Mostrar en casa",
+    "en": "Show home",
+    "de": "Anzeigen: home",
+    "fr": "Afficher home",
+    "it": "Mostra home",
+    "nl": "Toon home"
+  },
+  {
+    "es": "Mostrar en escritorio",
+    "en": "Show on desktop",
+    "de": "Anzeigen: on desktop",
+    "fr": "Afficher on desktop",
+    "it": "Mostra on desktop",
+    "nl": "Toon on desktop"
+  },
+  {
+    "es": "Mostrar estado",
+    "en": "Show state",
+    "de": "Anzeigen: state",
+    "fr": "Afficher state",
+    "it": "Mostra state",
+    "nl": "Toon state"
+  },
+  {
+    "es": "Mostrar estado actual",
+    "en": "Show current state",
+    "de": "Anzeigen: current state",
+    "fr": "Afficher current state",
+    "it": "Mostra current state",
+    "nl": "Toon current state"
+  },
+  {
+    "es": "Mostrar estado en burbuja",
+    "en": "Show state in bubble",
+    "de": "Anzeigen: state in bubble",
+    "fr": "Afficher state in bubble",
+    "it": "Mostra state in bubble",
+    "nl": "Toon state in bubble"
+  },
+  {
+    "es": "Mostrar estado textual",
+    "en": "Show textual state",
+    "de": "Anzeigen: textual state",
+    "fr": "Afficher textual state",
+    "it": "Mostra textual state",
+    "nl": "Toon textual state"
+  },
+  {
+    "es": "Mostrar etiquetas del grafico",
+    "en": "Mostrar Labels del chart",
+    "de": "Mostrar Labels del chart",
+    "fr": "Mostrar Labels del chart",
+    "it": "Mostrar Labels del chart",
+    "nl": "Mostrar Labels del chart"
+  },
+  {
+    "es": "Mostrar etiquetas habitaciones",
+    "en": "Mostrar Labels habitaciones",
+    "de": "Mostrar Labels habitaciones",
+    "fr": "Mostrar Labels habitaciones",
+    "it": "Mostrar Labels habitaciones",
+    "nl": "Mostrar Labels habitaciones"
+  },
+  {
+    "es": "Mostrar fuentes y apps",
+    "en": "Show sources and apps",
+    "de": "Anzeigen: sources and apps",
+    "fr": "Afficher sources and apps",
+    "it": "Mostra sources and apps",
+    "nl": "Toon sources and apps"
+  },
+  {
+    "es": "Mostrar icono",
+    "en": "Mostrar Icon",
+    "de": "Mostrar Icon",
+    "fr": "Mostrar Icon",
+    "it": "Mostrar Icon",
+    "nl": "Mostrar Icon"
+  },
+  {
+    "es": "Mostrar icono inferior",
+    "en": "Mostrar Icon inferior",
+    "de": "Mostrar Icon inferior",
+    "fr": "Mostrar Icon inferior",
+    "it": "Mostrar Icon inferior",
+    "nl": "Mostrar Icon inferior"
+  },
+  {
+    "es": "Mostrar leyenda",
+    "en": "Show legend",
+    "de": "Anzeigen: legend",
+    "fr": "Afficher legend",
+    "it": "Mostra legend",
+    "nl": "Toon legend"
+  },
+  {
+    "es": "Mostrar marcadores habitaciones",
+    "en": "Show room markers",
+    "de": "Anzeigen: room markers",
+    "fr": "Afficher room markers",
+    "it": "Mostra room markers",
+    "nl": "Toon room markers"
+  },
+  {
+    "es": "Mostrar noche",
+    "en": "Show night",
+    "de": "Anzeigen: night",
+    "fr": "Afficher night",
+    "it": "Mostra night",
+    "nl": "Toon night"
+  },
+  {
+    "es": "Mostrar nombre",
+    "en": "Show name",
+    "de": "Anzeigen: name",
+    "fr": "Afficher name",
+    "it": "Mostra name",
+    "nl": "Toon name"
+  },
+  {
+    "es": "Mostrar nombre en chip",
+    "en": "Show name in chip",
+    "de": "Anzeigen: name in chip",
+    "fr": "Afficher name in chip",
+    "it": "Mostra name in chip",
+    "nl": "Toon name in chip"
+  },
+  {
+    "es": "Mostrar personalizado",
+    "en": "Show custom",
+    "de": "Anzeigen: custom",
+    "fr": "Afficher custom",
+    "it": "Mostra custom",
+    "nl": "Toon custom"
+  },
+  {
+    "es": "Mostrar prediccion ampliada",
+    "en": "Show extended forecast",
+    "de": "Anzeigen: extended forecast",
+    "fr": "Afficher extended forecast",
+    "it": "Mostra extended forecast",
+    "nl": "Toon extended forecast"
+  },
+  {
+    "es": "Mostrar presets de modo",
+    "en": "Show mode presets",
+    "de": "Anzeigen: mode presets",
+    "fr": "Afficher mode presets",
+    "it": "Mostra mode presets",
+    "nl": "Toon mode presets"
+  },
+  {
+    "es": "Mostrar rango min/max",
+    "en": "Show min/max range",
+    "de": "Anzeigen: min/max range",
+    "fr": "Afficher min/max range",
+    "it": "Mostra min/max range",
+    "nl": "Toon min/max range"
+  },
+  {
+    "es": "Mostrar relleno",
+    "en": "Show fill",
+    "de": "Anzeigen: fill",
+    "fr": "Afficher fill",
+    "it": "Mostra fill",
+    "nl": "Toon fill"
+  },
+  {
+    "es": "Mostrar selector de vista",
+    "en": "Show view selector",
+    "de": "Anzeigen: view selector",
+    "fr": "Afficher view selector",
+    "it": "Mostra view selector",
+    "nl": "Toon view selector"
+  },
+  {
+    "es": "Mostrar slider",
+    "en": "Show slider",
+    "de": "Anzeigen: slider",
+    "fr": "Afficher slider",
+    "it": "Mostra slider",
+    "nl": "Toon slider"
+  },
+  {
+    "es": "Mostrar ubicacion",
+    "en": "Show location",
+    "de": "Anzeigen: location",
+    "fr": "Afficher location",
+    "it": "Mostra location",
+    "nl": "Toon location"
+  },
+  {
+    "es": "Mostrar vacaciones",
+    "en": "Show vacation",
+    "de": "Anzeigen: vacation",
+    "fr": "Afficher vacation",
+    "it": "Mostra vacation",
+    "nl": "Toon vacation"
+  },
+  {
+    "es": "Mostrar valor",
+    "en": "Show value",
+    "de": "Anzeigen: value",
+    "fr": "Afficher value",
+    "it": "Mostra value",
+    "nl": "Toon value"
+  },
+  {
+    "es": "Mostrar valor grande",
+    "en": "Show large value",
+    "de": "Anzeigen: large value",
+    "fr": "Afficher large value",
+    "it": "Mostra large value",
+    "nl": "Toon large value"
+  },
+  {
+    "es": "Máx ancho chip nombre",
+    "en": "Max name chip width",
+    "de": "Max name chip width",
+    "fr": "Max name chip width",
+    "it": "Max name chip width",
+    "nl": "Max name chip width"
+  },
+  {
+    "es": "Máximo de fuentes",
+    "en": "Maximum sources",
+    "de": "Maximum sources",
+    "fr": "Maximum sources",
+    "it": "Maximum sources",
+    "nl": "Maximum sources"
+  },
+  {
+    "es": "Navegador de medios (ms)",
+    "en": "Media browser (ms)",
+    "de": "Media browser (ms)",
+    "fr": "Media browser (ms)",
+    "it": "Media browser (ms)",
+    "nl": "Media browser (ms)"
+  },
+  {
+    "es": "Nombre",
+    "en": "Name",
+    "de": "Name",
+    "fr": "Name",
+    "it": "Name",
+    "nl": "Name"
+  },
+  {
+    "es": "Nombre corto",
+    "en": "Short name",
+    "de": "Short name",
+    "fr": "Short name",
+    "it": "Short name",
+    "nl": "Short name"
+  },
+  {
+    "es": "Nombre visible",
+    "en": "Visible name",
+    "de": "Visible name",
+    "fr": "Visible name",
+    "it": "Visible name",
+    "nl": "Visible name"
+  },
+  {
+    "es": "Offset",
+    "en": "Offset",
+    "de": "Offset",
+    "fr": "Offset",
+    "it": "Offset",
+    "nl": "Offset"
+  },
+  {
+    "es": "PIN fijo",
+    "en": "Fixed PIN",
+    "de": "Fixed PIN",
+    "fr": "Fixed PIN",
+    "it": "Fixed PIN",
+    "nl": "Fixed PIN"
+  },
+  {
+    "es": "Padding",
+    "en": "Padding",
+    "de": "Innenabstand",
+    "fr": "Marge intérieure",
+    "it": "Padding",
+    "nl": "Opvulling"
+  },
+  {
+    "es": "Padding burbuja info",
+    "en": "Info bubble Padding",
+    "de": "Info bubble Padding",
+    "fr": "Info bubble Padding",
+    "it": "Info bubble Padding",
+    "nl": "Info bubble Padding"
+  },
+  {
+    "es": "Padding chip",
+    "en": "Chip Padding",
+    "de": "Chip Padding",
+    "fr": "Chip Padding",
+    "it": "Chip Padding",
+    "nl": "Chip Padding"
+  },
+  {
+    "es": "Padding chips",
+    "en": "Chip Paddings",
+    "de": "Chip Paddings",
+    "fr": "Chip Paddings",
+    "it": "Chip Paddings",
+    "nl": "Chip Paddings"
+  },
+  {
+    "es": "Padding de chips",
+    "en": "Chip Padding",
+    "de": "Chip Padding",
+    "fr": "Chip Padding",
+    "it": "Chip Padding",
+    "nl": "Chip Padding"
+  },
+  {
+    "es": "Padding interior",
+    "en": "Inner Padding",
+    "de": "Inner Padding",
+    "fr": "Inner Padding",
+    "it": "Inner Padding",
+    "nl": "Inner Padding"
+  },
+  {
+    "es": "Padding tarjeta",
+    "en": "Card Padding",
+    "de": "Card Padding",
+    "fr": "Card Padding",
+    "it": "Card Padding",
+    "nl": "Card Padding"
+  },
+  {
+    "es": "Panel de modos (ms)",
+    "en": "Mode panel (ms)",
+    "de": "Mode panel (ms)",
+    "fr": "Mode panel (ms)",
+    "it": "Mode panel (ms)",
+    "nl": "Mode panel (ms)"
+  },
+  {
+    "es": "Paneles (ms)",
+    "en": "Panels (ms)",
+    "de": "Panels (ms)",
+    "fr": "Panels (ms)",
+    "it": "Panels (ms)",
+    "nl": "Panels (ms)"
+  },
+  {
+    "es": "Paneles TV (ms)",
+    "en": "TV panels (ms)",
+    "de": "TV panels (ms)",
+    "fr": "TV panels (ms)",
+    "it": "TV panels (ms)",
+    "nl": "TV panels (ms)"
+  },
+  {
+    "es": "Plataforma",
+    "en": "Platform",
+    "de": "Platform",
+    "fr": "Platform",
+    "it": "Platform",
+    "nl": "Platform"
+  },
+  {
+    "es": "Presets de brillo",
+    "en": "Brightness presets",
+    "de": "Brightness presets",
+    "fr": "Brightness presets",
+    "it": "Brightness presets",
+    "nl": "Brightness presets"
+  },
+  {
+    "es": "Puntos",
+    "en": "Points",
+    "de": "Points",
+    "fr": "Points",
+    "it": "Points",
+    "nl": "Points"
+  },
+  {
+    "es": "Radio",
+    "en": "Radius",
+    "de": "Radius",
+    "fr": "Radius",
+    "it": "Radius",
+    "nl": "Radius"
+  },
+  {
+    "es": "Radio borde",
+    "en": "Border radiusr",
+    "de": "Border radiusr",
+    "fr": "Border radiusr",
+    "it": "Border radiusr",
+    "nl": "Border radiusr"
+  },
+  {
+    "es": "Radio del borde",
+    "en": "Border radiusr",
+    "de": "Border radiusr",
+    "fr": "Border radiusr",
+    "it": "Border radiusr",
+    "nl": "Border radiusr"
+  },
+  {
+    "es": "Radio del navegador",
+    "en": "Browser radius",
+    "de": "Browser radius",
+    "fr": "Browser radius",
+    "it": "Browser radius",
+    "nl": "Browser radius"
+  },
+  {
+    "es": "Radius",
+    "en": "Radius",
+    "de": "Radius",
+    "fr": "Radius",
+    "it": "Radius",
+    "nl": "Radius"
+  },
+  {
+    "es": "Radius mapa",
+    "en": "Map radius",
+    "de": "Map radius",
+    "fr": "Map radius",
+    "it": "Map radius",
+    "nl": "Map radius"
+  },
+  {
+    "es": "Rebote botones (ms)",
+    "en": "Button bounce (ms)",
+    "de": "Button bounce (ms)",
+    "fr": "Button bounce (ms)",
+    "it": "Button bounce (ms)",
+    "nl": "Button bounce (ms)"
+  },
+  {
+    "es": "Rebote de botones (ms)",
+    "en": "Button bounce (ms)",
+    "de": "Button bounce (ms)",
+    "fr": "Button bounce (ms)",
+    "it": "Button bounce (ms)",
+    "nl": "Button bounce (ms)"
+  },
+  {
+    "es": "Rebote de chips (ms)",
+    "en": "Chip bounce (ms)",
+    "de": "Chip bounce (ms)",
+    "fr": "Chip bounce (ms)",
+    "it": "Chip bounce (ms)",
+    "nl": "Chip bounce (ms)"
+  },
+  {
+    "es": "Rebote pulsacion (ms)",
+    "en": "Tap bounce (ms)",
+    "de": "Tap bounce (ms)",
+    "fr": "Tap bounce (ms)",
+    "it": "Tap bounce (ms)",
+    "nl": "Tap bounce (ms)"
+  },
+  {
+    "es": "Rebote pulsación (ms)",
+    "en": "Tap bounce (ms)",
+    "de": "Tap bounce (ms)",
+    "fr": "Tap bounce (ms)",
+    "it": "Tap bounce (ms)",
+    "nl": "Tap bounce (ms)"
+  },
+  {
+    "es": "Rebote tap (ms)",
+    "en": "Tap bounce (ms)",
+    "de": "Tap bounce (ms)",
+    "fr": "Tap bounce (ms)",
+    "it": "Tap bounce (ms)",
+    "nl": "Tap bounce (ms)"
+  },
+  {
+    "es": "Relleno burbuja informativa",
+    "en": "Info bubble padding",
+    "de": "Info bubble padding",
+    "fr": "Info bubble padding",
+    "it": "Info bubble padding",
+    "nl": "Info bubble padding"
+  },
+  {
+    "es": "Relleno chips",
+    "en": "Chip padding",
+    "de": "Chip padding",
+    "fr": "Chip padding",
+    "it": "Chip padding",
+    "nl": "Chip padding"
+  },
+  {
+    "es": "Relleno interior",
+    "en": "Inner padding",
+    "de": "Inner padding",
+    "fr": "Inner padding",
+    "it": "Inner padding",
+    "nl": "Inner padding"
+  },
+  {
+    "es": "Reservar espacio",
+    "en": "Reserve space",
+    "de": "Reserve space",
+    "fr": "Reserve space",
+    "it": "Reserve space",
+    "nl": "Reserve space"
+  },
+  {
+    "es": "Rows de grid",
+    "en": "Grid rows",
+    "de": "Grid rows",
+    "fr": "Grid rows",
+    "it": "Grid rows",
+    "nl": "Grid rows"
+  },
+  {
+    "es": "Ruta de medios",
+    "en": "Media path",
+    "de": "Media path",
+    "fr": "Media path",
+    "it": "Media path",
+    "nl": "Media path"
+  },
+  {
+    "es": "Ruta de navegación",
+    "en": "Navigation path",
+    "de": "Navigation path",
+    "fr": "Navigation path",
+    "it": "Navigation path",
+    "nl": "Navigation path"
+  },
+  {
+    "es": "Rutinas (JSON)",
+    "en": "Routines (JSON)",
+    "de": "Routines (JSON)",
+    "fr": "Routines (JSON)",
+    "it": "Routines (JSON)",
+    "nl": "Routines (JSON)"
+  },
+  {
+    "es": "Select aspirado",
+    "en": "Suction select",
+    "de": "Suction select",
+    "fr": "Suction select",
+    "it": "Suction select",
+    "nl": "Suction select"
+  },
+  {
+    "es": "Select fregado",
+    "en": "Mop select",
+    "de": "Mop select",
+    "fr": "Mop select",
+    "it": "Mop select",
+    "nl": "Mop select"
+  },
+  {
+    "es": "Select modo mopa",
+    "en": "Mop mode select",
+    "de": "Mop mode select",
+    "fr": "Mop mode select",
+    "it": "Mop mode select",
+    "nl": "Mop mode select"
+  },
+  {
+    "es": "Selector de aspirado",
+    "en": "Suction selector",
+    "de": "Suction selector",
+    "fr": "Suction selector",
+    "it": "Suction selector",
+    "nl": "Suction selector"
+  },
+  {
+    "es": "Selector de fregado",
+    "en": "Mop selector",
+    "de": "Mop selector",
+    "fr": "Mop selector",
+    "it": "Mop selector",
+    "nl": "Mop selector"
+  },
+  {
+    "es": "Sensor de batería",
+    "en": "Battery sensor",
+    "de": "Battery sensor",
+    "fr": "Battery sensor",
+    "it": "Battery sensor",
+    "nl": "Battery sensor"
+  },
+  {
+    "es": "Sensor de estado",
+    "en": "State sensor",
+    "de": "State sensor",
+    "fr": "State sensor",
+    "it": "State sensor",
+    "nl": "State sensor"
+  },
+  {
+    "es": "Sensor de habitaciones",
+    "en": "Rooms sensor",
+    "de": "Rooms sensor",
+    "fr": "Rooms sensor",
+    "it": "Rooms sensor",
+    "nl": "Rooms sensor"
+  },
+  {
+    "es": "Separacion",
+    "en": "Gap",
+    "de": "Gap",
+    "fr": "Gap",
+    "it": "Gap",
+    "nl": "Gap"
+  },
+  {
+    "es": "Separacion interna",
+    "en": "Inner gap",
+    "de": "Inner gap",
+    "fr": "Inner gap",
+    "it": "Inner gap",
+    "nl": "Inner gap"
+  },
+  {
+    "es": "Separación",
+    "en": "Gap",
+    "de": "Gap",
+    "fr": "Gap",
+    "it": "Gap",
+    "nl": "Gap"
+  },
+  {
+    "es": "Separación interna",
+    "en": "Inner gap",
+    "de": "Inner gap",
+    "fr": "Inner gap",
+    "it": "Inner gap",
+    "nl": "Inner gap"
+  },
+  {
+    "es": "Service data JSON",
+    "en": "Service data JSON",
+    "de": "Service data JSON",
+    "fr": "Service data JSON",
+    "it": "Service data JSON",
+    "nl": "Service data JSON"
+  },
+  {
+    "es": "Servicio",
+    "en": "Service",
+    "de": "Service",
+    "fr": "Service",
+    "it": "Service",
+    "nl": "Service"
+  },
+  {
+    "es": "Servicio al tocar",
+    "en": "Tap service",
+    "de": "Tap service",
+    "fr": "Tap service",
+    "it": "Tap service",
+    "nl": "Tap service"
+  },
+  {
+    "es": "Shadow",
+    "en": "Shadow",
+    "de": "Schatten",
+    "fr": "Ombre",
+    "it": "Ombra",
+    "nl": "Schaduw"
+  },
+  {
+    "es": "Sombra",
+    "en": "Shadow",
+    "de": "Schatten",
+    "fr": "Ombre",
+    "it": "Ombra",
+    "nl": "Schaduw"
+  },
+  {
+    "es": "Sombra del navegador",
+    "en": "Browser shadow",
+    "de": "Browser shadow",
+    "fr": "Browser shadow",
+    "it": "Browser shadow",
+    "nl": "Browser shadow"
+  },
+  {
+    "es": "Subtítulo fijo",
+    "en": "Fixed subtitle",
+    "de": "Fixed subtitle",
+    "fr": "Fixed subtitle",
+    "it": "Fixed subtitle",
+    "nl": "Fixed subtitle"
+  },
+  {
+    "es": "Tamano avatar",
+    "en": "Avatar size",
+    "de": "Avatar size",
+    "fr": "Avatar size",
+    "it": "Avatar size",
+    "nl": "Avatar size"
+  },
+  {
+    "es": "Tamano badge",
+    "en": "Badge size",
+    "de": "Badge size",
+    "fr": "Badge size",
+    "it": "Badge size",
+    "nl": "Badge size"
+  },
+  {
+    "es": "Tamano boton +/-",
+    "en": "Size boton +/-",
+    "de": "Size boton +/-",
+    "fr": "Size boton +/-",
+    "it": "Size boton +/-",
+    "nl": "Size boton +/-"
+  },
+  {
+    "es": "Tamano boton modo",
+    "en": "Mode button size",
+    "de": "Mode button size",
+    "fr": "Mode button size",
+    "it": "Mode button size",
+    "nl": "Mode button size"
+  },
+  {
+    "es": "Tamano botones",
+    "en": "Button size",
+    "de": "Button size",
+    "fr": "Button size",
+    "it": "Button size",
+    "nl": "Button size"
+  },
+  {
+    "es": "Tamano burbuja entidad",
+    "en": "Size burbuja Entity",
+    "de": "Size burbuja Entity",
+    "fr": "Size burbuja Entity",
+    "it": "Size burbuja Entity",
+    "nl": "Size burbuja Entity"
+  },
+  {
+    "es": "Tamano casa",
+    "en": "Home size",
+    "de": "Home size",
+    "fr": "Home size",
+    "it": "Home size",
+    "nl": "Home size"
+  },
+  {
+    "es": "Tamano chip",
+    "en": "Chip size",
+    "de": "Chip size",
+    "fr": "Chip size",
+    "it": "Chip size",
+    "nl": "Chip size"
+  },
+  {
+    "es": "Tamano chips",
+    "en": "Chip sizes",
+    "de": "Chip sizes",
+    "fr": "Chip sizes",
+    "it": "Chip sizes",
+    "nl": "Chip sizes"
+  },
+  {
+    "es": "Tamano condicion",
+    "en": "Condition size",
+    "de": "Condition size",
+    "fr": "Condition size",
+    "it": "Condition size",
+    "nl": "Condition size"
+  },
+  {
+    "es": "Tamano dial",
+    "en": "Dial size",
+    "de": "Dial size",
+    "fr": "Dial size",
+    "it": "Dial size",
+    "nl": "Dial size"
+  },
+  {
+    "es": "Tamano icono",
+    "en": "Icon size",
+    "de": "Icon size",
+    "fr": "Icon size",
+    "it": "Icon size",
+    "nl": "Icon size"
+  },
+  {
+    "es": "Tamano individual",
+    "en": "Individual size",
+    "de": "Individual size",
+    "fr": "Individual size",
+    "it": "Individual size",
+    "nl": "Individual size"
+  },
+  {
+    "es": "Tamano leyenda",
+    "en": "Legend size",
+    "de": "Legend size",
+    "fr": "Legend size",
+    "it": "Legend size",
+    "nl": "Legend size"
+  },
+  {
+    "es": "Tamano marcadores",
+    "en": "Marker size",
+    "de": "Marker size",
+    "fr": "Marker size",
+    "it": "Marker size",
+    "nl": "Marker size"
+  },
+  {
+    "es": "Tamano nodo",
+    "en": "Node size",
+    "de": "Node size",
+    "fr": "Node size",
+    "it": "Node size",
+    "nl": "Node size"
+  },
+  {
+    "es": "Tamano nombre",
+    "en": "Size Name",
+    "de": "Size Name",
+    "fr": "Size Name",
+    "it": "Size Name",
+    "nl": "Size Name"
+  },
+  {
+    "es": "Tamano subtitulo",
+    "en": "Subtitle size",
+    "de": "Subtitle size",
+    "fr": "Subtitle size",
+    "it": "Subtitle size",
+    "nl": "Subtitle size"
+  },
+  {
+    "es": "Tamano temperatura",
+    "en": "Temperature size",
+    "de": "Temperature size",
+    "fr": "Temperature size",
+    "it": "Temperature size",
+    "nl": "Temperature size"
+  },
+  {
+    "es": "Tamano temperatura actual",
+    "en": "Current temperature size",
+    "de": "Current temperature size",
+    "fr": "Current temperature size",
+    "it": "Current temperature size",
+    "nl": "Current temperature size"
+  },
+  {
+    "es": "Tamano temperatura objetivo",
+    "en": "Target temperature size",
+    "de": "Target temperature size",
+    "fr": "Target temperature size",
+    "it": "Target temperature size",
+    "nl": "Target temperature size"
+  },
+  {
+    "es": "Tamano thumb dial",
+    "en": "Dial thumb size",
+    "de": "Dial thumb size",
+    "fr": "Dial thumb size",
+    "it": "Dial thumb size",
+    "nl": "Dial thumb size"
+  },
+  {
+    "es": "Tamano titulo",
+    "en": "Title size",
+    "de": "Title size",
+    "fr": "Title size",
+    "it": "Title size",
+    "nl": "Title size"
+  },
+  {
+    "es": "Tamano unidad",
+    "en": "Unit size",
+    "de": "Unit size",
+    "fr": "Unit size",
+    "it": "Unit size",
+    "nl": "Unit size"
+  },
+  {
+    "es": "Tamano valor",
+    "en": "Value size",
+    "de": "Value size",
+    "fr": "Value size",
+    "it": "Value size",
+    "nl": "Value size"
+  },
+  {
+    "es": "Tamaño botones",
+    "en": "Button size",
+    "de": "Button size",
+    "fr": "Button size",
+    "it": "Button size",
+    "nl": "Button size"
+  },
+  {
+    "es": "Tamaño botones + / -",
+    "en": "Size + / − buttons",
+    "de": "Size + / − buttons",
+    "fr": "Size + / − buttons",
+    "it": "Size + / − buttons",
+    "nl": "Size + / − buttons"
+  },
+  {
+    "es": "Tamaño botones auxiliares",
+    "en": "Auxiliary button size",
+    "de": "Auxiliary button size",
+    "fr": "Auxiliary button size",
+    "it": "Auxiliary button size",
+    "nl": "Auxiliary button size"
+  },
+  {
+    "es": "Tamaño botones modo",
+    "en": "Mode button size",
+    "de": "Mode button size",
+    "fr": "Mode button size",
+    "it": "Mode button size",
+    "nl": "Mode button size"
+  },
+  {
+    "es": "Tamaño botón",
+    "en": "Button size",
+    "de": "Button size",
+    "fr": "Button size",
+    "it": "Button size",
+    "nl": "Button size"
+  },
+  {
+    "es": "Tamaño botón principal",
+    "en": "Primary button size",
+    "de": "Primary button size",
+    "fr": "Primary button size",
+    "it": "Primary button size",
+    "nl": "Primary button size"
+  },
+  {
+    "es": "Tamaño burbuja",
+    "en": "Bubble size",
+    "de": "Bubble size",
+    "fr": "Bubble size",
+    "it": "Bubble size",
+    "nl": "Bubble size"
+  },
+  {
+    "es": "Tamaño burbuja entidad",
+    "en": "Bubble size Entity",
+    "de": "Bubble size Entity",
+    "fr": "Bubble size Entity",
+    "it": "Bubble size Entity",
+    "nl": "Bubble size Entity"
+  },
+  {
+    "es": "Tamaño burbuja principal",
+    "en": "Primary bubble size",
+    "de": "Primary bubble size",
+    "fr": "Primary bubble size",
+    "it": "Primary bubble size",
+    "nl": "Primary bubble size"
+  },
+  {
+    "es": "Tamaño chip",
+    "en": "Chip size",
+    "de": "Chip size",
+    "fr": "Chip size",
+    "it": "Chip size",
+    "nl": "Chip size"
+  },
+  {
+    "es": "Tamaño de botones",
+    "en": "Button size",
+    "de": "Button size",
+    "fr": "Button size",
+    "it": "Button size",
+    "nl": "Button size"
+  },
+  {
+    "es": "Tamaño de indicadores",
+    "en": "Indicator size",
+    "de": "Indicator size",
+    "fr": "Indicator size",
+    "it": "Indicator size",
+    "nl": "Indicator size"
+  },
+  {
+    "es": "Tamaño de la burbuja",
+    "en": "Bubble size",
+    "de": "Bubble size",
+    "fr": "Bubble size",
+    "it": "Bubble size",
+    "nl": "Bubble size"
+  },
+  {
+    "es": "Tamaño de portada",
+    "en": "Cover art size",
+    "de": "Cover art size",
+    "fr": "Cover art size",
+    "it": "Cover art size",
+    "nl": "Cover art size"
+  },
+  {
+    "es": "Tamaño de portada TV",
+    "en": "TV cover art size",
+    "de": "TV cover art size",
+    "fr": "TV cover art size",
+    "it": "TV cover art size",
+    "nl": "TV cover art size"
+  },
+  {
+    "es": "Tamaño del subtítulo",
+    "en": "Subtitle size",
+    "de": "Subtitle size",
+    "fr": "Subtitle size",
+    "it": "Subtitle size",
+    "nl": "Subtitle size"
+  },
+  {
+    "es": "Tamaño del thumb del slider",
+    "en": "Slider thumb size",
+    "de": "Slider thumb size",
+    "fr": "Slider thumb size",
+    "it": "Slider thumb size",
+    "nl": "Slider thumb size"
+  },
+  {
+    "es": "Tamaño del título",
+    "en": "Title size",
+    "de": "Title size",
+    "fr": "Title size",
+    "it": "Title size",
+    "nl": "Title size"
+  },
+  {
+    "es": "Tamaño dial",
+    "en": "Dial size",
+    "de": "Dial size",
+    "fr": "Dial size",
+    "it": "Dial size",
+    "nl": "Dial size"
+  },
+  {
+    "es": "Tamaño objetivo",
+    "en": "Target size",
+    "de": "Target size",
+    "fr": "Target size",
+    "it": "Target size",
+    "nl": "Target size"
+  },
+  {
+    "es": "Tamaño rango",
+    "en": "Range size",
+    "de": "Range size",
+    "fr": "Range size",
+    "it": "Range size",
+    "nl": "Range size"
+  },
+  {
+    "es": "Tamaño temperatura actual",
+    "en": "Current temperature size",
+    "de": "Current temperature size",
+    "fr": "Current temperature size",
+    "it": "Current temperature size",
+    "nl": "Current temperature size"
+  },
+  {
+    "es": "Tamaño thumb",
+    "en": "Thumb size",
+    "de": "Thumb size",
+    "fr": "Thumb size",
+    "it": "Thumb size",
+    "nl": "Thumb size"
+  },
+  {
+    "es": "Tamaño título",
+    "en": "Title size",
+    "de": "Title size",
+    "fr": "Title size",
+    "it": "Title size",
+    "nl": "Title size"
+  },
+  {
+    "es": "Tamaño valor",
+    "en": "Value size",
+    "de": "Value size",
+    "fr": "Value size",
+    "it": "Value size",
+    "nl": "Value size"
+  },
+  {
+    "es": "Tap action",
+    "en": "Tap action",
+    "de": "Tap action",
+    "fr": "Tap action",
+    "it": "Tap action",
+    "nl": "Tap action"
+  },
+  {
+    "es": "Tap card",
+    "en": "Tap card",
+    "de": "Tap card",
+    "fr": "Tap card",
+    "it": "Tap card",
+    "nl": "Tap card"
+  },
+  {
+    "es": "Tarjeta fija",
+    "en": "Fixed card",
+    "de": "Fixed card",
+    "fr": "Fixed card",
+    "it": "Fixed card",
+    "nl": "Fixed card"
+  },
+  {
+    "es": "Texto burbuja info",
+    "en": "Info bubble text",
+    "de": "Info bubble text",
+    "fr": "Info bubble text",
+    "it": "Info bubble text",
+    "nl": "Info bubble text"
+  },
+  {
+    "es": "Texto burbuja informativa",
+    "en": "Info bubble textrmativa",
+    "de": "Info bubble textrmativa",
+    "fr": "Info bubble textrmativa",
+    "it": "Info bubble textrmativa",
+    "nl": "Info bubble textrmativa"
+  },
+  {
+    "es": "Texto chip",
+    "en": "Chip text",
+    "de": "Chip text",
+    "fr": "Chip text",
+    "it": "Chip text",
+    "nl": "Chip text"
+  },
+  {
+    "es": "Texto chips",
+    "en": "Chip texts",
+    "de": "Chip texts",
+    "fr": "Chip texts",
+    "it": "Chip texts",
+    "nl": "Chip texts"
+  },
+  {
+    "es": "Texto de chips",
+    "en": "Chip text",
+    "de": "Chip text",
+    "fr": "Chip text",
+    "it": "Chip text",
+    "nl": "Chip text"
+  },
+  {
+    "es": "Texto marcadores",
+    "en": "Marker text",
+    "de": "Marker text",
+    "fr": "Marker text",
+    "it": "Marker text",
+    "nl": "Marker text"
+  },
+  {
+    "es": "Texto secundario",
+    "en": "Secondary text",
+    "de": "Secondary text",
+    "fr": "Secondary text",
+    "it": "Secondary text",
+    "nl": "Secondary text"
+  },
+  {
+    "es": "Tinte",
+    "en": "Tint",
+    "de": "Tint",
+    "fr": "Tint",
+    "it": "Tint",
+    "nl": "Tint"
+  },
+  {
+    "es": "Titulo",
+    "en": "Title",
+    "de": "Titel",
+    "fr": "Titre",
+    "it": "Titolo",
+    "nl": "Titel"
+  },
+  {
+    "es": "Tooltip y hover (ms)",
+    "en": "Tooltip and hover (ms)",
+    "de": "Tooltip and hover (ms)",
+    "fr": "Tooltip and hover (ms)",
+    "it": "Tooltip and hover (ms)",
+    "nl": "Tooltip and hover (ms)"
+  },
+  {
+    "es": "Track dial",
+    "en": "Dial track",
+    "de": "Dial track",
+    "fr": "Dial track",
+    "it": "Dial track",
+    "nl": "Dial track"
+  },
+  {
+    "es": "Transparencia lineas cero",
+    "en": "Zero-line transparency",
+    "de": "Zero-line transparency",
+    "fr": "Zero-line transparency",
+    "it": "Zero-line transparency",
+    "nl": "Zero-line transparency"
+  },
+  {
+    "es": "Título fijo",
+    "en": "Fixed title",
+    "de": "Fixed title",
+    "fr": "Fixed title",
+    "it": "Fixed title",
+    "nl": "Fixed title"
+  },
+  {
+    "es": "URL",
+    "en": "URL",
+    "de": "URL",
+    "fr": "URL",
+    "it": "URL",
+    "nl": "URL"
+  },
+  {
+    "es": "URL al tocar",
+    "en": "Tap URL",
+    "de": "Tap URL",
+    "fr": "Tap URL",
+    "it": "Tap URL",
+    "nl": "Tap URL"
+  },
+  {
+    "es": "Unidad",
+    "en": "Unit",
+    "de": "Unit",
+    "fr": "Unit",
+    "it": "Unit",
+    "nl": "Unit"
+  },
+  {
+    "es": "Unidad casa",
+    "en": "Home unit",
+    "de": "Home unit",
+    "fr": "Home unit",
+    "it": "Home unit",
+    "nl": "Home unit"
+  },
+  {
+    "es": "Unidad secundaria",
+    "en": "Secondary unit",
+    "de": "Secondary unit",
+    "fr": "Secondary unit",
+    "it": "Secondary unit",
+    "nl": "Secondary unit"
+  },
+  {
+    "es": "Usar carátula como fondo",
+    "en": "Use album art as background",
+    "de": "Use album art as background",
+    "fr": "Use album art as background",
+    "it": "Use album art as background",
+    "nl": "Use album art as background"
+  },
+  {
+    "es": "Usar el icono de la entidad",
+    "en": "Usar el Icon de la Entity",
+    "de": "Usar el Icon de la Entity",
+    "fr": "Usar el Icon de la Entity",
+    "it": "Usar el Icon de la Entity",
+    "nl": "Usar el Icon de la Entity"
+  },
+  {
+    "es": "Usar foto de entidad",
+    "en": "Usar foto de Entity",
+    "de": "Usar foto de Entity",
+    "fr": "Usar foto de Entity",
+    "it": "Usar foto de Entity",
+    "nl": "Usar foto de Entity"
+  },
+  {
+    "es": "Usar foto de la entidad",
+    "en": "Usar foto de la Entity",
+    "de": "Usar foto de la Entity",
+    "fr": "Usar foto de la Entity",
+    "it": "Usar foto de la Entity",
+    "nl": "Usar foto de la Entity"
+  },
+  {
+    "es": "Usar icono de la entidad",
+    "en": "Usar Icon de la Entity",
+    "de": "Usar Icon de la Entity",
+    "fr": "Usar Icon de la Entity",
+    "it": "Usar Icon de la Entity",
+    "nl": "Usar Icon de la Entity"
+  },
+  {
+    "es": "Usar icono de zona",
+    "en": "Usar Icon de zona",
+    "de": "Usar Icon de zona",
+    "fr": "Usar Icon de zona",
+    "it": "Usar Icon de zona",
+    "nl": "Usar Icon de zona"
+  },
+  {
+    "es": "Usar vibracion de respaldo",
+    "en": "Use vibration fallback",
+    "de": "Use vibration fallback",
+    "fr": "Use vibration fallback",
+    "it": "Use vibration fallback",
+    "nl": "Use vibration fallback"
+  },
+  {
+    "es": "Usar vibración si no hay háptica",
+    "en": "Use vibration if haptics unavailable",
+    "de": "Use vibration if haptics unavailable",
+    "fr": "Use vibration if haptics unavailable",
+    "it": "Use vibration if haptics unavailable",
+    "nl": "Use vibration if haptics unavailable"
+  },
+  {
+    "es": "Valor casa",
+    "en": "Home value",
+    "de": "Home value",
+    "fr": "Home value",
+    "it": "Home value",
+    "nl": "Home value"
+  },
+  {
+    "es": "Valor nodo",
+    "en": "Node value",
+    "de": "Node value",
+    "fr": "Node value",
+    "it": "Node value",
+    "nl": "Node value"
+  },
+  {
+    "es": "Valores",
+    "en": "Values",
+    "de": "Values",
+    "fr": "Values",
+    "it": "Values",
+    "nl": "Values"
+  },
+  {
+    "es": "Z-index",
+    "en": "Z-index",
+    "de": "Z-index",
+    "fr": "Z-index",
+    "it": "Z-index",
+    "nl": "Z-index"
+  },
+  {
+    "es": "__H__:Activa o desactiva cabecera, valor grande, leyenda y relleno.",
+    "en": "__H__::Enable or disable header, large value, legend and fill.",
+    "de": "__H__::Enable or disable header, large value, legend and fill.",
+    "fr": "__H__::Enable or disable header, large value, legend and fill.",
+    "it": "__H__::Enable or disable header, large value, legend and fill.",
+    "nl": "__H__::Enable or disable header, large value, legend and fill."
+  },
+  {
+    "es": "__H__:Activa o desactiva cabecera, valor, leyenda y relleno.",
+    "en": "__H__::Enable or disable header, value, legend and fill.",
+    "de": "__H__::Enable or disable header, value, legend and fill.",
+    "fr": "__H__::Enable or disable header, value, legend and fill.",
+    "it": "__H__::Enable or disable header, value, legend and fill.",
+    "nl": "__H__::Enable or disable header, value, legend and fill."
+  },
+  {
+    "es": "__H__:Activa u oculta cada bloque de la tarjeta.",
+    "en": "__H__::Show or hide each card block.",
+    "de": "__H__::Show or hide each card block.",
+    "fr": "__H__::Show or hide each card block.",
+    "it": "__H__::Show or hide each card block.",
+    "nl": "__H__::Show or hide each card block."
+  },
+  {
+    "es": "__H__:Ajusta la apertura de paneles, navegador y el rebote de los botones.",
+    "en": "__H__::Adjust panel opening, browser and button bounce.",
+    "de": "__H__::Adjust panel opening, browser and button bounce.",
+    "fr": "__H__::Adjust panel opening, browser and button bounce.",
+    "it": "__H__::Adjust panel opening, browser and button bounce.",
+    "nl": "__H__::Adjust panel opening, browser and button bounce."
+  },
+  {
+    "es": "__H__:Ajustes de cabecera, chips y rango visible.",
+    "en": "__H__::Header, chips and visible range settings.",
+    "de": "__H__::Header, chips and visible range settings.",
+    "fr": "__H__::Header, chips and visible range settings.",
+    "it": "__H__::Header, chips and visible range settings.",
+    "nl": "__H__::Header, chips and visible range settings."
+  },
+  {
+    "es": "__H__:Ajustes visuales base de la tarjeta favorita.",
+    "en": "__H__::Base visual settings for the favourite card.",
+    "de": "__H__::Base visual settings for the favourite card.",
+    "fr": "__H__::Base visual settings for the favourite card.",
+    "it": "__H__::Base visual settings for the favourite card.",
+    "nl": "__H__::Base visual settings for the favourite card."
+  },
+  {
+    "es": "__H__:Ajustes visuales base de la tarjeta y las burbujas.",
+    "en": "__H__::Base visual settings for the card and bubbles.",
+    "de": "__H__::Base visual settings for the card and bubbles.",
+    "fr": "__H__::Base visual settings for the card and bubbles.",
+    "it": "__H__::Base visual settings for the card and bubbles.",
+    "nl": "__H__::Base visual settings for the card and bubbles."
+  },
+  {
+    "es": "__H__:Ajustes visuales base de la tarjeta.",
+    "en": "__H__::Base visual settings for the card.",
+    "de": "__H__::Base visual settings for the card.",
+    "fr": "__H__::Base visual settings for the card.",
+    "it": "__H__::Base visual settings for the card.",
+    "nl": "__H__::Base visual settings for the card."
+  },
+  {
+    "es": "__H__:Ajustes visuales base del mapa y las burbujas.",
+    "en": "__H__::Base visual settings for the map and bubbles.",
+    "de": "__H__::Base visual settings for the map and bubbles.",
+    "fr": "__H__::Base visual settings for the map and bubbles.",
+    "it": "__H__::Base visual settings for the map and bubbles.",
+    "nl": "__H__::Base visual settings for the map and bubbles."
+  },
+  {
+    "es": "__H__:Ajustes visuales básicos del look Nodalia.",
+    "en": "__H__::Basic visual settings for the Nodalia look.",
+    "de": "__H__::Basic visual settings for the Nodalia look.",
+    "fr": "__H__::Basic visual settings for the Nodalia look.",
+    "it": "__H__::Basic visual settings for the Nodalia look.",
+    "nl": "__H__::Basic visual settings for the Nodalia look."
+  },
+  {
+    "es": "__H__:Ajustes visuales de barra, botones, popup y media player.",
+    "en": "__H__::Visual settings for bar, buttons, popup and media player.",
+    "de": "__H__::Visual settings for bar, buttons, popup and media player.",
+    "fr": "__H__::Visual settings for bar, buttons, popup and media player.",
+    "it": "__H__::Visual settings for bar, buttons, popup and media player.",
+    "nl": "__H__::Visual settings for bar, buttons, popup and media player."
+  },
+  {
+    "es": "__H__:Ajustes visuales de la card, el icono y el grafico.",
+    "en": "__H__::Visual settings for the card, icon and chart.",
+    "de": "__H__::Visual settings for the card, icon and chart.",
+    "fr": "__H__::Visual settings for the card, icon and chart.",
+    "it": "__H__::Visual settings for the card, icon and chart.",
+    "nl": "__H__::Visual settings for the card, icon and chart."
+  },
+  {
+    "es": "__H__:Ajustes visuales del grafico y el look Nodalia.",
+    "en": "__H__::Visual settings for the chart and Nodalia look.",
+    "de": "__H__::Visual settings for the chart and Nodalia look.",
+    "fr": "__H__::Visual settings for the chart and Nodalia look.",
+    "it": "__H__::Visual settings for the chart and Nodalia look.",
+    "nl": "__H__::Visual settings for the chart and Nodalia look."
+  },
+  {
+    "es": "__H__:Ajustes visuales del look Nodalia y el dial circular.",
+    "en": "__H__::Visual settings for the Nodalia look and circular dial.",
+    "de": "__H__::Visual settings for the Nodalia look and circular dial.",
+    "fr": "__H__::Visual settings for the Nodalia look and circular dial.",
+    "it": "__H__::Visual settings for the Nodalia look and circular dial.",
+    "nl": "__H__::Visual settings for the Nodalia look and circular dial."
+  },
+  {
+    "es": "__H__:Ajustes visuales del reproductor principal y del navegador de medios.",
+    "en": "__H__::Visual settings for the main player and media browser.",
+    "de": "__H__::Visual settings for the main player and media browser.",
+    "fr": "__H__::Visual settings for the main player and media browser.",
+    "it": "__H__::Visual settings for the main player and media browser.",
+    "nl": "__H__::Visual settings for the main player and media browser."
+  },
+  {
+    "es": "__H__:Ajustes visuales principales de la tarjeta.",
+    "en": "__H__::Main visual settings for the card.",
+    "de": "__H__::Main visual settings for the card.",
+    "fr": "__H__::Main visual settings for the card.",
+    "it": "__H__::Main visual settings for the card.",
+    "nl": "__H__::Main visual settings for the card."
+  },
+  {
+    "es": "__H__:Anade, reordena y personaliza cada entidad mostrada en la grafica.",
+    "en": "__H__::Add, reorder and customize each entity shown on the chart.",
+    "de": "__H__::Add, reorder and customize each entity shown on the chart.",
+    "fr": "__H__::Add, reorder and customize each entity shown on the chart.",
+    "it": "__H__::Add, reorder and customize each entity shown on the chart.",
+    "nl": "__H__::Add, reorder and customize each entity shown on the chart."
+  },
+  {
+    "es": "__H__:Ayuda a compactar el gauge según el espacio disponible en la vista.",
+    "en": "__H__::Helps compact the gauge based on available space.",
+    "de": "__H__::Helps compact the gauge based on available space.",
+    "fr": "__H__::Helps compact the gauge based on available space.",
+    "it": "__H__::Helps compact the gauge based on available space.",
+    "nl": "__H__::Helps compact the gauge based on available space."
+  },
+  {
+    "es": "__H__:Ayuda a compactar la climate card según el espacio disponible en la vista.",
+    "en": "__H__::Helps compact the climate card based on available space.",
+    "de": "__H__::Helps compact the climate card based on available space.",
+    "fr": "__H__::Helps compact the climate card based on available space.",
+    "it": "__H__::Helps compact the climate card based on available space.",
+    "nl": "__H__::Helps compact the climate card based on available space."
+  },
+  {
+    "es": "__H__:Añade, reordena y personaliza cada reproductor visible en la tarjeta.",
+    "en": "__H__::Add, reorder and customize each player shown on the card.",
+    "de": "__H__::Add, reorder and customize each player shown on the card.",
+    "fr": "__H__::Add, reorder and customize each player shown on the card.",
+    "it": "__H__::Add, reorder and customize each player shown on the card.",
+    "nl": "__H__::Add, reorder and customize each player shown on the card."
+  },
+  {
+    "es": "__H__:Añade, reordena y personaliza los destinos de la barra y sus popups.",
+    "en": "__H__::Add, reorder and customize bar destinations and their popups.",
+    "de": "__H__::Add, reorder and customize bar destinations and their popups.",
+    "fr": "__H__::Add, reorder and customize bar destinations and their popups.",
+    "it": "__H__::Add, reorder and customize bar destinations and their popups.",
+    "nl": "__H__::Add, reorder and customize bar destinations and their popups."
+  },
+  {
+    "es": "__H__:Botones de armado y desarmado visibles en la tarjeta.",
+    "en": "__H__::Arm and disarm buttons visible on the card.",
+    "de": "__H__::Arm and disarm buttons visible on the card.",
+    "fr": "__H__::Arm and disarm buttons visible on the card.",
+    "it": "__H__::Arm and disarm buttons visible on the card.",
+    "nl": "__H__::Arm and disarm buttons visible on the card."
+  },
+  {
+    "es": "__H__:Botones secundarios con icono para alternar, abrir más información o llamar un servicio.",
+    "en": "__H__::Secondary icon buttons to toggle, open more info or call a service.",
+    "de": "__H__::Secondary icon buttons to toggle, open more info or call a service.",
+    "fr": "__H__::Secondary icon buttons to toggle, open more info or call a service.",
+    "it": "__H__::Secondary icon buttons to toggle, open more info or call a service.",
+    "nl": "__H__::Secondary icon buttons to toggle, open more info or call a service."
+  },
+  {
+    "es": "__H__:Configura titulo, entidades y rango visible de la grafica.",
+    "en": "__H__::Configure title, entities and visible chart range.",
+    "de": "__H__::Configure title, entities and visible chart range.",
+    "fr": "__H__::Configure title, entities and visible chart range.",
+    "it": "__H__::Configure title, entities and visible chart range.",
+    "nl": "__H__::Configure title, entities and visible chart range."
+  },
+  {
+    "es": "__H__:Controla la entrada del tooltip y el rebote visual de los chips.",
+    "en": "__H__::Controls tooltip entrance and visual chip bounce.",
+    "de": "__H__::Controls tooltip entrance and visual chip bounce.",
+    "fr": "__H__::Controls tooltip entrance and visual chip bounce.",
+    "it": "__H__::Controls tooltip entrance and visual chip bounce.",
+    "nl": "__H__::Controls tooltip entrance and visual chip bounce."
+  },
+  {
+    "es": "__H__:Controla la transición del dial, la entrada del contenido y el rebote al tocar la tarjeta.",
+    "en": "__H__::Controls dial transition, content entrance and tap bounce.",
+    "de": "__H__::Controls dial transition, content entrance and tap bounce.",
+    "fr": "__H__::Controls dial transition, content entrance and tap bounce.",
+    "it": "__H__::Controls dial transition, content entrance and tap bounce.",
+    "nl": "__H__::Controls dial transition, content entrance and tap bounce."
+  },
+  {
+    "es": "__H__:Controla la transición del dial, la entrada del contenido y el rebote de los botones.",
+    "en": "__H__::Controls dial transition, content entrance and button bounce.",
+    "de": "__H__::Controls dial transition, content entrance and button bounce.",
+    "fr": "__H__::Controls dial transition, content entrance and button bounce.",
+    "it": "__H__::Controls dial transition, content entrance and button bounce.",
+    "nl": "__H__::Controls dial transition, content entrance and button bounce."
+  },
+  {
+    "es": "__H__:Controla la visualizacion de lineas sin consumo y la velocidad de animacion.",
+    "en": "__H__::Controls display of zero-consumption lines and animation speed.",
+    "de": "__H__::Controls display of zero-consumption lines and animation speed.",
+    "fr": "__H__::Controls display of zero-consumption lines and animation speed.",
+    "it": "__H__::Controls display of zero-consumption lines and animation speed.",
+    "nl": "__H__::Controls display of zero-consumption lines and animation speed."
+  },
+  {
+    "es": "__H__:Controla las lineas a cero y la velocidad del flujo.",
+    "en": "__H__::Controls zero lines and flow speed.",
+    "de": "__H__::Controls zero lines and flow speed.",
+    "fr": "__H__::Controls zero lines and flow speed.",
+    "it": "__H__::Controls zero lines and flow speed.",
+    "nl": "__H__::Controls zero lines and flow speed."
+  },
+  {
+    "es": "__H__:Controla transiciones de barra, popup, media player y respuestas visuales.",
+    "en": "__H__::Controla transiciones de barra, popup, media player y respuestas visuales.",
+    "de": "__H__::Controla transiciones de barra, popup, media player y respuestas visuales.",
+    "fr": "__H__::Controla transiciones de barra, popup, media player y respuestas visuales.",
+    "it": "__H__::Controla transiciones de barra, popup, media player y respuestas visuales.",
+    "nl": "__H__::Controla transiciones de barra, popup, media player y respuestas visuales."
+  },
+  {
+    "es": "__H__:Elige la informacion y los controles visibles.",
+    "en": "__H__::Choose the information and visible controls.",
+    "de": "__H__::Choose the information and visible controls.",
+    "fr": "__H__::Choose the information and visible controls.",
+    "it": "__H__::Choose the information and visible controls.",
+    "nl": "__H__::Choose the information and visible controls."
+  },
+  {
+    "es": "__H__:Elige qué chips y controles deben mostrarse.",
+    "en": "__H__::Choose which chips and controls should be shown.",
+    "de": "__H__::Choose which chips and controls should be shown.",
+    "fr": "__H__::Choose which chips and controls should be shown.",
+    "it": "__H__::Choose which chips and controls should be shown.",
+    "nl": "__H__::Choose which chips and controls should be shown."
+  },
+  {
+    "es": "__H__:Entidad del robot y fuente principal del mapa.",
+    "en": "__H__::Robot entity and main map source.",
+    "de": "__H__::Robot entity and main map source.",
+    "fr": "__H__::Robot entity and main map source.",
+    "it": "__H__::Robot entity and main map source.",
+    "nl": "__H__::Robot entity and main map source."
+  },
+  {
+    "es": "__H__:Entidad favorita, nombre visible e icono principal.",
+    "en": "__H__::Favourite entity, visible name and main icon.",
+    "de": "__H__::Favourite entity, visible name and main icon.",
+    "fr": "__H__::Favourite entity, visible name and main icon.",
+    "it": "__H__::Favourite entity, visible name and main icon.",
+    "nl": "__H__::Favourite entity, visible name and main icon."
+  },
+  {
+    "es": "__H__:Entidad meteorologica principal, nombre visible, icono y contenido mostrado.",
+    "en": "__H__::Main weather entity, visible name, icon and displayed content.",
+    "de": "__H__::Main weather entity, visible name, icon and displayed content.",
+    "fr": "__H__::Main weather entity, visible name, icon and displayed content.",
+    "it": "__H__::Main weather entity, visible name, icon and displayed content.",
+    "nl": "__H__::Main weather entity, visible name, icon and displayed content."
+  },
+  {
+    "es": "__H__:Entidad numérica principal, nombre, icono y rango del gauge.",
+    "en": "__H__::Main numeric entity, name, icon and gauge range.",
+    "de": "__H__::Main numeric entity, name, icon and gauge range.",
+    "fr": "__H__::Main numeric entity, name, icon and gauge range.",
+    "it": "__H__::Main numeric entity, name, icon and gauge range.",
+    "nl": "__H__::Main numeric entity, name, icon and gauge range."
+  },
+  {
+    "es": "__H__:Entidad persona, foto, icono de zona y comportamiento principal de la tarjeta.",
+    "en": "__H__::Person entity, photo, zone icon and main card behaviour.",
+    "de": "__H__::Person entity, photo, zone icon and main card behaviour.",
+    "fr": "__H__::Person entity, photo, zone icon and main card behaviour.",
+    "it": "__H__::Person entity, photo, zone icon and main card behaviour.",
+    "nl": "__H__::Person entity, photo, zone icon and main card behaviour."
+  },
+  {
+    "es": "__H__:Entidad principal y textos visibles.",
+    "en": "__H__::Main entity and visible texts.",
+    "de": "__H__::Main entity and visible texts.",
+    "fr": "__H__::Main entity and visible texts.",
+    "it": "__H__::Main entity and visible texts.",
+    "nl": "__H__::Main entity and visible texts."
+  },
+  {
+    "es": "__H__:Entidad principal, helper opcional del codigo, icono y comportamiento base de la tarjeta.",
+    "en": "__H__::Main entity, optional code helper, icon and base card behaviour.",
+    "de": "__H__::Main entity, optional code helper, icon and base card behaviour.",
+    "fr": "__H__::Main entity, optional code helper, icon and base card behaviour.",
+    "it": "__H__::Main entity, optional code helper, icon and base card behaviour.",
+    "nl": "__H__::Main entity, optional code helper, icon and base card behaviour."
+  },
+  {
+    "es": "__H__:Entidad principal, nombre visible e icono base de la tarjeta.",
+    "en": "__H__::Main entity, visible name and base card icon.",
+    "de": "__H__::Main entity, visible name and base card icon.",
+    "fr": "__H__::Main entity, visible name and base card icon.",
+    "it": "__H__::Main entity, visible name and base card icon.",
+    "nl": "__H__::Main entity, visible name and base card icon."
+  },
+  {
+    "es": "__H__:Entidad principal, nombre visible e icono de la tarjeta.",
+    "en": "__H__::Main entity, visible name and card icon.",
+    "de": "__H__::Main entity, visible name and card icon.",
+    "fr": "__H__::Main entity, visible name and card icon.",
+    "it": "__H__::Main entity, visible name and card icon.",
+    "nl": "__H__::Main entity, visible name and card icon."
+  },
+  {
+    "es": "__H__:Entidad principal, nombre visible y comportamiento al tocar la tarjeta.",
+    "en": "__H__::Main entity, visible name and tap behaviour.",
+    "de": "__H__::Main entity, visible name and tap behaviour.",
+    "fr": "__H__::Main entity, visible name and tap behaviour.",
+    "it": "__H__::Main entity, visible name and tap behaviour.",
+    "nl": "__H__::Main entity, visible name and tap behaviour."
+  },
+  {
+    "es": "__H__:Entrada suave de la tarjeta, paneles y respuesta visual al pulsar controles.",
+    "en": "__H__::Smooth card entrance, panels and visual feedback when pressing controls.",
+    "de": "__H__::Smooth card entrance, panels and visual feedback when pressing controls.",
+    "fr": "__H__::Smooth card entrance, panels and visual feedback when pressing controls.",
+    "it": "__H__::Smooth card entrance, panels and visual feedback when pressing controls.",
+    "nl": "__H__::Smooth card entrance, panels and visual feedback when pressing controls."
+  },
+  {
+    "es": "__H__:Entrada suave del contenido y pequeno rebote al pulsar acciones e icono.",
+    "en": "__H__::Smooth content entrance and small bounce when tapping actions and icon.",
+    "de": "__H__::Smooth content entrance and small bounce when tapping actions and icon.",
+    "fr": "__H__::Smooth content entrance and small bounce when tapping actions and icon.",
+    "it": "__H__::Smooth content entrance and small bounce when tapping actions and icon.",
+    "nl": "__H__::Smooth content entrance and small bounce when tapping actions and icon."
+  },
+  {
+    "es": "__H__:Entrada suave del contenido y pequeno rebote al pulsar la tarjeta.",
+    "en": "__H__::Smooth content entrance and small bounce when tapping the card.",
+    "de": "__H__::Smooth content entrance and small bounce when tapping the card.",
+    "fr": "__H__::Smooth content entrance and small bounce when tapping the card.",
+    "it": "__H__::Smooth content entrance and small bounce when tapping the card.",
+    "nl": "__H__::Smooth content entrance and small bounce when tapping the card."
+  },
+  {
+    "es": "__H__:Entrada suave del contenido y pequeño rebote al pulsar la tarjeta o sus acciones.",
+    "en": "__H__::Smooth content entrance and small bounce when tapping the card or its actions.",
+    "de": "__H__::Smooth content entrance and small bounce when tapping the card or its actions.",
+    "fr": "__H__::Smooth content entrance and small bounce when tapping the card or its actions.",
+    "it": "__H__::Smooth content entrance and small bounce when tapping the card or its actions.",
+    "nl": "__H__::Smooth content entrance and small bounce when tapping the card or its actions."
+  },
+  {
+    "es": "__H__:Entrada suave del contenido y rebote ligero al pulsar la tarjeta.",
+    "en": "__H__::Smooth content entrance and light bounce when tapping the card.",
+    "de": "__H__::Smooth content entrance and light bounce when tapping the card.",
+    "fr": "__H__::Smooth content entrance and light bounce when tapping the card.",
+    "it": "__H__::Smooth content entrance and light bounce when tapping the card.",
+    "nl": "__H__::Smooth content entrance and light bounce when tapping the card."
+  },
+  {
+    "es": "__H__:Entrada suave del flujo y rebote al pulsar nodos o acciones.",
+    "en": "__H__::Smooth flow entrance and bounce when tapping nodes or actions.",
+    "de": "__H__::Smooth flow entrance and bounce when tapping nodes or actions.",
+    "fr": "__H__::Smooth flow entrance and bounce when tapping nodes or actions.",
+    "it": "__H__::Smooth flow entrance and bounce when tapping nodes or actions.",
+    "nl": "__H__::Smooth flow entrance and bounce when tapping nodes or actions."
+  },
+  {
+    "es": "__H__:Estado visible, chips adicionales, decimales de los valores y comportamiento en modo compacto.",
+    "en": "__H__::Visible state, extra chips, value decimals and compact mode behaviour.",
+    "de": "__H__::Visible state, extra chips, value decimals and compact mode behaviour.",
+    "fr": "__H__::Visible state, extra chips, value decimals and compact mode behaviour.",
+    "it": "__H__::Visible state, extra chips, value decimals and compact mode behaviour.",
+    "nl": "__H__::Visible state, extra chips, value decimals and compact mode behaviour."
+  },
+  {
+    "es": "__H__:Feedback visual para botones y paneles del robot.",
+    "en": "__H__::Visual feedback for robot buttons and panels.",
+    "de": "__H__::Visual feedback for robot buttons and panels.",
+    "fr": "__H__::Visual feedback for robot buttons and panels.",
+    "it": "__H__::Visual feedback for robot buttons and panels.",
+    "nl": "__H__::Visual feedback for robot buttons and panels."
+  },
+  {
+    "es": "__H__:Ideal si quieres usarlo fijo arriba o abajo del dashboard.",
+    "en": "__H__::Ideal if you want it fixed at the top or bottom of the dashboard.",
+    "de": "__H__::Ideal if you want it fixed at the top or bottom of the dashboard.",
+    "fr": "__H__::Ideal if you want it fixed at the top or bottom of the dashboard.",
+    "it": "__H__::Ideal if you want it fixed at the top or bottom of the dashboard.",
+    "nl": "__H__::Ideal if you want it fixed at the top or bottom of the dashboard."
+  },
+  {
+    "es": "__H__:Nombre, icono, rango visible y comportamiento basico de la grafica.",
+    "en": "__H__::Name, icon, visible range and basic chart behaviour.",
+    "de": "__H__::Name, icon, visible range and basic chart behaviour.",
+    "fr": "__H__::Name, icon, visible range and basic chart behaviour.",
+    "it": "__H__::Name, icon, visible range and basic chart behaviour.",
+    "nl": "__H__::Name, icon, visible range and basic chart behaviour."
+  },
+  {
+    "es": "__H__:Opciones base de la barra, layout y visibilidad general.",
+    "en": "__H__::Base bar options, layout and general visibility.",
+    "de": "__H__::Base bar options, layout and general visibility.",
+    "fr": "__H__::Base bar options, layout and general visibility.",
+    "it": "__H__::Base bar options, layout and general visibility.",
+    "nl": "__H__::Base bar options, layout and general visibility."
+  },
+  {
+    "es": "__H__:Opciones extra si la entidad es un panel de alarma.",
+    "en": "__H__::Extra options if the entity is an alarm panel.",
+    "de": "__H__::Extra options if the entity is an alarm panel.",
+    "fr": "__H__::Extra options if the entity is an alarm panel.",
+    "it": "__H__::Extra options if the entity is an alarm panel.",
+    "nl": "__H__::Extra options if the entity is an alarm panel."
+  },
+  {
+    "es": "__H__:Opciones generales del reproductor integrado y lista de players visibles.",
+    "en": "__H__::General options for the embedded player and visible player list.",
+    "de": "__H__::General options for the embedded player and visible player list.",
+    "fr": "__H__::General options for the embedded player and visible player list.",
+    "it": "__H__::General options for the embedded player and visible player list.",
+    "nl": "__H__::General options for the embedded player and visible player list."
+  },
+  {
+    "es": "__H__:Opciones generales del reproductor y cuándo debe mostrarse la tarjeta.",
+    "en": "__H__::General player options and when the card should be shown.",
+    "de": "__H__::General player options and when the card should be shown.",
+    "fr": "__H__::General player options and when the card should be shown.",
+    "it": "__H__::General player options and when the card should be shown.",
+    "nl": "__H__::General player options and when the card should be shown."
+  },
+  {
+    "es": "__H__:Personaliza el look Nodalia de la climate card, el dial y los controles.",
+    "en": "__H__::Customize the Nodalia look for the climate card, dial and controls.",
+    "de": "__H__::Customize the Nodalia look for the climate card, dial and controls.",
+    "fr": "__H__::Customize the Nodalia look for the climate card, dial and controls.",
+    "it": "__H__::Customize the Nodalia look for the climate card, dial and controls.",
+    "nl": "__H__::Customize the Nodalia look for the climate card, dial and controls."
+  },
+  {
+    "es": "__H__:Personaliza el look Nodalia, el dial circular, la nueva burbuja del thumb y la escala de tinte del gauge.",
+    "en": "__H__::Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale.",
+    "de": "__H__::Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale.",
+    "fr": "__H__::Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale.",
+    "it": "__H__::Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale.",
+    "nl": "__H__::Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale."
+  },
+  {
+    "es": "__H__:Presentación compacta y elementos visibles dentro de la tarjeta.",
+    "en": "__H__::Compact layout and visible elements inside the card.",
+    "de": "__H__::Compact layout and visible elements inside the card.",
+    "fr": "__H__::Compact layout and visible elements inside the card.",
+    "it": "__H__::Compact layout and visible elements inside the card.",
+    "nl": "__H__::Compact layout and visible elements inside the card."
+  },
+  {
+    "es": "__H__:Que elementos quieres mantener siempre visibles.",
+    "en": "__H__::Which elements you want to keep always visible.",
+    "de": "__H__::Which elements you want to keep always visible.",
+    "fr": "__H__::Which elements you want to keep always visible.",
+    "it": "__H__::Which elements you want to keep always visible.",
+    "nl": "__H__::Which elements you want to keep always visible."
+  },
+  {
+    "es": "__H__:Qué bloques quieres mostrar dentro de la tarjeta.",
+    "en": "__H__::Which blocks you want to show inside the card.",
+    "de": "__H__::Which blocks you want to show inside the card.",
+    "fr": "__H__::Which blocks you want to show inside the card.",
+    "it": "__H__::Which blocks you want to show inside the card.",
+    "nl": "__H__::Which blocks you want to show inside the card."
+  },
+  {
+    "es": "__H__:Qué elementos quieres mostrar dentro de la tarjeta.",
+    "en": "__H__::Which elements you want to show inside the card.",
+    "de": "__H__::Which elements you want to show inside the card.",
+    "fr": "__H__::Which elements you want to show inside the card.",
+    "it": "__H__::Which elements you want to show inside the card.",
+    "nl": "__H__::Which elements you want to show inside the card."
+  },
+  {
+    "es": "__H__:Qué hace la tarjeta cuando la tocas.",
+    "en": "__H__::What the card does when you tap it.",
+    "de": "__H__::What the card does when you tap it.",
+    "fr": "__H__::What the card does when you tap it.",
+    "it": "__H__::What the card does when you tap it.",
+    "nl": "__H__::What the card does when you tap it."
+  },
+  {
+    "es": "__H__:Respuesta haptica opcional al tocar la tarjeta.",
+    "en": "__H__::Optional haptic feedback when tapping the card.",
+    "de": "__H__::Optional haptic feedback when tapping the card.",
+    "fr": "__H__::Optional haptic feedback when tapping the card.",
+    "it": "__H__::Optional haptic feedback when tapping the card.",
+    "nl": "__H__::Optional haptic feedback when tapping the card."
+  },
+  {
+    "es": "__H__:Respuesta haptica opcional para clicks y selecciones.",
+    "en": "__H__::Optional haptic feedback for clicks and selections.",
+    "de": "__H__::Optional haptic feedback for clicks and selections.",
+    "fr": "__H__::Optional haptic feedback for clicks and selections.",
+    "it": "__H__::Optional haptic feedback for clicks and selections.",
+    "nl": "__H__::Optional haptic feedback for clicks and selections."
+  },
+  {
+    "es": "__H__:Respuesta haptica opcional para dial y controles.",
+    "en": "__H__::Optional haptic feedback for dial and controls.",
+    "de": "__H__::Optional haptic feedback for dial and controls.",
+    "fr": "__H__::Optional haptic feedback for dial and controls.",
+    "it": "__H__::Optional haptic feedback for dial and controls.",
+    "nl": "__H__::Optional haptic feedback for dial and controls."
+  },
+  {
+    "es": "__H__:Respuesta háptica opcional para los controles.",
+    "en": "__H__::Optional haptic feedback for controls.",
+    "de": "__H__::Optional haptic feedback for controls.",
+    "fr": "__H__::Optional haptic feedback for controls.",
+    "it": "__H__::Optional haptic feedback for controls.",
+    "nl": "__H__::Optional haptic feedback for controls."
+  },
+  {
+    "es": "__H__:Respuesta tactil opcional al pulsar acciones.",
+    "en": "__H__::Optional tactile feedback when tapping actions.",
+    "de": "__H__::Optional tactile feedback when tapping actions.",
+    "fr": "__H__::Optional tactile feedback when tapping actions.",
+    "it": "__H__::Optional tactile feedback when tapping actions.",
+    "nl": "__H__::Optional tactile feedback when tapping actions."
+  },
+  {
+    "es": "__H__:Respuesta tactil opcional al pulsar nodos o botones.",
+    "en": "__H__::Optional tactile feedback when tapping nodes or buttons.",
+    "de": "__H__::Optional tactile feedback when tapping nodes or buttons.",
+    "fr": "__H__::Optional tactile feedback when tapping nodes or buttons.",
+    "it": "__H__::Optional tactile feedback when tapping nodes or buttons.",
+    "nl": "__H__::Optional tactile feedback when tapping nodes or buttons."
+  },
+  {
+    "es": "__H__:Respuesta tactil opcional al tocar la tarjeta.",
+    "en": "__H__::Optional tactile feedback when tapping the card.",
+    "de": "__H__::Optional tactile feedback when tapping the card.",
+    "fr": "__H__::Optional tactile feedback when tapping the card.",
+    "it": "__H__::Optional tactile feedback when tapping the card.",
+    "nl": "__H__::Optional tactile feedback when tapping the card."
+  },
+  {
+    "es": "__H__:Respuesta tactil opcional para taps, hover y cambios de serie.",
+    "en": "__H__::Optional tactile feedback for taps, hover and series changes.",
+    "de": "__H__::Optional tactile feedback for taps, hover and series changes.",
+    "fr": "__H__::Optional tactile feedback for taps, hover and series changes.",
+    "it": "__H__::Optional tactile feedback for taps, hover and series changes.",
+    "nl": "__H__::Optional tactile feedback for taps, hover and series changes."
+  },
+  {
+    "es": "__H__:Respuesta táctil opcional al interactuar con el dial y los botones.",
+    "en": "__H__::Optional tactile feedback when using the dial and buttons.",
+    "de": "__H__::Optional tactile feedback when using the dial and buttons.",
+    "fr": "__H__::Optional tactile feedback when using the dial and buttons.",
+    "it": "__H__::Optional tactile feedback when using the dial and buttons.",
+    "nl": "__H__::Optional tactile feedback when using the dial and buttons."
+  },
+  {
+    "es": "__H__:Respuesta táctil opcional al tocar la tarjeta.",
+    "en": "__H__::Optional tactile feedback when tapping the card.",
+    "de": "__H__::Optional tactile feedback when tapping the card.",
+    "fr": "__H__::Optional tactile feedback when tapping the card.",
+    "it": "__H__::Optional tactile feedback when tapping the card.",
+    "nl": "__H__::Optional tactile feedback when tapping the card."
+  },
+  {
+    "es": "__H__:Respuesta táctil opcional al usar la tarjeta y sus acciones.",
+    "en": "__H__::Optional tactile feedback when using the card and its actions.",
+    "de": "__H__::Optional tactile feedback when using the card and its actions.",
+    "fr": "__H__::Optional tactile feedback when using the card and its actions.",
+    "it": "__H__::Optional tactile feedback when using the card and its actions.",
+    "nl": "__H__::Optional tactile feedback when using the card and its actions."
+  },
+  {
+    "es": "__H__:Respuesta táctil opcional al usar los controles.",
+    "en": "__H__::Optional tactile feedback when using controls.",
+    "de": "__H__::Optional tactile feedback when using controls.",
+    "fr": "__H__::Optional tactile feedback when using controls.",
+    "it": "__H__::Optional tactile feedback when using controls.",
+    "nl": "__H__::Optional tactile feedback when using controls."
+  },
+  {
+    "es": "__H__:Respuesta táctil opcional para los controles del reproductor.",
+    "en": "__H__::Optional tactile feedback for player controls.",
+    "de": "__H__::Optional tactile feedback for player controls.",
+    "fr": "__H__::Optional tactile feedback for player controls.",
+    "it": "__H__::Optional tactile feedback for player controls.",
+    "nl": "__H__::Optional tactile feedback for player controls."
+  },
+  {
+    "es": "__H__:Selectores opcionales para el modo principal y la ventilación.",
+    "en": "__H__::Optional selectors for main mode and fan.",
+    "de": "__H__::Optional selectors for main mode and fan.",
+    "fr": "__H__::Optional selectors for main mode and fan.",
+    "it": "__H__::Optional selectors for main mode and fan.",
+    "nl": "__H__::Optional selectors for main mode and fan."
+  },
+  {
+    "es": "__H__:Sensores y selectores opcionales para enriquecer el estado y los controles.",
+    "en": "__H__::Optional sensors and selectors to enrich state and controls.",
+    "de": "__H__::Optional sensors and selectors to enrich state and controls.",
+    "fr": "__H__::Optional sensors and selectors to enrich state and controls.",
+    "it": "__H__::Optional sensors and selectors to enrich state and controls.",
+    "nl": "__H__::Optional sensors and selectors to enrich state and controls."
+  },
+  {
+    "es": "__H__:Titulo, enlace al panel de energia y comportamiento general de la tarjeta.",
+    "en": "__H__::Title, energy panel link and general card behaviour.",
+    "de": "__H__::Title, energy panel link and general card behaviour.",
+    "fr": "__H__::Title, energy panel link and general card behaviour.",
+    "it": "__H__::Title, energy panel link and general card behaviour.",
+    "nl": "__H__::Title, energy panel link and general card behaviour."
+  },
+  {
+    "es": "__H__:Transiciones suaves al encender, apagar, desplegar controles, abrir modos y dar respuesta visual a los botones.",
+    "en": "__H__::Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback.",
+    "de": "__H__::Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback.",
+    "fr": "__H__::Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback.",
+    "it": "__H__::Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback.",
+    "nl": "__H__::Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback."
+  },
+  {
+    "es": "__H__:Transiciones suaves al encender, apagar, desplegar controles, cambiar entre sliders y dar respuesta visual a los botones.",
+    "en": "__H__::Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback..",
+    "de": "__H__::Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback..",
+    "fr": "__H__::Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback..",
+    "it": "__H__::Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback..",
+    "nl": "__H__::Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback.."
+  },
+  {
+    "es": "__H__:Transiciones suaves al encender, apagar, desplegar controles, cambiar paneles y dar respuesta visual a los botones.",
+    "en": "__H__::Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback.",
+    "de": "__H__::Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback.",
+    "fr": "__H__::Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback.",
+    "it": "__H__::Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback.",
+    "nl": "__H__::Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback."
+  },
+  {
+    "es": "__T__:Acciones rápidas",
+    "en": "__T__::Acciones rápidas",
+    "de": "__T__::Acciones rápidas",
+    "fr": "__T__::Acciones rápidas",
+    "it": "__T__::Acciones rápidas",
+    "nl": "__T__::Acciones rápidas"
+  },
+  {
+    "es": "__T__:Acción",
+    "en": "__T__::Acción",
+    "de": "__T__::Acción",
+    "fr": "__T__::Acción",
+    "it": "__T__::Acción",
+    "nl": "__T__::Acción"
+  },
+  {
+    "es": "__T__:Alarma",
+    "en": "__T__::Alarma",
+    "de": "__T__::Alarma",
+    "fr": "__T__::Alarma",
+    "it": "__T__::Alarma",
+    "nl": "__T__::Alarma"
+  },
+  {
+    "es": "__T__:Animaciones",
+    "en": "__T__::Animaciones",
+    "de": "__T__::Animaciones",
+    "fr": "__T__::Animaciones",
+    "it": "__T__::Animaciones",
+    "nl": "__T__::Animaciones"
+  },
+  {
+    "es": "__T__:Contenido",
+    "en": "__T__::Contenido",
+    "de": "__T__::Contenido",
+    "fr": "__T__::Contenido",
+    "it": "__T__::Contenido",
+    "nl": "__T__::Contenido"
+  },
+  {
+    "es": "__T__:Controles avanzados",
+    "en": "__T__::Controles avanzados",
+    "de": "__T__::Controles avanzados",
+    "fr": "__T__::Controles avanzados",
+    "it": "__T__::Controles avanzados",
+    "nl": "__T__::Controles avanzados"
+  },
+  {
+    "es": "__T__:Entidades auxiliares",
+    "en": "__T__::Entities auxiliares",
+    "de": "__T__::Entities auxiliares",
+    "fr": "__T__::Entities auxiliares",
+    "it": "__T__::Entities auxiliares",
+    "nl": "__T__::Entities auxiliares"
+  },
+  {
+    "es": "__T__:Estilo",
+    "en": "__T__::Style",
+    "de": "__T__::Style",
+    "fr": "__T__::Style",
+    "it": "__T__::Style",
+    "nl": "__T__::Style"
+  },
+  {
+    "es": "__T__:Estilos",
+    "en": "__T__::Styles",
+    "de": "__T__::Styles",
+    "fr": "__T__::Styles",
+    "it": "__T__::Styles",
+    "nl": "__T__::Styles"
+  },
+  {
+    "es": "__T__:Flujo",
+    "en": "__T__::Flujo",
+    "de": "__T__::Flujo",
+    "fr": "__T__::Flujo",
+    "it": "__T__::Flujo",
+    "nl": "__T__::Flujo"
+  },
+  {
+    "es": "__T__:General",
+    "en": "__T__::General",
+    "de": "__T__::General",
+    "fr": "__T__::General",
+    "it": "__T__::General",
+    "nl": "__T__::General"
+  },
+  {
+    "es": "__T__:Haptics",
+    "en": "__T__::Haptics",
+    "de": "__T__::Haptics",
+    "fr": "__T__::Haptics",
+    "it": "__T__::Haptics",
+    "nl": "__T__::Haptics"
+  },
+  {
+    "es": "__T__:Individuales",
+    "en": "__T__::Individuales",
+    "de": "__T__::Individuales",
+    "fr": "__T__::Individuales",
+    "it": "__T__::Individuales",
+    "nl": "__T__::Individuales"
+  },
+  {
+    "es": "__T__:Layout",
+    "en": "__T__::Layout",
+    "de": "__T__::Layout",
+    "fr": "__T__::Layout",
+    "it": "__T__::Layout",
+    "nl": "__T__::Layout"
+  },
+  {
+    "es": "__T__:Mapa",
+    "en": "__T__::Mapa",
+    "de": "__T__::Mapa",
+    "fr": "__T__::Mapa",
+    "it": "__T__::Mapa",
+    "nl": "__T__::Mapa"
+  },
+  {
+    "es": "__T__:Media Player",
+    "en": "__T__::Media Player",
+    "de": "__T__::Media Player",
+    "fr": "__T__::Media Player",
+    "it": "__T__::Media Player",
+    "nl": "__T__::Media Player"
+  },
+  {
+    "es": "__T__:Modos",
+    "en": "__T__::Modos",
+    "de": "__T__::Modos",
+    "fr": "__T__::Modos",
+    "it": "__T__::Modos",
+    "nl": "__T__::Modos"
+  },
+  {
+    "es": "__T__:Reproductores",
+    "en": "__T__::Reproductores",
+    "de": "__T__::Reproductores",
+    "fr": "__T__::Reproductores",
+    "it": "__T__::Reproductores",
+    "nl": "__T__::Reproductores"
+  },
+  {
+    "es": "__T__:Respuesta haptica",
+    "en": "__T__::Respuesta haptica",
+    "de": "__T__::Respuesta haptica",
+    "fr": "__T__::Respuesta haptica",
+    "it": "__T__::Respuesta haptica",
+    "nl": "__T__::Respuesta haptica"
+  },
+  {
+    "es": "__T__:Respuesta háptica",
+    "en": "__T__::Respuesta háptica",
+    "de": "__T__::Respuesta háptica",
+    "fr": "__T__::Respuesta háptica",
+    "it": "__T__::Respuesta háptica",
+    "nl": "__T__::Respuesta háptica"
+  },
+  {
+    "es": "__T__:Rutas",
+    "en": "__T__::Rutas",
+    "de": "__T__::Rutas",
+    "fr": "__T__::Rutas",
+    "it": "__T__::Rutas",
+    "nl": "__T__::Rutas"
+  },
+  {
+    "es": "__T__:Series",
+    "en": "__T__::Series",
+    "de": "__T__::Series",
+    "fr": "__T__::Series",
+    "it": "__T__::Series",
+    "nl": "__T__::Series"
+  },
+  {
+    "es": "__T__:Visibilidad",
+    "en": "__T__::Visibilidad",
+    "de": "__T__::Visibilidad",
+    "fr": "__T__::Visibilidad",
+    "it": "__T__::Visibilidad",
+    "nl": "__T__::Visibilidad"
+  },
+  {
+    "es": "Ocultar ajustes de estilo",
+    "en": "Hide style settings",
+    "de": "Hide style settings",
+    "fr": "Hide style settings",
+    "it": "Hide style settings",
+    "nl": "Hide style settings"
+  },
+  {
+    "es": "Mostrar ajustes de estilo",
+    "en": "Show style settings",
+    "de": "Anzeigen: style settings",
+    "fr": "Afficher style settings",
+    "it": "Mostra style settings",
+    "nl": "Toon style settings"
+  },
+  {
+    "es": "Ocultar ajustes de animación",
+    "en": "Hide animation settings",
+    "de": "Hide animation settings",
+    "fr": "Hide animation settings",
+    "it": "Hide animation settings",
+    "nl": "Hide animation settings"
+  },
+  {
+    "es": "Mostrar ajustes de animación",
+    "en": "Show animation settings",
+    "de": "Anzeigen: animation settings",
+    "fr": "Afficher animation settings",
+    "it": "Mostra animation settings",
+    "nl": "Toon animation settings"
+  },
+  {
+    "es": "Anadir ruta",
+    "en": "Add route",
+    "de": "Add route",
+    "fr": "Add route",
+    "it": "Add route",
+    "nl": "Add route"
+  },
+  {
+    "es": "Anadir player",
+    "en": "Add player",
+    "de": "Add player",
+    "fr": "Add player",
+    "it": "Add player",
+    "nl": "Add player"
+  },
+  {
+    "es": "Anadir popup",
+    "en": "Add popup",
+    "de": "Add popup",
+    "fr": "Add popup",
+    "it": "Add popup",
+    "nl": "Add popup"
+  },
+  {
+    "es": "No hay reproductores configurados.",
+    "en": "No players configured.",
+    "de": "No players configured.",
+    "fr": "No players configured.",
+    "it": "No players configured.",
+    "nl": "No players configured."
+  },
+  {
+    "es": "No hay rutas todavia.",
+    "en": "No routes yet.",
+    "de": "No routes yet.",
+    "fr": "No routes yet.",
+    "it": "No routes yet.",
+    "nl": "No routes yet."
+  },
+  {
+    "es": "Esta ruta no tiene popup todavia.",
+    "en": "This route has no popup yet.",
+    "de": "This route has no popup yet.",
+    "fr": "This route has no popup yet.",
+    "it": "This route has no popup yet.",
+    "nl": "This route has no popup yet."
+  },
+  {
+    "es": "Player",
+    "en": "Player",
+    "de": "Player",
+    "fr": "Player",
+    "it": "Player",
+    "nl": "Player"
+  },
+  {
+    "es": "Popup",
+    "en": "Popup",
+    "de": "Popup",
+    "fr": "Popup",
+    "it": "Popup",
+    "nl": "Popup"
+  },
+  {
+    "es": "Ruta",
+    "en": "Route",
+    "de": "Route",
+    "fr": "Route",
+    "it": "Route",
+    "nl": "Route"
+  },
+  {
+    "es": "Altura minima media player",
+    "en": "Media player minimum height",
+    "de": "Media player minimum height",
+    "fr": "Media player minimum height",
+    "it": "Media player minimum height",
+    "nl": "Media player minimum height"
+  },
+  {
+    "es": "Tamano etiqueta popup",
+    "en": "Popup label size",
+    "de": "Popup label size",
+    "fr": "Popup label size",
+    "it": "Popup label size",
+    "nl": "Popup label size"
+  },
+  {
+    "es": "Tamano minimo badge",
+    "en": "Minimum badge size",
+    "de": "Minimum badge size",
+    "fr": "Minimum badge size",
+    "it": "Minimum badge size",
+    "nl": "Minimum badge size"
+  },
+  {
+    "es": "Mostrar tambien en escritorio",
+    "en": "Also show on desktop",
+    "de": "Also show on desktop",
+    "fr": "Also show on desktop",
+    "it": "Also show on desktop",
+    "nl": "Also show on desktop"
+  },
+  {
+    "es": "Marcar activa por prefijo",
+    "en": "Mark active by prefix",
+    "de": "Mark active by prefix",
+    "fr": "Mark active by prefix",
+    "it": "Mark active by prefix",
+    "nl": "Mark active by prefix"
+  },
+  {
+    "es": "Altura minima",
+    "en": "Minimum height",
+    "de": "Minimum height",
+    "fr": "Minimum height",
+    "it": "Minimum height",
+    "nl": "Minimum height"
+  },
+  {
+    "es": "Ancho maximo barra",
+    "en": "Bar maximum width",
+    "de": "Bar maximum width",
+    "fr": "Bar maximum width",
+    "it": "Bar maximum width",
+    "nl": "Bar maximum width"
+  },
+  {
+    "es": "Ancho maximo popup",
+    "en": "Popup maximum width",
+    "de": "Popup maximum width",
+    "fr": "Popup maximum width",
+    "it": "Popup maximum width",
+    "nl": "Popup maximum width"
+  },
+  {
+    "es": "Ancho minimo popup",
+    "en": "Popup minimum width",
+    "de": "Popup minimum width",
+    "fr": "Popup minimum width",
+    "it": "Popup minimum width",
+    "nl": "Popup minimum width"
+  },
+  {
+    "es": "Barra y hover (ms)",
+    "en": "Bar and hover (ms)",
+    "de": "Bar and hover (ms)",
+    "fr": "Bar and hover (ms)",
+    "it": "Bar and hover (ms)",
+    "nl": "Bar and hover (ms)"
+  },
+  {
+    "es": "Breakpoint movil",
+    "en": "Mobile breakpoint",
+    "de": "Mobile breakpoint",
+    "fr": "Mobile breakpoint",
+    "it": "Mobile breakpoint",
+    "nl": "Mobile breakpoint"
+  },
+  {
+    "es": "Color etiqueta activa",
+    "en": "Active label color",
+    "de": "Active label color",
+    "fr": "Active label color",
+    "it": "Active label color",
+    "nl": "Active label color"
+  },
+  {
+    "es": "Etiqueta opcional",
+    "en": "Optional label",
+    "de": "Optional label",
+    "fr": "Optional label",
+    "it": "Optional label",
+    "nl": "Optional label"
+  },
+  {
+    "es": "Estilo haptico",
+    "en": "Haptic style",
+    "de": "Haptic style",
+    "fr": "Haptic style",
+    "it": "Haptic style",
+    "nl": "Haptic style"
+  },
+  {
+    "es": "Fijar a pantalla",
+    "en": "Pin to screen",
+    "de": "Pin to screen",
+    "fr": "Pin to screen",
+    "it": "Pin to screen",
+    "nl": "Pin to screen"
+  },
+  {
+    "es": "Layout popup",
+    "en": "Popup layout",
+    "de": "Popup layout",
+    "fr": "Popup layout",
+    "it": "Popup layout",
+    "nl": "Popup layout"
+  },
+  {
+    "es": "Media player (ms)",
+    "en": "Media player (ms)",
+    "de": "Media player (ms)",
+    "fr": "Media player (ms)",
+    "it": "Media player (ms)",
+    "nl": "Media player (ms)"
+  },
+  {
+    "es": "Mostrar etiquetas",
+    "en": "Show labels",
+    "de": "Anzeigen: labels",
+    "fr": "Afficher labels",
+    "it": "Mostra labels",
+    "nl": "Toon labels"
+  },
+  {
+    "es": "Nombre reproductor",
+    "en": "Player name",
+    "de": "Player name",
+    "fr": "Player name",
+    "it": "Player name",
+    "nl": "Player name"
+  },
+  {
+    "es": "Offset icono X",
+    "en": "Icon offset X",
+    "de": "Icon offset X",
+    "fr": "Icon offset X",
+    "it": "Icon offset X",
+    "nl": "Icon offset X"
+  },
+  {
+    "es": "Offset icono Y",
+    "en": "Icon offset Y",
+    "de": "Icon offset Y",
+    "fr": "Icon offset Y",
+    "it": "Icon offset Y",
+    "nl": "Icon offset Y"
+  },
+  {
+    "es": "Path activo extra",
+    "en": "Extra active path",
+    "de": "Extra active path",
+    "fr": "Extra active path",
+    "it": "Extra active path",
+    "nl": "Extra active path"
+  },
+  {
+    "es": "Radio media player",
+    "en": "Media player radius",
+    "de": "Media player radius",
+    "fr": "Media player radius",
+    "it": "Media player radius",
+    "nl": "Media player radius"
+  },
+  {
+    "es": "Respuesta botones (ms)",
+    "en": "Button feedback (ms)",
+    "de": "Button feedback (ms)",
+    "fr": "Button feedback (ms)",
+    "it": "Button feedback (ms)",
+    "nl": "Button feedback (ms)"
+  },
+  {
+    "es": "Respuesta haptica",
+    "en": "Haptic feedback",
+    "de": "Haptisches Feedback",
+    "fr": "Retour haptique",
+    "it": "Feedback aptico",
+    "nl": "Haptische feedback"
+  },
+  {
+    "es": "Ruta medios",
+    "en": "Media path",
+    "de": "Media path",
+    "fr": "Media path",
+    "it": "Media path",
+    "nl": "Media path"
+  },
+  {
+    "es": "Separacion botones",
+    "en": "Button spacing",
+    "de": "Button spacing",
+    "fr": "Button spacing",
+    "it": "Button spacing",
+    "nl": "Button spacing"
+  },
+  {
+    "es": "Separacion con navbar",
+    "en": "Spacing from navbar",
+    "de": "Spacing from navbar",
+    "fr": "Spacing from navbar",
+    "it": "Spacing from navbar",
+    "nl": "Spacing from navbar"
+  },
+  {
+    "es": "Separacion etiqueta",
+    "en": "Label spacing",
+    "de": "Label spacing",
+    "fr": "Label spacing",
+    "it": "Label spacing",
+    "nl": "Label spacing"
+  },
+  {
+    "es": "Separacion popup",
+    "en": "Popup spacing",
+    "de": "Popup spacing",
+    "fr": "Popup spacing",
+    "it": "Popup spacing",
+    "nl": "Popup spacing"
+  },
+  {
+    "es": "Separacion stack",
+    "en": "Stack spacing",
+    "de": "Stack spacing",
+    "fr": "Stack spacing",
+    "it": "Stack spacing",
+    "nl": "Stack spacing"
+  },
+  {
+    "es": "Sombra media player",
+    "en": "Media player shadow",
+    "de": "Media player shadow",
+    "fr": "Media player shadow",
+    "it": "Media player shadow",
+    "nl": "Media player shadow"
+  },
+  {
+    "es": "Tamano controles",
+    "en": "Control size",
+    "de": "Control size",
+    "fr": "Control size",
+    "it": "Control size",
+    "nl": "Control size"
+  },
+  {
+    "es": "Tamano etiqueta",
+    "en": "Label size",
+    "de": "Label size",
+    "fr": "Label size",
+    "it": "Label size",
+    "nl": "Label size"
+  },
+  {
+    "es": "Tamano indicadores",
+    "en": "Indicator size",
+    "de": "Indicator size",
+    "fr": "Indicator size",
+    "it": "Indicator size",
+    "nl": "Indicator size"
+  },
+  {
+    "es": "Tamano item popup",
+    "en": "Popup item size",
+    "de": "Popup item size",
+    "fr": "Popup item size",
+    "it": "Popup item size",
+    "nl": "Popup item size"
+  },
+  {
+    "es": "Tamano portada",
+    "en": "Cover art size",
+    "de": "Cover art size",
+    "fr": "Cover art size",
+    "it": "Cover art size",
+    "nl": "Cover art size"
+  },
+  {
+    "es": "Tamano texto badge",
+    "en": "Badge text size",
+    "de": "Badge text size",
+    "fr": "Badge text size",
+    "it": "Badge text size",
+    "nl": "Badge text size"
+  },
+  {
+    "es": "Usar caratula de fondo",
+    "en": "Use cover art as background",
+    "de": "Use cover art as background",
+    "fr": "Use cover art as background",
+    "it": "Use cover art as background",
+    "nl": "Use cover art as background"
+  },
+  {
+    "es": "Veladura popup",
+    "en": "Popup dimming",
+    "de": "Popup dimming",
+    "fr": "Popup dimming",
+    "it": "Popup dimming",
+    "nl": "Popup dimming"
+  },
+  {
+    "es": "Backdrop filter",
+    "en": "Backdrop filter",
+    "de": "Backdrop filter",
+    "fr": "Backdrop filter",
+    "it": "Backdrop filter",
+    "nl": "Backdrop filter"
+  },
+  {
+    "es": "Borde media player",
+    "en": "Media player border",
+    "de": "Media player border",
+    "fr": "Media player border",
+    "it": "Media player border",
+    "nl": "Media player border"
+  },
+  {
+    "es": "Color etiqueta",
+    "en": "Label color",
+    "de": "Label color",
+    "fr": "Label color",
+    "it": "Label color",
+    "nl": "Label color"
+  },
+  {
+    "es": "Color progreso",
+    "en": "Progress color",
+    "de": "Progress color",
+    "fr": "Progress color",
+    "it": "Progress color",
+    "nl": "Progress color"
+  },
+  {
+    "es": "Descripcion",
+    "en": "Description",
+    "de": "Description",
+    "fr": "Description",
+    "it": "Description",
+    "nl": "Description"
+  },
+  {
+    "es": "Fondo media player",
+    "en": "Media player background",
+    "de": "Media player background",
+    "fr": "Media player background",
+    "it": "Media player background",
+    "nl": "Media player background"
+  },
+  {
+    "es": "Fondo progreso",
+    "en": "Progress background",
+    "de": "Progress background",
+    "fr": "Progress background",
+    "it": "Progress background",
+    "nl": "Progress background"
+  },
+  {
+    "es": "Imagen fija",
+    "en": "Fixed image",
+    "de": "Fixed image",
+    "fr": "Fixed image",
+    "it": "Fixed image",
+    "nl": "Fixed image"
+  },
+  {
+    "es": "Justificacion",
+    "en": "Justification",
+    "de": "Justification",
+    "fr": "Justification",
+    "it": "Justification",
+    "nl": "Justification"
+  },
+  {
+    "es": "Mostrar siempre",
+    "en": "Always show",
+    "de": "Always show",
+    "fr": "Always show",
+    "it": "Always show",
+    "nl": "Always show"
+  },
+  {
+    "es": "Overlay portada",
+    "en": "Cover overlay",
+    "de": "Cover overlay",
+    "fr": "Cover overlay",
+    "it": "Cover overlay",
+    "nl": "Cover overlay"
+  },
+  {
+    "es": "Padding media player",
+    "en": "Media player padding",
+    "de": "Media player padding",
+    "fr": "Media player padding",
+    "it": "Media player padding",
+    "nl": "Media player padding"
+  },
+  {
+    "es": "Paths activos",
+    "en": "Active paths",
+    "de": "Active paths",
+    "fr": "Active paths",
+    "it": "Active paths",
+    "nl": "Active paths"
+  },
+  {
+    "es": "Radio boton",
+    "en": "Button radius",
+    "de": "Button radius",
+    "fr": "Button radius",
+    "it": "Button radius",
+    "nl": "Button radius"
+  },
+  {
+    "es": "Sombra barra",
+    "en": "Bar shadow",
+    "de": "Bar shadow",
+    "fr": "Bar shadow",
+    "it": "Bar shadow",
+    "nl": "Bar shadow"
+  },
+  {
+    "es": "Sombra popup",
+    "en": "Popup shadow",
+    "de": "Popup shadow",
+    "fr": "Popup shadow",
+    "it": "Popup shadow",
+    "nl": "Popup shadow"
+  },
+  {
+    "es": "Tamano boton",
+    "en": "Button size",
+    "de": "Button size",
+    "fr": "Button size",
+    "it": "Button size",
+    "nl": "Button size"
+  },
+  {
+    "es": "Activa por prefijo",
+    "en": "Active by prefix",
+    "de": "Active by prefix",
+    "fr": "Active by prefix",
+    "it": "Active by prefix",
+    "nl": "Active by prefix"
+  },
+  {
+    "es": "Color botones",
+    "en": "Button color",
+    "de": "Button color",
+    "fr": "Button color",
+    "it": "Button color",
+    "nl": "Button color"
+  },
+  {
+    "es": "Fondo botones",
+    "en": "Button background",
+    "de": "Button background",
+    "fr": "Button background",
+    "it": "Button background",
+    "nl": "Button background"
+  },
+  {
+    "es": "Fondo popup",
+    "en": "Popup background",
+    "de": "Popup background",
+    "fr": "Popup background",
+    "it": "Popup background",
+    "nl": "Popup background"
+  },
+  {
+    "es": "Padding popup",
+    "en": "Popup padding",
+    "de": "Popup padding",
+    "fr": "Popup padding",
+    "it": "Popup padding",
+    "nl": "Popup padding"
+  },
+  {
+    "es": "Popup (ms)",
+    "en": "Popup (ms)",
+    "de": "Popup (ms)",
+    "fr": "Popup (ms)",
+    "it": "Popup (ms)",
+    "nl": "Popup (ms)"
+  },
+  {
+    "es": "Radio popup",
+    "en": "Popup radius",
+    "de": "Popup radius",
+    "fr": "Popup radius",
+    "it": "Popup radius",
+    "nl": "Popup radius"
+  },
+  {
+    "es": "Borde popup",
+    "en": "Popup border",
+    "de": "Popup border",
+    "fr": "Popup border",
+    "it": "Popup border",
+    "nl": "Popup border"
+  },
+  {
+    "es": "Color activo",
+    "en": "Active color",
+    "de": "Active color",
+    "fr": "Active color",
+    "it": "Active color",
+    "nl": "Active color"
+  },
+  {
+    "es": "Color badge",
+    "en": "Badge color",
+    "de": "Badge color",
+    "fr": "Badge color",
+    "it": "Badge color",
+    "nl": "Badge color"
+  },
+  {
+    "es": "Fondo activo",
+    "en": "Active background",
+    "de": "Active background",
+    "fr": "Active background",
+    "it": "Active background",
+    "nl": "Active background"
+  },
+  {
+    "es": "Fondo badge",
+    "en": "Badge background",
+    "de": "Badge background",
+    "fr": "Badge background",
+    "it": "Badge background",
+    "nl": "Badge background"
+  },
+  {
+    "es": "Fondo barra",
+    "en": "Bar background",
+    "de": "Bar background",
+    "fr": "Bar background",
+    "it": "Bar background",
+    "nl": "Bar background"
+  },
+  {
+    "es": "Padding barra",
+    "en": "Bar padding",
+    "de": "Bar padding",
+    "fr": "Bar padding",
+    "it": "Bar padding",
+    "nl": "Bar padding"
+  },
+  {
+    "es": "Radio barra",
+    "en": "Bar radius",
+    "de": "Bar radius",
+    "fr": "Bar radius",
+    "it": "Bar radius",
+    "nl": "Bar radius"
+  },
+  {
+    "es": "Todavía no hay acciones rápidas.",
+    "en": "No quick actions yet.",
+    "de": "No quick actions yet.",
+    "fr": "No quick actions yet.",
+    "it": "No quick actions yet.",
+    "nl": "No quick actions yet."
+  },
+  {
+    "es": "Añadir acción",
+    "en": "Add action",
+    "de": "Add action",
+    "fr": "Add action",
+    "it": "Add action",
+    "nl": "Add action"
+  },
+  {
+    "es": "Tipo de acción",
+    "en": "Action type",
+    "de": "Action type",
+    "fr": "Action type",
+    "it": "Action type",
+    "nl": "Action type"
+  },
+  {
+    "es": "Automática (toggle o info)",
+    "en": "Automatic (toggle or info)",
+    "de": "Automatic (toggle or info)",
+    "fr": "Automatic (toggle or info)",
+    "it": "Automatic (toggle or info)",
+    "nl": "Automatic (toggle or info)"
+  },
+  {
+    "es": "Modo compacto",
+    "en": "Compact mode",
+    "de": "Compact mode",
+    "fr": "Compact mode",
+    "it": "Compact mode",
+    "nl": "Compact mode"
+  },
+  {
+    "es": "Automático (<4 columnas)",
+    "en": "Automatic (<4 columns)",
+    "de": "Automatic (<4 columns)",
+    "fr": "Automatic (<4 columns)",
+    "it": "Automatic (<4 columns)",
+    "nl": "Automatic (<4 columns)"
+  },
+  {
+    "es": "Compacto siempre",
+    "en": "Always compact",
+    "de": "Always compact",
+    "fr": "Always compact",
+    "it": "Always compact",
+    "nl": "Always compact"
+  },
+  {
+    "es": "Nunca compacto",
+    "en": "Never compact",
+    "de": "Never compact",
+    "fr": "Never compact",
+    "it": "Never compact",
+    "nl": "Never compact"
+  },
+  {
+    "es": "Acción al tocar",
+    "en": "Tap action",
+    "de": "Tap action",
+    "fr": "Tap action",
+    "it": "Tap action",
+    "nl": "Tap action"
+  },
+  {
+    "es": "Color personalizado",
+    "en": "Custom color",
+    "de": "Custom color",
+    "fr": "Custom color",
+    "it": "Custom color",
+    "nl": "Custom color"
+  },
+  {
+    "es": "Acción",
+    "en": "Action",
+    "de": "Action",
+    "fr": "Action",
+    "it": "Action",
+    "nl": "Action"
+  },
+  {
+    "es": "Subir",
+    "en": "Move up",
+    "de": "Move up",
+    "fr": "Move up",
+    "it": "Move up",
+    "nl": "Move up"
+  },
+  {
+    "es": "Bajar",
+    "en": "Move down",
+    "de": "Move down",
+    "fr": "Move down",
+    "it": "Move down",
+    "nl": "Move down"
+  },
+  {
+    "es": "Eliminar",
+    "en": "Delete",
+    "de": "Delete",
+    "fr": "Delete",
+    "it": "Delete",
+    "nl": "Delete"
+  },
+  {
+    "es": "Activa o desactiva cabecera, valor grande, leyenda y relleno.",
+    "en": "__H__::Enable or disable header, large value, legend and fill.",
+    "de": "__H__::Enable or disable header, large value, legend and fill.",
+    "fr": "__H__::Enable or disable header, large value, legend and fill.",
+    "it": "__H__::Enable or disable header, large value, legend and fill.",
+    "nl": "__H__::Enable or disable header, large value, legend and fill."
+  },
+  {
+    "es": "Activa o desactiva cabecera, valor, leyenda y relleno.",
+    "en": "__H__::Enable or disable header, value, legend and fill.",
+    "de": "__H__::Enable or disable header, value, legend and fill.",
+    "fr": "__H__::Enable or disable header, value, legend and fill.",
+    "it": "__H__::Enable or disable header, value, legend and fill.",
+    "nl": "__H__::Enable or disable header, value, legend and fill."
+  },
+  {
+    "es": "Activa u oculta cada bloque de la tarjeta.",
+    "en": "__H__::Show or hide each card block.",
+    "de": "__H__::Show or hide each card block.",
+    "fr": "__H__::Show or hide each card block.",
+    "it": "__H__::Show or hide each card block.",
+    "nl": "__H__::Show or hide each card block."
+  },
+  {
+    "es": "Ajusta la apertura de paneles, navegador y el rebote de los botones.",
+    "en": "__H__::Adjust panel opening, browser and button bounce.",
+    "de": "__H__::Adjust panel opening, browser and button bounce.",
+    "fr": "__H__::Adjust panel opening, browser and button bounce.",
+    "it": "__H__::Adjust panel opening, browser and button bounce.",
+    "nl": "__H__::Adjust panel opening, browser and button bounce."
+  },
+  {
+    "es": "Ajustes de cabecera, chips y rango visible.",
+    "en": "__H__::Header, chips and visible range settings.",
+    "de": "__H__::Header, chips and visible range settings.",
+    "fr": "__H__::Header, chips and visible range settings.",
+    "it": "__H__::Header, chips and visible range settings.",
+    "nl": "__H__::Header, chips and visible range settings."
+  },
+  {
+    "es": "Ajustes visuales base de la tarjeta favorita.",
+    "en": "__H__::Base visual settings for the favourite card.",
+    "de": "__H__::Base visual settings for the favourite card.",
+    "fr": "__H__::Base visual settings for the favourite card.",
+    "it": "__H__::Base visual settings for the favourite card.",
+    "nl": "__H__::Base visual settings for the favourite card."
+  },
+  {
+    "es": "Ajustes visuales base de la tarjeta y las burbujas.",
+    "en": "__H__::Base visual settings for the card and bubbles.",
+    "de": "__H__::Base visual settings for the card and bubbles.",
+    "fr": "__H__::Base visual settings for the card and bubbles.",
+    "it": "__H__::Base visual settings for the card and bubbles.",
+    "nl": "__H__::Base visual settings for the card and bubbles."
+  },
+  {
+    "es": "Ajustes visuales base de la tarjeta.",
+    "en": "__H__::Base visual settings for the card.",
+    "de": "__H__::Base visual settings for the card.",
+    "fr": "__H__::Base visual settings for the card.",
+    "it": "__H__::Base visual settings for the card.",
+    "nl": "__H__::Base visual settings for the card."
+  },
+  {
+    "es": "Ajustes visuales base del mapa y las burbujas.",
+    "en": "__H__::Base visual settings for the map and bubbles.",
+    "de": "__H__::Base visual settings for the map and bubbles.",
+    "fr": "__H__::Base visual settings for the map and bubbles.",
+    "it": "__H__::Base visual settings for the map and bubbles.",
+    "nl": "__H__::Base visual settings for the map and bubbles."
+  },
+  {
+    "es": "Ajustes visuales básicos del look Nodalia.",
+    "en": "__H__::Basic visual settings for the Nodalia look.",
+    "de": "__H__::Basic visual settings for the Nodalia look.",
+    "fr": "__H__::Basic visual settings for the Nodalia look.",
+    "it": "__H__::Basic visual settings for the Nodalia look.",
+    "nl": "__H__::Basic visual settings for the Nodalia look."
+  },
+  {
+    "es": "Ajustes visuales de barra, botones, popup y media player.",
+    "en": "__H__::Visual settings for bar, buttons, popup and media player.",
+    "de": "__H__::Visual settings for bar, buttons, popup and media player.",
+    "fr": "__H__::Visual settings for bar, buttons, popup and media player.",
+    "it": "__H__::Visual settings for bar, buttons, popup and media player.",
+    "nl": "__H__::Visual settings for bar, buttons, popup and media player."
+  },
+  {
+    "es": "Ajustes visuales de la card, el icono y el grafico.",
+    "en": "__H__::Visual settings for the card, icon and chart.",
+    "de": "__H__::Visual settings for the card, icon and chart.",
+    "fr": "__H__::Visual settings for the card, icon and chart.",
+    "it": "__H__::Visual settings for the card, icon and chart.",
+    "nl": "__H__::Visual settings for the card, icon and chart."
+  },
+  {
+    "es": "Ajustes visuales del grafico y el look Nodalia.",
+    "en": "__H__::Visual settings for the chart and Nodalia look.",
+    "de": "__H__::Visual settings for the chart and Nodalia look.",
+    "fr": "__H__::Visual settings for the chart and Nodalia look.",
+    "it": "__H__::Visual settings for the chart and Nodalia look.",
+    "nl": "__H__::Visual settings for the chart and Nodalia look."
+  },
+  {
+    "es": "Ajustes visuales del look Nodalia y el dial circular.",
+    "en": "__H__::Visual settings for the Nodalia look and circular dial.",
+    "de": "__H__::Visual settings for the Nodalia look and circular dial.",
+    "fr": "__H__::Visual settings for the Nodalia look and circular dial.",
+    "it": "__H__::Visual settings for the Nodalia look and circular dial.",
+    "nl": "__H__::Visual settings for the Nodalia look and circular dial."
+  },
+  {
+    "es": "Ajustes visuales del reproductor principal y del navegador de medios.",
+    "en": "__H__::Visual settings for the main player and media browser.",
+    "de": "__H__::Visual settings for the main player and media browser.",
+    "fr": "__H__::Visual settings for the main player and media browser.",
+    "it": "__H__::Visual settings for the main player and media browser.",
+    "nl": "__H__::Visual settings for the main player and media browser."
+  },
+  {
+    "es": "Ajustes visuales principales de la tarjeta.",
+    "en": "__H__::Main visual settings for the card.",
+    "de": "__H__::Main visual settings for the card.",
+    "fr": "__H__::Main visual settings for the card.",
+    "it": "__H__::Main visual settings for the card.",
+    "nl": "__H__::Main visual settings for the card."
+  },
+  {
+    "es": "Anade, reordena y personaliza cada entidad mostrada en la grafica.",
+    "en": "__H__::Add, reorder and customize each entity shown on the chart.",
+    "de": "__H__::Add, reorder and customize each entity shown on the chart.",
+    "fr": "__H__::Add, reorder and customize each entity shown on the chart.",
+    "it": "__H__::Add, reorder and customize each entity shown on the chart.",
+    "nl": "__H__::Add, reorder and customize each entity shown on the chart."
+  },
+  {
+    "es": "Ayuda a compactar el gauge según el espacio disponible en la vista.",
+    "en": "__H__::Helps compact the gauge based on available space.",
+    "de": "__H__::Helps compact the gauge based on available space.",
+    "fr": "__H__::Helps compact the gauge based on available space.",
+    "it": "__H__::Helps compact the gauge based on available space.",
+    "nl": "__H__::Helps compact the gauge based on available space."
+  },
+  {
+    "es": "Ayuda a compactar la climate card según el espacio disponible en la vista.",
+    "en": "__H__::Helps compact the climate card based on available space.",
+    "de": "__H__::Helps compact the climate card based on available space.",
+    "fr": "__H__::Helps compact the climate card based on available space.",
+    "it": "__H__::Helps compact the climate card based on available space.",
+    "nl": "__H__::Helps compact the climate card based on available space."
+  },
+  {
+    "es": "Añade, reordena y personaliza cada reproductor visible en la tarjeta.",
+    "en": "__H__::Add, reorder and customize each player shown on the card.",
+    "de": "__H__::Add, reorder and customize each player shown on the card.",
+    "fr": "__H__::Add, reorder and customize each player shown on the card.",
+    "it": "__H__::Add, reorder and customize each player shown on the card.",
+    "nl": "__H__::Add, reorder and customize each player shown on the card."
+  },
+  {
+    "es": "Añade, reordena y personaliza los destinos de la barra y sus popups.",
+    "en": "__H__::Add, reorder and customize bar destinations and their popups.",
+    "de": "__H__::Add, reorder and customize bar destinations and their popups.",
+    "fr": "__H__::Add, reorder and customize bar destinations and their popups.",
+    "it": "__H__::Add, reorder and customize bar destinations and their popups.",
+    "nl": "__H__::Add, reorder and customize bar destinations and their popups."
+  },
+  {
+    "es": "Botones de armado y desarmado visibles en la tarjeta.",
+    "en": "__H__::Arm and disarm buttons visible on the card.",
+    "de": "__H__::Arm and disarm buttons visible on the card.",
+    "fr": "__H__::Arm and disarm buttons visible on the card.",
+    "it": "__H__::Arm and disarm buttons visible on the card.",
+    "nl": "__H__::Arm and disarm buttons visible on the card."
+  },
+  {
+    "es": "Botones secundarios con icono para alternar, abrir más información o llamar un servicio.",
+    "en": "__H__::Secondary icon buttons to toggle, open more info or call a service.",
+    "de": "__H__::Secondary icon buttons to toggle, open more info or call a service.",
+    "fr": "__H__::Secondary icon buttons to toggle, open more info or call a service.",
+    "it": "__H__::Secondary icon buttons to toggle, open more info or call a service.",
+    "nl": "__H__::Secondary icon buttons to toggle, open more info or call a service."
+  },
+  {
+    "es": "Configura titulo, entidades y rango visible de la grafica.",
+    "en": "__H__::Configure title, entities and visible chart range.",
+    "de": "__H__::Configure title, entities and visible chart range.",
+    "fr": "__H__::Configure title, entities and visible chart range.",
+    "it": "__H__::Configure title, entities and visible chart range.",
+    "nl": "__H__::Configure title, entities and visible chart range."
+  },
+  {
+    "es": "Controla la entrada del tooltip y el rebote visual de los chips.",
+    "en": "__H__::Controls tooltip entrance and visual chip bounce.",
+    "de": "__H__::Controls tooltip entrance and visual chip bounce.",
+    "fr": "__H__::Controls tooltip entrance and visual chip bounce.",
+    "it": "__H__::Controls tooltip entrance and visual chip bounce.",
+    "nl": "__H__::Controls tooltip entrance and visual chip bounce."
+  },
+  {
+    "es": "Controla la transición del dial, la entrada del contenido y el rebote al tocar la tarjeta.",
+    "en": "__H__::Controls dial transition, content entrance and tap bounce.",
+    "de": "__H__::Controls dial transition, content entrance and tap bounce.",
+    "fr": "__H__::Controls dial transition, content entrance and tap bounce.",
+    "it": "__H__::Controls dial transition, content entrance and tap bounce.",
+    "nl": "__H__::Controls dial transition, content entrance and tap bounce."
+  },
+  {
+    "es": "Controla la transición del dial, la entrada del contenido y el rebote de los botones.",
+    "en": "__H__::Controls dial transition, content entrance and button bounce.",
+    "de": "__H__::Controls dial transition, content entrance and button bounce.",
+    "fr": "__H__::Controls dial transition, content entrance and button bounce.",
+    "it": "__H__::Controls dial transition, content entrance and button bounce.",
+    "nl": "__H__::Controls dial transition, content entrance and button bounce."
+  },
+  {
+    "es": "Controla la visualizacion de lineas sin consumo y la velocidad de animacion.",
+    "en": "__H__::Controls display of zero-consumption lines and animation speed.",
+    "de": "__H__::Controls display of zero-consumption lines and animation speed.",
+    "fr": "__H__::Controls display of zero-consumption lines and animation speed.",
+    "it": "__H__::Controls display of zero-consumption lines and animation speed.",
+    "nl": "__H__::Controls display of zero-consumption lines and animation speed."
+  },
+  {
+    "es": "Controla las lineas a cero y la velocidad del flujo.",
+    "en": "__H__::Controls zero lines and flow speed.",
+    "de": "__H__::Controls zero lines and flow speed.",
+    "fr": "__H__::Controls zero lines and flow speed.",
+    "it": "__H__::Controls zero lines and flow speed.",
+    "nl": "__H__::Controls zero lines and flow speed."
+  },
+  {
+    "es": "Controla transiciones de barra, popup, media player y respuestas visuales.",
+    "en": "__H__::Controla transiciones de barra, popup, media player y respuestas visuales.",
+    "de": "__H__::Controla transiciones de barra, popup, media player y respuestas visuales.",
+    "fr": "__H__::Controla transiciones de barra, popup, media player y respuestas visuales.",
+    "it": "__H__::Controla transiciones de barra, popup, media player y respuestas visuales.",
+    "nl": "__H__::Controla transiciones de barra, popup, media player y respuestas visuales."
+  },
+  {
+    "es": "Elige la informacion y los controles visibles.",
+    "en": "__H__::Choose the information and visible controls.",
+    "de": "__H__::Choose the information and visible controls.",
+    "fr": "__H__::Choose the information and visible controls.",
+    "it": "__H__::Choose the information and visible controls.",
+    "nl": "__H__::Choose the information and visible controls."
+  },
+  {
+    "es": "Elige qué chips y controles deben mostrarse.",
+    "en": "__H__::Choose which chips and controls should be shown.",
+    "de": "__H__::Choose which chips and controls should be shown.",
+    "fr": "__H__::Choose which chips and controls should be shown.",
+    "it": "__H__::Choose which chips and controls should be shown.",
+    "nl": "__H__::Choose which chips and controls should be shown."
+  },
+  {
+    "es": "Entidad del robot y fuente principal del mapa.",
+    "en": "__H__::Robot entity and main map source.",
+    "de": "__H__::Robot entity and main map source.",
+    "fr": "__H__::Robot entity and main map source.",
+    "it": "__H__::Robot entity and main map source.",
+    "nl": "__H__::Robot entity and main map source."
+  },
+  {
+    "es": "Entidad favorita, nombre visible e icono principal.",
+    "en": "__H__::Favourite entity, visible name and main icon.",
+    "de": "__H__::Favourite entity, visible name and main icon.",
+    "fr": "__H__::Favourite entity, visible name and main icon.",
+    "it": "__H__::Favourite entity, visible name and main icon.",
+    "nl": "__H__::Favourite entity, visible name and main icon."
+  },
+  {
+    "es": "Entidad meteorologica principal, nombre visible, icono y contenido mostrado.",
+    "en": "__H__::Main weather entity, visible name, icon and displayed content.",
+    "de": "__H__::Main weather entity, visible name, icon and displayed content.",
+    "fr": "__H__::Main weather entity, visible name, icon and displayed content.",
+    "it": "__H__::Main weather entity, visible name, icon and displayed content.",
+    "nl": "__H__::Main weather entity, visible name, icon and displayed content."
+  },
+  {
+    "es": "Entidad numérica principal, nombre, icono y rango del gauge.",
+    "en": "__H__::Main numeric entity, name, icon and gauge range.",
+    "de": "__H__::Main numeric entity, name, icon and gauge range.",
+    "fr": "__H__::Main numeric entity, name, icon and gauge range.",
+    "it": "__H__::Main numeric entity, name, icon and gauge range.",
+    "nl": "__H__::Main numeric entity, name, icon and gauge range."
+  },
+  {
+    "es": "Entidad persona, foto, icono de zona y comportamiento principal de la tarjeta.",
+    "en": "__H__::Person entity, photo, zone icon and main card behaviour.",
+    "de": "__H__::Person entity, photo, zone icon and main card behaviour.",
+    "fr": "__H__::Person entity, photo, zone icon and main card behaviour.",
+    "it": "__H__::Person entity, photo, zone icon and main card behaviour.",
+    "nl": "__H__::Person entity, photo, zone icon and main card behaviour."
+  },
+  {
+    "es": "Entidad principal y textos visibles.",
+    "en": "__H__::Main entity and visible texts.",
+    "de": "__H__::Main entity and visible texts.",
+    "fr": "__H__::Main entity and visible texts.",
+    "it": "__H__::Main entity and visible texts.",
+    "nl": "__H__::Main entity and visible texts."
+  },
+  {
+    "es": "Entidad principal, helper opcional del codigo, icono y comportamiento base de la tarjeta.",
+    "en": "__H__::Main entity, optional code helper, icon and base card behaviour.",
+    "de": "__H__::Main entity, optional code helper, icon and base card behaviour.",
+    "fr": "__H__::Main entity, optional code helper, icon and base card behaviour.",
+    "it": "__H__::Main entity, optional code helper, icon and base card behaviour.",
+    "nl": "__H__::Main entity, optional code helper, icon and base card behaviour."
+  },
+  {
+    "es": "Entidad principal, nombre visible e icono base de la tarjeta.",
+    "en": "__H__::Main entity, visible name and base card icon.",
+    "de": "__H__::Main entity, visible name and base card icon.",
+    "fr": "__H__::Main entity, visible name and base card icon.",
+    "it": "__H__::Main entity, visible name and base card icon.",
+    "nl": "__H__::Main entity, visible name and base card icon."
+  },
+  {
+    "es": "Entidad principal, nombre visible e icono de la tarjeta.",
+    "en": "__H__::Main entity, visible name and card icon.",
+    "de": "__H__::Main entity, visible name and card icon.",
+    "fr": "__H__::Main entity, visible name and card icon.",
+    "it": "__H__::Main entity, visible name and card icon.",
+    "nl": "__H__::Main entity, visible name and card icon."
+  },
+  {
+    "es": "Entidad principal, nombre visible y comportamiento al tocar la tarjeta.",
+    "en": "__H__::Main entity, visible name and tap behaviour.",
+    "de": "__H__::Main entity, visible name and tap behaviour.",
+    "fr": "__H__::Main entity, visible name and tap behaviour.",
+    "it": "__H__::Main entity, visible name and tap behaviour.",
+    "nl": "__H__::Main entity, visible name and tap behaviour."
+  },
+  {
+    "es": "Entrada suave de la tarjeta, paneles y respuesta visual al pulsar controles.",
+    "en": "__H__::Smooth card entrance, panels and visual feedback when pressing controls.",
+    "de": "__H__::Smooth card entrance, panels and visual feedback when pressing controls.",
+    "fr": "__H__::Smooth card entrance, panels and visual feedback when pressing controls.",
+    "it": "__H__::Smooth card entrance, panels and visual feedback when pressing controls.",
+    "nl": "__H__::Smooth card entrance, panels and visual feedback when pressing controls."
+  },
+  {
+    "es": "Entrada suave del contenido y pequeno rebote al pulsar acciones e icono.",
+    "en": "__H__::Smooth content entrance and small bounce when tapping actions and icon.",
+    "de": "__H__::Smooth content entrance and small bounce when tapping actions and icon.",
+    "fr": "__H__::Smooth content entrance and small bounce when tapping actions and icon.",
+    "it": "__H__::Smooth content entrance and small bounce when tapping actions and icon.",
+    "nl": "__H__::Smooth content entrance and small bounce when tapping actions and icon."
+  },
+  {
+    "es": "Entrada suave del contenido y pequeno rebote al pulsar la tarjeta.",
+    "en": "__H__::Smooth content entrance and small bounce when tapping the card.",
+    "de": "__H__::Smooth content entrance and small bounce when tapping the card.",
+    "fr": "__H__::Smooth content entrance and small bounce when tapping the card.",
+    "it": "__H__::Smooth content entrance and small bounce when tapping the card.",
+    "nl": "__H__::Smooth content entrance and small bounce when tapping the card."
+  },
+  {
+    "es": "Entrada suave del contenido y pequeño rebote al pulsar la tarjeta o sus acciones.",
+    "en": "__H__::Smooth content entrance and small bounce when tapping the card or its actions.",
+    "de": "__H__::Smooth content entrance and small bounce when tapping the card or its actions.",
+    "fr": "__H__::Smooth content entrance and small bounce when tapping the card or its actions.",
+    "it": "__H__::Smooth content entrance and small bounce when tapping the card or its actions.",
+    "nl": "__H__::Smooth content entrance and small bounce when tapping the card or its actions."
+  },
+  {
+    "es": "Entrada suave del contenido y rebote ligero al pulsar la tarjeta.",
+    "en": "__H__::Smooth content entrance and light bounce when tapping the card.",
+    "de": "__H__::Smooth content entrance and light bounce when tapping the card.",
+    "fr": "__H__::Smooth content entrance and light bounce when tapping the card.",
+    "it": "__H__::Smooth content entrance and light bounce when tapping the card.",
+    "nl": "__H__::Smooth content entrance and light bounce when tapping the card."
+  },
+  {
+    "es": "Entrada suave del flujo y rebote al pulsar nodos o acciones.",
+    "en": "__H__::Smooth flow entrance and bounce when tapping nodes or actions.",
+    "de": "__H__::Smooth flow entrance and bounce when tapping nodes or actions.",
+    "fr": "__H__::Smooth flow entrance and bounce when tapping nodes or actions.",
+    "it": "__H__::Smooth flow entrance and bounce when tapping nodes or actions.",
+    "nl": "__H__::Smooth flow entrance and bounce when tapping nodes or actions."
+  },
+  {
+    "es": "Estado visible, chips adicionales, decimales de los valores y comportamiento en modo compacto.",
+    "en": "__H__::Visible state, extra chips, value decimals and compact mode behaviour.",
+    "de": "__H__::Visible state, extra chips, value decimals and compact mode behaviour.",
+    "fr": "__H__::Visible state, extra chips, value decimals and compact mode behaviour.",
+    "it": "__H__::Visible state, extra chips, value decimals and compact mode behaviour.",
+    "nl": "__H__::Visible state, extra chips, value decimals and compact mode behaviour."
+  },
+  {
+    "es": "Feedback visual para botones y paneles del robot.",
+    "en": "__H__::Visual feedback for robot buttons and panels.",
+    "de": "__H__::Visual feedback for robot buttons and panels.",
+    "fr": "__H__::Visual feedback for robot buttons and panels.",
+    "it": "__H__::Visual feedback for robot buttons and panels.",
+    "nl": "__H__::Visual feedback for robot buttons and panels."
+  },
+  {
+    "es": "Ideal si quieres usarlo fijo arriba o abajo del dashboard.",
+    "en": "__H__::Ideal if you want it fixed at the top or bottom of the dashboard.",
+    "de": "__H__::Ideal if you want it fixed at the top or bottom of the dashboard.",
+    "fr": "__H__::Ideal if you want it fixed at the top or bottom of the dashboard.",
+    "it": "__H__::Ideal if you want it fixed at the top or bottom of the dashboard.",
+    "nl": "__H__::Ideal if you want it fixed at the top or bottom of the dashboard."
+  },
+  {
+    "es": "Nombre, icono, rango visible y comportamiento basico de la grafica.",
+    "en": "__H__::Name, icon, visible range and basic chart behaviour.",
+    "de": "__H__::Name, icon, visible range and basic chart behaviour.",
+    "fr": "__H__::Name, icon, visible range and basic chart behaviour.",
+    "it": "__H__::Name, icon, visible range and basic chart behaviour.",
+    "nl": "__H__::Name, icon, visible range and basic chart behaviour."
+  },
+  {
+    "es": "Opciones base de la barra, layout y visibilidad general.",
+    "en": "__H__::Base bar options, layout and general visibility.",
+    "de": "__H__::Base bar options, layout and general visibility.",
+    "fr": "__H__::Base bar options, layout and general visibility.",
+    "it": "__H__::Base bar options, layout and general visibility.",
+    "nl": "__H__::Base bar options, layout and general visibility."
+  },
+  {
+    "es": "Opciones extra si la entidad es un panel de alarma.",
+    "en": "__H__::Extra options if the entity is an alarm panel.",
+    "de": "__H__::Extra options if the entity is an alarm panel.",
+    "fr": "__H__::Extra options if the entity is an alarm panel.",
+    "it": "__H__::Extra options if the entity is an alarm panel.",
+    "nl": "__H__::Extra options if the entity is an alarm panel."
+  },
+  {
+    "es": "Opciones generales del reproductor integrado y lista de players visibles.",
+    "en": "__H__::General options for the embedded player and visible player list.",
+    "de": "__H__::General options for the embedded player and visible player list.",
+    "fr": "__H__::General options for the embedded player and visible player list.",
+    "it": "__H__::General options for the embedded player and visible player list.",
+    "nl": "__H__::General options for the embedded player and visible player list."
+  },
+  {
+    "es": "Opciones generales del reproductor y cuándo debe mostrarse la tarjeta.",
+    "en": "__H__::General player options and when the card should be shown.",
+    "de": "__H__::General player options and when the card should be shown.",
+    "fr": "__H__::General player options and when the card should be shown.",
+    "it": "__H__::General player options and when the card should be shown.",
+    "nl": "__H__::General player options and when the card should be shown."
+  },
+  {
+    "es": "Personaliza el look Nodalia de la climate card, el dial y los controles.",
+    "en": "__H__::Customize the Nodalia look for the climate card, dial and controls.",
+    "de": "__H__::Customize the Nodalia look for the climate card, dial and controls.",
+    "fr": "__H__::Customize the Nodalia look for the climate card, dial and controls.",
+    "it": "__H__::Customize the Nodalia look for the climate card, dial and controls.",
+    "nl": "__H__::Customize the Nodalia look for the climate card, dial and controls."
+  },
+  {
+    "es": "Personaliza el look Nodalia, el dial circular, la nueva burbuja del thumb y la escala de tinte del gauge.",
+    "en": "__H__::Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale.",
+    "de": "__H__::Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale.",
+    "fr": "__H__::Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale.",
+    "it": "__H__::Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale.",
+    "nl": "__H__::Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale."
+  },
+  {
+    "es": "Presentación compacta y elementos visibles dentro de la tarjeta.",
+    "en": "__H__::Compact layout and visible elements inside the card.",
+    "de": "__H__::Compact layout and visible elements inside the card.",
+    "fr": "__H__::Compact layout and visible elements inside the card.",
+    "it": "__H__::Compact layout and visible elements inside the card.",
+    "nl": "__H__::Compact layout and visible elements inside the card."
+  },
+  {
+    "es": "Que elementos quieres mantener siempre visibles.",
+    "en": "__H__::Which elements you want to keep always visible.",
+    "de": "__H__::Which elements you want to keep always visible.",
+    "fr": "__H__::Which elements you want to keep always visible.",
+    "it": "__H__::Which elements you want to keep always visible.",
+    "nl": "__H__::Which elements you want to keep always visible."
+  },
+  {
+    "es": "Qué bloques quieres mostrar dentro de la tarjeta.",
+    "en": "__H__::Which blocks you want to show inside the card.",
+    "de": "__H__::Which blocks you want to show inside the card.",
+    "fr": "__H__::Which blocks you want to show inside the card.",
+    "it": "__H__::Which blocks you want to show inside the card.",
+    "nl": "__H__::Which blocks you want to show inside the card."
+  },
+  {
+    "es": "Qué elementos quieres mostrar dentro de la tarjeta.",
+    "en": "__H__::Which elements you want to show inside the card.",
+    "de": "__H__::Which elements you want to show inside the card.",
+    "fr": "__H__::Which elements you want to show inside the card.",
+    "it": "__H__::Which elements you want to show inside the card.",
+    "nl": "__H__::Which elements you want to show inside the card."
+  },
+  {
+    "es": "Qué hace la tarjeta cuando la tocas.",
+    "en": "__H__::What the card does when you tap it.",
+    "de": "__H__::What the card does when you tap it.",
+    "fr": "__H__::What the card does when you tap it.",
+    "it": "__H__::What the card does when you tap it.",
+    "nl": "__H__::What the card does when you tap it."
+  },
+  {
+    "es": "Respuesta haptica opcional al tocar la tarjeta.",
+    "en": "__H__::Optional haptic feedback when tapping the card.",
+    "de": "__H__::Optional haptic feedback when tapping the card.",
+    "fr": "__H__::Optional haptic feedback when tapping the card.",
+    "it": "__H__::Optional haptic feedback when tapping the card.",
+    "nl": "__H__::Optional haptic feedback when tapping the card."
+  },
+  {
+    "es": "Respuesta haptica opcional para clicks y selecciones.",
+    "en": "__H__::Optional haptic feedback for clicks and selections.",
+    "de": "__H__::Optional haptic feedback for clicks and selections.",
+    "fr": "__H__::Optional haptic feedback for clicks and selections.",
+    "it": "__H__::Optional haptic feedback for clicks and selections.",
+    "nl": "__H__::Optional haptic feedback for clicks and selections."
+  },
+  {
+    "es": "Respuesta haptica opcional para dial y controles.",
+    "en": "__H__::Optional haptic feedback for dial and controls.",
+    "de": "__H__::Optional haptic feedback for dial and controls.",
+    "fr": "__H__::Optional haptic feedback for dial and controls.",
+    "it": "__H__::Optional haptic feedback for dial and controls.",
+    "nl": "__H__::Optional haptic feedback for dial and controls."
+  },
+  {
+    "es": "Respuesta háptica opcional para los controles.",
+    "en": "__H__::Optional haptic feedback for controls.",
+    "de": "__H__::Optional haptic feedback for controls.",
+    "fr": "__H__::Optional haptic feedback for controls.",
+    "it": "__H__::Optional haptic feedback for controls.",
+    "nl": "__H__::Optional haptic feedback for controls."
+  },
+  {
+    "es": "Respuesta tactil opcional al pulsar acciones.",
+    "en": "__H__::Optional tactile feedback when tapping actions.",
+    "de": "__H__::Optional tactile feedback when tapping actions.",
+    "fr": "__H__::Optional tactile feedback when tapping actions.",
+    "it": "__H__::Optional tactile feedback when tapping actions.",
+    "nl": "__H__::Optional tactile feedback when tapping actions."
+  },
+  {
+    "es": "Respuesta tactil opcional al pulsar nodos o botones.",
+    "en": "__H__::Optional tactile feedback when tapping nodes or buttons.",
+    "de": "__H__::Optional tactile feedback when tapping nodes or buttons.",
+    "fr": "__H__::Optional tactile feedback when tapping nodes or buttons.",
+    "it": "__H__::Optional tactile feedback when tapping nodes or buttons.",
+    "nl": "__H__::Optional tactile feedback when tapping nodes or buttons."
+  },
+  {
+    "es": "Respuesta tactil opcional al tocar la tarjeta.",
+    "en": "__H__::Optional tactile feedback when tapping the card.",
+    "de": "__H__::Optional tactile feedback when tapping the card.",
+    "fr": "__H__::Optional tactile feedback when tapping the card.",
+    "it": "__H__::Optional tactile feedback when tapping the card.",
+    "nl": "__H__::Optional tactile feedback when tapping the card."
+  },
+  {
+    "es": "Respuesta tactil opcional para taps, hover y cambios de serie.",
+    "en": "__H__::Optional tactile feedback for taps, hover and series changes.",
+    "de": "__H__::Optional tactile feedback for taps, hover and series changes.",
+    "fr": "__H__::Optional tactile feedback for taps, hover and series changes.",
+    "it": "__H__::Optional tactile feedback for taps, hover and series changes.",
+    "nl": "__H__::Optional tactile feedback for taps, hover and series changes."
+  },
+  {
+    "es": "Respuesta táctil opcional al interactuar con el dial y los botones.",
+    "en": "__H__::Optional tactile feedback when using the dial and buttons.",
+    "de": "__H__::Optional tactile feedback when using the dial and buttons.",
+    "fr": "__H__::Optional tactile feedback when using the dial and buttons.",
+    "it": "__H__::Optional tactile feedback when using the dial and buttons.",
+    "nl": "__H__::Optional tactile feedback when using the dial and buttons."
+  },
+  {
+    "es": "Respuesta táctil opcional al tocar la tarjeta.",
+    "en": "__H__::Optional tactile feedback when tapping the card.",
+    "de": "__H__::Optional tactile feedback when tapping the card.",
+    "fr": "__H__::Optional tactile feedback when tapping the card.",
+    "it": "__H__::Optional tactile feedback when tapping the card.",
+    "nl": "__H__::Optional tactile feedback when tapping the card."
+  },
+  {
+    "es": "Respuesta táctil opcional al usar la tarjeta y sus acciones.",
+    "en": "__H__::Optional tactile feedback when using the card and its actions.",
+    "de": "__H__::Optional tactile feedback when using the card and its actions.",
+    "fr": "__H__::Optional tactile feedback when using the card and its actions.",
+    "it": "__H__::Optional tactile feedback when using the card and its actions.",
+    "nl": "__H__::Optional tactile feedback when using the card and its actions."
+  },
+  {
+    "es": "Respuesta táctil opcional al usar los controles.",
+    "en": "__H__::Optional tactile feedback when using controls.",
+    "de": "__H__::Optional tactile feedback when using controls.",
+    "fr": "__H__::Optional tactile feedback when using controls.",
+    "it": "__H__::Optional tactile feedback when using controls.",
+    "nl": "__H__::Optional tactile feedback when using controls."
+  },
+  {
+    "es": "Respuesta táctil opcional para los controles del reproductor.",
+    "en": "__H__::Optional tactile feedback for player controls.",
+    "de": "__H__::Optional tactile feedback for player controls.",
+    "fr": "__H__::Optional tactile feedback for player controls.",
+    "it": "__H__::Optional tactile feedback for player controls.",
+    "nl": "__H__::Optional tactile feedback for player controls."
+  },
+  {
+    "es": "Selectores opcionales para el modo principal y la ventilación.",
+    "en": "__H__::Optional selectors for main mode and fan.",
+    "de": "__H__::Optional selectors for main mode and fan.",
+    "fr": "__H__::Optional selectors for main mode and fan.",
+    "it": "__H__::Optional selectors for main mode and fan.",
+    "nl": "__H__::Optional selectors for main mode and fan."
+  },
+  {
+    "es": "Sensores y selectores opcionales para enriquecer el estado y los controles.",
+    "en": "__H__::Optional sensors and selectors to enrich state and controls.",
+    "de": "__H__::Optional sensors and selectors to enrich state and controls.",
+    "fr": "__H__::Optional sensors and selectors to enrich state and controls.",
+    "it": "__H__::Optional sensors and selectors to enrich state and controls.",
+    "nl": "__H__::Optional sensors and selectors to enrich state and controls."
+  },
+  {
+    "es": "Titulo, enlace al panel de energia y comportamiento general de la tarjeta.",
+    "en": "__H__::Title, energy panel link and general card behaviour.",
+    "de": "__H__::Title, energy panel link and general card behaviour.",
+    "fr": "__H__::Title, energy panel link and general card behaviour.",
+    "it": "__H__::Title, energy panel link and general card behaviour.",
+    "nl": "__H__::Title, energy panel link and general card behaviour."
+  },
+  {
+    "es": "Transiciones suaves al encender, apagar, desplegar controles, abrir modos y dar respuesta visual a los botones.",
+    "en": "__H__::Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback.",
+    "de": "__H__::Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback.",
+    "fr": "__H__::Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback.",
+    "it": "__H__::Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback.",
+    "nl": "__H__::Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback."
+  },
+  {
+    "es": "Transiciones suaves al encender, apagar, desplegar controles, cambiar entre sliders y dar respuesta visual a los botones.",
+    "en": "__H__::Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback..",
+    "de": "__H__::Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback..",
+    "fr": "__H__::Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback..",
+    "it": "__H__::Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback..",
+    "nl": "__H__::Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback.."
+  },
+  {
+    "es": "Transiciones suaves al encender, apagar, desplegar controles, cambiar paneles y dar respuesta visual a los botones.",
+    "en": "__H__::Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback.",
+    "de": "__H__::Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback.",
+    "fr": "__H__::Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback.",
+    "it": "__H__::Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback.",
+    "nl": "__H__::Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback."
+  },
+  {
+    "es": "Acciones rápidas",
+    "en": "__T__::Acciones rápidas",
+    "de": "__T__::Acciones rápidas",
+    "fr": "__T__::Acciones rápidas",
+    "it": "__T__::Acciones rápidas",
+    "nl": "__T__::Acciones rápidas"
+  },
+  {
+    "es": "Alarma",
+    "en": "__T__::Alarma",
+    "de": "__T__::Alarma",
+    "fr": "__T__::Alarma",
+    "it": "__T__::Alarma",
+    "nl": "__T__::Alarma"
+  },
+  {
+    "es": "Animaciones",
+    "en": "__T__::Animaciones",
+    "de": "__T__::Animaciones",
+    "fr": "__T__::Animaciones",
+    "it": "__T__::Animaciones",
+    "nl": "__T__::Animaciones"
+  },
+  {
+    "es": "Contenido",
+    "en": "__T__::Contenido",
+    "de": "__T__::Contenido",
+    "fr": "__T__::Contenido",
+    "it": "__T__::Contenido",
+    "nl": "__T__::Contenido"
+  },
+  {
+    "es": "Controles avanzados",
+    "en": "__T__::Controles avanzados",
+    "de": "__T__::Controles avanzados",
+    "fr": "__T__::Controles avanzados",
+    "it": "__T__::Controles avanzados",
+    "nl": "__T__::Controles avanzados"
+  },
+  {
+    "es": "Entidades auxiliares",
+    "en": "__T__::Entities auxiliares",
+    "de": "__T__::Entities auxiliares",
+    "fr": "__T__::Entities auxiliares",
+    "it": "__T__::Entities auxiliares",
+    "nl": "__T__::Entities auxiliares"
+  },
+  {
+    "es": "Estilos",
+    "en": "__T__::Styles",
+    "de": "__T__::Styles",
+    "fr": "__T__::Styles",
+    "it": "__T__::Styles",
+    "nl": "__T__::Styles"
+  },
+  {
+    "es": "Flujo",
+    "en": "__T__::Flujo",
+    "de": "__T__::Flujo",
+    "fr": "__T__::Flujo",
+    "it": "__T__::Flujo",
+    "nl": "__T__::Flujo"
+  },
+  {
+    "es": "General",
+    "en": "__T__::General",
+    "de": "__T__::General",
+    "fr": "__T__::General",
+    "it": "__T__::General",
+    "nl": "__T__::General"
+  },
+  {
+    "es": "Haptics",
+    "en": "__T__::Haptics",
+    "de": "__T__::Haptics",
+    "fr": "__T__::Haptics",
+    "it": "__T__::Haptics",
+    "nl": "__T__::Haptics"
+  },
+  {
+    "es": "Individuales",
+    "en": "__T__::Individuales",
+    "de": "__T__::Individuales",
+    "fr": "__T__::Individuales",
+    "it": "__T__::Individuales",
+    "nl": "__T__::Individuales"
+  },
+  {
+    "es": "Layout",
+    "en": "__T__::Layout",
+    "de": "__T__::Layout",
+    "fr": "__T__::Layout",
+    "it": "__T__::Layout",
+    "nl": "__T__::Layout"
+  },
+  {
+    "es": "Mapa",
+    "en": "__T__::Mapa",
+    "de": "__T__::Mapa",
+    "fr": "__T__::Mapa",
+    "it": "__T__::Mapa",
+    "nl": "__T__::Mapa"
+  },
+  {
+    "es": "Media Player",
+    "en": "__T__::Media Player",
+    "de": "__T__::Media Player",
+    "fr": "__T__::Media Player",
+    "it": "__T__::Media Player",
+    "nl": "__T__::Media Player"
+  },
+  {
+    "es": "Modos",
+    "en": "__T__::Modos",
+    "de": "__T__::Modos",
+    "fr": "__T__::Modos",
+    "it": "__T__::Modos",
+    "nl": "__T__::Modos"
+  },
+  {
+    "es": "Reproductores",
+    "en": "__T__::Reproductores",
+    "de": "__T__::Reproductores",
+    "fr": "__T__::Reproductores",
+    "it": "__T__::Reproductores",
+    "nl": "__T__::Reproductores"
+  },
+  {
+    "es": "Respuesta háptica",
+    "en": "__T__::Respuesta háptica",
+    "de": "__T__::Respuesta háptica",
+    "fr": "__T__::Respuesta háptica",
+    "it": "__T__::Respuesta háptica",
+    "nl": "__T__::Respuesta háptica"
+  },
+  {
+    "es": "Rutas",
+    "en": "__T__::Rutas",
+    "de": "__T__::Rutas",
+    "fr": "__T__::Rutas",
+    "it": "__T__::Rutas",
+    "nl": "__T__::Rutas"
+  },
+  {
+    "es": "Series",
+    "en": "__T__::Series",
+    "de": "__T__::Series",
+    "fr": "__T__::Series",
+    "it": "__T__::Series",
+    "nl": "__T__::Series"
+  },
+  {
+    "es": "Visibilidad",
+    "en": "__T__::Visibilidad",
+    "de": "__T__::Visibilidad",
+    "fr": "__T__::Visibilidad",
+    "it": "__T__::Visibilidad",
+    "nl": "__T__::Visibilidad"
+  }
+];
+
+  function buildMap(lang) {
+    const m = {};
+    for (const r of ROWS) {
+      m[r.es] = r[lang];
+    }
+    return m;
+  }
+
+  const MAP = { es: {}, en: buildMap("en"), de: buildMap("de"), fr: buildMap("fr"), it: buildMap("it"), nl: buildMap("nl") };
+  for (const r of ROWS) {
+    MAP.es[r.es] = r.es;
+  }
+
+  window.NodaliaI18n.editorUiMaps = MAP;
+
+  window.NodaliaI18n.editorStr = function editorStr(hass, configLang, spanishText) {
+    if (spanishText == null || spanishText === "") {
+      return "";
+    }
+    const lang = window.NodaliaI18n.resolveLanguage(hass, configLang);
+    const maps = window.NodaliaI18n.editorUiMaps;
+    if (maps.es[spanishText] === undefined && maps.en[spanishText] === undefined) {
+      return spanishText;
+    }
+    return maps[lang]?.[spanishText] ?? maps.en[spanishText] ?? maps.es[spanishText] ?? spanishText;
+  };
+})();
+
+}
+{
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
 const CARD_VERSION = "0.6.0";
@@ -45,33 +7365,6 @@ const MUSIC_ASSISTANT_DIRECTORY_ICON_RULES = [
   { patterns: ["recent", "recently", "recientes"], icon: "mdi:history" },
   { patterns: ["search", "buscar", "busqueda", "búsqueda"], icon: "mdi:magnify" },
 ];
-const MUSIC_ASSISTANT_LABEL_TRANSLATIONS = {
-  artist: "Artistas",
-  artists: "Artistas",
-  album: "Álbumes",
-  albums: "Álbumes",
-  track: "Canciones",
-  tracks: "Canciones",
-  song: "Canciones",
-  songs: "Canciones",
-  playlist: "Listas de reproducción",
-  playlists: "Listas de reproducción",
-  "radio station": "Emisoras",
-  "radio stations": "Emisoras",
-  podcast: "Podcasts",
-  podcasts: "Podcasts",
-  audiobook: "Audiolibros",
-  audiobooks: "Audiolibros",
-  genre: "Géneros",
-  genres: "Géneros",
-  favorite: "Favoritos",
-  favorites: "Favoritos",
-  favourites: "Favoritos",
-  search: "Buscar",
-  "recently played": "Reproducido recientemente",
-  "recently added": "Añadido recientemente",
-  "recently played tracks": "Canciones reproducidas recientemente",
-};
 
 const DEFAULT_CONFIG = {
   title: "",
@@ -579,7 +7872,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
       }
     });
 
-    return [...entityIds].sort((left, right) => left.localeCompare(right, "es"));
+    const tag = window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language));
+    return [...entityIds].sort((left, right) => left.localeCompare(right, tag));
   }
 
   _getRenderSignature(hass = this._hass) {
@@ -629,6 +7923,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       });
 
     return JSON.stringify({
+      locale: window.NodaliaI18n.resolveLanguage(hass, this._config?.language),
       user: String(hass?.user?.id || ""),
       routeBadgeStates,
       mediaPlayerStates,
@@ -1745,9 +9040,11 @@ class NodaliaNavigationBarCard extends HTMLElement {
   _getMediaBrowserDisplayTitle(value) {
     const label = typeof value === "string" ? value : value?.title;
     const fallback = String(label || "").trim();
+    const lang = window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language);
+    const dict = window.NodaliaI18n.strings(lang).navigationMusicAssist || {};
 
     if (!fallback) {
-      return "Elemento";
+      return dict.browseFallback || "Item";
     }
 
     if (!this._mediaBrowserState?.isMusicAssistant) {
@@ -1755,7 +9052,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
 
     const key = normalizeTextKey(fallback);
-    return MUSIC_ASSISTANT_LABEL_TRANSLATIONS[key] || fallback;
+    return dict[key] || fallback;
   }
 
   _getMediaBrowserIcon(item) {
@@ -3755,6 +11052,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     super();
     this.attachShadow({ mode: "open" });
     this._config = deepClone(STUB_CONFIG);
+    this._hass = null;
     this._showStyleSection = false;
     this._showAnimationSection = false;
     this._onShadowInput = this._onShadowInput.bind(this);
@@ -3762,6 +11060,22 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+  }
+
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
+  _L(s) {
+    return escapeHtml(this._editorLabel(s));
   }
 
   _prepareEditorConfig(config) {
@@ -4210,7 +11524,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     return `
       <div class="sub-card">
         <div class="route-head route-head--sub">
-          <strong>Popup ${popupIndex + 1}</strong>
+          <strong>${this._L("Popup")} ${popupIndex + 1}</strong>
           <div class="head-actions">
             <button
               type="button"
@@ -4245,7 +11559,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
         </div>
         <div class="grid">
           <label>
-            <span>Etiqueta opcional</span>
+            <span>${this._L("Etiqueta opcional")}</span>
             <input
               type="text"
               data-route-index="${routeIndex}"
@@ -4257,7 +11571,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Icono</span>
+            <span>${this._L("Icono")}</span>
             <input
               type="text"
               data-route-index="${routeIndex}"
@@ -4267,7 +11581,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Path</span>
+            <span>${this._L("Path")}</span>
             <input
               type="text"
               data-route-index="${routeIndex}"
@@ -4277,7 +11591,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Descripcion</span>
+            <span>${this._L("Descripcion")}</span>
             <input
               type="text"
               data-route-index="${routeIndex}"
@@ -4288,7 +11602,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Usuarios</span>
+            <span>${this._L("Usuarios")}</span>
             <input
               type="text"
               data-route-index="${routeIndex}"
@@ -4301,7 +11615,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Paths activos</span>
+            <span>${this._L("Paths activos")}</span>
             <input
               type="text"
               data-route-index="${routeIndex}"
@@ -4324,7 +11638,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               ${popupItem.match === "prefix" ? "checked" : ""}
             />
             <span class="toggle-switch" aria-hidden="true"></span>
-            <span>Activa por prefijo</span>
+            <span>${this._L("Activa por prefijo")}</span>
           </label>
         </div>
       </div>
@@ -4335,14 +11649,14 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     return `
       <div class="route-card">
         <div class="route-head">
-          <strong>Player ${index + 1}</strong>
+          <strong>${this._L("Player")} ${index + 1}</strong>
           <button type="button" class="danger" data-editor-action="remove-player" data-player-index="${index}">
             Eliminar
           </button>
         </div>
         <div class="grid">
           <label>
-            <span>Entidad</span>
+            <span>${this._L("Entidad")}</span>
             <input
               type="text"
               data-player-index="${index}"
@@ -4352,7 +11666,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Nombre reproductor</span>
+            <span>${this._L("Nombre reproductor")}</span>
             <input
               type="text"
               data-player-index="${index}"
@@ -4363,7 +11677,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Ruta medios</span>
+            <span>${this._L("Ruta medios")}</span>
             <input
               type="text"
               data-player-index="${index}"
@@ -4374,7 +11688,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Titulo</span>
+            <span>${this._L("Titulo")}</span>
             <input
               type="text"
               data-player-index="${index}"
@@ -4384,7 +11698,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Subtitulo</span>
+            <span>${this._L("Subtitulo")}</span>
             <input
               type="text"
               data-player-index="${index}"
@@ -4394,7 +11708,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Icono fallback</span>
+            <span>${this._L("Icono fallback")}</span>
             <input
               type="text"
               data-player-index="${index}"
@@ -4405,7 +11719,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Imagen fija</span>
+            <span>${this._L("Imagen fija")}</span>
             <input
               type="text"
               data-player-index="${index}"
@@ -4415,7 +11729,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Estados visibles</span>
+            <span>${this._L("Estados visibles")}</span>
             <input
               type="text"
               data-player-index="${index}"
@@ -4436,7 +11750,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               ${player.show === true ? "checked" : ""}
             />
             <span class="toggle-switch" aria-hidden="true"></span>
-            <span>Mostrar siempre</span>
+            <span>${this._L("Mostrar siempre")}</span>
           </label>
         </div>
       </div>
@@ -4446,12 +11760,12 @@ class NodaliaNavigationBarEditor extends HTMLElement {
   _renderRoute(route, index, totalRoutes) {
     const popupMarkup = Array.isArray(route.popup) && route.popup.length > 0
       ? route.popup.map((popupItem, popupIndex) => this._renderPopupItem(index, popupItem, popupIndex, route.popup.length)).join("")
-      : '<p class="hint">Esta ruta no tiene popup todavia.</p>';
+      : `<p class="hint">${this._L("Esta ruta no tiene popup todavia.")}</p>`;
 
     return `
       <div class="route-card">
         <div class="route-head">
-          <strong>Ruta ${index + 1}</strong>
+          <strong>${this._L("Ruta")} ${index + 1}</strong>
           <div class="head-actions">
             <button
               type="button"
@@ -4478,19 +11792,19 @@ class NodaliaNavigationBarEditor extends HTMLElement {
         </div>
         <div class="grid">
           <label>
-            <span>Etiqueta</span>
+            <span>${this._L("Etiqueta")}</span>
             <input type="text" data-route-index="${index}" data-route-field="label" value="${escapeHtml(route.label || "")}" />
           </label>
           <label>
-            <span>Icono</span>
+            <span>${this._L("Icono")}</span>
             <input type="text" data-route-index="${index}" data-route-field="icon" value="${escapeHtml(route.icon || "")}" />
           </label>
           <label>
-            <span>Path</span>
+            <span>${this._L("Path")}</span>
             <input type="text" data-route-index="${index}" data-route-field="path" value="${escapeHtml(route.path || "")}" />
           </label>
           <label>
-            <span>Path activo extra</span>
+            <span>${this._L("Path activo extra")}</span>
             <input
               type="text"
               data-route-index="${index}"
@@ -4502,7 +11816,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Usuarios</span>
+            <span>${this._L("Usuarios")}</span>
             <input
               type="text"
               data-route-index="${index}"
@@ -4514,7 +11828,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Layout popup</span>
+            <span>${this._L("Layout popup")}</span>
             <select data-route-index="${index}" data-route-field="popup_layout" data-optional="true">
               <option value="" ${!route.popup_layout ? "selected" : ""}>Auto</option>
               <option value="vertical" ${route.popup_layout === "vertical" ? "selected" : ""}>Vertical</option>
@@ -4531,12 +11845,12 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               ${route.match === "prefix" ? "checked" : ""}
             />
             <span class="toggle-switch" aria-hidden="true"></span>
-            <span>Marcar activa por prefijo</span>
+            <span>${this._L("Marcar activa por prefijo")}</span>
           </label>
         </div>
         <div class="subsection">
           <div class="route-head route-head--subsection">
-            <strong>Popup</strong>
+            <strong>${this._L("Popup")}</strong>
             <button type="button" data-editor-action="add-popup-item" data-route-index="${index}">
               Anadir popup
             </button>
@@ -4793,21 +12107,21 @@ class NodaliaNavigationBarEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Opciones base de la barra, layout y visibilidad general.</div>
+            <div class="editor-section__title">${this._L("General")}</div>
+            <div class="editor-section__hint">${this._L("Opciones base de la barra, layout y visibilidad general.")}</div>
           </div>
           <div class="editor-grid">
             <label>
-              <span>Titulo</span>
+              <span>${this._L("Titulo")}</span>
               <input type="text" data-field="title" data-optional="true" value="${escapeHtml(config.title || "")}" />
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="haptics.enabled" ${config.haptics.enabled ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
-              <span>Respuesta haptica</span>
+              <span>${this._L("Respuesta haptica")}</span>
             </label>
             <label>
-              <span>Estilo haptico</span>
+              <span>${this._L("Estilo haptico")}</span>
               <select data-field="haptics.style">
                 <option value="selection" ${config.haptics.style === "selection" ? "selected" : ""}>Selection</option>
                 <option value="light" ${config.haptics.style === "light" ? "selected" : ""}>Light</option>
@@ -4821,58 +12135,58 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             <label class="checkbox">
               <input type="checkbox" data-field="haptics.fallback_vibrate" ${config.haptics.fallback_vibrate ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
-              <span>Fallback con vibracion</span>
+              <span>${this._L("Fallback con vibracion")}</span>
             </label>
             <label>
-              <span>Breakpoint movil</span>
+              <span>${this._L("Breakpoint movil")}</span>
               <input type="number" data-field="layout.mobile_breakpoint" value="${escapeHtml(config.layout.mobile_breakpoint || 1279)}" />
             </label>
             <label>
-              <span>Posicion</span>
+              <span>${this._L("Posicion")}</span>
               <select data-field="layout.position">
                 <option value="bottom" ${config.layout.position === "bottom" ? "selected" : ""}>Inferior</option>
                 <option value="top" ${config.layout.position === "top" ? "selected" : ""}>Superior</option>
               </select>
             </label>
             <label>
-              <span>Offset</span>
+              <span>${this._L("Offset")}</span>
               <input type="text" data-field="layout.offset" value="${escapeHtml(config.layout.offset || "")}" />
             </label>
             <label>
-              <span>Margen lateral</span>
+              <span>${this._L("Margen lateral")}</span>
               <input type="text" data-field="layout.side_margin" value="${escapeHtml(config.layout.side_margin || "")}" />
             </label>
             <label>
-              <span>Separacion stack</span>
+              <span>${this._L("Separacion stack")}</span>
               <input type="text" data-field="layout.stack_gap" value="${escapeHtml(config.layout.stack_gap || "")}" />
             </label>
             <label>
-              <span>Altura reservada</span>
+              <span>${this._L("Altura reservada")}</span>
               <input type="text" data-field="layout.reserve_height" value="${escapeHtml(config.layout.reserve_height || "")}" />
             </label>
             <label>
-              <span>Z-index</span>
+              <span>${this._L("Z-index")}</span>
               <input type="number" data-field="layout.z_index" value="${escapeHtml(config.layout.z_index || 2)}" />
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="show_labels" ${config.show_labels ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
-              <span>Mostrar etiquetas</span>
+              <span>${this._L("Mostrar etiquetas")}</span>
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="layout.fixed" ${config.layout.fixed ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
-              <span>Fijar a pantalla</span>
+              <span>${this._L("Fijar a pantalla")}</span>
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="layout.reserve_space" ${config.layout.reserve_space ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
-              <span>Reservar espacio</span>
+              <span>${this._L("Reservar espacio")}</span>
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="layout.show_desktop" ${config.layout.show_desktop ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
-              <span>Mostrar tambien en escritorio</span>
+              <span>${this._L("Mostrar tambien en escritorio")}</span>
             </label>
           </div>
           <p class="hint">
@@ -4882,8 +12196,8 @@ class NodaliaNavigationBarEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Controla transiciones de barra, popup, media player y respuestas visuales.</div>
+            <div class="editor-section__title">${this._L("Animaciones")}</div>
+            <div class="editor-section__hint">${this._L("Controla transiciones de barra, popup, media player y respuestas visuales.")}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4892,7 +12206,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showAnimationSection ? "Ocultar ajustes de animación" : "Mostrar ajustes de animación"}</span>
+                <span>${this._showAnimationSection ? this._L("Ocultar ajustes de animación") : this._L("Mostrar ajustes de animación")}</span>
               </button>
             </div>
           </div>
@@ -4903,22 +12217,22 @@ class NodaliaNavigationBarEditor extends HTMLElement {
                   <label class="checkbox">
                     <input type="checkbox" data-field="animations.enabled" ${animationEnabled ? "checked" : ""} />
                     <span class="toggle-switch" aria-hidden="true"></span>
-                    <span>Activar animaciones</span>
+                    <span>${this._L("Activar animaciones")}</span>
                   </label>
                   <label>
-                    <span>Barra y hover (ms)</span>
+                    <span>${this._L("Barra y hover (ms)")}</span>
                     <input type="number" data-field="animations.bar_duration" value="${escapeHtml(config.animations.bar_duration || DEFAULT_CONFIG.animations.bar_duration)}" />
                   </label>
                   <label>
-                    <span>Popup (ms)</span>
+                    <span>${this._L("Popup (ms)")}</span>
                     <input type="number" data-field="animations.popup_duration" value="${escapeHtml(config.animations.popup_duration || DEFAULT_CONFIG.animations.popup_duration)}" />
                   </label>
                   <label>
-                    <span>Media player (ms)</span>
+                    <span>${this._L("Media player (ms)")}</span>
                     <input type="number" data-field="animations.media_duration" value="${escapeHtml(config.animations.media_duration || DEFAULT_CONFIG.animations.media_duration)}" />
                   </label>
                   <label>
-                    <span>Respuesta botones (ms)</span>
+                    <span>${this._L("Respuesta botones (ms)")}</span>
                     <input type="number" data-field="animations.button_bounce_duration" value="${escapeHtml(config.animations.button_bounce_duration || DEFAULT_CONFIG.animations.button_bounce_duration)}" />
                   </label>
                 </div>
@@ -4929,8 +12243,8 @@ class NodaliaNavigationBarEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales de barra, botones, popup y media player.</div>
+            <div class="editor-section__title">${this._L("Estilos")}</div>
+            <div class="editor-section__hint">${this._L("Ajustes visuales de barra, botones, popup y media player.")}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4939,7 +12253,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+                <span>${this._showStyleSection ? this._L("Ocultar ajustes de estilo") : this._L("Mostrar ajustes de estilo")}</span>
               </button>
             </div>
           </div>
@@ -4947,66 +12261,66 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             this._showStyleSection
               ? `
                 <div class="editor-grid">
-                  <label><span>Fondo barra</span><input type="text" data-field="styles.bar.background" value="${escapeHtml(config.styles.bar.background || "")}" /></label>
+                  <label><span>${this._L("Fondo barra")}</span><input type="text" data-field="styles.bar.background" value="${escapeHtml(config.styles.bar.background || "")}" /></label>
                   <label><span>Borde barra</span><input type="text" data-field="styles.bar.border" value="${escapeHtml(config.styles.bar.border || "")}" /></label>
-                  <label><span>Radio barra</span><input type="text" data-field="styles.bar.border_radius" value="${escapeHtml(config.styles.bar.border_radius || "")}" /></label>
-                  <label><span>Sombra barra</span><input type="text" data-field="styles.bar.box_shadow" value="${escapeHtml(config.styles.bar.box_shadow || "")}" /></label>
-                  <label><span>Padding barra</span><input type="text" data-field="styles.bar.padding" value="${escapeHtml(config.styles.bar.padding || "")}" /></label>
-                  <label><span>Altura minima</span><input type="text" data-field="styles.bar.min_height" value="${escapeHtml(config.styles.bar.min_height || "")}" /></label>
-                  <label><span>Separacion botones</span><input type="text" data-field="styles.bar.gap" value="${escapeHtml(config.styles.bar.gap || "")}" /></label>
-                  <label><span>Justificacion</span><input type="text" data-field="styles.bar.justify_content" value="${escapeHtml(config.styles.bar.justify_content || "")}" /></label>
-                  <label><span>Ancho maximo barra</span><input type="text" data-field="styles.bar.max_width" value="${escapeHtml(config.styles.bar.max_width || "")}" /></label>
-                  <label><span>Backdrop filter</span><input type="text" data-field="styles.bar.backdrop_filter" value="${escapeHtml(config.styles.bar.backdrop_filter || "")}" /></label>
-                  <label><span>Fondo botones</span><input type="text" data-field="styles.button.background" value="${escapeHtml(config.styles.button.background || "")}" /></label>
-                  <label><span>Color botones</span><input type="text" data-field="styles.button.color" value="${escapeHtml(config.styles.button.color || "")}" /></label>
-                  <label><span>Color activo</span><input type="text" data-field="styles.button.active_color" value="${escapeHtml(config.styles.button.active_color || "")}" /></label>
-                  <label><span>Fondo activo</span><input type="text" data-field="styles.button.active_background" value="${escapeHtml(config.styles.button.active_background || "")}" /></label>
-                  <label><span>Radio boton</span><input type="text" data-field="styles.button.border_radius" value="${escapeHtml(config.styles.button.border_radius || "")}" /></label>
-                  <label><span>Tamano boton</span><input type="text" data-field="styles.button.size" value="${escapeHtml(config.styles.button.size || "")}" /></label>
-                  <label><span>Tamano icono</span><input type="text" data-field="styles.button.icon_size" value="${escapeHtml(config.styles.button.icon_size || "")}" /></label>
-                  <label><span>Offset icono X</span><input type="text" data-field="styles.button.icon_offset_x" value="${escapeHtml(config.styles.button.icon_offset_x || "")}" /></label>
-                  <label><span>Offset icono Y</span><input type="text" data-field="styles.button.icon_offset_y" value="${escapeHtml(config.styles.button.icon_offset_y || "")}" /></label>
-                  <label><span>Color etiqueta</span><input type="text" data-field="styles.button.label_color" value="${escapeHtml(config.styles.button.label_color || "")}" /></label>
-                  <label><span>Color etiqueta activa</span><input type="text" data-field="styles.button.active_label_color" value="${escapeHtml(config.styles.button.active_label_color || "")}" /></label>
-                  <label><span>Tamano etiqueta</span><input type="text" data-field="styles.button.label_size" value="${escapeHtml(config.styles.button.label_size || "")}" /></label>
-                  <label><span>Separacion etiqueta</span><input type="text" data-field="styles.button.label_gap" value="${escapeHtml(config.styles.button.label_gap || "")}" /></label>
-                  <label><span>Fondo badge</span><input type="text" data-field="styles.badge.background" value="${escapeHtml(config.styles.badge.background || "")}" /></label>
-                  <label><span>Color badge</span><input type="text" data-field="styles.badge.color" value="${escapeHtml(config.styles.badge.color || "")}" /></label>
-                  <label><span>Tamano minimo badge</span><input type="text" data-field="styles.badge.min_size" value="${escapeHtml(config.styles.badge.min_size || "")}" /></label>
-                  <label><span>Tamano texto badge</span><input type="text" data-field="styles.badge.font_size" value="${escapeHtml(config.styles.badge.font_size || "")}" /></label>
-                  <label><span>Fondo popup</span><input type="text" data-field="styles.popup.background" value="${escapeHtml(config.styles.popup.background || "")}" /></label>
-                  <label><span>Borde popup</span><input type="text" data-field="styles.popup.border" value="${escapeHtml(config.styles.popup.border || "")}" /></label>
-                  <label><span>Radio popup</span><input type="text" data-field="styles.popup.border_radius" value="${escapeHtml(config.styles.popup.border_radius || "")}" /></label>
-                  <label><span>Sombra popup</span><input type="text" data-field="styles.popup.box_shadow" value="${escapeHtml(config.styles.popup.box_shadow || "")}" /></label>
+                  <label><span>${this._L("Radio barra")}</span><input type="text" data-field="styles.bar.border_radius" value="${escapeHtml(config.styles.bar.border_radius || "")}" /></label>
+                  <label><span>${this._L("Sombra barra")}</span><input type="text" data-field="styles.bar.box_shadow" value="${escapeHtml(config.styles.bar.box_shadow || "")}" /></label>
+                  <label><span>${this._L("Padding barra")}</span><input type="text" data-field="styles.bar.padding" value="${escapeHtml(config.styles.bar.padding || "")}" /></label>
+                  <label><span>${this._L("Altura minima")}</span><input type="text" data-field="styles.bar.min_height" value="${escapeHtml(config.styles.bar.min_height || "")}" /></label>
+                  <label><span>${this._L("Separacion botones")}</span><input type="text" data-field="styles.bar.gap" value="${escapeHtml(config.styles.bar.gap || "")}" /></label>
+                  <label><span>${this._L("Justificacion")}</span><input type="text" data-field="styles.bar.justify_content" value="${escapeHtml(config.styles.bar.justify_content || "")}" /></label>
+                  <label><span>${this._L("Ancho maximo barra")}</span><input type="text" data-field="styles.bar.max_width" value="${escapeHtml(config.styles.bar.max_width || "")}" /></label>
+                  <label><span>${this._L("Backdrop filter")}</span><input type="text" data-field="styles.bar.backdrop_filter" value="${escapeHtml(config.styles.bar.backdrop_filter || "")}" /></label>
+                  <label><span>${this._L("Fondo botones")}</span><input type="text" data-field="styles.button.background" value="${escapeHtml(config.styles.button.background || "")}" /></label>
+                  <label><span>${this._L("Color botones")}</span><input type="text" data-field="styles.button.color" value="${escapeHtml(config.styles.button.color || "")}" /></label>
+                  <label><span>${this._L("Color activo")}</span><input type="text" data-field="styles.button.active_color" value="${escapeHtml(config.styles.button.active_color || "")}" /></label>
+                  <label><span>${this._L("Fondo activo")}</span><input type="text" data-field="styles.button.active_background" value="${escapeHtml(config.styles.button.active_background || "")}" /></label>
+                  <label><span>${this._L("Radio boton")}</span><input type="text" data-field="styles.button.border_radius" value="${escapeHtml(config.styles.button.border_radius || "")}" /></label>
+                  <label><span>${this._L("Tamano boton")}</span><input type="text" data-field="styles.button.size" value="${escapeHtml(config.styles.button.size || "")}" /></label>
+                  <label><span>${this._L("Tamano icono")}</span><input type="text" data-field="styles.button.icon_size" value="${escapeHtml(config.styles.button.icon_size || "")}" /></label>
+                  <label><span>${this._L("Offset icono X")}</span><input type="text" data-field="styles.button.icon_offset_x" value="${escapeHtml(config.styles.button.icon_offset_x || "")}" /></label>
+                  <label><span>${this._L("Offset icono Y")}</span><input type="text" data-field="styles.button.icon_offset_y" value="${escapeHtml(config.styles.button.icon_offset_y || "")}" /></label>
+                  <label><span>${this._L("Color etiqueta")}</span><input type="text" data-field="styles.button.label_color" value="${escapeHtml(config.styles.button.label_color || "")}" /></label>
+                  <label><span>${this._L("Color etiqueta activa")}</span><input type="text" data-field="styles.button.active_label_color" value="${escapeHtml(config.styles.button.active_label_color || "")}" /></label>
+                  <label><span>${this._L("Tamano etiqueta")}</span><input type="text" data-field="styles.button.label_size" value="${escapeHtml(config.styles.button.label_size || "")}" /></label>
+                  <label><span>${this._L("Separacion etiqueta")}</span><input type="text" data-field="styles.button.label_gap" value="${escapeHtml(config.styles.button.label_gap || "")}" /></label>
+                  <label><span>${this._L("Fondo badge")}</span><input type="text" data-field="styles.badge.background" value="${escapeHtml(config.styles.badge.background || "")}" /></label>
+                  <label><span>${this._L("Color badge")}</span><input type="text" data-field="styles.badge.color" value="${escapeHtml(config.styles.badge.color || "")}" /></label>
+                  <label><span>${this._L("Tamano minimo badge")}</span><input type="text" data-field="styles.badge.min_size" value="${escapeHtml(config.styles.badge.min_size || "")}" /></label>
+                  <label><span>${this._L("Tamano texto badge")}</span><input type="text" data-field="styles.badge.font_size" value="${escapeHtml(config.styles.badge.font_size || "")}" /></label>
+                  <label><span>${this._L("Fondo popup")}</span><input type="text" data-field="styles.popup.background" value="${escapeHtml(config.styles.popup.background || "")}" /></label>
+                  <label><span>${this._L("Borde popup")}</span><input type="text" data-field="styles.popup.border" value="${escapeHtml(config.styles.popup.border || "")}" /></label>
+                  <label><span>${this._L("Radio popup")}</span><input type="text" data-field="styles.popup.border_radius" value="${escapeHtml(config.styles.popup.border_radius || "")}" /></label>
+                  <label><span>${this._L("Sombra popup")}</span><input type="text" data-field="styles.popup.box_shadow" value="${escapeHtml(config.styles.popup.box_shadow || "")}" /></label>
                   <label>
-                    <span>Layout popup</span>
+                    <span>${this._L("Layout popup")}</span>
                     <select data-field="styles.popup.layout" data-optional="true">
                       <option value="" ${!config.styles.popup.layout || config.styles.popup.layout === "auto" ? "selected" : ""}>Auto</option>
                       <option value="vertical" ${config.styles.popup.layout === "vertical" ? "selected" : ""}>Vertical</option>
                       <option value="horizontal" ${config.styles.popup.layout === "horizontal" ? "selected" : ""}>Horizontal</option>
                     </select>
                   </label>
-                  <label><span>Padding popup</span><input type="text" data-field="styles.popup.padding" value="${escapeHtml(config.styles.popup.padding || "")}" /></label>
-                  <label><span>Ancho minimo popup</span><input type="text" data-field="styles.popup.min_width" value="${escapeHtml(config.styles.popup.min_width || "")}" /></label>
-                  <label><span>Ancho maximo popup</span><input type="text" data-field="styles.popup.max_width" value="${escapeHtml(config.styles.popup.max_width || "")}" /></label>
-                  <label><span>Tamano item popup</span><input type="text" data-field="styles.popup.item_size" value="${escapeHtml(config.styles.popup.item_size || "")}" /></label>
-                  <label><span>Tamano etiqueta popup</span><input type="text" data-field="styles.popup.label_size" value="${escapeHtml(config.styles.popup.label_size || "")}" /></label>
-                  <label><span>Separacion popup</span><input type="text" data-field="styles.popup.item_gap" value="${escapeHtml(config.styles.popup.item_gap || "")}" /></label>
-                  <label><span>Veladura popup</span><input type="text" data-field="styles.popup.backdrop" value="${escapeHtml(config.styles.popup.backdrop || "")}" /></label>
-                  <label><span>Fondo media player</span><input type="text" data-field="styles.media_player.background" value="${escapeHtml(config.styles.media_player.background || "")}" /></label>
-                  <label><span>Borde media player</span><input type="text" data-field="styles.media_player.border" value="${escapeHtml(config.styles.media_player.border || "")}" /></label>
-                  <label><span>Radio media player</span><input type="text" data-field="styles.media_player.border_radius" value="${escapeHtml(config.styles.media_player.border_radius || "")}" /></label>
-                  <label><span>Sombra media player</span><input type="text" data-field="styles.media_player.box_shadow" value="${escapeHtml(config.styles.media_player.box_shadow || "")}" /></label>
-                  <label><span>Padding media player</span><input type="text" data-field="styles.media_player.padding" value="${escapeHtml(config.styles.media_player.padding || "")}" /></label>
-                  <label><span>Altura minima media player</span><input type="text" data-field="styles.media_player.min_height" value="${escapeHtml(config.styles.media_player.min_height || "")}" /></label>
-                  <label><span>Tamano portada</span><input type="text" data-field="styles.media_player.artwork_size" value="${escapeHtml(config.styles.media_player.artwork_size || "")}" /></label>
-                  <label><span>Tamano controles</span><input type="text" data-field="styles.media_player.control_size" value="${escapeHtml(config.styles.media_player.control_size || "")}" /></label>
-                  <label><span>Tamano titulo</span><input type="text" data-field="styles.media_player.title_size" value="${escapeHtml(config.styles.media_player.title_size || "")}" /></label>
-                  <label><span>Tamano subtitulo</span><input type="text" data-field="styles.media_player.subtitle_size" value="${escapeHtml(config.styles.media_player.subtitle_size || "")}" /></label>
-                  <label><span>Color progreso</span><input type="text" data-field="styles.media_player.progress_color" value="${escapeHtml(config.styles.media_player.progress_color || "")}" /></label>
-                  <label><span>Fondo progreso</span><input type="text" data-field="styles.media_player.progress_background" value="${escapeHtml(config.styles.media_player.progress_background || "")}" /></label>
-                  <label><span>Overlay portada</span><input type="text" data-field="styles.media_player.overlay_color" value="${escapeHtml(config.styles.media_player.overlay_color || "")}" /></label>
-                  <label><span>Tamano indicadores</span><input type="text" data-field="styles.media_player.dot_size" value="${escapeHtml(config.styles.media_player.dot_size || "")}" /></label>
+                  <label><span>${this._L("Padding popup")}</span><input type="text" data-field="styles.popup.padding" value="${escapeHtml(config.styles.popup.padding || "")}" /></label>
+                  <label><span>${this._L("Ancho minimo popup")}</span><input type="text" data-field="styles.popup.min_width" value="${escapeHtml(config.styles.popup.min_width || "")}" /></label>
+                  <label><span>${this._L("Ancho maximo popup")}</span><input type="text" data-field="styles.popup.max_width" value="${escapeHtml(config.styles.popup.max_width || "")}" /></label>
+                  <label><span>${this._L("Tamano item popup")}</span><input type="text" data-field="styles.popup.item_size" value="${escapeHtml(config.styles.popup.item_size || "")}" /></label>
+                  <label><span>${this._L("Tamano etiqueta popup")}</span><input type="text" data-field="styles.popup.label_size" value="${escapeHtml(config.styles.popup.label_size || "")}" /></label>
+                  <label><span>${this._L("Separacion popup")}</span><input type="text" data-field="styles.popup.item_gap" value="${escapeHtml(config.styles.popup.item_gap || "")}" /></label>
+                  <label><span>${this._L("Veladura popup")}</span><input type="text" data-field="styles.popup.backdrop" value="${escapeHtml(config.styles.popup.backdrop || "")}" /></label>
+                  <label><span>${this._L("Fondo media player")}</span><input type="text" data-field="styles.media_player.background" value="${escapeHtml(config.styles.media_player.background || "")}" /></label>
+                  <label><span>${this._L("Borde media player")}</span><input type="text" data-field="styles.media_player.border" value="${escapeHtml(config.styles.media_player.border || "")}" /></label>
+                  <label><span>${this._L("Radio media player")}</span><input type="text" data-field="styles.media_player.border_radius" value="${escapeHtml(config.styles.media_player.border_radius || "")}" /></label>
+                  <label><span>${this._L("Sombra media player")}</span><input type="text" data-field="styles.media_player.box_shadow" value="${escapeHtml(config.styles.media_player.box_shadow || "")}" /></label>
+                  <label><span>${this._L("Padding media player")}</span><input type="text" data-field="styles.media_player.padding" value="${escapeHtml(config.styles.media_player.padding || "")}" /></label>
+                  <label><span>${this._L("Altura minima media player")}</span><input type="text" data-field="styles.media_player.min_height" value="${escapeHtml(config.styles.media_player.min_height || "")}" /></label>
+                  <label><span>${this._L("Tamano portada")}</span><input type="text" data-field="styles.media_player.artwork_size" value="${escapeHtml(config.styles.media_player.artwork_size || "")}" /></label>
+                  <label><span>${this._L("Tamano controles")}</span><input type="text" data-field="styles.media_player.control_size" value="${escapeHtml(config.styles.media_player.control_size || "")}" /></label>
+                  <label><span>${this._L("Tamano titulo")}</span><input type="text" data-field="styles.media_player.title_size" value="${escapeHtml(config.styles.media_player.title_size || "")}" /></label>
+                  <label><span>${this._L("Tamano subtitulo")}</span><input type="text" data-field="styles.media_player.subtitle_size" value="${escapeHtml(config.styles.media_player.subtitle_size || "")}" /></label>
+                  <label><span>${this._L("Color progreso")}</span><input type="text" data-field="styles.media_player.progress_color" value="${escapeHtml(config.styles.media_player.progress_color || "")}" /></label>
+                  <label><span>${this._L("Fondo progreso")}</span><input type="text" data-field="styles.media_player.progress_background" value="${escapeHtml(config.styles.media_player.progress_background || "")}" /></label>
+                  <label><span>${this._L("Overlay portada")}</span><input type="text" data-field="styles.media_player.overlay_color" value="${escapeHtml(config.styles.media_player.overlay_color || "")}" /></label>
+                  <label><span>${this._L("Tamano indicadores")}</span><input type="text" data-field="styles.media_player.dot_size" value="${escapeHtml(config.styles.media_player.dot_size || "")}" /></label>
                 </div>
               `
               : ""
@@ -5015,61 +12329,61 @@ class NodaliaNavigationBarEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Media Player</div>
-            <div class="editor-section__hint">Opciones generales del reproductor integrado y lista de players visibles.</div>
+            <div class="editor-section__title">${this._L("Media Player")}</div>
+            <div class="editor-section__hint">${this._L("Opciones generales del reproductor integrado y lista de players visibles.")}</div>
             <div class="editor-section__actions">
-              <button type="button" data-editor-action="add-player">Anadir player</button>
+              <button type="button" data-editor-action="add-player">${this._L("Anadir player")}</button>
             </div>
           </div>
           <div class="editor-grid">
             <label class="checkbox">
               <input type="checkbox" data-field="media_player.show_desktop" ${config.media_player.show_desktop ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
-              <span>Mostrar tambien en escritorio</span>
+              <span>${this._L("Mostrar tambien en escritorio")}</span>
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="media_player.album_cover_background" ${config.media_player.album_cover_background ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
-              <span>Usar caratula de fondo</span>
+              <span>${this._L("Usar caratula de fondo")}</span>
             </label>
             <label>
-              <span>Altura reservada</span>
+              <span>${this._L("Altura reservada")}</span>
               <input type="text" data-field="media_player.reserve_height" value="${escapeHtml(config.media_player.reserve_height || "")}" />
             </label>
             <label>
-              <span>Separacion con navbar</span>
+              <span>${this._L("Separacion con navbar")}</span>
               <input type="text" data-field="media_player.gap" value="${escapeHtml(config.media_player.gap || "")}" />
             </label>
             <label>
-              <span>Tamano portada</span>
+              <span>${this._L("Tamano portada")}</span>
               <input type="text" data-field="styles.media_player.artwork_size" value="${escapeHtml(config.styles.media_player.artwork_size || "")}" />
             </label>
             <label>
-              <span>Tamano controles</span>
+              <span>${this._L("Tamano controles")}</span>
               <input type="text" data-field="styles.media_player.control_size" value="${escapeHtml(config.styles.media_player.control_size || "")}" />
             </label>
             <label>
-              <span>Tamano titulo</span>
+              <span>${this._L("Tamano titulo")}</span>
               <input type="text" data-field="styles.media_player.title_size" value="${escapeHtml(config.styles.media_player.title_size || "")}" />
             </label>
             <label>
-              <span>Tamano subtitulo</span>
+              <span>${this._L("Tamano subtitulo")}</span>
               <input type="text" data-field="styles.media_player.subtitle_size" value="${escapeHtml(config.styles.media_player.subtitle_size || "")}" />
             </label>
           </div>
           <div class="subsection">
-            ${playersMarkup || '<p class="hint">No hay reproductores configurados.</p>'}
+            ${playersMarkup || `<p class="hint">${this._L("No hay reproductores configurados.")}</p>`}
           </div>
         </section>
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Rutas</div>
-            <div class="editor-section__hint">Añade, reordena y personaliza los destinos de la barra y sus popups.</div>
+            <div class="editor-section__title">${this._L("Rutas")}</div>
+            <div class="editor-section__hint">${this._L("Añade, reordena y personaliza los destinos de la barra y sus popups.")}</div>
             <div class="editor-section__actions">
-              <button type="button" data-editor-action="add-route">Anadir ruta</button>
+              <button type="button" data-editor-action="add-route">${this._L("Anadir ruta")}</button>
             </div>
           </div>
-          ${routesMarkup || '<p class="hint">No hay rutas todavia.</p>'}
+          ${routesMarkup || `<p class="hint">${this._L("No hay rutas todavia.")}</p>`}
         </section>
       </div>
     `;
@@ -10472,7 +17786,16 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const tag = options.multiline ? "textarea" : "input";
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -10482,7 +17805,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     if (tag === "textarea") {
       return `
         <label class="editor-field editor-field--full">
-          <span>${escapeHtml(label)}</span>
+          <span>${escapeHtml(tLabel)}</span>
           <textarea data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(valueType)}" rows="${options.rows || 2}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
         </label>
       `;
@@ -10490,7 +17813,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -10503,6 +17826,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -10511,16 +17836,16 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -10530,6 +17855,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _renderTextareaField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     return this._renderTextField(label, field, value, {
       ...options,
       multiline: true,
@@ -10538,6 +17864,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -10547,15 +17874,16 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options, valueType = "string") {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(valueType)}">
           ${options
             .map(option => {
@@ -10566,7 +17894,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
               return `
                 <option value="${escapeHtml(optionValue)}" ${isSelected ? "selected" : ""}>
-                  ${escapeHtml(option.label)}
+                  ${escapeHtml(this._editorLabel(option.label))}
                 </option>
               `;
             })
@@ -10579,7 +17907,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   _renderActionConfigFields(title, path, action = {}) {
     return `
       <div class="player-editor-subgroup">
-        <div class="player-editor-subgroup__title">${escapeHtml(title)}</div>
+        <div class="player-editor-subgroup__title">${escapeHtml(this._editorLabel(title))}</div>
         <div class="editor-grid">
           ${this._renderSelectField(
             "Acción",
@@ -10616,13 +17944,14 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _renderEntityField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const domains = Array.isArray(options.domains)
       ? options.domains.map(domain => String(domain || "").trim()).filter(Boolean).join(",")
       : "";
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity-picker"
@@ -10636,10 +17965,11 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="icon-picker"
@@ -10655,15 +17985,15 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     return `
       <div class="player-editor-card">
         <div class="player-editor-card__header">
-          <div class="player-editor-card__title">Reproductor ${index + 1}</div>
+          <div class="player-editor-card__title">${escapeHtml(this._editorLabel("Reproductor"))} ${index + 1}</div>
           <div class="player-editor-card__actions">
-            <button type="button" data-action="move-player-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>Subir</button>
-            <button type="button" data-action="move-player-down" data-index="${index}" ${index === this._config.players.length - 1 ? "disabled" : ""}>Bajar</button>
-            <button type="button" data-action="remove-player" data-index="${index}" class="danger">Eliminar</button>
+            <button type="button" data-action="move-player-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>${escapeHtml(this._editorLabel("Subir"))}</button>
+            <button type="button" data-action="move-player-down" data-index="${index}" ${index === this._config.players.length - 1 ? "disabled" : ""}>${escapeHtml(this._editorLabel("Bajar"))}</button>
+            <button type="button" data-action="remove-player" data-index="${index}" class="danger">${escapeHtml(this._editorLabel("Eliminar"))}</button>
           </div>
         </div>
         <div class="player-editor-subgroup">
-          <div class="player-editor-subgroup__title">Principal</div>
+          <div class="player-editor-subgroup__title">${escapeHtml(this._editorLabel("Principal"))}</div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityField("Entidad", `players.${index}.entity`, player.entity, {
               domains: ["media_player"],
@@ -11212,8 +18542,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Opciones generales del reproductor y cuándo debe mostrarse la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Opciones generales del reproductor y cuándo debe mostrarse la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -11236,8 +18566,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Layout</div>
-            <div class="editor-section__hint">Ideal si quieres usarlo fijo arriba o abajo del dashboard.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Layout"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ideal si quieres usarlo fijo arriba o abajo del dashboard."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Tarjeta fija", "layout.fixed", config.layout.fixed === true)}
@@ -11268,8 +18598,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Reproductores</div>
-            <div class="editor-section__hint">Añade, reordena y personaliza cada reproductor visible en la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Reproductores"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Añade, reordena y personaliza cada reproductor visible en la tarjeta."))}</div>
           </div>
           <div class="player-editor-list">
             ${
@@ -11285,8 +18615,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Respuesta háptica</div>
-            <div class="editor-section__hint">Respuesta táctil opcional para los controles del reproductor.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta háptica"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta táctil opcional para los controles del reproductor."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar respuesta háptica", "haptics.enabled", config.haptics.enabled === true)}
@@ -11310,8 +18640,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Ajusta la apertura de paneles, navegador y el rebote de los botones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajusta la apertura de paneles, navegador y el rebote de los botones."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -11346,8 +18676,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales del reproductor principal y del navegador de medios.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales del reproductor principal y del navegador de medios."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -15414,7 +22744,16 @@ class NodaliaLightCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const min = options.min !== undefined ? `min="${escapeHtml(String(options.min))}"` : "";
@@ -15425,7 +22764,7 @@ class NodaliaLightCardEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -15441,6 +22780,8 @@ class NodaliaLightCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -15449,16 +22790,16 @@ class NodaliaLightCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -15468,6 +22809,7 @@ class NodaliaLightCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -15477,20 +22819,21 @@ class NodaliaLightCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options
             .map(option => `
               <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
+                ${escapeHtml(this._editorLabel(option.label))}
               </option>
             `)
             .join("")}
@@ -15515,11 +22858,12 @@ class NodaliaLightCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
@@ -15870,8 +23214,8 @@ class NodaliaLightCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal, nombre visible e icono de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal, nombre visible e icono de la tarjeta."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderLightEntityField("Entidad de luz", "entity", config.entity, {
@@ -15902,8 +23246,8 @@ class NodaliaLightCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Qué bloques quieres mostrar dentro de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Qué bloques quieres mostrar dentro de la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -15927,8 +23271,8 @@ class NodaliaLightCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta háptica opcional para los controles.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta háptica opcional para los controles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -15952,8 +23296,8 @@ class NodaliaLightCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles, cambiar entre sliders y dar respuesta visual a los botones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Transiciones suaves al encender, apagar, desplegar controles, cambiar entre sliders y dar respuesta visual a los botones."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -16008,8 +23352,8 @@ class NodaliaLightCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales básicos del look Nodalia.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales básicos del look Nodalia."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -18862,7 +26206,16 @@ class NodaliaFanCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const min = options.min !== undefined ? `min="${escapeHtml(String(options.min))}"` : "";
@@ -18873,7 +26226,7 @@ class NodaliaFanCardEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -18889,6 +26242,8 @@ class NodaliaFanCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -18897,16 +26252,16 @@ class NodaliaFanCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -18916,6 +26271,7 @@ class NodaliaFanCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -18925,7 +26281,7 @@ class NodaliaFanCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
@@ -18991,14 +26347,15 @@ class NodaliaFanCardEditor extends HTMLElement {
   }
 
   _renderSelectField(label, field, value, options) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options
             .map(option => `
               <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
+                ${escapeHtml(this._editorLabel(option.label))}
               </option>
             `)
             .join("")}
@@ -19008,10 +26365,11 @@ class NodaliaFanCardEditor extends HTMLElement {
   }
 
   _renderFanEntityField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="fan-entity"
@@ -19023,11 +26381,12 @@ class NodaliaFanCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
@@ -19383,8 +26742,8 @@ class NodaliaFanCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal, nombre visible e icono de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal, nombre visible e icono de la tarjeta."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderFanEntityField("Entidad de ventilador", "entity", config.entity, {
@@ -19404,8 +26763,8 @@ class NodaliaFanCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Qué bloques quieres mostrar dentro de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Qué bloques quieres mostrar dentro de la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -19442,8 +26801,8 @@ class NodaliaFanCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta háptica opcional para los controles.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta háptica opcional para los controles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -19467,8 +26826,8 @@ class NodaliaFanCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles, abrir modos y dar respuesta visual a los botones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Transiciones suaves al encender, apagar, desplegar controles, abrir modos y dar respuesta visual a los botones."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -19522,8 +26881,8 @@ class NodaliaFanCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales básicos del look Nodalia.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales básicos del look Nodalia."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -22694,7 +30053,16 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const min = options.min !== undefined ? `min="${escapeHtml(String(options.min))}"` : "";
@@ -22705,7 +30073,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -22721,6 +30089,8 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -22729,16 +30099,16 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -22748,6 +30118,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -22757,7 +30128,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
@@ -22846,14 +30217,15 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
   }
 
   _renderSelectField(label, field, value, options) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options
             .map(option => `
               <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
+                ${escapeHtml(this._editorLabel(option.label))}
               </option>
             `)
             .join("")}
@@ -22893,11 +30265,12 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
@@ -23300,8 +30673,8 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal, nombre visible e icono de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal, nombre visible e icono de la tarjeta."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderHumidifierEntityField("Entidad principal", "entity", config.entity, {
@@ -23321,8 +30694,8 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Entidades auxiliares</div>
-            <div class="editor-section__hint">Selectores opcionales para el modo principal y la ventilación.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Entidades auxiliares"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Selectores opcionales para el modo principal y la ventilación."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderSelectEntityField("Selector de modo", "mode_entity", config.mode_entity, {
@@ -23338,8 +30711,8 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Activa u oculta cada bloque de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Activa u oculta cada bloque de la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -23390,8 +30763,8 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Respuesta háptica</div>
-            <div class="editor-section__hint">Respuesta táctil opcional al usar los controles.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta háptica"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta táctil opcional al usar los controles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar respuesta háptica", "haptics.enabled", config.haptics.enabled === true)}
@@ -23415,8 +30788,8 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Transiciones suaves al encender, apagar, desplegar controles, cambiar paneles y dar respuesta visual a los botones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Transiciones suaves al encender, apagar, desplegar controles, cambiar paneles y dar respuesta visual a los botones."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -23470,8 +30843,8 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales principales de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales principales de la tarjeta."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -25670,7 +33043,16 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const tag = options.multiline ? "textarea" : "input";
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -25680,7 +33062,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     if (tag === "textarea") {
       return `
         <label class="editor-field ${options.fullWidth !== false ? "editor-field--full" : ""}">
-          <span>${escapeHtml(label)}</span>
+          <span>${escapeHtml(tLabel)}</span>
           <textarea data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(valueType)}" rows="${options.rows || 2}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
         </label>
       `;
@@ -25688,7 +33070,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -25701,6 +33083,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -25709,16 +33093,16 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch:${escapeHtml(currentValue)};"></span>
           </label>
@@ -25728,6 +33112,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -25737,20 +33122,21 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options
             .map(option => `
               <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
+                ${escapeHtml(this._editorLabel(option.label))}
               </option>
             `)
             .join("")}
@@ -25760,11 +33146,12 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
   }
 
   _renderEntityField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity-picker"
@@ -25777,11 +33164,12 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="icon-picker"
@@ -26155,8 +33543,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad numérica principal, nombre, icono y rango del gauge.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad numérica principal, nombre, icono y rango del gauge."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderEntityField("Entidad numérica", "entity", config.entity, {
@@ -26209,8 +33597,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Layout</div>
-            <div class="editor-section__hint">Ayuda a compactar el gauge según el espacio disponible en la vista.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Layout"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ayuda a compactar el gauge según el espacio disponible en la vista."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Rows de grid", "grid_options.rows", config.grid_options?.rows, {
@@ -26226,8 +33614,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Ajustes de cabecera, chips y rango visible.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes de cabecera, chips y rango visible."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Empezar desde cero", "start_from_zero", config.start_from_zero !== false)}
@@ -26244,8 +33632,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica opcional al tocar la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta haptica opcional al tocar la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -26269,8 +33657,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Controla la transición del dial, la entrada del contenido y el rebote al tocar la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla la transición del dial, la entrada del contenido y el rebote al tocar la tarjeta."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -26308,8 +33696,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Personaliza el look Nodalia, el dial circular, la nueva burbuja del thumb y la escala de tinte del gauge.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Personaliza el look Nodalia, el dial circular, la nueva burbuja del thumb y la escala de tinte del gauge."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -28909,7 +36297,16 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
@@ -28917,7 +36314,7 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -28930,12 +36327,13 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
   }
 
   _renderTextareaField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
 
     return `
       <label class="editor-field editor-field--full">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <textarea
           data-field="${escapeHtml(field)}"
           data-value-type="${escapeHtml(options.valueType || "string")}"
@@ -28947,6 +36345,7 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -28956,20 +36355,21 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options
             .map(option => `
               <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
+                ${escapeHtml(this._editorLabel(option.label))}
               </option>
             `)
             .join("")}
@@ -29168,8 +36568,8 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Configura titulo, entidades y rango visible de la grafica.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Configura titulo, entidades y rango visible de la grafica."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Nombre", "name", config.name, {
@@ -29204,8 +36604,8 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Activa o desactiva cabecera, valor, leyenda y relleno.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Activa o desactiva cabecera, valor, leyenda y relleno."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Mostrar cabecera", "show_header", config.show_header !== false)}
@@ -29228,8 +36628,8 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica opcional al tocar la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta haptica opcional al tocar la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -29253,8 +36653,8 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales del grafico y el look Nodalia.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales del grafico y el look Nodalia."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
@@ -29651,7 +37051,16 @@ class NodaliaGraphCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const tag = options.multiline ? "textarea" : "input";
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -29661,7 +37070,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     if (tag === "textarea") {
       return `
         <label class="editor-field ${options.fullWidth !== false ? "editor-field--full" : ""}">
-          <span>${escapeHtml(label)}</span>
+          <span>${escapeHtml(tLabel)}</span>
           <textarea data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(valueType)}" rows="${options.rows || 2}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
         </label>
       `;
@@ -29669,7 +37078,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -29682,6 +37091,8 @@ class NodaliaGraphCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -29690,16 +37101,16 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch:${escapeHtml(currentValue)};"></span>
           </label>
@@ -29709,6 +37120,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -29718,15 +37130,16 @@ class NodaliaGraphCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options, valueType = "string") {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(valueType)}">
           ${options
             .map(option => {
@@ -29737,7 +37150,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
               return `
                 <option value="${escapeHtml(optionValue)}" ${isSelected ? "selected" : ""}>
-                  ${escapeHtml(option.label)}
+                  ${escapeHtml(this._editorLabel(option.label))}
                 </option>
               `;
             })
@@ -29748,6 +37161,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
   }
 
   _renderEntityField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const domains = Array.isArray(options.domains)
       ? options.domains.map(domain => String(domain || "").trim()).filter(Boolean).join(",")
@@ -29755,7 +37169,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity-picker"
@@ -29769,11 +37183,12 @@ class NodaliaGraphCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="icon-picker"
@@ -30286,8 +37701,8 @@ class NodaliaGraphCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Nombre, icono, rango visible y comportamiento basico de la grafica.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Nombre, icono, rango visible y comportamiento basico de la grafica."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Nombre", "name", config.name, {
@@ -30326,8 +37741,8 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Series</div>
-            <div class="editor-section__hint">Anade, reordena y personaliza cada entidad mostrada en la grafica.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Series"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Anade, reordena y personaliza cada entidad mostrada en la grafica."))}</div>
           </div>
           <div class="series-editor-list">
             ${
@@ -30343,8 +37758,8 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Activa o desactiva cabecera, valor grande, leyenda y relleno.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Activa o desactiva cabecera, valor grande, leyenda y relleno."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Mostrar cabecera", "show_header", config.show_header !== false)}
@@ -30358,8 +37773,8 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta tactil opcional para taps, hover y cambios de serie.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional para taps, hover y cambios de serie."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -30383,8 +37798,8 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Controla la entrada del tooltip y el rebote visual de los chips.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla la entrada del tooltip y el rebote visual de los chips."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -30418,8 +37833,8 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales de la card, el icono y el grafico.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales de la card, el icono y el grafico."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -33085,7 +40500,16 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
@@ -33093,7 +40517,7 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -33106,12 +40530,13 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
   }
 
   _renderTextareaField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
 
     return `
       <label class="editor-field editor-field--full">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <textarea
           data-field="${escapeHtml(field)}"
           data-value-type="${escapeHtml(options.valueType || "string")}"
@@ -33123,6 +40548,7 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -33132,19 +40558,20 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options.map(option => `
             <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-              ${escapeHtml(option.label)}
+              ${escapeHtml(this._editorLabel(option.label))}
             </option>
           `).join("")}
         </select>
@@ -33379,8 +40806,8 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Titulo, enlace al panel de energia y comportamiento general de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Titulo, enlace al panel de energia y comportamiento general de la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Titulo", "title", config.title, { placeholder: "Energia" })}
@@ -33409,8 +40836,8 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Individuales</div>
-            <div class="editor-section__hint">Una linea por entidad: \`entity|nombre|icono|color\`.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Individuales"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Una linea por entidad: \\`entity|nombre|icono|color\\`."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextareaField("Entidades individuales", "entities.individual", this._serializeIndividuals(), {
@@ -33423,8 +40850,8 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Flujo</div>
-            <div class="editor-section__hint">Controla la visualizacion de lineas sin consumo y la velocidad de animacion.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Flujo"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla la visualizacion de lineas sin consumo y la velocidad de animacion."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField("Lineas a cero", "display_zero_lines.mode", config.display_zero_lines?.mode || "show", [
@@ -33455,8 +40882,8 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilo</div>
-            <div class="editor-section__hint">Ajustes visuales base de la tarjeta y las burbujas.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilo"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base de la tarjeta y las burbujas."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Background", "styles.card.background", config.styles?.card?.background)}
@@ -33480,8 +40907,8 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta tactil opcional al pulsar nodos o botones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional al pulsar nodos o botones."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics?.enabled === true)}
@@ -33827,14 +41254,23 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(options.type || "text")}"
           data-field="${escapeHtml(field)}"
@@ -33847,12 +41283,13 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
   }
 
   _renderTextareaField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
 
     return `
       <label class="editor-field editor-field--full">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <textarea
           data-field="${escapeHtml(field)}"
           data-value-type="${escapeHtml(options.valueType || "string")}"
@@ -33864,6 +41301,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -33872,16 +41311,16 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -33917,6 +41356,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -33926,19 +41366,20 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options, renderOptions = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options.map(option => `
             <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-              ${escapeHtml(option.label)}
+              ${escapeHtml(this._editorLabel(option.label))}
             </option>
           `).join("")}
         </select>
@@ -33947,12 +41388,13 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
   }
 
   _renderEntityPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder || "";
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity"
@@ -33965,12 +41407,13 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
@@ -34339,8 +41782,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Titulo, enlace al panel de energia y comportamiento general de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Titulo, enlace al panel de energia y comportamiento general de la tarjeta."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderTextField("Titulo", "title", config.title, { placeholder: "Energia", fullWidth: true })}
@@ -34369,8 +41812,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Individuales</div>
-            <div class="editor-section__hint">Una linea por entidad: \`entity|nombre|icono|color\`.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Individuales"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Una linea por entidad: \\`entity|nombre|icono|color\\`."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderTextareaField("Entidades individuales", "entities.individual", this._serializeIndividuals(), {
@@ -34383,8 +41826,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Flujo</div>
-            <div class="editor-section__hint">Controla las lineas a cero y la velocidad del flujo.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Flujo"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla las lineas a cero y la velocidad del flujo."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField("Lineas a cero", "display_zero_lines.mode", config.display_zero_lines?.mode || "show", [
@@ -34412,8 +41855,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta tactil opcional al pulsar nodos o botones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional al pulsar nodos o botones."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics?.enabled === true)}
@@ -34432,8 +41875,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Entrada suave del flujo y rebote al pulsar nodos o acciones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave del flujo y rebote al pulsar nodos o acciones."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -34467,8 +41910,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilo</div>
-            <div class="editor-section__hint">Ajustes visuales base de la tarjeta y las burbujas.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilo"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base de la tarjeta y las burbujas."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -37365,7 +44808,16 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
@@ -37373,7 +44825,7 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -37386,6 +44838,7 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -37395,20 +44848,21 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options
             .map(option => `
               <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
+                ${escapeHtml(this._editorLabel(option.label))}
               </option>
             `)
             .join("")}
@@ -37607,8 +45061,8 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal y textos visibles.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal y textos visibles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Entidad", "entity", config.entity, {
@@ -37625,8 +45079,8 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Elige la informacion y los controles visibles.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Elige la informacion y los controles visibles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Mostrar chip de estado", "show_state_chip", config.show_state_chip !== false)}
@@ -37640,8 +45094,8 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica opcional para dial y controles.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta haptica opcional para dial y controles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -37665,8 +45119,8 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales del look Nodalia y el dial circular.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales del look Nodalia y el dial circular."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
@@ -38007,7 +45461,16 @@ class NodaliaClimateCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const tag = options.multiline ? "textarea" : "input";
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -38017,7 +45480,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     if (tag === "textarea") {
       return `
         <label class="editor-field ${options.fullWidth !== false ? "editor-field--full" : ""}">
-          <span>${escapeHtml(label)}</span>
+          <span>${escapeHtml(tLabel)}</span>
           <textarea data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(valueType)}" rows="${options.rows || 2}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
         </label>
       `;
@@ -38025,7 +45488,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -38038,6 +45501,8 @@ class NodaliaClimateCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -38046,16 +45511,16 @@ class NodaliaClimateCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch:${escapeHtml(currentValue)};"></span>
           </label>
@@ -38065,6 +45530,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -38074,20 +45540,21 @@ class NodaliaClimateCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options
             .map(option => `
               <option value="${escapeHtml(String(option.value))}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
+                ${escapeHtml(this._editorLabel(option.label))}
               </option>
             `)
             .join("")}
@@ -38097,11 +45564,12 @@ class NodaliaClimateCardEditor extends HTMLElement {
   }
 
   _renderEntityField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity-picker"
@@ -38114,11 +45582,12 @@ class NodaliaClimateCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="icon-picker"
@@ -38491,8 +45960,8 @@ class NodaliaClimateCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal, nombre visible e icono de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal, nombre visible e icono de la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderEntityField("Entidad climate", "entity", config.entity, {
@@ -38512,8 +45981,8 @@ class NodaliaClimateCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Layout</div>
-            <div class="editor-section__hint">Ayuda a compactar la climate card según el espacio disponible en la vista.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Layout"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ayuda a compactar la climate card según el espacio disponible en la vista."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Rows de grid", "grid_options.rows", config.grid_options?.rows, {
@@ -38529,8 +45998,8 @@ class NodaliaClimateCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Elige qué chips y controles deben mostrarse.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Elige qué chips y controles deben mostrarse."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Chip de estado", "show_state_chip", config.show_state_chip !== false)}
@@ -38544,8 +46013,8 @@ class NodaliaClimateCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta táctil opcional al interactuar con el dial y los botones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta táctil opcional al interactuar con el dial y los botones."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -38569,8 +46038,8 @@ class NodaliaClimateCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Controla la transición del dial, la entrada del contenido y el rebote de los botones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla la transición del dial, la entrada del contenido y el rebote de los botones."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -38608,8 +46077,8 @@ class NodaliaClimateCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Personaliza el look Nodalia de la climate card, el dial y los controles.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Personaliza el look Nodalia de la climate card, el dial y los controles."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -40590,14 +48059,23 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(options.type || "text")}"
           data-field="${escapeHtml(field)}"
@@ -40610,6 +48088,8 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -40618,16 +48098,16 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -40637,6 +48117,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -40646,19 +48127,20 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options, renderOptions = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options.map(option => `
             <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-              ${escapeHtml(option.label)}
+              ${escapeHtml(this._editorLabel(option.label))}
             </option>
           `).join("")}
         </select>
@@ -40667,6 +48149,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
   }
 
   _renderEntityPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder || "";
     const domains = Array.isArray(options.domains)
@@ -40675,7 +48158,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity"
@@ -40689,12 +48172,13 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
@@ -41021,8 +48505,8 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal, helper opcional del codigo, icono y comportamiento base de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal, helper opcional del codigo, icono y comportamiento base de la tarjeta."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityPickerField("Entidad principal", "entity", config.entity, {
@@ -41064,8 +48548,8 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Modos</div>
-            <div class="editor-section__hint">Botones de armado y desarmado visibles en la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Modos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Botones de armado y desarmado visibles en la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Mostrar desarmar", "show_disarm", config.show_disarm !== false)}
@@ -41079,8 +48563,8 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Entrada suave del contenido y pequeno rebote al pulsar acciones e icono.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave del contenido y pequeno rebote al pulsar acciones e icono."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -41112,8 +48596,8 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Respuesta haptica</div>
-            <div class="editor-section__hint">Respuesta tactil opcional al pulsar acciones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta haptica"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional al pulsar acciones."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -41137,8 +48621,8 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales base de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base de la tarjeta."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -49008,10 +56492,19 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     this._notifyConfigChange(nextConfig);
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           data-field="${escapeHtml(field)}"
           data-value-type="${escapeHtml(options.valueType || "string")}"
@@ -49024,9 +56517,10 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
   }
 
   _renderTextareaField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <textarea
           data-field="${escapeHtml(field)}"
           data-value-type="${escapeHtml(options.valueType || "string")}"
@@ -49038,13 +56532,14 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
   }
 
   _renderEntityPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder || "";
     const domains = arrayFromMaybe(options.domains).map(domain => String(domain).trim()).filter(Boolean);
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity"
@@ -49149,9 +56644,10 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
           class="editor-control-host"
           data-field="${escapeHtml(field)}"
@@ -49178,11 +56674,12 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input data-field="${escapeHtml(field)}" type="checkbox" ${checked ? "checked" : ""} />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
@@ -49435,8 +56932,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-          <div class="editor-section__hint">Entidad del robot y fuente principal del mapa.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+          <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad del robot y fuente principal del mapa."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderEntityPickerField("Entidad vacuum", "entity", config.entity, { domains: ["vacuum"] })}
@@ -49454,8 +56951,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Mapa</div>
-            <div class="editor-section__hint">La tarjeta reutiliza automaticamente tu config legacy de \`map_modes\` e \`icons\` si la pegas en YAML.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Mapa"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("La tarjeta reutiliza automaticamente tu config legacy de \\`map_modes\\` e \\`icons\\` si la pegas en YAML."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Calibracion desde camera", "calibration_source.camera", config.calibration_source?.camera !== false)}
@@ -49472,8 +56969,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Controles avanzados</div>
-            <div class="editor-section__hint">Selector de aspirado/fregado, menu derecho y rutinas configurables. En rutinas puedes usar \`entity\`, \`label\`, \`icon\`, \`service\`, \`service_data\` o \`tap_action\`.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Controles avanzados"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Selector de aspirado/fregado, menu derecho y rutinas configurables. En rutinas puedes usar \\`entity\\`, \\`label\\`, \\`icon\\`, \\`service\\`, \\`service_data\\` o \\`tap_action\\`."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Modo todo", "show_all_mode", config.show_all_mode !== false)}
@@ -49503,8 +57000,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Que elementos quieres mantener siempre visibles.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Que elementos quieres mantener siempre visibles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Chip de estado", "show_state_chip", config.show_state_chip !== false)}
@@ -49518,8 +57015,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica opcional para clicks y selecciones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta haptica opcional para clicks y selecciones."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics?.enabled === true)}
@@ -49538,8 +57035,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Entrada suave de la tarjeta, paneles y respuesta visual al pulsar controles.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave de la tarjeta, paneles y respuesta visual al pulsar controles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
@@ -49560,8 +57057,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilo</div>
-            <div class="editor-section__hint">Ajustes visuales base del mapa y las burbujas.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilo"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base del mapa y las burbujas."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -50289,6 +57786,7 @@ class NodaliaEntityCard extends HTMLElement {
     const configuredPrimaryAttribute = String(this._config?.primary_attribute || "").trim();
     const configuredSecondaryAttribute = String(this._config?.secondary_attribute || "").trim();
     return JSON.stringify({
+      locale: window.NodaliaI18n.resolveLanguage(hass, this._config?.language),
       entityId,
       state: String(state?.state || ""),
       friendlyName: String(attrs.friendly_name || ""),
@@ -50372,185 +57870,15 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _translateStateValue(state) {
-    if (!state) {
-      return null;
-    }
-
-    const rawState = String(state.state ?? "").trim();
-    const unit = String(state.attributes?.unit_of_measurement || state.attributes?.native_unit_of_measurement || "").trim();
-    const key = normalizeTextKey(rawState);
-    const domain = getEntityDomain(state);
-    const deviceClass = normalizeTextKey(state.attributes?.device_class);
-    const numberDecimals = this._getNumberDecimals();
-
-    if (parseNumericValue(rawState) !== null) {
-      return unit
-        ? formatNumericValueWithUnit(rawState, unit, numberDecimals)
-        : formatNumericValue(rawState, numberDecimals);
-    }
-
-    if (domain === "binary_sensor") {
-      const isOpenState = ["on", "open", "opening"].includes(key);
-      const isClosedState = ["off", "closed", "closing"].includes(key);
-
-      if (["door", "opening", "window", "garage_door"].includes(deviceClass)) {
-        if (isOpenState) {
-          return "Abierta";
-        }
-        if (isClosedState) {
-          return "Cerrada";
-        }
-      }
-
-      if (["motion", "occupancy", "presence", "moving"].includes(deviceClass)) {
-        if (isOpenState) {
-          return "Detectado";
-        }
-        if (isClosedState) {
-          return "No detectado";
-        }
-      }
-    }
-
-    if (domain === "lock") {
-      if (key === "locking") {
-        return "Bloqueando";
-      }
-      if (key === "unlocking") {
-        return "Desbloqueando";
-      }
-    }
-
-    switch (key) {
-      case "on":
-        return "Encendido";
-      case "off":
-        return "Apagado";
-      case "open":
-        return "Abierto";
-      case "opening":
-        return "Abriendo";
-      case "closed":
-        return "Cerrado";
-      case "closing":
-        return "Cerrando";
-      case "playing":
-        return "Reproduciendo";
-      case "paused":
-        return "En pausa";
-      case "idle":
-        return "En espera";
-      case "standby":
-        return "Standby";
-      case "home":
-        return "En casa";
-      case "not_home":
-        return "Fuera";
-      case "detected":
-        return "Detectado";
-      case "clear":
-        return "Libre";
-      case "unavailable":
-        return "No disponible";
-      case "unknown":
-        return "Desconocido";
-      case "locked":
-        return "Bloqueado";
-      case "unlocked":
-        return "Desbloqueado";
-      case "locking":
-        return "Bloqueando";
-      case "unlocking":
-        return "Desbloqueando";
-      case "locking_failed":
-        return "Bloqueo fallido";
-      case "unlocking_failed":
-        return "Desbloqueo fallido";
-      case "jammed":
-        return "Atascado";
-      case "pending":
-        return "Pendiente";
-      case "opening":
-        return "Abriendo";
-      case "closing":
-        return "Cerrando";
-      case "stopped":
-        return "Detenido";
-      case "paused":
-        return "En pausa";
-      case "unavailable":
-        return "No disponible";
-      case "armed_away":
-        return "Armado fuera";
-      case "armed_home":
-        return "Armado en casa";
-      case "disarmed":
-        return "Desarmado";
-      case "triggered":
-        return "Disparado";
-      case "comfortable":
-        return "Comodo";
-      case "very_comfortable":
-        return "Muy comodo";
-      case "slightly_uncomfortable":
-        return "Ligeramente incomodo";
-      case "somewhat_uncomfortable":
-        return "Algo incomodo";
-      case "quite_uncomfortable":
-        return "Bastante incomodo";
-      case "extremely_uncomfortable":
-        return "Muy incomodo";
-      case "ok_but_humid":
-        return "Bien, pero humedo";
-      case "little_or_no_discomfort":
-        return "Poco o ningun malestar";
-      case "some_discomfort":
-        return "Algo de malestar";
-      case "great_discomfort_avoid_exertion":
-        return "Gran malestar";
-      case "dangerous_discomfort":
-        return "Malestar peligroso";
-      case "heat_stroke_imminent":
-        return "Golpe de calor inminente";
-      case "dry":
-        return "Seco";
-      case "very_dry":
-        return "Muy seco";
-      case "too_dry":
-        return "Demasiado seco";
-      case "humid":
-        return "Humedo";
-      case "very_humid":
-        return "Muy humedo";
-      case "too_humid":
-        return "Demasiado humedo";
-      case "wet":
-        return "Mojado";
-      case "low":
-        return "Bajo";
-      case "medium":
-        return "Medio";
-      case "moderate":
-        return "Moderado";
-      case "high":
-        return "Alto";
-      case "very_high":
-        return "Muy alto";
-      case "severely_high":
-        return "Extremadamente alto";
-      case "critical":
-        return "Critico";
-      case "excellent":
-        return "Excelente";
-      case "good":
-        return "Bueno";
-      case "fair":
-        return "Aceptable";
-      case "poor":
-        return "Malo";
-      default:
-        return rawState || null;
-    }
+    const lang = window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language);
+    return window.NodaliaI18n.translateEntityState(
+      lang,
+      state,
+      this._getNumberDecimals(),
+      formatNumericValueWithUnit,
+      formatNumericValue,
+      parseNumericValue,
+    );
   }
 
   _formatAttributeValue(state, attributeName) {
@@ -50568,7 +57896,9 @@ class NodaliaEntityCard extends HTMLElement {
     const numberDecimals = this._getNumberDecimals();
 
     if (typeof value === "boolean") {
-      return value ? "Si" : "No";
+      const lang = window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language);
+      const labels = window.NodaliaI18n.strings(lang).entityCard.boolean;
+      return value ? labels.yes : labels.no;
     }
 
     if (Array.isArray(value)) {
@@ -51510,10 +58840,11 @@ class NodaliaEntityCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    return Object.entries(hass?.states || {})
+    const tag = window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, this._config?.language));
+    return `${tag}|${Object.entries(hass?.states || {})
       .map(([entityId, state]) => `${entityId}:${String(state?.attributes?.friendly_name || "")}:${String(state?.attributes?.icon || "")}`)
-      .sort((left, right) => left.localeCompare(right, "es", { sensitivity: "base" }))
-      .join("|");
+      .sort((left, right) => left.localeCompare(right, tag, { sensitivity: "base" }))
+      .join("|")}`;
   }
 
   _watchEditorControlTag(tagName) {
@@ -51550,6 +58881,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
   }
 
   _getEntityOptions(path = "entity") {
+    const sortTag = window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language));
     const options = Object.entries(this._hass?.states || {})
       .map(([entityId, state]) => {
         const friendlyName = String(state?.attributes?.friendly_name || "").trim();
@@ -51562,8 +58894,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
         };
       })
       .sort((left, right) => (
-        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
-        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+        left.label.localeCompare(right.label, sortTag, { sensitivity: "base" })
+        || left.value.localeCompare(right.value, sortTag, { sensitivity: "base" })
       ));
 
     const currentValue = String(getByPath(this._config, path) || "").trim();
@@ -51817,7 +59149,16 @@ class NodaliaEntityCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
@@ -51825,7 +59166,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -51838,18 +59179,21 @@ class NodaliaEntityCardEditor extends HTMLElement {
   }
 
   _renderTextareaField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
 
     return `
       <label class="editor-field editor-field--full">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <textarea data-field="${escapeHtml(field)}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
       </label>
     `;
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -51858,16 +59202,16 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -51877,6 +59221,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -51886,20 +59231,21 @@ class NodaliaEntityCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options, renderOptions = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options
             .map(option => `
               <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
+                ${escapeHtml(this._editorLabel(option.label))}
               </option>
             `)
             .join("")}
@@ -51909,10 +59255,11 @@ class NodaliaEntityCardEditor extends HTMLElement {
   }
 
   _renderEntityPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity"
@@ -51924,11 +59271,12 @@ class NodaliaEntityCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
@@ -51988,7 +59336,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
   _renderQuickActions(config) {
     if (!Array.isArray(config.quick_actions) || !config.quick_actions.length) {
       return `
-        <div class="editor-empty">Todavía no hay acciones rápidas.</div>
+        <div class="editor-empty">${escapeHtml(this._editorLabel("Todavía no hay acciones rápidas."))}</div>
       `;
     }
 
@@ -51999,11 +59347,11 @@ class NodaliaEntityCardEditor extends HTMLElement {
         return `
           <div class="editor-action">
             <div class="editor-action__header">
-              <div class="editor-action__title">Acción ${index + 1}</div>
+              <div class="editor-action__title">${escapeHtml(this._editorLabel("Acción"))} ${index + 1}</div>
               <div class="editor-action__buttons">
-                <button type="button" data-editor-action="move-action-up" data-index="${index}" aria-label="Subir">Subir</button>
-                <button type="button" data-editor-action="move-action-down" data-index="${index}" aria-label="Bajar">Bajar</button>
-                <button type="button" data-editor-action="remove-action" data-index="${index}" aria-label="Eliminar">Eliminar</button>
+                <button type="button" data-editor-action="move-action-up" data-index="${index}" aria-label="${escapeHtml(this._editorLabel("Subir"))}">${escapeHtml(this._editorLabel("Subir"))}</button>
+                <button type="button" data-editor-action="move-action-down" data-index="${index}" aria-label="${escapeHtml(this._editorLabel("Bajar"))}">${escapeHtml(this._editorLabel("Bajar"))}</button>
+                <button type="button" data-editor-action="remove-action" data-index="${index}" aria-label="${escapeHtml(this._editorLabel("Eliminar"))}">${escapeHtml(this._editorLabel("Eliminar"))}</button>
               </div>
             </div>
             <div class="editor-grid">
@@ -52373,8 +59721,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal, nombre visible e icono base de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal, nombre visible e icono base de la tarjeta."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityPickerField("Entidad principal", "entity", config.entity, {
@@ -52432,8 +59780,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Contenido</div>
-            <div class="editor-section__hint">Estado visible, chips adicionales, decimales de los valores y comportamiento en modo compacto.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Contenido"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Estado visible, chips adicionales, decimales de los valores y comportamiento en modo compacto."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -52465,12 +59813,12 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Acciones rápidas</div>
-            <div class="editor-section__hint">Botones secundarios con icono para alternar, abrir más información o llamar un servicio.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Acciones rápidas"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Botones secundarios con icono para alternar, abrir más información o llamar un servicio."))}</div>
             <div class="editor-section__actions">
               <button type="button" class="editor-section__toggle-button" data-editor-action="add-action">
                 <ha-icon icon="mdi:plus"></ha-icon>
-                <span>Añadir acción</span>
+                <span>${escapeHtml(this._editorLabel("Añadir acción"))}</span>
               </button>
             </div>
           </div>
@@ -52479,8 +59827,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Entrada suave del contenido y pequeño rebote al pulsar la tarjeta o sus acciones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave del contenido y pequeño rebote al pulsar la tarjeta o sus acciones."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -52512,8 +59860,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Respuesta háptica</div>
-            <div class="editor-section__hint">Respuesta táctil opcional al usar la tarjeta y sus acciones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta háptica"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta táctil opcional al usar la tarjeta y sus acciones."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar respuesta háptica", "haptics.enabled", config.haptics.enabled === true)}
@@ -52537,8 +59885,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales principales de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales principales de la tarjeta."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -54890,7 +62238,16 @@ class NodaliaFavCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
@@ -54898,7 +62255,7 @@ class NodaliaFavCardEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -54911,18 +62268,21 @@ class NodaliaFavCardEditor extends HTMLElement {
   }
 
   _renderTextareaField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
 
     return `
       <label class="editor-field editor-field--full">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <textarea data-field="${escapeHtml(field)}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
       </label>
     `;
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -54931,16 +62291,16 @@ class NodaliaFavCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -54950,6 +62310,7 @@ class NodaliaFavCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -54959,20 +62320,21 @@ class NodaliaFavCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options
             .map(option => `
               <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
+                ${escapeHtml(this._editorLabel(option.label))}
               </option>
             `)
             .join("")}
@@ -54982,13 +62344,14 @@ class NodaliaFavCardEditor extends HTMLElement {
   }
 
   _renderEntityField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const domains = Array.isArray(options.domains)
       ? options.domains.map(domain => String(domain || "").trim()).filter(Boolean).join(",")
       : "";
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity-picker"
@@ -55001,10 +62364,11 @@ class NodaliaFavCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="icon-picker"
@@ -55405,8 +62769,8 @@ class NodaliaFavCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad favorita, nombre visible e icono principal.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad favorita, nombre visible e icono principal."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityField("Entidad", "entity", config.entity, {
@@ -55438,8 +62802,8 @@ class NodaliaFavCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Acción</div>
-            <div class="editor-section__hint">Qué hace la tarjeta cuando la tocas.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Acción"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Qué hace la tarjeta cuando la tocas."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -55475,8 +62839,8 @@ class NodaliaFavCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Presentación compacta y elementos visibles dentro de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Presentación compacta y elementos visibles dentro de la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -55499,8 +62863,8 @@ class NodaliaFavCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Alarma</div>
-            <div class="editor-section__hint">Opciones extra si la entidad es un panel de alarma.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Alarma"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Opciones extra si la entidad es un panel de alarma."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("PIN fijo", "alarm_code", config.alarm_code, {
@@ -55519,8 +62883,8 @@ class NodaliaFavCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Respuesta háptica</div>
-            <div class="editor-section__hint">Respuesta táctil opcional al tocar la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta háptica"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta táctil opcional al tocar la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar respuesta háptica", "haptics.enabled", config.haptics.enabled === true)}
@@ -55544,8 +62908,8 @@ class NodaliaFavCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales base de la tarjeta favorita.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base de la tarjeta favorita."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -56658,10 +64022,19 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
       .join("");
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, path, value = "", options = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="text"
           data-path="${escapeHtml(path)}"
@@ -56673,21 +64046,23 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, path, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-checkbox">
         <input type="checkbox" data-path="${escapeHtml(path)}" ${checked ? "checked" : ""} />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, path, value, options) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-path="${escapeHtml(path)}">
-          ${options.map(option => `<option value="${escapeHtml(option.value)}" ${option.value === value ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+          ${options.map(option => `<option value="${escapeHtml(option.value)}" ${option.value === value ? "selected" : ""}>${escapeHtml(this._editorLabel(option.label))}</option>`).join("")}
         </select>
       </label>
     `;
@@ -56831,10 +64206,10 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
 </style>
       <div class="editor">
         <div class="editor-section">
-          <h3>Contenido</h3>
+          <h3>${escapeHtml(this._editorLabel("Contenido"))}</h3>
           <div class="editor-grid">
             <label class="editor-field">
-              <span>Entidad</span>
+              <span>${escapeHtml(this._editorLabel("Entidad"))}</span>
               <input list="insignia-entities" data-path="entity" value="${escapeHtml(config.entity || "")}" />
               <datalist id="insignia-entities">${this._getEntityOptions()}</datalist>
             </label>
@@ -56851,7 +64226,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
         </div>
 
         <div class="editor-section">
-          <h3>Accion</h3>
+          <h3>${escapeHtml(this._editorLabel("Accion"))}</h3>
           <div class="editor-grid">
             ${this._renderSelectField("Tap action", "tap_action", config.tap_action || "auto", [
               { value: "auto", label: "Auto" },
@@ -56870,7 +64245,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
         </div>
 
         <div class="editor-section">
-          <h3>Estilo</h3>
+          <h3>${escapeHtml(this._editorLabel("Estilo"))}</h3>
           <div class="editor-grid">
             ${this._renderTextField("Tamano icono", "styles.icon.size", config.styles?.icon?.size || DEFAULT_CONFIG.styles.icon.size)}
             ${this._renderTextField("Tamano nombre", "styles.title_size", config.styles?.title_size || DEFAULT_CONFIG.styles.title_size)}
@@ -58424,14 +65799,23 @@ class NodaliaPersonCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(options.type || "text")}"
           data-field="${escapeHtml(field)}"
@@ -58444,6 +65828,8 @@ class NodaliaPersonCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -58452,16 +65838,16 @@ class NodaliaPersonCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -58471,6 +65857,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -58480,19 +65867,20 @@ class NodaliaPersonCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options, renderOptions = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options.map(option => `
             <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-              ${escapeHtml(option.label)}
+              ${escapeHtml(this._editorLabel(option.label))}
             </option>
           `).join("")}
         </select>
@@ -58501,6 +65889,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
   }
 
   _renderEntityPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder || "";
     const domains = Array.isArray(options.domains)
@@ -58509,7 +65898,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity"
@@ -58523,12 +65912,13 @@ class NodaliaPersonCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
@@ -58856,8 +66246,8 @@ class NodaliaPersonCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad persona, foto, icono de zona y comportamiento principal de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad persona, foto, icono de zona y comportamiento principal de la tarjeta."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityPickerField("Entidad principal", "entity", config.entity, {
@@ -58892,8 +66282,8 @@ class NodaliaPersonCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Entrada suave del contenido y rebote ligero al pulsar la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave del contenido y rebote ligero al pulsar la tarjeta."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -58925,8 +66315,8 @@ class NodaliaPersonCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Respuesta haptica</div>
-            <div class="editor-section__hint">Respuesta tactil opcional al tocar la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta haptica"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional al tocar la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -58950,8 +66340,8 @@ class NodaliaPersonCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales base de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base de la tarjeta."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -62270,14 +69660,23 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(options.type || "text")}"
           data-field="${escapeHtml(field)}"
@@ -62290,6 +69689,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -62298,16 +69699,16 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -62317,6 +69718,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -62326,19 +69728,20 @@ class NodaliaWeatherCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options, renderOptions = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options.map(option => `
             <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-              ${escapeHtml(option.label)}
+              ${escapeHtml(this._editorLabel(option.label))}
             </option>
           `).join("")}
         </select>
@@ -62347,12 +69750,13 @@ class NodaliaWeatherCardEditor extends HTMLElement {
   }
 
   _renderEntityPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder || "";
     const domains = Array.isArray(options.domains) && options.domains.length ? options.domains : ["weather"];
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity"
@@ -62366,11 +69770,12 @@ class NodaliaWeatherCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
@@ -62698,8 +70103,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad meteorologica principal, nombre visible, icono y contenido mostrado.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad meteorologica principal, nombre visible, icono y contenido mostrado."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityPickerField("Entidad principal", "entity", config.entity, {
@@ -62778,8 +70183,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Entrada suave del contenido y pequeno rebote al pulsar la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave del contenido y pequeno rebote al pulsar la tarjeta."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -62811,8 +70216,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Respuesta haptica</div>
-            <div class="editor-section__hint">Respuesta tactil opcional al tocar la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta haptica"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional al tocar la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -62836,8 +70241,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales base de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base de la tarjeta."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -66336,7 +73741,16 @@ class NodaliaVacuumCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
@@ -66344,7 +73758,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -66357,6 +73771,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -66365,16 +73781,16 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -66384,6 +73800,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -66393,7 +73810,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
@@ -66537,14 +73954,15 @@ class NodaliaVacuumCardEditor extends HTMLElement {
   }
 
   _renderSelectField(label, field, value, options, renderOptions = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options
             .map(option => `
               <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
+                ${escapeHtml(this._editorLabel(option.label))}
               </option>
             `)
             .join("")}
@@ -66554,10 +73972,11 @@ class NodaliaVacuumCardEditor extends HTMLElement {
   }
 
   _renderEntityPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="${escapeHtml(options.controlType || "entity")}"
@@ -66569,11 +73988,12 @@ class NodaliaVacuumCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
@@ -66942,8 +74362,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal, nombre visible y comportamiento al tocar la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal, nombre visible y comportamiento al tocar la tarjeta."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityPickerField("Entidad del robot", "entity", config.entity, {
@@ -66993,8 +74413,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Entidades auxiliares</div>
-            <div class="editor-section__hint">Sensores y selectores opcionales para enriquecer el estado y los controles.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Entidades auxiliares"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Sensores y selectores opcionales para enriquecer el estado y los controles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderEntityPickerField("Sensor de estado", "state_entity", config.state_entity, {
@@ -67017,8 +74437,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Qué elementos quieres mostrar dentro de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Qué elementos quieres mostrar dentro de la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -67069,8 +74489,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta háptica opcional para los controles.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta háptica opcional para los controles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -67094,8 +74514,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Feedback visual para botones y paneles del robot.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Feedback visual para botones y paneles del robot."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -67127,8 +74547,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales básicos del look Nodalia.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales básicos del look Nodalia."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -67235,3 +74655,4 @@ window.customCards.push({
 });
 
 }
+

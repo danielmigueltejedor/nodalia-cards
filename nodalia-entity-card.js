@@ -653,6 +653,7 @@ class NodaliaEntityCard extends HTMLElement {
     const configuredPrimaryAttribute = String(this._config?.primary_attribute || "").trim();
     const configuredSecondaryAttribute = String(this._config?.secondary_attribute || "").trim();
     return JSON.stringify({
+      locale: window.NodaliaI18n.resolveLanguage(hass, this._config?.language),
       entityId,
       state: String(state?.state || ""),
       friendlyName: String(attrs.friendly_name || ""),
@@ -736,185 +737,15 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _translateStateValue(state) {
-    if (!state) {
-      return null;
-    }
-
-    const rawState = String(state.state ?? "").trim();
-    const unit = String(state.attributes?.unit_of_measurement || state.attributes?.native_unit_of_measurement || "").trim();
-    const key = normalizeTextKey(rawState);
-    const domain = getEntityDomain(state);
-    const deviceClass = normalizeTextKey(state.attributes?.device_class);
-    const numberDecimals = this._getNumberDecimals();
-
-    if (parseNumericValue(rawState) !== null) {
-      return unit
-        ? formatNumericValueWithUnit(rawState, unit, numberDecimals)
-        : formatNumericValue(rawState, numberDecimals);
-    }
-
-    if (domain === "binary_sensor") {
-      const isOpenState = ["on", "open", "opening"].includes(key);
-      const isClosedState = ["off", "closed", "closing"].includes(key);
-
-      if (["door", "opening", "window", "garage_door"].includes(deviceClass)) {
-        if (isOpenState) {
-          return "Abierta";
-        }
-        if (isClosedState) {
-          return "Cerrada";
-        }
-      }
-
-      if (["motion", "occupancy", "presence", "moving"].includes(deviceClass)) {
-        if (isOpenState) {
-          return "Detectado";
-        }
-        if (isClosedState) {
-          return "No detectado";
-        }
-      }
-    }
-
-    if (domain === "lock") {
-      if (key === "locking") {
-        return "Bloqueando";
-      }
-      if (key === "unlocking") {
-        return "Desbloqueando";
-      }
-    }
-
-    switch (key) {
-      case "on":
-        return "Encendido";
-      case "off":
-        return "Apagado";
-      case "open":
-        return "Abierto";
-      case "opening":
-        return "Abriendo";
-      case "closed":
-        return "Cerrado";
-      case "closing":
-        return "Cerrando";
-      case "playing":
-        return "Reproduciendo";
-      case "paused":
-        return "En pausa";
-      case "idle":
-        return "En espera";
-      case "standby":
-        return "Standby";
-      case "home":
-        return "En casa";
-      case "not_home":
-        return "Fuera";
-      case "detected":
-        return "Detectado";
-      case "clear":
-        return "Libre";
-      case "unavailable":
-        return "No disponible";
-      case "unknown":
-        return "Desconocido";
-      case "locked":
-        return "Bloqueado";
-      case "unlocked":
-        return "Desbloqueado";
-      case "locking":
-        return "Bloqueando";
-      case "unlocking":
-        return "Desbloqueando";
-      case "locking_failed":
-        return "Bloqueo fallido";
-      case "unlocking_failed":
-        return "Desbloqueo fallido";
-      case "jammed":
-        return "Atascado";
-      case "pending":
-        return "Pendiente";
-      case "opening":
-        return "Abriendo";
-      case "closing":
-        return "Cerrando";
-      case "stopped":
-        return "Detenido";
-      case "paused":
-        return "En pausa";
-      case "unavailable":
-        return "No disponible";
-      case "armed_away":
-        return "Armado fuera";
-      case "armed_home":
-        return "Armado en casa";
-      case "disarmed":
-        return "Desarmado";
-      case "triggered":
-        return "Disparado";
-      case "comfortable":
-        return "Comodo";
-      case "very_comfortable":
-        return "Muy comodo";
-      case "slightly_uncomfortable":
-        return "Ligeramente incomodo";
-      case "somewhat_uncomfortable":
-        return "Algo incomodo";
-      case "quite_uncomfortable":
-        return "Bastante incomodo";
-      case "extremely_uncomfortable":
-        return "Muy incomodo";
-      case "ok_but_humid":
-        return "Bien, pero humedo";
-      case "little_or_no_discomfort":
-        return "Poco o ningun malestar";
-      case "some_discomfort":
-        return "Algo de malestar";
-      case "great_discomfort_avoid_exertion":
-        return "Gran malestar";
-      case "dangerous_discomfort":
-        return "Malestar peligroso";
-      case "heat_stroke_imminent":
-        return "Golpe de calor inminente";
-      case "dry":
-        return "Seco";
-      case "very_dry":
-        return "Muy seco";
-      case "too_dry":
-        return "Demasiado seco";
-      case "humid":
-        return "Humedo";
-      case "very_humid":
-        return "Muy humedo";
-      case "too_humid":
-        return "Demasiado humedo";
-      case "wet":
-        return "Mojado";
-      case "low":
-        return "Bajo";
-      case "medium":
-        return "Medio";
-      case "moderate":
-        return "Moderado";
-      case "high":
-        return "Alto";
-      case "very_high":
-        return "Muy alto";
-      case "severely_high":
-        return "Extremadamente alto";
-      case "critical":
-        return "Critico";
-      case "excellent":
-        return "Excelente";
-      case "good":
-        return "Bueno";
-      case "fair":
-        return "Aceptable";
-      case "poor":
-        return "Malo";
-      default:
-        return rawState || null;
-    }
+    const lang = window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language);
+    return window.NodaliaI18n.translateEntityState(
+      lang,
+      state,
+      this._getNumberDecimals(),
+      formatNumericValueWithUnit,
+      formatNumericValue,
+      parseNumericValue,
+    );
   }
 
   _formatAttributeValue(state, attributeName) {
@@ -932,7 +763,9 @@ class NodaliaEntityCard extends HTMLElement {
     const numberDecimals = this._getNumberDecimals();
 
     if (typeof value === "boolean") {
-      return value ? "Si" : "No";
+      const lang = window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language);
+      const labels = window.NodaliaI18n.strings(lang).entityCard.boolean;
+      return value ? labels.yes : labels.no;
     }
 
     if (Array.isArray(value)) {
@@ -1874,10 +1707,11 @@ class NodaliaEntityCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    return Object.entries(hass?.states || {})
+    const tag = window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, this._config?.language));
+    return `${tag}|${Object.entries(hass?.states || {})
       .map(([entityId, state]) => `${entityId}:${String(state?.attributes?.friendly_name || "")}:${String(state?.attributes?.icon || "")}`)
-      .sort((left, right) => left.localeCompare(right, "es", { sensitivity: "base" }))
-      .join("|");
+      .sort((left, right) => left.localeCompare(right, tag, { sensitivity: "base" }))
+      .join("|")}`;
   }
 
   _watchEditorControlTag(tagName) {
@@ -1914,6 +1748,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
   }
 
   _getEntityOptions(path = "entity") {
+    const sortTag = window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language));
     const options = Object.entries(this._hass?.states || {})
       .map(([entityId, state]) => {
         const friendlyName = String(state?.attributes?.friendly_name || "").trim();
@@ -1926,8 +1761,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
         };
       })
       .sort((left, right) => (
-        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
-        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+        left.label.localeCompare(right.label, sortTag, { sensitivity: "base" })
+        || left.value.localeCompare(right.value, sortTag, { sensitivity: "base" })
       ));
 
     const currentValue = String(getByPath(this._config, path) || "").trim();
@@ -2181,7 +2016,16 @@ class NodaliaEntityCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
@@ -2189,7 +2033,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -2202,18 +2046,21 @@ class NodaliaEntityCardEditor extends HTMLElement {
   }
 
   _renderTextareaField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
 
     return `
       <label class="editor-field editor-field--full">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <textarea data-field="${escapeHtml(field)}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
       </label>
     `;
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -2222,16 +2069,16 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -2241,6 +2088,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -2250,20 +2098,21 @@ class NodaliaEntityCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options, renderOptions = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options
             .map(option => `
               <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
+                ${escapeHtml(this._editorLabel(option.label))}
               </option>
             `)
             .join("")}
@@ -2273,10 +2122,11 @@ class NodaliaEntityCardEditor extends HTMLElement {
   }
 
   _renderEntityPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity"
@@ -2288,11 +2138,12 @@ class NodaliaEntityCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
@@ -2352,7 +2203,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
   _renderQuickActions(config) {
     if (!Array.isArray(config.quick_actions) || !config.quick_actions.length) {
       return `
-        <div class="editor-empty">Todavía no hay acciones rápidas.</div>
+        <div class="editor-empty">${escapeHtml(this._editorLabel("Todavía no hay acciones rápidas."))}</div>
       `;
     }
 
@@ -2363,11 +2214,11 @@ class NodaliaEntityCardEditor extends HTMLElement {
         return `
           <div class="editor-action">
             <div class="editor-action__header">
-              <div class="editor-action__title">Acción ${index + 1}</div>
+              <div class="editor-action__title">${escapeHtml(this._editorLabel("Acción"))} ${index + 1}</div>
               <div class="editor-action__buttons">
-                <button type="button" data-editor-action="move-action-up" data-index="${index}" aria-label="Subir">Subir</button>
-                <button type="button" data-editor-action="move-action-down" data-index="${index}" aria-label="Bajar">Bajar</button>
-                <button type="button" data-editor-action="remove-action" data-index="${index}" aria-label="Eliminar">Eliminar</button>
+                <button type="button" data-editor-action="move-action-up" data-index="${index}" aria-label="${escapeHtml(this._editorLabel("Subir"))}">${escapeHtml(this._editorLabel("Subir"))}</button>
+                <button type="button" data-editor-action="move-action-down" data-index="${index}" aria-label="${escapeHtml(this._editorLabel("Bajar"))}">${escapeHtml(this._editorLabel("Bajar"))}</button>
+                <button type="button" data-editor-action="remove-action" data-index="${index}" aria-label="${escapeHtml(this._editorLabel("Eliminar"))}">${escapeHtml(this._editorLabel("Eliminar"))}</button>
               </div>
             </div>
             <div class="editor-grid">
@@ -2737,8 +2588,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal, nombre visible e icono base de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal, nombre visible e icono base de la tarjeta."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityPickerField("Entidad principal", "entity", config.entity, {
@@ -2796,8 +2647,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Contenido</div>
-            <div class="editor-section__hint">Estado visible, chips adicionales, decimales de los valores y comportamiento en modo compacto.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Contenido"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Estado visible, chips adicionales, decimales de los valores y comportamiento en modo compacto."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -2829,12 +2680,12 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Acciones rápidas</div>
-            <div class="editor-section__hint">Botones secundarios con icono para alternar, abrir más información o llamar un servicio.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Acciones rápidas"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Botones secundarios con icono para alternar, abrir más información o llamar un servicio."))}</div>
             <div class="editor-section__actions">
               <button type="button" class="editor-section__toggle-button" data-editor-action="add-action">
                 <ha-icon icon="mdi:plus"></ha-icon>
-                <span>Añadir acción</span>
+                <span>${escapeHtml(this._editorLabel("Añadir acción"))}</span>
               </button>
             </div>
           </div>
@@ -2843,8 +2694,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Entrada suave del contenido y pequeño rebote al pulsar la tarjeta o sus acciones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave del contenido y pequeño rebote al pulsar la tarjeta o sus acciones."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -2876,8 +2727,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Respuesta háptica</div>
-            <div class="editor-section__hint">Respuesta táctil opcional al usar la tarjeta y sus acciones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta háptica"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta táctil opcional al usar la tarjeta y sus acciones."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar respuesta háptica", "haptics.enabled", config.haptics.enabled === true)}
@@ -2901,8 +2752,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales principales de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales principales de la tarjeta."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"

@@ -7766,10 +7766,19 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     this._notifyConfigChange(nextConfig);
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           data-field="${escapeHtml(field)}"
           data-value-type="${escapeHtml(options.valueType || "string")}"
@@ -7782,9 +7791,10 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
   }
 
   _renderTextareaField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <textarea
           data-field="${escapeHtml(field)}"
           data-value-type="${escapeHtml(options.valueType || "string")}"
@@ -7796,13 +7806,14 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
   }
 
   _renderEntityPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder || "";
     const domains = arrayFromMaybe(options.domains).map(domain => String(domain).trim()).filter(Boolean);
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity"
@@ -7907,9 +7918,10 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
           class="editor-control-host"
           data-field="${escapeHtml(field)}"
@@ -7936,11 +7948,12 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input data-field="${escapeHtml(field)}" type="checkbox" ${checked ? "checked" : ""} />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
@@ -8193,8 +8206,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-          <div class="editor-section__hint">Entidad del robot y fuente principal del mapa.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+          <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad del robot y fuente principal del mapa."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderEntityPickerField("Entidad vacuum", "entity", config.entity, { domains: ["vacuum"] })}
@@ -8212,8 +8225,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Mapa</div>
-            <div class="editor-section__hint">La tarjeta reutiliza automaticamente tu config legacy de \`map_modes\` e \`icons\` si la pegas en YAML.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Mapa"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("La tarjeta reutiliza automaticamente tu config legacy de \\`map_modes\\` e \\`icons\\` si la pegas en YAML."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Calibracion desde camera", "calibration_source.camera", config.calibration_source?.camera !== false)}
@@ -8230,8 +8243,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Controles avanzados</div>
-            <div class="editor-section__hint">Selector de aspirado/fregado, menu derecho y rutinas configurables. En rutinas puedes usar \`entity\`, \`label\`, \`icon\`, \`service\`, \`service_data\` o \`tap_action\`.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Controles avanzados"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Selector de aspirado/fregado, menu derecho y rutinas configurables. En rutinas puedes usar \\`entity\\`, \\`label\\`, \\`icon\\`, \\`service\\`, \\`service_data\\` o \\`tap_action\\`."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Modo todo", "show_all_mode", config.show_all_mode !== false)}
@@ -8261,8 +8274,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Que elementos quieres mantener siempre visibles.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Que elementos quieres mantener siempre visibles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Chip de estado", "show_state_chip", config.show_state_chip !== false)}
@@ -8276,8 +8289,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica opcional para clicks y selecciones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta haptica opcional para clicks y selecciones."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics?.enabled === true)}
@@ -8296,8 +8309,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Entrada suave de la tarjeta, paneles y respuesta visual al pulsar controles.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave de la tarjeta, paneles y respuesta visual al pulsar controles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
@@ -8318,8 +8331,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilo</div>
-            <div class="editor-section__hint">Ajustes visuales base del mapa y las burbujas.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilo"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base del mapa y las burbujas."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"

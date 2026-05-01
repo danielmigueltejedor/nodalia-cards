@@ -1044,10 +1044,19 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
       .join("");
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, path, value = "", options = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="text"
           data-path="${escapeHtml(path)}"
@@ -1059,21 +1068,23 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, path, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-checkbox">
         <input type="checkbox" data-path="${escapeHtml(path)}" ${checked ? "checked" : ""} />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, path, value, options) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-path="${escapeHtml(path)}">
-          ${options.map(option => `<option value="${escapeHtml(option.value)}" ${option.value === value ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+          ${options.map(option => `<option value="${escapeHtml(option.value)}" ${option.value === value ? "selected" : ""}>${escapeHtml(this._editorLabel(option.label))}</option>`).join("")}
         </select>
       </label>
     `;
@@ -1217,10 +1228,10 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
 </style>
       <div class="editor">
         <div class="editor-section">
-          <h3>Contenido</h3>
+          <h3>${escapeHtml(this._editorLabel("Contenido"))}</h3>
           <div class="editor-grid">
             <label class="editor-field">
-              <span>Entidad</span>
+              <span>${escapeHtml(this._editorLabel("Entidad"))}</span>
               <input list="insignia-entities" data-path="entity" value="${escapeHtml(config.entity || "")}" />
               <datalist id="insignia-entities">${this._getEntityOptions()}</datalist>
             </label>
@@ -1237,7 +1248,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
         </div>
 
         <div class="editor-section">
-          <h3>Accion</h3>
+          <h3>${escapeHtml(this._editorLabel("Accion"))}</h3>
           <div class="editor-grid">
             ${this._renderSelectField("Tap action", "tap_action", config.tap_action || "auto", [
               { value: "auto", label: "Auto" },
@@ -1256,7 +1267,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
         </div>
 
         <div class="editor-section">
-          <h3>Estilo</h3>
+          <h3>${escapeHtml(this._editorLabel("Estilo"))}</h3>
           <div class="editor-grid">
             ${this._renderTextField("Tamano icono", "styles.icon.size", config.styles?.icon?.size || DEFAULT_CONFIG.styles.icon.size)}
             ${this._renderTextField("Tamano nombre", "styles.title_size", config.styles?.title_size || DEFAULT_CONFIG.styles.title_size)}
