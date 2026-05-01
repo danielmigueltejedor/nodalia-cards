@@ -12,13 +12,53 @@
     return PACK[two] ? two : null;
   }
 
+  /**
+   * Lovelace often calls setConfig before hass is set on the editor element.
+   * Use the app root hass so resolveLanguage still sees HA profile / locale.
+   */
+  function resolveHass(hass) {
+    if (hass != null && typeof hass === "object") {
+      if (
+        hass.states != null
+        || hass.config != null
+        || hass.locale != null
+        || hass.user != null
+        || typeof hass.callService === "function"
+      ) {
+        return hass;
+      }
+    }
+    if (typeof document === "undefined") {
+      return hass;
+    }
+    try {
+      const root = document.querySelector("home-assistant");
+      if (root?.hass) {
+        return root.hass;
+      }
+    } catch (_err) {
+      // ignore
+    }
+    return hass;
+  }
+
   function resolveLanguage(hass, configLang) {
+    const h = resolveHass(hass);
     const configured = baseLang(configLang);
     if (configured) {
       return configured;
     }
-    const ha = baseLang(hass?.locale?.language || hass?.language || "");
-    return ha || "es";
+    const ha = baseLang(h?.locale?.language || h?.language || "");
+    if (ha) {
+      return ha;
+    }
+    if (typeof navigator !== "undefined" && navigator.language) {
+      const nav = baseLang(String(navigator.language));
+      if (nav) {
+        return nav;
+      }
+    }
+    return "es";
   }
 
   function localeTag(langCode) {
@@ -2107,6 +2147,7 @@
 
   window.NodaliaI18n = {
     PACK,
+    resolveHass,
     resolveLanguage,
     localeTag,
     normalizeTextKey,

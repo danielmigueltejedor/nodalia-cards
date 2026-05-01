@@ -133,10 +133,10 @@ for (const k of EXTRA_EDITOR_KEYS) {
 
 function translateEsToEn(s) {
   if (s.startsWith("__T__:")) {
-    return "__T__:" + translateEsToEnTitle(s.slice(5));
+    return translateEsToEnTitle(s.slice("__T__:".length));
   }
   if (s.startsWith("__H__:")) {
-    return "__H__:" + translateEsToEnHint(s.slice(5));
+    return translateEsToEnHint(s.slice("__H__:".length));
   }
   if (/^(Background|Border|Gap|Padding|Radius|Shadow|URL|Tap action|Tap card)$/i.test(s)) {
     return s;
@@ -151,8 +151,8 @@ function translateEsToEn(s) {
     [/Activar haptics/gi, "Enable haptics"],
     [/Activar respuesta háptica/gi, "Enable haptic feedback"],
     [/Ajuste icono \(solo icono\)/gi, "Icon fit (icon only)"],
-    [/Alto burbuja info/gi, "Info bubble height"],
     [/Alto burbuja informativa/gi, "Info bubble height"],
+    [/Alto burbuja info/gi, "Info bubble height"],
     [/Alto chip/gi, "Chip height"],
     [/Alto chips/gi, "Chip height"],
     [/Alto contenedor slider/gi, "Slider container height"],
@@ -170,30 +170,23 @@ function translateEsToEn(s) {
     [/Atributo chip secundario/gi, "Secondary chip attribute"],
     [/Atributo de estado/gi, "State attribute"],
     [/Atributo secundario/gi, "Secondary attribute"],
-    [/Badge de no disponible/gi, "Unavailable badge"],
-    [/Badge no disponible/gi, "Unavailable badge"],
     [/Borde de la tarjeta/gi, "Card border"],
     [/Borde del navegador/gi, "Browser border"],
     [/Borde del reproductor/gi, "Player border"],
     [/Borde tarjeta/gi, "Card border"],
-    [/Borde/gi, "Border"],
+    [/Radio borde/gi, "Border radius"],
+    [/Radio del borde/gi, "Border radius"],
+    [/Radio del navegador/gi, "Browser radius"],
+    [/\bBorde\b/gi, "Border"],
     [/Boton localizar/gi, "Locate button"],
     [/Boton parar/gi, "Stop button"],
     [/Boton volver a base/gi, "Return to dock button"],
     [/Botón localizar/gi, "Locate button"],
     [/Botón parar/gi, "Stop button"],
     [/Botón volver a base/gi, "Return to dock button"],
-    [/Botones de modo junto al slider/gi, "Mode buttons next to slider"],
-    [/Botones de modo/gi, "Mode buttons"],
-    [/Botones \+ \/ -/gi, "+ / − buttons"],
     [/Breakpoint móvil/gi, "Mobile breakpoint"],
     [/Calibracion desde camera/gi, "Calibration from camera"],
     [/Cambio entre sliders \(ms\)/gi, "Slider switch (ms)"],
-    [/Chip de bateria/gi, "Battery chip"],
-    [/Chip de batería/gi, "Battery chip"],
-    [/Chip de estado/gi, "State chip"],
-    [/Chip de humedad/gi, "Humidity chip"],
-    [/Chip de temperatura actual/gi, "Current temperature chip"],
     [/Click entidades/gi, "Entity click"],
     [/Color auto/gi, "Auto color"],
     [/Color calor/gi, "Heat color"],
@@ -232,12 +225,6 @@ function translateEsToEn(s) {
     [/Estado a la derecha del nombre/gi, "State on title row"],
     [/Estados visibles/gi, "Visible states"],
     [/Estilo/gi, "Style"],
-    [/Etiqueta boton energia/gi, "Energy button label"],
-    [/Etiqueta maximo/gi, "Maximum label"],
-    [/Etiqueta menu derecho/gi, "Right menu label"],
-    [/Etiqueta minimo/gi, "Minimum label"],
-    [/Etiqueta/gi, "Label"],
-    [/Etiquetas/gi, "Labels"],
     [/Expansión de controles \(ms\)/gi, "Controls expand (ms)"],
     [/Fallback con vibracion/gi, "Vibration fallback"],
     [/Fallback con vibración/gi, "Vibration fallback"],
@@ -246,8 +233,8 @@ function translateEsToEn(s) {
     [/Grafico en color/gi, "Color chart"],
     [/Grosor del slider/gi, "Slider thickness"],
     [/Grosor dial/gi, "Dial thickness"],
-    [/Grosor linea/gi, "Line thickness"],
     [/Grosor lineas/gi, "Line thickness"],
+    [/Grosor linea/gi, "Line thickness"],
     [/Grosor slider/gi, "Slider thickness"],
     [/Helper codigo/gi, "Code helper"],
     [/Helper sesion compartida/gi, "Shared session helper"],
@@ -255,7 +242,6 @@ function translateEsToEn(s) {
     [/Horas visibles/gi, "Visible hours"],
     [/Icono fallback/gi, "Fallback icon"],
     [/Icono menu derecho/gi, "Right menu icon"],
-    [/Icono/gi, "Icon"],
     [/Iconos cabecera/gi, "Header icons"],
     [/Imagen personalizada/gi, "Custom image"],
     [/Info secundaria/gi, "Secondary info"],
@@ -311,9 +297,16 @@ function translateEsToEn(s) {
     [/Mostrar estado/gi, "Show state"],
     [/Mostrar etiquetas del grafico/gi, "Show chart labels"],
     [/Mostrar etiquetas habitaciones/gi, "Show room labels"],
+    [/Etiqueta boton energia/gi, "Energy button label"],
+    [/Etiqueta maximo/gi, "Maximum label"],
+    [/Etiqueta menu derecho/gi, "Right menu label"],
+    [/Etiqueta minimo/gi, "Minimum label"],
+    [/Etiqueta/gi, "Label"],
+    [/Etiquetas/gi, "Labels"],
     [/Mostrar fuentes y apps/gi, "Show sources and apps"],
     [/Mostrar icono inferior/gi, "Show bottom icon"],
     [/Mostrar icono/gi, "Show icon"],
+    [/\bIcono\b/gi, "Icon"],
     [/Mostrar leyenda/gi, "Show legend"],
     [/Mostrar marcadores habitaciones/gi, "Show room markers"],
     [/Mostrar noche/gi, "Show night"],
@@ -330,6 +323,16 @@ function translateEsToEn(s) {
     [/Mostrar vacaciones/gi, "Show vacation"],
     [/Mostrar valor grande/gi, "Show large value"],
     [/Mostrar valor/gi, "Show value"],
+    [/Badge de no disponible/gi, "Unavailable badge"],
+    [/Badge no disponible/gi, "Unavailable badge"],
+    [/Botones de modo junto al slider/gi, "Mode buttons next to slider"],
+    [/Botones de modo/gi, "Mode buttons"],
+    [/Botones \+ \/ -/gi, "+ / − buttons"],
+    [/Chip de bateria/gi, "Battery chip"],
+    [/Chip de batería/gi, "Battery chip"],
+    [/Chip de temperatura actual/gi, "Current temperature chip"],
+    [/Chip de estado/gi, "State chip"],
+    [/Chip de humedad/gi, "Humidity chip"],
     [/Máx ancho chip nombre/gi, "Max name chip width"],
     [/Máximo de fuentes/gi, "Maximum sources"],
     [/Navegador de medios \(ms\)/gi, "Media browser (ms)"],
@@ -351,10 +354,7 @@ function translateEsToEn(s) {
     [/Plataforma/gi, "Platform"],
     [/Presets de brillo/gi, "Brightness presets"],
     [/Puntos/gi, "Points"],
-    [/Radio borde/gi, "Border radius"],
-    [/Radio del borde/gi, "Border radius"],
-    [/Radio del navegador/gi, "Browser radius"],
-    [/Radio/gi, "Radius"],
+    [/\bRadio\b/gi, "Radius"],
     [/Radius mapa/gi, "Map radius"],
     [/Rebote botones \(ms\)/gi, "Button bounce (ms)"],
     [/Rebote de botones \(ms\)/gi, "Button bounce (ms)"],
@@ -439,8 +439,8 @@ function translateEsToEn(s) {
     [/Tamaño título/gi, "Title size"],
     [/Tamaño valor/gi, "Value size"],
     [/Tarjeta fija/gi, "Fixed card"],
-    [/Texto burbuja info/gi, "Info bubble text"],
     [/Texto burbuja informativa/gi, "Info bubble text"],
+    [/Texto burbuja info/gi, "Info bubble text"],
     [/Texto chip/gi, "Chip text"],
     [/Texto chips/gi, "Chip text"],
     [/Texto de chips/gi, "Chip text"],
@@ -744,10 +744,18 @@ function translateEsToEnHint(s) {
   t = t.replace(/Entrada suave del contenido y rebote ligero al pulsar la tarjeta\./gi, "Smooth content entrance and light bounce when tapping the card.");
   t = t.replace(/Entrada suave del flujo y rebote al pulsar nodos o acciones\./gi, "Smooth flow entrance and bounce when tapping nodes or actions.");
   t = t.replace(/Entrada suave del contenido y rebote al pulsar la tarjeta\./gi, "Smooth content entrance and bounce when tapping the card.");
-  return translateEsToEn(t);
+  return t;
+}
+
+/** Only apply Show/Enable/Open shims to short field labels, not full English hint sentences. */
+function isCompactUiEnglish(s) {
+  return typeof s === "string" && !/,/.test(s) && s.length <= 72;
 }
 
 function enToDe(s) {
+  if (!isCompactUiEnglish(s)) {
+    return s;
+  }
   return s
     .replace(/^Show /, "Anzeigen: ")
     .replace(/^Enable /, "Aktivieren: ")
@@ -777,6 +785,9 @@ function enToDe(s) {
 }
 
 function enToFr(s) {
+  if (!isCompactUiEnglish(s)) {
+    return s;
+  }
   return s
     .replace(/^Show /, "Afficher ")
     .replace(/^Enable /, "Activer ")
@@ -805,6 +816,9 @@ function enToFr(s) {
 }
 
 function enToIt(s) {
+  if (!isCompactUiEnglish(s)) {
+    return s;
+  }
   return s
     .replace(/^Show /, "Mostra ")
     .replace(/^Enable /, "Abilita ")
@@ -833,6 +847,9 @@ function enToIt(s) {
 }
 
 function enToNl(s) {
+  if (!isCompactUiEnglish(s)) {
+    return s;
+  }
   return s
     .replace(/^Show /, "Toon ")
     .replace(/^Enable /, "Schakel ")
@@ -891,10 +908,16 @@ for (const r of [...rows]) {
   }
 }
 
+const rowByEs = new Map();
+for (const r of rows) {
+  rowByEs.set(r.es, r);
+}
+const dedupedRows = [...rowByEs.values()];
+
 const out = `/* eslint-disable max-len */
 /* Auto-generated by scripts/gen-editor-ui.mjs — run: node scripts/gen-editor-ui.mjs */
 (() => {
-  const ROWS = ${JSON.stringify(rows, null, 2)};
+  const ROWS = ${JSON.stringify(dedupedRows, null, 2)};
 
   function buildMap(lang) {
     const m = {};
@@ -926,4 +949,4 @@ const out = `/* eslint-disable max-len */
 `;
 
 fs.writeFileSync(path.join(root, "nodalia-editor-ui.js"), out);
-console.log("Wrote nodalia-editor-ui.js", rows.length, "strings");
+console.log("Wrote nodalia-editor-ui.js", dedupedRows.length, "strings");
