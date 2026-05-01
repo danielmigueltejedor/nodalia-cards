@@ -1,8 +1,10 @@
 # 🎨 Nodalia Cards
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
+![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
+![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=beta)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Status](https://img.shields.io/badge/status-stable-success.svg)
+![Status](https://img.shields.io/badge/status-beta-orange.svg)
 ![GitHub](https://img.shields.io/badge/hosted%20on-GitHub-black?logo=github)
 
 **Nodalia Cards** is a custom card bundle for Home Assistant focused on creating a cleaner, more polished and more app-like dashboard experience.
@@ -30,8 +32,8 @@ The goal is not only to provide beautiful cards, but to build a consistent UI sy
 Animations and interactions in action:
 
 <p align="center">
-  <img src="docs/gifs/animations1.gif" width="280"/>
-  <img src="docs/gifs/animations2.gif" width="280"/>
+  <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/gifs/animations1.optimized.gif" width="280"/>
+  <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/gifs/animations2.optimized.gif" width="280"/>
 </p>
 
 ---
@@ -82,8 +84,7 @@ Currently optimized for Spanish. English and more languages will be added over t
 - Redesign graph card  
 - Improve energy flow card  
 - Refine navigation bar  
-- Improve multilingual support  
-- Prepare beta channel  
+- Improve multilingual support 
 
 ---
 

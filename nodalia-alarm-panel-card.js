@@ -600,7 +600,18 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   }
 
   _getTitle(state) {
-    return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Alarma";
+    if (this._config?.name) {
+      return this._config.name;
+    }
+    if (state?.attributes?.friendly_name) {
+      return state.attributes.friendly_name;
+    }
+    if (this._config?.entity) {
+      return this._config.entity;
+    }
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    return window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.defaultTitle || "Alarma";
   }
 
   _getIcon() {
@@ -609,6 +620,13 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
   _translateState(state) {
     const key = normalizeTextKey(state?.state);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const alarmStrings = window.NodaliaI18n?.strings?.(lang)?.alarmPanel;
+    const translated = alarmStrings?.states?.[key];
+    if (translated) {
+      return translated;
+    }
 
     switch (key) {
       case "disarmed":
@@ -638,7 +656,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       case "unknown":
         return "Desconocida";
       default:
-        return state?.state ? String(state.state) : "Sin estado";
+        return state?.state ? String(state.state) : (alarmStrings?.noState || "Sin estado");
     }
   }
 

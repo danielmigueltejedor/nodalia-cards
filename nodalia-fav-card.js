@@ -879,6 +879,15 @@ class NodaliaFavCard extends HTMLElement {
       return `${rawState} ${unit}`;
     }
 
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    if (window.NodaliaI18n?.translateFavState) {
+      const translated = window.NodaliaI18n.translateFavState(lang, key);
+      if (translated) {
+        return translated;
+      }
+    }
+
     switch (key) {
       case "on":
         return "Encendido";

@@ -2651,6 +2651,174 @@
     "nl": "Values"
   },
   {
+    "es": "Serie",
+    "en": "Series",
+    "de": "Serien",
+    "fr": "Séries",
+    "it": "Serie",
+    "nl": "Reeksen"
+  },
+  {
+    "es": "Datos",
+    "en": "Data",
+    "de": "Data",
+    "fr": "Data",
+    "it": "Data",
+    "nl": "Data"
+  },
+  {
+    "es": "Color de la linea",
+    "en": "Line color",
+    "de": "Line color",
+    "fr": "Line color",
+    "it": "Line color",
+    "nl": "Line color"
+  },
+  {
+    "es": "Selecciona una entidad",
+    "en": "Select an entity",
+    "de": "Select an entity",
+    "fr": "Select an entity",
+    "it": "Select an entity",
+    "nl": "Select an entity"
+  },
+  {
+    "es": "Todavia no has anadido ninguna serie.",
+    "en": "You have not added any series yet.",
+    "de": "You have not added any series yet.",
+    "fr": "You have not added any series yet.",
+    "it": "You have not added any series yet.",
+    "nl": "You have not added any series yet."
+  },
+  {
+    "es": "Anadir serie",
+    "en": "Add series",
+    "de": "Add series",
+    "fr": "Add series",
+    "it": "Add series",
+    "nl": "Add series"
+  },
+  {
+    "es": "Borde barra",
+    "en": "Bar border",
+    "de": "Bar border",
+    "fr": "Bar border",
+    "it": "Bar border",
+    "nl": "Bar border"
+  },
+  {
+    "es": "Dejalo vacio para solo icono",
+    "en": "Leave empty for icon only",
+    "de": "Leave empty for icon only",
+    "fr": "Leave empty for icon only",
+    "it": "Leave empty for icon only",
+    "nl": "Leave empty for icon only"
+  },
+  {
+    "es": "Aqui ya puedes editar popup y media player. Para acciones muy avanzadas, sigue siendo mejor completar el YAML.",
+    "en": "You can edit popup and media player here. For very advanced actions, it is still better to complete YAML.",
+    "de": "You can edit popup and media player here. For very advanced actions, it is still better to complete YAML.",
+    "fr": "You can edit popup and media player here. For very advanced actions, it is still better to complete YAML.",
+    "it": "You can edit popup and media player here. For very advanced actions, it is still better to complete YAML.",
+    "nl": "You can edit popup and media player here. For very advanced actions, it is still better to complete YAML."
+  },
+  {
+    "es": "Selección",
+    "en": "Selection",
+    "de": "Selection",
+    "fr": "Selection",
+    "it": "Selection",
+    "nl": "Selection"
+  },
+  {
+    "es": "Ligero",
+    "en": "Light",
+    "de": "Light",
+    "fr": "Light",
+    "it": "Light",
+    "nl": "Light"
+  },
+  {
+    "es": "Medio",
+    "en": "Medium",
+    "de": "Medium",
+    "fr": "Medium",
+    "it": "Medium",
+    "nl": "Medium"
+  },
+  {
+    "es": "Intenso",
+    "en": "Heavy",
+    "de": "Heavy",
+    "fr": "Heavy",
+    "it": "Heavy",
+    "nl": "Heavy"
+  },
+  {
+    "es": "Éxito",
+    "en": "Success",
+    "de": "Success",
+    "fr": "Success",
+    "it": "Success",
+    "nl": "Success"
+  },
+  {
+    "es": "Aviso",
+    "en": "Warning",
+    "de": "Warning",
+    "fr": "Warning",
+    "it": "Warning",
+    "nl": "Warning"
+  },
+  {
+    "es": "Fallo",
+    "en": "Failure",
+    "de": "Failure",
+    "fr": "Failure",
+    "it": "Failure",
+    "nl": "Failure"
+  },
+  {
+    "es": "Inferior",
+    "en": "Bottom",
+    "de": "Bottom",
+    "fr": "Bottom",
+    "it": "Bottom",
+    "nl": "Bottom"
+  },
+  {
+    "es": "Superior",
+    "en": "Top",
+    "de": "Top",
+    "fr": "Top",
+    "it": "Top",
+    "nl": "Top"
+  },
+  {
+    "es": "Auto",
+    "en": "Auto",
+    "de": "Auto",
+    "fr": "Auto",
+    "it": "Auto",
+    "nl": "Auto"
+  },
+  {
+    "es": "Vertical",
+    "en": "Vertical",
+    "de": "Vertical",
+    "fr": "Vertical",
+    "it": "Vertical",
+    "nl": "Vertical"
+  },
+  {
+    "es": "Horizontal",
+    "en": "Horizontal",
+    "de": "Horizontal",
+    "fr": "Horizontal",
+    "it": "Horizontal",
+    "nl": "Horizontal"
+  },
+  {
     "es": "Veladura del navegador",
     "en": "Browser backdrop",
     "de": "Browser backdrop",

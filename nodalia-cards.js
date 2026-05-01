@@ -427,6 +427,21 @@
           humidityLabel: "Humedad",
           windLabel: "Viento",
         },
+        meteoalarm: {
+          name: "Meteoalarm",
+          alertFallback: "Alerta",
+          noAlerts: "Sin alertas",
+          weatherAlert: "Alerta meteorologica",
+          noWeatherAlerts: "Sin alertas meteorologicas",
+          level: "Nivel",
+          type: "Tipo",
+          start: "Inicio",
+          end: "Fin",
+          severity: "Severidad",
+          urgency: "Urgencia",
+          certainty: "Certeza",
+          close: "Cerrar",
+        },
       },
       humidifierCard: {
         modes: {
@@ -807,6 +822,21 @@
           rainLabel: "Rain",
           humidityLabel: "Humidity",
           windLabel: "Wind",
+        },
+        meteoalarm: {
+          name: "Meteoalarm",
+          alertFallback: "Alert",
+          noAlerts: "No alerts",
+          weatherAlert: "Weather alert",
+          noWeatherAlerts: "No weather alerts",
+          level: "Level",
+          type: "Type",
+          start: "Start",
+          end: "End",
+          severity: "Severity",
+          urgency: "Urgency",
+          certainty: "Certainty",
+          close: "Close",
         },
       },
       humidifierCard: {
@@ -1189,6 +1219,21 @@
           humidityLabel: "Luftfeuchte",
           windLabel: "Wind",
         },
+        meteoalarm: {
+          name: "Meteoalarm",
+          alertFallback: "Warnung",
+          noAlerts: "Keine Warnungen",
+          weatherAlert: "Wetterwarnung",
+          noWeatherAlerts: "Keine Wetterwarnungen",
+          level: "Stufe",
+          type: "Typ",
+          start: "Beginn",
+          end: "Ende",
+          severity: "Schweregrad",
+          urgency: "Dringlichkeit",
+          certainty: "Sicherheit",
+          close: "Schließen",
+        },
       },
       humidifierCard: {
         modes: {
@@ -1569,6 +1614,21 @@
           rainLabel: "Pluie",
           humidityLabel: "Humidité",
           windLabel: "Vent",
+        },
+        meteoalarm: {
+          name: "Meteoalarm",
+          alertFallback: "Alerte",
+          noAlerts: "Aucune alerte",
+          weatherAlert: "Alerte météo",
+          noWeatherAlerts: "Aucune alerte météo",
+          level: "Niveau",
+          type: "Type",
+          start: "Début",
+          end: "Fin",
+          severity: "Sévérité",
+          urgency: "Urgence",
+          certainty: "Certitude",
+          close: "Fermer",
         },
       },
       humidifierCard: {
@@ -1951,6 +2011,21 @@
           humidityLabel: "Umidità",
           windLabel: "Vento",
         },
+        meteoalarm: {
+          name: "Meteoalarm",
+          alertFallback: "Allerta",
+          noAlerts: "Nessuna allerta",
+          weatherAlert: "Allerta meteo",
+          noWeatherAlerts: "Nessuna allerta meteo",
+          level: "Livello",
+          type: "Tipo",
+          start: "Inizio",
+          end: "Fine",
+          severity: "Severità",
+          urgency: "Urgenza",
+          certainty: "Certezza",
+          close: "Chiudi",
+        },
       },
       humidifierCard: {
         modes: {
@@ -2331,6 +2406,21 @@
           rainLabel: "Regen",
           humidityLabel: "Luchtvochtigheid",
           windLabel: "Wind",
+        },
+        meteoalarm: {
+          name: "Meteoalarm",
+          alertFallback: "Waarschuwing",
+          noAlerts: "Geen waarschuwingen",
+          weatherAlert: "Weeralarm",
+          noWeatherAlerts: "Geen weeralarmen",
+          level: "Niveau",
+          type: "Type",
+          start: "Start",
+          end: "Einde",
+          severity: "Ernst",
+          urgency: "Urgentie",
+          certainty: "Zekerheid",
+          close: "Sluiten",
         },
       },
       humidifierCard: {
@@ -5385,6 +5475,174 @@
     "fr": "Values",
     "it": "Values",
     "nl": "Values"
+  },
+  {
+    "es": "Serie",
+    "en": "Series",
+    "de": "Serien",
+    "fr": "Séries",
+    "it": "Serie",
+    "nl": "Reeksen"
+  },
+  {
+    "es": "Datos",
+    "en": "Data",
+    "de": "Data",
+    "fr": "Data",
+    "it": "Data",
+    "nl": "Data"
+  },
+  {
+    "es": "Color de la linea",
+    "en": "Line color",
+    "de": "Line color",
+    "fr": "Line color",
+    "it": "Line color",
+    "nl": "Line color"
+  },
+  {
+    "es": "Selecciona una entidad",
+    "en": "Select an entity",
+    "de": "Select an entity",
+    "fr": "Select an entity",
+    "it": "Select an entity",
+    "nl": "Select an entity"
+  },
+  {
+    "es": "Todavia no has anadido ninguna serie.",
+    "en": "You have not added any series yet.",
+    "de": "You have not added any series yet.",
+    "fr": "You have not added any series yet.",
+    "it": "You have not added any series yet.",
+    "nl": "You have not added any series yet."
+  },
+  {
+    "es": "Anadir serie",
+    "en": "Add series",
+    "de": "Add series",
+    "fr": "Add series",
+    "it": "Add series",
+    "nl": "Add series"
+  },
+  {
+    "es": "Borde barra",
+    "en": "Bar border",
+    "de": "Bar border",
+    "fr": "Bar border",
+    "it": "Bar border",
+    "nl": "Bar border"
+  },
+  {
+    "es": "Dejalo vacio para solo icono",
+    "en": "Leave empty for icon only",
+    "de": "Leave empty for icon only",
+    "fr": "Leave empty for icon only",
+    "it": "Leave empty for icon only",
+    "nl": "Leave empty for icon only"
+  },
+  {
+    "es": "Aqui ya puedes editar popup y media player. Para acciones muy avanzadas, sigue siendo mejor completar el YAML.",
+    "en": "You can edit popup and media player here. For very advanced actions, it is still better to complete YAML.",
+    "de": "You can edit popup and media player here. For very advanced actions, it is still better to complete YAML.",
+    "fr": "You can edit popup and media player here. For very advanced actions, it is still better to complete YAML.",
+    "it": "You can edit popup and media player here. For very advanced actions, it is still better to complete YAML.",
+    "nl": "You can edit popup and media player here. For very advanced actions, it is still better to complete YAML."
+  },
+  {
+    "es": "Selección",
+    "en": "Selection",
+    "de": "Selection",
+    "fr": "Selection",
+    "it": "Selection",
+    "nl": "Selection"
+  },
+  {
+    "es": "Ligero",
+    "en": "Light",
+    "de": "Light",
+    "fr": "Light",
+    "it": "Light",
+    "nl": "Light"
+  },
+  {
+    "es": "Medio",
+    "en": "Medium",
+    "de": "Medium",
+    "fr": "Medium",
+    "it": "Medium",
+    "nl": "Medium"
+  },
+  {
+    "es": "Intenso",
+    "en": "Heavy",
+    "de": "Heavy",
+    "fr": "Heavy",
+    "it": "Heavy",
+    "nl": "Heavy"
+  },
+  {
+    "es": "Éxito",
+    "en": "Success",
+    "de": "Success",
+    "fr": "Success",
+    "it": "Success",
+    "nl": "Success"
+  },
+  {
+    "es": "Aviso",
+    "en": "Warning",
+    "de": "Warning",
+    "fr": "Warning",
+    "it": "Warning",
+    "nl": "Warning"
+  },
+  {
+    "es": "Fallo",
+    "en": "Failure",
+    "de": "Failure",
+    "fr": "Failure",
+    "it": "Failure",
+    "nl": "Failure"
+  },
+  {
+    "es": "Inferior",
+    "en": "Bottom",
+    "de": "Bottom",
+    "fr": "Bottom",
+    "it": "Bottom",
+    "nl": "Bottom"
+  },
+  {
+    "es": "Superior",
+    "en": "Top",
+    "de": "Top",
+    "fr": "Top",
+    "it": "Top",
+    "nl": "Top"
+  },
+  {
+    "es": "Auto",
+    "en": "Auto",
+    "de": "Auto",
+    "fr": "Auto",
+    "it": "Auto",
+    "nl": "Auto"
+  },
+  {
+    "es": "Vertical",
+    "en": "Vertical",
+    "de": "Vertical",
+    "fr": "Vertical",
+    "it": "Vertical",
+    "nl": "Vertical"
+  },
+  {
+    "es": "Horizontal",
+    "en": "Horizontal",
+    "de": "Horizontal",
+    "fr": "Horizontal",
+    "it": "Horizontal",
+    "nl": "Horizontal"
   },
   {
     "es": "Veladura del navegador",
@@ -12241,7 +12499,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-popup-index="${popupIndex}"
               ${popupIndex === 0 ? "disabled" : ""}
             >
-              Subir
+              ${this._L("Subir")}
             </button>
             <button
               type="button"
@@ -12251,7 +12509,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-popup-index="${popupIndex}"
               ${popupIndex === popupTotal - 1 ? "disabled" : ""}
             >
-              Bajar
+              ${this._L("Bajar")}
             </button>
             <button
               type="button"
@@ -12260,7 +12518,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-route-index="${routeIndex}"
               data-popup-index="${popupIndex}"
             >
-              Eliminar
+              ${this._L("Eliminar")}
             </button>
           </div>
         </div>
@@ -12274,7 +12532,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-popup-field="label"
               data-optional="true"
               value="${escapeHtml(popupItem.label || "")}"
-              placeholder="Dejalo vacio para solo icono"
+              placeholder="${escapeHtml(this._L("Dejalo vacio para solo icono"))}"
             />
           </label>
           <label>
@@ -12358,7 +12616,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
         <div class="route-head">
           <strong>${this._L("Player")} ${index + 1}</strong>
           <button type="button" class="danger" data-editor-action="remove-player" data-player-index="${index}">
-            Eliminar
+            ${this._L("Eliminar")}
           </button>
         </div>
         <div class="grid">
@@ -12481,7 +12739,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-route-index="${index}"
               ${index === 0 ? "disabled" : ""}
             >
-              Subir
+              ${this._L("Subir")}
             </button>
             <button
               type="button"
@@ -12490,10 +12748,10 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-route-index="${index}"
               ${index === totalRoutes - 1 ? "disabled" : ""}
             >
-              Bajar
+              ${this._L("Bajar")}
             </button>
             <button type="button" class="danger" data-editor-action="remove-route" data-route-index="${index}">
-              Eliminar
+              ${this._L("Eliminar")}
             </button>
           </div>
         </div>
@@ -12537,9 +12795,9 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           <label>
             <span>${this._L("Layout popup")}</span>
             <select data-route-index="${index}" data-route-field="popup_layout" data-optional="true">
-              <option value="" ${!route.popup_layout ? "selected" : ""}>Auto</option>
-              <option value="vertical" ${route.popup_layout === "vertical" ? "selected" : ""}>Vertical</option>
-              <option value="horizontal" ${route.popup_layout === "horizontal" ? "selected" : ""}>Horizontal</option>
+              <option value="" ${!route.popup_layout ? "selected" : ""}>${this._L("Auto")}</option>
+              <option value="vertical" ${route.popup_layout === "vertical" ? "selected" : ""}>${this._L("Vertical")}</option>
+              <option value="horizontal" ${route.popup_layout === "horizontal" ? "selected" : ""}>${this._L("Horizontal")}</option>
             </select>
           </label>
           <label class="checkbox">
@@ -12559,7 +12817,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           <div class="route-head route-head--subsection">
             <strong>${this._L("Popup")}</strong>
             <button type="button" data-editor-action="add-popup-item" data-route-index="${index}">
-              Anadir popup
+              ${this._L("Anadir popup")}
             </button>
           </div>
           ${popupMarkup}
@@ -12830,13 +13088,13 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             <label>
               <span>${this._L("Estilo haptico")}</span>
               <select data-field="haptics.style">
-                <option value="selection" ${config.haptics.style === "selection" ? "selected" : ""}>Selection</option>
-                <option value="light" ${config.haptics.style === "light" ? "selected" : ""}>Light</option>
-                <option value="medium" ${config.haptics.style === "medium" ? "selected" : ""}>Medium</option>
-                <option value="heavy" ${config.haptics.style === "heavy" ? "selected" : ""}>Heavy</option>
-                <option value="success" ${config.haptics.style === "success" ? "selected" : ""}>Success</option>
-                <option value="warning" ${config.haptics.style === "warning" ? "selected" : ""}>Warning</option>
-                <option value="failure" ${config.haptics.style === "failure" ? "selected" : ""}>Failure</option>
+                <option value="selection" ${config.haptics.style === "selection" ? "selected" : ""}>${this._L("Selección")}</option>
+                <option value="light" ${config.haptics.style === "light" ? "selected" : ""}>${this._L("Ligero")}</option>
+                <option value="medium" ${config.haptics.style === "medium" ? "selected" : ""}>${this._L("Medio")}</option>
+                <option value="heavy" ${config.haptics.style === "heavy" ? "selected" : ""}>${this._L("Intenso")}</option>
+                <option value="success" ${config.haptics.style === "success" ? "selected" : ""}>${this._L("Éxito")}</option>
+                <option value="warning" ${config.haptics.style === "warning" ? "selected" : ""}>${this._L("Aviso")}</option>
+                <option value="failure" ${config.haptics.style === "failure" ? "selected" : ""}>${this._L("Fallo")}</option>
               </select>
             </label>
             <label class="checkbox">
@@ -12851,8 +13109,8 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             <label>
               <span>${this._L("Posicion")}</span>
               <select data-field="layout.position">
-                <option value="bottom" ${config.layout.position === "bottom" ? "selected" : ""}>Inferior</option>
-                <option value="top" ${config.layout.position === "top" ? "selected" : ""}>Superior</option>
+                <option value="bottom" ${config.layout.position === "bottom" ? "selected" : ""}>${this._L("Inferior")}</option>
+                <option value="top" ${config.layout.position === "top" ? "selected" : ""}>${this._L("Superior")}</option>
               </select>
             </label>
             <label>
@@ -12897,7 +13155,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             </label>
           </div>
           <p class="hint">
-            Aqui ya puedes editar popup y media player. Para acciones muy avanzadas, sigue siendo mejor completar el YAML.
+            ${this._L("Aqui ya puedes editar popup y media player. Para acciones muy avanzadas, sigue siendo mejor completar el YAML.")}
           </p>
         </section>
 
@@ -12969,7 +13227,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               ? `
                 <div class="editor-grid">
                   <label><span>${this._L("Fondo barra")}</span><input type="text" data-field="styles.bar.background" value="${escapeHtml(config.styles.bar.background || "")}" /></label>
-                  <label><span>Borde barra</span><input type="text" data-field="styles.bar.border" value="${escapeHtml(config.styles.bar.border || "")}" /></label>
+                  <label><span>${this._L("Borde barra")}</span><input type="text" data-field="styles.bar.border" value="${escapeHtml(config.styles.bar.border || "")}" /></label>
                   <label><span>${this._L("Radio barra")}</span><input type="text" data-field="styles.bar.border_radius" value="${escapeHtml(config.styles.bar.border_radius || "")}" /></label>
                   <label><span>${this._L("Sombra barra")}</span><input type="text" data-field="styles.bar.box_shadow" value="${escapeHtml(config.styles.bar.box_shadow || "")}" /></label>
                   <label><span>${this._L("Padding barra")}</span><input type="text" data-field="styles.bar.padding" value="${escapeHtml(config.styles.bar.padding || "")}" /></label>
@@ -13002,9 +13260,9 @@ class NodaliaNavigationBarEditor extends HTMLElement {
                   <label>
                     <span>${this._L("Layout popup")}</span>
                     <select data-field="styles.popup.layout" data-optional="true">
-                      <option value="" ${!config.styles.popup.layout || config.styles.popup.layout === "auto" ? "selected" : ""}>Auto</option>
-                      <option value="vertical" ${config.styles.popup.layout === "vertical" ? "selected" : ""}>Vertical</option>
-                      <option value="horizontal" ${config.styles.popup.layout === "horizontal" ? "selected" : ""}>Horizontal</option>
+                      <option value="" ${!config.styles.popup.layout || config.styles.popup.layout === "auto" ? "selected" : ""}>${this._L("Auto")}</option>
+                      <option value="vertical" ${config.styles.popup.layout === "vertical" ? "selected" : ""}>${this._L("Vertical")}</option>
+                      <option value="horizontal" ${config.styles.popup.layout === "horizontal" ? "selected" : ""}>${this._L("Horizontal")}</option>
                     </select>
                   </label>
                   <label><span>${this._L("Padding popup")}</span><input type="text" data-field="styles.popup.padding" value="${escapeHtml(config.styles.popup.padding || "")}" /></label>
@@ -20942,25 +21200,29 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _getStateLabel(state) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const entityStates = window.NodaliaI18n?.strings?.(lang)?.entityCard?.states;
+
     if (state?.attributes?._nodalia_optimistic_off === true) {
-      return "Apagando";
+      return entityStates?.closing || "Apagando";
     }
 
     if (state?.attributes?._nodalia_optimistic_on === true) {
-      return "Encendiendo";
+      return entityStates?.opening || "Encendiendo";
     }
 
     switch (state?.state) {
       case "on":
-        return "Encendida";
+        return entityStates?.on || "Encendida";
       case "off":
-        return "Apagada";
+        return entityStates?.off || "Apagada";
       case "unavailable":
-        return "No disponible";
+        return entityStates?.unavailable || "No disponible";
       case "unknown":
-        return "Desconocida";
+        return entityStates?.unknown || "Desconocida";
       default:
-        return state?.state ? String(state.state) : "Sin estado";
+        return state?.state ? String(state.state) : (window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.noState || "Sin estado");
     }
   }
 
@@ -24802,7 +25064,9 @@ class NodaliaFanCard extends HTMLElement {
       return state.attributes.friendly_name;
     }
 
-    return this._config?.entity || "Fan";
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    return this._config?.entity || window.NodaliaI18n?.strings?.(lang)?.fan?.fallbackName || "Fan";
   }
 
   _getFanIcon(state) {
@@ -24819,18 +25083,24 @@ class NodaliaFanCard extends HTMLElement {
 
   _getStateLabel(state) {
     const stateValue = normalizeTextKey(state?.state);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const fanStrings = window.NodaliaI18n?.strings?.(lang)?.fan;
+    if (fanStrings?.[stateValue]) {
+      return fanStrings[stateValue];
+    }
 
     switch (stateValue) {
       case "off":
-        return "Apagado";
+        return fanStrings?.off || "Apagado";
       case "on":
-        return "Encendido";
+        return fanStrings?.on || "Encendido";
       case "unavailable":
-        return "No disponible";
+        return fanStrings?.unavailable || "No disponible";
       case "unknown":
-        return "Desconocido";
+        return fanStrings?.unknown || "Desconocido";
       default:
-        return state?.state ? String(state.state) : "Sin estado";
+        return state?.state ? String(state.state) : (fanStrings?.noState || "Sin estado");
     }
   }
 
@@ -37919,15 +38189,15 @@ class NodaliaGraphCardEditor extends HTMLElement {
     return `
       <div class="series-editor-card">
         <div class="series-editor-card__header">
-          <div class="series-editor-card__title">Serie ${index + 1}</div>
+          <div class="series-editor-card__title">${escapeHtml(this._editorLabel("Serie"))} ${index + 1}</div>
           <div class="series-editor-card__actions">
-            <button type="button" data-action="move-series-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>Subir</button>
-            <button type="button" data-action="move-series-down" data-index="${index}" ${index === total - 1 ? "disabled" : ""}>Bajar</button>
-            <button type="button" data-action="remove-series" data-index="${index}" class="danger">Eliminar</button>
+            <button type="button" data-action="move-series-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>${escapeHtml(this._editorLabel("Subir"))}</button>
+            <button type="button" data-action="move-series-down" data-index="${index}" ${index === total - 1 ? "disabled" : ""}>${escapeHtml(this._editorLabel("Bajar"))}</button>
+            <button type="button" data-action="remove-series" data-index="${index}" class="danger">${escapeHtml(this._editorLabel("Eliminar"))}</button>
           </div>
         </div>
         <div class="series-editor-subgroup">
-          <div class="series-editor-subgroup__title">Datos</div>
+          <div class="series-editor-subgroup__title">${escapeHtml(this._editorLabel("Datos"))}</div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityField("Entidad", `entities.${index}.entity`, series.entity, {
               domains: ["sensor", "number", "input_number"],
@@ -37982,7 +38252,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = placeholder || "Selecciona una entidad";
+      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
       control.appendChild(emptyOption);
       this._getEntityOptions(field, allowedDomains).forEach(option => {
         const optionElement = document.createElement("option");
@@ -38429,7 +38699,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
               "tap_action",
               config.tap_action || "more-info",
               [
-                { value: "more-info", label: "Mas informacion" },
+                { value: "more-info", label: "Más información" },
                 { value: "none", label: "Sin accion" },
               ],
             )}
@@ -38461,11 +38731,11 @@ class NodaliaGraphCardEditor extends HTMLElement {
             ${
               entities.length
                 ? entities.map((series, index) => this._renderSeriesCard(series, index, entities.length)).join("")
-                : '<div class="empty-note">Todavia no has anadido ninguna serie.</div>'
+                : `<div class="empty-note">${escapeHtml(this._editorLabel("Todavia no has anadido ninguna serie."))}</div>`
             }
           </div>
           <div class="editor-actions">
-            <button type="button" data-action="add-series">Anadir serie</button>
+            <button type="button" data-action="add-series">${escapeHtml(this._editorLabel("Anadir serie"))}</button>
           </div>
         </section>
 
@@ -38497,7 +38767,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Seleccion" },
+                { value: "selection", label: "Selección" },
                 { value: "light", label: "Ligero" },
                 { value: "medium", label: "Medio" },
                 { value: "heavy", label: "Intenso" },
@@ -38521,7 +38791,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showAnimationSection ? "Ocultar ajustes de animacion" : "Mostrar ajustes de animacion"}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animacion") : this._editorLabel("Mostrar ajustes de animacion"))}</span>
               </button>
             </div>
           </div>
@@ -47501,7 +47771,18 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   }
 
   _getTitle(state) {
-    return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Alarma";
+    if (this._config?.name) {
+      return this._config.name;
+    }
+    if (state?.attributes?.friendly_name) {
+      return state.attributes.friendly_name;
+    }
+    if (this._config?.entity) {
+      return this._config.entity;
+    }
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    return window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.defaultTitle || "Alarma";
   }
 
   _getIcon() {
@@ -47510,6 +47791,13 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
   _translateState(state) {
     const key = normalizeTextKey(state?.state);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const alarmStrings = window.NodaliaI18n?.strings?.(lang)?.alarmPanel;
+    const translated = alarmStrings?.states?.[key];
+    if (translated) {
+      return translated;
+    }
 
     switch (key) {
       case "disarmed":
@@ -47539,7 +47827,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       case "unknown":
         return "Desconocida";
       default:
-        return state?.state ? String(state.state) : "Sin estado";
+        return state?.state ? String(state.state) : (alarmStrings?.noState || "Sin estado");
     }
   }
 
@@ -61603,6 +61891,15 @@ class NodaliaFavCard extends HTMLElement {
       return `${rawState} ${unit}`;
     }
 
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    if (window.NodaliaI18n?.translateFavState) {
+      const translated = window.NodaliaI18n.translateFavState(lang, key);
+      if (translated) {
+        return translated;
+      }
+    }
+
     switch (key) {
       case "on":
         return "Encendido";
@@ -68453,11 +68750,14 @@ class NodaliaWeatherCard extends HTMLElement {
     const accentColor = getMeteoalarmAccentColor(state);
     const isActive = state?.state === "on";
     const awareness = getMeteoalarmAwarenessParts(state);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const wm = window.NodaliaI18n?.strings?.(lang)?.weatherCard?.meteoalarm;
     const label = isActive
-      ? String(attrs.event || attrs.headline || awareness.label || "Alerta").trim()
+      ? String(attrs.event || attrs.headline || awareness.label || wm?.alertFallback || "Alerta").trim()
       : state?.state === "off"
-        ? "Sin alertas"
-        : "Meteoalarm";
+        ? (wm?.noAlerts || "Sin alertas")
+        : (wm?.name || "Meteoalarm");
 
     return `
       <button
@@ -68491,19 +68791,22 @@ class NodaliaWeatherCard extends HTMLElement {
     const attrs = state?.attributes || {};
     const accentColor = getMeteoalarmAccentColor(state);
     const awareness = getMeteoalarmAwarenessParts(state);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const wm = window.NodaliaI18n?.strings?.(lang)?.weatherCard?.meteoalarm;
     const title = state?.state === "on"
-      ? String(attrs.headline || attrs.event || "Alerta meteorologica").trim()
+      ? String(attrs.headline || attrs.event || wm?.weatherAlert || "Alerta meteorologica").trim()
       : state?.state === "off"
-        ? "Sin alertas meteorologicas"
-        : "Meteoalarm";
+        ? (wm?.noWeatherAlerts || "Sin alertas meteorologicas")
+        : (wm?.name || "Meteoalarm");
     const rows = [
-      ["Nivel", translateMeteoalarmValue(awareness.label || attrs.severity || "")],
-      ["Tipo", attrs.event || attrs.awareness_type || ""],
-      ["Inicio", formatMeteoalarmDate(attrs.onset || attrs.effective)],
-      ["Fin", formatMeteoalarmDate(attrs.expires)],
-      ["Severidad", translateMeteoalarmValue(attrs.severity || "")],
-      ["Urgencia", translateMeteoalarmValue(attrs.urgency || "")],
-      ["Certeza", translateMeteoalarmValue(attrs.certainty || "")],
+      [wm?.level || "Nivel", translateMeteoalarmValue(awareness.label || attrs.severity || "")],
+      [wm?.type || "Tipo", attrs.event || attrs.awareness_type || ""],
+      [wm?.start || "Inicio", formatMeteoalarmDate(attrs.onset || attrs.effective)],
+      [wm?.end || "Fin", formatMeteoalarmDate(attrs.expires)],
+      [wm?.severity || "Severidad", translateMeteoalarmValue(attrs.severity || "")],
+      [wm?.urgency || "Urgencia", translateMeteoalarmValue(attrs.urgency || "")],
+      [wm?.certainty || "Certeza", translateMeteoalarmValue(attrs.certainty || "")],
     ].filter(([, value]) => String(value || "").trim());
     const description = String(attrs.description || "").trim();
     const instruction = String(attrs.instruction || "").trim();
@@ -68516,10 +68819,10 @@ class NodaliaWeatherCard extends HTMLElement {
               <ha-icon icon="${state?.state === "on" ? "mdi:alert" : "mdi:shield-check"}"></ha-icon>
             </div>
             <div class="weather-alert-panel__copy">
-              <div class="weather-alert-panel__eyebrow">Meteoalarm</div>
+              <div class="weather-alert-panel__eyebrow">${escapeHtml(wm?.name || "Meteoalarm")}</div>
               <div class="weather-alert-panel__title">${escapeHtml(title)}</div>
             </div>
-            <button type="button" class="weather-alert-panel__close" data-weather-action="close-meteoalarm" aria-label="Cerrar">
+            <button type="button" class="weather-alert-panel__close" data-weather-action="close-meteoalarm" aria-label="${escapeHtml(wm?.close || "Cerrar")}">
               <ha-icon icon="mdi:close"></ha-icon>
             </button>
           </div>

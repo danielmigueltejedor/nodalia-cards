@@ -1479,25 +1479,29 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _getStateLabel(state) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const entityStates = window.NodaliaI18n?.strings?.(lang)?.entityCard?.states;
+
     if (state?.attributes?._nodalia_optimistic_off === true) {
-      return "Apagando";
+      return entityStates?.closing || "Apagando";
     }
 
     if (state?.attributes?._nodalia_optimistic_on === true) {
-      return "Encendiendo";
+      return entityStates?.opening || "Encendiendo";
     }
 
     switch (state?.state) {
       case "on":
-        return "Encendida";
+        return entityStates?.on || "Encendida";
       case "off":
-        return "Apagada";
+        return entityStates?.off || "Apagada";
       case "unavailable":
-        return "No disponible";
+        return entityStates?.unavailable || "No disponible";
       case "unknown":
-        return "Desconocida";
+        return entityStates?.unknown || "Desconocida";
       default:
-        return state?.state ? String(state.state) : "Sin estado";
+        return state?.state ? String(state.state) : (window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.noState || "Sin estado");
     }
   }
 

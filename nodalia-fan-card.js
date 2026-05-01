@@ -666,7 +666,9 @@ class NodaliaFanCard extends HTMLElement {
       return state.attributes.friendly_name;
     }
 
-    return this._config?.entity || "Fan";
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    return this._config?.entity || window.NodaliaI18n?.strings?.(lang)?.fan?.fallbackName || "Fan";
   }
 
   _getFanIcon(state) {
@@ -683,18 +685,24 @@ class NodaliaFanCard extends HTMLElement {
 
   _getStateLabel(state) {
     const stateValue = normalizeTextKey(state?.state);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const fanStrings = window.NodaliaI18n?.strings?.(lang)?.fan;
+    if (fanStrings?.[stateValue]) {
+      return fanStrings[stateValue];
+    }
 
     switch (stateValue) {
       case "off":
-        return "Apagado";
+        return fanStrings?.off || "Apagado";
       case "on":
-        return "Encendido";
+        return fanStrings?.on || "Encendido";
       case "unavailable":
-        return "No disponible";
+        return fanStrings?.unavailable || "No disponible";
       case "unknown":
-        return "Desconocido";
+        return fanStrings?.unknown || "Desconocido";
       default:
-        return state?.state ? String(state.state) : "Sin estado";
+        return state?.state ? String(state.state) : (fanStrings?.noState || "Sin estado");
     }
   }
 

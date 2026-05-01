@@ -4213,7 +4213,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-popup-index="${popupIndex}"
               ${popupIndex === 0 ? "disabled" : ""}
             >
-              Subir
+              ${this._L("Subir")}
             </button>
             <button
               type="button"
@@ -4223,7 +4223,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-popup-index="${popupIndex}"
               ${popupIndex === popupTotal - 1 ? "disabled" : ""}
             >
-              Bajar
+              ${this._L("Bajar")}
             </button>
             <button
               type="button"
@@ -4232,7 +4232,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-route-index="${routeIndex}"
               data-popup-index="${popupIndex}"
             >
-              Eliminar
+              ${this._L("Eliminar")}
             </button>
           </div>
         </div>
@@ -4246,7 +4246,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-popup-field="label"
               data-optional="true"
               value="${escapeHtml(popupItem.label || "")}"
-              placeholder="Dejalo vacio para solo icono"
+              placeholder="${escapeHtml(this._L("Dejalo vacio para solo icono"))}"
             />
           </label>
           <label>
@@ -4330,7 +4330,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
         <div class="route-head">
           <strong>${this._L("Player")} ${index + 1}</strong>
           <button type="button" class="danger" data-editor-action="remove-player" data-player-index="${index}">
-            Eliminar
+            ${this._L("Eliminar")}
           </button>
         </div>
         <div class="grid">
@@ -4453,7 +4453,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-route-index="${index}"
               ${index === 0 ? "disabled" : ""}
             >
-              Subir
+              ${this._L("Subir")}
             </button>
             <button
               type="button"
@@ -4462,10 +4462,10 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-route-index="${index}"
               ${index === totalRoutes - 1 ? "disabled" : ""}
             >
-              Bajar
+              ${this._L("Bajar")}
             </button>
             <button type="button" class="danger" data-editor-action="remove-route" data-route-index="${index}">
-              Eliminar
+              ${this._L("Eliminar")}
             </button>
           </div>
         </div>
@@ -4509,9 +4509,9 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           <label>
             <span>${this._L("Layout popup")}</span>
             <select data-route-index="${index}" data-route-field="popup_layout" data-optional="true">
-              <option value="" ${!route.popup_layout ? "selected" : ""}>Auto</option>
-              <option value="vertical" ${route.popup_layout === "vertical" ? "selected" : ""}>Vertical</option>
-              <option value="horizontal" ${route.popup_layout === "horizontal" ? "selected" : ""}>Horizontal</option>
+              <option value="" ${!route.popup_layout ? "selected" : ""}>${this._L("Auto")}</option>
+              <option value="vertical" ${route.popup_layout === "vertical" ? "selected" : ""}>${this._L("Vertical")}</option>
+              <option value="horizontal" ${route.popup_layout === "horizontal" ? "selected" : ""}>${this._L("Horizontal")}</option>
             </select>
           </label>
           <label class="checkbox">
@@ -4531,7 +4531,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           <div class="route-head route-head--subsection">
             <strong>${this._L("Popup")}</strong>
             <button type="button" data-editor-action="add-popup-item" data-route-index="${index}">
-              Anadir popup
+              ${this._L("Anadir popup")}
             </button>
           </div>
           ${popupMarkup}
@@ -4802,13 +4802,13 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             <label>
               <span>${this._L("Estilo haptico")}</span>
               <select data-field="haptics.style">
-                <option value="selection" ${config.haptics.style === "selection" ? "selected" : ""}>Selection</option>
-                <option value="light" ${config.haptics.style === "light" ? "selected" : ""}>Light</option>
-                <option value="medium" ${config.haptics.style === "medium" ? "selected" : ""}>Medium</option>
-                <option value="heavy" ${config.haptics.style === "heavy" ? "selected" : ""}>Heavy</option>
-                <option value="success" ${config.haptics.style === "success" ? "selected" : ""}>Success</option>
-                <option value="warning" ${config.haptics.style === "warning" ? "selected" : ""}>Warning</option>
-                <option value="failure" ${config.haptics.style === "failure" ? "selected" : ""}>Failure</option>
+                <option value="selection" ${config.haptics.style === "selection" ? "selected" : ""}>${this._L("Selección")}</option>
+                <option value="light" ${config.haptics.style === "light" ? "selected" : ""}>${this._L("Ligero")}</option>
+                <option value="medium" ${config.haptics.style === "medium" ? "selected" : ""}>${this._L("Medio")}</option>
+                <option value="heavy" ${config.haptics.style === "heavy" ? "selected" : ""}>${this._L("Intenso")}</option>
+                <option value="success" ${config.haptics.style === "success" ? "selected" : ""}>${this._L("Éxito")}</option>
+                <option value="warning" ${config.haptics.style === "warning" ? "selected" : ""}>${this._L("Aviso")}</option>
+                <option value="failure" ${config.haptics.style === "failure" ? "selected" : ""}>${this._L("Fallo")}</option>
               </select>
             </label>
             <label class="checkbox">
@@ -4823,8 +4823,8 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             <label>
               <span>${this._L("Posicion")}</span>
               <select data-field="layout.position">
-                <option value="bottom" ${config.layout.position === "bottom" ? "selected" : ""}>Inferior</option>
-                <option value="top" ${config.layout.position === "top" ? "selected" : ""}>Superior</option>
+                <option value="bottom" ${config.layout.position === "bottom" ? "selected" : ""}>${this._L("Inferior")}</option>
+                <option value="top" ${config.layout.position === "top" ? "selected" : ""}>${this._L("Superior")}</option>
               </select>
             </label>
             <label>
@@ -4869,7 +4869,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             </label>
           </div>
           <p class="hint">
-            Aqui ya puedes editar popup y media player. Para acciones muy avanzadas, sigue siendo mejor completar el YAML.
+            ${this._L("Aqui ya puedes editar popup y media player. Para acciones muy avanzadas, sigue siendo mejor completar el YAML.")}
           </p>
         </section>
 
@@ -4941,7 +4941,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               ? `
                 <div class="editor-grid">
                   <label><span>${this._L("Fondo barra")}</span><input type="text" data-field="styles.bar.background" value="${escapeHtml(config.styles.bar.background || "")}" /></label>
-                  <label><span>Borde barra</span><input type="text" data-field="styles.bar.border" value="${escapeHtml(config.styles.bar.border || "")}" /></label>
+                  <label><span>${this._L("Borde barra")}</span><input type="text" data-field="styles.bar.border" value="${escapeHtml(config.styles.bar.border || "")}" /></label>
                   <label><span>${this._L("Radio barra")}</span><input type="text" data-field="styles.bar.border_radius" value="${escapeHtml(config.styles.bar.border_radius || "")}" /></label>
                   <label><span>${this._L("Sombra barra")}</span><input type="text" data-field="styles.bar.box_shadow" value="${escapeHtml(config.styles.bar.box_shadow || "")}" /></label>
                   <label><span>${this._L("Padding barra")}</span><input type="text" data-field="styles.bar.padding" value="${escapeHtml(config.styles.bar.padding || "")}" /></label>
@@ -4974,9 +4974,9 @@ class NodaliaNavigationBarEditor extends HTMLElement {
                   <label>
                     <span>${this._L("Layout popup")}</span>
                     <select data-field="styles.popup.layout" data-optional="true">
-                      <option value="" ${!config.styles.popup.layout || config.styles.popup.layout === "auto" ? "selected" : ""}>Auto</option>
-                      <option value="vertical" ${config.styles.popup.layout === "vertical" ? "selected" : ""}>Vertical</option>
-                      <option value="horizontal" ${config.styles.popup.layout === "horizontal" ? "selected" : ""}>Horizontal</option>
+                      <option value="" ${!config.styles.popup.layout || config.styles.popup.layout === "auto" ? "selected" : ""}>${this._L("Auto")}</option>
+                      <option value="vertical" ${config.styles.popup.layout === "vertical" ? "selected" : ""}>${this._L("Vertical")}</option>
+                      <option value="horizontal" ${config.styles.popup.layout === "horizontal" ? "selected" : ""}>${this._L("Horizontal")}</option>
                     </select>
                   </label>
                   <label><span>${this._L("Padding popup")}</span><input type="text" data-field="styles.popup.padding" value="${escapeHtml(config.styles.popup.padding || "")}" /></label>

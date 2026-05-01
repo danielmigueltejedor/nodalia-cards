@@ -1286,11 +1286,14 @@ class NodaliaWeatherCard extends HTMLElement {
     const accentColor = getMeteoalarmAccentColor(state);
     const isActive = state?.state === "on";
     const awareness = getMeteoalarmAwarenessParts(state);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const wm = window.NodaliaI18n?.strings?.(lang)?.weatherCard?.meteoalarm;
     const label = isActive
-      ? String(attrs.event || attrs.headline || awareness.label || "Alerta").trim()
+      ? String(attrs.event || attrs.headline || awareness.label || wm?.alertFallback || "Alerta").trim()
       : state?.state === "off"
-        ? "Sin alertas"
-        : "Meteoalarm";
+        ? (wm?.noAlerts || "Sin alertas")
+        : (wm?.name || "Meteoalarm");
 
     return `
       <button
@@ -1324,19 +1327,22 @@ class NodaliaWeatherCard extends HTMLElement {
     const attrs = state?.attributes || {};
     const accentColor = getMeteoalarmAccentColor(state);
     const awareness = getMeteoalarmAwarenessParts(state);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const wm = window.NodaliaI18n?.strings?.(lang)?.weatherCard?.meteoalarm;
     const title = state?.state === "on"
-      ? String(attrs.headline || attrs.event || "Alerta meteorologica").trim()
+      ? String(attrs.headline || attrs.event || wm?.weatherAlert || "Alerta meteorologica").trim()
       : state?.state === "off"
-        ? "Sin alertas meteorologicas"
-        : "Meteoalarm";
+        ? (wm?.noWeatherAlerts || "Sin alertas meteorologicas")
+        : (wm?.name || "Meteoalarm");
     const rows = [
-      ["Nivel", translateMeteoalarmValue(awareness.label || attrs.severity || "")],
-      ["Tipo", attrs.event || attrs.awareness_type || ""],
-      ["Inicio", formatMeteoalarmDate(attrs.onset || attrs.effective)],
-      ["Fin", formatMeteoalarmDate(attrs.expires)],
-      ["Severidad", translateMeteoalarmValue(attrs.severity || "")],
-      ["Urgencia", translateMeteoalarmValue(attrs.urgency || "")],
-      ["Certeza", translateMeteoalarmValue(attrs.certainty || "")],
+      [wm?.level || "Nivel", translateMeteoalarmValue(awareness.label || attrs.severity || "")],
+      [wm?.type || "Tipo", attrs.event || attrs.awareness_type || ""],
+      [wm?.start || "Inicio", formatMeteoalarmDate(attrs.onset || attrs.effective)],
+      [wm?.end || "Fin", formatMeteoalarmDate(attrs.expires)],
+      [wm?.severity || "Severidad", translateMeteoalarmValue(attrs.severity || "")],
+      [wm?.urgency || "Urgencia", translateMeteoalarmValue(attrs.urgency || "")],
+      [wm?.certainty || "Certeza", translateMeteoalarmValue(attrs.certainty || "")],
     ].filter(([, value]) => String(value || "").trim());
     const description = String(attrs.description || "").trim();
     const instruction = String(attrs.instruction || "").trim();
@@ -1349,10 +1355,10 @@ class NodaliaWeatherCard extends HTMLElement {
               <ha-icon icon="${state?.state === "on" ? "mdi:alert" : "mdi:shield-check"}"></ha-icon>
             </div>
             <div class="weather-alert-panel__copy">
-              <div class="weather-alert-panel__eyebrow">Meteoalarm</div>
+              <div class="weather-alert-panel__eyebrow">${escapeHtml(wm?.name || "Meteoalarm")}</div>
               <div class="weather-alert-panel__title">${escapeHtml(title)}</div>
             </div>
-            <button type="button" class="weather-alert-panel__close" data-weather-action="close-meteoalarm" aria-label="Cerrar">
+            <button type="button" class="weather-alert-panel__close" data-weather-action="close-meteoalarm" aria-label="${escapeHtml(wm?.close || "Cerrar")}">
               <ha-icon icon="mdi:close"></ha-icon>
             </button>
           </div>

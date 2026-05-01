@@ -3418,15 +3418,15 @@ class NodaliaGraphCardEditor extends HTMLElement {
     return `
       <div class="series-editor-card">
         <div class="series-editor-card__header">
-          <div class="series-editor-card__title">Serie ${index + 1}</div>
+          <div class="series-editor-card__title">${escapeHtml(this._editorLabel("Serie"))} ${index + 1}</div>
           <div class="series-editor-card__actions">
-            <button type="button" data-action="move-series-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>Subir</button>
-            <button type="button" data-action="move-series-down" data-index="${index}" ${index === total - 1 ? "disabled" : ""}>Bajar</button>
-            <button type="button" data-action="remove-series" data-index="${index}" class="danger">Eliminar</button>
+            <button type="button" data-action="move-series-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>${escapeHtml(this._editorLabel("Subir"))}</button>
+            <button type="button" data-action="move-series-down" data-index="${index}" ${index === total - 1 ? "disabled" : ""}>${escapeHtml(this._editorLabel("Bajar"))}</button>
+            <button type="button" data-action="remove-series" data-index="${index}" class="danger">${escapeHtml(this._editorLabel("Eliminar"))}</button>
           </div>
         </div>
         <div class="series-editor-subgroup">
-          <div class="series-editor-subgroup__title">Datos</div>
+          <div class="series-editor-subgroup__title">${escapeHtml(this._editorLabel("Datos"))}</div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityField("Entidad", `entities.${index}.entity`, series.entity, {
               domains: ["sensor", "number", "input_number"],
@@ -3481,7 +3481,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = placeholder || "Selecciona una entidad";
+      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
       control.appendChild(emptyOption);
       this._getEntityOptions(field, allowedDomains).forEach(option => {
         const optionElement = document.createElement("option");
@@ -3928,7 +3928,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
               "tap_action",
               config.tap_action || "more-info",
               [
-                { value: "more-info", label: "Mas informacion" },
+                { value: "more-info", label: "Más información" },
                 { value: "none", label: "Sin accion" },
               ],
             )}
@@ -3960,11 +3960,11 @@ class NodaliaGraphCardEditor extends HTMLElement {
             ${
               entities.length
                 ? entities.map((series, index) => this._renderSeriesCard(series, index, entities.length)).join("")
-                : '<div class="empty-note">Todavia no has anadido ninguna serie.</div>'
+                : `<div class="empty-note">${escapeHtml(this._editorLabel("Todavia no has anadido ninguna serie."))}</div>`
             }
           </div>
           <div class="editor-actions">
-            <button type="button" data-action="add-series">Anadir serie</button>
+            <button type="button" data-action="add-series">${escapeHtml(this._editorLabel("Anadir serie"))}</button>
           </div>
         </section>
 
@@ -3996,7 +3996,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Seleccion" },
+                { value: "selection", label: "Selección" },
                 { value: "light", label: "Ligero" },
                 { value: "medium", label: "Medio" },
                 { value: "heavy", label: "Intenso" },
@@ -4020,7 +4020,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showAnimationSection ? "Ocultar ajustes de animacion" : "Mostrar ajustes de animacion"}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animacion") : this._editorLabel("Mostrar ajustes de animacion"))}</span>
               </button>
             </div>
           </div>
