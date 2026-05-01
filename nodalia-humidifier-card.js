@@ -3846,7 +3846,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showAnimationSection ? "Ocultar ajustes de animación" : "Mostrar ajustes de animación"}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
               </button>
             </div>
           </div>
@@ -3901,7 +3901,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
               </button>
             </div>
           </div>

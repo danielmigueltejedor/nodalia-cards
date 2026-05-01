@@ -290,6 +290,14 @@
       alarmPanel: {
         defaultTitle: "Alarma",
         noState: "Sin estado",
+        actions: {
+          disarm: "Desarmar",
+          arm_home: "Armar en casa",
+          arm_away: "Armar ausente",
+          arm_night: "Armar noche",
+          arm_vacation: "Armar vacaciones",
+          arm_custom_bypass: "Armar personalizado",
+        },
         states: {
           disarmed: "Desarmada",
           armed_home: "En casa",
@@ -686,6 +694,14 @@
       alarmPanel: {
         defaultTitle: "Alarm",
         noState: "No state",
+        actions: {
+          disarm: "Disarm",
+          arm_home: "Arm home",
+          arm_away: "Arm away",
+          arm_night: "Arm night",
+          arm_vacation: "Arm vacation",
+          arm_custom_bypass: "Arm custom",
+        },
         states: {
           disarmed: "Disarmed",
           armed_home: "Home",
@@ -1082,6 +1098,14 @@
       alarmPanel: {
         defaultTitle: "Alarm",
         noState: "Kein Status",
+        actions: {
+          disarm: "Unscharf",
+          arm_home: "Zuhause scharf",
+          arm_away: "Abwesend scharf",
+          arm_night: "Nacht scharf",
+          arm_vacation: "Urlaub scharf",
+          arm_custom_bypass: "Benutzerdefiniert scharf",
+        },
         states: {
           disarmed: "Entschärft",
           armed_home: "Zuhause",
@@ -1478,6 +1502,14 @@
       alarmPanel: {
         defaultTitle: "Alarme",
         noState: "Pas d'état",
+        actions: {
+          disarm: "Désarmer",
+          arm_home: "Armer maison",
+          arm_away: "Armer absent",
+          arm_night: "Armer nuit",
+          arm_vacation: "Armer vacances",
+          arm_custom_bypass: "Armer personnalisé",
+        },
         states: {
           disarmed: "Désactivée",
           armed_home: "Maison",
@@ -1874,6 +1906,14 @@
       alarmPanel: {
         defaultTitle: "Allarme",
         noState: "Nessuno stato",
+        actions: {
+          disarm: "Disarma",
+          arm_home: "Arma casa",
+          arm_away: "Arma fuori",
+          arm_night: "Arma notte",
+          arm_vacation: "Arma vacanza",
+          arm_custom_bypass: "Arma personalizzato",
+        },
         states: {
           disarmed: "Disattivato",
           armed_home: "Casa",
@@ -2270,6 +2310,14 @@
       alarmPanel: {
         defaultTitle: "Alarm",
         noState: "Geen status",
+        actions: {
+          disarm: "Uitschakelen",
+          arm_home: "Inschakelen thuis",
+          arm_away: "Inschakelen afwezig",
+          arm_night: "Inschakelen nacht",
+          arm_vacation: "Inschakelen vakantie",
+          arm_custom_bypass: "Inschakelen aangepast",
+        },
         states: {
           disarmed: "Uitgeschakeld",
           armed_home: "Thuis",

@@ -1794,6 +1794,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return kind === "mop" ? d.mop : d.suction;
   }
 
+  _advanceVacuumStrings() {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    return window.NodaliaI18n?.strings?.(lang)?.advanceVacuum || null;
+  }
+
   _getAccentColor(state) {
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
 
@@ -2889,6 +2895,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getAvailableModes() {
+    const modeLabels = this._advanceVacuumStrings()?.modeLabels || MODE_LABELS;
     const modes = [];
     const showAllMode = this._config?.show_all_mode !== false;
     const hasRooms = this._getRoomSegments().length > 0;
@@ -2896,16 +2903,16 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const hasRoutines = this._getRoutineItems().length > 0;
 
     if (showAllMode) {
-      modes.push({ id: "all", label: MODE_LABELS.all, icon: "mdi:home" });
+      modes.push({ id: "all", label: modeLabels.all || MODE_LABELS.all, icon: "mdi:home" });
     }
     if (hasRooms && this._config?.allow_segment_mode !== false) {
-      modes.push({ id: "rooms", label: MODE_LABELS.rooms, icon: "mdi:floor-plan" });
+      modes.push({ id: "rooms", label: modeLabels.rooms || MODE_LABELS.rooms, icon: "mdi:floor-plan" });
     }
     if (hasZones) {
-      modes.push({ id: "zone", label: MODE_LABELS.zone, icon: "mdi:vector-rectangle" });
+      modes.push({ id: "zone", label: modeLabels.zone || MODE_LABELS.zone, icon: "mdi:vector-rectangle" });
     }
     if (hasRoutines) {
-      modes.push({ id: "routines", label: MODE_LABELS.routines, icon: "mdi:play-box-multiple-outline" });
+      modes.push({ id: "routines", label: modeLabels.routines || MODE_LABELS.routines, icon: "mdi:play-box-multiple-outline" });
     }
 
     return modes;
@@ -3317,12 +3324,16 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return null;
     }
 
+    const dockControlLabels = this._advanceVacuumStrings()?.dockControls?.[definition.id];
+    const inactiveLabel = dockControlLabels?.label || definition.label;
+    const activeLabel = dockControlLabels?.active || definition.active_label || definition.label;
+
     const toggleEntity = this._findFirstAvailableEntity(definition.entity_ids || []);
     if (toggleEntity) {
       const isActive = this._isBooleanEntityOn(toggleEntity);
       return {
         id: definition.id,
-        label: isActive ? definition.active_label : definition.label,
+        label: isActive ? activeLabel : inactiveLabel,
         icon: isActive ? definition.active_icon || definition.icon : definition.icon,
         target: toggleEntity,
         active: isActive,
@@ -3341,7 +3352,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     return {
       id: definition.id,
-      label: isActive ? definition.active_label : definition.label,
+      label: isActive ? activeLabel : inactiveLabel,
       icon: isActive ? definition.active_icon || definition.icon : definition.icon,
       target,
       active: isActive,
@@ -3350,6 +3361,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getDockControlDescriptors(state = this._getVacuumState()) {
+    const actions = this._advanceVacuumStrings()?.actions;
     const isCleaningSessionActive = this._isCleaningSessionActive(state);
     if (isCleaningSessionActive) {
       const descriptors = [];
@@ -3357,7 +3369,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       if (this._config?.show_return_to_base !== false && !this._isDocked(state)) {
         descriptors.push({
           id: "return_to_base",
-          label: "Volver a base",
+          label: actions?.returnToBase || "Volver a base",
           icon: "mdi:home-import-outline",
           builtin_action: "return_to_base",
         });
@@ -3366,7 +3378,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       if (this._config?.show_locate !== false) {
         descriptors.push({
           id: "locate",
-          label: "Localizar",
+          label: actions?.locate || "Localizar",
           icon: "mdi:crosshairs-gps",
           builtin_action: "locate",
         });
@@ -3385,13 +3397,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return null;
     }
 
+    const dockSettingLabel = this._advanceVacuumStrings()?.dockSettings?.[definition.id] || definition.label;
     const explicitEntity = this._findFirstAvailableEntity(definition.entity_ids || []);
     const entityId = explicitEntity || this._guessGlobalEntityByPatterns(["input_select", "select"], definition.patterns || []);
     const descriptor = this._getSelectOptions(entityId);
     if (descriptor?.entityId && descriptor.options?.length) {
       return {
         id: definition.id,
-        label: definition.label,
+        label: dockSettingLabel,
         target: descriptor.entityId,
         options: descriptor.options,
         current: descriptor.value,
@@ -3403,7 +3416,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return mopModeDescriptor
         ? {
             id: definition.id,
-            label: definition.label,
+            label: dockSettingLabel,
             target: mopModeDescriptor.target,
             options: mopModeDescriptor.options,
             current: mopModeDescriptor.current,
@@ -4082,11 +4095,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getDefaultCustomMenuItems(state) {
+    const actions = this._advanceVacuumStrings()?.actions;
     const items = [];
 
     if (this._config?.show_return_to_base !== false && !this._isDocked(state)) {
       items.push({
-        label: "Volver a base",
+        label: actions?.returnToBase || "Volver a base",
         icon: "mdi:home-import-outline",
         builtin_action: "return_to_base",
       });
@@ -4094,7 +4108,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     if (this._config?.show_stop !== false && this._isActive(state)) {
       items.push({
-        label: "Parar",
+        label: actions?.stop || "Parar",
         icon: "mdi:stop",
         builtin_action: "stop",
       });
@@ -4102,7 +4116,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     if (this._config?.show_locate !== false) {
       items.push({
-        label: "Localizar",
+        label: actions?.locate || "Localizar",
         icon: "mdi:crosshairs-gps",
         builtin_action: "locate",
       });
@@ -4412,12 +4426,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   _getZoneHandlePoints(zone) {
     const rect = this._zoneToSvgRect(zone);
+    const handlesText = this._advanceVacuumStrings()?.handles;
     return {
       rect,
       handles: [
-        { id: "move", icon: "mdi:arrow-all", x: rect.x, y: rect.y, title: "Mover zona" },
-        { id: "delete", icon: "mdi:trash-can-outline", x: rect.x, y: rect.y + rect.height, title: "Eliminar zona" },
-        { id: "resize", icon: "mdi:arrow-bottom-right", x: rect.x + rect.width, y: rect.y + rect.height, title: "Redimensionar zona" },
+        { id: "move", icon: "mdi:arrow-all", x: rect.x, y: rect.y, title: handlesText?.moveZone || "Mover zona" },
+        { id: "delete", icon: "mdi:trash-can-outline", x: rect.x, y: rect.y + rect.height, title: handlesText?.deleteZone || "Eliminar zona" },
+        { id: "resize", icon: "mdi:arrow-bottom-right", x: rect.x + rect.width, y: rect.y + rect.height, title: handlesText?.resizeZone || "Redimensionar zona" },
       ],
     };
   }
@@ -6251,7 +6266,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                 class="advance-vacuum-card__utility-option ${preset.id === activePreset ? "is-active" : ""}"
                 data-mode-preset-id="${escapeHtml(preset.id)}"
               >
-                ${escapeHtml(preset.label)}
+                ${escapeHtml(this._advanceVacuumStrings()?.panelModes?.[preset.id] || preset.label)}
               </button>
             `).join("")}
           </div>
@@ -6343,14 +6358,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return `
       <div class="advance-vacuum-card__utility-panel">
         <div class="advance-vacuum-card__utility-group">
-          <div class="advance-vacuum-card__utility-label">Base de carga</div>
+          <div class="advance-vacuum-card__utility-label">${escapeHtml(this._advanceVacuumStrings()?.utility?.chargingStation || "Base de carga")}</div>
           <div class="advance-vacuum-card__utility-options advance-vacuum-card__utility-options--presets">
             ${availableSections.map(section => `
               <button
                 class="advance-vacuum-card__utility-option ${section.id === activeSection.id ? "is-active" : ""}"
                 data-dock-section-id="${escapeHtml(section.id)}"
               >
-                ${escapeHtml(section.label)}
+                ${escapeHtml(this._advanceVacuumStrings()?.dockSections?.[section.id] || section.label)}
               </button>
             `).join("")}
           </div>
@@ -6426,6 +6441,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const config = this._config || normalizeConfig({});
       const state = this._getVacuumState();
       const accentColor = this._getAccentColor(state);
+      const advanceVacuumStrings = this._advanceVacuumStrings();
       const styles = config.styles || DEFAULT_CONFIG.styles;
       const animations = this._getAnimationSettings();
       const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
@@ -6442,7 +6458,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         || (["rooms", "zone", "goto"].includes(preferredModeId)
           ? {
               id: preferredModeId,
-              label: MODE_LABELS[preferredModeId],
+              label: advanceVacuumStrings?.modeLabels?.[preferredModeId] || MODE_LABELS[preferredModeId],
               icon: preferredModeId === "rooms"
                 ? "mdi:floor-plan"
                 : preferredModeId === "zone"
@@ -6451,7 +6467,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
             }
           : null)
         || modes[0]
-        || { id: "all", label: MODE_LABELS.all, icon: "mdi:home" };
+        || { id: "all", label: advanceVacuumStrings?.modeLabels?.all || MODE_LABELS.all, icon: "mdi:home" };
       const iconSize = Math.max(54, parseSizeToPixels(styles.icon.size, 64));
       const controlSize = Math.max(38, parseSizeToPixels(styles.control.size, 42));
       const titleSize = Math.max(15, parseSizeToPixels(styles.title_size, 16));
@@ -6490,8 +6506,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           ? "mdi:pause"
           : "mdi:play";
       const primaryButtonTitle = hasPendingZoneSelection
-        ? (isCleaningSessionActive ? "Añadir zona a la limpieza" : "Limpiar zona")
-        : "Ejecutar";
+        ? (isCleaningSessionActive
+          ? (advanceVacuumStrings?.actions?.addZoneToClean || "Añadir zona a la limpieza")
+          : (advanceVacuumStrings?.actions?.cleanZone || "Limpiar zona"))
+        : (advanceVacuumStrings?.actions?.run || "Ejecutar");
       const modeDescriptors = this._getModeDescriptors(state);
       const dockControlDescriptors = this._getDockControlDescriptors(state);
       const dockSettingDescriptors = this._getDockSettingDescriptors(state);
@@ -7463,7 +7481,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
               ${
                 showModeMenuButton
                   ? `
-                    <button class="advance-vacuum-card__control ${this._activeUtilityPanel === "modes" ? "is-primary" : ""}" data-control-action="toggle_modes" title="${escapeHtml(activeModePanelPresetConfig?.label || "Modos de aspirado y fregado")}">
+                    <button class="advance-vacuum-card__control ${this._activeUtilityPanel === "modes" ? "is-primary" : ""}" data-control-action="toggle_modes" title="${escapeHtml((activeModePanelPresetConfig?.id ? advanceVacuumStrings?.panelModes?.[activeModePanelPresetConfig.id] : "") || advanceVacuumStrings?.utility?.modesFallbackTitle || "Modos de aspirado y fregado")}">
                       <ha-icon icon="${escapeHtml(activeModePanelPresetConfig?.icon || "mdi:tune-variant")}"></ha-icon>
                     </button>
                   `
@@ -7481,7 +7499,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
               ${
                 showDockMenuButton
                   ? `
-                    <button class="advance-vacuum-card__control ${this._activeUtilityPanel === "dock" ? "is-primary" : ""}" data-control-action="toggle_dock_panel" title="${escapeHtml(activeDockPanelSectionConfig?.label || "Base de carga")}">
+                    <button class="advance-vacuum-card__control ${this._activeUtilityPanel === "dock" ? "is-primary" : ""}" data-control-action="toggle_dock_panel" title="${escapeHtml((activeDockPanelSectionConfig?.id ? advanceVacuumStrings?.dockSections?.[activeDockPanelSectionConfig.id] : "") || advanceVacuumStrings?.utility?.chargingStation || "Base de carga")}">
                       <ha-icon icon="${escapeHtml(activeDockPanelSectionConfig?.icon || "mdi:home-import-outline")}"></ha-icon>
                     </button>
                 `
@@ -7933,7 +7951,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = placeholder || "Selecciona una entidad";
+      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
       control.appendChild(emptyOption);
       this._getEntityOptions(field, domains).forEach(option => {
         const optionElement = document.createElement("option");

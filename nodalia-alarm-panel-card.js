@@ -785,10 +785,13 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   }
 
   _getModeDefinitions(state) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const actionLabels = window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.actions || {};
     const modes = [
       {
         key: "disarm",
-        label: "Desarmar",
+        label: actionLabels.disarm || this._translateState({ state: "disarmed" }),
         icon: "mdi:shield-off-outline",
         service: "alarm_disarm",
         enabled: this._config?.show_disarm !== false && !this._matchesAlarmMode(state, "disarmed"),
@@ -796,7 +799,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       },
       {
         key: "home",
-        label: "Casa",
+        label: actionLabels.arm_home || this._translateState({ state: "armed_home" }),
         icon: "mdi:home-lock",
         service: "alarm_arm_home",
         enabled: this._config?.show_arm_home !== false
@@ -806,7 +809,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       },
       {
         key: "away",
-        label: "Ausente",
+        label: actionLabels.arm_away || this._translateState({ state: "armed_away" }),
         icon: "mdi:shield-lock",
         service: "alarm_arm_away",
         enabled: this._config?.show_arm_away !== false
@@ -816,7 +819,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       },
       {
         key: "night",
-        label: "Noche",
+        label: actionLabels.arm_night || this._translateState({ state: "armed_night" }),
         icon: "mdi:weather-night",
         service: "alarm_arm_night",
         enabled: this._config?.show_arm_night !== false
@@ -826,7 +829,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       },
       {
         key: "vacation",
-        label: "Vacaciones",
+        label: actionLabels.arm_vacation || this._translateState({ state: "armed_vacation" }),
         icon: "mdi:palm-tree",
         service: "alarm_arm_vacation",
         enabled: this._config?.show_arm_vacation === true
@@ -836,7 +839,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       },
       {
         key: "custom_bypass",
-        label: "Personalizado",
+        label: actionLabels.arm_custom_bypass || this._translateState({ state: "armed_custom_bypass" }),
         icon: "mdi:tune-variant",
         service: "alarm_arm_custom_bypass",
         enabled: this._config?.show_custom_bypass === true
@@ -2052,7 +2055,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = placeholder || "Selecciona una entidad";
+      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
       control.appendChild(emptyOption);
       this._getDomainEntityOptions(domains, field).forEach(option => {
         const optionElement = document.createElement("option");
@@ -2403,7 +2406,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showAnimationSection ? "Ocultar ajustes de animacion" : "Mostrar ajustes de animacion"}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
               </button>
             </div>
           </div>
@@ -2461,7 +2464,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
               </button>
             </div>
           </div>

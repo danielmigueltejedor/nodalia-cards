@@ -3552,7 +3552,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = placeholder || "Selecciona una entidad";
+      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
       control.appendChild(emptyOption);
       this._getPowerEntityOptions(field).forEach(option => {
         const optionElement = document.createElement("option");
@@ -3982,7 +3982,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showAnimationSection ? "Ocultar ajustes de animacion" : "Mostrar ajustes de animacion"}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
               </button>
             </div>
           </div>
@@ -4017,7 +4017,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
               </button>
             </div>
           </div>
