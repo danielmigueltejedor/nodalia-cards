@@ -65,7 +65,7 @@ Animations and interactions in action:
 ### HACS
 
 ```yaml
-url: (https://github.com/danielmigueltejedor/nodalia-cards)
+url: https://github.com/danielmigueltejedor/nodalia-cards
 type: dashboard
 ```
 
