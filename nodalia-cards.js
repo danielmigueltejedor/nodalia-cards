@@ -1151,6 +1151,74 @@
           poor: "Schlecht",
         },
       },
+      weatherCard: {
+        conditions: {
+          clear_night: "Klare Nacht",
+          cloudy: "Bewölkt",
+          exceptional: "Außergewöhnlich",
+          fog: "Nebel",
+          hail: "Hagel",
+          lightning: "Gewitter",
+          lightning_rainy: "Gewitter mit Regen",
+          partlycloudy: "Teilweise bewölkt",
+          pouring: "Starker Regen",
+          rainy: "Regnerisch",
+          snowy: "Schneefall",
+          snowy_rainy: "Schneeregen",
+          sunny: "Sonnig",
+          windy: "Windig",
+          windy_variant: "Wechselhafter Wind",
+        },
+        defaultCondition: "Wetter",
+        forecast: {
+          chartAriaHourly: "Stündliches Vorhersagediagramm",
+          chartAriaDaily: "Wöchentliches Vorhersagediagramm",
+          tabsAria: "Vorhersageansicht",
+          tabCards: "Karten",
+          tabChart: "Diagramm",
+          hoursTab: "Stunden",
+          weekTab: "Woche",
+          emptyHourly: "Keine stündliche Vorhersage verfügbar.",
+          emptyDaily: "Keine wöchentliche Vorhersage verfügbar.",
+          chartInsufficientData: "Nicht genügend Daten, um das Diagramm anzuzeigen.",
+          closeDetail: "Details schließen",
+          maxLabel: "Hoch",
+          minLabel: "Tief",
+          temperatureLabel: "Temperatur",
+          rainLabel: "Regen",
+          humidityLabel: "Luftfeuchte",
+          windLabel: "Wind",
+        },
+      },
+      humidifierCard: {
+        modes: {
+          auto: "Auto",
+          automatic: "Auto",
+          smart: "Smart",
+          smart_mode: "Smart",
+          sleep: "Nacht",
+          night: "Nacht",
+          eco: "Eco",
+          quiet: "Leise",
+          silent: "Leise",
+          low: "Niedrig",
+          medium: "Mittel",
+          mid: "Mittel",
+          high: "Hoch",
+          boost: "Boost",
+          turbo: "Turbo",
+          normal: "Normal",
+          balanced: "Normal",
+          dry: "Trocknen",
+          drying: "Trocknen",
+          continuous: "Dauerbetrieb",
+          clothes_dry: "Wäsche",
+          laundry: "Wäsche",
+        },
+      },
+      graphCard: {
+        emptyHistory: "Kein Verlauf verfügbar",
+      },
       favCard: {
         disarmedF: "Entschärft",
         armed_home: "Zuhause",
@@ -1463,6 +1531,74 @@
           fair: "Correct",
           poor: "Mauvais",
         },
+      },
+      weatherCard: {
+        conditions: {
+          clear_night: "Nuit claire",
+          cloudy: "Nuageux",
+          exceptional: "Exceptionnel",
+          fog: "Brouillard",
+          hail: "Grêle",
+          lightning: "Orage",
+          lightning_rainy: "Orage et pluie",
+          partlycloudy: "Partiellement nuageux",
+          pouring: "Pluie intense",
+          rainy: "Pluvieux",
+          snowy: "Neigeux",
+          snowy_rainy: "Neige fondue",
+          sunny: "Ensoleillé",
+          windy: "Venteux",
+          windy_variant: "Vent variable",
+        },
+        defaultCondition: "Météo",
+        forecast: {
+          chartAriaHourly: "Graphique météo horaire",
+          chartAriaDaily: "Graphique météo hebdomadaire",
+          tabsAria: "Vue des prévisions",
+          tabCards: "Cartes",
+          tabChart: "Graphique",
+          hoursTab: "Heures",
+          weekTab: "Semaine",
+          emptyHourly: "Aucune prévision horaire disponible.",
+          emptyDaily: "Aucune prévision hebdomadaire disponible.",
+          chartInsufficientData: "Pas assez de données pour afficher le graphique.",
+          closeDetail: "Fermer le détail",
+          maxLabel: "Max",
+          minLabel: "Min",
+          temperatureLabel: "Température",
+          rainLabel: "Pluie",
+          humidityLabel: "Humidité",
+          windLabel: "Vent",
+        },
+      },
+      humidifierCard: {
+        modes: {
+          auto: "Auto",
+          automatic: "Auto",
+          smart: "Intelligent",
+          smart_mode: "Intelligent",
+          sleep: "Nuit",
+          night: "Nuit",
+          eco: "Éco",
+          quiet: "Silencieux",
+          silent: "Silencieux",
+          low: "Faible",
+          medium: "Moyen",
+          mid: "Moyen",
+          high: "Élevé",
+          boost: "Boost",
+          turbo: "Turbo",
+          normal: "Normal",
+          balanced: "Normal",
+          dry: "Séchage",
+          drying: "Séchage",
+          continuous: "Continu",
+          clothes_dry: "Linge",
+          laundry: "Linge",
+        },
+      },
+      graphCard: {
+        emptyHistory: "Aucun historique disponible",
       },
       favCard: {
         disarmedF: "Désactivée",
@@ -1777,6 +1913,74 @@
           poor: "Scarso",
         },
       },
+      weatherCard: {
+        conditions: {
+          clear_night: "Cielo sereno",
+          cloudy: "Nuvoloso",
+          exceptional: "Eccezionale",
+          fog: "Nebbia",
+          hail: "Grandine",
+          lightning: "Temporale",
+          lightning_rainy: "Temporale con pioggia",
+          partlycloudy: "Parzialmente nuvoloso",
+          pouring: "Pioggia intensa",
+          rainy: "Piovoso",
+          snowy: "Nevoso",
+          snowy_rainy: "Nevischio",
+          sunny: "Soleggiato",
+          windy: "Ventoso",
+          windy_variant: "Vento variabile",
+        },
+        defaultCondition: "Meteo",
+        forecast: {
+          chartAriaHourly: "Grafico previsioni orarie",
+          chartAriaDaily: "Grafico previsioni settimanali",
+          tabsAria: "Vista previsioni",
+          tabCards: "Schede",
+          tabChart: "Grafico",
+          hoursTab: "Ore",
+          weekTab: "Settimana",
+          emptyHourly: "Nessuna previsione oraria disponibile.",
+          emptyDaily: "Nessuna previsione settimanale disponibile.",
+          chartInsufficientData: "Dati insufficienti per mostrare il grafico.",
+          closeDetail: "Chiudi dettaglio",
+          maxLabel: "Max",
+          minLabel: "Min",
+          temperatureLabel: "Temperatura",
+          rainLabel: "Pioggia",
+          humidityLabel: "Umidità",
+          windLabel: "Vento",
+        },
+      },
+      humidifierCard: {
+        modes: {
+          auto: "Auto",
+          automatic: "Auto",
+          smart: "Smart",
+          smart_mode: "Smart",
+          sleep: "Notte",
+          night: "Notte",
+          eco: "Eco",
+          quiet: "Silenzioso",
+          silent: "Silenzioso",
+          low: "Basso",
+          medium: "Medio",
+          mid: "Medio",
+          high: "Alto",
+          boost: "Boost",
+          turbo: "Turbo",
+          normal: "Normale",
+          balanced: "Normale",
+          dry: "Asciugatura",
+          drying: "Asciugatura",
+          continuous: "Continuo",
+          clothes_dry: "Bucato",
+          laundry: "Bucato",
+        },
+      },
+      graphCard: {
+        emptyHistory: "Nessuno storico disponibile",
+      },
       favCard: {
         disarmedF: "Disattivato",
         armed_home: "Casa",
@@ -2089,6 +2293,74 @@
           fair: "Redelijk",
           poor: "Slecht",
         },
+      },
+      weatherCard: {
+        conditions: {
+          clear_night: "Heldere nacht",
+          cloudy: "Bewolkt",
+          exceptional: "Uitzonderlijk",
+          fog: "Mist",
+          hail: "Hagel",
+          lightning: "Onweer",
+          lightning_rainy: "Onweer met regen",
+          partlycloudy: "Gedeeltelijk bewolkt",
+          pouring: "Zware regen",
+          rainy: "Regenachtig",
+          snowy: "Sneeuw",
+          snowy_rainy: "Natte sneeuw",
+          sunny: "Zonnig",
+          windy: "Winderig",
+          windy_variant: "Wisselende wind",
+        },
+        defaultCondition: "Weer",
+        forecast: {
+          chartAriaHourly: "Uurlijkse weersgrafiek",
+          chartAriaDaily: "Wekelijkse weersgrafiek",
+          tabsAria: "Voorspellingsweergave",
+          tabCards: "Kaarten",
+          tabChart: "Grafiek",
+          hoursTab: "Uren",
+          weekTab: "Week",
+          emptyHourly: "Geen uurlijkse voorspelling beschikbaar.",
+          emptyDaily: "Geen wekelijkse voorspelling beschikbaar.",
+          chartInsufficientData: "Onvoldoende gegevens om de grafiek te tonen.",
+          closeDetail: "Detail sluiten",
+          maxLabel: "Max",
+          minLabel: "Min",
+          temperatureLabel: "Temperatuur",
+          rainLabel: "Regen",
+          humidityLabel: "Luchtvochtigheid",
+          windLabel: "Wind",
+        },
+      },
+      humidifierCard: {
+        modes: {
+          auto: "Auto",
+          automatic: "Auto",
+          smart: "Slim",
+          smart_mode: "Slim",
+          sleep: "Nacht",
+          night: "Nacht",
+          eco: "Eco",
+          quiet: "Stil",
+          silent: "Stil",
+          low: "Laag",
+          medium: "Gemiddeld",
+          mid: "Gemiddeld",
+          high: "Hoog",
+          boost: "Boost",
+          turbo: "Turbo",
+          normal: "Normaal",
+          balanced: "Normaal",
+          dry: "Drogen",
+          drying: "Drogen",
+          continuous: "Continu",
+          clothes_dry: "Wasgoed",
+          laundry: "Wasgoed",
+        },
+      },
+      graphCard: {
+        emptyHistory: "Geen geschiedenis beschikbaar",
       },
       favCard: {
         disarmedF: "Uitgeschakeld",
@@ -5115,6 +5387,190 @@
     "nl": "Values"
   },
   {
+    "es": "Veladura del navegador",
+    "en": "Browser backdrop",
+    "de": "Browser backdrop",
+    "fr": "Browser backdrop",
+    "it": "Browser backdrop",
+    "nl": "Browser backdrop"
+  },
+  {
+    "es": "Entidad de más información",
+    "en": "More-info entity",
+    "de": "More-info entity",
+    "fr": "More-info entity",
+    "it": "More-info entity",
+    "nl": "More-info entity"
+  },
+  {
+    "es": "Botón de encendido cuando está apagado o en espera",
+    "en": "Power button when off or standby",
+    "de": "Power button when off or standby",
+    "fr": "Power button when off or standby",
+    "it": "Power button when off or standby",
+    "nl": "Power button when off or standby"
+  },
+  {
+    "es": "Botón de encendido cuando está activo",
+    "en": "Power button when active",
+    "de": "Power button when active",
+    "fr": "Power button when active",
+    "it": "Power button when active",
+    "nl": "Power button when active"
+  },
+  {
+    "es": "Botón de encendido cuando no está disponible",
+    "en": "Power button when unavailable",
+    "de": "Power button when unavailable",
+    "fr": "Power button when unavailable",
+    "it": "Power button when unavailable",
+    "nl": "Power button when unavailable"
+  },
+  {
+    "es": "Añadir reproductor",
+    "en": "Add player",
+    "de": "Add player",
+    "fr": "Add player",
+    "it": "Add player",
+    "nl": "Add player"
+  },
+  {
+    "es": "Mostrar ajustes de animación",
+    "en": "Show animation settings",
+    "de": "Anzeigen: animation settings",
+    "fr": "Afficher animation settings",
+    "it": "Mostra animation settings",
+    "nl": "Toon animation settings"
+  },
+  {
+    "es": "Ocultar ajustes de animación",
+    "en": "Hide animation settings",
+    "de": "Hide animation settings",
+    "fr": "Hide animation settings",
+    "it": "Hide animation settings",
+    "nl": "Hide animation settings"
+  },
+  {
+    "es": "Mostrar ajustes de estilo",
+    "en": "Show style settings",
+    "de": "Anzeigen: style settings",
+    "fr": "Afficher style settings",
+    "it": "Mostra style settings",
+    "nl": "Toon style settings"
+  },
+  {
+    "es": "Ocultar ajustes de estilo",
+    "en": "Hide style settings",
+    "de": "Hide style settings",
+    "fr": "Hide style settings",
+    "it": "Hide style settings",
+    "nl": "Hide style settings"
+  },
+  {
+    "es": "Por defecto",
+    "en": "Default",
+    "de": "Default",
+    "fr": "Default",
+    "it": "Default",
+    "nl": "Default"
+  },
+  {
+    "es": "Navegar",
+    "en": "Navigate",
+    "de": "Navigate",
+    "fr": "Navigate",
+    "it": "Navigate",
+    "nl": "Navigate"
+  },
+  {
+    "es": "Sin acción",
+    "en": "No action",
+    "de": "No action",
+    "fr": "No action",
+    "it": "No action",
+    "nl": "No action"
+  },
+  {
+    "es": "Más información",
+    "en": "More info",
+    "de": "More info",
+    "fr": "More info",
+    "it": "More info",
+    "nl": "More info"
+  },
+  {
+    "es": "Abrir URL",
+    "en": "Open URL",
+    "de": "Öffnen: URL",
+    "fr": "Ouvrir URL",
+    "it": "Apri URL",
+    "nl": "Open URL"
+  },
+  {
+    "es": "Llamar servicio",
+    "en": "Call service",
+    "de": "Call service",
+    "fr": "Call service",
+    "it": "Call service",
+    "nl": "Call service"
+  },
+  {
+    "es": "Color del progreso",
+    "en": "Progress color",
+    "de": "Progress color",
+    "fr": "Progress color",
+    "it": "Progress color",
+    "nl": "Progress color"
+  },
+  {
+    "es": "Fondo del progreso",
+    "en": "Progress background",
+    "de": "Progress background",
+    "fr": "Progress background",
+    "it": "Progress background",
+    "nl": "Progress background"
+  },
+  {
+    "es": "Tintado activo TV",
+    "en": "TV active tint",
+    "de": "TV active tint",
+    "fr": "TV active tint",
+    "it": "TV active tint",
+    "nl": "TV active tint"
+  },
+  {
+    "es": "Color de acento",
+    "en": "Accent color",
+    "de": "Accent color",
+    "fr": "Accent color",
+    "it": "Accent color",
+    "nl": "Accent color"
+  },
+  {
+    "es": "Fondo del navegador",
+    "en": "Browser background",
+    "de": "Browser background",
+    "fr": "Browser background",
+    "it": "Browser background",
+    "nl": "Browser background"
+  },
+  {
+    "es": "Comportamiento",
+    "en": "Behavior",
+    "de": "Behavior",
+    "fr": "Behavior",
+    "it": "Behavior",
+    "nl": "Behavior"
+  },
+  {
+    "es": "Todavía no has añadido ningún reproductor.",
+    "en": "You have not added any players yet.",
+    "de": "You have not added any players yet.",
+    "fr": "You have not added any players yet.",
+    "it": "You have not added any players yet.",
+    "nl": "You have not added any players yet."
+  },
+  {
     "es": "Z-index",
     "en": "Z-index",
     "de": "Z-index",
@@ -5961,38 +6417,6 @@
     "fr": "Visibility",
     "it": "Visibility",
     "nl": "Visibility"
-  },
-  {
-    "es": "Ocultar ajustes de estilo",
-    "en": "Hide style settings",
-    "de": "Hide style settings",
-    "fr": "Hide style settings",
-    "it": "Hide style settings",
-    "nl": "Hide style settings"
-  },
-  {
-    "es": "Mostrar ajustes de estilo",
-    "en": "Show style settings",
-    "de": "Anzeigen: style settings",
-    "fr": "Afficher style settings",
-    "it": "Mostra style settings",
-    "nl": "Toon style settings"
-  },
-  {
-    "es": "Ocultar ajustes de animación",
-    "en": "Hide animation settings",
-    "de": "Hide animation settings",
-    "fr": "Hide animation settings",
-    "it": "Hide animation settings",
-    "nl": "Hide animation settings"
-  },
-  {
-    "es": "Mostrar ajustes de animación",
-    "en": "Show animation settings",
-    "de": "Anzeigen: animation settings",
-    "fr": "Afficher animation settings",
-    "it": "Mostra animation settings",
-    "nl": "Toon animation settings"
   },
   {
     "es": "Anadir ruta",
@@ -18299,7 +18723,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           </div>
         </div>
         <div class="player-editor-subgroup">
-          <div class="player-editor-subgroup__title">Comportamiento</div>
+          <div class="player-editor-subgroup__title">${escapeHtml(this._editorLabel("Comportamiento"))}</div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Modo TV / Apple TV", `players.${index}.tv_mode`, player.tv_mode === true)}
             ${this._renderCheckboxField("Mostrar fuentes y apps", `players.${index}.show_source_controls`, player.show_source_controls !== false)}
@@ -18888,11 +19312,11 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             ${
               Array.isArray(config.players) && config.players.length
                 ? config.players.map((player, index) => this._renderPlayerCard(player, index)).join("")
-                : '<div class="empty-note">Todavía no has añadido ningún reproductor.</div>'
+                : `<div class="empty-note">${escapeHtml(this._editorLabel("Todavía no has añadido ningún reproductor."))}</div>`
             }
           </div>
           <div class="editor-actions">
-            <button type="button" data-action="add-player">Añadir reproductor</button>
+            <button type="button" data-action="add-player">${escapeHtml(this._editorLabel("Añadir reproductor"))}</button>
           </div>
         </section>
 
@@ -18933,7 +19357,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showAnimationSection ? "Ocultar ajustes de animación" : "Mostrar ajustes de animación"}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
               </button>
             </div>
           </div>
@@ -18969,7 +19393,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
               </button>
             </div>
           </div>
@@ -67343,8 +67767,9 @@ function translateMeteoalarmValue(value) {
 }
 
 function translateCondition(value, hass = null, configLang = null) {
-  if (hass && window.NodaliaI18n?.translateWeatherCondition) {
-    return window.NodaliaI18n.translateWeatherCondition(hass, configLang ?? "auto", value);
+  const h = hass ?? (typeof window !== "undefined" ? window.NodaliaI18n?.resolveHass?.(null) : null);
+  if (window.NodaliaI18n?.translateWeatherCondition) {
+    return window.NodaliaI18n.translateWeatherCondition(h, configLang ?? "auto", value);
   }
   switch (normalizeTextKey(value)) {
     case "clear_night":
@@ -71070,13 +71495,17 @@ function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
-function humanizeModeLabel(value, kind = "generic") {
+function humanizeModeLabel(value, kind = "generic", hass = null, configLang = null) {
   const raw = String(value || "").trim();
   if (!raw) {
     return "";
   }
 
   const key = normalizeTextKey(raw);
+  const h = hass ?? (typeof window !== "undefined" ? window.NodaliaI18n?.resolveHass?.(null) : null);
+  if (window.NodaliaI18n?.translateAdvanceVacuumVacuumMode) {
+    return window.NodaliaI18n.translateAdvanceVacuumVacuumMode(h, configLang ?? "auto", raw, kind);
+  }
   if (key === "off" && kind === "suction") {
     return "Off";
   }
@@ -71696,29 +72125,38 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _getStateLabel(state) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    const trState = (stateKey, rawFallback = state?.state) => (
+      window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, langCfg, stateKey, rawFallback)
+        : rawFallback
+    );
+
     if (this._isGoingToWashMops(state)) {
-      return "Yendo a lavar mopas";
+      return this._humanizeStateLabel("going_to_wash_mop", hass, langCfg);
     }
 
     if (this._isWashingMops(state)) {
-      return "Lavando mopas";
+      return trState("washing_mop", "Lavando mopas");
     }
 
     if (this._isDryingMops(state)) {
-      return "Secando";
+      return trState("drying_mop", "Secando");
     }
 
     if (this._isAutoEmptying(state)) {
-      return "Autovaciando";
+      return trState("emptying", "Autovaciando");
     }
 
     const roomMappings = this._getRoomMappings(state);
     const cleaningAreaLabel = this._getCleaningAreaLabel(state, roomMappings);
     if (cleaningAreaLabel) {
-      return `Limpiando: ${cleaningAreaLabel}`;
+      return `${trState("cleaning", "Limpiando")}: ${cleaningAreaLabel}`;
     }
 
-    switch (normalizeTextKey(this._getReportedStateValue(state))) {
+    const reportedKey = normalizeTextKey(this._getReportedStateValue(state));
+    switch (reportedKey) {
       case "cleaning":
       case "segment_cleaning":
       case "room_cleaning":
@@ -71729,45 +72167,45 @@ class NodaliaVacuumCard extends HTMLElement {
       case "clean_area":
       case "vacuuming":
       case "limpiando":
-        return "Limpiando";
+        return trState("cleaning", "Limpiando");
       case "going_to_wash_the_mop":
       case "going_to_wash_mop":
       case "go_to_wash_mop":
       case "go_wash_mop":
       case "returning_to_wash_mop":
-        return "Yendo a lavar mopas";
+        return this._humanizeStateLabel("going_to_wash_mop", hass, langCfg);
       case "paused":
       case "pause":
       case "pausado":
-        return "Pausado";
+        return trState("paused", "Pausado");
       case "returning":
       case "return_to_base":
       case "returning_home":
       case "volviendo":
-        return "Volviendo a la base";
+        return trState("returning", "Volviendo a la base");
       case "docked":
       case "charging":
       case "charging_completed":
       case "en_base":
       case "base":
-        return "En base";
+        return trState("docked", "En base");
       case "idle":
       case "standby":
       case "en_espera":
-        return "En espera";
+        return trState("fallback", "En espera");
       case "error":
       case "fallo":
-        return "Error";
+        return trState("error", "Error");
       case "unavailable":
-        return "No disponible";
+        return trState("unavailable", "No disponible");
       case "unknown":
-        return "Desconocido";
+        return trState("unknown", "Desconocido");
       default:
-        return this._humanizeStateLabel(this._getReportedStateValue(state)) || "Sin estado";
+        return this._humanizeStateLabel(this._getReportedStateValue(state), hass, langCfg) || "Sin estado";
     }
   }
 
-  _humanizeStateLabel(value) {
+  _humanizeStateLabel(value, hass = null, configLang = null) {
     const raw = String(value ?? "").trim();
     if (!raw) {
       return "";
@@ -71779,27 +72217,39 @@ class NodaliaVacuumCard extends HTMLElement {
     }
 
     if (normalized.includes("go") && normalized.includes("wash") && normalized.includes("mop")) {
-      return "Yendo a lavar mopas";
+      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "washing_mop", "Yendo a lavar mopas")
+        : "Yendo a lavar mopas";
     }
 
     if (normalized.includes("wash") && normalized.includes("mop")) {
-      return "Lavando mopas";
+      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "washing_mop", "Lavando mopas")
+        : "Lavando mopas";
     }
 
     if (normalized.includes("dry") && normalized.includes("mop")) {
-      return "Secando mopas";
+      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "drying_mop", "Secando mopas")
+        : "Secando mopas";
     }
 
     if (normalized.includes("empty")) {
-      return "Autovaciando";
+      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "emptying", "Autovaciando")
+        : "Autovaciando";
     }
 
     if (normalized.includes("zone") && normalized.includes("clean")) {
-      return "Limpiando zona";
+      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "cleaning", "Limpiando zona")
+        : "Limpiando zona";
     }
 
     if ((normalized.includes("room") || normalized.includes("segment")) && normalized.includes("clean")) {
-      return "Limpiando habitación";
+      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "cleaning", "Limpiando habitación")
+        : "Limpiando habitación";
     }
 
     return raw
@@ -72262,7 +72712,7 @@ class NodaliaVacuumCard extends HTMLElement {
               data-mode-kind="${escapeHtml(descriptor.kind)}"
               data-value="${escapeHtml(option)}"
             >
-              ${escapeHtml(humanizeModeLabel(option, descriptor.kind))}
+              ${escapeHtml(humanizeModeLabel(option, descriptor.kind, this._hass, this._config?.language ?? "auto"))}
             </button>
           `)
           .join("")}
@@ -74284,7 +74734,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
   }
 
   _renderModeVisibilityField(field, modeValue, kind) {
-    const translatedLabel = humanizeModeLabel(modeValue, kind);
+    const translatedLabel = humanizeModeLabel(modeValue, kind, this._hass ?? this.hass, this._config?.language ?? "auto");
     const showRawValue = normalizeTextKey(translatedLabel) !== normalizeTextKey(modeValue);
     const label = showRawValue ? `${translatedLabel} (${modeValue})` : translatedLabel;
 

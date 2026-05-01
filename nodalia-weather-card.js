@@ -600,8 +600,9 @@ function translateMeteoalarmValue(value) {
 }
 
 function translateCondition(value, hass = null, configLang = null) {
-  if (hass && window.NodaliaI18n?.translateWeatherCondition) {
-    return window.NodaliaI18n.translateWeatherCondition(hass, configLang ?? "auto", value);
+  const h = hass ?? (typeof window !== "undefined" ? window.NodaliaI18n?.resolveHass?.(null) : null);
+  if (window.NodaliaI18n?.translateWeatherCondition) {
+    return window.NodaliaI18n.translateWeatherCondition(h, configLang ?? "auto", value);
   }
   switch (normalizeTextKey(value)) {
     case "clear_night":

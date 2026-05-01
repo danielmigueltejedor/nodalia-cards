@@ -2651,6 +2651,190 @@
     "nl": "Values"
   },
   {
+    "es": "Veladura del navegador",
+    "en": "Browser backdrop",
+    "de": "Browser backdrop",
+    "fr": "Browser backdrop",
+    "it": "Browser backdrop",
+    "nl": "Browser backdrop"
+  },
+  {
+    "es": "Entidad de más información",
+    "en": "More-info entity",
+    "de": "More-info entity",
+    "fr": "More-info entity",
+    "it": "More-info entity",
+    "nl": "More-info entity"
+  },
+  {
+    "es": "Botón de encendido cuando está apagado o en espera",
+    "en": "Power button when off or standby",
+    "de": "Power button when off or standby",
+    "fr": "Power button when off or standby",
+    "it": "Power button when off or standby",
+    "nl": "Power button when off or standby"
+  },
+  {
+    "es": "Botón de encendido cuando está activo",
+    "en": "Power button when active",
+    "de": "Power button when active",
+    "fr": "Power button when active",
+    "it": "Power button when active",
+    "nl": "Power button when active"
+  },
+  {
+    "es": "Botón de encendido cuando no está disponible",
+    "en": "Power button when unavailable",
+    "de": "Power button when unavailable",
+    "fr": "Power button when unavailable",
+    "it": "Power button when unavailable",
+    "nl": "Power button when unavailable"
+  },
+  {
+    "es": "Añadir reproductor",
+    "en": "Add player",
+    "de": "Add player",
+    "fr": "Add player",
+    "it": "Add player",
+    "nl": "Add player"
+  },
+  {
+    "es": "Mostrar ajustes de animación",
+    "en": "Show animation settings",
+    "de": "Anzeigen: animation settings",
+    "fr": "Afficher animation settings",
+    "it": "Mostra animation settings",
+    "nl": "Toon animation settings"
+  },
+  {
+    "es": "Ocultar ajustes de animación",
+    "en": "Hide animation settings",
+    "de": "Hide animation settings",
+    "fr": "Hide animation settings",
+    "it": "Hide animation settings",
+    "nl": "Hide animation settings"
+  },
+  {
+    "es": "Mostrar ajustes de estilo",
+    "en": "Show style settings",
+    "de": "Anzeigen: style settings",
+    "fr": "Afficher style settings",
+    "it": "Mostra style settings",
+    "nl": "Toon style settings"
+  },
+  {
+    "es": "Ocultar ajustes de estilo",
+    "en": "Hide style settings",
+    "de": "Hide style settings",
+    "fr": "Hide style settings",
+    "it": "Hide style settings",
+    "nl": "Hide style settings"
+  },
+  {
+    "es": "Por defecto",
+    "en": "Default",
+    "de": "Default",
+    "fr": "Default",
+    "it": "Default",
+    "nl": "Default"
+  },
+  {
+    "es": "Navegar",
+    "en": "Navigate",
+    "de": "Navigate",
+    "fr": "Navigate",
+    "it": "Navigate",
+    "nl": "Navigate"
+  },
+  {
+    "es": "Sin acción",
+    "en": "No action",
+    "de": "No action",
+    "fr": "No action",
+    "it": "No action",
+    "nl": "No action"
+  },
+  {
+    "es": "Más información",
+    "en": "More info",
+    "de": "More info",
+    "fr": "More info",
+    "it": "More info",
+    "nl": "More info"
+  },
+  {
+    "es": "Abrir URL",
+    "en": "Open URL",
+    "de": "Öffnen: URL",
+    "fr": "Ouvrir URL",
+    "it": "Apri URL",
+    "nl": "Open URL"
+  },
+  {
+    "es": "Llamar servicio",
+    "en": "Call service",
+    "de": "Call service",
+    "fr": "Call service",
+    "it": "Call service",
+    "nl": "Call service"
+  },
+  {
+    "es": "Color del progreso",
+    "en": "Progress color",
+    "de": "Progress color",
+    "fr": "Progress color",
+    "it": "Progress color",
+    "nl": "Progress color"
+  },
+  {
+    "es": "Fondo del progreso",
+    "en": "Progress background",
+    "de": "Progress background",
+    "fr": "Progress background",
+    "it": "Progress background",
+    "nl": "Progress background"
+  },
+  {
+    "es": "Tintado activo TV",
+    "en": "TV active tint",
+    "de": "TV active tint",
+    "fr": "TV active tint",
+    "it": "TV active tint",
+    "nl": "TV active tint"
+  },
+  {
+    "es": "Color de acento",
+    "en": "Accent color",
+    "de": "Accent color",
+    "fr": "Accent color",
+    "it": "Accent color",
+    "nl": "Accent color"
+  },
+  {
+    "es": "Fondo del navegador",
+    "en": "Browser background",
+    "de": "Browser background",
+    "fr": "Browser background",
+    "it": "Browser background",
+    "nl": "Browser background"
+  },
+  {
+    "es": "Comportamiento",
+    "en": "Behavior",
+    "de": "Behavior",
+    "fr": "Behavior",
+    "it": "Behavior",
+    "nl": "Behavior"
+  },
+  {
+    "es": "Todavía no has añadido ningún reproductor.",
+    "en": "You have not added any players yet.",
+    "de": "You have not added any players yet.",
+    "fr": "You have not added any players yet.",
+    "it": "You have not added any players yet.",
+    "nl": "You have not added any players yet."
+  },
+  {
     "es": "Z-index",
     "en": "Z-index",
     "de": "Z-index",
@@ -3497,38 +3681,6 @@
     "fr": "Visibility",
     "it": "Visibility",
     "nl": "Visibility"
-  },
-  {
-    "es": "Ocultar ajustes de estilo",
-    "en": "Hide style settings",
-    "de": "Hide style settings",
-    "fr": "Hide style settings",
-    "it": "Hide style settings",
-    "nl": "Hide style settings"
-  },
-  {
-    "es": "Mostrar ajustes de estilo",
-    "en": "Show style settings",
-    "de": "Anzeigen: style settings",
-    "fr": "Afficher style settings",
-    "it": "Mostra style settings",
-    "nl": "Toon style settings"
-  },
-  {
-    "es": "Ocultar ajustes de animación",
-    "en": "Hide animation settings",
-    "de": "Hide animation settings",
-    "fr": "Hide animation settings",
-    "it": "Hide animation settings",
-    "nl": "Hide animation settings"
-  },
-  {
-    "es": "Mostrar ajustes de animación",
-    "en": "Show animation settings",
-    "de": "Anzeigen: animation settings",
-    "fr": "Afficher animation settings",
-    "it": "Mostra animation settings",
-    "nl": "Toon animation settings"
   },
   {
     "es": "Anadir ruta",

@@ -5600,7 +5600,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           </div>
         </div>
         <div class="player-editor-subgroup">
-          <div class="player-editor-subgroup__title">Comportamiento</div>
+          <div class="player-editor-subgroup__title">${escapeHtml(this._editorLabel("Comportamiento"))}</div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Modo TV / Apple TV", `players.${index}.tv_mode`, player.tv_mode === true)}
             ${this._renderCheckboxField("Mostrar fuentes y apps", `players.${index}.show_source_controls`, player.show_source_controls !== false)}
@@ -6189,11 +6189,11 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             ${
               Array.isArray(config.players) && config.players.length
                 ? config.players.map((player, index) => this._renderPlayerCard(player, index)).join("")
-                : '<div class="empty-note">Todavía no has añadido ningún reproductor.</div>'
+                : `<div class="empty-note">${escapeHtml(this._editorLabel("Todavía no has añadido ningún reproductor."))}</div>`
             }
           </div>
           <div class="editor-actions">
-            <button type="button" data-action="add-player">Añadir reproductor</button>
+            <button type="button" data-action="add-player">${escapeHtml(this._editorLabel("Añadir reproductor"))}</button>
           </div>
         </section>
 
@@ -6234,7 +6234,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showAnimationSection ? "Ocultar ajustes de animación" : "Mostrar ajustes de animación"}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
               </button>
             </div>
           </div>
@@ -6270,7 +6270,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
               </button>
             </div>
           </div>

@@ -404,13 +404,17 @@ function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
-function humanizeModeLabel(value, kind = "generic") {
+function humanizeModeLabel(value, kind = "generic", hass = null, configLang = null) {
   const raw = String(value || "").trim();
   if (!raw) {
     return "";
   }
 
   const key = normalizeTextKey(raw);
+  const h = hass ?? (typeof window !== "undefined" ? window.NodaliaI18n?.resolveHass?.(null) : null);
+  if (window.NodaliaI18n?.translateAdvanceVacuumVacuumMode) {
+    return window.NodaliaI18n.translateAdvanceVacuumVacuumMode(h, configLang ?? "auto", raw, kind);
+  }
   if (key === "off" && kind === "suction") {
     return "Off";
   }
@@ -1030,29 +1034,38 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _getStateLabel(state) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    const trState = (stateKey, rawFallback = state?.state) => (
+      window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, langCfg, stateKey, rawFallback)
+        : rawFallback
+    );
+
     if (this._isGoingToWashMops(state)) {
-      return "Yendo a lavar mopas";
+      return this._humanizeStateLabel("going_to_wash_mop", hass, langCfg);
     }
 
     if (this._isWashingMops(state)) {
-      return "Lavando mopas";
+      return trState("washing_mop", "Lavando mopas");
     }
 
     if (this._isDryingMops(state)) {
-      return "Secando";
+      return trState("drying_mop", "Secando");
     }
 
     if (this._isAutoEmptying(state)) {
-      return "Autovaciando";
+      return trState("emptying", "Autovaciando");
     }
 
     const roomMappings = this._getRoomMappings(state);
     const cleaningAreaLabel = this._getCleaningAreaLabel(state, roomMappings);
     if (cleaningAreaLabel) {
-      return `Limpiando: ${cleaningAreaLabel}`;
+      return `${trState("cleaning", "Limpiando")}: ${cleaningAreaLabel}`;
     }
 
-    switch (normalizeTextKey(this._getReportedStateValue(state))) {
+    const reportedKey = normalizeTextKey(this._getReportedStateValue(state));
+    switch (reportedKey) {
       case "cleaning":
       case "segment_cleaning":
       case "room_cleaning":
@@ -1063,45 +1076,45 @@ class NodaliaVacuumCard extends HTMLElement {
       case "clean_area":
       case "vacuuming":
       case "limpiando":
-        return "Limpiando";
+        return trState("cleaning", "Limpiando");
       case "going_to_wash_the_mop":
       case "going_to_wash_mop":
       case "go_to_wash_mop":
       case "go_wash_mop":
       case "returning_to_wash_mop":
-        return "Yendo a lavar mopas";
+        return this._humanizeStateLabel("going_to_wash_mop", hass, langCfg);
       case "paused":
       case "pause":
       case "pausado":
-        return "Pausado";
+        return trState("paused", "Pausado");
       case "returning":
       case "return_to_base":
       case "returning_home":
       case "volviendo":
-        return "Volviendo a la base";
+        return trState("returning", "Volviendo a la base");
       case "docked":
       case "charging":
       case "charging_completed":
       case "en_base":
       case "base":
-        return "En base";
+        return trState("docked", "En base");
       case "idle":
       case "standby":
       case "en_espera":
-        return "En espera";
+        return trState("fallback", "En espera");
       case "error":
       case "fallo":
-        return "Error";
+        return trState("error", "Error");
       case "unavailable":
-        return "No disponible";
+        return trState("unavailable", "No disponible");
       case "unknown":
-        return "Desconocido";
+        return trState("unknown", "Desconocido");
       default:
-        return this._humanizeStateLabel(this._getReportedStateValue(state)) || "Sin estado";
+        return this._humanizeStateLabel(this._getReportedStateValue(state), hass, langCfg) || "Sin estado";
     }
   }
 
-  _humanizeStateLabel(value) {
+  _humanizeStateLabel(value, hass = null, configLang = null) {
     const raw = String(value ?? "").trim();
     if (!raw) {
       return "";
@@ -1113,27 +1126,39 @@ class NodaliaVacuumCard extends HTMLElement {
     }
 
     if (normalized.includes("go") && normalized.includes("wash") && normalized.includes("mop")) {
-      return "Yendo a lavar mopas";
+      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "washing_mop", "Yendo a lavar mopas")
+        : "Yendo a lavar mopas";
     }
 
     if (normalized.includes("wash") && normalized.includes("mop")) {
-      return "Lavando mopas";
+      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "washing_mop", "Lavando mopas")
+        : "Lavando mopas";
     }
 
     if (normalized.includes("dry") && normalized.includes("mop")) {
-      return "Secando mopas";
+      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "drying_mop", "Secando mopas")
+        : "Secando mopas";
     }
 
     if (normalized.includes("empty")) {
-      return "Autovaciando";
+      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "emptying", "Autovaciando")
+        : "Autovaciando";
     }
 
     if (normalized.includes("zone") && normalized.includes("clean")) {
-      return "Limpiando zona";
+      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "cleaning", "Limpiando zona")
+        : "Limpiando zona";
     }
 
     if ((normalized.includes("room") || normalized.includes("segment")) && normalized.includes("clean")) {
-      return "Limpiando habitación";
+      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "cleaning", "Limpiando habitación")
+        : "Limpiando habitación";
     }
 
     return raw
@@ -1596,7 +1621,7 @@ class NodaliaVacuumCard extends HTMLElement {
               data-mode-kind="${escapeHtml(descriptor.kind)}"
               data-value="${escapeHtml(option)}"
             >
-              ${escapeHtml(humanizeModeLabel(option, descriptor.kind))}
+              ${escapeHtml(humanizeModeLabel(option, descriptor.kind, this._hass, this._config?.language ?? "auto"))}
             </button>
           `)
           .join("")}
@@ -3618,7 +3643,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
   }
 
   _renderModeVisibilityField(field, modeValue, kind) {
-    const translatedLabel = humanizeModeLabel(modeValue, kind);
+    const translatedLabel = humanizeModeLabel(modeValue, kind, this._hass ?? this.hass, this._config?.language ?? "auto");
     const showRawValue = normalizeTextKey(translatedLabel) !== normalizeTextKey(modeValue);
     const label = showRawValue ? `${translatedLabel} (${modeValue})` : translatedLabel;
 
