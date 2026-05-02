@@ -6,7 +6,6 @@
 ![Current beta](https://img.shields.io/badge/current%20beta-0.3.0--beta.03-orange)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Status](https://img.shields.io/badge/status-beta-orange.svg)
 ![GitHub](https://img.shields.io/badge/hosted%20on-GitHub-black?logo=github)
 
 **Nodalia Cards** is a custom card bundle for Home Assistant focused on creating a cleaner, more polished and more app-like dashboard experience.
@@ -77,9 +76,11 @@ HACS can append `?hacstag=…` to that path. The number is **not** the app versi
 
 ## 🌍 Translations
 
-**0.2.1** on **`main`** includes **es, en, de, fr, it, nl** for the bundled cards and Lovelace visual editors (coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
+**Stable (`main`) — 0.2.1** includes **es, en, de, fr, it, nl** for the bundled cards and Lovelace visual editors (coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
 
-This **`beta`** branch ships **0.3.0-beta.XX** prereleases (see **CONTRIBUTING** for tag form): locale polish, editor refinements, and card improvements before the next minor release.
+**Prereleases (`beta`) — 0.3.0-beta.XX** (see **CONTRIBUTING** for tags): locale polish, editor refinements, and card improvements before the next minor release.
+
+> **Note:** `README.md`, `CHANGELOG.md`, and `CONTRIBUTING.md` are kept **identical** on **`main`** and **`beta`**; only code and `package.json` differ by branch.
 
 ---
 

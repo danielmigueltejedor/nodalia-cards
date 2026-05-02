@@ -6,6 +6,19 @@ Nodalia Cards is still evolving and feedback, ideas and improvements are very we
 
 ---
 
+## 📄 Documentation parity (`main` / `beta`)
+
+These files must stay **the same** on **`main`** and **`beta`** (copy or merge after each edit):
+
+- **`README.md`**
+- **`CHANGELOG.md`**
+- **`CONTRIBUTING.md`**
+- **`ROADMAP.md`** (if present)
+
+Branch-specific content belongs in **`package.json`**, release tags, and code—not in diverging docs. After changing any of the files above on one branch, update the other branch **before** pushing (e.g. `git checkout main -- README.md CHANGELOG.md CONTRIBUTING.md` from the branch that has the edits, or merge).
+
+---
+
 ## 🧠 Project philosophy
 
 The goal of Nodalia Cards is to create a **clean, consistent and app-like UI system for Home Assistant**.
@@ -111,7 +124,7 @@ Stable releases (**`0.2.x`**, **`0.3.x`**, …) ship from **`main`**. Prerelease
 
 **Beta tags and versions:** use **`v0.3.0-beta.XX`** on GitHub with **`XX` as two digits** (`01`, `02`, … `09`, `10`, …) so release lists stay ordered. Example: third beta → **`v0.3.0-beta.03`**. Keep **`package.json`** `version` identical to that prerelease string (without the leading `v`) so HACS and `__NODALIA_BUNDLE__` match the tag.
 
-For maintainers: each shipped beta—add a section to **`CHANGELOG.md`**, bump the **Current beta** badge in **`README.md`** on **`beta`**, tag **`v0.3.0-beta.XX`**, and run **`npm run bundle`** when artefacts change.
+For maintainers: each shipped beta—add a section to **`CHANGELOG.md`**, bump the **Current beta** badge in **`README.md`** (same file on **`main`** and **`beta`**), tag **`v0.3.0-beta.XX`**, and run **`npm run bundle`** when artefacts change.
 
 ---
 
