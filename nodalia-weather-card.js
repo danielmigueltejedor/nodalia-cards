@@ -537,13 +537,15 @@ function getMeteoalarmAccentColor(state) {
   }
 }
 
-function formatMeteoalarmDate(value) {
+function formatMeteoalarmDate(value, hass, configLang) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return String(value || "").trim();
   }
 
-  return date.toLocaleString([], {
+  const lang = window.NodaliaI18n?.resolveLanguage?.(hass, configLang ?? "auto") ?? "es";
+  const tag = window.NodaliaI18n?.localeTag?.(lang) || lang;
+  return date.toLocaleString(tag, {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
@@ -551,7 +553,10 @@ function formatMeteoalarmDate(value) {
   });
 }
 
-function translateMeteoalarmValue(value) {
+function translateMeteoalarmValue(value, hass, configLang) {
+  if (window.NodaliaI18n?.translateMeteoalarmTerm) {
+    return window.NodaliaI18n.translateMeteoalarmTerm(hass, configLang ?? "auto", value);
+  }
   const text = String(value || "").trim();
   switch (normalizeTextKey(text)) {
     case "moderate":
@@ -1287,13 +1292,23 @@ class NodaliaWeatherCard extends HTMLElement {
     const isActive = state?.state === "on";
     const awareness = getMeteoalarmAwarenessParts(state);
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const langCfg = this._config?.language ?? "auto";
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "es";
     const wm = window.NodaliaI18n?.strings?.(lang)?.weatherCard?.meteoalarm;
-    const label = isActive
-      ? String(attrs.event || attrs.headline || awareness.label || wm?.alertFallback || "Alerta").trim()
-      : state?.state === "off"
+    const ev = String(attrs.event || "").trim();
+    const headline = String(attrs.headline || "").trim();
+    const awareLabel = String(awareness.label || "").trim();
+    const label = !isActive
+      ? state?.state === "off"
         ? (wm?.noAlerts || "Sin alertas")
-        : (wm?.name || "Meteoalarm");
+        : (wm?.name || "Meteoalarm")
+      : ev
+        ? ev
+        : headline
+          ? headline
+          : awareLabel
+            ? translateMeteoalarmValue(awareLabel, hass, langCfg)
+            : (wm?.alertFallback || "Alerta");
 
     return `
       <button
@@ -1328,7 +1343,8 @@ class NodaliaWeatherCard extends HTMLElement {
     const accentColor = getMeteoalarmAccentColor(state);
     const awareness = getMeteoalarmAwarenessParts(state);
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const langCfg = this._config?.language ?? "auto";
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "es";
     const wm = window.NodaliaI18n?.strings?.(lang)?.weatherCard?.meteoalarm;
     const title = state?.state === "on"
       ? String(attrs.headline || attrs.event || wm?.weatherAlert || "Alerta meteorologica").trim()
@@ -1336,13 +1352,13 @@ class NodaliaWeatherCard extends HTMLElement {
         ? (wm?.noWeatherAlerts || "Sin alertas meteorologicas")
         : (wm?.name || "Meteoalarm");
     const rows = [
-      [wm?.level || "Nivel", translateMeteoalarmValue(awareness.label || attrs.severity || "")],
+      [wm?.level || "Nivel", translateMeteoalarmValue(awareness.label || attrs.severity || "", hass, langCfg)],
       [wm?.type || "Tipo", attrs.event || attrs.awareness_type || ""],
-      [wm?.start || "Inicio", formatMeteoalarmDate(attrs.onset || attrs.effective)],
-      [wm?.end || "Fin", formatMeteoalarmDate(attrs.expires)],
-      [wm?.severity || "Severidad", translateMeteoalarmValue(attrs.severity || "")],
-      [wm?.urgency || "Urgencia", translateMeteoalarmValue(attrs.urgency || "")],
-      [wm?.certainty || "Certeza", translateMeteoalarmValue(attrs.certainty || "")],
+      [wm?.start || "Inicio", formatMeteoalarmDate(attrs.onset || attrs.effective, hass, langCfg)],
+      [wm?.end || "Fin", formatMeteoalarmDate(attrs.expires, hass, langCfg)],
+      [wm?.severity || "Severidad", translateMeteoalarmValue(attrs.severity || "", hass, langCfg)],
+      [wm?.urgency || "Urgencia", translateMeteoalarmValue(attrs.urgency || "", hass, langCfg)],
+      [wm?.certainty || "Certeza", translateMeteoalarmValue(attrs.certainty || "", hass, langCfg)],
     ].filter(([, value]) => String(value || "").trim());
     const description = String(attrs.description || "").trim();
     const instruction = String(attrs.instruction || "").trim();
@@ -1372,8 +1388,8 @@ class NodaliaWeatherCard extends HTMLElement {
               `).join("")}</div>`
               : ""
           }
-          ${description ? `<div class="weather-alert-panel__section"><h3>Descripcion</h3><p>${escapeHtml(description)}</p></div>` : ""}
-          ${instruction ? `<div class="weather-alert-panel__section"><h3>Instrucciones</h3><p>${escapeHtml(instruction)}</p></div>` : ""}
+          ${description ? `<div class="weather-alert-panel__section"><h3>${escapeHtml(wm?.descriptionTitle || "Descripcion")}</h3><p>${escapeHtml(description)}</p></div>` : ""}
+          ${instruction ? `<div class="weather-alert-panel__section"><h3>${escapeHtml(wm?.instructionsTitle || "Instrucciones")}</h3><p>${escapeHtml(instruction)}</p></div>` : ""}
         </section>
       </div>
     `;

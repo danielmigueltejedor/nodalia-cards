@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0-beta.10] - 2026-05-02
+
+### Changed
+
+- **Weather** (`nodalia-weather-card.js`): Meteoalarm chip and popup use `translateMeteoalarmTerm` with localized row labels and enum-style values (Spanish/French/English API strings mapped to the active locale); popup dates use `localeTag(resolveLanguage(...))`; description/instructions headings use `weatherCard.meteoalarm.descriptionTitle` / `instructionsTitle`.
+- **`nodalia-i18n.js`**: `translateMeteoalarmTerm` with `meteoalarmApiKey` and cross-language aliases for Meteoalarm/CAP values.
+- **Advance vacuum** (`nodalia-advance-vacuum-card.js`): default `language` is `auto` so the card follows Home Assistant unless overridden.
+- Regenerated artifact: bundled `nodalia-cards.js`.
+
 ## [0.2.0-beta.9] - 2026-05-02
 
 ### Changed

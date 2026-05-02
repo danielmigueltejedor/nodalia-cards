@@ -258,7 +258,7 @@ const DEFAULT_CONFIG = {
   },
   map_locked: true,
   two_finger_pan: false,
-  language: "es",
+  language: "auto",
   show_state_chip: true,
   show_battery_chip: true,
   show_room_labels: true,

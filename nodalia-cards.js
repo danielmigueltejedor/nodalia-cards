@@ -53,6 +53,12 @@
     if (ha) {
       return ha;
     }
+    if (typeof document !== "undefined") {
+      const docLang = baseLang(String(document.documentElement?.getAttribute("lang") || "").trim());
+      if (docLang) {
+        return docLang;
+      }
+    }
     if (typeof navigator !== "undefined" && navigator.language) {
       const nav = baseLang(String(navigator.language));
       if (nav) {
@@ -449,6 +455,30 @@
           urgency: "Urgencia",
           certainty: "Certeza",
           close: "Cerrar",
+          descriptionTitle: "Descripción",
+          instructionsTitle: "Instrucciones",
+          terms: {
+            moderate: "Moderado",
+            severe: "Severo",
+            high: "Alto",
+            extreme: "Extremo",
+            minor: "Menor",
+            yellow: "Amarillo",
+            orange: "Naranja",
+            red: "Rojo",
+            green: "Verde",
+            future: "Futuro",
+            immediate: "Inmediato",
+            expected: "Esperado",
+            past: "Pasado",
+            likely: "Probable",
+            observed: "Observado",
+            possible: "Posible",
+            unlikely: "Improbable",
+            unknown: "Desconocido",
+            met: "Meteorológico",
+            monitor: "Monitorizar",
+          },
         },
       },
       humidifierCard: {
@@ -853,6 +883,30 @@
           urgency: "Urgency",
           certainty: "Certainty",
           close: "Close",
+          descriptionTitle: "Description",
+          instructionsTitle: "Instructions",
+          terms: {
+            moderate: "Moderate",
+            severe: "Severe",
+            high: "High",
+            extreme: "Extreme",
+            minor: "Minor",
+            yellow: "Yellow",
+            orange: "Orange",
+            red: "Red",
+            green: "Green",
+            future: "Future",
+            immediate: "Immediate",
+            expected: "Expected",
+            past: "Past",
+            likely: "Likely",
+            observed: "Observed",
+            possible: "Possible",
+            unlikely: "Unlikely",
+            unknown: "Unknown",
+            met: "Meteorological",
+            monitor: "Monitor",
+          },
         },
       },
       humidifierCard: {
@@ -1257,6 +1311,30 @@
           urgency: "Dringlichkeit",
           certainty: "Sicherheit",
           close: "Schließen",
+          descriptionTitle: "Beschreibung",
+          instructionsTitle: "Hinweise",
+          terms: {
+            moderate: "Mäßig",
+            severe: "Schwer",
+            high: "Hoch",
+            extreme: "Extrem",
+            minor: "Gering",
+            yellow: "Gelb",
+            orange: "Orange",
+            red: "Rot",
+            green: "Grün",
+            future: "Zukünftig",
+            immediate: "Sofort",
+            expected: "Erwartet",
+            past: "Vergangen",
+            likely: "Wahrscheinlich",
+            observed: "Beobachtet",
+            possible: "Möglich",
+            unlikely: "Unwahrscheinlich",
+            unknown: "Unbekannt",
+            met: "Meteorologisch",
+            monitor: "Beobachten",
+          },
         },
       },
       humidifierCard: {
@@ -1661,6 +1739,30 @@
           urgency: "Urgence",
           certainty: "Certitude",
           close: "Fermer",
+          descriptionTitle: "Description",
+          instructionsTitle: "Consignes",
+          terms: {
+            moderate: "Modéré",
+            severe: "Grave",
+            high: "Élevé",
+            extreme: "Extrême",
+            minor: "Mineur",
+            yellow: "Jaune",
+            orange: "Orange",
+            red: "Rouge",
+            green: "Vert",
+            future: "Futur",
+            immediate: "Immédiat",
+            expected: "Prévu",
+            past: "Passé",
+            likely: "Probable",
+            observed: "Observé",
+            possible: "Possible",
+            unlikely: "Improbable",
+            unknown: "Inconnu",
+            met: "Météorologique",
+            monitor: "Surveillance",
+          },
         },
       },
       humidifierCard: {
@@ -2065,6 +2167,30 @@
           urgency: "Urgenza",
           certainty: "Certezza",
           close: "Chiudi",
+          descriptionTitle: "Descrizione",
+          instructionsTitle: "Istruzioni",
+          terms: {
+            moderate: "Moderato",
+            severe: "Grave",
+            high: "Alto",
+            extreme: "Estremo",
+            minor: "Lieve",
+            yellow: "Giallo",
+            orange: "Arancione",
+            red: "Rosso",
+            green: "Verde",
+            future: "Futuro",
+            immediate: "Immediato",
+            expected: "Previsto",
+            past: "Passato",
+            likely: "Probabile",
+            observed: "Osservato",
+            possible: "Possibile",
+            unlikely: "Improbabile",
+            unknown: "Sconosciuto",
+            met: "Meteorologico",
+            monitor: "Monitoraggio",
+          },
         },
       },
       humidifierCard: {
@@ -2469,6 +2595,30 @@
           urgency: "Urgentie",
           certainty: "Zekerheid",
           close: "Sluiten",
+          descriptionTitle: "Beschrijving",
+          instructionsTitle: "Instructies",
+          terms: {
+            moderate: "Matig",
+            severe: "Ernstig",
+            high: "Hoog",
+            extreme: "Extreem",
+            minor: "Licht",
+            yellow: "Geel",
+            orange: "Oranje",
+            red: "Rood",
+            green: "Groen",
+            future: "Toekomst",
+            immediate: "Onmiddellijk",
+            expected: "Verwacht",
+            past: "Verleden",
+            likely: "Waarschijnlijk",
+            observed: "Waargenomen",
+            possible: "Mogelijk",
+            unlikely: "Onwaarschijnlijk",
+            unknown: "Onbekend",
+            met: "Meteorologisch",
+            monitor: "Monitoren",
+          },
         },
       },
       humidifierCard: {
@@ -2576,6 +2726,102 @@
       return modes[key];
     }
     return String(value ?? "").trim();
+  }
+
+  /** Same normalization as `nodalia-weather-card.js` for CAP / Meteoalarm attribute strings. */
+  function meteoalarmApiKey(value) {
+    return String(value ?? "")
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+  }
+
+  /**
+   * Maps API text (EN/ES/FR/DE/IT/NL variants) to canonical keys under `weatherCard.meteoalarm.terms`.
+   */
+  const METEOALARM_CANONICAL_BY_API_KEY = {
+    moderate: "moderate",
+    severe: "severe",
+    high: "high",
+    extreme: "extreme",
+    minor: "minor",
+    yellow: "yellow",
+    orange: "orange",
+    red: "red",
+    green: "green",
+    future: "future",
+    immediate: "immediate",
+    expected: "expected",
+    past: "past",
+    likely: "likely",
+    observed: "observed",
+    possible: "possible",
+    unlikely: "unlikely",
+    unknown: "unknown",
+    met: "met",
+    monitor: "monitor",
+    moderado: "moderate",
+    severo: "severe",
+    alto: "high",
+    extremo: "extreme",
+    menor: "minor",
+    amarillo: "yellow",
+    naranja: "orange",
+    rojo: "red",
+    verde: "green",
+    futuro: "future",
+    inmediato: "immediate",
+    immediato: "immediate",
+    sofort: "immediate",
+    unmittelbar: "immediate",
+    esperado: "expected",
+    pasado: "past",
+    probable: "likely",
+    observado: "observed",
+    posible: "possible",
+    improbable: "unlikely",
+    desconocido: "unknown",
+    meteorologico: "met",
+    monitorizar: "monitor",
+    modere: "moderate",
+    eleve: "high",
+    elevee: "high",
+    futur: "future",
+    immediat: "immediate",
+    prevu: "expected",
+    passe: "past",
+    observe: "observed",
+    maessig: "moderate",
+    messig: "moderate",
+    gering: "minor",
+    moderato: "moderate",
+    elevato: "high",
+    matig: "moderate",
+    hoog: "high",
+    laag: "minor",
+    onbekend: "unknown",
+  };
+
+  function translateMeteoalarmTerm(hass, configLang, raw) {
+    const text = String(raw ?? "").trim();
+    if (!text) {
+      return "";
+    }
+    const lang = resolveLanguage(hass, configLang);
+    const apiKey = meteoalarmApiKey(text);
+    const canonical = METEOALARM_CANONICAL_BY_API_KEY[apiKey] || apiKey;
+    const terms = strings(lang).weatherCard?.meteoalarm?.terms;
+    if (terms?.[canonical]) {
+      return terms[canonical];
+    }
+    const enTerms = strings("en").weatherCard?.meteoalarm?.terms;
+    if (enTerms?.[canonical]) {
+      return enTerms[canonical];
+    }
+    return text;
   }
 
   function translateAdvanceVacuumReportedState(hass, configLang, stateKey, rawFallback) {
@@ -2805,6 +3051,7 @@
     translateWeatherForecastUi,
     translateGraphEmptyHistory,
     translateHumidifierMode,
+    translateMeteoalarmTerm,
     translateAdvanceVacuumReportedState,
     translateAdvanceVacuumVacuumMode,
     translateFavState(langCode, key) {
@@ -50069,7 +50316,7 @@ const DEFAULT_CONFIG = {
   },
   map_locked: true,
   two_finger_pan: false,
-  language: "es",
+  language: "auto",
   show_state_chip: true,
   show_battery_chip: true,
   show_room_labels: true,
@@ -68139,13 +68386,15 @@ function getMeteoalarmAccentColor(state) {
   }
 }
 
-function formatMeteoalarmDate(value) {
+function formatMeteoalarmDate(value, hass, configLang) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return String(value || "").trim();
   }
 
-  return date.toLocaleString([], {
+  const lang = window.NodaliaI18n?.resolveLanguage?.(hass, configLang ?? "auto") ?? "es";
+  const tag = window.NodaliaI18n?.localeTag?.(lang) || lang;
+  return date.toLocaleString(tag, {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
@@ -68153,7 +68402,10 @@ function formatMeteoalarmDate(value) {
   });
 }
 
-function translateMeteoalarmValue(value) {
+function translateMeteoalarmValue(value, hass, configLang) {
+  if (window.NodaliaI18n?.translateMeteoalarmTerm) {
+    return window.NodaliaI18n.translateMeteoalarmTerm(hass, configLang ?? "auto", value);
+  }
   const text = String(value || "").trim();
   switch (normalizeTextKey(text)) {
     case "moderate":
@@ -68889,13 +69141,23 @@ class NodaliaWeatherCard extends HTMLElement {
     const isActive = state?.state === "on";
     const awareness = getMeteoalarmAwarenessParts(state);
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const langCfg = this._config?.language ?? "auto";
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "es";
     const wm = window.NodaliaI18n?.strings?.(lang)?.weatherCard?.meteoalarm;
-    const label = isActive
-      ? String(attrs.event || attrs.headline || awareness.label || wm?.alertFallback || "Alerta").trim()
-      : state?.state === "off"
+    const ev = String(attrs.event || "").trim();
+    const headline = String(attrs.headline || "").trim();
+    const awareLabel = String(awareness.label || "").trim();
+    const label = !isActive
+      ? state?.state === "off"
         ? (wm?.noAlerts || "Sin alertas")
-        : (wm?.name || "Meteoalarm");
+        : (wm?.name || "Meteoalarm")
+      : ev
+        ? ev
+        : headline
+          ? headline
+          : awareLabel
+            ? translateMeteoalarmValue(awareLabel, hass, langCfg)
+            : (wm?.alertFallback || "Alerta");
 
     return `
       <button
@@ -68930,7 +69192,8 @@ class NodaliaWeatherCard extends HTMLElement {
     const accentColor = getMeteoalarmAccentColor(state);
     const awareness = getMeteoalarmAwarenessParts(state);
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const langCfg = this._config?.language ?? "auto";
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "es";
     const wm = window.NodaliaI18n?.strings?.(lang)?.weatherCard?.meteoalarm;
     const title = state?.state === "on"
       ? String(attrs.headline || attrs.event || wm?.weatherAlert || "Alerta meteorologica").trim()
@@ -68938,13 +69201,13 @@ class NodaliaWeatherCard extends HTMLElement {
         ? (wm?.noWeatherAlerts || "Sin alertas meteorologicas")
         : (wm?.name || "Meteoalarm");
     const rows = [
-      [wm?.level || "Nivel", translateMeteoalarmValue(awareness.label || attrs.severity || "")],
+      [wm?.level || "Nivel", translateMeteoalarmValue(awareness.label || attrs.severity || "", hass, langCfg)],
       [wm?.type || "Tipo", attrs.event || attrs.awareness_type || ""],
-      [wm?.start || "Inicio", formatMeteoalarmDate(attrs.onset || attrs.effective)],
-      [wm?.end || "Fin", formatMeteoalarmDate(attrs.expires)],
-      [wm?.severity || "Severidad", translateMeteoalarmValue(attrs.severity || "")],
-      [wm?.urgency || "Urgencia", translateMeteoalarmValue(attrs.urgency || "")],
-      [wm?.certainty || "Certeza", translateMeteoalarmValue(attrs.certainty || "")],
+      [wm?.start || "Inicio", formatMeteoalarmDate(attrs.onset || attrs.effective, hass, langCfg)],
+      [wm?.end || "Fin", formatMeteoalarmDate(attrs.expires, hass, langCfg)],
+      [wm?.severity || "Severidad", translateMeteoalarmValue(attrs.severity || "", hass, langCfg)],
+      [wm?.urgency || "Urgencia", translateMeteoalarmValue(attrs.urgency || "", hass, langCfg)],
+      [wm?.certainty || "Certeza", translateMeteoalarmValue(attrs.certainty || "", hass, langCfg)],
     ].filter(([, value]) => String(value || "").trim());
     const description = String(attrs.description || "").trim();
     const instruction = String(attrs.instruction || "").trim();
@@ -68974,8 +69237,8 @@ class NodaliaWeatherCard extends HTMLElement {
               `).join("")}</div>`
               : ""
           }
-          ${description ? `<div class="weather-alert-panel__section"><h3>Descripcion</h3><p>${escapeHtml(description)}</p></div>` : ""}
-          ${instruction ? `<div class="weather-alert-panel__section"><h3>Instrucciones</h3><p>${escapeHtml(instruction)}</p></div>` : ""}
+          ${description ? `<div class="weather-alert-panel__section"><h3>${escapeHtml(wm?.descriptionTitle || "Descripcion")}</h3><p>${escapeHtml(description)}</p></div>` : ""}
+          ${instruction ? `<div class="weather-alert-panel__section"><h3>${escapeHtml(wm?.instructionsTitle || "Instrucciones")}</h3><p>${escapeHtml(instruction)}</p></div>` : ""}
         </section>
       </div>
     `;
