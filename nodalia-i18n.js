@@ -2853,21 +2853,42 @@
     },
   };
 
+  /** Merge locale PACK trees so partial locales (pt/ru/…) inherit full card strings from English. */
+  function deepMergeLocale(base, override) {
+    if (override === undefined || override === null) {
+      return base;
+    }
+    if (typeof base !== "object" || base === null || Array.isArray(base)) {
+      return override !== undefined ? override : base;
+    }
+    if (typeof override !== "object" || override === null || Array.isArray(override)) {
+      return override;
+    }
+    const out = { ...base };
+    for (const k of Object.keys(override)) {
+      if (
+        Object.prototype.hasOwnProperty.call(base, k) &&
+        typeof base[k] === "object" &&
+        base[k] !== null &&
+        !Array.isArray(base[k]) &&
+        typeof override[k] === "object" &&
+        override[k] !== null &&
+        !Array.isArray(override[k])
+      ) {
+        out[k] = deepMergeLocale(base[k], override[k]);
+      } else {
+        out[k] = override[k];
+      }
+    }
+    return out;
+  }
+
   function strings(langCode) {
     const code = PACK[langCode] ? langCode : "es";
-    const p = PACK[code];
-    if (p.weatherCard && p.humidifierCard && p.graphCard && p.advanceVacuum) {
-      return p;
+    if (code === "es") {
+      return PACK.es;
     }
-    const fb = code === "es" ? PACK.es : PACK.en;
-    return {
-      ...p,
-      weatherCard: p.weatherCard || fb.weatherCard,
-      humidifierCard: p.humidifierCard || fb.humidifierCard,
-      graphCard: p.graphCard || fb.graphCard,
-      advanceVacuum: p.advanceVacuum || fb.advanceVacuum,
-      navigationMusicAssist: p.navigationMusicAssist || fb.navigationMusicAssist,
-    };
+    return deepMergeLocale(PACK.en, PACK[code]);
   }
 
   function normalizeHumidifierModeKey(value) {

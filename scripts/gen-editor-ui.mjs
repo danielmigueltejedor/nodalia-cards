@@ -767,20 +767,195 @@ function enToNl(s) {
     .replace(/^Enable haptics$/i, "Haptiek inschakelen");
 }
 
+function enToPt(s) {
+  if (!isCompactUiEnglish(s)) {
+    return s;
+  }
+  return s
+    .replace(/^Show /, "Mostrar ")
+    .replace(/^Enable /, "Ativar ")
+    .replace(/^Open /, "Abrir ")
+    .replace(/^Icon$/i, "Ícone")
+    .replace(/^General$/i, "Geral")
+    .replace(/^Styles$/i, "Estilos")
+    .replace(/^Map$/i, "Mapa")
+    .replace(/^Border$/i, "Borda")
+    .replace(/^Shadow$/i, "Sombra")
+    .replace(/^Padding$/i, "Margem interna")
+    .replace(/^Color$/i, "Cor")
+    .replace(/^Title$/i, "Título")
+    .replace(/^Entity$/i, "Entidade")
+    .replace(/^Alarm$/i, "Alarme")
+    .replace(/^Layout$/i, "Layout")
+    .replace(/^Flow$/i, "Fluxo")
+    .replace(/^Players$/i, "Leitores")
+    .replace(/^Routes$/i, "Rotas")
+    .replace(/^Series$/i, "Séries")
+    .replace(/^Modes$/i, "Modos")
+    .replace(/^Individuals$/i, "Individuais")
+    .replace(/^Haptic feedback$/i, "Feedback háptico")
+    .replace(/^Enable animations$/i, "Ativar animações")
+    .replace(/^Enable haptics$/i, "Ativar háptico");
+}
+
+function enToRu(s) {
+  if (!isCompactUiEnglish(s)) {
+    return s;
+  }
+  return s
+    .replace(/^Show /, "Показать: ")
+    .replace(/^Enable /, "Включить ")
+    .replace(/^Open /, "Открыть ")
+    .replace(/^Icon$/i, "Значок")
+    .replace(/^General$/i, "Общее")
+    .replace(/^Styles$/i, "Стили")
+    .replace(/^Map$/i, "Карта")
+    .replace(/^Border$/i, "Граница")
+    .replace(/^Shadow$/i, "Тень")
+    .replace(/^Padding$/i, "Отступ")
+    .replace(/^Color$/i, "Цвет")
+    .replace(/^Title$/i, "Заголовок")
+    .replace(/^Entity$/i, "Объект")
+    .replace(/^Alarm$/i, "Сигнализация")
+    .replace(/^Layout$/i, "Макет")
+    .replace(/^Flow$/i, "Поток")
+    .replace(/^Players$/i, "Плееры")
+    .replace(/^Routes$/i, "Маршруты")
+    .replace(/^Series$/i, "Ряды")
+    .replace(/^Modes$/i, "Режимы")
+    .replace(/^Individuals$/i, "Отдельные")
+    .replace(/^Haptic feedback$/i, "Тактильная отдача")
+    .replace(/^Enable animations$/i, "Включить анимации")
+    .replace(/^Enable haptics$/i, "Включить тактильную отдачу");
+}
+
+function enToEl(s) {
+  if (!isCompactUiEnglish(s)) {
+    return s;
+  }
+  return s
+    .replace(/^Show /, "Εμφάνιση ")
+    .replace(/^Enable /, "Ενεργοποίηση ")
+    .replace(/^Open /, "Άνοιγμα ")
+    .replace(/^Icon$/i, "Εικονίδιο")
+    .replace(/^General$/i, "Γενικά")
+    .replace(/^Styles$/i, "Στυλ")
+    .replace(/^Map$/i, "Χάρτης")
+    .replace(/^Border$/i, "Περίγραμμα")
+    .replace(/^Shadow$/i, "Σκιά")
+    .replace(/^Padding$/i, "Εσωτερικό περιθώριο")
+    .replace(/^Color$/i, "Χρώμα")
+    .replace(/^Title$/i, "Τίτλος")
+    .replace(/^Entity$/i, "Οντότητα")
+    .replace(/^Alarm$/i, "Συναγερμός")
+    .replace(/^Layout$/i, "Διάταξη")
+    .replace(/^Flow$/i, "Ροή")
+    .replace(/^Players$/i, "Αναπαραγωγείς")
+    .replace(/^Routes$/i, "Διαδρομές")
+    .replace(/^Series$/i, "Σειρές")
+    .replace(/^Modes$/i, "Λειτουργίες")
+    .replace(/^Individuals$/i, "Μεμονωμένα")
+    .replace(/^Haptic feedback$/i, "Απτική ανάδραση")
+    .replace(/^Enable animations$/i, "Ενεργοποίηση κινούμενων εικόνων")
+    .replace(/^Enable haptics$/i, "Ενεργοποίηση απτικής ανάδρασης");
+}
+
+function enToZh(s) {
+  if (!isCompactUiEnglish(s)) {
+    return s;
+  }
+  return s
+    .replace(/^Show /, "显示")
+    .replace(/^Enable /, "启用")
+    .replace(/^Open /, "打开")
+    .replace(/^Icon$/i, "图标")
+    .replace(/^General$/i, "常规")
+    .replace(/^Styles$/i, "样式")
+    .replace(/^Map$/i, "地图")
+    .replace(/^Border$/i, "边框")
+    .replace(/^Shadow$/i, "阴影")
+    .replace(/^Padding$/i, "内边距")
+    .replace(/^Color$/i, "颜色")
+    .replace(/^Title$/i, "标题")
+    .replace(/^Entity$/i, "实体")
+    .replace(/^Alarm$/i, "警报")
+    .replace(/^Layout$/i, "布局")
+    .replace(/^Flow$/i, "流向")
+    .replace(/^Players$/i, "播放器")
+    .replace(/^Routes$/i, "路线")
+    .replace(/^Series$/i, "系列")
+    .replace(/^Modes$/i, "模式")
+    .replace(/^Individuals$/i, "单项")
+    .replace(/^Haptic feedback$/i, "触觉反馈")
+    .replace(/^Enable animations$/i, "启用动画")
+    .replace(/^Enable haptics$/i, "启用触觉反馈");
+}
+
+function enToRo(s) {
+  if (!isCompactUiEnglish(s)) {
+    return s;
+  }
+  return s
+    .replace(/^Show /, "Afișează ")
+    .replace(/^Enable /, "Activează ")
+    .replace(/^Open /, "Deschide ")
+    .replace(/^Icon$/i, "Pictogramă")
+    .replace(/^General$/i, "General")
+    .replace(/^Styles$/i, "Stiluri")
+    .replace(/^Map$/i, "Hartă")
+    .replace(/^Border$/i, "Chenar")
+    .replace(/^Shadow$/i, "Umbră")
+    .replace(/^Padding$/i, "Umplere")
+    .replace(/^Color$/i, "Culoare")
+    .replace(/^Title$/i, "Titlu")
+    .replace(/^Entity$/i, "Entitate")
+    .replace(/^Alarm$/i, "Alarmă")
+    .replace(/^Layout$/i, "Aranjament")
+    .replace(/^Flow$/i, "Flux")
+    .replace(/^Players$/i, "Playere")
+    .replace(/^Routes$/i, "Rute")
+    .replace(/^Series$/i, "Serii")
+    .replace(/^Modes$/i, "Moduri")
+    .replace(/^Individuals$/i, "Individuale")
+    .replace(/^Haptic feedback$/i, "Feedback haptic")
+    .replace(/^Enable animations$/i, "Activează animațiile")
+    .replace(/^Enable haptics$/i, "Activează haptic");
+}
+
 /** Full-sentence / editor phrases where compact locale shims cannot apply (length, commas). Key = English seed (`row.en`). */
 const FULL_LOCALE_BY_EN = {
-  Visibility: { de: "Sichtbarkeit", fr: "Visibilité", it: "Visibilità", nl: "Zichtbaarheid" },
+  Visibility: {
+    de: "Sichtbarkeit",
+    fr: "Visibilité",
+    it: "Visibilità",
+    nl: "Zichtbaarheid",
+    pt: "Visibilidade",
+    ru: "Видимость",
+    el: "Ορατότητα",
+    zh: "可见性",
+    ro: "Vizibilitate",
+  },
   "Choose which chips and controls should be shown.": {
     de: "Wähle, welche Chips und Steuerelemente angezeigt werden sollen.",
     fr: "Choisissez les puces et contrôles à afficher.",
     it: "Scegli quali chip e controlli mostrare.",
     nl: "Kies welke chips en bediening zichtbaar zijn.",
+    pt: "Escolha quais chips e controlos mostrar.",
+    ru: "Выберите, какие чипы и элементы управления показывать.",
+    el: "Επιλέξτε ποια chip και στοιχεία ελέγχου θα εμφανίζονται.",
+    zh: "选择要显示的芯片和控件。",
+    ro: "Alegeți ce chipuri și comenzi să fie afișate.",
   },
   "Choose the information and visible controls.": {
     de: "Wähle die sichtbaren Informationen und Steuerelemente.",
     fr: "Choisissez les informations et contrôles visibles.",
     it: "Scegli le informazioni e i controlli visibili.",
     nl: "Kies zichtbare informatie en bediening.",
+    pt: "Escolha as informações e os controlos visíveis.",
+    ru: "Выберите отображаемую информацию и элементы управления.",
+    el: "Επιλέξτε τις ορατές πληροφορίες και τα στοιχεία ελέγχου.",
+    zh: "选择可见信息与控件。",
+    ro: "Alegeți informațiile și comenzile vizibile.",
   },
   "State chip": { de: "Status-Chip", fr: "Puce d’état", it: "Chip di stato", nl: "Statuschip" },
   "Current temperature chip": { de: "Aktuelle Temperatur (Chip)", fr: "Puce température actuelle", it: "Chip temperatura attuale", nl: "Huidige temperatuur (chip)" },
@@ -912,12 +1087,19 @@ const FULL_LOCALE_BY_EN = {
   },
 };
 
+function pickNewLang(rowEn, mergedVal, compactFn) {
+  if (mergedVal !== undefined && mergedVal !== "") {
+    return mergedVal;
+  }
+  if (isCompactUiEnglish(rowEn)) {
+    return compactFn(rowEn);
+  }
+  return rowEn;
+}
+
 function applyFullLocaleByEn(row) {
   const patch = FULL_LOCALE_BY_EN[row.en];
   const extra = EDITOR_EXTRA_FULL_LOCALE_BY_EN[row.en];
-  if (!patch && !extra) {
-    return row;
-  }
   const merged = { ...(patch || {}), ...(extra || {}) };
   return {
     ...row,
@@ -925,6 +1107,11 @@ function applyFullLocaleByEn(row) {
     fr: merged.fr !== undefined ? merged.fr : row.fr,
     it: merged.it !== undefined ? merged.it : row.it,
     nl: merged.nl !== undefined ? merged.nl : row.nl,
+    pt: pickNewLang(row.en, merged.pt, enToPt),
+    ru: pickNewLang(row.en, merged.ru, enToRu),
+    el: pickNewLang(row.en, merged.el, enToEl),
+    zh: pickNewLang(row.en, merged.zh, enToZh),
+    ro: pickNewLang(row.en, merged.ro, enToRo),
   };
 }
 
@@ -940,6 +1127,11 @@ for (const es of keys) {
       fr: enToFr(en),
       it: enToIt(en),
       nl: enToNl(en),
+      pt: enToPt(en),
+      ru: enToRu(en),
+      el: enToEl(en),
+      zh: enToZh(en),
+      ro: enToRo(en),
     }),
   );
   seenEs.add(es);
@@ -956,6 +1148,11 @@ for (const r of [...rows]) {
         fr: r.fr,
         it: r.it,
         nl: r.nl,
+        pt: r.pt,
+        ru: r.ru,
+        el: r.el,
+        zh: r.zh,
+        ro: r.ro,
       });
     }
   }
@@ -980,7 +1177,11 @@ const out = `/* eslint-disable max-len */
     return m;
   }
 
-  const MAP = { es: {}, en: buildMap("en"), de: buildMap("de"), fr: buildMap("fr"), it: buildMap("it"), nl: buildMap("nl") };
+  const EDITOR_LANGS = ["en", "de", "fr", "it", "nl", "pt", "ru", "el", "zh", "ro"];
+  const MAP = { es: {} };
+  for (const L of EDITOR_LANGS) {
+    MAP[L] = buildMap(L);
+  }
   for (const r of ROWS) {
     MAP.es[r.es] = r.es;
   }
@@ -996,7 +1197,21 @@ const out = `/* eslint-disable max-len */
     if (maps.es[spanishText] === undefined && maps.en[spanishText] === undefined) {
       return spanishText;
     }
-    return maps[lang]?.[spanishText] ?? maps.en[spanishText] ?? maps.es[spanishText] ?? spanishText;
+    const primary = maps[lang]?.[spanishText];
+    if (primary !== undefined && primary !== "") {
+      return primary;
+    }
+    if (lang !== "es") {
+      const enVal = maps.en?.[spanishText];
+      if (enVal !== undefined && enVal !== "") {
+        return enVal;
+      }
+    }
+    const esVal = maps.es?.[spanishText];
+    if (esVal !== undefined && esVal !== "") {
+      return esVal;
+    }
+    return spanishText;
   };
 })();
 `;
