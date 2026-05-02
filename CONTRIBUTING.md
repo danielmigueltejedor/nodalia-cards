@@ -8,14 +8,18 @@ Nodalia Cards is still evolving and feedback, ideas and improvements are very we
 
 ## 📄 Documentation parity (`main` / `beta`)
 
-These files must stay **the same** on **`main`** and **`beta`** (copy or merge after each edit):
+These paths must stay **the same** on **`main`** and **`beta`** (copy or merge after each edit):
 
 - **`README.md`**
 - **`CHANGELOG.md`**
 - **`CONTRIBUTING.md`**
 - **`ROADMAP.md`** (if present)
+- **`.github/ISSUE_TEMPLATE/**`** and other **`.github/*.md`** text (bug reports, PR templates, etc.)
 
-Branch-specific content belongs in **`package.json`**, release tags, and code—not in diverging docs. After changing any of the files above on one branch, update the other branch **before** pushing (e.g. `git checkout main -- README.md CHANGELOG.md CONTRIBUTING.md` from the branch that has the edits, or merge).
+Branch-specific content belongs in **`package.json`**, release tags, and code—not in diverging docs. After changing any of the files above on one branch, update the other branch **before** pushing (e.g. `git checkout main -- README.md CHANGELOG.md CONTRIBUTING.md` from the branch that has the edits, `git checkout main -- .github`, or merge **`main` ↔ `beta`** once code conflicts are resolved).
+
+Tip: after syncing docs, confirm with  
+`git diff main beta -- README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md .github` — it should be **empty**.
 
 ---
 
