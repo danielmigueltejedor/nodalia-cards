@@ -15,6 +15,7 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  language: "auto",
   tap_action: "more-info",
   show_condition: true,
   show_humidity_chip: true,

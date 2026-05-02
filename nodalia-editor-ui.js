@@ -3619,6 +3619,30 @@
     "nl": "Optional tactile feedback for player controls."
   },
   {
+    "es": "Automático (perfil Home Assistant)",
+    "en": "Automático (perfil Home Assistant)",
+    "de": "Automático (perfil Home Assistant)",
+    "fr": "Automático (perfil Home Assistant)",
+    "it": "Automático (perfil Home Assistant)",
+    "nl": "Automático (perfil Home Assistant)"
+  },
+  {
+    "es": "Idioma de la tarjeta",
+    "en": "Idioma de la tarjeta",
+    "de": "Idioma de la tarjeta",
+    "fr": "Idioma de la tarjeta",
+    "it": "Idioma de la tarjeta",
+    "nl": "Idioma de la tarjeta"
+  },
+  {
+    "es": "Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado).",
+    "en": "Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado).",
+    "de": "Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado).",
+    "fr": "Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado).",
+    "it": "Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado).",
+    "nl": "Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado)."
+  },
+  {
     "es": "__H__:Selectores opcionales para el modo principal y la ventilación.",
     "en": "Optional selectors for main mode and fan.",
     "de": "Optional selectors for main mode and fan.",

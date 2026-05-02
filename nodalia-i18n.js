@@ -59,12 +59,13 @@
         (h.locale && typeof h.locale === "object" && typeof h.locale.language === "string" && h.locale.language.trim() && h.locale.language);
       return raw ? baseLang(raw) : null;
     };
-    return (
-      fromObject(resolveHass(hass))
-      || (typeof document !== "undefined"
-        ? fromObject(document.querySelector("home-assistant")?.hass)
-        : null)
-    );
+    const rootHass =
+      typeof document !== "undefined" ? document.querySelector("home-assistant")?.hass : null;
+    /**
+     * Prefer the app-root hass first: Lovelace sometimes passes a hass-shaped object that has
+     * entity state but omits `language`; the canonical UI language lives on `home-assistant.hass`.
+     */
+    return fromObject(rootHass) || fromObject(resolveHass(hass));
   }
 
   function resolveLanguage(hass, configLang) {
@@ -82,10 +83,19 @@
         return docLang;
       }
     }
+    /**
+     * Inside Home Assistant, do not fall back to `navigator.language`: it often disagrees with the
+     * profile (e.g. FR browser + ES HA), which produced mixed Meteoalarm UI (French labels/dates vs
+     * Spanish alert text). Outside HA (tests / standalone pages), navigator is still used.
+     */
     if (typeof navigator !== "undefined" && navigator.language) {
-      const nav = baseLang(String(navigator.language));
-      if (nav) {
-        return nav;
+      const inHomeAssistant =
+        typeof document !== "undefined" && document.querySelector("home-assistant");
+      if (!inHomeAssistant) {
+        const nav = baseLang(String(navigator.language));
+        if (nav) {
+          return nav;
+        }
       }
     }
     return "es";

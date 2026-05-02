@@ -4,6 +4,28 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0-beta.13] - 2026-05-02
+
+### Added
+
+- **Advance vacuum editor**: selector **Idioma de la tarjeta** (`auto`, `es`, `en`, `de`, `fr`, `it`, `nl`) so you can match Home Assistant or force a locale; existing dashboards that still stored the old default **`language: es`** can switch to **Automático** to follow the UI language (e.g. français).
+
+### Changed
+
+- **Advance vacuum runtime** (`nodalia-advance-vacuum-card.js`): buttons, chips, map tools, markers, zone handles, routine tiles and map chrome use **theme-aware** fills and borders (`color-mix` with `--primary-text-color`) and clearer inset shadows, aligned with cards like the humidifier — readable borders on **light** themes; active states keep accent tints.
+- **Animations**: slightly softer entrance motion and bounce timing on utility panel / footer / primary bounce keyframes.
+- **`scripts/editor-source-strings.json`** + regenerated **`nodalia-editor-ui.js`** for new editor strings.
+- Regenerated artifact: bundled **`nodalia-cards.js`**.
+
+## [0.2.0-beta.12] - 2026-05-02
+
+### Fixed
+
+- **`nodalia-i18n.js`**: `effectiveHaLanguageCode` now reads **`home-assistant` root `hass` first**, then the Lovelace card `hass`, so the profile language wins over incomplete card snapshots.
+- **`resolveLanguage`**: when the Home Assistant shell is present (`<home-assistant>`), **`navigator.language` is no longer used** as a fallback — it often disagreed with the HA profile (e.g. French browser + Spanish UI), causing mixed Meteoalarm UI (French row labels / dates like “mai” vs Spanish alert copy) and wrong packs for advance vacuum.
+- **Weather** (`nodalia-weather-card.js`): default config includes **`language: "auto"`** explicitly.
+- Regenerated artifact: bundled `nodalia-cards.js`.
+
 ## [0.2.0-beta.11] - 2026-05-02
 
 ### Fixed
