@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.2] - 2026-05-03
+
+### Changed
+
+- **Bundle** (`scripts/build-bundle.mjs`): built **`nodalia-cards.js`** appends `window.__NODALIA_BUNDLE__` (`pkgVersion` + short content hash) so you can verify in the browser console which script loaded. **Regenerated** the bundle (new bytes **invalidate** stale HACS/proxy caches that could still serve an old script on the stable resource).
+- **Docs** (`README.md`): **HACS `hacstag`** differs between stable and prerelease installs by design; if translations behave differently between channels, **Redownload** in HACS and use the resource URL HACS shows.
+
 ## [0.3.0-beta.1] - 2026-05-03
 
 ### Changed

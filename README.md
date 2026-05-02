@@ -3,7 +3,7 @@
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
 ![Latest stable](https://img.shields.io/badge/latest%20stable-0.2.0-2ea043)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
-![Current beta](https://img.shields.io/badge/current%20beta-0.3.0--beta.1-orange)
+![Current beta](https://img.shields.io/badge/current%20beta-0.3.0--beta.2-orange)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Status](https://img.shields.io/badge/status-beta-orange.svg)
@@ -71,7 +71,7 @@ url: /hacsfiles/nodalia-cards/nodalia-cards.js
 type: module
 ```
 
-HACS can append `?hacstag=…` to that path (cache busting). **Do not keep a very old or copy-pasted `hacstag`:** it can make the panel keep loading an **outdated** `nodalia-cards.js` (e.g. missing or broken translations). If the UI does not follow your Home Assistant language, open your Lovelace **Resource**, remove the `?hacstag=…` part or replace the full URL with the one HACS shows after **Redownload**, then hard-refresh the dashboard.
+HACS can append `?hacstag=…` to that path. The number is **not** the app version: it is **per HACS install + selected release** (so **stable** and **prerelease** often show different `hacstag` values even when the JavaScript is the same). If one release “translates” and the other does not, the panel is usually still loading an **old** `nodalia-cards.js` for the stable path. **Redownload** the integration in HACS for the version you use, set the Lovelace resource to the **exact** URL HACS shows (or remove a stale `?hacstag=…` and save), then hard-refresh. In the browser console, `__NODALIA_BUNDLE__` reports the loaded bundle (`pkgVersion` and a short content id) so you can confirm the file is up to date.
 
 ---
 
