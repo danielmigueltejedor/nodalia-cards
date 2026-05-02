@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.05] - 2026-05-03
+
+### Added
+
+- **`nodalia-i18n.js`**: `deepMergeLocale` + **`strings()`** builds **full card dictionaries** for **pt / ru / el / zh / ro** by merging each partial PACK over **`PACK.en`** (same pattern as other locales, extended for new codes).
+
+### Changed
+
+- **`scripts/gen-editor-ui.mjs`**: Lovelace **`editorUiMaps`** includes **pt, ru, el, zh, ro**; compact labels via **`enToPt`** / **`enToRu`** / …; long strings use **English** until **`FULL_LOCALE_BY_EN`** supplies a translation (add **`pt`/`ru`/…** keys next to **`de`**); **`editorStr`** prefers **English** over Spanish when the profile is not Spanish (fixes mixed ES copy under EN-driven editors).
+
+### Fixed
+
+- Sparse locales no longer miss **`fan`**, **`alarmPanel`**, **`entityCard`**, etc. at runtime (previously only a shallow merge).
+
 ## [0.3.0-beta.04] - 2026-05-03
 
 ### Added
