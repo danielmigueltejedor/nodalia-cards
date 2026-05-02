@@ -1084,6 +1084,33 @@ class NodaliaFavCard extends HTMLElement {
     }
   }
 
+  _getAlarmActionLabel(modeKey) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const actions = window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.actions;
+    const map = {
+      disarm: "disarm",
+      home: "arm_home",
+      away: "arm_away",
+      night: "arm_night",
+      vacation: "arm_vacation",
+      custom_bypass: "arm_custom_bypass",
+    };
+    const actionKey = map[modeKey];
+    if (actionKey && actions?.[actionKey]) {
+      return actions[actionKey];
+    }
+    const fallbacks = {
+      disarm: "Desarmar",
+      home: "Casa",
+      away: "Ausente",
+      night: "Noche",
+      vacation: "Vacaciones",
+      custom_bypass: "Personalizada",
+    };
+    return fallbacks[modeKey] || modeKey;
+  }
+
   _matchesAlarmMode(state, ...keys) {
     const candidates = this._getAlarmStateCandidates(state);
     return keys.some(key => candidates.includes(normalizeTextKey(key)));
@@ -1094,14 +1121,14 @@ class NodaliaFavCard extends HTMLElement {
     const modes = [
       {
         key: "disarm",
-        label: "Desarmar",
+        label: this._getAlarmActionLabel("disarm"),
         icon: "mdi:shield-off-outline",
         service: "alarm_disarm",
         enabled: this._config?.alarm_show_disarm !== false && currentModeKey !== "disarm",
       },
       {
         key: "home",
-        label: "Casa",
+        label: this._getAlarmActionLabel("home"),
         icon: "mdi:home-lock",
         service: "alarm_arm_home",
         enabled: this._config?.alarm_show_arm_home !== false
@@ -1110,7 +1137,7 @@ class NodaliaFavCard extends HTMLElement {
       },
       {
         key: "away",
-        label: "Ausente",
+        label: this._getAlarmActionLabel("away"),
         icon: "mdi:shield-lock",
         service: "alarm_arm_away",
         enabled: this._config?.alarm_show_arm_away !== false
@@ -1119,7 +1146,7 @@ class NodaliaFavCard extends HTMLElement {
       },
       {
         key: "night",
-        label: "Noche",
+        label: this._getAlarmActionLabel("night"),
         icon: "mdi:weather-night",
         service: "alarm_arm_night",
         enabled: this._config?.alarm_show_arm_night !== false
@@ -1128,7 +1155,7 @@ class NodaliaFavCard extends HTMLElement {
       },
       {
         key: "vacation",
-        label: "Vacaciones",
+        label: this._getAlarmActionLabel("vacation"),
         icon: "mdi:palm-tree",
         service: "alarm_arm_vacation",
         enabled: this._config?.alarm_show_arm_vacation === true
@@ -1137,7 +1164,7 @@ class NodaliaFavCard extends HTMLElement {
       },
       {
         key: "custom_bypass",
-        label: "Personalizada",
+        label: this._getAlarmActionLabel("custom_bypass"),
         icon: "mdi:tune-variant",
         service: "alarm_arm_custom_bypass",
         enabled: this._config?.alarm_show_custom_bypass === true
@@ -1159,28 +1186,28 @@ class NodaliaFavCard extends HTMLElement {
     const fallbackModes = [
       {
         key: "disarm",
-        label: "Desarmar",
+        label: this._getAlarmActionLabel("disarm"),
         icon: "mdi:shield-off-outline",
         service: "alarm_disarm",
         enabled: this._config?.alarm_show_disarm !== false && currentModeKey !== "disarm",
       },
       {
         key: "home",
-        label: "Casa",
+        label: this._getAlarmActionLabel("home"),
         icon: "mdi:home-lock",
         service: "alarm_arm_home",
         enabled: this._config?.alarm_show_arm_home !== false && currentModeKey !== "home",
       },
       {
         key: "away",
-        label: "Ausente",
+        label: this._getAlarmActionLabel("away"),
         icon: "mdi:shield-lock",
         service: "alarm_arm_away",
         enabled: this._config?.alarm_show_arm_away !== false && currentModeKey !== "away",
       },
       {
         key: "night",
-        label: "Noche",
+        label: this._getAlarmActionLabel("night"),
         icon: "mdi:weather-night",
         service: "alarm_arm_night",
         enabled: this._config?.alarm_show_arm_night !== false && currentModeKey !== "night",
@@ -1575,7 +1602,7 @@ class NodaliaFavCard extends HTMLElement {
     const cardShadow = isActive
       ? `${styles.card.box_shadow}, 0 16px 30px color-mix(in srgb, ${accentColor} 16%, rgba(0, 0, 0, 0.18))`
       : styles.card.box_shadow;
-    const showTitle = config.show_name !== false && !isMini && !showAlarmPanel;
+    const showTitle = config.show_name !== false && !isMini;
     const showValue = Boolean(displayValue) && !isMini;
     const showCopy = showTitle || showValue;
 
@@ -1892,6 +1919,14 @@ class NodaliaFavCard extends HTMLElement {
         .fav-card--tight-inline:not(.fav-card--alarm-open) .fav-card__chips {
           flex: 0 0 auto;
           gap: 4px;
+        }
+
+        .fav-card--tight-inline.fav-card--alarm-open .fav-card__copy {
+          align-content: start;
+          display: grid;
+          gap: 6px;
+          min-width: 0;
+          width: 100%;
         }
 
         .fav-card--empty {

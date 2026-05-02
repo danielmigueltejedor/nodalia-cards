@@ -918,8 +918,9 @@ function sortByOrder(items) {
 }
 
 function humanizeModeLabel(value, kind = "generic", hass = null, configLang = null) {
-  if (hass && window.NodaliaI18n?.translateAdvanceVacuumVacuumMode) {
-    return window.NodaliaI18n.translateAdvanceVacuumVacuumMode(hass, configLang ?? "auto", value, kind);
+  if (window.NodaliaI18n?.translateAdvanceVacuumVacuumMode) {
+    const h = hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    return window.NodaliaI18n.translateAdvanceVacuumVacuumMode(h, configLang ?? "auto", value, kind);
   }
 
   const raw = String(value || "").trim();

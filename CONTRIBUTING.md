@@ -104,11 +104,9 @@ Community help is especially useful for languages other than Spanish and English
 
 ---
 
-## 🧪 Beta features
+## 🏷️ Releases and beta versions
 
-Some features may be experimental.
-
-In the future, a beta channel will be introduced to test new ideas before they reach the stable version.
+Pre-releases use **`0.2.0-beta.N`** (increment **N** for each shipped beta). For maintainers: treat **each release commit** as a **new beta**—add a section to `CHANGELOG.md`, bump the **Current beta** badge in `README.md`, and run `npm run bundle` when artefacts change.
 
 ---
 

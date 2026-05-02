@@ -37,10 +37,10 @@
   {
     "es": "Activar haptics",
     "en": "Enable haptics",
-    "de": "Aktivieren: haptics",
-    "fr": "Activer haptics",
-    "it": "Abilita haptics",
-    "nl": "Schakel haptics"
+    "de": "Haptik aktivieren",
+    "fr": "Activer le retour haptique",
+    "it": "Abilita feedback aptico",
+    "nl": "Haptiek inschakelen"
   },
   {
     "es": "Activar respuesta háptica",
@@ -221,18 +221,18 @@
   {
     "es": "Badge de no disponible",
     "en": "Unavailable badge",
-    "de": "Unavailable badge",
-    "fr": "Unavailable badge",
-    "it": "Unavailable badge",
-    "nl": "Unavailable badge"
+    "de": "Nicht-verfügbar-Abzeichen",
+    "fr": "Badge indisponible",
+    "it": "Badge non disponibile",
+    "nl": "Niet-beschikbaar-badge"
   },
   {
     "es": "Badge no disponible",
     "en": "Unavailable badge",
-    "de": "Unavailable badge",
-    "fr": "Unavailable badge",
-    "it": "Unavailable badge",
-    "nl": "Unavailable badge"
+    "de": "Nicht-verfügbar-Abzeichen",
+    "fr": "Badge indisponible",
+    "it": "Badge non disponibile",
+    "nl": "Niet-beschikbaar-badge"
   },
   {
     "es": "Borde",
@@ -309,18 +309,18 @@
   {
     "es": "Botones + / -",
     "en": "+ / − buttons",
-    "de": "+ / − buttons",
-    "fr": "+ / − buttons",
-    "it": "+ / − buttons",
-    "nl": "+ / − buttons"
+    "de": "+/−-Tasten",
+    "fr": "Boutons +/−",
+    "it": "Pulsanti +/−",
+    "nl": "+/−-knoppen"
   },
   {
     "es": "Botones de modo",
     "en": "Mode buttons",
-    "de": "Mode buttons",
-    "fr": "Mode buttons",
-    "it": "Mode buttons",
-    "nl": "Mode buttons"
+    "de": "Modus-Tasten",
+    "fr": "Boutons de mode",
+    "it": "Pulsanti modalità",
+    "nl": "Modusknoppen"
   },
   {
     "es": "Botones de modo junto al slider",
@@ -397,26 +397,26 @@
   {
     "es": "Chip de estado",
     "en": "State chip",
-    "de": "State chip",
-    "fr": "State chip",
-    "it": "State chip",
-    "nl": "State chip"
+    "de": "Status-Chip",
+    "fr": "Puce d’état",
+    "it": "Chip di stato",
+    "nl": "Statuschip"
   },
   {
     "es": "Chip de humedad",
     "en": "Humidity chip",
-    "de": "Humidity chip",
-    "fr": "Humidity chip",
-    "it": "Humidity chip",
-    "nl": "Humidity chip"
+    "de": "Feuchtigkeits-Chip",
+    "fr": "Puce humidité",
+    "it": "Chip umidità",
+    "nl": "Vochtigheidschip"
   },
   {
     "es": "Chip de temperatura actual",
     "en": "Current temperature chip",
-    "de": "Current temperature chip",
-    "fr": "Current temperature chip",
-    "it": "Current temperature chip",
-    "nl": "Current temperature chip"
+    "de": "Aktuelle Temperatur",
+    "fr": "Puce température actuelle",
+    "it": "Chip temperatura attuale",
+    "nl": "Huidige temperatuur"
   },
   {
     "es": "Click entidades",
@@ -781,18 +781,18 @@
   {
     "es": "Fallback con vibracion",
     "en": "Vibration fallback",
-    "de": "Vibration fallback",
-    "fr": "Vibration fallback",
-    "it": "Vibration fallback",
-    "nl": "Vibration fallback"
+    "de": "Vibrations-Fallback",
+    "fr": "Secours vibration",
+    "it": "Fallback vibrazione",
+    "nl": "Trilling reserve"
   },
   {
     "es": "Fallback con vibración",
     "en": "Vibration fallback",
-    "de": "Vibration fallback",
-    "fr": "Vibration fallback",
-    "it": "Vibration fallback",
-    "nl": "Vibration fallback"
+    "de": "Vibrations-Fallback",
+    "fr": "Secours vibration",
+    "it": "Fallback vibrazione",
+    "nl": "Trilling reserve"
   },
   {
     "es": "Flujo maximo (s)",
@@ -1069,10 +1069,10 @@
   {
     "es": "Mostrar badge de no disponible",
     "en": "Show unavailable badge",
-    "de": "Anzeigen: unavailable badge",
-    "fr": "Afficher unavailable badge",
-    "it": "Mostra unavailable badge",
-    "nl": "Toon unavailable badge"
+    "de": "Abzeichen „Nicht verfügbar“ anzeigen",
+    "fr": "Afficher le badge indisponible",
+    "it": "Mostra badge non disponibile",
+    "nl": "Toon niet-beschikbaar-badge"
   },
   {
     "es": "Mostrar badge de zona",
@@ -1101,10 +1101,10 @@
   {
     "es": "Mostrar botones de modo",
     "en": "Show mode buttons",
-    "de": "Anzeigen: mode buttons",
-    "fr": "Afficher mode buttons",
-    "it": "Mostra mode buttons",
-    "nl": "Toon mode buttons"
+    "de": "Modus-Tasten anzeigen",
+    "fr": "Afficher les boutons de mode",
+    "it": "Mostra pulsanti modalità",
+    "nl": "Toon modusknoppen"
   },
   {
     "es": "Mostrar botón de modo",
@@ -1165,18 +1165,18 @@
   {
     "es": "Mostrar chip de estado",
     "en": "Show state chip",
-    "de": "Anzeigen: state chip",
-    "fr": "Afficher state chip",
-    "it": "Mostra state chip",
-    "nl": "Toon state chip"
+    "de": "Status-Chip anzeigen",
+    "fr": "Afficher la puce d’état",
+    "it": "Mostra chip di stato",
+    "nl": "Toon statuschip"
   },
   {
     "es": "Mostrar chip de humedad",
     "en": "Show humidity chip",
-    "de": "Anzeigen: humidity chip",
-    "fr": "Afficher humidity chip",
-    "it": "Mostra humidity chip",
-    "nl": "Toon humidity chip"
+    "de": "Feuchtigkeits-Chip anzeigen",
+    "fr": "Afficher l’humidité",
+    "it": "Mostra chip umidità",
+    "nl": "Toon vochtigheidschip"
   },
   {
     "es": "Mostrar chip de humedad objetivo",
@@ -1205,10 +1205,10 @@
   {
     "es": "Mostrar chip de temperatura actual",
     "en": "Show current temperature chip",
-    "de": "Anzeigen: current temperature chip",
-    "fr": "Afficher current temperature chip",
-    "it": "Mostra current temperature chip",
-    "nl": "Toon current temperature chip"
+    "de": "Aktuelle Temperatur anzeigen",
+    "fr": "Afficher la température actuelle",
+    "it": "Mostra chip temperatura attuale",
+    "nl": "Toon huidige temperatuur"
   },
   {
     "es": "Mostrar chip de velocidad",
@@ -1229,10 +1229,10 @@
   {
     "es": "Mostrar chip humedad",
     "en": "Show humidity chip",
-    "de": "Anzeigen: humidity chip",
-    "fr": "Afficher humidity chip",
-    "it": "Mostra humidity chip",
-    "nl": "Toon humidity chip"
+    "de": "Feuchtigkeits-Chip anzeigen",
+    "fr": "Afficher l’humidité",
+    "it": "Mostra chip umidità",
+    "nl": "Toon vochtigheidschip"
   },
   {
     "es": "Mostrar chip presion",
@@ -2869,34 +2869,34 @@
   {
     "es": "Mostrar ajustes de animación",
     "en": "Show animation settings",
-    "de": "Anzeigen: animation settings",
-    "fr": "Afficher animation settings",
-    "it": "Mostra animation settings",
-    "nl": "Toon animation settings"
+    "de": "Animationseinstellungen anzeigen",
+    "fr": "Afficher les paramètres d’animation",
+    "it": "Mostra impostazioni animazioni",
+    "nl": "Animatie-instellingen tonen"
   },
   {
     "es": "Ocultar ajustes de animación",
     "en": "Hide animation settings",
-    "de": "Hide animation settings",
-    "fr": "Hide animation settings",
-    "it": "Hide animation settings",
-    "nl": "Hide animation settings"
+    "de": "Animationseinstellungen ausblenden",
+    "fr": "Masquer les paramètres d’animation",
+    "it": "Nascondi impostazioni animazioni",
+    "nl": "Animatie-instellingen verbergen"
   },
   {
     "es": "Mostrar ajustes de estilo",
     "en": "Show style settings",
-    "de": "Anzeigen: style settings",
-    "fr": "Afficher style settings",
-    "it": "Mostra style settings",
-    "nl": "Toon style settings"
+    "de": "Stileinstellungen anzeigen",
+    "fr": "Afficher les paramètres de style",
+    "it": "Mostra impostazioni di stile",
+    "nl": "Stijlinstellingen tonen"
   },
   {
     "es": "Ocultar ajustes de estilo",
     "en": "Hide style settings",
-    "de": "Hide style settings",
-    "fr": "Hide style settings",
-    "it": "Hide style settings",
-    "nl": "Hide style settings"
+    "de": "Stileinstellungen ausblenden",
+    "fr": "Masquer les paramètres de style",
+    "it": "Nascondi impostazioni di stile",
+    "nl": "Stijlinstellingen verbergen"
   },
   {
     "es": "Por defecto",
@@ -3157,10 +3157,10 @@
   {
     "es": "__H__:Ayuda a compactar la climate card según el espacio disponible en la vista.",
     "en": "Helps compact the climate card based on available space.",
-    "de": "Helps compact the climate card based on available space.",
-    "fr": "Helps compact the climate card based on available space.",
-    "it": "Helps compact the climate card based on available space.",
-    "nl": "Helps compact the climate card based on available space."
+    "de": "Hilft, die Thermostat-Karte je nach verfügbarem Platz zu kompaktieren.",
+    "fr": "Aide à compacter la carte climat selon l’espace disponible.",
+    "it": "Aiuta a compattare la climate card in base allo spazio.",
+    "nl": "Houdt de thermostaatkaart compact naargelang de ruimte."
   },
   {
     "es": "__H__:Añade, reordena y personaliza cada reproductor visible en la tarjeta.",
@@ -3221,10 +3221,10 @@
   {
     "es": "__H__:Controla la transición del dial, la entrada del contenido y el rebote de los botones.",
     "en": "Controls dial transition, content entrance and button bounce.",
-    "de": "Controls dial transition, content entrance and button bounce.",
-    "fr": "Controls dial transition, content entrance and button bounce.",
-    "it": "Controls dial transition, content entrance and button bounce.",
-    "nl": "Controls dial transition, content entrance and button bounce."
+    "de": "Steuert den Übergang des Drehreglers, den Eingang des Inhalts und den Tasten-Federungseffekt.",
+    "fr": "Contrôle la transition du cadran, l’entrée du contenu et le rebond des boutons.",
+    "it": "Controlla la transizione del dial, l’ingresso del contenuto e il rimbalzo dei pulsanti.",
+    "nl": "Regelt de draaiknop-overgang, binnenkomst van inhoud en knop-veer."
   },
   {
     "es": "__H__:Controla la visualizacion de lineas sin consumo y la velocidad de animacion.",
@@ -3253,18 +3253,18 @@
   {
     "es": "__H__:Elige la informacion y los controles visibles.",
     "en": "Choose the information and visible controls.",
-    "de": "Choose the information and visible controls.",
-    "fr": "Choose the information and visible controls.",
-    "it": "Choose the information and visible controls.",
-    "nl": "Choose the information and visible controls."
+    "de": "Wähle die sichtbaren Informationen und Steuerelemente.",
+    "fr": "Choisissez les informations et contrôles visibles.",
+    "it": "Scegli le informazioni e i controlli visibili.",
+    "nl": "Kies zichtbare informatie en bediening."
   },
   {
     "es": "__H__:Elige qué chips y controles deben mostrarse.",
     "en": "Choose which chips and controls should be shown.",
-    "de": "Choose which chips and controls should be shown.",
-    "fr": "Choose which chips and controls should be shown.",
-    "it": "Choose which chips and controls should be shown.",
-    "nl": "Choose which chips and controls should be shown."
+    "de": "Wähle, welche Chips und Steuerelemente angezeigt werden sollen.",
+    "fr": "Choisissez les puces et contrôles à afficher.",
+    "it": "Scegli quali chip e controlli mostrare.",
+    "nl": "Kies welke chips en bediening zichtbaar zijn."
   },
   {
     "es": "__H__:Entidad del robot y fuente principal del mapa.",
@@ -3461,10 +3461,10 @@
   {
     "es": "__H__:Personaliza el look Nodalia de la climate card, el dial y los controles.",
     "en": "Customize the Nodalia look for the climate card, dial and controls.",
-    "de": "Customize the Nodalia look for the climate card, dial and controls.",
-    "fr": "Customize the Nodalia look for the climate card, dial and controls.",
-    "it": "Customize the Nodalia look for the climate card, dial and controls.",
-    "nl": "Customize the Nodalia look for the climate card, dial and controls."
+    "de": "Passe das Nodalia-Erscheinungsbild für die Thermostat-Karte, den Drehregler und die Steuerung an.",
+    "fr": "Personnalisez le rendu Nodalia de la carte climat, du cadran et des contrôles.",
+    "it": "Personalizza l’aspetto Nodalia della climate card, del dial e dei controlli.",
+    "nl": "Pas de Nodalia-stijl aan voor de thermostaatkaart, draaiknop en bediening."
   },
   {
     "es": "__H__:Personaliza el look Nodalia, el dial circular, la nueva burbuja del thumb y la escala de tinte del gauge.",
@@ -3533,10 +3533,10 @@
   {
     "es": "__H__:Respuesta haptica opcional para dial y controles.",
     "en": "Optional haptic feedback for dial and controls.",
-    "de": "Optional haptic feedback for dial and controls.",
-    "fr": "Optional haptic feedback for dial and controls.",
-    "it": "Optional haptic feedback for dial and controls.",
-    "nl": "Optional haptic feedback for dial and controls."
+    "de": "Optionales haptisches Feedback für Drehregler und Steuerelemente.",
+    "fr": "Retour haptique optionnel pour le cadran et les contrôles.",
+    "it": "Feedback aptico opzionale per il dial e i controlli.",
+    "nl": "Optionele haptische feedback voor draaiknop en bediening."
   },
   {
     "es": "__H__:Respuesta háptica opcional para los controles.",
@@ -3581,10 +3581,10 @@
   {
     "es": "__H__:Respuesta táctil opcional al interactuar con el dial y los botones.",
     "en": "Optional tactile feedback when using the dial and buttons.",
-    "de": "Optional tactile feedback when using the dial and buttons.",
-    "fr": "Optional tactile feedback when using the dial and buttons.",
-    "it": "Optional tactile feedback when using the dial and buttons.",
-    "nl": "Optional tactile feedback when using the dial and buttons."
+    "de": "Optionales haptisches Feedback beim Drehregler und den Tasten.",
+    "fr": "Retour tactile optionnel pour le cadran et les boutons.",
+    "it": "Feedback tattile opzionale per il dial e i pulsanti.",
+    "nl": "Optionele haptische feedback bij draaiknop en knoppen."
   },
   {
     "es": "__H__:Respuesta táctil opcional al tocar la tarjeta.",
@@ -3845,10 +3845,10 @@
   {
     "es": "__T__:Visibilidad",
     "en": "Visibility",
-    "de": "Visibility",
-    "fr": "Visibility",
-    "it": "Visibility",
-    "nl": "Visibility"
+    "de": "Sichtbarkeit",
+    "fr": "Visibilité",
+    "it": "Visibilità",
+    "nl": "Zichtbaarheid"
   },
   {
     "es": "Anadir ruta",
@@ -4297,6 +4297,38 @@
     "fr": "Progress background",
     "it": "Progress background",
     "nl": "Progress background"
+  },
+  {
+    "es": "Fondo tarjeta",
+    "en": "Card background",
+    "de": "Kartenhintergrund",
+    "fr": "Fond de la carte",
+    "it": "Sfondo scheda",
+    "nl": "Kaartachtergrond"
+  },
+  {
+    "es": "Fondo burbuja",
+    "en": "Bubble background",
+    "de": "Blasen-Hintergrund",
+    "fr": "Fond de la bulle",
+    "it": "Sfondo bolla",
+    "nl": "Bel-achtergrond"
+  },
+  {
+    "es": "Fondo dial",
+    "en": "Dial background",
+    "de": "Drehregler-Hintergrund",
+    "fr": "Fond du cadran",
+    "it": "Sfondo dial",
+    "nl": "Draaiknop-achtergrond"
+  },
+  {
+    "es": "Fondo acento botones",
+    "en": "Button accent background",
+    "de": "Akzent-Hintergrund der Tasten",
+    "fr": "Fond d’accent des boutons",
+    "it": "Sfondo accento pulsanti",
+    "nl": "Knopaccent-achtergrond"
   },
   {
     "es": "Imagen fija",
@@ -4757,10 +4789,10 @@
   {
     "es": "Ayuda a compactar la climate card según el espacio disponible en la vista.",
     "en": "Helps compact the climate card based on available space.",
-    "de": "Helps compact the climate card based on available space.",
-    "fr": "Helps compact the climate card based on available space.",
-    "it": "Helps compact the climate card based on available space.",
-    "nl": "Helps compact the climate card based on available space."
+    "de": "Hilft, die Thermostat-Karte je nach verfügbarem Platz zu kompaktieren.",
+    "fr": "Aide à compacter la carte climat selon l’espace disponible.",
+    "it": "Aiuta a compattare la climate card in base allo spazio.",
+    "nl": "Houdt de thermostaatkaart compact naargelang de ruimte."
   },
   {
     "es": "Añade, reordena y personaliza cada reproductor visible en la tarjeta.",
@@ -4821,10 +4853,10 @@
   {
     "es": "Controla la transición del dial, la entrada del contenido y el rebote de los botones.",
     "en": "Controls dial transition, content entrance and button bounce.",
-    "de": "Controls dial transition, content entrance and button bounce.",
-    "fr": "Controls dial transition, content entrance and button bounce.",
-    "it": "Controls dial transition, content entrance and button bounce.",
-    "nl": "Controls dial transition, content entrance and button bounce."
+    "de": "Steuert den Übergang des Drehreglers, den Eingang des Inhalts und den Tasten-Federungseffekt.",
+    "fr": "Contrôle la transition du cadran, l’entrée du contenu et le rebond des boutons.",
+    "it": "Controlla la transizione del dial, l’ingresso del contenuto e il rimbalzo dei pulsanti.",
+    "nl": "Regelt de draaiknop-overgang, binnenkomst van inhoud en knop-veer."
   },
   {
     "es": "Controla la visualizacion de lineas sin consumo y la velocidad de animacion.",
@@ -4853,18 +4885,18 @@
   {
     "es": "Elige la informacion y los controles visibles.",
     "en": "Choose the information and visible controls.",
-    "de": "Choose the information and visible controls.",
-    "fr": "Choose the information and visible controls.",
-    "it": "Choose the information and visible controls.",
-    "nl": "Choose the information and visible controls."
+    "de": "Wähle die sichtbaren Informationen und Steuerelemente.",
+    "fr": "Choisissez les informations et contrôles visibles.",
+    "it": "Scegli le informazioni e i controlli visibili.",
+    "nl": "Kies zichtbare informatie en bediening."
   },
   {
     "es": "Elige qué chips y controles deben mostrarse.",
     "en": "Choose which chips and controls should be shown.",
-    "de": "Choose which chips and controls should be shown.",
-    "fr": "Choose which chips and controls should be shown.",
-    "it": "Choose which chips and controls should be shown.",
-    "nl": "Choose which chips and controls should be shown."
+    "de": "Wähle, welche Chips und Steuerelemente angezeigt werden sollen.",
+    "fr": "Choisissez les puces et contrôles à afficher.",
+    "it": "Scegli quali chip e controlli mostrare.",
+    "nl": "Kies welke chips en bediening zichtbaar zijn."
   },
   {
     "es": "Entidad del robot y fuente principal del mapa.",
@@ -5061,10 +5093,10 @@
   {
     "es": "Personaliza el look Nodalia de la climate card, el dial y los controles.",
     "en": "Customize the Nodalia look for the climate card, dial and controls.",
-    "de": "Customize the Nodalia look for the climate card, dial and controls.",
-    "fr": "Customize the Nodalia look for the climate card, dial and controls.",
-    "it": "Customize the Nodalia look for the climate card, dial and controls.",
-    "nl": "Customize the Nodalia look for the climate card, dial and controls."
+    "de": "Passe das Nodalia-Erscheinungsbild für die Thermostat-Karte, den Drehregler und die Steuerung an.",
+    "fr": "Personnalisez le rendu Nodalia de la carte climat, du cadran et des contrôles.",
+    "it": "Personalizza l’aspetto Nodalia della climate card, del dial e dei controlli.",
+    "nl": "Pas de Nodalia-stijl aan voor de thermostaatkaart, draaiknop en bediening."
   },
   {
     "es": "Personaliza el look Nodalia, el dial circular, la nueva burbuja del thumb y la escala de tinte del gauge.",
@@ -5133,10 +5165,10 @@
   {
     "es": "Respuesta haptica opcional para dial y controles.",
     "en": "Optional haptic feedback for dial and controls.",
-    "de": "Optional haptic feedback for dial and controls.",
-    "fr": "Optional haptic feedback for dial and controls.",
-    "it": "Optional haptic feedback for dial and controls.",
-    "nl": "Optional haptic feedback for dial and controls."
+    "de": "Optionales haptisches Feedback für Drehregler und Steuerelemente.",
+    "fr": "Retour haptique optionnel pour le cadran et les contrôles.",
+    "it": "Feedback aptico opzionale per il dial e i controlli.",
+    "nl": "Optionele haptische feedback voor draaiknop en bediening."
   },
   {
     "es": "Respuesta háptica opcional para los controles.",
@@ -5181,10 +5213,10 @@
   {
     "es": "Respuesta táctil opcional al interactuar con el dial y los botones.",
     "en": "Optional tactile feedback when using the dial and buttons.",
-    "de": "Optional tactile feedback when using the dial and buttons.",
-    "fr": "Optional tactile feedback when using the dial and buttons.",
-    "it": "Optional tactile feedback when using the dial and buttons.",
-    "nl": "Optional tactile feedback when using the dial and buttons."
+    "de": "Optionales haptisches Feedback beim Drehregler und den Tasten.",
+    "fr": "Retour tactile optionnel pour le cadran et les boutons.",
+    "it": "Feedback tattile opzionale per il dial e i pulsanti.",
+    "nl": "Optionele haptische feedback bij draaiknop en knoppen."
   },
   {
     "es": "Respuesta táctil opcional al tocar la tarjeta.",
@@ -5421,10 +5453,10 @@
   {
     "es": "Visibilidad",
     "en": "Visibility",
-    "de": "Visibility",
-    "fr": "Visibility",
-    "it": "Visibility",
-    "nl": "Visibility"
+    "de": "Sichtbarkeit",
+    "fr": "Visibilité",
+    "it": "Visibilità",
+    "nl": "Zichtbaarheid"
   }
 ];
 

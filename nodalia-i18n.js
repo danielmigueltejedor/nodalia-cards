@@ -292,11 +292,11 @@
         noState: "Sin estado",
         actions: {
           disarm: "Desarmar",
-          arm_home: "Armar en casa",
-          arm_away: "Armar ausente",
-          arm_night: "Armar noche",
-          arm_vacation: "Armar vacaciones",
-          arm_custom_bypass: "Armar personalizado",
+          arm_home: "Casa",
+          arm_away: "Ausente",
+          arm_night: "Noche",
+          arm_vacation: "Vacaciones",
+          arm_custom_bypass: "Personalizada",
         },
         states: {
           disarmed: "Desarmada",
@@ -696,11 +696,11 @@
         noState: "No state",
         actions: {
           disarm: "Disarm",
-          arm_home: "Arm home",
-          arm_away: "Arm away",
-          arm_night: "Arm night",
-          arm_vacation: "Arm vacation",
-          arm_custom_bypass: "Arm custom",
+          arm_home: "Home",
+          arm_away: "Away",
+          arm_night: "Night",
+          arm_vacation: "Vacation",
+          arm_custom_bypass: "Custom",
         },
         states: {
           disarmed: "Disarmed",
@@ -1100,11 +1100,11 @@
         noState: "Kein Status",
         actions: {
           disarm: "Unscharf",
-          arm_home: "Zuhause scharf",
-          arm_away: "Abwesend scharf",
-          arm_night: "Nacht scharf",
-          arm_vacation: "Urlaub scharf",
-          arm_custom_bypass: "Benutzerdefiniert scharf",
+          arm_home: "Zuhause",
+          arm_away: "Abwesend",
+          arm_night: "Nacht",
+          arm_vacation: "Urlaub",
+          arm_custom_bypass: "Individuell",
         },
         states: {
           disarmed: "Entschärft",
@@ -1504,11 +1504,11 @@
         noState: "Pas d'état",
         actions: {
           disarm: "Désarmer",
-          arm_home: "Armer maison",
-          arm_away: "Armer absent",
-          arm_night: "Armer nuit",
-          arm_vacation: "Armer vacances",
-          arm_custom_bypass: "Armer personnalisé",
+          arm_home: "Maison",
+          arm_away: "Absent",
+          arm_night: "Nuit",
+          arm_vacation: "Vacances",
+          arm_custom_bypass: "Perso",
         },
         states: {
           disarmed: "Désactivée",
@@ -1908,11 +1908,11 @@
         noState: "Nessuno stato",
         actions: {
           disarm: "Disarma",
-          arm_home: "Arma casa",
-          arm_away: "Arma fuori",
-          arm_night: "Arma notte",
-          arm_vacation: "Arma vacanza",
-          arm_custom_bypass: "Arma personalizzato",
+          arm_home: "Casa",
+          arm_away: "Fuori",
+          arm_night: "Notte",
+          arm_vacation: "Vacanza",
+          arm_custom_bypass: "Personalizzato",
         },
         states: {
           disarmed: "Disattivato",
@@ -2312,11 +2312,11 @@
         noState: "Geen status",
         actions: {
           disarm: "Uitschakelen",
-          arm_home: "Inschakelen thuis",
-          arm_away: "Inschakelen afwezig",
-          arm_night: "Inschakelen nacht",
-          arm_vacation: "Inschakelen vakantie",
-          arm_custom_bypass: "Inschakelen aangepast",
+          arm_home: "Thuis",
+          arm_away: "Afwezig",
+          arm_night: "Nacht",
+          arm_vacation: "Vakantie",
+          arm_custom_bypass: "Aangepast",
         },
         states: {
           disarmed: "Uitgeschakeld",
@@ -2517,7 +2517,7 @@
   function strings(langCode) {
     const code = PACK[langCode] ? langCode : "es";
     const p = PACK[code];
-    if (p.weatherCard && p.humidifierCard && p.graphCard) {
+    if (p.weatherCard && p.humidifierCard && p.graphCard && p.advanceVacuum) {
       return p;
     }
     const fb = code === "es" ? PACK.es : PACK.en;
@@ -2526,6 +2526,7 @@
       weatherCard: p.weatherCard || fb.weatherCard,
       humidifierCard: p.humidifierCard || fb.humidifierCard,
       graphCard: p.graphCard || fb.graphCard,
+      advanceVacuum: p.advanceVacuum || fb.advanceVacuum,
     };
   }
 

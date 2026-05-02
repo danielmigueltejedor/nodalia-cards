@@ -74,6 +74,10 @@ Descripcion
 Estados visibles
 Fondo media player
 Fondo progreso
+Fondo tarjeta
+Fondo burbuja
+Fondo dial
+Fondo acento botones
 Imagen fija
 Justificacion
 Margen lateral
@@ -553,6 +557,10 @@ function translateEsToEn(s) {
     "Estados visibles": "Visible states",
     "Fondo media player": "Media player background",
     "Fondo progreso": "Progress background",
+    "Fondo tarjeta": "Card background",
+    "Fondo burbuja": "Bubble background",
+    "Fondo dial": "Dial background",
+    "Fondo acento botones": "Button accent background",
     "Imagen fija": "Fixed image",
     Justificacion: "Justification",
     "Margen lateral": "Side margin",
@@ -916,18 +924,127 @@ function enToNl(s) {
     .replace(/^Enable haptics$/i, "Haptiek inschakelen");
 }
 
+/** Full-sentence / editor phrases where compact locale shims cannot apply (length, commas). Key = English seed (`row.en`). */
+const FULL_LOCALE_BY_EN = {
+  Visibility: { de: "Sichtbarkeit", fr: "Visibilité", it: "Visibilità", nl: "Zichtbaarheid" },
+  "Choose which chips and controls should be shown.": {
+    de: "Wähle, welche Chips und Steuerelemente angezeigt werden sollen.",
+    fr: "Choisissez les puces et contrôles à afficher.",
+    it: "Scegli quali chip e controlli mostrare.",
+    nl: "Kies welke chips en bediening zichtbaar zijn.",
+  },
+  "Choose the information and visible controls.": {
+    de: "Wähle die sichtbaren Informationen und Steuerelemente.",
+    fr: "Choisissez les informations et contrôles visibles.",
+    it: "Scegli le informazioni e i controlli visibili.",
+    nl: "Kies zichtbare informatie en bediening.",
+  },
+  "State chip": { de: "Status-Chip", fr: "Puce d’état", it: "Chip di stato", nl: "Statuschip" },
+  "Current temperature chip": { de: "Aktuelle Temperatur", fr: "Puce température actuelle", it: "Chip temperatura attuale", nl: "Huidige temperatuur" },
+  "Humidity chip": { de: "Feuchtigkeits-Chip", fr: "Puce humidité", it: "Chip umidità", nl: "Vochtigheidschip" },
+  "Show state chip": { de: "Status-Chip anzeigen", fr: "Afficher la puce d’état", it: "Mostra chip di stato", nl: "Toon statuschip" },
+  "Show current temperature chip": {
+    de: "Aktuelle Temperatur anzeigen",
+    fr: "Afficher la température actuelle",
+    it: "Mostra chip temperatura attuale",
+    nl: "Toon huidige temperatuur",
+  },
+  "Show humidity chip": { de: "Feuchtigkeits-Chip anzeigen", fr: "Afficher l’humidité", it: "Mostra chip umidità", nl: "Toon vochtigheidschip" },
+  "Mode buttons": { de: "Modus-Tasten", fr: "Boutons de mode", it: "Pulsanti modalità", nl: "Modusknoppen" },
+  "Show mode buttons": { de: "Modus-Tasten anzeigen", fr: "Afficher les boutons de mode", it: "Mostra pulsanti modalità", nl: "Toon modusknoppen" },
+  "+ / − buttons": { de: "+/−-Tasten", fr: "Boutons +/−", it: "Pulsanti +/−", nl: "+/−-knoppen" },
+  "Unavailable badge": { de: "Nicht-verfügbar-Abzeichen", fr: "Badge indisponible", it: "Badge non disponibile", nl: "Niet-beschikbaar-badge" },
+  "Show unavailable badge": { de: "Abzeichen „Nicht verfügbar“ anzeigen", fr: "Afficher le badge indisponible", it: "Mostra badge non disponibile", nl: "Toon niet-beschikbaar-badge" },
+  "Optional tactile feedback when using the dial and buttons.": {
+    de: "Optionales haptisches Feedback beim Drehregler und den Tasten.",
+    fr: "Retour tactile optionnel pour le cadran et les boutons.",
+    it: "Feedback tattile opzionale per il dial e i pulsanti.",
+    nl: "Optionele haptische feedback bij draaiknop en knoppen.",
+  },
+  "Optional haptic feedback for dial and controls.": {
+    de: "Optionales haptisches Feedback für Drehregler und Steuerelemente.",
+    fr: "Retour haptique optionnel pour le cadran et les contrôles.",
+    it: "Feedback aptico opzionale per il dial e i controlli.",
+    nl: "Optionele haptische feedback voor draaiknop en bediening.",
+  },
+  "Enable haptics": { de: "Haptik aktivieren", fr: "Activer le retour haptique", it: "Abilita feedback aptico", nl: "Haptiek inschakelen" },
+  "Vibration fallback": { de: "Vibrations-Fallback", fr: "Secours vibration", it: "Fallback vibrazione", nl: "Trilling reserve" },
+  "Customize the Nodalia look for the climate card, dial and controls.": {
+    de: "Passe das Nodalia-Erscheinungsbild für die Thermostat-Karte, den Drehregler und die Steuerung an.",
+    fr: "Personnalisez le rendu Nodalia de la carte climat, du cadran et des contrôles.",
+    it: "Personalizza l’aspetto Nodalia della climate card, del dial e dei controlli.",
+    nl: "Pas de Nodalia-stijl aan voor de thermostaatkaart, draaiknop en bediening.",
+  },
+  "Hide style settings": {
+    de: "Stileinstellungen ausblenden",
+    fr: "Masquer les paramètres de style",
+    it: "Nascondi impostazioni di stile",
+    nl: "Stijlinstellingen verbergen",
+  },
+  "Show style settings": {
+    de: "Stileinstellungen anzeigen",
+    fr: "Afficher les paramètres de style",
+    it: "Mostra impostazioni di stile",
+    nl: "Stijlinstellingen tonen",
+  },
+  "Hide animation settings": {
+    de: "Animationseinstellungen ausblenden",
+    fr: "Masquer les paramètres d’animation",
+    it: "Nascondi impostazioni animazioni",
+    nl: "Animatie-instellingen verbergen",
+  },
+  "Show animation settings": {
+    de: "Animationseinstellungen anzeigen",
+    fr: "Afficher les paramètres d’animation",
+    it: "Mostra impostazioni animazioni",
+    nl: "Animatie-instellingen tonen",
+  },
+  "Controls dial transition, content entrance and button bounce.": {
+    de: "Steuert den Übergang des Drehreglers, den Eingang des Inhalts und den Tasten-Federungseffekt.",
+    fr: "Contrôle la transition du cadran, l’entrée du contenu et le rebond des boutons.",
+    it: "Controlla la transizione del dial, l’ingresso del contenuto e il rimbalzo dei pulsanti.",
+    nl: "Regelt de draaiknop-overgang, binnenkomst van inhoud en knop-veer.",
+  },
+  "Card background": { de: "Kartenhintergrund", fr: "Fond de la carte", it: "Sfondo scheda", nl: "Kaartachtergrond" },
+  "Bubble background": { de: "Blasen-Hintergrund", fr: "Fond de la bulle", it: "Sfondo bolla", nl: "Bel-achtergrond" },
+  "Dial background": { de: "Drehregler-Hintergrund", fr: "Fond du cadran", it: "Sfondo dial", nl: "Draaiknop-achtergrond" },
+  "Button accent background": { de: "Akzent-Hintergrund der Tasten", fr: "Fond d’accent des boutons", it: "Sfondo accento pulsanti", nl: "Knopaccent-achtergrond" },
+  "Helps compact the climate card based on available space.": {
+    de: "Hilft, die Thermostat-Karte je nach verfügbarem Platz zu kompaktieren.",
+    fr: "Aide à compacter la carte climat selon l’espace disponible.",
+    it: "Aiuta a compattare la climate card in base allo spazio.",
+    nl: "Houdt de thermostaatkaart compact naargelang de ruimte.",
+  },
+};
+
+function applyFullLocaleByEn(row) {
+  const patch = FULL_LOCALE_BY_EN[row.en];
+  if (!patch) {
+    return row;
+  }
+  return {
+    ...row,
+    de: patch.de !== undefined ? patch.de : row.de,
+    fr: patch.fr !== undefined ? patch.fr : row.fr,
+    it: patch.it !== undefined ? patch.it : row.it,
+    nl: patch.nl !== undefined ? patch.nl : row.nl,
+  };
+}
+
 const rows = [];
 const seenEs = new Set();
 for (const es of keys) {
   const en = translateEsToEn(es);
-  rows.push({
-    es,
-    en,
-    de: enToDe(en),
-    fr: enToFr(en),
-    it: enToIt(en),
-    nl: enToNl(en),
-  });
+  rows.push(
+    applyFullLocaleByEn({
+      es,
+      en,
+      de: enToDe(en),
+      fr: enToFr(en),
+      it: enToIt(en),
+      nl: enToNl(en),
+    }),
+  );
   seenEs.add(es);
 }
 for (const r of [...rows]) {
