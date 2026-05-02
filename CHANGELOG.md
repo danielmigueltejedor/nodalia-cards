@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.1] - 2026-05-03
+
+### Changed
+
+- Opens the **0.3.x** prerelease line on branch **`beta`**: continued **translation** polish, Lovelace editor refinements, and **card UX** work (graph, energy flow, navigation bar, etc.). **`main`** remains the **0.2.x** stable line (**v0.2.0** ships multilingual UI at ~80% coverage).
+
 ## [0.2.0] - 2026-05-03
 
 ### Summary
