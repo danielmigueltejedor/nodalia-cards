@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0-beta.11] - 2026-05-02
+
+### Fixed
+
+- **`nodalia-i18n.js`**: `resolveLanguage` now reads UI language via `effectiveHaLanguageCode`, which prefers `hass.language` / `selectedLanguage` / `locale.language` and falls back to `<home-assistant>.hass` when Lovelace passes a hass object that has entity state but not yet i18n fields — fixes Meteoalarm chip/popup and advance vacuum (and other cards using `language: auto`) staying on Spanish copy despite an English or other profile.
+- Exposed `effectiveHaLanguageCode` on `window.NodaliaI18n`.
+- Regenerated artifact: bundled `nodalia-cards.js`.
+
 ## [0.2.0-beta.10] - 2026-05-02
 
 ### Changed

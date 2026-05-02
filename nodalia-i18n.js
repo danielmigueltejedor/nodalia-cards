@@ -24,6 +24,7 @@
         || hass.locale != null
         || hass.user != null
         || typeof hass.callService === "function"
+        || (typeof hass.language === "string" && hass.language.trim() !== "")
       ) {
         return hass;
       }
@@ -42,13 +43,36 @@
     return hass;
   }
 
+  /**
+   * Reads HA UI language from hass (root exposes `language`, `selectedLanguage`, `locale.language`).
+   * Lovelace may pass a hass object with states but without i18n fields until a later update — fall back
+   * to `document.querySelector("home-assistant")?.hass` so `language: auto` matches the profile.
+   */
+  function effectiveHaLanguageCode(hass) {
+    const fromObject = h => {
+      if (!h || typeof h !== "object") {
+        return null;
+      }
+      const raw =
+        (typeof h.language === "string" && h.language.trim() && h.language) ||
+        (typeof h.selectedLanguage === "string" && h.selectedLanguage.trim() && h.selectedLanguage) ||
+        (h.locale && typeof h.locale === "object" && typeof h.locale.language === "string" && h.locale.language.trim() && h.locale.language);
+      return raw ? baseLang(raw) : null;
+    };
+    return (
+      fromObject(resolveHass(hass))
+      || (typeof document !== "undefined"
+        ? fromObject(document.querySelector("home-assistant")?.hass)
+        : null)
+    );
+  }
+
   function resolveLanguage(hass, configLang) {
-    const h = resolveHass(hass);
     const configured = baseLang(configLang);
     if (configured) {
       return configured;
     }
-    const ha = baseLang(h?.locale?.language || h?.language || "");
+    const ha = effectiveHaLanguageCode(hass);
     if (ha) {
       return ha;
     }
@@ -3041,6 +3065,7 @@
     PACK,
     resolveHass,
     resolveLanguage,
+    effectiveHaLanguageCode,
     localeTag,
     normalizeTextKey,
     normalizeHumidifierModeKey,
