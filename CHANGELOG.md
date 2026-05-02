@@ -4,6 +4,19 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0-beta.16] - 2026-05-03
+
+### Fixed
+
+- **Lovelace editor i18n** (`scripts/gen-editor-ui.mjs`): `Entidad` → `Entity` is applied **after** compound phrases (e.g. **Tamaño burbuja entidad**), fixing broken English seeds like “Size burbuja Entity” and improving downstream **de / fr / it / nl** editor labels.
+- **Advance vacuum** (`nodalia-advance-vacuum-card.js`): `window.NodaliaI18n?.resolveLanguage?.(…)` everywhere it is used in templates/signature; **`nodalia-i18n-ready`** event + short locale reconciliation so the card re-renders when i18n or profile language becomes available (avoids stuck fallbacks).
+- **Visual editors (layout)**: `ha-entity-picker` / `ha-selector` hosts in **`.editor-field`** use **full grid width** (no two entity pickers on one row), so long entity names are readable.
+
+### Changed
+
+- **Editor strings**: `scripts/editor-source-strings.json` and `scripts/spanish-nav-exact.mjs` extended for icon/bubble/colour labels; **`FULL_LOCALE_BY_EN`** in `gen-editor-ui.mjs` adds fuller **de / fr / it / nl** for style/animation/hint phrasing; **`nodalia-i18n.js`** dispatches **`nodalia-i18n-ready`** when the pack is registered.
+- **Community**: **Translation correction** issue template (`.github/ISSUE_TEMPLATE/translation.yml`); **CONTRIBUTING** links to it for wrong-locale copy.
+- Regenerated **`nodalia-editor-ui.js`** and bundled **`nodalia-cards.js`**.
 
 ## [0.2.0-beta.14] - 2026-05-02
 
