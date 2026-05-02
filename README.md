@@ -71,6 +71,8 @@ url: /hacsfiles/nodalia-cards/nodalia-cards.js
 type: module
 ```
 
+HACS can append `?hacstag=…` to that path (cache busting). **Do not keep a very old or copy-pasted `hacstag`:** it can make the panel keep loading an **outdated** `nodalia-cards.js` (e.g. missing or broken translations). If the UI does not follow your Home Assistant language, open your Lovelace **Resource**, remove the `?hacstag=…` part or replace the full URL with the one HACS shows after **Redownload**, then hard-refresh the dashboard.
+
 ---
 
 ## 🌍 Translations
