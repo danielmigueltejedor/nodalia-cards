@@ -110,6 +110,11 @@
       fr: "fr",
       it: "it",
       nl: "nl",
+      pt: "pt",
+      ru: "ru",
+      el: "el",
+      zh: "zh",
+      ro: "ro",
     };
     return map[langCode] || "es";
   }
@@ -2697,6 +2702,156 @@
         triggered: "Getriggerd",
       },
     },
+    pt: {
+      navigationMusicAssist: {
+        artist: "Artistas",
+        artists: "Artistas",
+        album: "Álbuns",
+        albums: "Álbuns",
+        track: "Faixas",
+        tracks: "Faixas",
+        song: "Faixas",
+        songs: "Faixas",
+        playlist: "Listas de reprodução",
+        playlists: "Listas de reprodução",
+        "radio station": "Estações de rádio",
+        "radio stations": "Estações de rádio",
+        podcast: "Podcasts",
+        podcasts: "Podcasts",
+        audiobook: "Audiolivros",
+        audiobooks: "Audiolivros",
+        genre: "Géneros",
+        genres: "Géneros",
+        favorite: "Favoritos",
+        favorites: "Favoritos",
+        favourites: "Favoritos",
+        search: "Pesquisar",
+        "recently played": "Reproduzidos recentemente",
+        "recently added": "Adicionados recentemente",
+        "recently played tracks": "Faixas ouvidas recentemente",
+        browseFallback: "Item",
+      },
+    },
+    ru: {
+      navigationMusicAssist: {
+        artist: "Артисты",
+        artists: "Артисты",
+        album: "Альбомы",
+        albums: "Альбомы",
+        track: "Треки",
+        tracks: "Треки",
+        song: "Треки",
+        songs: "Треки",
+        playlist: "Плейлисты",
+        playlists: "Плейлисты",
+        "radio station": "Радиостанции",
+        "radio stations": "Радиостанции",
+        podcast: "Подкасты",
+        podcasts: "Подкасты",
+        audiobook: "Аудиокниги",
+        audiobooks: "Аудиокниги",
+        genre: "Жанры",
+        genres: "Жанры",
+        favorite: "Избранное",
+        favorites: "Избранное",
+        favourites: "Избранное",
+        search: "Поиск",
+        "recently played": "Недавно воспроизведённые",
+        "recently added": "Недавно добавленные",
+        "recently played tracks": "Недавно воспроизведённые треки",
+        browseFallback: "Элемент",
+      },
+    },
+    el: {
+      navigationMusicAssist: {
+        artist: "Καλλιτέχνες",
+        artists: "Καλλιτέχνες",
+        album: "Άλμπουμ",
+        albums: "Άλμπουμ",
+        track: "Κομμάτια",
+        tracks: "Κομμάτια",
+        song: "Κομμάτια",
+        songs: "Κομμάτια",
+        playlist: "Λίστες αναπαραγωγής",
+        playlists: "Λίστες αναπαραγωγής",
+        "radio station": "Ραδιοφωνικοί σταθμοί",
+        "radio stations": "Ραδιοφωνικοί σταθμοί",
+        podcast: "Podcasts",
+        podcasts: "Podcasts",
+        audiobook: "Ακουστικά βιβλία",
+        audiobooks: "Ακουστικά βιβλία",
+        genre: "Είδη",
+        genres: "Είδη",
+        favorite: "Αγαπημένα",
+        favorites: "Αγαπημένα",
+        favourites: "Αγαπημένα",
+        search: "Αναζήτηση",
+        "recently played": "Πρόσφατη αναπαραγωγή",
+        "recently added": "Πρόσφατα προστέθηκαν",
+        "recently played tracks": "Πρόσφατα κομμάτια",
+        browseFallback: "Στοιχείο",
+      },
+    },
+    zh: {
+      navigationMusicAssist: {
+        artist: "艺术家",
+        artists: "艺术家",
+        album: "专辑",
+        albums: "专辑",
+        track: "曲目",
+        tracks: "曲目",
+        song: "曲目",
+        songs: "曲目",
+        playlist: "播放列表",
+        playlists: "播放列表",
+        "radio station": "广播电台",
+        "radio stations": "广播电台",
+        podcast: "播客",
+        podcasts: "播客",
+        audiobook: "有声书",
+        audiobooks: "有声书",
+        genre: "流派",
+        genres: "流派",
+        favorite: "收藏",
+        favorites: "收藏",
+        favourites: "收藏",
+        search: "搜索",
+        "recently played": "最近播放",
+        "recently added": "最近添加",
+        "recently played tracks": "最近播放的曲目",
+        browseFallback: "项目",
+      },
+    },
+    ro: {
+      navigationMusicAssist: {
+        artist: "Artiști",
+        artists: "Artiști",
+        album: "Albume",
+        albums: "Albume",
+        track: "Piese",
+        tracks: "Piese",
+        song: "Piese",
+        songs: "Piese",
+        playlist: "Liste de redare",
+        playlists: "Liste de redare",
+        "radio station": "Stații radio",
+        "radio stations": "Stații radio",
+        podcast: "Podcasturi",
+        podcasts: "Podcasturi",
+        audiobook: "Cărți audio",
+        audiobooks: "Cărți audio",
+        genre: "Genuri",
+        genres: "Genuri",
+        favorite: "Favorite",
+        favorites: "Favorite",
+        favourites: "Favorite",
+        search: "Căutare",
+        "recently played": "Redări recente",
+        "recently added": "Adăugate recent",
+        "recently played tracks": "Piese redate recent",
+        browseFallback: "Element",
+      },
+    },
   };
 
   function strings(langCode) {
@@ -2712,6 +2867,7 @@
       humidifierCard: p.humidifierCard || fb.humidifierCard,
       graphCard: p.graphCard || fb.graphCard,
       advanceVacuum: p.advanceVacuum || fb.advanceVacuum,
+      navigationMusicAssist: p.navigationMusicAssist || fb.navigationMusicAssist,
     };
   }
 
@@ -8777,17 +8933,124 @@ const MUSIC_ASSISTANT_BROWSER_EXCLUDE_PATTERNS = [
   "imagenes",
 ];
 const MUSIC_ASSISTANT_DIRECTORY_ICON_RULES = [
-  { patterns: ["artists", "artistas"], icon: "mdi:account-music" },
-  { patterns: ["albums", "albumes", "álbumes"], icon: "mdi:album" },
-  { patterns: ["tracks", "songs", "canciones", "temas", "pistas"], icon: "mdi:music-note" },
-  { patterns: ["playlists", "listas", "listas de reproduccion", "listas de reproducción"], icon: "mdi:playlist-music" },
-  { patterns: ["radio stations", "radios", "emisoras", "stations"], icon: "mdi:radio" },
-  { patterns: ["podcasts"], icon: "mdi:podcast" },
-  { patterns: ["audiobooks", "audiolibros"], icon: "mdi:book-music" },
-  { patterns: ["genres", "generos", "géneros"], icon: "mdi:shape" },
-  { patterns: ["favorites", "favourites", "favoritos"], icon: "mdi:heart" },
-  { patterns: ["recent", "recently", "recientes"], icon: "mdi:history" },
-  { patterns: ["search", "buscar", "busqueda", "búsqueda"], icon: "mdi:magnify" },
+  {
+    patterns: [
+      "artists",
+      "artistas",
+      "artistes",
+      "артисты",
+      "artiști",
+      "艺术家",
+      "καλλιτέχνες",
+    ],
+    icon: "mdi:account-music",
+  },
+  {
+    patterns: [
+      "albums",
+      "albumes",
+      "álbumes",
+      "álbums",
+      "albuns",
+      "альбомы",
+      "专辑",
+      "άλμπουμ",
+    ],
+    icon: "mdi:album",
+  },
+  {
+    patterns: [
+      "tracks",
+      "songs",
+      "canciones",
+      "temas",
+      "pistas",
+      "faixas",
+      "músicas",
+      "треки",
+      "曲目",
+      "κομμάτια",
+      "piese",
+    ],
+    icon: "mdi:music-note",
+  },
+  {
+    patterns: [
+      "playlists",
+      "listas",
+      "listas de reproduccion",
+      "listas de reproducción",
+      "listas de reprodução",
+      "плейлисты",
+      "播放列表",
+      "liste de redare",
+      "λίστες αναπαραγωγής",
+    ],
+    icon: "mdi:playlist-music",
+  },
+  {
+    patterns: [
+      "radio stations",
+      "radios",
+      "emisoras",
+      "stations",
+      "estações",
+      "радио",
+      "радиостанции",
+      "广播电台",
+      "stații radio",
+      "ραδιοφωνικοί",
+    ],
+    icon: "mdi:radio",
+  },
+  { patterns: ["podcasts", "подкасты", "播客", "podcasturi"], icon: "mdi:podcast" },
+  {
+    patterns: ["audiobooks", "audiolibros", "audiolivros", "аудиокниги", "有声书", "cărți audio", "ακουστικά βιβλία"],
+    icon: "mdi:book-music",
+  },
+  {
+    patterns: ["genres", "generos", "géneros", "жанры", "流派", "genuri", "είδη"],
+    icon: "mdi:shape",
+  },
+  {
+    patterns: [
+      "favorites",
+      "favourites",
+      "favoritos",
+      "избранное",
+      "收藏",
+      "favorite",
+      "αγαπημένα",
+    ],
+    icon: "mdi:heart",
+  },
+  {
+    patterns: [
+      "recent",
+      "recently",
+      "recientes",
+      "recentemente",
+      "недавно",
+      "最近",
+      "πρόσφατα",
+      "redări recente",
+    ],
+    icon: "mdi:history",
+  },
+  {
+    patterns: [
+      "search",
+      "buscar",
+      "busqueda",
+      "búsqueda",
+      "pesquisar",
+      "поиск",
+      "搜索",
+      "căutare",
+      "αναζήτηση",
+    ],
+    icon: "mdi:magnify",
+  },
 ];
 
 const DEFAULT_CONFIG = {
@@ -10464,11 +10727,12 @@ class NodaliaNavigationBarCard extends HTMLElement {
   _getMediaBrowserDisplayTitle(value) {
     const label = typeof value === "string" ? value : value?.title;
     const fallback = String(label || "").trim();
-    const lang = window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language);
+    const lang = window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language ?? "auto");
     const dict = window.NodaliaI18n.strings(lang).navigationMusicAssist || {};
+    const enDict = window.NodaliaI18n.strings("en").navigationMusicAssist || {};
 
     if (!fallback) {
-      return dict.browseFallback || "Item";
+      return dict.browseFallback || enDict.browseFallback || "Item";
     }
 
     if (!this._mediaBrowserState?.isMusicAssistant) {
@@ -10476,7 +10740,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
 
     const key = normalizeTextKey(fallback);
-    return dict[key] || fallback;
+    return dict[key] || enDict[key] || fallback;
   }
 
   _getMediaBrowserIcon(item) {
@@ -13873,45 +14137,125 @@ const MUSIC_ASSISTANT_BROWSER_EXCLUDE_PATTERNS = [
   "imagenes",
 ];
 const MUSIC_ASSISTANT_DIRECTORY_ICON_RULES = [
-  { patterns: ["artists", "artistas"], icon: "mdi:account-music" },
-  { patterns: ["albums", "albumes", "álbumes"], icon: "mdi:album" },
-  { patterns: ["tracks", "songs", "canciones", "temas", "pistas"], icon: "mdi:music-note" },
-  { patterns: ["playlists", "listas", "listas de reproduccion", "listas de reproducción"], icon: "mdi:playlist-music" },
-  { patterns: ["radio stations", "radios", "emisoras", "stations"], icon: "mdi:radio" },
-  { patterns: ["podcasts"], icon: "mdi:podcast" },
-  { patterns: ["audiobooks", "audiolibros"], icon: "mdi:book-music" },
-  { patterns: ["genres", "generos", "géneros"], icon: "mdi:shape" },
-  { patterns: ["favorites", "favourites", "favoritos"], icon: "mdi:heart" },
-  { patterns: ["recent", "recently", "recientes"], icon: "mdi:history" },
-  { patterns: ["search", "buscar", "busqueda", "búsqueda"], icon: "mdi:magnify" },
+  {
+    patterns: [
+      "artists",
+      "artistas",
+      "artistes",
+      "артисты",
+      "artiști",
+      "艺术家",
+      "καλλιτέχνες",
+    ],
+    icon: "mdi:account-music",
+  },
+  {
+    patterns: [
+      "albums",
+      "albumes",
+      "álbumes",
+      "álbums",
+      "albuns",
+      "альбомы",
+      "专辑",
+      "άλμπουμ",
+    ],
+    icon: "mdi:album",
+  },
+  {
+    patterns: [
+      "tracks",
+      "songs",
+      "canciones",
+      "temas",
+      "pistas",
+      "faixas",
+      "músicas",
+      "треки",
+      "曲目",
+      "κομμάτια",
+      "piese",
+    ],
+    icon: "mdi:music-note",
+  },
+  {
+    patterns: [
+      "playlists",
+      "listas",
+      "listas de reproduccion",
+      "listas de reproducción",
+      "listas de reprodução",
+      "плейлисты",
+      "播放列表",
+      "liste de redare",
+      "λίστες αναπαραγωγής",
+    ],
+    icon: "mdi:playlist-music",
+  },
+  {
+    patterns: [
+      "radio stations",
+      "radios",
+      "emisoras",
+      "stations",
+      "estações",
+      "радио",
+      "радиостанции",
+      "广播电台",
+      "stații radio",
+      "ραδιοφωνικοί",
+    ],
+    icon: "mdi:radio",
+  },
+  { patterns: ["podcasts", "подкасты", "播客", "podcasturi"], icon: "mdi:podcast" },
+  {
+    patterns: ["audiobooks", "audiolibros", "audiolivros", "аудиокниги", "有声书", "cărți audio", "ακουστικά βιβλία"],
+    icon: "mdi:book-music",
+  },
+  {
+    patterns: ["genres", "generos", "géneros", "жанры", "流派", "genuri", "είδη"],
+    icon: "mdi:shape",
+  },
+  {
+    patterns: [
+      "favorites",
+      "favourites",
+      "favoritos",
+      "избранное",
+      "收藏",
+      "favorite",
+      "αγαπημένα",
+    ],
+    icon: "mdi:heart",
+  },
+  {
+    patterns: [
+      "recent",
+      "recently",
+      "recientes",
+      "recentemente",
+      "недавно",
+      "最近",
+      "πρόσφατα",
+      "redări recente",
+    ],
+    icon: "mdi:history",
+  },
+  {
+    patterns: [
+      "search",
+      "buscar",
+      "busqueda",
+      "búsqueda",
+      "pesquisar",
+      "поиск",
+      "搜索",
+      "căutare",
+      "αναζήτηση",
+    ],
+    icon: "mdi:magnify",
+  },
 ];
-const MUSIC_ASSISTANT_LABEL_TRANSLATIONS = {
-  artist: "Artistas",
-  artists: "Artistas",
-  album: "Álbumes",
-  albums: "Álbumes",
-  track: "Canciones",
-  tracks: "Canciones",
-  song: "Canciones",
-  songs: "Canciones",
-  playlist: "Listas de reproducción",
-  playlists: "Listas de reproducción",
-  "radio station": "Emisoras",
-  "radio stations": "Emisoras",
-  podcast: "Podcasts",
-  podcasts: "Podcasts",
-  audiobook: "Audiolibros",
-  audiobooks: "Audiolibros",
-  genre: "Géneros",
-  genres: "Géneros",
-  favorite: "Favoritos",
-  favorites: "Favoritos",
-  favourites: "Favoritos",
-  search: "Buscar",
-  "recently played": "Reproducido recientemente",
-  "recently added": "Añadido recientemente",
-  "recently played tracks": "Canciones reproducidas recientemente",
-};
 
 const DEFAULT_CONFIG = {
   title: "",
@@ -16399,9 +16743,13 @@ class NodaliaMediaPlayer extends HTMLElement {
   _getMediaBrowserDisplayTitle(value) {
     const label = typeof value === "string" ? value : value?.title;
     const fallback = String(label || "").trim();
+    const lang =
+      window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") ?? "es";
+    const dict = window.NodaliaI18n?.strings?.(lang)?.navigationMusicAssist || {};
+    const enDict = window.NodaliaI18n?.strings?.("en")?.navigationMusicAssist || {};
 
     if (!fallback) {
-      return "Elemento";
+      return dict.browseFallback || enDict.browseFallback || "Item";
     }
 
     if (!this._mediaBrowserState?.isMusicAssistant) {
@@ -16409,7 +16757,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     const key = normalizeTextKey(fallback);
-    return MUSIC_ASSISTANT_LABEL_TRANSLATIONS[key] || fallback;
+    return dict[key] || enDict[key] || fallback;
   }
 
   _getMediaBrowserViewKey(state = this._mediaBrowserState) {
@@ -76629,4 +76977,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.3.0-beta.03","contentSha256_12":"c0d5fa633893"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.3.0-beta.04","contentSha256_12":"d7d87f9d1bc9"};}
