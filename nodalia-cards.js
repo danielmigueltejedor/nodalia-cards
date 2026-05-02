@@ -3578,10 +3578,10 @@
   {
     "es": "Chip de temperatura actual",
     "en": "Current temperature chip",
-    "de": "Aktuelle Temperatur",
+    "de": "Aktuelle Temperatur (Chip)",
     "fr": "Puce température actuelle",
     "it": "Chip temperatura attuale",
-    "nl": "Huidige temperatuur"
+    "nl": "Huidige temperatuur (chip)"
   },
   {
     "es": "Click entidades",
@@ -3602,26 +3602,34 @@
   {
     "es": "Color auto",
     "en": "Auto Color",
-    "de": "Auto Color",
-    "fr": "Auto Color",
-    "it": "Auto Color",
-    "nl": "Auto Color"
+    "de": "Auto-Farbe",
+    "fr": "Couleur auto",
+    "it": "Colore auto",
+    "nl": "Autokleur"
   },
   {
     "es": "Color calor",
-    "en": "Heat Color",
-    "de": "Heat Color",
-    "fr": "Heat Color",
-    "it": "Heat Color",
-    "nl": "Heat Color"
+    "en": "Heat color",
+    "de": "Heizfarbe",
+    "fr": "Couleur chaleur",
+    "it": "Colore calore",
+    "nl": "Verwarmingskleur"
   },
   {
     "es": "Color frio",
-    "en": "Cool Color",
-    "de": "Cool Color",
-    "fr": "Cool Color",
-    "it": "Cool Color",
-    "nl": "Cool Color"
+    "en": "Cool color",
+    "de": "Kühlfarbe",
+    "fr": "Couleur froid",
+    "it": "Colore freddo",
+    "nl": "Koelkleur"
+  },
+  {
+    "es": "Color frío",
+    "en": "Cool color",
+    "de": "Kühlfarbe",
+    "fr": "Couleur froid",
+    "it": "Colore freddo",
+    "nl": "Koelkleur"
   },
   {
     "es": "Color gris RGB",
@@ -3632,28 +3640,60 @@
     "nl": "Gray RGB Color"
   },
   {
+    "es": "Color icono activo",
+    "en": "Active icon color",
+    "de": "Aktive Symbolfarbe",
+    "fr": "Couleur d’icône active",
+    "it": "Colore icona attivo",
+    "nl": "Actieve pictogramkleur"
+  },
+  {
+    "es": "Color icono apagado",
+    "en": "Off icon color",
+    "de": "Symbolfarbe (Aus)",
+    "fr": "Couleur icône (inactif)",
+    "it": "Colore icona (spento)",
+    "nl": "Pictogramkleur (uit)"
+  },
+  {
+    "es": "Color icono encendido",
+    "en": "On icon color",
+    "de": "Symbolfarbe (Ein)",
+    "fr": "Couleur icône (actif)",
+    "it": "Colore icona (acceso)",
+    "nl": "Pictogramkleur (aan)"
+  },
+  {
+    "es": "Color icono inactivo",
+    "en": "Inactive icon color",
+    "de": "Inaktive Symbolfarbe",
+    "fr": "Couleur d’icône inactive",
+    "it": "Colore icona inattivo",
+    "nl": "Inactieve pictogramkleur"
+  },
+  {
     "es": "Color iconos",
     "en": "Icon Color",
-    "de": "Icon Color",
-    "fr": "Icon Color",
-    "it": "Icon Color",
-    "nl": "Icon Color"
+    "de": "Symbolfarbe",
+    "fr": "Couleur d’icône",
+    "it": "Colore icona",
+    "nl": "Pictogramkleur"
   },
   {
     "es": "Color secado",
     "en": "Dry Color",
-    "de": "Dry Color",
-    "fr": "Dry Color",
-    "it": "Dry Color",
-    "nl": "Dry Color"
+    "de": "Trocknungsfarbe",
+    "fr": "Couleur séchage",
+    "it": "Colore asciugatura",
+    "nl": "Droogkleur"
   },
   {
     "es": "Color ventilador",
     "en": "Fan Color",
-    "de": "Fan Color",
-    "fr": "Fan Color",
-    "it": "Fan Color",
-    "nl": "Fan Color"
+    "de": "Lüfterfarbe",
+    "fr": "Couleur ventilateur",
+    "it": "Colore ventola",
+    "nl": "Ventilatorkleur"
   },
   {
     "es": "Columnas de grid",
@@ -3850,18 +3890,18 @@
   {
     "es": "Entrada contenido (ms)",
     "en": "Content entrance (ms)",
-    "de": "Content entrance (ms)",
-    "fr": "Content entrance (ms)",
-    "it": "Content entrance (ms)",
-    "nl": "Content entrance (ms)"
+    "de": "Inhaltseingang (ms)",
+    "fr": "Entrée du contenu (ms)",
+    "it": "Ingresso contenuto (ms)",
+    "nl": "Inhoud binnenkomst (ms)"
   },
   {
     "es": "Entrada del contenido (ms)",
     "en": "Content entrance (ms)",
-    "de": "Content entrance (ms)",
-    "fr": "Content entrance (ms)",
-    "it": "Content entrance (ms)",
-    "nl": "Content entrance (ms)"
+    "de": "Inhaltseingang (ms)",
+    "fr": "Entrée du contenu (ms)",
+    "it": "Ingresso contenuto (ms)",
+    "nl": "Inhoud binnenkomst (ms)"
   },
   {
     "es": "Estado a la derecha del nombre",
@@ -3974,6 +4014,14 @@
     "fr": "Minimum flow (s)",
     "it": "Minimum flow (s)",
     "nl": "Minimum flow (s)"
+  },
+  {
+    "es": "Fondo burbuja icono",
+    "en": "Icon bubble background",
+    "de": "Hintergrund Symbolblase",
+    "fr": "Fond de la bulle d’icône",
+    "it": "Sfondo bolla icona",
+    "nl": "Achtergrond pictogrambel"
   },
   {
     "es": "Gap",
@@ -4922,26 +4970,26 @@
   {
     "es": "Rebote pulsacion (ms)",
     "en": "Tap bounce (ms)",
-    "de": "Tap bounce (ms)",
-    "fr": "Tap bounce (ms)",
-    "it": "Tap bounce (ms)",
-    "nl": "Tap bounce (ms)"
+    "de": "Tipp-Feder (ms)",
+    "fr": "Rebond au toucher (ms)",
+    "it": "Rimbalzo tap (ms)",
+    "nl": "Tik-veer (ms)"
   },
   {
     "es": "Rebote pulsación (ms)",
     "en": "Tap bounce (ms)",
-    "de": "Tap bounce (ms)",
-    "fr": "Tap bounce (ms)",
-    "it": "Tap bounce (ms)",
-    "nl": "Tap bounce (ms)"
+    "de": "Tipp-Feder (ms)",
+    "fr": "Rebond au toucher (ms)",
+    "it": "Rimbalzo tap (ms)",
+    "nl": "Tik-veer (ms)"
   },
   {
     "es": "Rebote tap (ms)",
     "en": "Tap bounce (ms)",
-    "de": "Tap bounce (ms)",
-    "fr": "Tap bounce (ms)",
-    "it": "Tap bounce (ms)",
-    "nl": "Tap bounce (ms)"
+    "de": "Tipp-Feder (ms)",
+    "fr": "Rebond au toucher (ms)",
+    "it": "Rimbalzo tap (ms)",
+    "nl": "Tik-veer (ms)"
   },
   {
     "es": "Relleno burbuja informativa",
@@ -5201,11 +5249,11 @@
   },
   {
     "es": "Tamano burbuja entidad",
-    "en": "Size burbuja Entity",
-    "de": "Size burbuja Entity",
-    "fr": "Size burbuja Entity",
-    "it": "Size burbuja Entity",
-    "nl": "Size burbuja Entity"
+    "en": "Entity bubble size",
+    "de": "Größe Entitätsblase",
+    "fr": "Taille de la bulle d’entité",
+    "it": "Dimensione bolla entità",
+    "nl": "Grootte entiteitsbel"
   },
   {
     "es": "Tamano casa",
@@ -5234,10 +5282,10 @@
   {
     "es": "Tamano condicion",
     "en": "Condition size",
-    "de": "Condition size",
-    "fr": "Condition size",
-    "it": "Condition size",
-    "nl": "Condition size"
+    "de": "Vorhersage-Größe",
+    "fr": "Taille condition",
+    "it": "Dimensione condizione",
+    "nl": "Voorwaardegrootte"
   },
   {
     "es": "Tamano dial",
@@ -5306,26 +5354,26 @@
   {
     "es": "Tamano temperatura",
     "en": "Temperature size",
-    "de": "Temperature size",
-    "fr": "Temperature size",
-    "it": "Temperature size",
-    "nl": "Temperature size"
+    "de": "Temperatur-Größe",
+    "fr": "Taille température",
+    "it": "Dimensione temperatura",
+    "nl": "Temperatuurgrootte"
   },
   {
     "es": "Tamano temperatura actual",
     "en": "Current temperature size",
-    "de": "Current temperature size",
-    "fr": "Current temperature size",
-    "it": "Current temperature size",
-    "nl": "Current temperature size"
+    "de": "Größe aktuelle Temperatur",
+    "fr": "Taille température actuelle",
+    "it": "Dimensione temperatura attuale",
+    "nl": "Grootte huidige temperatuur"
   },
   {
     "es": "Tamano temperatura objetivo",
     "en": "Target temperature size",
-    "de": "Target temperature size",
-    "fr": "Target temperature size",
-    "it": "Target temperature size",
-    "nl": "Target temperature size"
+    "de": "Größe Solltemperatur",
+    "fr": "Taille consigne de température",
+    "it": "Dimensione temperatura obiettivo",
+    "nl": "Grootte doeltemperatuur"
   },
   {
     "es": "Tamano thumb dial",
@@ -5338,10 +5386,10 @@
   {
     "es": "Tamano titulo",
     "en": "Title size",
-    "de": "Title size",
-    "fr": "Title size",
-    "it": "Title size",
-    "nl": "Title size"
+    "de": "Titelgröße",
+    "fr": "Taille du titre",
+    "it": "Dimensione titolo",
+    "nl": "Titelgrootte"
   },
   {
     "es": "Tamano unidad",
@@ -5370,10 +5418,10 @@
   {
     "es": "Tamaño botones + / -",
     "en": "Size + / − buttons",
-    "de": "Size + / − buttons",
-    "fr": "Size + / − buttons",
-    "it": "Size + / − buttons",
-    "nl": "Size + / − buttons"
+    "de": "Größe +/−-Tasten",
+    "fr": "Taille des boutons +/−",
+    "it": "Dimensione pulsanti +/−",
+    "nl": "Grootte +/− knoppen"
   },
   {
     "es": "Tamaño botones auxiliares",
@@ -5417,11 +5465,11 @@
   },
   {
     "es": "Tamaño burbuja entidad",
-    "en": "Bubble size Entity",
-    "de": "Bubble size Entity",
-    "fr": "Bubble size Entity",
-    "it": "Bubble size Entity",
-    "nl": "Bubble size Entity"
+    "en": "Entity bubble size",
+    "de": "Größe Entitätsblase",
+    "fr": "Taille de la bulle d’entité",
+    "it": "Dimensione bolla entità",
+    "nl": "Grootte entiteitsbel"
   },
   {
     "es": "Tamaño burbuja principal",
@@ -5498,10 +5546,10 @@
   {
     "es": "Tamaño del título",
     "en": "Title size",
-    "de": "Title size",
-    "fr": "Title size",
-    "it": "Title size",
-    "nl": "Title size"
+    "de": "Titelgröße",
+    "fr": "Taille du titre",
+    "it": "Dimensione titolo",
+    "nl": "Titelgrootte"
   },
   {
     "es": "Tamaño dial",
@@ -5514,10 +5562,10 @@
   {
     "es": "Tamaño objetivo",
     "en": "Target size",
-    "de": "Target size",
-    "fr": "Target size",
-    "it": "Target size",
-    "nl": "Target size"
+    "de": "Ziel-Größe",
+    "fr": "Taille cible",
+    "it": "Dimensione obiettivo",
+    "nl": "Doelgrootte"
   },
   {
     "es": "Tamaño rango",
@@ -5530,26 +5578,26 @@
   {
     "es": "Tamaño temperatura actual",
     "en": "Current temperature size",
-    "de": "Current temperature size",
-    "fr": "Current temperature size",
-    "it": "Current temperature size",
-    "nl": "Current temperature size"
+    "de": "Größe aktuelle Temperatur",
+    "fr": "Taille température actuelle",
+    "it": "Dimensione temperatura attuale",
+    "nl": "Grootte huidige temperatuur"
   },
   {
     "es": "Tamaño thumb",
     "en": "Thumb size",
-    "de": "Thumb size",
-    "fr": "Thumb size",
-    "it": "Thumb size",
-    "nl": "Thumb size"
+    "de": "Griffgröße",
+    "fr": "Taille du curseur",
+    "it": "Dimensione thumb",
+    "nl": "Duimgrootte"
   },
   {
     "es": "Tamaño título",
     "en": "Title size",
-    "de": "Title size",
-    "fr": "Title size",
-    "it": "Title size",
-    "nl": "Title size"
+    "de": "Titelgröße",
+    "fr": "Taille du titre",
+    "it": "Dimensione titolo",
+    "nl": "Titelgrootte"
   },
   {
     "es": "Tamaño valor",
@@ -5602,26 +5650,26 @@
   {
     "es": "Texto chip",
     "en": "Chip text",
-    "de": "Chip text",
-    "fr": "Chip text",
-    "it": "Chip text",
-    "nl": "Chip text"
+    "de": "Chip-Text",
+    "fr": "Texte de puce",
+    "it": "Testo chip",
+    "nl": "Chip-tekst"
   },
   {
     "es": "Texto chips",
     "en": "Chip texts",
-    "de": "Chip texts",
-    "fr": "Chip texts",
-    "it": "Chip texts",
-    "nl": "Chip texts"
+    "de": "Chip-Texte",
+    "fr": "Textes de puces",
+    "it": "Testi chip",
+    "nl": "Chip-teksten"
   },
   {
     "es": "Texto de chips",
     "en": "Chip text",
-    "de": "Chip text",
-    "fr": "Chip text",
-    "it": "Chip text",
-    "nl": "Chip text"
+    "de": "Chip-Text",
+    "fr": "Texte de puce",
+    "it": "Testo chip",
+    "nl": "Chip-tekst"
   },
   {
     "es": "Texto marcadores",
@@ -5666,10 +5714,10 @@
   {
     "es": "Track dial",
     "en": "Dial track",
-    "de": "Dial track",
-    "fr": "Dial track",
-    "it": "Dial track",
-    "nl": "Dial track"
+    "de": "Drehregler-Spur",
+    "fr": "Piste du cadran",
+    "it": "Traccia dial",
+    "nl": "Draaiknop-spoor"
   },
   {
     "es": "Transparencia lineas cero",
@@ -6784,6 +6832,22 @@
     "nl": "Optionele tactiele feedback voor spelerbediening."
   },
   {
+    "es": "Ajustes visuales base de la tarjeta favorita.",
+    "en": "Basic visual settings for the favourite card.",
+    "de": "Grundlegende visuelle Einstellungen für die Favoritenkarte.",
+    "fr": "Réglages visuels de base pour la carte favoris.",
+    "it": "Impostazioni visive di base per la scheda preferiti.",
+    "nl": "Basis visuele instellingen voor de favorietenkaart."
+  },
+  {
+    "es": "Ajustes visuales base de la tarjeta.",
+    "en": "Basic visual settings for the card.",
+    "de": "Grundlegende visuelle Einstellungen für die Karte.",
+    "fr": "Réglages visuels de base pour la carte.",
+    "it": "Impostazioni visive di base per la scheda.",
+    "nl": "Basis visuele instellingen voor de kaart."
+  },
+  {
     "es": "Automático (perfil Home Assistant)",
     "en": "Automático (perfil Home Assistant)",
     "de": "Automático (perfil Home Assistant)",
@@ -7888,28 +7952,12 @@
     "nl": "Kop, chips en zichtbaar bereik."
   },
   {
-    "es": "Ajustes visuales base de la tarjeta favorita.",
-    "en": "Base visual settings for the favourite card.",
-    "de": "Grundlegende visuelle Einstellungen für die Favoritenkarte.",
-    "fr": "Réglages visuels de base pour la carte favorite.",
-    "it": "Impostazioni visive di base per la scheda preferita.",
-    "nl": "Basis visuele instellingen voor de favorietenkaart."
-  },
-  {
     "es": "Ajustes visuales base de la tarjeta y las burbujas.",
     "en": "Base visual settings for the card and bubbles.",
     "de": "Grundlegende visuelle Einstellungen für Karte und Blasen.",
     "fr": "Réglages visuels de base pour la carte et les bulles.",
     "it": "Impostazioni visive di base per scheda e bolle.",
     "nl": "Basis visuele instellingen voor kaart en bellen."
-  },
-  {
-    "es": "Ajustes visuales base de la tarjeta.",
-    "en": "Base visual settings for the card.",
-    "de": "Grundlegende visuelle Einstellungen für die Karte.",
-    "fr": "Réglages visuels de base pour la carte.",
-    "it": "Impostazioni visive di base per la scheda.",
-    "nl": "Basis visuele instellingen voor de kaart."
   },
   {
     "es": "Ajustes visuales base del mapa y las burbujas.",
@@ -19633,6 +19681,18 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           grid-column: 1 / -1;
         }
 
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+          grid-column: 1 / -1;
+        }
+
         .editor-field > span,
         .editor-toggle > span {
           font-size: 12px;
@@ -24419,6 +24479,18 @@ class NodaliaLightCardEditor extends HTMLElement {
           grid-column: 1 / -1;
         }
 
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+          grid-column: 1 / -1;
+        }
+
         .editor-field > span,
         .editor-toggle > span {
           font-size: 12px;
@@ -27932,6 +28004,18 @@ class NodaliaFanCardEditor extends HTMLElement {
         }
 
         .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
           grid-column: 1 / -1;
         }
 
@@ -31843,6 +31927,18 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
           grid-column: 1 / -1;
         }
 
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+          grid-column: 1 / -1;
+        }
+
         .editor-field > span,
         .editor-toggle > span {
           font-size: 12px;
@@ -34772,6 +34868,18 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
         }
 
         .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
           grid-column: 1 / -1;
         }
 
@@ -37844,6 +37952,18 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
           grid-column: 1 / -1;
         }
 
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+          grid-column: 1 / -1;
+        }
+
         .editor-field > span,
         .editor-toggle > span {
           font-size: 12px;
@@ -38835,6 +38955,18 @@ class NodaliaGraphCardEditor extends HTMLElement {
         }
 
         .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
           grid-column: 1 / -1;
         }
 
@@ -42082,6 +42214,18 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
           grid-column: 1 / -1;
         }
 
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+          grid-column: 1 / -1;
+        }
+
         .editor-field > span,
         .editor-toggle > span {
           font-size: 12px;
@@ -42985,6 +43129,18 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
         }
 
         .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
           grid-column: 1 / -1;
         }
 
@@ -46343,6 +46499,18 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
           grid-column: 1 / -1;
         }
 
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+          grid-column: 1 / -1;
+        }
+
         .editor-field > span,
         .editor-toggle > span {
           font-size: 12px;
@@ -47189,6 +47357,18 @@ class NodaliaClimateCardEditor extends HTMLElement {
         }
 
         .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
           grid-column: 1 / -1;
         }
 
@@ -49727,6 +49907,18 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
         }
 
         .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
           grid-column: 1 / -1;
         }
 
@@ -58393,6 +58585,18 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
           grid-column: 1 / -1;
         }
 
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+          grid-column: 1 / -1;
+        }
+
         .editor-field > span,
         .editor-toggle > span {
           font-size: 12px;
@@ -61060,6 +61264,18 @@ class NodaliaEntityCardEditor extends HTMLElement {
         }
 
         .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
           grid-column: 1 / -1;
         }
 
@@ -64219,6 +64435,18 @@ class NodaliaFavCardEditor extends HTMLElement {
         }
 
         .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
           grid-column: 1 / -1;
         }
 
@@ -67694,6 +67922,18 @@ class NodaliaPersonCardEditor extends HTMLElement {
         }
 
         .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
           grid-column: 1 / -1;
         }
 
@@ -71594,6 +71834,18 @@ class NodaliaWeatherCardEditor extends HTMLElement {
         }
 
         .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
           grid-column: 1 / -1;
         }
 
@@ -75878,6 +76130,18 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         }
 
         .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
           grid-column: 1 / -1;
         }
 

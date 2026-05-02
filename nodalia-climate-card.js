@@ -2963,6 +2963,18 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
           grid-column: 1 / -1;
         }
 
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+          grid-column: 1 / -1;
+        }
+
         .editor-field > span,
         .editor-toggle > span {
           font-size: 12px;
@@ -3809,6 +3821,18 @@ class NodaliaClimateCardEditor extends HTMLElement {
         }
 
         .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
           grid-column: 1 / -1;
         }
 

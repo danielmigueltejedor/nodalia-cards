@@ -98,7 +98,8 @@ If you want to help with translations:
 
 - Keep wording natural (not literal translations)
 - Focus on clarity and usability
-- Open a PR or issue with your proposal
+- **Wrong string on screen?** Open an issue using the **Translation correction** template (`.github/ISSUE_TEMPLATE/translation.yml`).
+- Alternatively, open a PR that updates the relevant locale data if you are comfortable editing the repo.
 
 Community help is especially useful for languages other than Spanish and English.
 
