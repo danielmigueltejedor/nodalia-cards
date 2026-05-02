@@ -76629,4 +76629,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.3.0-beta.3","contentSha256_12":"c0d5fa633893"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.3.0-beta.03","contentSha256_12":"c0d5fa633893"};}

@@ -107,7 +107,11 @@ Community help is especially useful for languages other than Spanish and English
 
 ## 🏷️ Releases and beta versions
 
-Stable releases (**`0.2.x`**, **`0.3.x`**, …) ship from **`main`**. Prereleases use **`0.3.0-beta.N`** (increment **N**) from the **`beta`** branch for translation polish and card work ahead of the next minor. For maintainers: each shipped beta—add a section to `CHANGELOG.md`, bump the **Current beta** badge in `README.md` on **`beta`**, and run `npm run bundle` when artefacts change.
+Stable releases (**`0.2.x`**, **`0.3.x`**, …) ship from **`main`**. Prereleases are cut from the **`beta`** branch for translation polish and card work ahead of the next minor.
+
+**Beta tags and versions:** use **`v0.3.0-beta.XX`** on GitHub with **`XX` as two digits** (`01`, `02`, … `09`, `10`, …) so release lists stay ordered. Example: third beta → **`v0.3.0-beta.03`**. Keep **`package.json`** `version` identical to that prerelease string (without the leading `v`) so HACS and `__NODALIA_BUNDLE__` match the tag.
+
+For maintainers: each shipped beta—add a section to **`CHANGELOG.md`**, bump the **Current beta** badge in **`README.md`** on **`beta`**, tag **`v0.3.0-beta.XX`**, and run **`npm run bundle`** when artefacts change.
 
 ---
 

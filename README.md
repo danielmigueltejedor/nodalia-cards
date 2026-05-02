@@ -3,7 +3,7 @@
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
 ![Latest stable](https://img.shields.io/badge/latest%20stable-0.2.1-2ea043)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
-![Current beta](https://img.shields.io/badge/current%20beta-0.3.0--beta.3-orange)
+![Current beta](https://img.shields.io/badge/current%20beta-0.3.0--beta.03-orange)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Status](https://img.shields.io/badge/status-beta-orange.svg)
@@ -79,7 +79,7 @@ HACS can append `?hacstag=…` to that path. The number is **not** the app versi
 
 **0.2.1** on **`main`** includes **es, en, de, fr, it, nl** for the bundled cards and Lovelace visual editors (coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
 
-This **`beta`** branch ships **0.3.0-beta.x** prereleases: locale polish, editor refinements, and card improvements before the next minor release.
+This **`beta`** branch ships **0.3.0-beta.XX** prereleases (see **CONTRIBUTING** for tag form): locale polish, editor refinements, and card improvements before the next minor release.
 
 ---
 

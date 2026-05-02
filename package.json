@@ -1,6 +1,6 @@
 {
   "name": "nodalia-cards",
-  "version": "0.3.0-beta.3",
+  "version": "0.3.0-beta.03",
   "private": false,
   "type": "module",
   "description": "Suite de tarjetas personalizadas de Home Assistant para Nodalia.",
