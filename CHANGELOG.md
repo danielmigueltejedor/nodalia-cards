@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.04] - 2026-05-03
+
+### Added
+
+- **Locales** (`nodalia-i18n.js`): **`pt`**, **`ru`**, **`el`**, **`zh`**, **`ro`** registered for **`language: auto`** / `localeTag`; initial **`navigationMusicAssist`** strings for Music Assistant folder titles (artists, playlists, etc.).
+- **`strings()`** merges **`navigationMusicAssist`** like other partial locales.
+
+### Fixed
+
+- **Media player** (`nodalia-media-player.js`): Music Assistant browser titles used a **hardcoded Spanish** map; they now use **`NodaliaI18n.navigationMusicAssist`** + English fallback (same as **navigation bar**).
+- **Navigation bar / media player**: broader **Music Assistant directory icon** keyword lists (ES/EN/FR/DE/… plus **pt / ru / ro / el / zh** fragments) so icons match localized browse titles.
+
 ## [0.3.0-beta.03] - 2026-05-03
 
 ### Changed
