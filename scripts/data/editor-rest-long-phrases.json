@@ -1,0 +1,247 @@
+{
+  "Add, reorder and customize bar destinations and their popups.": {
+    "pt": "Adicione, reordene e personalize os destinos da barra e os respetivos popups.",
+    "ru": "Добавляйте, упорядочивайте и настраивайте пункты назначения панели и их всплывающие окна.",
+    "el": "Προσθέστε, αναδιατάξτε και προσαρμόστε τους προορισμούς της γραμμής και τα αναδυόμενα τους.",
+    "zh": "添加、排序并自定义导航栏目标及其弹出窗口。",
+    "ro": "Adăugați, reordonați și personalizați destinațiile barei și popup-urile acestora."
+  },
+  "Add, reorder and customize each entity shown on the chart.": {
+    "pt": "Adicione, reordene e personalize cada entidade mostrada no gráfico.",
+    "ru": "Добавляйте, упорядочивайте и настраивайте каждую сущность на графике.",
+    "el": "Προσθέστε, αναδιατάξτε και προσαρμόστε κάθε οντότητα που εμφανίζεται στο γράφημα.",
+    "zh": "添加、排序并自定义图表上显示的每个实体。",
+    "ro": "Adăugați, reordonați și personalizați fiecare entitate afișată pe grafic."
+  },
+  "Add, reorder and customize each player shown on the card.": {
+    "pt": "Adicione, reordene e personalize cada leitor mostrado no cartão.",
+    "ru": "Добавляйте, упорядочивайте и настраивайте каждый плеер на карточке.",
+    "el": "Προσθέστε, αναδιατάξτε και προσαρμόστε κάθε player που εμφανίζεται στην κάρτα.",
+    "zh": "添加、排序并自定义卡片上显示的每个播放器。",
+    "ro": "Adăugați, reordonați și personalizați fiecare player afișat pe card."
+  },
+  "Adjust panel opening, browser and button bounce.": {
+    "pt": "Ajuste a abertura dos painéis, do navegador e o salto dos botões.",
+    "ru": "Настройте открытие панелей, браузера и отскок кнопок.",
+    "el": "Ρυθμίστε το άνοιγμα πάνελ, τον περιηγητή και το αναπήδημα κουμπιών.",
+    "zh": "调整面板展开、浏览器与按钮弹跳效果。",
+    "ro": "Ajustați deschiderea panourilor, browserul și săritura butoanelor."
+  },
+  "Base bar options, layout and general visibility.": {
+    "pt": "Opções base da barra, layout e visibilidade geral.",
+    "ru": "Базовые параметры панели, макет и общая видимость.",
+    "el": "Βασικές επιλογές γραμμής, διάταξη και γενική ορατότητα.",
+    "zh": "导航栏基础选项、布局和总体可见性。",
+    "ro": "Opțiuni de bază pentru bară, aranjament și vizibilitate generală."
+  },
+  "Configure title, entities and visible chart range.": {
+    "pt": "Configure o título, as entidades e o intervalo visível do gráfico.",
+    "ru": "Настройте заголовок, сущности и видимый диапазон графика.",
+    "el": "Ρυθμίστε τίτλο, οντότητες και ορατό εύρος γραφήματος.",
+    "zh": "配置标题、实体与图表可见范围。",
+    "ro": "Configurați titlul, entitățile și intervalul vizibil al graficului."
+  },
+  "Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale.": {
+    "pt": "Personalize o aspeto Nodalia, o esfera circular, a nova bolha do cursor e a escala de tonalidade do indicador.",
+    "ru": "Настройте вид Nodalia, круговой диск, новый пузырёк ползунка и цветовую шкалу индикатора.",
+    "el": "Προσαρμόστε την εμφάνιση Nodalia, τον κυκλικό δίσκο, τη νέα φυσαλίδα χειριστηρίου και την κλίμακα απόχρωσης του μέτρου.",
+    "zh": "自定义 Nodalia 外观、圆形旋钮、新拇指气泡与仪表色调刻度。",
+    "ro": "Personalizați aspectul Nodalia, discul circular, noua bulă thumb și scala de nuanțe a gauge-ului."
+  },
+  "Enable or disable header, large value, legend and fill.": {
+    "pt": "Ative ou desative o cabeçalho, o valor grande, a legenda e o preenchimento.",
+    "ru": "Включите или отключите заголовок, крупное значение, легенду и заливку.",
+    "el": "Ενεργοποιήστε ή απενεργοποιήστε κεφαλίδα, μεγάλη τιμή, υπόμνημα και γέμισμα.",
+    "zh": "启用或禁用标题栏、大数值、图例与填充。",
+    "ro": "Activați sau dezactivați antetul, valoarea mare, legenda și umplerea."
+  },
+  "Enable or disable header, value, legend and fill.": {
+    "pt": "Ative ou desative o cabeçalho, o valor, a legenda e o preenchimento.",
+    "ru": "Включите или отключите заголовок, значение, легенду и заливку.",
+    "el": "Ενεργοποιήστε ή απενεργοποιήστε κεφαλίδα, τιμή, υπόμνημα και γέμισμα.",
+    "zh": "启用或禁用标题栏、数值、图例与填充。",
+    "ro": "Activați sau dezactivați antetul, valoarea, legenda și umplerea."
+  },
+  "Favourite entity, visible name and main icon.": {
+    "pt": "Entidade favorita, nome visível e ícone principal.",
+    "ru": "Избранная сущность, видимое имя и основной значок.",
+    "el": "Αγαπημένη οντότητα, ορατό όνομα και κύριο εικονίδιο.",
+    "zh": "收藏实体、可见名称与主图标。",
+    "ro": "Entitate favorită, nume vizibil și pictogramă principală."
+  },
+  "Header, chips and visible range settings.": {
+    "pt": "Cabeçalho, chips e definições do intervalo visível.",
+    "ru": "Заголовок, чипы и настройки видимого диапазона.",
+    "el": "Κεφαλίδα, chip και ρυθμίσεις ορατού εύρους.",
+    "zh": "标题栏、芯片与可见范围设置。",
+    "ro": "Antet, chipuri și setări pentru intervalul vizibil."
+  },
+  "Main entity, optional code helper, icon and base card behaviour.": {
+    "pt": "Entidade principal, ajudante de código opcional, ícone e comportamento base do cartão.",
+    "ru": "Основная сущность, опциональный помощник кода, значок и базовое поведение карточки.",
+    "el": "Κύρια οντότητα, προαιρετικός βοηθός κώδικα, εικονίδιο και βασική συμπεριφορά κάρτας.",
+    "zh": "主实体、可选代码助手、图标与卡片基础行为。",
+    "ro": "Entitate principală, ajutor de cod opțional, pictogramă și comportament de bază al cardului."
+  },
+  "Main entity, visible name and base card icon.": {
+    "pt": "Entidade principal, nome visível e ícone base do cartão.",
+    "ru": "Основная сущность, видимое имя и базовый значок карточки.",
+    "el": "Κύρια οντότητα, ορατό όνομα και βασικό εικονίδιο κάρτας.",
+    "zh": "主实体、可见名称与卡片基础图标。",
+    "ro": "Entitate principală, nume vizibil și pictogramă de bază a cardului."
+  },
+  "Main entity, visible name and card icon.": {
+    "pt": "Entidade principal, nome visível e ícone do cartão.",
+    "ru": "Основная сущность, видимое имя и значок карточки.",
+    "el": "Κύρια οντότητα, ορατό όνομα και εικονίδιο κάρτας.",
+    "zh": "主实体、可见名称与卡片图标。",
+    "ro": "Entitate principală, nume vizibil și pictograma cardului."
+  },
+  "Main entity, visible name and tap behaviour.": {
+    "pt": "Entidade principal, nome visível e comportamento ao toque.",
+    "ru": "Основная сущность, видимое имя и поведение при нажатии.",
+    "el": "Κύρια οντότητα, ορατό όνομα και συμπεριφορά πατήματος.",
+    "zh": "主实体、可见名称与点击行为。",
+    "ro": "Entitate principală, nume vizibil și comportament la atingere."
+  },
+  "Main numeric entity, name, icon and gauge range.": {
+    "pt": "Entidade numérica principal, nome, ícone e intervalo do indicador.",
+    "ru": "Основная числовая сущность, имя, значок и диапазон индикатора.",
+    "el": "Κύρια αριθμητική οντότητα, όνομα, εικονίδιο και εύρος μέτρου.",
+    "zh": "主数值实体、名称、图标与仪表范围。",
+    "ro": "Entitate numerică principală, nume, pictogramă și interval gauge."
+  },
+  "Main weather entity, visible name, icon and displayed content.": {
+    "pt": "Entidade meteorológica principal, nome visível, ícone e conteúdo mostrado.",
+    "ru": "Основная погодная сущность, видимое имя, значок и отображаемое содержимое.",
+    "el": "Κύρια μετεωρολογική οντότητα, ορατό όνομα, εικονίδιο και εμφανιζόμενο περιεχόμενο.",
+    "zh": "主天气实体、可见名称、图标与显示内容。",
+    "ro": "Entitate meteo principală, nume vizibil, pictogramă și conținut afișat."
+  },
+  "Name, icon, visible range and basic chart behaviour.": {
+    "pt": "Nome, ícone, intervalo visível e comportamento base do gráfico.",
+    "ru": "Имя, значок, видимый диапазон и базовое поведение графика.",
+    "el": "Όνομα, εικονίδιο, ορατό εύρος και βασική συμπεριφορά γραφήματος.",
+    "zh": "名称、图标、可见范围与图表基础行为。",
+    "ro": "Nume, pictogramă, interval vizibil și comportament de bază al graficului."
+  },
+  "Optional tactile feedback for taps, hover and series changes.": {
+    "pt": "Feedback tátil opcional para toques, hover e alterações de séries.",
+    "ru": "Дополнительная тактильная отдача при нажатиях, наведении и смене рядов.",
+    "el": "Προαιρετική απτική ανταπόκριση για πατήματα, hover και αλλαγές σειρών.",
+    "zh": "点击、悬停与系列变更的可选触觉反馈。",
+    "ro": "Feedback tactil opțional pentru atingeri, hover și schimbări de serii."
+  },
+  "Person entity, photo, zone icon and main card behaviour.": {
+    "pt": "Entidade pessoa, foto, ícone da zona e comportamento principal do cartão.",
+    "ru": "Сущность человека, фото, значок зоны и основное поведение карточки.",
+    "el": "Οντότητα προσώπου, φωτογραφία, εικονίδιο ζώνης και κύρια συμπεριφορά κάρτας.",
+    "zh": "人员实体、照片、区域图标与卡片主要行为。",
+    "ro": "Entitate persoană, fotografie, pictogramă zonă și comportament principal al cardului."
+  },
+  "Secondary icon buttons to toggle, open more info or call a service.": {
+    "pt": "Botões de ícone secundários para alternar, abrir mais informação ou chamar um serviço.",
+    "ru": "Дополнительные значковые кнопки для переключения, подробностей или вызова службы.",
+    "el": "Δευτερεύοντα κουμπιά εικονιδίων για εναλλαγή, περισσότερες πληροφορίες ή κλήση υπηρεσίας.",
+    "zh": "用于切换、打开更多信息或调用服务的次要图标按钮。",
+    "ro": "Butoane pictogramă secundare pentru comutare, mai multe informații sau apel serviciu."
+  },
+  "Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado).": {
+    "pt": "Se o texto não corresponder ao idioma do perfil, escolha Automático em Idioma do cartão (configurações antigas podem ter espanhol guardado).",
+    "ru": "Если текст не совпадает с языком профиля, выберите «Авто» в языке карточки (в старых настройках мог сохраниться испанский).",
+    "el": "Αν το κείμενο δεν ταιριάζει με τη γλώσσα προφίλ, επιλέξτε Αυτόματο στη γλώσσα κάρτας (παλιές ρυθμίσεις μπορεί να έχουν αποθηκευμένα ισπανικά).",
+    "zh": "若文本与用户档案语言不符，请在卡片语言中选择“自动”（旧配置可能仍保存西班牙语）。",
+    "ro": "Dacă textul nu se potrivește cu limba profilului, alegeți Automat la limba cardului (configurările vechi pot avea spaniolă salvată)."
+  },
+  "Smooth card entrance, panels and visual feedback when pressing controls.": {
+    "pt": "Entrada suave do cartão, painéis e feedback visual ao premir controlos.",
+    "ru": "Плавное появление карточки, панелей и визуальная отдача при нажатии элементов управления.",
+    "el": "Ομαλή είσοδος κάρτας, πάνελ και οπτική ανταπόκριση κατά το πάτημα στοιχείων ελέγχου.",
+    "zh": "卡片入场、面板平滑过渡及按下控件时的视觉反馈。",
+    "ro": "Intrare lină a cardului, panouri și feedback vizual la apăsarea comenzilor."
+  },
+  "Smooth content entrance and small bounce when tapping the card or its actions.": {
+    "pt": "Entrada suave do conteúdo e pequeno salto ao tocar no cartão ou nas suas ações.",
+    "ru": "Плавное появление содержимого и лёгкий отскок при нажатии на карточку или её действия.",
+    "el": "Ομαλή είσοδος περιεχομένου και ελαφρύ αναπήδημα όταν πατάτε την κάρτα ή τις ενέργειές της.",
+    "zh": "内容平滑进入，点击卡片或其操作时轻微弹跳。",
+    "ro": "Intrare lină a conținutului și săritură mică la atingerea cardului sau acțiunilor sale."
+  },
+  "Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback.": {
+    "pt": "Transições suaves ao ligar/desligar, expandir controlos, mudar painéis e feedback visual dos botões.",
+    "ru": "Плавные переходы при вкл/выкл, разворачивании элементов управления, смене панелей и визуальной отдаче кнопок.",
+    "el": "Ομαλές μεταβάσεις κατά την ενεργοποίηση/απενεργοποίηση, επέκταση στοιχείων ελέγχου, αλλαγή πάνελ και οπτική ανταπόκριση κουμπιών.",
+    "zh": "开关机、展开控件、切换面板及按钮视觉反馈的平滑过渡。",
+    "ro": "Tranziții line la pornire/oprire, extinderea comenzilor, schimbarea panourilor și feedback vizual la butoane."
+  },
+  "Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback.": {
+    "pt": "Transições suaves ao ligar/desligar, expandir controlos, abrir modos e feedback visual dos botões.",
+    "ru": "Плавные переходы при вкл/выкл, разворачивании элементов управления, открытии режимов и визуальной отдаче кнопок.",
+    "el": "Ομαλές μεταβάσεις κατά την ενεργοποίηση/απενεργοποίηση, επέκταση στοιχείων ελέγχου, άνοιγμα λειτουργιών και οπτική ανταπόκριση κουμπιών.",
+    "zh": "开关机、展开控件、打开模式及按钮视觉反馈的平滑过渡。",
+    "ro": "Tranziții line la pornire/oprire, extinderea comenzilor, deschiderea modurilor și feedback vizual la butoane."
+  },
+  "Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback.": {
+    "pt": "Transições suaves ao ligar/desligar, expandir controlos, mudar sliders e feedback visual dos botões.",
+    "ru": "Плавные переходы при вкл/выкл, разворачивании элементов управления, переключении ползунков и визуальной отдаче кнопок.",
+    "el": "Ομαλές μεταβάσεις κατά την ενεργοποίηση/απενεργοποίηση, επέκταση στοιχείων ελέγχου, εναλλαγή ρυθμιστών και οπτική ανταπόκριση κουμπιών.",
+    "zh": "开关机、展开控件、切换滑块及按钮视觉反馈的平滑过渡。",
+    "ro": "Tranziții line la pornire/oprire, extinderea comenzilor, comutarea sliderelor și feedback vizual la butoane."
+  },
+  "Title, energy panel link and general card behaviour.": {
+    "pt": "Título, ligação ao painel de energia e comportamento geral do cartão.",
+    "ru": "Заголовок, ссылка на энергопанель и общее поведение карточки.",
+    "el": "Τίτλος, σύνδεσμος ενεργειακού πάνελ και γενική συμπεριφορά κάρτας.",
+    "zh": "标题、能源面板链接与卡片总体行为。",
+    "ro": "Titlu, legătură panou energie și comportament general al cardului."
+  },
+  "Visible state, extra chips, value decimals and compact mode behaviour.": {
+    "pt": "Estado visível, chips extra, casas decimais do valor e comportamento em modo compacto.",
+    "ru": "Видимое состояние, дополнительные чипы, десятичные знаки значения и поведение компактного режима.",
+    "el": "Ορατή κατάσταση, επιπλέον chip, δεκαδικά τιμής και συμπεριφορά συμπαγούς λειτουργίας.",
+    "zh": "可见状态、额外芯片、数值小数与紧凑模式行为。",
+    "ro": "Stare vizibilă, chipuri extra, zecimale valoare și comportament mod compact."
+  },
+  "Visual settings for bar, buttons, popup and media player.": {
+    "pt": "Definições visuais para a barra, botões, popup e leitor multimédia.",
+    "ru": "Визуальные настройки панели, кнопок, всплывающего окна и медиаплеера.",
+    "el": "Οπτικές ρυθμίσεις για γραμμή, κουμπιά, αναδυόμενο και media player.",
+    "zh": "导航栏、按钮、弹出窗口与媒体播放器的视觉设置。",
+    "ro": "Setări vizuale pentru bară, butoane, popup și media player."
+  },
+  "Visual settings for the card, icon and chart.": {
+    "pt": "Definições visuais do cartão, ícone e gráfico.",
+    "ru": "Визуальные настройки карточки, значка и графика.",
+    "el": "Οπτικές ρυθμίσεις για την κάρτα, το εικονίδιο και το γράφημα.",
+    "zh": "卡片、图标与图表的视觉设置。",
+    "ro": "Setări vizuale pentru card, pictogramă și grafic."
+  },
+  "You can edit popup and media player here. For very advanced actions, it is still better to complete YAML.": {
+    "pt": "Pode editar o popup e o leitor multimédia aqui. Para ações muito avançadas, continua a ser melhor completar o YAML.",
+    "ru": "Здесь можно редактировать всплывающее окно и медиаплеер. Для очень сложных действий по-прежнему лучше дописать YAML.",
+    "el": "Μπορείτε να επεξεργαστείτε το αναδυόμενο και το media player εδώ. Για πολύ προχωρημένες ενέργειες, είναι καλύτερο να συμπληρώσετε YAML.",
+    "zh": "可在此编辑弹出窗口和媒体播放器。非常复杂操作建议仍直接编写 YAML。",
+    "ro": "Puteți edita popup-ul și playerul aici. Pentru acțiuni foarte avansate, e mai bine să completați YAML."
+  },
+  "Controls transitions for bar, popup, media player and visual feedback.": {
+    "pt": "Controla as transições da barra, popup, leitor multimédia e feedback visual.",
+    "ru": "Управляет переходами панели, всплывающего окна, медиаплеера и визуальной отдачей.",
+    "el": "Ελέγχει τις μεταβάσεις γραμμής, αναδυόμενου, media player και οπτική ανταπόκριση.",
+    "zh": "控制导航栏、弹出窗口、媒体播放器与视觉反馈的过渡。",
+    "ro": "Controlează tranzițiile pentru bară, popup, media player și feedback vizual."
+  },
+  "Controls dial transition, content entrance and tap bounce.": {
+    "pt": "Controla a transição do mostrador, a entrada do conteúdo e o salto ao toque.",
+    "ru": "Управляет переходом диска, появлением содержимого и отскоком при нажатии.",
+    "el": "Ελέγχει τη μετάβαση του δίσκου, την είσοδο περιεχομένου και το αναπήδημα πατήματος.",
+    "zh": "控制旋钮过渡、内容进入与点击弹跳。",
+    "ro": "Controlează tranziția discului, intrarea conținutului și săritura la atingere."
+  },
+  "Customize the Nodalia look for the climate card, dial and controls.": {
+    "pt": "Personalize o aspeto Nodalia do cartão de clima, mostrador e controlos.",
+    "ru": "Настройте вид Nodalia для карты климата, диска и элементов управления.",
+    "el": "Προσαρμόστε την εμφάνιση Nodalia για την κάρτα κλίματος, τον δίσκο και τα στοιχεία ελέγχου.",
+    "zh": "自定义气候卡片、旋钮与控件的 Nodalia 外观。",
+    "ro": "Personalizați aspectul Nodalia pentru cardul climă, disc și comenzi."
+  }
+}

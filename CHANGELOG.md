@@ -4,6 +4,28 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.07] - 2026-05-03
+
+### Added
+
+- **`advanceVacuum`** + **`vacuumSimple`** for **`pt`**, **`ru`**, **`el`**, **`zh`**, **`ro`** (`scripts/data/locale-vacuum-packs.json`, applied with **`node scripts/prepend-locale-vacuum.mjs`**): robot modes, base/dock copy, reported states and simple vacuum labels no longer fall through to English.
+- **Editor Lovelace (`nodalia-editor-ui.js`)**: phrase packs **`scripts/data/editor-show-phrases.json`** (all **Show …** chips), **`editor-rest-long-phrases.json`** (comma/long sentences), **`editor-rest-compact-long-phrases.json`** (long sentences without commas that `enTo*` did not translate). **`scripts/gen-editor-ui.mjs`** merges them after **`editor-extra-locale-by-en.json`** and before **`FULL_LOCALE_BY_EN`** so climate/visual strings from **`FULL_LOCALE`** still win.
+
+### Changed
+
+- **`scripts/gen-editor-ui.mjs`**: **`applyFullLocaleByEn`** merge order is **`editor-extra` → phrase overlays → `FULL_LOCALE_BY_EN`** (was patch-then-extra).
+
+## [0.3.0-beta.06] - 2026-05-03
+
+### Added
+
+- **`nodalia-i18n.js`**: Full **`weatherCard`** (conditions, forecast, Meteoalarm), **`humidifierCard.modes`**, **`graphCard`**, **`fan`**, **`alarmPanel`**, **`person`**, **`entityCard`**, **`favCard`** for **`pt`**, **`ru`**, **`el`**, **`zh`**, **`ro`** (source: `scripts/data/locale-extra.json`; inject via `scripts/apply-locale-extra.mjs`).
+- **`scripts/gen-editor-ui.mjs`**: **`FULL_LOCALE_BY_EN`** completed with **`pt`/`ru`/`el`/`zh`/`ro`** for climate-visual-editor phrases (source: `scripts/data/full-locale-extra.json`; inject via `scripts/apply-full-locale-extra.mjs`).
+
+### Fixed
+
+- Portuguese and other new locales no longer show English weather labels such as **cloudy** / humidifier modes / editor chips because partial PACK trees now override **`PACK.en`** for those cards.
+
 ## [0.3.0-beta.05] - 2026-05-03
 
 ### Added
