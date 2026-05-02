@@ -4219,7 +4219,7 @@
     "es": "Mostrar ausente",
     "en": "Show away",
     "de": "Anzeigen: away",
-    "fr": "Afficher away",
+    "fr": "Afficher Absent",
     "it": "Mostra away",
     "nl": "Toon away"
   },
@@ -4235,7 +4235,7 @@
     "es": "Mostrar badge de zona",
     "en": "Show zone badge",
     "de": "Anzeigen: zone badge",
-    "fr": "Afficher zone badge",
+    "fr": "Afficher le badge de zone",
     "it": "Mostra zone badge",
     "nl": "Toon zone badge"
   },
@@ -4243,7 +4243,7 @@
     "es": "Mostrar boton energia",
     "en": "Show energy button",
     "de": "Anzeigen: energy button",
-    "fr": "Afficher energy button",
+    "fr": "Afficher le bouton énergie",
     "it": "Mostra energy button",
     "nl": "Toon energy button"
   },
@@ -4267,7 +4267,7 @@
     "es": "Mostrar botón de modo",
     "en": "Show mode button",
     "de": "Anzeigen: mode button",
-    "fr": "Afficher mode button",
+    "fr": "Afficher le bouton de mode",
     "it": "Mostra mode button",
     "nl": "Toon mode button"
   },
@@ -4275,7 +4275,7 @@
     "es": "Mostrar botón de oscilación",
     "en": "Show oscillate button",
     "de": "Anzeigen: oscillate button",
-    "fr": "Afficher oscillate button",
+    "fr": "Afficher le bouton oscillation",
     "it": "Mostra oscillate button",
     "nl": "Toon oscillate button"
   },
@@ -4283,7 +4283,7 @@
     "es": "Mostrar botón de ventilación",
     "en": "Show fan mode button",
     "de": "Anzeigen: fan mode button",
-    "fr": "Afficher fan mode button",
+    "fr": "Afficher le bouton mode ventilateur",
     "it": "Mostra fan mode button",
     "nl": "Toon fan mode button"
   },
@@ -4291,23 +4291,23 @@
     "es": "Mostrar brillo",
     "en": "Show brightness",
     "de": "Anzeigen: brightness",
-    "fr": "Afficher brightness",
+    "fr": "Afficher la luminosité",
     "it": "Mostra brightness",
     "nl": "Toon brightness"
   },
   {
     "es": "Mostrar burbuja de estado",
     "en": "Show state bubble",
-    "de": "Anzeigen: state bubble",
-    "fr": "Afficher state bubble",
-    "it": "Mostra state bubble",
-    "nl": "Toon state bubble"
+    "de": "Statusblase anzeigen",
+    "fr": "Afficher la bulle d’état",
+    "it": "Mostra bolla di stato",
+    "nl": "Statusbel tonen"
   },
   {
     "es": "Mostrar cabecera",
     "en": "Show header",
     "de": "Anzeigen: header",
-    "fr": "Afficher header",
+    "fr": "Afficher l’en-tête",
     "it": "Mostra header",
     "nl": "Toon header"
   },
@@ -4315,7 +4315,7 @@
     "es": "Mostrar chip Meteoalarm",
     "en": "Show Meteoalarm chip",
     "de": "Anzeigen: Meteoalarm chip",
-    "fr": "Afficher Meteoalarm chip",
+    "fr": "Afficher la puce Meteoalarm",
     "it": "Mostra Meteoalarm chip",
     "nl": "Toon Meteoalarm chip"
   },
@@ -4331,7 +4331,7 @@
     "es": "Mostrar chip de humedad",
     "en": "Show humidity chip",
     "de": "Feuchtigkeits-Chip anzeigen",
-    "fr": "Afficher l’humidité",
+    "fr": "Afficher la puce humidité",
     "it": "Mostra chip umidità",
     "nl": "Toon vochtigheidschip"
   },
@@ -4339,7 +4339,7 @@
     "es": "Mostrar chip de humedad objetivo",
     "en": "Show target humidity chip",
     "de": "Anzeigen: target humidity chip",
-    "fr": "Afficher target humidity chip",
+    "fr": "Afficher la puce humidité cible",
     "it": "Mostra target humidity chip",
     "nl": "Toon target humidity chip"
   },
@@ -4347,7 +4347,7 @@
     "es": "Mostrar chip de modo",
     "en": "Show mode chip",
     "de": "Anzeigen: mode chip",
-    "fr": "Afficher mode chip",
+    "fr": "Afficher la puce de mode",
     "it": "Mostra mode chip",
     "nl": "Toon mode chip"
   },
@@ -4355,7 +4355,7 @@
     "es": "Mostrar chip de porcentaje",
     "en": "Show percentage chip",
     "de": "Anzeigen: percentage chip",
-    "fr": "Afficher percentage chip",
+    "fr": "Afficher la puce pourcentage",
     "it": "Mostra percentage chip",
     "nl": "Toon percentage chip"
   },
@@ -4371,7 +4371,7 @@
     "es": "Mostrar chip de velocidad",
     "en": "Show speed chip",
     "de": "Anzeigen: speed chip",
-    "fr": "Afficher speed chip",
+    "fr": "Afficher la puce vitesse",
     "it": "Mostra speed chip",
     "nl": "Toon speed chip"
   },
@@ -4379,7 +4379,7 @@
     "es": "Mostrar chip de ventilación",
     "en": "Show fan chip",
     "de": "Anzeigen: fan chip",
-    "fr": "Afficher fan chip",
+    "fr": "Afficher la puce ventilateur",
     "it": "Mostra fan chip",
     "nl": "Toon fan chip"
   },
@@ -4387,7 +4387,7 @@
     "es": "Mostrar chip humedad",
     "en": "Show humidity chip",
     "de": "Feuchtigkeits-Chip anzeigen",
-    "fr": "Afficher l’humidité",
+    "fr": "Afficher la puce humidité",
     "it": "Mostra chip umidità",
     "nl": "Toon vochtigheidschip"
   },
@@ -4395,7 +4395,7 @@
     "es": "Mostrar chip presion",
     "en": "Show pressure chip",
     "de": "Anzeigen: pressure chip",
-    "fr": "Afficher pressure chip",
+    "fr": "Afficher la puce pression",
     "it": "Mostra pressure chip",
     "nl": "Toon pressure chip"
   },
@@ -4403,7 +4403,7 @@
     "es": "Mostrar chip principal",
     "en": "Show primary chip",
     "de": "Anzeigen: primary chip",
-    "fr": "Afficher primary chip",
+    "fr": "Afficher la puce principale",
     "it": "Mostra primary chip",
     "nl": "Toon primary chip"
   },
@@ -4411,7 +4411,7 @@
     "es": "Mostrar chip secundario",
     "en": "Show secondary chip",
     "de": "Anzeigen: secondary chip",
-    "fr": "Afficher secondary chip",
+    "fr": "Afficher la puce secondaire",
     "it": "Mostra secondary chip",
     "nl": "Toon secondary chip"
   },
@@ -4419,23 +4419,23 @@
     "es": "Mostrar chip viento",
     "en": "Show wind chip",
     "de": "Anzeigen: wind chip",
-    "fr": "Afficher wind chip",
+    "fr": "Afficher la puce vent",
     "it": "Mostra wind chip",
     "nl": "Toon wind chip"
   },
   {
     "es": "Mostrar condicion",
     "en": "Show condition",
-    "de": "Anzeigen: condition",
-    "fr": "Afficher condition",
-    "it": "Mostra condition",
-    "nl": "Toon condition"
+    "de": "Vorhersage anzeigen",
+    "fr": "Afficher la condition",
+    "it": "Mostra condizione",
+    "nl": "Conditie tonen"
   },
   {
     "es": "Mostrar control deslizante",
     "en": "Show slider",
     "de": "Anzeigen: slider",
-    "fr": "Afficher slider",
+    "fr": "Afficher le curseur",
     "it": "Mostra slider",
     "nl": "Toon slider"
   },
@@ -4443,7 +4443,7 @@
     "es": "Mostrar cuadro de texto del PIN",
     "en": "Show PIN text field",
     "de": "Anzeigen: PIN text field",
-    "fr": "Afficher PIN text field",
+    "fr": "Afficher le champ PIN",
     "it": "Mostra PIN text field",
     "nl": "Toon PIN text field"
   },
@@ -4451,7 +4451,7 @@
     "es": "Mostrar desarmar",
     "en": "Show disarm",
     "de": "Anzeigen: disarm",
-    "fr": "Afficher disarm",
+    "fr": "Afficher Désarmer",
     "it": "Mostra disarm",
     "nl": "Toon disarm"
   },
@@ -4459,7 +4459,7 @@
     "es": "Mostrar en casa",
     "en": "Show home",
     "de": "Anzeigen: home",
-    "fr": "Afficher home",
+    "fr": "Afficher Domicile",
     "it": "Mostra home",
     "nl": "Toon home"
   },
@@ -4467,103 +4467,103 @@
     "es": "Mostrar en escritorio",
     "en": "Show on desktop",
     "de": "Anzeigen: on desktop",
-    "fr": "Afficher on desktop",
+    "fr": "Afficher sur bureau",
     "it": "Mostra on desktop",
     "nl": "Toon on desktop"
   },
   {
     "es": "Mostrar estado",
     "en": "Show state",
-    "de": "Anzeigen: state",
-    "fr": "Afficher state",
-    "it": "Mostra state",
-    "nl": "Toon state"
+    "de": "Status anzeigen",
+    "fr": "Afficher l’état",
+    "it": "Mostra stato",
+    "nl": "Status tonen"
   },
   {
     "es": "Mostrar estado actual",
     "en": "Show current state",
-    "de": "Anzeigen: current state",
-    "fr": "Afficher current state",
-    "it": "Mostra current state",
-    "nl": "Toon current state"
+    "de": "Aktuellen Status anzeigen",
+    "fr": "Afficher l’état actuel",
+    "it": "Mostra stato attuale",
+    "nl": "Huidige status tonen"
   },
   {
     "es": "Mostrar estado en burbuja",
     "en": "Show state in bubble",
-    "de": "Anzeigen: state in bubble",
-    "fr": "Afficher state in bubble",
-    "it": "Mostra state in bubble",
-    "nl": "Toon state in bubble"
+    "de": "Status in Blase anzeigen",
+    "fr": "Afficher l’état dans la bulle",
+    "it": "Mostra stato nella bolla",
+    "nl": "Status in bel tonen"
   },
   {
     "es": "Mostrar estado textual",
     "en": "Show textual state",
-    "de": "Anzeigen: textual state",
-    "fr": "Afficher textual state",
-    "it": "Mostra textual state",
-    "nl": "Toon textual state"
+    "de": "Textstatus anzeigen",
+    "fr": "Afficher l’état textuel",
+    "it": "Mostra stato testuale",
+    "nl": "Tekststatus tonen"
   },
   {
     "es": "Mostrar etiquetas del grafico",
     "en": "Show chart labels",
     "de": "Anzeigen: chart labels",
-    "fr": "Afficher chart labels",
+    "fr": "Afficher les étiquettes du graphique",
     "it": "Mostra chart labels",
     "nl": "Toon chart labels"
   },
   {
     "es": "Mostrar etiquetas habitaciones",
     "en": "Show room labels",
-    "de": "Anzeigen: room labels",
-    "fr": "Afficher room labels",
-    "it": "Mostra room labels",
-    "nl": "Toon room labels"
+    "de": "Raumlabels anzeigen",
+    "fr": "Afficher les noms des pièces",
+    "it": "Mostra etichette stanze",
+    "nl": "Kamerlabels tonen"
   },
   {
     "es": "Mostrar fuentes y apps",
     "en": "Show sources and apps",
-    "de": "Anzeigen: sources and apps",
-    "fr": "Afficher sources and apps",
-    "it": "Mostra sources and apps",
-    "nl": "Toon sources and apps"
+    "de": "Quellen und Apps anzeigen",
+    "fr": "Afficher les sources et les applications",
+    "it": "Mostra fonti e app",
+    "nl": "Bronnen en apps tonen"
   },
   {
     "es": "Mostrar icono",
     "en": "Show icon",
-    "de": "Anzeigen: icon",
-    "fr": "Afficher icon",
-    "it": "Mostra icon",
-    "nl": "Toon icon"
+    "de": "Symbol anzeigen",
+    "fr": "Afficher l’icône",
+    "it": "Mostra icona",
+    "nl": "Pictogram tonen"
   },
   {
     "es": "Mostrar icono inferior",
     "en": "Show bottom icon",
-    "de": "Anzeigen: bottom icon",
-    "fr": "Afficher bottom icon",
-    "it": "Mostra bottom icon",
-    "nl": "Toon bottom icon"
+    "de": "Unteres Symbol anzeigen",
+    "fr": "Afficher l’icône inférieure",
+    "it": "Mostra icona inferiore",
+    "nl": "Onderste pictogram tonen"
   },
   {
     "es": "Mostrar leyenda",
     "en": "Show legend",
     "de": "Anzeigen: legend",
-    "fr": "Afficher legend",
+    "fr": "Afficher la légende",
     "it": "Mostra legend",
     "nl": "Toon legend"
   },
   {
     "es": "Mostrar marcadores habitaciones",
     "en": "Show room markers",
-    "de": "Anzeigen: room markers",
-    "fr": "Afficher room markers",
-    "it": "Mostra room markers",
-    "nl": "Toon room markers"
+    "de": "Raummarkierungen anzeigen",
+    "fr": "Afficher les marqueurs de pièces",
+    "it": "Mostra indicatori stanze",
+    "nl": "Kamermarkers tonen"
   },
   {
     "es": "Mostrar noche",
     "en": "Show night",
     "de": "Anzeigen: night",
-    "fr": "Afficher night",
+    "fr": "Afficher Nuit",
     "it": "Mostra night",
     "nl": "Toon night"
   },
@@ -4571,7 +4571,7 @@
     "es": "Mostrar nombre",
     "en": "Show name",
     "de": "Anzeigen: name",
-    "fr": "Afficher name",
+    "fr": "Afficher le nom",
     "it": "Mostra name",
     "nl": "Toon name"
   },
@@ -4579,7 +4579,7 @@
     "es": "Mostrar nombre en chip",
     "en": "Show name in chip",
     "de": "Anzeigen: name in chip",
-    "fr": "Afficher name in chip",
+    "fr": "Afficher le nom dans la puce",
     "it": "Mostra name in chip",
     "nl": "Toon name in chip"
   },
@@ -4587,7 +4587,7 @@
     "es": "Mostrar personalizado",
     "en": "Show custom",
     "de": "Anzeigen: custom",
-    "fr": "Afficher custom",
+    "fr": "Afficher Personnalisé",
     "it": "Mostra custom",
     "nl": "Toon custom"
   },
@@ -4595,7 +4595,7 @@
     "es": "Mostrar prediccion ampliada",
     "en": "Show extended forecast",
     "de": "Anzeigen: extended forecast",
-    "fr": "Afficher extended forecast",
+    "fr": "Afficher les prévisions étendues",
     "it": "Mostra extended forecast",
     "nl": "Toon extended forecast"
   },
@@ -4603,7 +4603,7 @@
     "es": "Mostrar presets de modo",
     "en": "Show mode presets",
     "de": "Anzeigen: mode presets",
-    "fr": "Afficher mode presets",
+    "fr": "Afficher les préréglages de mode",
     "it": "Mostra mode presets",
     "nl": "Toon mode presets"
   },
@@ -4611,7 +4611,7 @@
     "es": "Mostrar rango min/max",
     "en": "Show min/max range",
     "de": "Anzeigen: min/max range",
-    "fr": "Afficher min/max range",
+    "fr": "Afficher la plage min/max",
     "it": "Mostra min/max range",
     "nl": "Toon min/max range"
   },
@@ -4619,7 +4619,7 @@
     "es": "Mostrar relleno",
     "en": "Show fill",
     "de": "Anzeigen: fill",
-    "fr": "Afficher fill",
+    "fr": "Afficher le remplissage",
     "it": "Mostra fill",
     "nl": "Toon fill"
   },
@@ -4627,7 +4627,7 @@
     "es": "Mostrar selector de vista",
     "en": "Show view selector",
     "de": "Anzeigen: view selector",
-    "fr": "Afficher view selector",
+    "fr": "Afficher le sélecteur de vue",
     "it": "Mostra view selector",
     "nl": "Toon view selector"
   },
@@ -4635,7 +4635,7 @@
     "es": "Mostrar slider",
     "en": "Show slider",
     "de": "Anzeigen: slider",
-    "fr": "Afficher slider",
+    "fr": "Afficher le curseur",
     "it": "Mostra slider",
     "nl": "Toon slider"
   },
@@ -4643,7 +4643,7 @@
     "es": "Mostrar ubicacion",
     "en": "Show location",
     "de": "Anzeigen: location",
-    "fr": "Afficher location",
+    "fr": "Afficher la position",
     "it": "Mostra location",
     "nl": "Toon location"
   },
@@ -4651,7 +4651,7 @@
     "es": "Mostrar vacaciones",
     "en": "Show vacation",
     "de": "Anzeigen: vacation",
-    "fr": "Afficher vacation",
+    "fr": "Afficher Vacances",
     "it": "Mostra vacation",
     "nl": "Toon vacation"
   },
@@ -4659,7 +4659,7 @@
     "es": "Mostrar valor",
     "en": "Show value",
     "de": "Anzeigen: value",
-    "fr": "Afficher value",
+    "fr": "Afficher la valeur",
     "it": "Mostra value",
     "nl": "Toon value"
   },
@@ -4667,7 +4667,7 @@
     "es": "Mostrar valor grande",
     "en": "Show large value",
     "de": "Anzeigen: large value",
-    "fr": "Afficher large value",
+    "fr": "Afficher la grande valeur",
     "it": "Mostra large value",
     "nl": "Toon large value"
   },
@@ -4699,9 +4699,9 @@
     "es": "Nombre",
     "en": "Name",
     "de": "Name",
-    "fr": "Name",
-    "it": "Name",
-    "nl": "Name"
+    "fr": "Nom",
+    "it": "Nome",
+    "nl": "Naam"
   },
   {
     "es": "Nombre corto",
@@ -5842,10 +5842,10 @@
   {
     "es": "Todavia no has anadido ninguna serie.",
     "en": "You have not added any series yet.",
-    "de": "You have not added any series yet.",
-    "fr": "You have not added any series yet.",
-    "it": "You have not added any series yet.",
-    "nl": "You have not added any series yet."
+    "de": "Sie haben noch keine Serien hinzugefügt.",
+    "fr": "Vous n’avez pas encore ajouté de série.",
+    "it": "Non hai ancora aggiunto serie.",
+    "nl": "Je hebt nog geen reeksen toegevoegd."
   },
   {
     "es": "Anadir serie",
@@ -5874,10 +5874,10 @@
   {
     "es": "Aqui ya puedes editar popup y media player. Para acciones muy avanzadas, sigue siendo mejor completar el YAML.",
     "en": "You can edit popup and media player here. For very advanced actions, it is still better to complete YAML.",
-    "de": "You can edit popup and media player here. For very advanced actions, it is still better to complete YAML.",
-    "fr": "You can edit popup and media player here. For very advanced actions, it is still better to complete YAML.",
-    "it": "You can edit popup and media player here. For very advanced actions, it is still better to complete YAML.",
-    "nl": "You can edit popup and media player here. For very advanced actions, it is still better to complete YAML."
+    "de": "Popup und Media Player hier bearbeiten. Für sehr fortgeschrittene Aktionen bleibt YAML besser.",
+    "fr": "Vous pouvez modifier le popup et le lecteur ici. Pour les actions très avancées, le YAML reste préférable.",
+    "it": "Modifica popup e lettore qui. Per azioni avanzate YAML è ancora meglio.",
+    "nl": "Bewerk pop-up en speler hier. Voor geavanceerde acties blijft YAML beter."
   },
   {
     "es": "Selección",
@@ -6154,10 +6154,10 @@
   {
     "es": "Todavía no has añadido ningún reproductor.",
     "en": "You have not added any players yet.",
-    "de": "You have not added any players yet.",
-    "fr": "You have not added any players yet.",
-    "it": "You have not added any players yet.",
-    "nl": "You have not added any players yet."
+    "de": "Sie haben noch keine Player hinzugefügt.",
+    "fr": "Vous n’avez pas encore ajouté de lecteur.",
+    "it": "Non hai ancora aggiunto lettori.",
+    "nl": "Je hebt nog geen spelers toegevoegd."
   },
   {
     "es": "Z-index",
@@ -6170,146 +6170,146 @@
   {
     "es": "__H__:Activa o desactiva cabecera, valor grande, leyenda y relleno.",
     "en": "Enable or disable header, large value, legend and fill.",
-    "de": "Enable or disable header, large value, legend and fill.",
-    "fr": "Enable or disable header, large value, legend and fill.",
-    "it": "Enable or disable header, large value, legend and fill.",
-    "nl": "Enable or disable header, large value, legend and fill."
+    "de": "Kopfzeile, großen Wert, Legende und Füllung aktivieren oder deaktivieren.",
+    "fr": "Active ou désactive l’en-tête, la grande valeur, la légende et le remplissage.",
+    "it": "Attiva o disattiva intestazione, valore grande, legenda e riempimento.",
+    "nl": "Kop, grote waarde, legenda en vulling in-/uitschakelen."
   },
   {
     "es": "__H__:Activa o desactiva cabecera, valor, leyenda y relleno.",
     "en": "Enable or disable header, value, legend and fill.",
-    "de": "Enable or disable header, value, legend and fill.",
-    "fr": "Enable or disable header, value, legend and fill.",
-    "it": "Enable or disable header, value, legend and fill.",
-    "nl": "Enable or disable header, value, legend and fill."
+    "de": "Kopfzeile, Wert, Legende und Füllung aktivieren oder deaktivieren.",
+    "fr": "Active ou désactive l’en-tête, la valeur, la légende et le remplissage.",
+    "it": "Attiva o disattiva intestazione, valore, legenda e riempimento.",
+    "nl": "Kop, waarde, legenda en vulling in-/uitschakelen."
   },
   {
     "es": "__H__:Activa u oculta cada bloque de la tarjeta.",
     "en": "Show or hide each card block.",
     "de": "Anzeigen: or hide each card block.",
-    "fr": "Afficher or hide each card block.",
+    "fr": "Afficher ou masquer chaque bloc de la carte.",
     "it": "Mostra or hide each card block.",
     "nl": "Toon or hide each card block."
   },
   {
     "es": "__H__:Ajusta la apertura de paneles, navegador y el rebote de los botones.",
     "en": "Adjust panel opening, browser and button bounce.",
-    "de": "Adjust panel opening, browser and button bounce.",
-    "fr": "Adjust panel opening, browser and button bounce.",
-    "it": "Adjust panel opening, browser and button bounce.",
-    "nl": "Adjust panel opening, browser and button bounce."
+    "de": "Panelöffnung, Browser und Button-Federung anpassen.",
+    "fr": "Ajustez l’ouverture des panneaux, du navigateur et le rebond des boutons.",
+    "it": "Regola apertura pannelli, browser e rimbalzo pulsanti.",
+    "nl": "Paneelopening, browser en knop-veer aanpassen."
   },
   {
     "es": "__H__:Ajustes de cabecera, chips y rango visible.",
     "en": "Header, chips and visible range settings.",
-    "de": "Header, chips and visible range settings.",
-    "fr": "Header, chips and visible range settings.",
-    "it": "Header, chips and visible range settings.",
-    "nl": "Header, chips and visible range settings."
+    "de": "Kopfzeile, Chips und sichtbarer Bereich.",
+    "fr": "Réglages de l’en-tête, des puces et de la plage visible.",
+    "it": "Intestazione, chip e intervallo visibile.",
+    "nl": "Kop, chips en zichtbaar bereik."
   },
   {
     "es": "__H__:Ajustes visuales base de la tarjeta favorita.",
     "en": "Base visual settings for the favourite card.",
-    "de": "Base visual settings for the favourite card.",
-    "fr": "Base visual settings for the favourite card.",
-    "it": "Base visual settings for the favourite card.",
-    "nl": "Base visual settings for the favourite card."
+    "de": "Grundlegende visuelle Einstellungen für die Favoritenkarte.",
+    "fr": "Réglages visuels de base pour la carte favorite.",
+    "it": "Impostazioni visive di base per la scheda preferita.",
+    "nl": "Basis visuele instellingen voor de favorietenkaart."
   },
   {
     "es": "__H__:Ajustes visuales base de la tarjeta y las burbujas.",
     "en": "Base visual settings for the card and bubbles.",
-    "de": "Base visual settings for the card and bubbles.",
-    "fr": "Base visual settings for the card and bubbles.",
-    "it": "Base visual settings for the card and bubbles.",
-    "nl": "Base visual settings for the card and bubbles."
+    "de": "Grundlegende visuelle Einstellungen für Karte und Blasen.",
+    "fr": "Réglages visuels de base pour la carte et les bulles.",
+    "it": "Impostazioni visive di base per scheda e bolle.",
+    "nl": "Basis visuele instellingen voor kaart en bellen."
   },
   {
     "es": "__H__:Ajustes visuales base de la tarjeta.",
     "en": "Base visual settings for the card.",
-    "de": "Base visual settings for the card.",
-    "fr": "Base visual settings for the card.",
-    "it": "Base visual settings for the card.",
-    "nl": "Base visual settings for the card."
+    "de": "Grundlegende visuelle Einstellungen für die Karte.",
+    "fr": "Réglages visuels de base pour la carte.",
+    "it": "Impostazioni visive di base per la scheda.",
+    "nl": "Basis visuele instellingen voor de kaart."
   },
   {
     "es": "__H__:Ajustes visuales base del mapa y las burbujas.",
     "en": "Base visual settings for the map and bubbles.",
-    "de": "Base visual settings for the map and bubbles.",
-    "fr": "Base visual settings for the map and bubbles.",
-    "it": "Base visual settings for the map and bubbles.",
-    "nl": "Base visual settings for the map and bubbles."
+    "de": "Grundlegende visuelle Einstellungen für Karte und Blasen.",
+    "fr": "Réglages visuels de base pour la carte et les bulles.",
+    "it": "Impostazioni visive di base per mappa e bolle.",
+    "nl": "Basis visuele instellingen voor kaart en bellen."
   },
   {
     "es": "__H__:Ajustes visuales básicos del look Nodalia.",
     "en": "Basic visual settings for the Nodalia look.",
-    "de": "Basic visual settings for the Nodalia look.",
-    "fr": "Basic visual settings for the Nodalia look.",
-    "it": "Basic visual settings for the Nodalia look.",
-    "nl": "Basic visual settings for the Nodalia look."
+    "de": "Grundlegende visuelle Einstellungen für den Nodalia-Look.",
+    "fr": "Réglages visuels de base pour le style Nodalia.",
+    "it": "Impostazioni visive di base per il look Nodalia.",
+    "nl": "Basis visuele instellingen voor de Nodalia-stijl."
   },
   {
     "es": "__H__:Ajustes visuales de barra, botones, popup y media player.",
     "en": "Visual settings for bar, buttons, popup and media player.",
-    "de": "Visual settings for bar, buttons, popup and media player.",
-    "fr": "Visual settings for bar, buttons, popup and media player.",
-    "it": "Visual settings for bar, buttons, popup and media player.",
-    "nl": "Visual settings for bar, buttons, popup and media player."
+    "de": "Visuelle Einstellungen für Leiste, Tasten, Popup und Media Player.",
+    "fr": "Réglages visuels pour la barre, les boutons, la fenêtre contextuelle et le lecteur média.",
+    "it": "Impostazioni visive per barra, pulsanti, popup e lettore.",
+    "nl": "Visuele instellingen voor balk, knoppen, pop-up en mediaspeler."
   },
   {
     "es": "__H__:Ajustes visuales de la card, el icono y el grafico.",
     "en": "Visual settings for the card, icon and chart.",
-    "de": "Visual settings for the card, icon and chart.",
-    "fr": "Visual settings for the card, icon and chart.",
-    "it": "Visual settings for the card, icon and chart.",
-    "nl": "Visual settings for the card, icon and chart."
+    "de": "Visuelle Einstellungen für Karte, Symbol und Diagramm.",
+    "fr": "Réglages visuels pour la carte, l’icône et le graphique.",
+    "it": "Impostazioni visive per scheda, icona e grafico.",
+    "nl": "Visuele instellingen voor kaart, pictogram en grafiek."
   },
   {
     "es": "__H__:Ajustes visuales del grafico y el look Nodalia.",
     "en": "Visual settings for the chart and Nodalia look.",
-    "de": "Visual settings for the chart and Nodalia look.",
-    "fr": "Visual settings for the chart and Nodalia look.",
-    "it": "Visual settings for the chart and Nodalia look.",
-    "nl": "Visual settings for the chart and Nodalia look."
+    "de": "Visuelle Einstellungen für Diagramm und Nodalia-Look.",
+    "fr": "Réglages visuels pour le graphique et le style Nodalia.",
+    "it": "Impostazioni visive per grafico e look Nodalia.",
+    "nl": "Visuele instellingen voor grafiek en Nodalia-stijl."
   },
   {
     "es": "__H__:Ajustes visuales del look Nodalia y el dial circular.",
     "en": "Visual settings for the Nodalia look and circular dial.",
-    "de": "Visual settings for the Nodalia look and circular dial.",
-    "fr": "Visual settings for the Nodalia look and circular dial.",
-    "it": "Visual settings for the Nodalia look and circular dial.",
-    "nl": "Visual settings for the Nodalia look and circular dial."
+    "de": "Visuelle Einstellungen für Nodalia-Look und Drehregler.",
+    "fr": "Réglages visuels pour le style Nodalia et le cadran circulaire.",
+    "it": "Impostazioni visive per look Nodalia e dial circolare.",
+    "nl": "Visuele instellingen voor Nodalia-stijl en ronde wijzerplaat."
   },
   {
     "es": "__H__:Ajustes visuales del reproductor principal y del navegador de medios.",
     "en": "Visual settings for the main player and media browser.",
-    "de": "Visual settings for the main player and media browser.",
-    "fr": "Visual settings for the main player and media browser.",
-    "it": "Visual settings for the main player and media browser.",
-    "nl": "Visual settings for the main player and media browser."
+    "de": "Visuelle Einstellungen für Hauptplayer und Medienbrowser.",
+    "fr": "Réglages visuels pour le lecteur principal et le navigateur multimédia.",
+    "it": "Impostazioni visive per lettore principale e browser media.",
+    "nl": "Visuele instellingen voor hoofdspeler en mediabrowser."
   },
   {
     "es": "__H__:Ajustes visuales principales de la tarjeta.",
     "en": "Main visual settings for the card.",
-    "de": "Main visual settings for the card.",
-    "fr": "Main visual settings for the card.",
-    "it": "Main visual settings for the card.",
-    "nl": "Main visual settings for the card."
+    "de": "Hauptvisuelle Einstellungen für die Karte.",
+    "fr": "Réglages visuels principaux de la carte.",
+    "it": "Impostazioni visive principali della scheda.",
+    "nl": "Belangrijkste visuele instellingen voor de kaart."
   },
   {
     "es": "__H__:Anade, reordena y personaliza cada entidad mostrada en la grafica.",
     "en": "Add, reorder and customize each entity shown on the chart.",
-    "de": "Add, reorder and customize each entity shown on the chart.",
-    "fr": "Add, reorder and customize each entity shown on the chart.",
-    "it": "Add, reorder and customize each entity shown on the chart.",
-    "nl": "Add, reorder and customize each entity shown on the chart."
+    "de": "Jede Entität im Diagramm hinzufügen, sortieren und anpassen.",
+    "fr": "Ajoutez, réorganisez et personnalisez chaque entité affichée sur le graphique.",
+    "it": "Aggiungi, riordina e personalizza ogni entità nel grafico.",
+    "nl": "Elke entiteit in de grafiek toevoegen, sorteren en aanpassen."
   },
   {
     "es": "__H__:Ayuda a compactar el gauge según el espacio disponible en la vista.",
     "en": "Helps compact the gauge based on available space.",
-    "de": "Helps compact the gauge based on available space.",
-    "fr": "Helps compact the gauge based on available space.",
-    "it": "Helps compact the gauge based on available space.",
-    "nl": "Helps compact the gauge based on available space."
+    "de": "Kompaktiert die Gauge je nach Platz.",
+    "fr": "Aide à compacter le jauge selon l’espace disponible.",
+    "it": "Compatta il gauge in base allo spazio.",
+    "nl": "Maakt de gauge compacter naargelang ruimte."
   },
   {
     "es": "__H__:Ayuda a compactar la climate card según el espacio disponible en la vista.",
@@ -6322,58 +6322,58 @@
   {
     "es": "__H__:Añade, reordena y personaliza cada reproductor visible en la tarjeta.",
     "en": "Add, reorder and customize each player shown on the card.",
-    "de": "Add, reorder and customize each player shown on the card.",
-    "fr": "Add, reorder and customize each player shown on the card.",
-    "it": "Add, reorder and customize each player shown on the card.",
-    "nl": "Add, reorder and customize each player shown on the card."
+    "de": "Jeden Player auf der Karte hinzufügen, sortieren und anpassen.",
+    "fr": "Ajoutez, réorganisez et personnalisez chaque lecteur affiché sur la carte.",
+    "it": "Aggiungi, riordina e personalizza ogni lettore sulla scheda.",
+    "nl": "Elke speler op de kaart toevoegen, sorteren en aanpassen."
   },
   {
     "es": "__H__:Añade, reordena y personaliza los destinos de la barra y sus popups.",
     "en": "Add, reorder and customize bar destinations and their popups.",
-    "de": "Add, reorder and customize bar destinations and their popups.",
-    "fr": "Add, reorder and customize bar destinations and their popups.",
-    "it": "Add, reorder and customize bar destinations and their popups.",
-    "nl": "Add, reorder and customize bar destinations and their popups."
+    "de": "Leisten-Ziele und Popups hinzufügen, sortieren und anpassen.",
+    "fr": "Ajoutez, réorganisez et personnalisez les destinations de la barre et leurs fenêtres.",
+    "it": "Aggiungi, riordina e personalizza destinazioni della barra e relativi popup.",
+    "nl": "Bestemmingsbalk en pop-ups toevoegen, sorteren en aanpassen."
   },
   {
     "es": "__H__:Botones de armado y desarmado visibles en la tarjeta.",
     "en": "Arm and disarm buttons visible on the card.",
-    "de": "Arm and disarm buttons visible on the card.",
-    "fr": "Arm and disarm buttons visible on the card.",
-    "it": "Arm and disarm buttons visible on the card.",
-    "nl": "Arm and disarm buttons visible on the card."
+    "de": "Scharf-/Unscharf-Schaltflächen auf der Karte.",
+    "fr": "Boutons d’armement et de désarmement visibles sur la carte.",
+    "it": "Pulsanti inserimento/disinserimento visibili sulla scheda.",
+    "nl": "Zichtbare in-/uitschakelknoppen op de kaart."
   },
   {
     "es": "__H__:Botones secundarios con icono para alternar, abrir más información o llamar un servicio.",
     "en": "Secondary icon buttons to toggle, open more info or call a service.",
-    "de": "Secondary icon buttons to toggle, open more info or call a service.",
-    "fr": "Secondary icon buttons to toggle, open more info or call a service.",
-    "it": "Secondary icon buttons to toggle, open more info or call a service.",
-    "nl": "Secondary icon buttons to toggle, open more info or call a service."
+    "de": "Sekundäre Symboltasten zum Umschalten, Infos oder Service.",
+    "fr": "Boutons d’icônes secondaires pour basculer, ouvrir les infos ou appeler un service.",
+    "it": "Pulsanti icona secondari per toggle, info o servizio.",
+    "nl": "Secundaire pictogramknoppen voor toggle, info of service."
   },
   {
     "es": "__H__:Configura titulo, entidades y rango visible de la grafica.",
     "en": "Configure title, entities and visible chart range.",
-    "de": "Configure title, entities and visible chart range.",
-    "fr": "Configure title, entities and visible chart range.",
-    "it": "Configure title, entities and visible chart range.",
-    "nl": "Configure title, entities and visible chart range."
+    "de": "Titel, Entitäten und sichtbaren Diagrammbereich konfigurieren.",
+    "fr": "Configurez le titre, les entités et la plage visible du graphique.",
+    "it": "Configura titolo, entità e intervallo visibile del grafico.",
+    "nl": "Titel, entiteiten en zichtbaar grafiekbereik configureren."
   },
   {
     "es": "__H__:Controla la entrada del tooltip y el rebote visual de los chips.",
     "en": "Controls tooltip entrance and visual chip bounce.",
-    "de": "Controls tooltip entrance and visual chip bounce.",
-    "fr": "Controls tooltip entrance and visual chip bounce.",
-    "it": "Controls tooltip entrance and visual chip bounce.",
-    "nl": "Controls tooltip entrance and visual chip bounce."
+    "de": "Tooltip-Eingang und Chip-Federung steuern.",
+    "fr": "Contrôle l’entrée du tooltip et le rebond visuel des puces.",
+    "it": "Ingresso tooltip e rimbalzo chip.",
+    "nl": "Tooltip en chip-animatie regelen."
   },
   {
     "es": "__H__:Controla la transición del dial, la entrada del contenido y el rebote al tocar la tarjeta.",
     "en": "Controls dial transition, content entrance and tap bounce.",
-    "de": "Controls dial transition, content entrance and tap bounce.",
-    "fr": "Controls dial transition, content entrance and tap bounce.",
-    "it": "Controls dial transition, content entrance and tap bounce.",
-    "nl": "Controls dial transition, content entrance and tap bounce."
+    "de": "Steuert Drehregler-Übergang, Inhaltseingang und Tap-Federung.",
+    "fr": "Contrôle la transition du cadran, l’entrée du contenu et le rebond au toucher.",
+    "it": "Controlla transizione dial, ingresso contenuto e rimbalzo tocco.",
+    "nl": "Regelt draaiknop-overgang, inhoud en tik-veer."
   },
   {
     "es": "__H__:Controla la transición del dial, la entrada del contenido y el rebote de los botones.",
@@ -6386,26 +6386,26 @@
   {
     "es": "__H__:Controla la visualizacion de lineas sin consumo y la velocidad de animacion.",
     "en": "Controls display of zero-consumption lines and animation speed.",
-    "de": "Controls display of zero-consumption lines and animation speed.",
-    "fr": "Controls display of zero-consumption lines and animation speed.",
-    "it": "Controls display of zero-consumption lines and animation speed.",
-    "nl": "Controls display of zero-consumption lines and animation speed."
+    "de": "Nullverbrauchslinien und Animationsgeschwindigkeit steuern.",
+    "fr": "Contrôle l’affichage des lignes à zéro et la vitesse d’animation.",
+    "it": "Visualizza linee a zero consumo e velocità animazione.",
+    "nl": "Nul-lijnen en animatiesnelheid regelen."
   },
   {
     "es": "__H__:Controla las lineas a cero y la velocidad del flujo.",
     "en": "Controls zero lines and flow speed.",
-    "de": "Controls zero lines and flow speed.",
-    "fr": "Controls zero lines and flow speed.",
-    "it": "Controls zero lines and flow speed.",
-    "nl": "Controls zero lines and flow speed."
+    "de": "Null-Linien und Flussgeschwindigkeit steuern.",
+    "fr": "Contrôle les lignes à zéro et la vitesse du flux.",
+    "it": "Linee a zero e velocità del flusso.",
+    "nl": "Nul-lijnen en stroomsnelheid."
   },
   {
     "es": "__H__:Controla transiciones de barra, popup, media player y respuestas visuales.",
-    "en": "Controla transiciones de barra, popup, media player y respuestas visuales.",
-    "de": "Controla transiciones de barra, popup, media player y respuestas visuales.",
-    "fr": "Controla transiciones de barra, popup, media player y respuestas visuales.",
-    "it": "Controla transiciones de barra, popup, media player y respuestas visuales.",
-    "nl": "Controla transiciones de barra, popup, media player y respuestas visuales."
+    "en": "Controls transitions for bar, popup, media player and visual feedback.",
+    "de": "Steuert Übergänge für Leiste, Popup, Media Player und visuelles Feedback.",
+    "fr": "Contrôle les transitions de la barre, du popup, du lecteur média et le retour visuel.",
+    "it": "Controlla transizioni barra, popup, lettore e feedback visivo.",
+    "nl": "Regelt overgangen voor balk, pop-up, mediaspeler en visuele feedback."
   },
   {
     "es": "__H__:Elige la informacion y los controles visibles.",
@@ -6426,266 +6426,266 @@
   {
     "es": "__H__:Entidad del robot y fuente principal del mapa.",
     "en": "Robot entity and main map source.",
-    "de": "Robot entity and main map source.",
-    "fr": "Robot entity and main map source.",
-    "it": "Robot entity and main map source.",
-    "nl": "Robot entity and main map source."
+    "de": "Roboter-Entität und Hauptkartenquelle.",
+    "fr": "Entité robot et source principale de la carte.",
+    "it": "Entità robot e sorgente mappa principale.",
+    "nl": "Robotentiteit en hoofdkaartbron."
   },
   {
     "es": "__H__:Entidad favorita, nombre visible e icono principal.",
     "en": "Favourite entity, visible name and main icon.",
-    "de": "Favourite entity, visible name and main icon.",
-    "fr": "Favourite entity, visible name and main icon.",
-    "it": "Favourite entity, visible name and main icon.",
-    "nl": "Favourite entity, visible name and main icon."
+    "de": "Favoriten-Entität, sichtbarer Name und Hauptsymbol.",
+    "fr": "Entité favorite, nom visible et icône principale.",
+    "it": "Entità preferita, nome visibile e icona principale.",
+    "nl": "Favoriete entiteit, zichtbare naam en hoofdpictogram."
   },
   {
     "es": "__H__:Entidad meteorologica principal, nombre visible, icono y contenido mostrado.",
     "en": "Main weather entity, visible name, icon and displayed content.",
-    "de": "Main weather entity, visible name, icon and displayed content.",
-    "fr": "Main weather entity, visible name, icon and displayed content.",
-    "it": "Main weather entity, visible name, icon and displayed content.",
-    "nl": "Main weather entity, visible name, icon and displayed content."
+    "de": "Haupt-Wetterentität, sichtbarer Name, Symbol und angezeigter Inhalt.",
+    "fr": "Entité météo principale, nom visible, icône et contenu affiché.",
+    "it": "Entità meteo principale, nome visibile, icona e contenuto.",
+    "nl": "Hoofdweerentiteit, zichtbare naam, pictogram en inhoud."
   },
   {
     "es": "__H__:Entidad numérica principal, nombre, icono y rango del gauge.",
     "en": "Main numeric entity, name, icon and gauge range.",
-    "de": "Main numeric entity, name, icon and gauge range.",
-    "fr": "Main numeric entity, name, icon and gauge range.",
-    "it": "Main numeric entity, name, icon and gauge range.",
-    "nl": "Main numeric entity, name, icon and gauge range."
+    "de": "Numerische Hauptentität, Name, Symbol und Messbereich.",
+    "fr": "Entité numérique principale, nom, icône et plage du jauge.",
+    "it": "Entità numerica principale, nome, icona e intervallo gauge.",
+    "nl": "Hoofdnumerieke entiteit, naam, pictogram en bereik."
   },
   {
     "es": "__H__:Entidad persona, foto, icono de zona y comportamiento principal de la tarjeta.",
     "en": "Person entity, photo, zone icon and main card behaviour.",
-    "de": "Person entity, photo, zone icon and main card behaviour.",
-    "fr": "Person entity, photo, zone icon and main card behaviour.",
-    "it": "Person entity, photo, zone icon and main card behaviour.",
-    "nl": "Person entity, photo, zone icon and main card behaviour."
+    "de": "Personenentität, Foto, Zonensymbol und Hauptverhalten.",
+    "fr": "Entité personne, photo, icône de zone et comportement principal.",
+    "it": "Entità persona, foto, icona zona e comportamento principale.",
+    "nl": "Persoonentiteit, foto, zonepictogram en hoofdgedrag."
   },
   {
     "es": "__H__:Entidad principal y textos visibles.",
     "en": "Main entity and visible texts.",
-    "de": "Main entity and visible texts.",
-    "fr": "Main entity and visible texts.",
-    "it": "Main entity and visible texts.",
-    "nl": "Main entity and visible texts."
+    "de": "Hauptentität und sichtbare Texte.",
+    "fr": "Entité principale et textes visibles.",
+    "it": "Entità principale e testi visibili.",
+    "nl": "Hoofdentiteit en zichtbare teksten."
   },
   {
     "es": "__H__:Entidad principal, helper opcional del codigo, icono y comportamiento base de la tarjeta.",
     "en": "Main entity, optional code helper, icon and base card behaviour.",
-    "de": "Main entity, optional code helper, icon and base card behaviour.",
-    "fr": "Main entity, optional code helper, icon and base card behaviour.",
-    "it": "Main entity, optional code helper, icon and base card behaviour.",
-    "nl": "Main entity, optional code helper, icon and base card behaviour."
+    "de": "Hauptentität, optionaler Code-Helfer, Symbol und Grundverhalten.",
+    "fr": "Entité principale, aide code optionnelle, icône et comportement de base.",
+    "it": "Entità principale, helper codice opzionale, icona e comportamento base.",
+    "nl": "Hoofdentiteit, optionele code-helper, pictogram en basisgedrag."
   },
   {
     "es": "__H__:Entidad principal, nombre visible e icono base de la tarjeta.",
     "en": "Main entity, visible name and base card icon.",
-    "de": "Main entity, visible name and base card icon.",
-    "fr": "Main entity, visible name and base card icon.",
-    "it": "Main entity, visible name and base card icon.",
-    "nl": "Main entity, visible name and base card icon."
+    "de": "Hauptentität, sichtbarer Name und Basissymbol.",
+    "fr": "Entité principale, nom visible et icône de base de la carte.",
+    "it": "Entità principale, nome visibile e icona base.",
+    "nl": "Hoofdentiteit, zichtbare naam en basispictogram."
   },
   {
     "es": "__H__:Entidad principal, nombre visible e icono de la tarjeta.",
     "en": "Main entity, visible name and card icon.",
-    "de": "Main entity, visible name and card icon.",
-    "fr": "Main entity, visible name and card icon.",
-    "it": "Main entity, visible name and card icon.",
-    "nl": "Main entity, visible name and card icon."
+    "de": "Hauptentität, sichtbarer Name und Kartensymbol.",
+    "fr": "Entité principale, nom visible et icône de la carte.",
+    "it": "Entità principale, nome visibile e icona scheda.",
+    "nl": "Hoofdentiteit, zichtbare naam en kaartpictogram."
   },
   {
     "es": "__H__:Entidad principal, nombre visible y comportamiento al tocar la tarjeta.",
     "en": "Main entity, visible name and tap behaviour.",
-    "de": "Main entity, visible name and tap behaviour.",
-    "fr": "Main entity, visible name and tap behaviour.",
-    "it": "Main entity, visible name and tap behaviour.",
-    "nl": "Main entity, visible name and tap behaviour."
+    "de": "Hauptentität, sichtbarer Name und Tap-Verhalten.",
+    "fr": "Entité principale, nom visible et comportement au toucher.",
+    "it": "Entità principale, nome visibile e comportamento al tocco.",
+    "nl": "Hoofdentiteit, zichtbare naam en tikgedrag."
   },
   {
     "es": "__H__:Entrada suave de la tarjeta, paneles y respuesta visual al pulsar controles.",
     "en": "Smooth card entrance, panels and visual feedback when pressing controls.",
-    "de": "Smooth card entrance, panels and visual feedback when pressing controls.",
-    "fr": "Smooth card entrance, panels and visual feedback when pressing controls.",
-    "it": "Smooth card entrance, panels and visual feedback when pressing controls.",
-    "nl": "Smooth card entrance, panels and visual feedback when pressing controls."
+    "de": "Sanfter Karteneingang, Panels und visuelles Feedback bei Bedienung.",
+    "fr": "Entrée fluide de la carte, panneaux et retour visuel en pressant les contrôles.",
+    "it": "Entrata fluida scheda, pannelli e feedback visivo ai controlli.",
+    "nl": "Vloeiende kaartingang, panelen en visuele feedback."
   },
   {
     "es": "__H__:Entrada suave del contenido y pequeno rebote al pulsar acciones e icono.",
     "en": "Smooth content entrance and small bounce when tapping actions and icon.",
-    "de": "Smooth content entrance and small bounce when tapping actions and icon.",
-    "fr": "Smooth content entrance and small bounce when tapping actions and icon.",
-    "it": "Smooth content entrance and small bounce when tapping actions and icon.",
-    "nl": "Smooth content entrance and small bounce when tapping actions and icon."
+    "de": "Sanfter Inhaltseingang und kleine Feder bei Aktionen und Symbol.",
+    "fr": "Entrée fluide du contenu et petit rebond sur les actions et l’icône.",
+    "it": "Ingresso fluido e piccolo rimbalzo su azioni e icona.",
+    "nl": "Vloeiende inhoud en kleine veer op acties en pictogram."
   },
   {
     "es": "__H__:Entrada suave del contenido y pequeno rebote al pulsar la tarjeta.",
     "en": "Smooth content entrance and small bounce when tapping the card.",
-    "de": "Smooth content entrance and small bounce when tapping the card.",
-    "fr": "Smooth content entrance and small bounce when tapping the card.",
-    "it": "Smooth content entrance and small bounce when tapping the card.",
-    "nl": "Smooth content entrance and small bounce when tapping the card."
+    "de": "Sanfter Inhaltseingang und kleine Feder beim Tippen.",
+    "fr": "Entrée fluide du contenu et petit rebond au toucher sur la carte.",
+    "it": "Ingresso fluido e piccolo rimbalzo al tocco.",
+    "nl": "Vloeiende inhoud en kleine tik-animatie."
   },
   {
     "es": "__H__:Entrada suave del contenido y pequeño rebote al pulsar la tarjeta o sus acciones.",
     "en": "Smooth content entrance and small bounce when tapping the card or its actions.",
-    "de": "Smooth content entrance and small bounce when tapping the card or its actions.",
-    "fr": "Smooth content entrance and small bounce when tapping the card or its actions.",
-    "it": "Smooth content entrance and small bounce when tapping the card or its actions.",
-    "nl": "Smooth content entrance and small bounce when tapping the card or its actions."
+    "de": "Sanfter Inhaltseingang und kleine Feder bei Karte oder Aktionen.",
+    "fr": "Entrée fluide du contenu et petit rebond au toucher sur la carte ou ses actions.",
+    "it": "Ingresso fluido e piccolo rimbalzo su scheda o azioni.",
+    "nl": "Vloeiende inhoud en kleine veer op kaart of acties."
   },
   {
     "es": "__H__:Entrada suave del contenido y rebote ligero al pulsar la tarjeta.",
     "en": "Smooth content entrance and light bounce when tapping the card.",
-    "de": "Smooth content entrance and light bounce when tapping the card.",
-    "fr": "Smooth content entrance and light bounce when tapping the card.",
-    "it": "Smooth content entrance and light bounce when tapping the card.",
-    "nl": "Smooth content entrance and light bounce when tapping the card."
+    "de": "Sanfter Inhaltseingang und leichter Feder-Tap.",
+    "fr": "Entrée fluide du contenu et léger rebond au toucher sur la carte.",
+    "it": "Ingresso fluido e leggero rimbalzo al tocco.",
+    "nl": "Vloeiende inhoud en lichte tik-animatie."
   },
   {
     "es": "__H__:Entrada suave del flujo y rebote al pulsar nodos o acciones.",
     "en": "Smooth flow entrance and bounce when tapping nodes or actions.",
-    "de": "Smooth flow entrance and bounce when tapping nodes or actions.",
-    "fr": "Smooth flow entrance and bounce when tapping nodes or actions.",
-    "it": "Smooth flow entrance and bounce when tapping nodes or actions.",
-    "nl": "Smooth flow entrance and bounce when tapping nodes or actions."
+    "de": "Sanfter Flusseingang und Feder bei Knoten oder Aktionen.",
+    "fr": "Entrée fluide du flux et rebond au toucher sur les nœuds ou actions.",
+    "it": "Ingresso fluido del flusso e rimbalzo su nodi o azioni.",
+    "nl": "Vloeiende stroom en veer bij knopen of acties."
   },
   {
     "es": "__H__:Estado visible, chips adicionales, decimales de los valores y comportamiento en modo compacto.",
     "en": "Visible state, extra chips, value decimals and compact mode behaviour.",
-    "de": "Visible state, extra chips, value decimals and compact mode behaviour.",
-    "fr": "Visible state, extra chips, value decimals and compact mode behaviour.",
-    "it": "Visible state, extra chips, value decimals and compact mode behaviour.",
-    "nl": "Visible state, extra chips, value decimals and compact mode behaviour."
+    "de": "Sichtbarer Status, Extra-Chips, Dezimalstellen und Kompaktmodus.",
+    "fr": "État visible, puces supplémentaires, décimales et comportement en mode compact.",
+    "it": "Stato visibile, chip extra, decimali e modalità compatta.",
+    "nl": "Zichtbare status, extra chips, decimalen en compacte modus."
   },
   {
     "es": "__H__:Feedback visual para botones y paneles del robot.",
     "en": "Visual feedback for robot buttons and panels.",
-    "de": "Visual feedback for robot buttons and panels.",
-    "fr": "Visual feedback for robot buttons and panels.",
-    "it": "Visual feedback for robot buttons and panels.",
-    "nl": "Visual feedback for robot buttons and panels."
+    "de": "Visuelles Feedback für Roboter-Tasten und Panels.",
+    "fr": "Retour visuel pour les boutons et panneaux du robot.",
+    "it": "Feedback visivo per pulsanti e pannelli robot.",
+    "nl": "Visuele feedback voor robotknoppen en panelen."
   },
   {
     "es": "__H__:Ideal si quieres usarlo fijo arriba o abajo del dashboard.",
     "en": "Ideal if you want it fixed at the top or bottom of the dashboard.",
-    "de": "Ideal if you want it fixed at the top or bottom of the dashboard.",
-    "fr": "Ideal if you want it fixed at the top or bottom of the dashboard.",
-    "it": "Ideal if you want it fixed at the top or bottom of the dashboard.",
-    "nl": "Ideal if you want it fixed at the top or bottom of the dashboard."
+    "de": "Ideal zum Fixieren oben oder unten im Dashboard.",
+    "fr": "Idéal pour une barre fixe en haut ou en bas du tableau de bord.",
+    "it": "Ideale se vuoi fissarlo in alto o in basso.",
+    "nl": "Handig om vast te pinnen boven of onderaan."
   },
   {
     "es": "__H__:Nombre, icono, rango visible y comportamiento basico de la grafica.",
     "en": "Name, icon, visible range and basic chart behaviour.",
-    "de": "Name, icon, visible range and basic chart behaviour.",
-    "fr": "Name, icon, visible range and basic chart behaviour.",
-    "it": "Name, icon, visible range and basic chart behaviour.",
-    "nl": "Name, icon, visible range and basic chart behaviour."
+    "de": "Name, Symbol, sichtbarer Bereich und Basisdiagrammverhalten.",
+    "fr": "Nom, icône, plage visible et comportement de base du graphique.",
+    "it": "Nome, icona, intervallo visibile e comportamento grafico base.",
+    "nl": "Naam, pictogram, zichtbaar bereik en basisgrafiekgedrag."
   },
   {
     "es": "__H__:Opciones base de la barra, layout y visibilidad general.",
     "en": "Base bar options, layout and general visibility.",
-    "de": "Base bar options, layout and general visibility.",
-    "fr": "Base bar options, layout and general visibility.",
-    "it": "Base bar options, layout and general visibility.",
-    "nl": "Base bar options, layout and general visibility."
+    "de": "Grundoptionen der Leiste, Layout und allgemeine Sichtbarkeit.",
+    "fr": "Options de base de la barre, mise en page et visibilité générale.",
+    "it": "Opzioni base della barra, layout e visibilità generale.",
+    "nl": "Basisopties balk, lay-out en algemene zichtbaarheid."
   },
   {
     "es": "__H__:Opciones extra si la entidad es un panel de alarma.",
     "en": "Extra options if the entity is an alarm panel.",
-    "de": "Extra options if the entity is an alarm panel.",
-    "fr": "Extra options if the entity is an alarm panel.",
-    "it": "Extra options if the entity is an alarm panel.",
-    "nl": "Extra options if the entity is an alarm panel."
+    "de": "Zusätzliche Optionen für Alarmfelder.",
+    "fr": "Options supplémentaires si l’entité est un panneau d’alarme.",
+    "it": "Opzioni extra se l’entità è un pannello allarme.",
+    "nl": "Extra opties voor alarmpaneel-entiteiten."
   },
   {
     "es": "__H__:Opciones generales del reproductor integrado y lista de players visibles.",
     "en": "General options for the embedded player and visible player list.",
-    "de": "General options for the embedded player and visible player list.",
-    "fr": "General options for the embedded player and visible player list.",
-    "it": "General options for the embedded player and visible player list.",
-    "nl": "General options for the embedded player and visible player list."
+    "de": "Allgemeine Optionen für eingebetteten Player und sichtbare Player-Liste.",
+    "fr": "Options générales du lecteur intégré et liste des lecteurs visibles.",
+    "it": "Opzioni generali del lettore incorporato e elenco lettori.",
+    "nl": "Algemene opties voor ingesloten speler en zichtbare spelerslijst."
   },
   {
     "es": "__H__:Opciones generales del reproductor y cuándo debe mostrarse la tarjeta.",
     "en": "General player options and when the card should be shown.",
-    "de": "General player options and when the card should be shown.",
-    "fr": "General player options and when the card should be shown.",
-    "it": "General player options and when the card should be shown.",
-    "nl": "General player options and when the card should be shown."
+    "de": "Allgemeine Player-Optionen und wann die Karte angezeigt wird.",
+    "fr": "Options générales du lecteur et affichage de la carte.",
+    "it": "Opzioni generali del lettore e quando mostrare la scheda.",
+    "nl": "Algemene speleropties en wanneer de kaart wordt getoond."
   },
   {
     "es": "__H__:Personaliza el look Nodalia de la climate card, el dial y los controles.",
     "en": "Customize the Nodalia look for the climate card, dial and controls.",
-    "de": "Passe das Nodalia-Erscheinungsbild für die Thermostat-Karte, den Drehregler und die Steuerung an.",
+    "de": "Passe das Nodalia-Erscheinungsbild für Thermostat, Drehregler und Steuerung an.",
     "fr": "Personnalisez le rendu Nodalia de la carte climat, du cadran et des contrôles.",
-    "it": "Personalizza l’aspetto Nodalia della climate card, del dial e dei controlli.",
-    "nl": "Pas de Nodalia-stijl aan voor de thermostaatkaart, draaiknop en bediening."
+    "it": "Personalizza look Nodalia per climate card, dial e controlli.",
+    "nl": "Pas Nodalia-stijl aan voor thermostaat, wijzerplaat en bediening."
   },
   {
     "es": "__H__:Personaliza el look Nodalia, el dial circular, la nueva burbuja del thumb y la escala de tinte del gauge.",
     "en": "Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale.",
-    "de": "Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale.",
-    "fr": "Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale.",
-    "it": "Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale.",
-    "nl": "Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale."
+    "de": "Nodalia-Look, Drehregler, Thumb-Blase und Gauge-Tönung anpassen.",
+    "fr": "Personnalisez le rendu Nodalia, le cadran circulaire, la bulle du curseur et l’échelle de teinte.",
+    "it": "Personalizza look Nodalia, dial circolare, bolla thumb e scala tinta gauge.",
+    "nl": "Nodalia-stijl, draaiknop, thumb-bel en tintschaal aanpassen."
   },
   {
     "es": "__H__:Presentación compacta y elementos visibles dentro de la tarjeta.",
     "en": "Compact layout and visible elements inside the card.",
-    "de": "Compact layout and visible elements inside the card.",
-    "fr": "Compact layout and visible elements inside the card.",
-    "it": "Compact layout and visible elements inside the card.",
-    "nl": "Compact layout and visible elements inside the card."
+    "de": "Kompaktes Layout und sichtbare Elemente in der Karte.",
+    "fr": "Mise en page compacte et éléments visibles dans la carte.",
+    "it": "Layout compatto ed elementi visibili nella scheda.",
+    "nl": "Compacte lay-out en zichtbare elementen op de kaart."
   },
   {
     "es": "__H__:Que elementos quieres mantener siempre visibles.",
     "en": "Which elements you want to keep always visible.",
-    "de": "Which elements you want to keep always visible.",
-    "fr": "Which elements you want to keep always visible.",
-    "it": "Which elements you want to keep always visible.",
-    "nl": "Which elements you want to keep always visible."
+    "de": "Welche Elemente immer sichtbar bleiben.",
+    "fr": "Quels éléments garder toujours visibles.",
+    "it": "Quali elementi tenere sempre visibili.",
+    "nl": "Welke elementen altijd zichtbaar houden."
   },
   {
     "es": "__H__:Qué bloques quieres mostrar dentro de la tarjeta.",
     "en": "Which blocks you want to show inside the card.",
-    "de": "Which blocks you want to show inside the card.",
-    "fr": "Which blocks you want to show inside the card.",
-    "it": "Which blocks you want to show inside the card.",
-    "nl": "Which blocks you want to show inside the card."
+    "de": "Welche Blöcke in der Karte angezeigt werden.",
+    "fr": "Quels blocs afficher dans la carte.",
+    "it": "Quali blocchi mostrare nella scheda.",
+    "nl": "Welke blokken op de kaart tonen."
   },
   {
     "es": "__H__:Qué elementos quieres mostrar dentro de la tarjeta.",
     "en": "Which elements you want to show inside the card.",
-    "de": "Which elements you want to show inside the card.",
-    "fr": "Which elements you want to show inside the card.",
-    "it": "Which elements you want to show inside the card.",
-    "nl": "Which elements you want to show inside the card."
+    "de": "Welche Elemente in der Karte angezeigt werden.",
+    "fr": "Quels éléments afficher dans la carte.",
+    "it": "Quali elementi mostrare nella scheda.",
+    "nl": "Welke elementen op de kaart tonen."
   },
   {
     "es": "__H__:Qué hace la tarjeta cuando la tocas.",
     "en": "What the card does when you tap it.",
-    "de": "What the card does when you tap it.",
-    "fr": "What the card does when you tap it.",
-    "it": "What the card does when you tap it.",
-    "nl": "What the card does when you tap it."
+    "de": "Was die Karte beim Tippen tut.",
+    "fr": "Ce que fait la carte lorsque vous la touchez.",
+    "it": "Cosa fa la scheda al tocco.",
+    "nl": "Wat de kaart doet bij tikken."
   },
   {
     "es": "__H__:Respuesta haptica opcional al tocar la tarjeta.",
     "en": "Optional haptic feedback when tapping the card.",
-    "de": "Optional haptic feedback when tapping the card.",
-    "fr": "Optional haptic feedback when tapping the card.",
-    "it": "Optional haptic feedback when tapping the card.",
-    "nl": "Optional haptic feedback when tapping the card."
+    "de": "Optionales haptisches Feedback beim Tippen auf die Karte.",
+    "fr": "Retour haptique optionnel au toucher sur la carte.",
+    "it": "Feedback aptico opzionale al tocco sulla scheda.",
+    "nl": "Optionele haptische feedback bij tikken op de kaart."
   },
   {
     "es": "__H__:Respuesta haptica opcional para clicks y selecciones.",
     "en": "Optional haptic feedback for clicks and selections.",
-    "de": "Optional haptic feedback for clicks and selections.",
-    "fr": "Optional haptic feedback for clicks and selections.",
-    "it": "Optional haptic feedback for clicks and selections.",
-    "nl": "Optional haptic feedback for clicks and selections."
+    "de": "Optionales haptisches Feedback für Klicks und Auswahl.",
+    "fr": "Retour haptique optionnel pour les clics et les sélections.",
+    "it": "Feedback aptico opzionale per clic e selezioni.",
+    "nl": "Optionele haptische feedback voor klikken en selectie."
   },
   {
     "es": "__H__:Respuesta haptica opcional para dial y controles.",
@@ -6698,42 +6698,42 @@
   {
     "es": "__H__:Respuesta háptica opcional para los controles.",
     "en": "Optional haptic feedback for controls.",
-    "de": "Optional haptic feedback for controls.",
-    "fr": "Optional haptic feedback for controls.",
-    "it": "Optional haptic feedback for controls.",
-    "nl": "Optional haptic feedback for controls."
+    "de": "Optionales haptisches Feedback für Steuerelemente.",
+    "fr": "Retour haptique optionnel pour les contrôles.",
+    "it": "Feedback aptico opzionale per i controlli.",
+    "nl": "Optionele haptische feedback voor bediening."
   },
   {
     "es": "__H__:Respuesta tactil opcional al pulsar acciones.",
     "en": "Optional tactile feedback when tapping actions.",
-    "de": "Optional tactile feedback when tapping actions.",
-    "fr": "Optional tactile feedback when tapping actions.",
-    "it": "Optional tactile feedback when tapping actions.",
-    "nl": "Optional tactile feedback when tapping actions."
+    "de": "Optionales haptisches Feedback beim Tippen auf Aktionen.",
+    "fr": "Retour tactile optionnel lors des actions.",
+    "it": "Feedback tattile opzionale al tocco sulle azioni.",
+    "nl": "Optionele tactiele feedback bij acties."
   },
   {
     "es": "__H__:Respuesta tactil opcional al pulsar nodos o botones.",
     "en": "Optional tactile feedback when tapping nodes or buttons.",
-    "de": "Optional tactile feedback when tapping nodes or buttons.",
-    "fr": "Optional tactile feedback when tapping nodes or buttons.",
-    "it": "Optional tactile feedback when tapping nodes or buttons.",
-    "nl": "Optional tactile feedback when tapping nodes or buttons."
+    "de": "Optionales haptisches Feedback bei Knoten oder Tasten.",
+    "fr": "Retour tactile optionnel sur les nœuds ou boutons.",
+    "it": "Feedback tattile opzionale su nodi o pulsanti.",
+    "nl": "Optionele tactiele feedback bij knopen of knoppen."
   },
   {
     "es": "__H__:Respuesta tactil opcional al tocar la tarjeta.",
     "en": "Optional tactile feedback when tapping the card.",
-    "de": "Optional tactile feedback when tapping the card.",
-    "fr": "Optional tactile feedback when tapping the card.",
-    "it": "Optional tactile feedback when tapping the card.",
-    "nl": "Optional tactile feedback when tapping the card."
+    "de": "Optionales haptisches Feedback beim Tippen auf die Karte.",
+    "fr": "Retour tactile optionnel au toucher sur la carte.",
+    "it": "Feedback tattile opzionale al tocco sulla scheda.",
+    "nl": "Optionele tactiele feedback bij tikken op de kaart."
   },
   {
     "es": "__H__:Respuesta tactil opcional para taps, hover y cambios de serie.",
     "en": "Optional tactile feedback for taps, hover and series changes.",
-    "de": "Optional tactile feedback for taps, hover and series changes.",
-    "fr": "Optional tactile feedback for taps, hover and series changes.",
-    "it": "Optional tactile feedback for taps, hover and series changes.",
-    "nl": "Optional tactile feedback for taps, hover and series changes."
+    "de": "Optionales haptisches Feedback für Tippen, Hover und Serienwechsel.",
+    "fr": "Retour tactile optionnel pour les appuis, le survol et les changements de série.",
+    "it": "Feedback tattile opzionale per tap, hover e cambio serie.",
+    "nl": "Optionele tactiele feedback voor tikken, hover en serie."
   },
   {
     "es": "__H__:Respuesta táctil opcional al interactuar con el dial y los botones.",
@@ -6746,34 +6746,34 @@
   {
     "es": "__H__:Respuesta táctil opcional al tocar la tarjeta.",
     "en": "Optional tactile feedback when tapping the card.",
-    "de": "Optional tactile feedback when tapping the card.",
-    "fr": "Optional tactile feedback when tapping the card.",
-    "it": "Optional tactile feedback when tapping the card.",
-    "nl": "Optional tactile feedback when tapping the card."
+    "de": "Optionales haptisches Feedback beim Tippen auf die Karte.",
+    "fr": "Retour tactile optionnel au toucher sur la carte.",
+    "it": "Feedback tattile opzionale al tocco sulla scheda.",
+    "nl": "Optionele tactiele feedback bij tikken op de kaart."
   },
   {
     "es": "__H__:Respuesta táctil opcional al usar la tarjeta y sus acciones.",
     "en": "Optional tactile feedback when using the card and its actions.",
-    "de": "Optional tactile feedback when using the card and its actions.",
-    "fr": "Optional tactile feedback when using the card and its actions.",
-    "it": "Optional tactile feedback when using the card and its actions.",
-    "nl": "Optional tactile feedback when using the card and its actions."
+    "de": "Optionales haptisches Feedback bei Karte und Aktionen.",
+    "fr": "Retour tactile optionnel lors de l’utilisation de la carte et de ses actions.",
+    "it": "Feedback tattile opzionale usando la scheda e le azioni.",
+    "nl": "Optionele tactiele feedback bij kaart en acties."
   },
   {
     "es": "__H__:Respuesta táctil opcional al usar los controles.",
     "en": "Optional tactile feedback when using controls.",
-    "de": "Optional tactile feedback when using controls.",
-    "fr": "Optional tactile feedback when using controls.",
-    "it": "Optional tactile feedback when using controls.",
-    "nl": "Optional tactile feedback when using controls."
+    "de": "Optionales haptisches Feedback bei Steuerung.",
+    "fr": "Retour tactile optionnel lors de l’utilisation des contrôles.",
+    "it": "Feedback tattile opzionale usando i controlli.",
+    "nl": "Optionele tactiele feedback bij bediening."
   },
   {
     "es": "__H__:Respuesta táctil opcional para los controles del reproductor.",
     "en": "Optional tactile feedback for player controls.",
-    "de": "Optional tactile feedback for player controls.",
-    "fr": "Optional tactile feedback for player controls.",
-    "it": "Optional tactile feedback for player controls.",
-    "nl": "Optional tactile feedback for player controls."
+    "de": "Optionales haptisches Feedback für Player-Steuerung.",
+    "fr": "Retour tactile optionnel pour les contrôles du lecteur.",
+    "it": "Feedback tattile opzionale per i controlli del lettore.",
+    "nl": "Optionele tactiele feedback voor spelerbediening."
   },
   {
     "es": "Automático (perfil Home Assistant)",
@@ -6794,58 +6794,58 @@
   {
     "es": "Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado).",
     "en": "Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado).",
-    "de": "Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado).",
-    "fr": "Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado).",
-    "it": "Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado).",
-    "nl": "Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado)."
+    "de": "Wenn der Text nicht zur Profilsprache passt, wählen Sie Automatisch bei Kartensprache (alte Konfigurationen können Spanisch enthalten).",
+    "fr": "Si le texte ne correspond pas à la langue du profil, choisissez Automatique dans Langue de la carte (les anciennes configs peuvent avoir l’espagnol enregistré).",
+    "it": "Se il testo non coincide con la lingua del profilo, scegli Automatico in Lingua della scheda (le vecchie config possono avere lo spagnolo).",
+    "nl": "Als de tekst niet overeenkomt met de profieltaal, kies Automatisch bij Kaarttaal (oude configs kunnen Spaans bevatten)."
   },
   {
     "es": "__H__:Selectores opcionales para el modo principal y la ventilación.",
     "en": "Optional selectors for main mode and fan.",
-    "de": "Optional selectors for main mode and fan.",
-    "fr": "Optional selectors for main mode and fan.",
-    "it": "Optional selectors for main mode and fan.",
-    "nl": "Optional selectors for main mode and fan."
+    "de": "Optionale Selektoren für Hauptmodus und Lüfter.",
+    "fr": "Sélecteurs optionnels pour le mode principal et le ventilateur.",
+    "it": "Selettori opzionali per modalità principale e ventola.",
+    "nl": "Optionele selecteurs voor hoofdmodus en ventilator."
   },
   {
     "es": "__H__:Sensores y selectores opcionales para enriquecer el estado y los controles.",
     "en": "Optional sensors and selectors to enrich state and controls.",
-    "de": "Optional sensors and selectors to enrich state and controls.",
-    "fr": "Optional sensors and selectors to enrich state and controls.",
-    "it": "Optional sensors and selectors to enrich state and controls.",
-    "nl": "Optional sensors and selectors to enrich state and controls."
+    "de": "Optionale Sensoren und Selektoren für Status und Steuerung.",
+    "fr": "Capteurs et sélecteurs optionnels pour enrichir l’état et les contrôles.",
+    "it": "Sensori e selettori opzionali per arricchire stato e controlli.",
+    "nl": "Optionele sensoren en selecteurs voor status en bediening."
   },
   {
     "es": "__H__:Titulo, enlace al panel de energia y comportamiento general de la tarjeta.",
     "en": "Title, energy panel link and general card behaviour.",
-    "de": "Title, energy panel link and general card behaviour.",
-    "fr": "Title, energy panel link and general card behaviour.",
-    "it": "Title, energy panel link and general card behaviour.",
-    "nl": "Title, energy panel link and general card behaviour."
+    "de": "Titel, Energiepanel-Link und allgemeines Kartenverhalten.",
+    "fr": "Titre, lien vers le panneau énergie et comportement général de la carte.",
+    "it": "Titolo, link pannello energia e comportamento generale.",
+    "nl": "Titel, energiepaneel-link en algemeen kaartgedrag."
   },
   {
     "es": "__H__:Transiciones suaves al encender, apagar, desplegar controles, abrir modos y dar respuesta visual a los botones.",
     "en": "Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback.",
-    "de": "Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback.",
-    "fr": "Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback.",
-    "it": "Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback.",
-    "nl": "Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback."
+    "de": "Sanfte Übergänge beim Ein/Aus, Aufklappen, Modus öffnen und Button-Feedback.",
+    "fr": "Transitions fluides à l’alimentation, au déploiement des contrôles, à l’ouverture des modes et au retour visuel des boutons.",
+    "it": "Transizioni fluide accensione, espansione, apertura modalità e feedback pulsanti.",
+    "nl": "Vloeiende overgangen bij aan/uit, uitklappen, modi en knopfeedback."
   },
   {
     "es": "__H__:Transiciones suaves al encender, apagar, desplegar controles, cambiar entre sliders y dar respuesta visual a los botones.",
-    "en": "Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback..",
-    "de": "Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback..",
-    "fr": "Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback..",
-    "it": "Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback..",
-    "nl": "Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback.."
+    "en": "Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback.",
+    "de": "Sanfte Übergänge beim Ein/Aus, Aufklappen, Slider-Wechsel und Button-Feedback.",
+    "fr": "Transitions fluides à l’alimentation, au déploiement des contrôles, au changement de curseurs et au retour visuel des boutons.",
+    "it": "Transizioni fluide accensione, espansione, slider e feedback pulsanti.",
+    "nl": "Vloeiende overgangen bij aan/uit, uitklappen, sliders en knopfeedback."
   },
   {
     "es": "__H__:Transiciones suaves al encender, apagar, desplegar controles, cambiar paneles y dar respuesta visual a los botones.",
     "en": "Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback.",
-    "de": "Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback.",
-    "fr": "Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback.",
-    "it": "Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback.",
-    "nl": "Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback."
+    "de": "Sanfte Übergänge beim Ein/Aus, Aufklappen, Panelwechsel und Button-Feedback.",
+    "fr": "Transitions fluides à l’alimentation, au déploiement des contrôles, au changement de panneaux et au retour visuel des boutons.",
+    "it": "Transizioni fluide accensione, espansione controlli, pannelli e feedback pulsanti.",
+    "nl": "Vloeiende overgangen bij aan/uit, uitklappen, panelen en knopfeedback."
   },
   {
     "es": "__T__:Acciones rápidas",
@@ -6938,10 +6938,10 @@
   {
     "es": "__T__:Haptics",
     "en": "Haptics",
-    "de": "Haptics",
-    "fr": "Haptics",
-    "it": "Haptics",
-    "nl": "Haptics"
+    "de": "Haptik",
+    "fr": "Haptique",
+    "it": "Aptica",
+    "nl": "Haptiek"
   },
   {
     "es": "__T__:Individuales",
@@ -7056,28 +7056,44 @@
     "nl": "Add popup"
   },
   {
+    "es": "Mostrar tarjeta",
+    "en": "Show card",
+    "de": "Karte anzeigen",
+    "fr": "Afficher la carte",
+    "it": "Mostra scheda",
+    "nl": "Kaart tonen"
+  },
+  {
+    "es": "Layout estrecho",
+    "en": "Narrow layout",
+    "de": "Schmales Layout",
+    "fr": "Disposition étroite",
+    "it": "Layout compatto",
+    "nl": "Smalle lay-out"
+  },
+  {
     "es": "No hay reproductores configurados.",
     "en": "No players configured.",
-    "de": "No players configured.",
-    "fr": "No players configured.",
-    "it": "No players configured.",
-    "nl": "No players configured."
+    "de": "Keine Player konfiguriert.",
+    "fr": "Aucun lecteur configuré.",
+    "it": "Nessun lettore configurato.",
+    "nl": "Geen spelers geconfigureerd."
   },
   {
     "es": "No hay rutas todavia.",
     "en": "No routes yet.",
-    "de": "No routes yet.",
-    "fr": "No routes yet.",
-    "it": "No routes yet.",
-    "nl": "No routes yet."
+    "de": "Noch keine Routen.",
+    "fr": "Aucune route pour le moment.",
+    "it": "Nessuna route ancora.",
+    "nl": "Nog geen routes."
   },
   {
     "es": "Esta ruta no tiene popup todavia.",
     "en": "This route has no popup yet.",
-    "de": "This route has no popup yet.",
-    "fr": "This route has no popup yet.",
-    "it": "This route has no popup yet.",
-    "nl": "This route has no popup yet."
+    "de": "Diese Route hat noch kein Popup.",
+    "fr": "Cette route n’a pas encore de fenêtre contextuelle.",
+    "it": "Questa route non ha ancora popup.",
+    "nl": "Deze route heeft nog geen pop-up."
   },
   {
     "es": "Player",
@@ -7243,7 +7259,7 @@
     "es": "Mostrar etiquetas",
     "en": "Show labels",
     "de": "Anzeigen: labels",
-    "fr": "Afficher labels",
+    "fr": "Afficher les étiquettes",
     "it": "Mostra labels",
     "nl": "Toon labels"
   },
@@ -7714,10 +7730,10 @@
   {
     "es": "Todavía no hay acciones rápidas.",
     "en": "No quick actions yet.",
-    "de": "No quick actions yet.",
-    "fr": "No quick actions yet.",
-    "it": "No quick actions yet.",
-    "nl": "No quick actions yet."
+    "de": "Noch keine Schnellaktionen.",
+    "fr": "Aucune action rapide pour le moment.",
+    "it": "Nessuna azione rapida ancora.",
+    "nl": "Nog geen snelle acties."
   },
   {
     "es": "Añadir acción",
@@ -7826,146 +7842,146 @@
   {
     "es": "Activa o desactiva cabecera, valor grande, leyenda y relleno.",
     "en": "Enable or disable header, large value, legend and fill.",
-    "de": "Enable or disable header, large value, legend and fill.",
-    "fr": "Enable or disable header, large value, legend and fill.",
-    "it": "Enable or disable header, large value, legend and fill.",
-    "nl": "Enable or disable header, large value, legend and fill."
+    "de": "Kopfzeile, großen Wert, Legende und Füllung aktivieren oder deaktivieren.",
+    "fr": "Active ou désactive l’en-tête, la grande valeur, la légende et le remplissage.",
+    "it": "Attiva o disattiva intestazione, valore grande, legenda e riempimento.",
+    "nl": "Kop, grote waarde, legenda en vulling in-/uitschakelen."
   },
   {
     "es": "Activa o desactiva cabecera, valor, leyenda y relleno.",
     "en": "Enable or disable header, value, legend and fill.",
-    "de": "Enable or disable header, value, legend and fill.",
-    "fr": "Enable or disable header, value, legend and fill.",
-    "it": "Enable or disable header, value, legend and fill.",
-    "nl": "Enable or disable header, value, legend and fill."
+    "de": "Kopfzeile, Wert, Legende und Füllung aktivieren oder deaktivieren.",
+    "fr": "Active ou désactive l’en-tête, la valeur, la légende et le remplissage.",
+    "it": "Attiva o disattiva intestazione, valore, legenda e riempimento.",
+    "nl": "Kop, waarde, legenda en vulling in-/uitschakelen."
   },
   {
     "es": "Activa u oculta cada bloque de la tarjeta.",
     "en": "Show or hide each card block.",
     "de": "Anzeigen: or hide each card block.",
-    "fr": "Afficher or hide each card block.",
+    "fr": "Afficher ou masquer chaque bloc de la carte.",
     "it": "Mostra or hide each card block.",
     "nl": "Toon or hide each card block."
   },
   {
     "es": "Ajusta la apertura de paneles, navegador y el rebote de los botones.",
     "en": "Adjust panel opening, browser and button bounce.",
-    "de": "Adjust panel opening, browser and button bounce.",
-    "fr": "Adjust panel opening, browser and button bounce.",
-    "it": "Adjust panel opening, browser and button bounce.",
-    "nl": "Adjust panel opening, browser and button bounce."
+    "de": "Panelöffnung, Browser und Button-Federung anpassen.",
+    "fr": "Ajustez l’ouverture des panneaux, du navigateur et le rebond des boutons.",
+    "it": "Regola apertura pannelli, browser e rimbalzo pulsanti.",
+    "nl": "Paneelopening, browser en knop-veer aanpassen."
   },
   {
     "es": "Ajustes de cabecera, chips y rango visible.",
     "en": "Header, chips and visible range settings.",
-    "de": "Header, chips and visible range settings.",
-    "fr": "Header, chips and visible range settings.",
-    "it": "Header, chips and visible range settings.",
-    "nl": "Header, chips and visible range settings."
+    "de": "Kopfzeile, Chips und sichtbarer Bereich.",
+    "fr": "Réglages de l’en-tête, des puces et de la plage visible.",
+    "it": "Intestazione, chip e intervallo visibile.",
+    "nl": "Kop, chips en zichtbaar bereik."
   },
   {
     "es": "Ajustes visuales base de la tarjeta favorita.",
     "en": "Base visual settings for the favourite card.",
-    "de": "Base visual settings for the favourite card.",
-    "fr": "Base visual settings for the favourite card.",
-    "it": "Base visual settings for the favourite card.",
-    "nl": "Base visual settings for the favourite card."
+    "de": "Grundlegende visuelle Einstellungen für die Favoritenkarte.",
+    "fr": "Réglages visuels de base pour la carte favorite.",
+    "it": "Impostazioni visive di base per la scheda preferita.",
+    "nl": "Basis visuele instellingen voor de favorietenkaart."
   },
   {
     "es": "Ajustes visuales base de la tarjeta y las burbujas.",
     "en": "Base visual settings for the card and bubbles.",
-    "de": "Base visual settings for the card and bubbles.",
-    "fr": "Base visual settings for the card and bubbles.",
-    "it": "Base visual settings for the card and bubbles.",
-    "nl": "Base visual settings for the card and bubbles."
+    "de": "Grundlegende visuelle Einstellungen für Karte und Blasen.",
+    "fr": "Réglages visuels de base pour la carte et les bulles.",
+    "it": "Impostazioni visive di base per scheda e bolle.",
+    "nl": "Basis visuele instellingen voor kaart en bellen."
   },
   {
     "es": "Ajustes visuales base de la tarjeta.",
     "en": "Base visual settings for the card.",
-    "de": "Base visual settings for the card.",
-    "fr": "Base visual settings for the card.",
-    "it": "Base visual settings for the card.",
-    "nl": "Base visual settings for the card."
+    "de": "Grundlegende visuelle Einstellungen für die Karte.",
+    "fr": "Réglages visuels de base pour la carte.",
+    "it": "Impostazioni visive di base per la scheda.",
+    "nl": "Basis visuele instellingen voor de kaart."
   },
   {
     "es": "Ajustes visuales base del mapa y las burbujas.",
     "en": "Base visual settings for the map and bubbles.",
-    "de": "Base visual settings for the map and bubbles.",
-    "fr": "Base visual settings for the map and bubbles.",
-    "it": "Base visual settings for the map and bubbles.",
-    "nl": "Base visual settings for the map and bubbles."
+    "de": "Grundlegende visuelle Einstellungen für Karte und Blasen.",
+    "fr": "Réglages visuels de base pour la carte et les bulles.",
+    "it": "Impostazioni visive di base per mappa e bolle.",
+    "nl": "Basis visuele instellingen voor kaart en bellen."
   },
   {
     "es": "Ajustes visuales básicos del look Nodalia.",
     "en": "Basic visual settings for the Nodalia look.",
-    "de": "Basic visual settings for the Nodalia look.",
-    "fr": "Basic visual settings for the Nodalia look.",
-    "it": "Basic visual settings for the Nodalia look.",
-    "nl": "Basic visual settings for the Nodalia look."
+    "de": "Grundlegende visuelle Einstellungen für den Nodalia-Look.",
+    "fr": "Réglages visuels de base pour le style Nodalia.",
+    "it": "Impostazioni visive di base per il look Nodalia.",
+    "nl": "Basis visuele instellingen voor de Nodalia-stijl."
   },
   {
     "es": "Ajustes visuales de barra, botones, popup y media player.",
     "en": "Visual settings for bar, buttons, popup and media player.",
-    "de": "Visual settings for bar, buttons, popup and media player.",
-    "fr": "Visual settings for bar, buttons, popup and media player.",
-    "it": "Visual settings for bar, buttons, popup and media player.",
-    "nl": "Visual settings for bar, buttons, popup and media player."
+    "de": "Visuelle Einstellungen für Leiste, Tasten, Popup und Media Player.",
+    "fr": "Réglages visuels pour la barre, les boutons, la fenêtre contextuelle et le lecteur média.",
+    "it": "Impostazioni visive per barra, pulsanti, popup e lettore.",
+    "nl": "Visuele instellingen voor balk, knoppen, pop-up en mediaspeler."
   },
   {
     "es": "Ajustes visuales de la card, el icono y el grafico.",
     "en": "Visual settings for the card, icon and chart.",
-    "de": "Visual settings for the card, icon and chart.",
-    "fr": "Visual settings for the card, icon and chart.",
-    "it": "Visual settings for the card, icon and chart.",
-    "nl": "Visual settings for the card, icon and chart."
+    "de": "Visuelle Einstellungen für Karte, Symbol und Diagramm.",
+    "fr": "Réglages visuels pour la carte, l’icône et le graphique.",
+    "it": "Impostazioni visive per scheda, icona e grafico.",
+    "nl": "Visuele instellingen voor kaart, pictogram en grafiek."
   },
   {
     "es": "Ajustes visuales del grafico y el look Nodalia.",
     "en": "Visual settings for the chart and Nodalia look.",
-    "de": "Visual settings for the chart and Nodalia look.",
-    "fr": "Visual settings for the chart and Nodalia look.",
-    "it": "Visual settings for the chart and Nodalia look.",
-    "nl": "Visual settings for the chart and Nodalia look."
+    "de": "Visuelle Einstellungen für Diagramm und Nodalia-Look.",
+    "fr": "Réglages visuels pour le graphique et le style Nodalia.",
+    "it": "Impostazioni visive per grafico e look Nodalia.",
+    "nl": "Visuele instellingen voor grafiek en Nodalia-stijl."
   },
   {
     "es": "Ajustes visuales del look Nodalia y el dial circular.",
     "en": "Visual settings for the Nodalia look and circular dial.",
-    "de": "Visual settings for the Nodalia look and circular dial.",
-    "fr": "Visual settings for the Nodalia look and circular dial.",
-    "it": "Visual settings for the Nodalia look and circular dial.",
-    "nl": "Visual settings for the Nodalia look and circular dial."
+    "de": "Visuelle Einstellungen für Nodalia-Look und Drehregler.",
+    "fr": "Réglages visuels pour le style Nodalia et le cadran circulaire.",
+    "it": "Impostazioni visive per look Nodalia e dial circolare.",
+    "nl": "Visuele instellingen voor Nodalia-stijl en ronde wijzerplaat."
   },
   {
     "es": "Ajustes visuales del reproductor principal y del navegador de medios.",
     "en": "Visual settings for the main player and media browser.",
-    "de": "Visual settings for the main player and media browser.",
-    "fr": "Visual settings for the main player and media browser.",
-    "it": "Visual settings for the main player and media browser.",
-    "nl": "Visual settings for the main player and media browser."
+    "de": "Visuelle Einstellungen für Hauptplayer und Medienbrowser.",
+    "fr": "Réglages visuels pour le lecteur principal et le navigateur multimédia.",
+    "it": "Impostazioni visive per lettore principale e browser media.",
+    "nl": "Visuele instellingen voor hoofdspeler en mediabrowser."
   },
   {
     "es": "Ajustes visuales principales de la tarjeta.",
     "en": "Main visual settings for the card.",
-    "de": "Main visual settings for the card.",
-    "fr": "Main visual settings for the card.",
-    "it": "Main visual settings for the card.",
-    "nl": "Main visual settings for the card."
+    "de": "Hauptvisuelle Einstellungen für die Karte.",
+    "fr": "Réglages visuels principaux de la carte.",
+    "it": "Impostazioni visive principali della scheda.",
+    "nl": "Belangrijkste visuele instellingen voor de kaart."
   },
   {
     "es": "Anade, reordena y personaliza cada entidad mostrada en la grafica.",
     "en": "Add, reorder and customize each entity shown on the chart.",
-    "de": "Add, reorder and customize each entity shown on the chart.",
-    "fr": "Add, reorder and customize each entity shown on the chart.",
-    "it": "Add, reorder and customize each entity shown on the chart.",
-    "nl": "Add, reorder and customize each entity shown on the chart."
+    "de": "Jede Entität im Diagramm hinzufügen, sortieren und anpassen.",
+    "fr": "Ajoutez, réorganisez et personnalisez chaque entité affichée sur le graphique.",
+    "it": "Aggiungi, riordina e personalizza ogni entità nel grafico.",
+    "nl": "Elke entiteit in de grafiek toevoegen, sorteren en aanpassen."
   },
   {
     "es": "Ayuda a compactar el gauge según el espacio disponible en la vista.",
     "en": "Helps compact the gauge based on available space.",
-    "de": "Helps compact the gauge based on available space.",
-    "fr": "Helps compact the gauge based on available space.",
-    "it": "Helps compact the gauge based on available space.",
-    "nl": "Helps compact the gauge based on available space."
+    "de": "Kompaktiert die Gauge je nach Platz.",
+    "fr": "Aide à compacter le jauge selon l’espace disponible.",
+    "it": "Compatta il gauge in base allo spazio.",
+    "nl": "Maakt de gauge compacter naargelang ruimte."
   },
   {
     "es": "Ayuda a compactar la climate card según el espacio disponible en la vista.",
@@ -7978,58 +7994,58 @@
   {
     "es": "Añade, reordena y personaliza cada reproductor visible en la tarjeta.",
     "en": "Add, reorder and customize each player shown on the card.",
-    "de": "Add, reorder and customize each player shown on the card.",
-    "fr": "Add, reorder and customize each player shown on the card.",
-    "it": "Add, reorder and customize each player shown on the card.",
-    "nl": "Add, reorder and customize each player shown on the card."
+    "de": "Jeden Player auf der Karte hinzufügen, sortieren und anpassen.",
+    "fr": "Ajoutez, réorganisez et personnalisez chaque lecteur affiché sur la carte.",
+    "it": "Aggiungi, riordina e personalizza ogni lettore sulla scheda.",
+    "nl": "Elke speler op de kaart toevoegen, sorteren en aanpassen."
   },
   {
     "es": "Añade, reordena y personaliza los destinos de la barra y sus popups.",
     "en": "Add, reorder and customize bar destinations and their popups.",
-    "de": "Add, reorder and customize bar destinations and their popups.",
-    "fr": "Add, reorder and customize bar destinations and their popups.",
-    "it": "Add, reorder and customize bar destinations and their popups.",
-    "nl": "Add, reorder and customize bar destinations and their popups."
+    "de": "Leisten-Ziele und Popups hinzufügen, sortieren und anpassen.",
+    "fr": "Ajoutez, réorganisez et personnalisez les destinations de la barre et leurs fenêtres.",
+    "it": "Aggiungi, riordina e personalizza destinazioni della barra e relativi popup.",
+    "nl": "Bestemmingsbalk en pop-ups toevoegen, sorteren en aanpassen."
   },
   {
     "es": "Botones de armado y desarmado visibles en la tarjeta.",
     "en": "Arm and disarm buttons visible on the card.",
-    "de": "Arm and disarm buttons visible on the card.",
-    "fr": "Arm and disarm buttons visible on the card.",
-    "it": "Arm and disarm buttons visible on the card.",
-    "nl": "Arm and disarm buttons visible on the card."
+    "de": "Scharf-/Unscharf-Schaltflächen auf der Karte.",
+    "fr": "Boutons d’armement et de désarmement visibles sur la carte.",
+    "it": "Pulsanti inserimento/disinserimento visibili sulla scheda.",
+    "nl": "Zichtbare in-/uitschakelknoppen op de kaart."
   },
   {
     "es": "Botones secundarios con icono para alternar, abrir más información o llamar un servicio.",
     "en": "Secondary icon buttons to toggle, open more info or call a service.",
-    "de": "Secondary icon buttons to toggle, open more info or call a service.",
-    "fr": "Secondary icon buttons to toggle, open more info or call a service.",
-    "it": "Secondary icon buttons to toggle, open more info or call a service.",
-    "nl": "Secondary icon buttons to toggle, open more info or call a service."
+    "de": "Sekundäre Symboltasten zum Umschalten, Infos oder Service.",
+    "fr": "Boutons d’icônes secondaires pour basculer, ouvrir les infos ou appeler un service.",
+    "it": "Pulsanti icona secondari per toggle, info o servizio.",
+    "nl": "Secundaire pictogramknoppen voor toggle, info of service."
   },
   {
     "es": "Configura titulo, entidades y rango visible de la grafica.",
     "en": "Configure title, entities and visible chart range.",
-    "de": "Configure title, entities and visible chart range.",
-    "fr": "Configure title, entities and visible chart range.",
-    "it": "Configure title, entities and visible chart range.",
-    "nl": "Configure title, entities and visible chart range."
+    "de": "Titel, Entitäten und sichtbaren Diagrammbereich konfigurieren.",
+    "fr": "Configurez le titre, les entités et la plage visible du graphique.",
+    "it": "Configura titolo, entità e intervallo visibile del grafico.",
+    "nl": "Titel, entiteiten en zichtbaar grafiekbereik configureren."
   },
   {
     "es": "Controla la entrada del tooltip y el rebote visual de los chips.",
     "en": "Controls tooltip entrance and visual chip bounce.",
-    "de": "Controls tooltip entrance and visual chip bounce.",
-    "fr": "Controls tooltip entrance and visual chip bounce.",
-    "it": "Controls tooltip entrance and visual chip bounce.",
-    "nl": "Controls tooltip entrance and visual chip bounce."
+    "de": "Tooltip-Eingang und Chip-Federung steuern.",
+    "fr": "Contrôle l’entrée du tooltip et le rebond visuel des puces.",
+    "it": "Ingresso tooltip e rimbalzo chip.",
+    "nl": "Tooltip en chip-animatie regelen."
   },
   {
     "es": "Controla la transición del dial, la entrada del contenido y el rebote al tocar la tarjeta.",
     "en": "Controls dial transition, content entrance and tap bounce.",
-    "de": "Controls dial transition, content entrance and tap bounce.",
-    "fr": "Controls dial transition, content entrance and tap bounce.",
-    "it": "Controls dial transition, content entrance and tap bounce.",
-    "nl": "Controls dial transition, content entrance and tap bounce."
+    "de": "Steuert Drehregler-Übergang, Inhaltseingang und Tap-Federung.",
+    "fr": "Contrôle la transition du cadran, l’entrée du contenu et le rebond au toucher.",
+    "it": "Controlla transizione dial, ingresso contenuto e rimbalzo tocco.",
+    "nl": "Regelt draaiknop-overgang, inhoud en tik-veer."
   },
   {
     "es": "Controla la transición del dial, la entrada del contenido y el rebote de los botones.",
@@ -8042,26 +8058,26 @@
   {
     "es": "Controla la visualizacion de lineas sin consumo y la velocidad de animacion.",
     "en": "Controls display of zero-consumption lines and animation speed.",
-    "de": "Controls display of zero-consumption lines and animation speed.",
-    "fr": "Controls display of zero-consumption lines and animation speed.",
-    "it": "Controls display of zero-consumption lines and animation speed.",
-    "nl": "Controls display of zero-consumption lines and animation speed."
+    "de": "Nullverbrauchslinien und Animationsgeschwindigkeit steuern.",
+    "fr": "Contrôle l’affichage des lignes à zéro et la vitesse d’animation.",
+    "it": "Visualizza linee a zero consumo e velocità animazione.",
+    "nl": "Nul-lijnen en animatiesnelheid regelen."
   },
   {
     "es": "Controla las lineas a cero y la velocidad del flujo.",
     "en": "Controls zero lines and flow speed.",
-    "de": "Controls zero lines and flow speed.",
-    "fr": "Controls zero lines and flow speed.",
-    "it": "Controls zero lines and flow speed.",
-    "nl": "Controls zero lines and flow speed."
+    "de": "Null-Linien und Flussgeschwindigkeit steuern.",
+    "fr": "Contrôle les lignes à zéro et la vitesse du flux.",
+    "it": "Linee a zero e velocità del flusso.",
+    "nl": "Nul-lijnen en stroomsnelheid."
   },
   {
     "es": "Controla transiciones de barra, popup, media player y respuestas visuales.",
-    "en": "Controla transiciones de barra, popup, media player y respuestas visuales.",
-    "de": "Controla transiciones de barra, popup, media player y respuestas visuales.",
-    "fr": "Controla transiciones de barra, popup, media player y respuestas visuales.",
-    "it": "Controla transiciones de barra, popup, media player y respuestas visuales.",
-    "nl": "Controla transiciones de barra, popup, media player y respuestas visuales."
+    "en": "Controls transitions for bar, popup, media player and visual feedback.",
+    "de": "Steuert Übergänge für Leiste, Popup, Media Player und visuelles Feedback.",
+    "fr": "Contrôle les transitions de la barre, du popup, du lecteur média et le retour visuel.",
+    "it": "Controlla transizioni barra, popup, lettore e feedback visivo.",
+    "nl": "Regelt overgangen voor balk, pop-up, mediaspeler en visuele feedback."
   },
   {
     "es": "Elige la informacion y los controles visibles.",
@@ -8082,266 +8098,266 @@
   {
     "es": "Entidad del robot y fuente principal del mapa.",
     "en": "Robot entity and main map source.",
-    "de": "Robot entity and main map source.",
-    "fr": "Robot entity and main map source.",
-    "it": "Robot entity and main map source.",
-    "nl": "Robot entity and main map source."
+    "de": "Roboter-Entität und Hauptkartenquelle.",
+    "fr": "Entité robot et source principale de la carte.",
+    "it": "Entità robot e sorgente mappa principale.",
+    "nl": "Robotentiteit en hoofdkaartbron."
   },
   {
     "es": "Entidad favorita, nombre visible e icono principal.",
     "en": "Favourite entity, visible name and main icon.",
-    "de": "Favourite entity, visible name and main icon.",
-    "fr": "Favourite entity, visible name and main icon.",
-    "it": "Favourite entity, visible name and main icon.",
-    "nl": "Favourite entity, visible name and main icon."
+    "de": "Favoriten-Entität, sichtbarer Name und Hauptsymbol.",
+    "fr": "Entité favorite, nom visible et icône principale.",
+    "it": "Entità preferita, nome visibile e icona principale.",
+    "nl": "Favoriete entiteit, zichtbare naam en hoofdpictogram."
   },
   {
     "es": "Entidad meteorologica principal, nombre visible, icono y contenido mostrado.",
     "en": "Main weather entity, visible name, icon and displayed content.",
-    "de": "Main weather entity, visible name, icon and displayed content.",
-    "fr": "Main weather entity, visible name, icon and displayed content.",
-    "it": "Main weather entity, visible name, icon and displayed content.",
-    "nl": "Main weather entity, visible name, icon and displayed content."
+    "de": "Haupt-Wetterentität, sichtbarer Name, Symbol und angezeigter Inhalt.",
+    "fr": "Entité météo principale, nom visible, icône et contenu affiché.",
+    "it": "Entità meteo principale, nome visibile, icona e contenuto.",
+    "nl": "Hoofdweerentiteit, zichtbare naam, pictogram en inhoud."
   },
   {
     "es": "Entidad numérica principal, nombre, icono y rango del gauge.",
     "en": "Main numeric entity, name, icon and gauge range.",
-    "de": "Main numeric entity, name, icon and gauge range.",
-    "fr": "Main numeric entity, name, icon and gauge range.",
-    "it": "Main numeric entity, name, icon and gauge range.",
-    "nl": "Main numeric entity, name, icon and gauge range."
+    "de": "Numerische Hauptentität, Name, Symbol und Messbereich.",
+    "fr": "Entité numérique principale, nom, icône et plage du jauge.",
+    "it": "Entità numerica principale, nome, icona e intervallo gauge.",
+    "nl": "Hoofdnumerieke entiteit, naam, pictogram en bereik."
   },
   {
     "es": "Entidad persona, foto, icono de zona y comportamiento principal de la tarjeta.",
     "en": "Person entity, photo, zone icon and main card behaviour.",
-    "de": "Person entity, photo, zone icon and main card behaviour.",
-    "fr": "Person entity, photo, zone icon and main card behaviour.",
-    "it": "Person entity, photo, zone icon and main card behaviour.",
-    "nl": "Person entity, photo, zone icon and main card behaviour."
+    "de": "Personenentität, Foto, Zonensymbol und Hauptverhalten.",
+    "fr": "Entité personne, photo, icône de zone et comportement principal.",
+    "it": "Entità persona, foto, icona zona e comportamento principale.",
+    "nl": "Persoonentiteit, foto, zonepictogram en hoofdgedrag."
   },
   {
     "es": "Entidad principal y textos visibles.",
     "en": "Main entity and visible texts.",
-    "de": "Main entity and visible texts.",
-    "fr": "Main entity and visible texts.",
-    "it": "Main entity and visible texts.",
-    "nl": "Main entity and visible texts."
+    "de": "Hauptentität und sichtbare Texte.",
+    "fr": "Entité principale et textes visibles.",
+    "it": "Entità principale e testi visibili.",
+    "nl": "Hoofdentiteit en zichtbare teksten."
   },
   {
     "es": "Entidad principal, helper opcional del codigo, icono y comportamiento base de la tarjeta.",
     "en": "Main entity, optional code helper, icon and base card behaviour.",
-    "de": "Main entity, optional code helper, icon and base card behaviour.",
-    "fr": "Main entity, optional code helper, icon and base card behaviour.",
-    "it": "Main entity, optional code helper, icon and base card behaviour.",
-    "nl": "Main entity, optional code helper, icon and base card behaviour."
+    "de": "Hauptentität, optionaler Code-Helfer, Symbol und Grundverhalten.",
+    "fr": "Entité principale, aide code optionnelle, icône et comportement de base.",
+    "it": "Entità principale, helper codice opzionale, icona e comportamento base.",
+    "nl": "Hoofdentiteit, optionele code-helper, pictogram en basisgedrag."
   },
   {
     "es": "Entidad principal, nombre visible e icono base de la tarjeta.",
     "en": "Main entity, visible name and base card icon.",
-    "de": "Main entity, visible name and base card icon.",
-    "fr": "Main entity, visible name and base card icon.",
-    "it": "Main entity, visible name and base card icon.",
-    "nl": "Main entity, visible name and base card icon."
+    "de": "Hauptentität, sichtbarer Name und Basissymbol.",
+    "fr": "Entité principale, nom visible et icône de base de la carte.",
+    "it": "Entità principale, nome visibile e icona base.",
+    "nl": "Hoofdentiteit, zichtbare naam en basispictogram."
   },
   {
     "es": "Entidad principal, nombre visible e icono de la tarjeta.",
     "en": "Main entity, visible name and card icon.",
-    "de": "Main entity, visible name and card icon.",
-    "fr": "Main entity, visible name and card icon.",
-    "it": "Main entity, visible name and card icon.",
-    "nl": "Main entity, visible name and card icon."
+    "de": "Hauptentität, sichtbarer Name und Kartensymbol.",
+    "fr": "Entité principale, nom visible et icône de la carte.",
+    "it": "Entità principale, nome visibile e icona scheda.",
+    "nl": "Hoofdentiteit, zichtbare naam en kaartpictogram."
   },
   {
     "es": "Entidad principal, nombre visible y comportamiento al tocar la tarjeta.",
     "en": "Main entity, visible name and tap behaviour.",
-    "de": "Main entity, visible name and tap behaviour.",
-    "fr": "Main entity, visible name and tap behaviour.",
-    "it": "Main entity, visible name and tap behaviour.",
-    "nl": "Main entity, visible name and tap behaviour."
+    "de": "Hauptentität, sichtbarer Name und Tap-Verhalten.",
+    "fr": "Entité principale, nom visible et comportement au toucher.",
+    "it": "Entità principale, nome visibile e comportamento al tocco.",
+    "nl": "Hoofdentiteit, zichtbare naam en tikgedrag."
   },
   {
     "es": "Entrada suave de la tarjeta, paneles y respuesta visual al pulsar controles.",
     "en": "Smooth card entrance, panels and visual feedback when pressing controls.",
-    "de": "Smooth card entrance, panels and visual feedback when pressing controls.",
-    "fr": "Smooth card entrance, panels and visual feedback when pressing controls.",
-    "it": "Smooth card entrance, panels and visual feedback when pressing controls.",
-    "nl": "Smooth card entrance, panels and visual feedback when pressing controls."
+    "de": "Sanfter Karteneingang, Panels und visuelles Feedback bei Bedienung.",
+    "fr": "Entrée fluide de la carte, panneaux et retour visuel en pressant les contrôles.",
+    "it": "Entrata fluida scheda, pannelli e feedback visivo ai controlli.",
+    "nl": "Vloeiende kaartingang, panelen en visuele feedback."
   },
   {
     "es": "Entrada suave del contenido y pequeno rebote al pulsar acciones e icono.",
     "en": "Smooth content entrance and small bounce when tapping actions and icon.",
-    "de": "Smooth content entrance and small bounce when tapping actions and icon.",
-    "fr": "Smooth content entrance and small bounce when tapping actions and icon.",
-    "it": "Smooth content entrance and small bounce when tapping actions and icon.",
-    "nl": "Smooth content entrance and small bounce when tapping actions and icon."
+    "de": "Sanfter Inhaltseingang und kleine Feder bei Aktionen und Symbol.",
+    "fr": "Entrée fluide du contenu et petit rebond sur les actions et l’icône.",
+    "it": "Ingresso fluido e piccolo rimbalzo su azioni e icona.",
+    "nl": "Vloeiende inhoud en kleine veer op acties en pictogram."
   },
   {
     "es": "Entrada suave del contenido y pequeno rebote al pulsar la tarjeta.",
     "en": "Smooth content entrance and small bounce when tapping the card.",
-    "de": "Smooth content entrance and small bounce when tapping the card.",
-    "fr": "Smooth content entrance and small bounce when tapping the card.",
-    "it": "Smooth content entrance and small bounce when tapping the card.",
-    "nl": "Smooth content entrance and small bounce when tapping the card."
+    "de": "Sanfter Inhaltseingang und kleine Feder beim Tippen.",
+    "fr": "Entrée fluide du contenu et petit rebond au toucher sur la carte.",
+    "it": "Ingresso fluido e piccolo rimbalzo al tocco.",
+    "nl": "Vloeiende inhoud en kleine tik-animatie."
   },
   {
     "es": "Entrada suave del contenido y pequeño rebote al pulsar la tarjeta o sus acciones.",
     "en": "Smooth content entrance and small bounce when tapping the card or its actions.",
-    "de": "Smooth content entrance and small bounce when tapping the card or its actions.",
-    "fr": "Smooth content entrance and small bounce when tapping the card or its actions.",
-    "it": "Smooth content entrance and small bounce when tapping the card or its actions.",
-    "nl": "Smooth content entrance and small bounce when tapping the card or its actions."
+    "de": "Sanfter Inhaltseingang und kleine Feder bei Karte oder Aktionen.",
+    "fr": "Entrée fluide du contenu et petit rebond au toucher sur la carte ou ses actions.",
+    "it": "Ingresso fluido e piccolo rimbalzo su scheda o azioni.",
+    "nl": "Vloeiende inhoud en kleine veer op kaart of acties."
   },
   {
     "es": "Entrada suave del contenido y rebote ligero al pulsar la tarjeta.",
     "en": "Smooth content entrance and light bounce when tapping the card.",
-    "de": "Smooth content entrance and light bounce when tapping the card.",
-    "fr": "Smooth content entrance and light bounce when tapping the card.",
-    "it": "Smooth content entrance and light bounce when tapping the card.",
-    "nl": "Smooth content entrance and light bounce when tapping the card."
+    "de": "Sanfter Inhaltseingang und leichter Feder-Tap.",
+    "fr": "Entrée fluide du contenu et léger rebond au toucher sur la carte.",
+    "it": "Ingresso fluido e leggero rimbalzo al tocco.",
+    "nl": "Vloeiende inhoud en lichte tik-animatie."
   },
   {
     "es": "Entrada suave del flujo y rebote al pulsar nodos o acciones.",
     "en": "Smooth flow entrance and bounce when tapping nodes or actions.",
-    "de": "Smooth flow entrance and bounce when tapping nodes or actions.",
-    "fr": "Smooth flow entrance and bounce when tapping nodes or actions.",
-    "it": "Smooth flow entrance and bounce when tapping nodes or actions.",
-    "nl": "Smooth flow entrance and bounce when tapping nodes or actions."
+    "de": "Sanfter Flusseingang und Feder bei Knoten oder Aktionen.",
+    "fr": "Entrée fluide du flux et rebond au toucher sur les nœuds ou actions.",
+    "it": "Ingresso fluido del flusso e rimbalzo su nodi o azioni.",
+    "nl": "Vloeiende stroom en veer bij knopen of acties."
   },
   {
     "es": "Estado visible, chips adicionales, decimales de los valores y comportamiento en modo compacto.",
     "en": "Visible state, extra chips, value decimals and compact mode behaviour.",
-    "de": "Visible state, extra chips, value decimals and compact mode behaviour.",
-    "fr": "Visible state, extra chips, value decimals and compact mode behaviour.",
-    "it": "Visible state, extra chips, value decimals and compact mode behaviour.",
-    "nl": "Visible state, extra chips, value decimals and compact mode behaviour."
+    "de": "Sichtbarer Status, Extra-Chips, Dezimalstellen und Kompaktmodus.",
+    "fr": "État visible, puces supplémentaires, décimales et comportement en mode compact.",
+    "it": "Stato visibile, chip extra, decimali e modalità compatta.",
+    "nl": "Zichtbare status, extra chips, decimalen en compacte modus."
   },
   {
     "es": "Feedback visual para botones y paneles del robot.",
     "en": "Visual feedback for robot buttons and panels.",
-    "de": "Visual feedback for robot buttons and panels.",
-    "fr": "Visual feedback for robot buttons and panels.",
-    "it": "Visual feedback for robot buttons and panels.",
-    "nl": "Visual feedback for robot buttons and panels."
+    "de": "Visuelles Feedback für Roboter-Tasten und Panels.",
+    "fr": "Retour visuel pour les boutons et panneaux du robot.",
+    "it": "Feedback visivo per pulsanti e pannelli robot.",
+    "nl": "Visuele feedback voor robotknoppen en panelen."
   },
   {
     "es": "Ideal si quieres usarlo fijo arriba o abajo del dashboard.",
     "en": "Ideal if you want it fixed at the top or bottom of the dashboard.",
-    "de": "Ideal if you want it fixed at the top or bottom of the dashboard.",
-    "fr": "Ideal if you want it fixed at the top or bottom of the dashboard.",
-    "it": "Ideal if you want it fixed at the top or bottom of the dashboard.",
-    "nl": "Ideal if you want it fixed at the top or bottom of the dashboard."
+    "de": "Ideal zum Fixieren oben oder unten im Dashboard.",
+    "fr": "Idéal pour une barre fixe en haut ou en bas du tableau de bord.",
+    "it": "Ideale se vuoi fissarlo in alto o in basso.",
+    "nl": "Handig om vast te pinnen boven of onderaan."
   },
   {
     "es": "Nombre, icono, rango visible y comportamiento basico de la grafica.",
     "en": "Name, icon, visible range and basic chart behaviour.",
-    "de": "Name, icon, visible range and basic chart behaviour.",
-    "fr": "Name, icon, visible range and basic chart behaviour.",
-    "it": "Name, icon, visible range and basic chart behaviour.",
-    "nl": "Name, icon, visible range and basic chart behaviour."
+    "de": "Name, Symbol, sichtbarer Bereich und Basisdiagrammverhalten.",
+    "fr": "Nom, icône, plage visible et comportement de base du graphique.",
+    "it": "Nome, icona, intervallo visibile e comportamento grafico base.",
+    "nl": "Naam, pictogram, zichtbaar bereik en basisgrafiekgedrag."
   },
   {
     "es": "Opciones base de la barra, layout y visibilidad general.",
     "en": "Base bar options, layout and general visibility.",
-    "de": "Base bar options, layout and general visibility.",
-    "fr": "Base bar options, layout and general visibility.",
-    "it": "Base bar options, layout and general visibility.",
-    "nl": "Base bar options, layout and general visibility."
+    "de": "Grundoptionen der Leiste, Layout und allgemeine Sichtbarkeit.",
+    "fr": "Options de base de la barre, mise en page et visibilité générale.",
+    "it": "Opzioni base della barra, layout e visibilità generale.",
+    "nl": "Basisopties balk, lay-out en algemene zichtbaarheid."
   },
   {
     "es": "Opciones extra si la entidad es un panel de alarma.",
     "en": "Extra options if the entity is an alarm panel.",
-    "de": "Extra options if the entity is an alarm panel.",
-    "fr": "Extra options if the entity is an alarm panel.",
-    "it": "Extra options if the entity is an alarm panel.",
-    "nl": "Extra options if the entity is an alarm panel."
+    "de": "Zusätzliche Optionen für Alarmfelder.",
+    "fr": "Options supplémentaires si l’entité est un panneau d’alarme.",
+    "it": "Opzioni extra se l’entità è un pannello allarme.",
+    "nl": "Extra opties voor alarmpaneel-entiteiten."
   },
   {
     "es": "Opciones generales del reproductor integrado y lista de players visibles.",
     "en": "General options for the embedded player and visible player list.",
-    "de": "General options for the embedded player and visible player list.",
-    "fr": "General options for the embedded player and visible player list.",
-    "it": "General options for the embedded player and visible player list.",
-    "nl": "General options for the embedded player and visible player list."
+    "de": "Allgemeine Optionen für eingebetteten Player und sichtbare Player-Liste.",
+    "fr": "Options générales du lecteur intégré et liste des lecteurs visibles.",
+    "it": "Opzioni generali del lettore incorporato e elenco lettori.",
+    "nl": "Algemene opties voor ingesloten speler en zichtbare spelerslijst."
   },
   {
     "es": "Opciones generales del reproductor y cuándo debe mostrarse la tarjeta.",
     "en": "General player options and when the card should be shown.",
-    "de": "General player options and when the card should be shown.",
-    "fr": "General player options and when the card should be shown.",
-    "it": "General player options and when the card should be shown.",
-    "nl": "General player options and when the card should be shown."
+    "de": "Allgemeine Player-Optionen und wann die Karte angezeigt wird.",
+    "fr": "Options générales du lecteur et affichage de la carte.",
+    "it": "Opzioni generali del lettore e quando mostrare la scheda.",
+    "nl": "Algemene speleropties en wanneer de kaart wordt getoond."
   },
   {
     "es": "Personaliza el look Nodalia de la climate card, el dial y los controles.",
     "en": "Customize the Nodalia look for the climate card, dial and controls.",
-    "de": "Passe das Nodalia-Erscheinungsbild für die Thermostat-Karte, den Drehregler und die Steuerung an.",
+    "de": "Passe das Nodalia-Erscheinungsbild für Thermostat, Drehregler und Steuerung an.",
     "fr": "Personnalisez le rendu Nodalia de la carte climat, du cadran et des contrôles.",
-    "it": "Personalizza l’aspetto Nodalia della climate card, del dial e dei controlli.",
-    "nl": "Pas de Nodalia-stijl aan voor de thermostaatkaart, draaiknop en bediening."
+    "it": "Personalizza look Nodalia per climate card, dial e controlli.",
+    "nl": "Pas Nodalia-stijl aan voor thermostaat, wijzerplaat en bediening."
   },
   {
     "es": "Personaliza el look Nodalia, el dial circular, la nueva burbuja del thumb y la escala de tinte del gauge.",
     "en": "Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale.",
-    "de": "Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale.",
-    "fr": "Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale.",
-    "it": "Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale.",
-    "nl": "Customize the Nodalia look, circular dial, new thumb bubble and gauge tint scale."
+    "de": "Nodalia-Look, Drehregler, Thumb-Blase und Gauge-Tönung anpassen.",
+    "fr": "Personnalisez le rendu Nodalia, le cadran circulaire, la bulle du curseur et l’échelle de teinte.",
+    "it": "Personalizza look Nodalia, dial circolare, bolla thumb e scala tinta gauge.",
+    "nl": "Nodalia-stijl, draaiknop, thumb-bel en tintschaal aanpassen."
   },
   {
     "es": "Presentación compacta y elementos visibles dentro de la tarjeta.",
     "en": "Compact layout and visible elements inside the card.",
-    "de": "Compact layout and visible elements inside the card.",
-    "fr": "Compact layout and visible elements inside the card.",
-    "it": "Compact layout and visible elements inside the card.",
-    "nl": "Compact layout and visible elements inside the card."
+    "de": "Kompaktes Layout und sichtbare Elemente in der Karte.",
+    "fr": "Mise en page compacte et éléments visibles dans la carte.",
+    "it": "Layout compatto ed elementi visibili nella scheda.",
+    "nl": "Compacte lay-out en zichtbare elementen op de kaart."
   },
   {
     "es": "Que elementos quieres mantener siempre visibles.",
     "en": "Which elements you want to keep always visible.",
-    "de": "Which elements you want to keep always visible.",
-    "fr": "Which elements you want to keep always visible.",
-    "it": "Which elements you want to keep always visible.",
-    "nl": "Which elements you want to keep always visible."
+    "de": "Welche Elemente immer sichtbar bleiben.",
+    "fr": "Quels éléments garder toujours visibles.",
+    "it": "Quali elementi tenere sempre visibili.",
+    "nl": "Welke elementen altijd zichtbaar houden."
   },
   {
     "es": "Qué bloques quieres mostrar dentro de la tarjeta.",
     "en": "Which blocks you want to show inside the card.",
-    "de": "Which blocks you want to show inside the card.",
-    "fr": "Which blocks you want to show inside the card.",
-    "it": "Which blocks you want to show inside the card.",
-    "nl": "Which blocks you want to show inside the card."
+    "de": "Welche Blöcke in der Karte angezeigt werden.",
+    "fr": "Quels blocs afficher dans la carte.",
+    "it": "Quali blocchi mostrare nella scheda.",
+    "nl": "Welke blokken op de kaart tonen."
   },
   {
     "es": "Qué elementos quieres mostrar dentro de la tarjeta.",
     "en": "Which elements you want to show inside the card.",
-    "de": "Which elements you want to show inside the card.",
-    "fr": "Which elements you want to show inside the card.",
-    "it": "Which elements you want to show inside the card.",
-    "nl": "Which elements you want to show inside the card."
+    "de": "Welche Elemente in der Karte angezeigt werden.",
+    "fr": "Quels éléments afficher dans la carte.",
+    "it": "Quali elementi mostrare nella scheda.",
+    "nl": "Welke elementen op de kaart tonen."
   },
   {
     "es": "Qué hace la tarjeta cuando la tocas.",
     "en": "What the card does when you tap it.",
-    "de": "What the card does when you tap it.",
-    "fr": "What the card does when you tap it.",
-    "it": "What the card does when you tap it.",
-    "nl": "What the card does when you tap it."
+    "de": "Was die Karte beim Tippen tut.",
+    "fr": "Ce que fait la carte lorsque vous la touchez.",
+    "it": "Cosa fa la scheda al tocco.",
+    "nl": "Wat de kaart doet bij tikken."
   },
   {
     "es": "Respuesta haptica opcional al tocar la tarjeta.",
     "en": "Optional haptic feedback when tapping the card.",
-    "de": "Optional haptic feedback when tapping the card.",
-    "fr": "Optional haptic feedback when tapping the card.",
-    "it": "Optional haptic feedback when tapping the card.",
-    "nl": "Optional haptic feedback when tapping the card."
+    "de": "Optionales haptisches Feedback beim Tippen auf die Karte.",
+    "fr": "Retour haptique optionnel au toucher sur la carte.",
+    "it": "Feedback aptico opzionale al tocco sulla scheda.",
+    "nl": "Optionele haptische feedback bij tikken op de kaart."
   },
   {
     "es": "Respuesta haptica opcional para clicks y selecciones.",
     "en": "Optional haptic feedback for clicks and selections.",
-    "de": "Optional haptic feedback for clicks and selections.",
-    "fr": "Optional haptic feedback for clicks and selections.",
-    "it": "Optional haptic feedback for clicks and selections.",
-    "nl": "Optional haptic feedback for clicks and selections."
+    "de": "Optionales haptisches Feedback für Klicks und Auswahl.",
+    "fr": "Retour haptique optionnel pour les clics et les sélections.",
+    "it": "Feedback aptico opzionale per clic e selezioni.",
+    "nl": "Optionele haptische feedback voor klikken en selectie."
   },
   {
     "es": "Respuesta haptica opcional para dial y controles.",
@@ -8354,42 +8370,42 @@
   {
     "es": "Respuesta háptica opcional para los controles.",
     "en": "Optional haptic feedback for controls.",
-    "de": "Optional haptic feedback for controls.",
-    "fr": "Optional haptic feedback for controls.",
-    "it": "Optional haptic feedback for controls.",
-    "nl": "Optional haptic feedback for controls."
+    "de": "Optionales haptisches Feedback für Steuerelemente.",
+    "fr": "Retour haptique optionnel pour les contrôles.",
+    "it": "Feedback aptico opzionale per i controlli.",
+    "nl": "Optionele haptische feedback voor bediening."
   },
   {
     "es": "Respuesta tactil opcional al pulsar acciones.",
     "en": "Optional tactile feedback when tapping actions.",
-    "de": "Optional tactile feedback when tapping actions.",
-    "fr": "Optional tactile feedback when tapping actions.",
-    "it": "Optional tactile feedback when tapping actions.",
-    "nl": "Optional tactile feedback when tapping actions."
+    "de": "Optionales haptisches Feedback beim Tippen auf Aktionen.",
+    "fr": "Retour tactile optionnel lors des actions.",
+    "it": "Feedback tattile opzionale al tocco sulle azioni.",
+    "nl": "Optionele tactiele feedback bij acties."
   },
   {
     "es": "Respuesta tactil opcional al pulsar nodos o botones.",
     "en": "Optional tactile feedback when tapping nodes or buttons.",
-    "de": "Optional tactile feedback when tapping nodes or buttons.",
-    "fr": "Optional tactile feedback when tapping nodes or buttons.",
-    "it": "Optional tactile feedback when tapping nodes or buttons.",
-    "nl": "Optional tactile feedback when tapping nodes or buttons."
+    "de": "Optionales haptisches Feedback bei Knoten oder Tasten.",
+    "fr": "Retour tactile optionnel sur les nœuds ou boutons.",
+    "it": "Feedback tattile opzionale su nodi o pulsanti.",
+    "nl": "Optionele tactiele feedback bij knopen of knoppen."
   },
   {
     "es": "Respuesta tactil opcional al tocar la tarjeta.",
     "en": "Optional tactile feedback when tapping the card.",
-    "de": "Optional tactile feedback when tapping the card.",
-    "fr": "Optional tactile feedback when tapping the card.",
-    "it": "Optional tactile feedback when tapping the card.",
-    "nl": "Optional tactile feedback when tapping the card."
+    "de": "Optionales haptisches Feedback beim Tippen auf die Karte.",
+    "fr": "Retour tactile optionnel au toucher sur la carte.",
+    "it": "Feedback tattile opzionale al tocco sulla scheda.",
+    "nl": "Optionele tactiele feedback bij tikken op de kaart."
   },
   {
     "es": "Respuesta tactil opcional para taps, hover y cambios de serie.",
     "en": "Optional tactile feedback for taps, hover and series changes.",
-    "de": "Optional tactile feedback for taps, hover and series changes.",
-    "fr": "Optional tactile feedback for taps, hover and series changes.",
-    "it": "Optional tactile feedback for taps, hover and series changes.",
-    "nl": "Optional tactile feedback for taps, hover and series changes."
+    "de": "Optionales haptisches Feedback für Tippen, Hover und Serienwechsel.",
+    "fr": "Retour tactile optionnel pour les appuis, le survol et les changements de série.",
+    "it": "Feedback tattile opzionale per tap, hover e cambio serie.",
+    "nl": "Optionele tactiele feedback voor tikken, hover en serie."
   },
   {
     "es": "Respuesta táctil opcional al interactuar con el dial y los botones.",
@@ -8402,82 +8418,82 @@
   {
     "es": "Respuesta táctil opcional al tocar la tarjeta.",
     "en": "Optional tactile feedback when tapping the card.",
-    "de": "Optional tactile feedback when tapping the card.",
-    "fr": "Optional tactile feedback when tapping the card.",
-    "it": "Optional tactile feedback when tapping the card.",
-    "nl": "Optional tactile feedback when tapping the card."
+    "de": "Optionales haptisches Feedback beim Tippen auf die Karte.",
+    "fr": "Retour tactile optionnel au toucher sur la carte.",
+    "it": "Feedback tattile opzionale al tocco sulla scheda.",
+    "nl": "Optionele tactiele feedback bij tikken op de kaart."
   },
   {
     "es": "Respuesta táctil opcional al usar la tarjeta y sus acciones.",
     "en": "Optional tactile feedback when using the card and its actions.",
-    "de": "Optional tactile feedback when using the card and its actions.",
-    "fr": "Optional tactile feedback when using the card and its actions.",
-    "it": "Optional tactile feedback when using the card and its actions.",
-    "nl": "Optional tactile feedback when using the card and its actions."
+    "de": "Optionales haptisches Feedback bei Karte und Aktionen.",
+    "fr": "Retour tactile optionnel lors de l’utilisation de la carte et de ses actions.",
+    "it": "Feedback tattile opzionale usando la scheda e le azioni.",
+    "nl": "Optionele tactiele feedback bij kaart en acties."
   },
   {
     "es": "Respuesta táctil opcional al usar los controles.",
     "en": "Optional tactile feedback when using controls.",
-    "de": "Optional tactile feedback when using controls.",
-    "fr": "Optional tactile feedback when using controls.",
-    "it": "Optional tactile feedback when using controls.",
-    "nl": "Optional tactile feedback when using controls."
+    "de": "Optionales haptisches Feedback bei Steuerung.",
+    "fr": "Retour tactile optionnel lors de l’utilisation des contrôles.",
+    "it": "Feedback tattile opzionale usando i controlli.",
+    "nl": "Optionele tactiele feedback bij bediening."
   },
   {
     "es": "Respuesta táctil opcional para los controles del reproductor.",
     "en": "Optional tactile feedback for player controls.",
-    "de": "Optional tactile feedback for player controls.",
-    "fr": "Optional tactile feedback for player controls.",
-    "it": "Optional tactile feedback for player controls.",
-    "nl": "Optional tactile feedback for player controls."
+    "de": "Optionales haptisches Feedback für Player-Steuerung.",
+    "fr": "Retour tactile optionnel pour les contrôles du lecteur.",
+    "it": "Feedback tattile opzionale per i controlli del lettore.",
+    "nl": "Optionele tactiele feedback voor spelerbediening."
   },
   {
     "es": "Selectores opcionales para el modo principal y la ventilación.",
     "en": "Optional selectors for main mode and fan.",
-    "de": "Optional selectors for main mode and fan.",
-    "fr": "Optional selectors for main mode and fan.",
-    "it": "Optional selectors for main mode and fan.",
-    "nl": "Optional selectors for main mode and fan."
+    "de": "Optionale Selektoren für Hauptmodus und Lüfter.",
+    "fr": "Sélecteurs optionnels pour le mode principal et le ventilateur.",
+    "it": "Selettori opzionali per modalità principale e ventola.",
+    "nl": "Optionele selecteurs voor hoofdmodus en ventilator."
   },
   {
     "es": "Sensores y selectores opcionales para enriquecer el estado y los controles.",
     "en": "Optional sensors and selectors to enrich state and controls.",
-    "de": "Optional sensors and selectors to enrich state and controls.",
-    "fr": "Optional sensors and selectors to enrich state and controls.",
-    "it": "Optional sensors and selectors to enrich state and controls.",
-    "nl": "Optional sensors and selectors to enrich state and controls."
+    "de": "Optionale Sensoren und Selektoren für Status und Steuerung.",
+    "fr": "Capteurs et sélecteurs optionnels pour enrichir l’état et les contrôles.",
+    "it": "Sensori e selettori opzionali per arricchire stato e controlli.",
+    "nl": "Optionele sensoren en selecteurs voor status en bediening."
   },
   {
     "es": "Titulo, enlace al panel de energia y comportamiento general de la tarjeta.",
     "en": "Title, energy panel link and general card behaviour.",
-    "de": "Title, energy panel link and general card behaviour.",
-    "fr": "Title, energy panel link and general card behaviour.",
-    "it": "Title, energy panel link and general card behaviour.",
-    "nl": "Title, energy panel link and general card behaviour."
+    "de": "Titel, Energiepanel-Link und allgemeines Kartenverhalten.",
+    "fr": "Titre, lien vers le panneau énergie et comportement général de la carte.",
+    "it": "Titolo, link pannello energia e comportamento generale.",
+    "nl": "Titel, energiepaneel-link en algemeen kaartgedrag."
   },
   {
     "es": "Transiciones suaves al encender, apagar, desplegar controles, abrir modos y dar respuesta visual a los botones.",
     "en": "Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback.",
-    "de": "Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback.",
-    "fr": "Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback.",
-    "it": "Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback.",
-    "nl": "Smooth transitions when powering on/off, expanding controls, opening modes and visual button feedback."
+    "de": "Sanfte Übergänge beim Ein/Aus, Aufklappen, Modus öffnen und Button-Feedback.",
+    "fr": "Transitions fluides à l’alimentation, au déploiement des contrôles, à l’ouverture des modes et au retour visuel des boutons.",
+    "it": "Transizioni fluide accensione, espansione, apertura modalità e feedback pulsanti.",
+    "nl": "Vloeiende overgangen bij aan/uit, uitklappen, modi en knopfeedback."
   },
   {
     "es": "Transiciones suaves al encender, apagar, desplegar controles, cambiar entre sliders y dar respuesta visual a los botones.",
-    "en": "Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback..",
-    "de": "Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback..",
-    "fr": "Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback..",
-    "it": "Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback..",
-    "nl": "Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback.."
+    "en": "Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback.",
+    "de": "Sanfte Übergänge beim Ein/Aus, Aufklappen, Slider-Wechsel und Button-Feedback.",
+    "fr": "Transitions fluides à l’alimentation, au déploiement des contrôles, au changement de curseurs et au retour visuel des boutons.",
+    "it": "Transizioni fluide accensione, espansione, slider e feedback pulsanti.",
+    "nl": "Vloeiende overgangen bij aan/uit, uitklappen, sliders en knopfeedback."
   },
   {
     "es": "Transiciones suaves al encender, apagar, desplegar controles, cambiar paneles y dar respuesta visual a los botones.",
     "en": "Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback.",
-    "de": "Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback.",
-    "fr": "Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback.",
-    "it": "Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback.",
-    "nl": "Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback."
+    "de": "Sanfte Übergänge beim Ein/Aus, Aufklappen, Panelwechsel und Button-Feedback.",
+    "fr": "Transitions fluides à l’alimentation, au déploiement des contrôles, au changement de panneaux et au retour visuel des boutons.",
+    "it": "Transizioni fluide accensione, espansione controlli, pannelli e feedback pulsanti.",
+    "nl": "Vloeiende overgangen bij aan/uit, uitklappen, panelen en knopfeedback."
   },
   {
     "es": "Acciones rápidas",
@@ -8554,10 +8570,10 @@
   {
     "es": "Haptics",
     "en": "Haptics",
-    "de": "Haptics",
-    "fr": "Haptics",
-    "it": "Haptics",
-    "nl": "Haptics"
+    "de": "Haptik",
+    "fr": "Haptique",
+    "it": "Aptica",
+    "nl": "Haptiek"
   },
   {
     "es": "Individuales",

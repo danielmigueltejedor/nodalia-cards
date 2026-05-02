@@ -4,6 +4,19 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0-beta.14] - 2026-05-02
+
+### Fixed
+
+- **Lovelace editor i18n** (`scripts/gen-editor-ui.mjs`): hints (`__H__:…`) now resolve through the same **Spanish → English** exact map as other editor strings, so long hints (e.g. navigation bar transitions) are no longer left in Spanish in the `en` column and never reached French.
+- **Editor UI**: `Mostrar tarjeta` and **`Layout estrecho`** are registered and mapped to English seeds; **double period** on one “Transiciones suaves…” hint line removed.
+- **French (and de / it / nl) editor copy**: `scripts/editor-extra-locale-by-en.json` (maintained via `scripts/generate-extra-locale-by-en.mjs`) merges **full translations** for long hints (media player, weather, navigation bar, graphs, etc.), **“Show …”** compound labels, section word **Haptics**, **Show card** / **Narrow layout**, so profiles like **fr** no longer show English sentences or hybrids such as “Afficher textual state” or “General player options…”.
+
+### Changed
+
+- **`scripts/spanish-nav-exact.mjs`**: shared Spanish→English map for generator hints + main pipeline.
+- Regenerated **`nodalia-editor-ui.js`** and bundled **`nodalia-cards.js`**.
+
 ## [0.2.0-beta.13] - 2026-05-02
 
 ### Added

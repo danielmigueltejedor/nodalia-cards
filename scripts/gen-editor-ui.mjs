@@ -1,10 +1,15 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { SPANISH_TO_ENGLISH_EXACT } from "./spanish-nav-exact.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
 let keys = JSON.parse(fs.readFileSync(path.join(__dirname, "editor-source-strings.json"), "utf8"));
+
+const EDITOR_EXTRA_FULL_LOCALE_BY_EN = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "editor-extra-locale-by-en.json"), "utf8"),
+);
 
 const EXTRA_EDITOR_KEYS = `
 Ocultar ajustes de estilo
@@ -14,6 +19,8 @@ Mostrar ajustes de animación
 Anadir ruta
 Anadir player
 Anadir popup
+Mostrar tarjeta
+Layout estrecho
 No hay reproductores configurados.
 No hay rutas todavia.
 Esta ruta no tiene popup todavia.
@@ -491,178 +498,11 @@ function translateEsToEn(s) {
   t = t.replace(/\bcalibracion\b/gi, "calibration");
   t = t.replace(/\bmóvil\b/gi, "mobile");
   t = t.replace(/\bmovil\b/gi, "mobile");
+  t = t.replace(/Mostrar tarjeta/gi, "Show card");
+  t = t.replace(/Layout estrecho/gi, "Narrow layout");
 
-  const NAV_EXACT = {
-    "Ocultar ajustes de estilo": "Hide style settings",
-    "Mostrar ajustes de estilo": "Show style settings",
-    "Ocultar ajustes de animación": "Hide animation settings",
-    "Mostrar ajustes de animación": "Show animation settings",
-    "Anadir ruta": "Add route",
-    "Anadir player": "Add player",
-    "Anadir popup": "Add popup",
-    "No hay reproductores configurados.": "No players configured.",
-    "No hay rutas todavia.": "No routes yet.",
-    "Esta ruta no tiene popup todavia.": "This route has no popup yet.",
-    Player: "Player",
-    Popup: "Popup",
-    Ruta: "Route",
-    "Altura minima media player": "Media player minimum height",
-    "Tamano etiqueta popup": "Popup label size",
-    "Tamano minimo badge": "Minimum badge size",
-    "Mostrar tambien en escritorio": "Also show on desktop",
-    "Marcar activa por prefijo": "Mark active by prefix",
-    "Fallback con vibracion": "Vibration fallback",
-    "Altura minima": "Minimum height",
-    "Ancho maximo barra": "Bar maximum width",
-    "Ancho maximo popup": "Popup maximum width",
-    "Ancho minimo popup": "Popup minimum width",
-    "Barra y hover (ms)": "Bar and hover (ms)",
-    "Breakpoint movil": "Mobile breakpoint",
-    "Color etiqueta activa": "Active label color",
-    "Etiqueta opcional": "Optional label",
-    "Estilo haptico": "Haptic style",
-    "Fijar a pantalla": "Pin to screen",
-    "Icono fallback": "Fallback icon",
-    "Layout popup": "Popup layout",
-    "Media player (ms)": "Media player (ms)",
-    "Mostrar etiquetas": "Show labels",
-    "Nombre reproductor": "Player name",
-    "Offset icono X": "Icon offset X",
-    "Offset icono Y": "Icon offset Y",
-    "Path activo extra": "Extra active path",
-    "Radio media player": "Media player radius",
-    "Respuesta botones (ms)": "Button feedback (ms)",
-    "Respuesta haptica": "Haptic feedback",
-    "Ruta medios": "Media path",
-    "Separacion botones": "Button spacing",
-    "Separacion con navbar": "Spacing from navbar",
-    "Separacion etiqueta": "Label spacing",
-    "Separacion popup": "Popup spacing",
-    "Separacion stack": "Stack spacing",
-    "Sombra media player": "Media player shadow",
-    "Tamano controles": "Control size",
-    "Tamano etiqueta": "Label size",
-    "Tamano indicadores": "Indicator size",
-    "Tamano item popup": "Popup item size",
-    "Tamano portada": "Cover art size",
-    "Tamano subtitulo": "Subtitle size",
-    "Tamano texto badge": "Badge text size",
-    "Usar caratula de fondo": "Use cover art as background",
-    "Veladura popup": "Popup dimming",
-    "Backdrop filter": "Backdrop filter",
-    "Borde media player": "Media player border",
-    "Color etiqueta": "Label color",
-    "Color progreso": "Progress color",
-    Descripcion: "Description",
-    "Estados visibles": "Visible states",
-    "Fondo media player": "Media player background",
-    "Fondo progreso": "Progress background",
-    "Fondo tarjeta": "Card background",
-    "Fondo burbuja": "Bubble background",
-    "Fondo dial": "Dial background",
-    "Fondo acento botones": "Button accent background",
-    "Imagen fija": "Fixed image",
-    Justificacion: "Justification",
-    "Margen lateral": "Side margin",
-    "Mostrar siempre": "Always show",
-    "Overlay portada": "Cover overlay",
-    "Padding media player": "Media player padding",
-    "Paths activos": "Active paths",
-    "Radio boton": "Button radius",
-    "Sombra barra": "Bar shadow",
-    "Sombra popup": "Popup shadow",
-    "Tamano boton": "Button size",
-    "Tamano icono": "Icon size",
-    "Activa por prefijo": "Active by prefix",
-    "Color botones": "Button color",
-    "Fondo botones": "Button background",
-    "Fondo popup": "Popup background",
-    "Padding popup": "Popup padding",
-    "Popup (ms)": "Popup (ms)",
-    "Radio popup": "Popup radius",
-    "Borde popup": "Popup border",
-    "Color activo": "Active color",
-    "Color badge": "Badge color",
-    "Fondo activo": "Active background",
-    "Fondo badge": "Badge background",
-    "Fondo barra": "Bar background",
-    "Padding barra": "Bar padding",
-    "Radio barra": "Bar radius",
-    "Todavía no hay acciones rápidas.": "No quick actions yet.",
-    "Añadir acción": "Add action",
-    "Tipo de acción": "Action type",
-    "Automática (toggle o info)": "Automatic (toggle or info)",
-    "Modo compacto": "Compact mode",
-    "Automático (<4 columnas)": "Automatic (<4 columns)",
-    "Compacto siempre": "Always compact",
-    "Nunca compacto": "Never compact",
-    "Acción al tocar": "Tap action",
-    "Abrir en pestaña nueva": "Open in new tab",
-    "Color personalizado": "Custom color",
-    Acción: "Action",
-    Accion: "Action",
-    Contenido: "Content",
-    Estilo: "Style",
-    "Sin accion": "No action",
-    Subir: "Move up",
-    Bajar: "Move down",
-    Eliminar: "Delete",
-    Reproductor: "Player",
-    Principal: "Main",
-    "Por defecto": "Default",
-    "Sin acción": "No action",
-    "Más información": "More info",
-    Navegar: "Navigate",
-    "Abrir URL": "Open URL",
-    "Llamar servicio": "Call service",
-    "Entidad de más información": "More-info entity",
-    "Botón de encendido cuando está apagado o en espera": "Power button when off or standby",
-    "Botón de encendido cuando está activo": "Power button when active",
-    "Botón de encendido cuando no está disponible": "Power button when unavailable",
-    "Añadir reproductor": "Add player",
-    "Mostrar ajustes de animación": "Show animation settings",
-    "Ocultar ajustes de animación": "Hide animation settings",
-    "Mostrar ajustes de estilo": "Show style settings",
-    "Ocultar ajustes de estilo": "Hide style settings",
-    "Color del progreso": "Progress color",
-    "Fondo del progreso": "Progress background",
-    "Tintado activo TV": "TV active tint",
-    "Color de acento": "Accent color",
-    "Fondo del navegador": "Browser background",
-    "Veladura del navegador": "Browser backdrop",
-    Comportamiento: "Behavior",
-    "Todavía no has añadido ningún reproductor.": "You have not added any players yet.",
-    "Todavia no has anadido ninguna serie.": "You have not added any series yet.",
-    Serie: "Series",
-    Datos: "Data",
-    "Color de la linea": "Line color",
-    "Selecciona una entidad": "Select an entity",
-    "Anadir serie": "Add series",
-    "Borde barra": "Bar border",
-    "Dejalo vacio para solo icono": "Leave empty for icon only",
-    "Aqui ya puedes editar popup y media player. Para acciones muy avanzadas, sigue siendo mejor completar el YAML.":
-      "You can edit popup and media player here. For very advanced actions, it is still better to complete YAML.",
-    "Selección": "Selection",
-    Ligero: "Light",
-    Medio: "Medium",
-    Intenso: "Heavy",
-    "Éxito": "Success",
-    Aviso: "Warning",
-    Fallo: "Failure",
-    Inferior: "Bottom",
-    Superior: "Top",
-    Auto: "Auto",
-    Vertical: "Vertical",
-    Horizontal: "Horizontal",
-    "Controla transiciones de barra, popup, media player y respuestas visuales.":
-      "Controls transitions for bar, popup, media player and visual feedback.",
-    "Opciones generales del reproductor integrado y lista de players visibles.":
-      "General options for the embedded player and visible player list.",
-    "Opciones base de la barra, layout y visibilidad general.":
-      "Base bar options, layout and general visibility.",
-  };
-  if (NAV_EXACT[s]) {
-    return NAV_EXACT[s];
+  if (SPANISH_TO_ENGLISH_EXACT[s]) {
+    return SPANISH_TO_ENGLISH_EXACT[s];
   }
   return t;
 }
@@ -756,7 +596,7 @@ function translateEsToEnHint(s) {
   t = t.replace(/Controla la transición del dial, la entrada del contenido y el rebote al tocar la tarjeta\./gi, "Controls dial transition, content entrance and tap bounce.");
   t = t.replace(/Controla la transición del dial, la entrada del contenido y el rebote de los botones\./gi, "Controls dial transition, content entrance and button bounce.");
   t = t.replace(/Controla la entrada del tooltip y el rebote visual de los chips\./gi, "Controls tooltip entrance and visual chip bounce.");
-  t = t.replace(/Transiciones suaves al encender, apagar, desplegar controles, cambiar entre sliders y dar respuesta visual a los botones/gi,
+  t = t.replace(/Transiciones suaves al encender, apagar, desplegar controles, cambiar entre sliders y dar respuesta visual a los botones\./gi,
     "Smooth transitions when powering on/off, expanding controls, switching sliders and visual button feedback.");
   t = t.replace(/Transiciones suaves al encender, apagar, desplegar controles, cambiar paneles y dar respuesta visual a los botones\./gi,
     "Smooth transitions when powering on/off, expanding controls, changing panels and visual button feedback.");
@@ -791,6 +631,9 @@ function translateEsToEnHint(s) {
   t = t.replace(/Entrada suave del contenido y rebote ligero al pulsar la tarjeta\./gi, "Smooth content entrance and light bounce when tapping the card.");
   t = t.replace(/Entrada suave del flujo y rebote al pulsar nodos o acciones\./gi, "Smooth flow entrance and bounce when tapping nodes or actions.");
   t = t.replace(/Entrada suave del contenido y rebote al pulsar la tarjeta\./gi, "Smooth content entrance and bounce when tapping the card.");
+  if (SPANISH_TO_ENGLISH_EXACT[t]) {
+    return SPANISH_TO_ENGLISH_EXACT[t];
+  }
   return t;
 }
 
@@ -1019,15 +862,17 @@ const FULL_LOCALE_BY_EN = {
 
 function applyFullLocaleByEn(row) {
   const patch = FULL_LOCALE_BY_EN[row.en];
-  if (!patch) {
+  const extra = EDITOR_EXTRA_FULL_LOCALE_BY_EN[row.en];
+  if (!patch && !extra) {
     return row;
   }
+  const merged = { ...(patch || {}), ...(extra || {}) };
   return {
     ...row,
-    de: patch.de !== undefined ? patch.de : row.de,
-    fr: patch.fr !== undefined ? patch.fr : row.fr,
-    it: patch.it !== undefined ? patch.it : row.it,
-    nl: patch.nl !== undefined ? patch.nl : row.nl,
+    de: merged.de !== undefined ? merged.de : row.de,
+    fr: merged.fr !== undefined ? merged.fr : row.fr,
+    it: merged.it !== undefined ? merged.it : row.it,
+    nl: merged.nl !== undefined ? merged.nl : row.nl,
   };
 }
 
