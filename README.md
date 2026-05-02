@@ -12,8 +12,6 @@
 
 The goal is not only to provide beautiful cards, but to build a consistent UI system for Home Assistant with smooth interactions, readable layouts and a mobile-first experience.
 
-> 🟡 Project not affiliated with Home Assistant.  
-> Personal and educational project.
 
 ---
 
@@ -79,8 +77,6 @@ HACS can append `?hacstag=…` to that path. The number is **not** the app versi
 **Stable (`main`) — 0.2.1** includes **es, en, de, fr, it, nl** for the bundled cards and Lovelace visual editors (coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
 
 **Prereleases (`beta`) — 0.3.0-beta.XX** (see **CONTRIBUTING** for tags): locale polish, editor refinements, and card improvements before the next minor release.
-
-> **Note:** `README.md`, `CHANGELOG.md`, and `CONTRIBUTING.md` are kept **identical** on **`main`** and **`beta`**; only code and `package.json` differ by branch.
 
 ---
 
