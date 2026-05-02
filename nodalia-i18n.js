@@ -3150,4 +3150,12 @@
       }
     },
   };
+
+  try {
+    if (typeof window !== "undefined" && typeof CustomEvent === "function") {
+      window.dispatchEvent(new CustomEvent("nodalia-i18n-ready", { bubbles: false }));
+    }
+  } catch (_e) {
+    // ignore
+  }
 })();

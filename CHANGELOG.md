@@ -4,17 +4,6 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.2.0-beta.15] - 2026-05-02
-
-### Fixed
-
-- **Advance vacuum** (`nodalia-advance-vacuum-card.js`): render signature now includes **resolved UI language** and **i18n load state**, so when Home Assistant fills `hass.language` / profile locale after the first frame (or when `nodalia-i18n` registers slightly later), the card **re-renders** and picks up **de / fr / …** instead of staying on the initial Spanish fallbacks.
-- **Advance vacuum** runtime fallbacks: default mode / preset labels use **English** when i18n is not ready (instead of Spanish), avoiding a “stuck Spanish” first paint for non-ES users.
-
-### Changed
-
-- **Advance vacuum** pill buttons (mode strip + utility panel): **selected** (`.is-active`) states use stronger **primary-colour** tint, **2px focus ring**, and **bold** text so the active option is obvious on light themes.
-- Regenerated bundled **`nodalia-cards.js`**.
 
 ## [0.2.0-beta.14] - 2026-05-02
 

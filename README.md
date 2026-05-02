@@ -72,9 +72,11 @@ type: module
 
 ---
 
-## 🌍 Language support
+## 🌍 Translations
 
-Currently optimized for Spanish. English and more languages will be added over time.
+Translations are currently available in beta releases.
+
+They are still being polished and will be included in the next stable release once they are ready.
 
 ---
 

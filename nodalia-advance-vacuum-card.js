@@ -1474,6 +1474,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._onShadowTouchEnd = this._onShadowTouchEnd.bind(this);
     this._onMapImageLoad = this._onMapImageLoad.bind(this);
     this._onMapBackClick = this._onMapBackClick.bind(this);
+    this._onNodaliaI18nReady = this._onNodaliaI18nReady.bind(this);
+
+    this._localeReconciliationTimeouts = null;
 
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("change", this._onShadowChange);
@@ -1492,9 +1495,17 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
     this._render();
+    if (typeof window !== "undefined") {
+      window.addEventListener("nodalia-i18n-ready", this._onNodaliaI18nReady);
+    }
+    this._scheduleLocaleReconciliation();
   }
 
   disconnectedCallback() {
+    if (typeof window !== "undefined") {
+      window.removeEventListener("nodalia-i18n-ready", this._onNodaliaI18nReady);
+    }
+    this._clearLocaleReconciliation();
     const image = this.shadowRoot?.querySelector("[data-map-image]");
     if (image) {
       image.removeEventListener("load", this._onMapImageLoad);
@@ -1503,6 +1514,59 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
+  }
+
+  _onNodaliaI18nReady() {
+    this._reconcileI18nOrLocaleIfNeeded();
+  }
+
+  _reconcileI18nOrLocaleIfNeeded() {
+    if (!this.isConnected || !this.shadowRoot) {
+      return;
+    }
+    try {
+      const nextSignature = this._getRenderSignature(this._hass);
+      if (nextSignature === this._lastRenderSignature && this.shadowRoot.innerHTML) {
+        return;
+      }
+      this._updateCalibration();
+      this._render();
+    } catch (_err) {
+      // ignore
+    }
+  }
+
+  _clearLocaleReconciliation() {
+    if (this._localeReconciliationTimeouts?.length) {
+      this._localeReconciliationTimeouts.forEach(id => {
+        window.clearTimeout(id);
+      });
+      this._localeReconciliationTimeouts = null;
+    }
+  }
+
+  /**
+   * Re-render when `nodalia-i18n` loads after the first paint or when HA exposes UI language / locale
+   * slightly later (signature includes `ui.resolvedLang` + `ui.i18nLoaded`; without this, `set hass`
+   * may not run again and strings stay on fallbacks).
+   */
+  _scheduleLocaleReconciliation() {
+    if (typeof window === "undefined") {
+      return;
+    }
+    this._clearLocaleReconciliation();
+    const run = () => {
+      if (!this.isConnected) {
+        return;
+      }
+      this._reconcileI18nOrLocaleIfNeeded();
+    };
+    queueMicrotask(run);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(run);
+    });
+    const delaysMs = [0, 200, 600, 1600, 4000];
+    this._localeReconciliationTimeouts = delaysMs.map(ms => window.setTimeout(run, ms));
   }
 
   setConfig(config) {
