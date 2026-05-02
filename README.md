@@ -64,14 +64,16 @@ Animations and interactions in action:
 
 [![Open your Home Assistant instance and open this repository in the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards&category=plugin)
 
-Then add the Lovelace resource (Settings → Dashboards → ⋮ → Resources, or YAML):
+In HACS, open **Nodalia Cards** and use **Download** (pick the release or prerelease you want). HACS adds the Lovelace resource for you—no need to paste YAML for a normal install. Refresh the dashboard; you can then add the custom cards in the UI.
 
-```yaml
-url: /hacsfiles/nodalia-cards/nodalia-cards.js
-type: module
-```
+If something still looks off (e.g. old script cached), use **Redownload** in HACS, or in **Settings → Dashboards → ⋮ → Resources** make sure the entry matches the URL HACS created. HACS may append `?hacstag=…` to the path; that value is **per install and selected version**, not the app semver—replace it with whatever HACS shows after **Redownload** if needed. In the browser console, `__NODALIA_BUNDLE__` confirms which bundle loaded (`pkgVersion` and a short content id).
 
-HACS can append `?hacstag=…` to that path. The number is **not** the app version: it is **per HACS install + selected release** (so **stable** and **prerelease** often show different `hacstag` values even when the JavaScript is the same). If one release “translates” and the other does not, the panel is usually still loading an **old** `nodalia-cards.js` for the stable path. **Redownload** the integration in HACS for the version you use, set the Lovelace resource to the **exact** URL HACS shows (or remove a stale `?hacstag=…` and save), then hard-refresh. In the browser console, `__NODALIA_BUNDLE__` reports the loaded bundle (`pkgVersion` and a short content id) so you can confirm the file is up to date.
+<details>
+<summary>Manual install (no HACS)</summary>
+
+Copy `nodalia-cards.js` into `config/www/` (or a subfolder) and add a resource under **Settings → Dashboards → Resources** with **type** `JavaScript module` and **URL** `/local/…` pointing at that file (for example `/local/nodalia-cards.js` if it lives at `config/www/nodalia-cards.js`).
+
+</details>
 
 ---
 
