@@ -2313,7 +2313,7 @@ class NodaliaGraphCard extends HTMLElement {
                 `
                 : ""
             }
-            ${hasGraphData ? "" : `<div class="graph-card__chart-empty">Sin historial disponible</div>`}
+            ${hasGraphData ? "" : `<div class="graph-card__chart-empty">${escapeHtml(window.NodaliaI18n?.translateGraphEmptyHistory?.(this._hass, this._config?.language ?? "auto") || "Sin historial disponible")}</div>`}
           </div>
         </div>
       </ha-card>
@@ -2509,7 +2509,16 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
@@ -2517,7 +2526,7 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -2530,12 +2539,13 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
   }
 
   _renderTextareaField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
 
     return `
       <label class="editor-field editor-field--full">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <textarea
           data-field="${escapeHtml(field)}"
           data-value-type="${escapeHtml(options.valueType || "string")}"
@@ -2547,6 +2557,7 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -2556,20 +2567,21 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options
             .map(option => `
               <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
+                ${escapeHtml(this._editorLabel(option.label))}
               </option>
             `)
             .join("")}
@@ -2647,6 +2659,18 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
         }
 
         .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
           grid-column: 1 / -1;
         }
 
@@ -2768,8 +2792,8 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Configura titulo, entidades y rango visible de la grafica.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Configura titulo, entidades y rango visible de la grafica."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Nombre", "name", config.name, {
@@ -2804,8 +2828,8 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Activa o desactiva cabecera, valor, leyenda y relleno.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Activa o desactiva cabecera, valor, leyenda y relleno."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Mostrar cabecera", "show_header", config.show_header !== false)}
@@ -2828,8 +2852,8 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta haptica opcional al tocar la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta haptica opcional al tocar la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -2853,8 +2877,8 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales del grafico y el look Nodalia.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales del grafico y el look Nodalia."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
@@ -3251,7 +3275,16 @@ class NodaliaGraphCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const tag = options.multiline ? "textarea" : "input";
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -3261,7 +3294,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     if (tag === "textarea") {
       return `
         <label class="editor-field ${options.fullWidth !== false ? "editor-field--full" : ""}">
-          <span>${escapeHtml(label)}</span>
+          <span>${escapeHtml(tLabel)}</span>
           <textarea data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(valueType)}" rows="${options.rows || 2}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
         </label>
       `;
@@ -3269,7 +3302,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -3282,6 +3315,8 @@ class NodaliaGraphCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -3290,16 +3325,16 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch:${escapeHtml(currentValue)};"></span>
           </label>
@@ -3309,6 +3344,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -3318,15 +3354,16 @@ class NodaliaGraphCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options, valueType = "string") {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(valueType)}">
           ${options
             .map(option => {
@@ -3337,7 +3374,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
               return `
                 <option value="${escapeHtml(optionValue)}" ${isSelected ? "selected" : ""}>
-                  ${escapeHtml(option.label)}
+                  ${escapeHtml(this._editorLabel(option.label))}
                 </option>
               `;
             })
@@ -3348,6 +3385,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
   }
 
   _renderEntityField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const domains = Array.isArray(options.domains)
       ? options.domains.map(domain => String(domain || "").trim()).filter(Boolean).join(",")
@@ -3355,7 +3393,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity-picker"
@@ -3369,11 +3407,12 @@ class NodaliaGraphCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="icon-picker"
@@ -3391,15 +3430,15 @@ class NodaliaGraphCardEditor extends HTMLElement {
     return `
       <div class="series-editor-card">
         <div class="series-editor-card__header">
-          <div class="series-editor-card__title">Serie ${index + 1}</div>
+          <div class="series-editor-card__title">${escapeHtml(this._editorLabel("Serie"))} ${index + 1}</div>
           <div class="series-editor-card__actions">
-            <button type="button" data-action="move-series-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>Subir</button>
-            <button type="button" data-action="move-series-down" data-index="${index}" ${index === total - 1 ? "disabled" : ""}>Bajar</button>
-            <button type="button" data-action="remove-series" data-index="${index}" class="danger">Eliminar</button>
+            <button type="button" data-action="move-series-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>${escapeHtml(this._editorLabel("Subir"))}</button>
+            <button type="button" data-action="move-series-down" data-index="${index}" ${index === total - 1 ? "disabled" : ""}>${escapeHtml(this._editorLabel("Bajar"))}</button>
+            <button type="button" data-action="remove-series" data-index="${index}" class="danger">${escapeHtml(this._editorLabel("Eliminar"))}</button>
           </div>
         </div>
         <div class="series-editor-subgroup">
-          <div class="series-editor-subgroup__title">Datos</div>
+          <div class="series-editor-subgroup__title">${escapeHtml(this._editorLabel("Datos"))}</div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityField("Entidad", `entities.${index}.entity`, series.entity, {
               domains: ["sensor", "number", "input_number"],
@@ -3454,7 +3493,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = placeholder || "Selecciona una entidad";
+      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
       control.appendChild(emptyOption);
       this._getEntityOptions(field, allowedDomains).forEach(option => {
         const optionElement = document.createElement("option");
@@ -3626,6 +3665,18 @@ class NodaliaGraphCardEditor extends HTMLElement {
         }
 
         .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
           grid-column: 1 / -1;
         }
 
@@ -3886,8 +3937,8 @@ class NodaliaGraphCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Nombre, icono, rango visible y comportamiento basico de la grafica.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Nombre, icono, rango visible y comportamiento basico de la grafica."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Nombre", "name", config.name, {
@@ -3901,7 +3952,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
               "tap_action",
               config.tap_action || "more-info",
               [
-                { value: "more-info", label: "Mas informacion" },
+                { value: "more-info", label: "Más información" },
                 { value: "none", label: "Sin accion" },
               ],
             )}
@@ -3926,25 +3977,25 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Series</div>
-            <div class="editor-section__hint">Anade, reordena y personaliza cada entidad mostrada en la grafica.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Series"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Anade, reordena y personaliza cada entidad mostrada en la grafica."))}</div>
           </div>
           <div class="series-editor-list">
             ${
               entities.length
                 ? entities.map((series, index) => this._renderSeriesCard(series, index, entities.length)).join("")
-                : '<div class="empty-note">Todavia no has anadido ninguna serie.</div>'
+                : `<div class="empty-note">${escapeHtml(this._editorLabel("Todavia no has anadido ninguna serie."))}</div>`
             }
           </div>
           <div class="editor-actions">
-            <button type="button" data-action="add-series">Anadir serie</button>
+            <button type="button" data-action="add-series">${escapeHtml(this._editorLabel("Anadir serie"))}</button>
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Activa o desactiva cabecera, valor grande, leyenda y relleno.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Activa o desactiva cabecera, valor grande, leyenda y relleno."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Mostrar cabecera", "show_header", config.show_header !== false)}
@@ -3958,8 +4009,8 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta tactil opcional para taps, hover y cambios de serie.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional para taps, hover y cambios de serie."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -3969,7 +4020,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Seleccion" },
+                { value: "selection", label: "Selección" },
                 { value: "light", label: "Ligero" },
                 { value: "medium", label: "Medio" },
                 { value: "heavy", label: "Intenso" },
@@ -3983,8 +4034,8 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Controla la entrada del tooltip y el rebote visual de los chips.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla la entrada del tooltip y el rebote visual de los chips."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -3993,7 +4044,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showAnimationSection ? "Ocultar ajustes de animacion" : "Mostrar ajustes de animacion"}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animacion") : this._editorLabel("Mostrar ajustes de animacion"))}</span>
               </button>
             </div>
           </div>
@@ -4018,8 +4069,8 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales de la card, el icono y el grafico.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales de la card, el icono y el grafico."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4028,7 +4079,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
               </button>
             </div>
           </div>

@@ -107,7 +107,7 @@ Community help is especially useful for languages other than Spanish and English
 
 ## 🏷️ Releases and beta versions
 
-Pre-releases use **`0.2.0-beta.N`** (increment **N** for each shipped beta). For maintainers: treat **each release commit** as a **new beta**—add a section to `CHANGELOG.md`, bump the **Current beta** badge in `README.md`, and run `npm run bundle` when artefacts change.
+Stable releases (**`0.2.x`**, **`0.3.x`**, …) ship from **`main`**. Prereleases use **`0.3.0-beta.N`** (increment **N**) from the **`beta`** branch for translation polish and card work ahead of the next minor. For maintainers: each shipped beta—add a section to `CHANGELOG.md`, bump the **Current beta** badge in `README.md` on **`beta`**, and run `npm run bundle` when artefacts change.
 
 ---
 

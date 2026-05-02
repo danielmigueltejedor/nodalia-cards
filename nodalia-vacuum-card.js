@@ -404,13 +404,17 @@ function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
-function humanizeModeLabel(value, kind = "generic") {
+function humanizeModeLabel(value, kind = "generic", hass = null, configLang = null) {
   const raw = String(value || "").trim();
   if (!raw) {
     return "";
   }
 
   const key = normalizeTextKey(raw);
+  const h = hass ?? (typeof window !== "undefined" ? window.NodaliaI18n?.resolveHass?.(null) : null);
+  if (window.NodaliaI18n?.translateAdvanceVacuumVacuumMode) {
+    return window.NodaliaI18n.translateAdvanceVacuumVacuumMode(h, configLang ?? "auto", raw, kind);
+  }
   if (key === "off" && kind === "suction") {
     return "Off";
   }
@@ -1030,29 +1034,38 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _getStateLabel(state) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    const trState = (stateKey, rawFallback = state?.state) => (
+      window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, langCfg, stateKey, rawFallback)
+        : rawFallback
+    );
+
     if (this._isGoingToWashMops(state)) {
-      return "Yendo a lavar mopas";
+      return this._humanizeStateLabel("going_to_wash_mop", hass, langCfg);
     }
 
     if (this._isWashingMops(state)) {
-      return "Lavando mopas";
+      return trState("washing_mop", "Lavando mopas");
     }
 
     if (this._isDryingMops(state)) {
-      return "Secando";
+      return trState("drying_mop", "Secando");
     }
 
     if (this._isAutoEmptying(state)) {
-      return "Autovaciando";
+      return trState("emptying", "Autovaciando");
     }
 
     const roomMappings = this._getRoomMappings(state);
     const cleaningAreaLabel = this._getCleaningAreaLabel(state, roomMappings);
     if (cleaningAreaLabel) {
-      return `Limpiando: ${cleaningAreaLabel}`;
+      return `${trState("cleaning", "Limpiando")}: ${cleaningAreaLabel}`;
     }
 
-    switch (normalizeTextKey(this._getReportedStateValue(state))) {
+    const reportedKey = normalizeTextKey(this._getReportedStateValue(state));
+    switch (reportedKey) {
       case "cleaning":
       case "segment_cleaning":
       case "room_cleaning":
@@ -1063,45 +1076,45 @@ class NodaliaVacuumCard extends HTMLElement {
       case "clean_area":
       case "vacuuming":
       case "limpiando":
-        return "Limpiando";
+        return trState("cleaning", "Limpiando");
       case "going_to_wash_the_mop":
       case "going_to_wash_mop":
       case "go_to_wash_mop":
       case "go_wash_mop":
       case "returning_to_wash_mop":
-        return "Yendo a lavar mopas";
+        return this._humanizeStateLabel("going_to_wash_mop", hass, langCfg);
       case "paused":
       case "pause":
       case "pausado":
-        return "Pausado";
+        return trState("paused", "Pausado");
       case "returning":
       case "return_to_base":
       case "returning_home":
       case "volviendo":
-        return "Volviendo a la base";
+        return trState("returning", "Volviendo a la base");
       case "docked":
       case "charging":
       case "charging_completed":
       case "en_base":
       case "base":
-        return "En base";
+        return trState("docked", "En base");
       case "idle":
       case "standby":
       case "en_espera":
-        return "En espera";
+        return trState("fallback", "En espera");
       case "error":
       case "fallo":
-        return "Error";
+        return trState("error", "Error");
       case "unavailable":
-        return "No disponible";
+        return trState("unavailable", "No disponible");
       case "unknown":
-        return "Desconocido";
+        return trState("unknown", "Desconocido");
       default:
-        return this._humanizeStateLabel(this._getReportedStateValue(state)) || "Sin estado";
+        return this._humanizeStateLabel(this._getReportedStateValue(state), hass, langCfg) || "Sin estado";
     }
   }
 
-  _humanizeStateLabel(value) {
+  _humanizeStateLabel(value, hass = null, configLang = null) {
     const raw = String(value ?? "").trim();
     if (!raw) {
       return "";
@@ -1113,27 +1126,39 @@ class NodaliaVacuumCard extends HTMLElement {
     }
 
     if (normalized.includes("go") && normalized.includes("wash") && normalized.includes("mop")) {
-      return "Yendo a lavar mopas";
+      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "washing_mop", "Yendo a lavar mopas")
+        : "Yendo a lavar mopas";
     }
 
     if (normalized.includes("wash") && normalized.includes("mop")) {
-      return "Lavando mopas";
+      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "washing_mop", "Lavando mopas")
+        : "Lavando mopas";
     }
 
     if (normalized.includes("dry") && normalized.includes("mop")) {
-      return "Secando mopas";
+      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "drying_mop", "Secando mopas")
+        : "Secando mopas";
     }
 
     if (normalized.includes("empty")) {
-      return "Autovaciando";
+      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "emptying", "Autovaciando")
+        : "Autovaciando";
     }
 
     if (normalized.includes("zone") && normalized.includes("clean")) {
-      return "Limpiando zona";
+      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "cleaning", "Limpiando zona")
+        : "Limpiando zona";
     }
 
     if ((normalized.includes("room") || normalized.includes("segment")) && normalized.includes("clean")) {
-      return "Limpiando habitación";
+      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "cleaning", "Limpiando habitación")
+        : "Limpiando habitación";
     }
 
     return raw
@@ -1596,7 +1621,7 @@ class NodaliaVacuumCard extends HTMLElement {
               data-mode-kind="${escapeHtml(descriptor.kind)}"
               data-value="${escapeHtml(option)}"
             >
-              ${escapeHtml(humanizeModeLabel(option, descriptor.kind))}
+              ${escapeHtml(humanizeModeLabel(option, descriptor.kind, this._hass, this._config?.language ?? "auto"))}
             </button>
           `)
           .join("")}
@@ -3424,7 +3449,16 @@ class NodaliaVacuumCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
@@ -3432,7 +3466,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -3445,6 +3479,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -3453,16 +3489,16 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -3472,6 +3508,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -3481,7 +3518,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
@@ -3606,7 +3643,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
   }
 
   _renderModeVisibilityField(field, modeValue, kind) {
-    const translatedLabel = humanizeModeLabel(modeValue, kind);
+    const translatedLabel = humanizeModeLabel(modeValue, kind, this._hass ?? this.hass, this._config?.language ?? "auto");
     const showRawValue = normalizeTextKey(translatedLabel) !== normalizeTextKey(modeValue);
     const label = showRawValue ? `${translatedLabel} (${modeValue})` : translatedLabel;
 
@@ -3625,14 +3662,15 @@ class NodaliaVacuumCardEditor extends HTMLElement {
   }
 
   _renderSelectField(label, field, value, options, renderOptions = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options
             .map(option => `
               <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
+                ${escapeHtml(this._editorLabel(option.label))}
               </option>
             `)
             .join("")}
@@ -3642,10 +3680,11 @@ class NodaliaVacuumCardEditor extends HTMLElement {
   }
 
   _renderEntityPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="${escapeHtml(options.controlType || "entity")}"
@@ -3657,11 +3696,12 @@ class NodaliaVacuumCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
@@ -3837,6 +3877,18 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         }
 
         .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
           grid-column: 1 / -1;
         }
 
@@ -4030,8 +4082,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal, nombre visible y comportamiento al tocar la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal, nombre visible y comportamiento al tocar la tarjeta."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityPickerField("Entidad del robot", "entity", config.entity, {
@@ -4081,8 +4133,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Entidades auxiliares</div>
-            <div class="editor-section__hint">Sensores y selectores opcionales para enriquecer el estado y los controles.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Entidades auxiliares"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Sensores y selectores opcionales para enriquecer el estado y los controles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderEntityPickerField("Sensor de estado", "state_entity", config.state_entity, {
@@ -4105,8 +4157,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Qué elementos quieres mostrar dentro de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Qué elementos quieres mostrar dentro de la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -4157,8 +4209,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Haptics</div>
-            <div class="editor-section__hint">Respuesta háptica opcional para los controles.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta háptica opcional para los controles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -4182,8 +4234,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Feedback visual para botones y paneles del robot.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Feedback visual para botones y paneles del robot."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4192,7 +4244,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showAnimationSection ? "Ocultar ajustes de animación" : "Mostrar ajustes de animación"}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
               </button>
             </div>
           </div>
@@ -4215,8 +4267,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales básicos del look Nodalia.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales básicos del look Nodalia."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4225,7 +4277,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
               </button>
             </div>
           </div>

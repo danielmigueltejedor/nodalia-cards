@@ -879,6 +879,15 @@ class NodaliaFavCard extends HTMLElement {
       return `${rawState} ${unit}`;
     }
 
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    if (window.NodaliaI18n?.translateFavState) {
+      const translated = window.NodaliaI18n.translateFavState(lang, key);
+      if (translated) {
+        return translated;
+      }
+    }
+
     switch (key) {
       case "on":
         return "Encendido";
@@ -1075,6 +1084,33 @@ class NodaliaFavCard extends HTMLElement {
     }
   }
 
+  _getAlarmActionLabel(modeKey) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const actions = window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.actions;
+    const map = {
+      disarm: "disarm",
+      home: "arm_home",
+      away: "arm_away",
+      night: "arm_night",
+      vacation: "arm_vacation",
+      custom_bypass: "arm_custom_bypass",
+    };
+    const actionKey = map[modeKey];
+    if (actionKey && actions?.[actionKey]) {
+      return actions[actionKey];
+    }
+    const fallbacks = {
+      disarm: "Desarmar",
+      home: "Casa",
+      away: "Ausente",
+      night: "Noche",
+      vacation: "Vacaciones",
+      custom_bypass: "Personalizada",
+    };
+    return fallbacks[modeKey] || modeKey;
+  }
+
   _matchesAlarmMode(state, ...keys) {
     const candidates = this._getAlarmStateCandidates(state);
     return keys.some(key => candidates.includes(normalizeTextKey(key)));
@@ -1085,14 +1121,14 @@ class NodaliaFavCard extends HTMLElement {
     const modes = [
       {
         key: "disarm",
-        label: "Desarmar",
+        label: this._getAlarmActionLabel("disarm"),
         icon: "mdi:shield-off-outline",
         service: "alarm_disarm",
         enabled: this._config?.alarm_show_disarm !== false && currentModeKey !== "disarm",
       },
       {
         key: "home",
-        label: "Casa",
+        label: this._getAlarmActionLabel("home"),
         icon: "mdi:home-lock",
         service: "alarm_arm_home",
         enabled: this._config?.alarm_show_arm_home !== false
@@ -1101,7 +1137,7 @@ class NodaliaFavCard extends HTMLElement {
       },
       {
         key: "away",
-        label: "Ausente",
+        label: this._getAlarmActionLabel("away"),
         icon: "mdi:shield-lock",
         service: "alarm_arm_away",
         enabled: this._config?.alarm_show_arm_away !== false
@@ -1110,7 +1146,7 @@ class NodaliaFavCard extends HTMLElement {
       },
       {
         key: "night",
-        label: "Noche",
+        label: this._getAlarmActionLabel("night"),
         icon: "mdi:weather-night",
         service: "alarm_arm_night",
         enabled: this._config?.alarm_show_arm_night !== false
@@ -1119,7 +1155,7 @@ class NodaliaFavCard extends HTMLElement {
       },
       {
         key: "vacation",
-        label: "Vacaciones",
+        label: this._getAlarmActionLabel("vacation"),
         icon: "mdi:palm-tree",
         service: "alarm_arm_vacation",
         enabled: this._config?.alarm_show_arm_vacation === true
@@ -1128,7 +1164,7 @@ class NodaliaFavCard extends HTMLElement {
       },
       {
         key: "custom_bypass",
-        label: "Personalizada",
+        label: this._getAlarmActionLabel("custom_bypass"),
         icon: "mdi:tune-variant",
         service: "alarm_arm_custom_bypass",
         enabled: this._config?.alarm_show_custom_bypass === true
@@ -1150,28 +1186,28 @@ class NodaliaFavCard extends HTMLElement {
     const fallbackModes = [
       {
         key: "disarm",
-        label: "Desarmar",
+        label: this._getAlarmActionLabel("disarm"),
         icon: "mdi:shield-off-outline",
         service: "alarm_disarm",
         enabled: this._config?.alarm_show_disarm !== false && currentModeKey !== "disarm",
       },
       {
         key: "home",
-        label: "Casa",
+        label: this._getAlarmActionLabel("home"),
         icon: "mdi:home-lock",
         service: "alarm_arm_home",
         enabled: this._config?.alarm_show_arm_home !== false && currentModeKey !== "home",
       },
       {
         key: "away",
-        label: "Ausente",
+        label: this._getAlarmActionLabel("away"),
         icon: "mdi:shield-lock",
         service: "alarm_arm_away",
         enabled: this._config?.alarm_show_arm_away !== false && currentModeKey !== "away",
       },
       {
         key: "night",
-        label: "Noche",
+        label: this._getAlarmActionLabel("night"),
         icon: "mdi:weather-night",
         service: "alarm_arm_night",
         enabled: this._config?.alarm_show_arm_night !== false && currentModeKey !== "night",
@@ -1566,7 +1602,7 @@ class NodaliaFavCard extends HTMLElement {
     const cardShadow = isActive
       ? `${styles.card.box_shadow}, 0 16px 30px color-mix(in srgb, ${accentColor} 16%, rgba(0, 0, 0, 0.18))`
       : styles.card.box_shadow;
-    const showTitle = config.show_name !== false && !isMini && !showAlarmPanel;
+    const showTitle = config.show_name !== false && !isMini;
     const showValue = Boolean(displayValue) && !isMini;
     const showCopy = showTitle || showValue;
 
@@ -1883,6 +1919,14 @@ class NodaliaFavCard extends HTMLElement {
         .fav-card--tight-inline:not(.fav-card--alarm-open) .fav-card__chips {
           flex: 0 0 auto;
           gap: 4px;
+        }
+
+        .fav-card--tight-inline.fav-card--alarm-open .fav-card__copy {
+          align-content: start;
+          display: grid;
+          gap: 6px;
+          min-width: 0;
+          width: 100%;
         }
 
         .fav-card--empty {
@@ -2268,7 +2312,16 @@ class NodaliaFavCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
@@ -2276,7 +2329,7 @@ class NodaliaFavCardEditor extends HTMLElement {
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(inputType)}"
           data-field="${escapeHtml(field)}"
@@ -2289,18 +2342,21 @@ class NodaliaFavCardEditor extends HTMLElement {
   }
 
   _renderTextareaField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
 
     return `
       <label class="editor-field editor-field--full">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <textarea data-field="${escapeHtml(field)}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
       </label>
     `;
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -2309,16 +2365,16 @@ class NodaliaFavCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -2328,6 +2384,7 @@ class NodaliaFavCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -2337,20 +2394,21 @@ class NodaliaFavCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options
             .map(option => `
               <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(option.label)}
+                ${escapeHtml(this._editorLabel(option.label))}
               </option>
             `)
             .join("")}
@@ -2360,13 +2418,14 @@ class NodaliaFavCardEditor extends HTMLElement {
   }
 
   _renderEntityField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const domains = Array.isArray(options.domains)
       ? options.domains.map(domain => String(domain || "").trim()).filter(Boolean).join(",")
       : "";
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity-picker"
@@ -2379,10 +2438,11 @@ class NodaliaFavCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="icon-picker"
@@ -2595,6 +2655,18 @@ class NodaliaFavCardEditor extends HTMLElement {
           grid-column: 1 / -1;
         }
 
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+          grid-column: 1 / -1;
+        }
+
         .editor-field > span,
         .editor-toggle > span {
           font-size: 12px;
@@ -2783,8 +2855,8 @@ class NodaliaFavCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad favorita, nombre visible e icono principal.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad favorita, nombre visible e icono principal."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityField("Entidad", "entity", config.entity, {
@@ -2816,8 +2888,8 @@ class NodaliaFavCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Acción</div>
-            <div class="editor-section__hint">Qué hace la tarjeta cuando la tocas.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Acción"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Qué hace la tarjeta cuando la tocas."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -2853,8 +2925,8 @@ class NodaliaFavCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Visibilidad</div>
-            <div class="editor-section__hint">Presentación compacta y elementos visibles dentro de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Presentación compacta y elementos visibles dentro de la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -2877,8 +2949,8 @@ class NodaliaFavCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Alarma</div>
-            <div class="editor-section__hint">Opciones extra si la entidad es un panel de alarma.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Alarma"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Opciones extra si la entidad es un panel de alarma."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("PIN fijo", "alarm_code", config.alarm_code, {
@@ -2897,8 +2969,8 @@ class NodaliaFavCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Respuesta háptica</div>
-            <div class="editor-section__hint">Respuesta táctil opcional al tocar la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta háptica"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta táctil opcional al tocar la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar respuesta háptica", "haptics.enabled", config.haptics.enabled === true)}
@@ -2922,8 +2994,8 @@ class NodaliaFavCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales base de la tarjeta favorita.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base de la tarjeta favorita."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -2932,7 +3004,7 @@ class NodaliaFavCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
               </button>
             </div>
           </div>

@@ -44,33 +44,6 @@ const MUSIC_ASSISTANT_DIRECTORY_ICON_RULES = [
   { patterns: ["recent", "recently", "recientes"], icon: "mdi:history" },
   { patterns: ["search", "buscar", "busqueda", "búsqueda"], icon: "mdi:magnify" },
 ];
-const MUSIC_ASSISTANT_LABEL_TRANSLATIONS = {
-  artist: "Artistas",
-  artists: "Artistas",
-  album: "Álbumes",
-  albums: "Álbumes",
-  track: "Canciones",
-  tracks: "Canciones",
-  song: "Canciones",
-  songs: "Canciones",
-  playlist: "Listas de reproducción",
-  playlists: "Listas de reproducción",
-  "radio station": "Emisoras",
-  "radio stations": "Emisoras",
-  podcast: "Podcasts",
-  podcasts: "Podcasts",
-  audiobook: "Audiolibros",
-  audiobooks: "Audiolibros",
-  genre: "Géneros",
-  genres: "Géneros",
-  favorite: "Favoritos",
-  favorites: "Favoritos",
-  favourites: "Favoritos",
-  search: "Buscar",
-  "recently played": "Reproducido recientemente",
-  "recently added": "Añadido recientemente",
-  "recently played tracks": "Canciones reproducidas recientemente",
-};
 
 const DEFAULT_CONFIG = {
   title: "",
@@ -578,7 +551,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
       }
     });
 
-    return [...entityIds].sort((left, right) => left.localeCompare(right, "es"));
+    const tag = window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language));
+    return [...entityIds].sort((left, right) => left.localeCompare(right, tag));
   }
 
   _getRenderSignature(hass = this._hass) {
@@ -628,6 +602,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       });
 
     return JSON.stringify({
+      locale: window.NodaliaI18n.resolveLanguage(hass, this._config?.language),
       user: String(hass?.user?.id || ""),
       routeBadgeStates,
       mediaPlayerStates,
@@ -1744,9 +1719,11 @@ class NodaliaNavigationBarCard extends HTMLElement {
   _getMediaBrowserDisplayTitle(value) {
     const label = typeof value === "string" ? value : value?.title;
     const fallback = String(label || "").trim();
+    const lang = window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language);
+    const dict = window.NodaliaI18n.strings(lang).navigationMusicAssist || {};
 
     if (!fallback) {
-      return "Elemento";
+      return dict.browseFallback || "Item";
     }
 
     if (!this._mediaBrowserState?.isMusicAssistant) {
@@ -1754,7 +1731,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
 
     const key = normalizeTextKey(fallback);
-    return MUSIC_ASSISTANT_LABEL_TRANSLATIONS[key] || fallback;
+    return dict[key] || fallback;
   }
 
   _getMediaBrowserIcon(item) {
@@ -3754,6 +3731,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     super();
     this.attachShadow({ mode: "open" });
     this._config = deepClone(STUB_CONFIG);
+    this._hass = null;
     this._showStyleSection = false;
     this._showAnimationSection = false;
     this._onShadowInput = this._onShadowInput.bind(this);
@@ -3761,6 +3739,22 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+  }
+
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
+  _L(s) {
+    return escapeHtml(this._editorLabel(s));
   }
 
   _prepareEditorConfig(config) {
@@ -4209,7 +4203,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     return `
       <div class="sub-card">
         <div class="route-head route-head--sub">
-          <strong>Popup ${popupIndex + 1}</strong>
+          <strong>${this._L("Popup")} ${popupIndex + 1}</strong>
           <div class="head-actions">
             <button
               type="button"
@@ -4219,7 +4213,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-popup-index="${popupIndex}"
               ${popupIndex === 0 ? "disabled" : ""}
             >
-              Subir
+              ${this._L("Subir")}
             </button>
             <button
               type="button"
@@ -4229,7 +4223,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-popup-index="${popupIndex}"
               ${popupIndex === popupTotal - 1 ? "disabled" : ""}
             >
-              Bajar
+              ${this._L("Bajar")}
             </button>
             <button
               type="button"
@@ -4238,13 +4232,13 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-route-index="${routeIndex}"
               data-popup-index="${popupIndex}"
             >
-              Eliminar
+              ${this._L("Eliminar")}
             </button>
           </div>
         </div>
         <div class="grid">
           <label>
-            <span>Etiqueta opcional</span>
+            <span>${this._L("Etiqueta opcional")}</span>
             <input
               type="text"
               data-route-index="${routeIndex}"
@@ -4252,11 +4246,11 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-popup-field="label"
               data-optional="true"
               value="${escapeHtml(popupItem.label || "")}"
-              placeholder="Dejalo vacio para solo icono"
+              placeholder="${escapeHtml(this._L("Dejalo vacio para solo icono"))}"
             />
           </label>
           <label>
-            <span>Icono</span>
+            <span>${this._L("Icono")}</span>
             <input
               type="text"
               data-route-index="${routeIndex}"
@@ -4266,7 +4260,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Path</span>
+            <span>${this._L("Path")}</span>
             <input
               type="text"
               data-route-index="${routeIndex}"
@@ -4276,7 +4270,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Descripcion</span>
+            <span>${this._L("Descripcion")}</span>
             <input
               type="text"
               data-route-index="${routeIndex}"
@@ -4287,7 +4281,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Usuarios</span>
+            <span>${this._L("Usuarios")}</span>
             <input
               type="text"
               data-route-index="${routeIndex}"
@@ -4300,7 +4294,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Paths activos</span>
+            <span>${this._L("Paths activos")}</span>
             <input
               type="text"
               data-route-index="${routeIndex}"
@@ -4323,7 +4317,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               ${popupItem.match === "prefix" ? "checked" : ""}
             />
             <span class="toggle-switch" aria-hidden="true"></span>
-            <span>Activa por prefijo</span>
+            <span>${this._L("Activa por prefijo")}</span>
           </label>
         </div>
       </div>
@@ -4334,14 +4328,14 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     return `
       <div class="route-card">
         <div class="route-head">
-          <strong>Player ${index + 1}</strong>
+          <strong>${this._L("Player")} ${index + 1}</strong>
           <button type="button" class="danger" data-editor-action="remove-player" data-player-index="${index}">
-            Eliminar
+            ${this._L("Eliminar")}
           </button>
         </div>
         <div class="grid">
           <label>
-            <span>Entidad</span>
+            <span>${this._L("Entidad")}</span>
             <input
               type="text"
               data-player-index="${index}"
@@ -4351,7 +4345,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Nombre reproductor</span>
+            <span>${this._L("Nombre reproductor")}</span>
             <input
               type="text"
               data-player-index="${index}"
@@ -4362,7 +4356,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Ruta medios</span>
+            <span>${this._L("Ruta medios")}</span>
             <input
               type="text"
               data-player-index="${index}"
@@ -4373,7 +4367,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Titulo</span>
+            <span>${this._L("Titulo")}</span>
             <input
               type="text"
               data-player-index="${index}"
@@ -4383,7 +4377,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Subtitulo</span>
+            <span>${this._L("Subtitulo")}</span>
             <input
               type="text"
               data-player-index="${index}"
@@ -4393,7 +4387,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Icono fallback</span>
+            <span>${this._L("Icono fallback")}</span>
             <input
               type="text"
               data-player-index="${index}"
@@ -4404,7 +4398,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Imagen fija</span>
+            <span>${this._L("Imagen fija")}</span>
             <input
               type="text"
               data-player-index="${index}"
@@ -4414,7 +4408,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Estados visibles</span>
+            <span>${this._L("Estados visibles")}</span>
             <input
               type="text"
               data-player-index="${index}"
@@ -4435,7 +4429,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               ${player.show === true ? "checked" : ""}
             />
             <span class="toggle-switch" aria-hidden="true"></span>
-            <span>Mostrar siempre</span>
+            <span>${this._L("Mostrar siempre")}</span>
           </label>
         </div>
       </div>
@@ -4445,12 +4439,12 @@ class NodaliaNavigationBarEditor extends HTMLElement {
   _renderRoute(route, index, totalRoutes) {
     const popupMarkup = Array.isArray(route.popup) && route.popup.length > 0
       ? route.popup.map((popupItem, popupIndex) => this._renderPopupItem(index, popupItem, popupIndex, route.popup.length)).join("")
-      : '<p class="hint">Esta ruta no tiene popup todavia.</p>';
+      : `<p class="hint">${this._L("Esta ruta no tiene popup todavia.")}</p>`;
 
     return `
       <div class="route-card">
         <div class="route-head">
-          <strong>Ruta ${index + 1}</strong>
+          <strong>${this._L("Ruta")} ${index + 1}</strong>
           <div class="head-actions">
             <button
               type="button"
@@ -4459,7 +4453,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-route-index="${index}"
               ${index === 0 ? "disabled" : ""}
             >
-              Subir
+              ${this._L("Subir")}
             </button>
             <button
               type="button"
@@ -4468,28 +4462,28 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               data-route-index="${index}"
               ${index === totalRoutes - 1 ? "disabled" : ""}
             >
-              Bajar
+              ${this._L("Bajar")}
             </button>
             <button type="button" class="danger" data-editor-action="remove-route" data-route-index="${index}">
-              Eliminar
+              ${this._L("Eliminar")}
             </button>
           </div>
         </div>
         <div class="grid">
           <label>
-            <span>Etiqueta</span>
+            <span>${this._L("Etiqueta")}</span>
             <input type="text" data-route-index="${index}" data-route-field="label" value="${escapeHtml(route.label || "")}" />
           </label>
           <label>
-            <span>Icono</span>
+            <span>${this._L("Icono")}</span>
             <input type="text" data-route-index="${index}" data-route-field="icon" value="${escapeHtml(route.icon || "")}" />
           </label>
           <label>
-            <span>Path</span>
+            <span>${this._L("Path")}</span>
             <input type="text" data-route-index="${index}" data-route-field="path" value="${escapeHtml(route.path || "")}" />
           </label>
           <label>
-            <span>Path activo extra</span>
+            <span>${this._L("Path activo extra")}</span>
             <input
               type="text"
               data-route-index="${index}"
@@ -4501,7 +4495,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Usuarios</span>
+            <span>${this._L("Usuarios")}</span>
             <input
               type="text"
               data-route-index="${index}"
@@ -4513,11 +4507,11 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           <label>
-            <span>Layout popup</span>
+            <span>${this._L("Layout popup")}</span>
             <select data-route-index="${index}" data-route-field="popup_layout" data-optional="true">
-              <option value="" ${!route.popup_layout ? "selected" : ""}>Auto</option>
-              <option value="vertical" ${route.popup_layout === "vertical" ? "selected" : ""}>Vertical</option>
-              <option value="horizontal" ${route.popup_layout === "horizontal" ? "selected" : ""}>Horizontal</option>
+              <option value="" ${!route.popup_layout ? "selected" : ""}>${this._L("Auto")}</option>
+              <option value="vertical" ${route.popup_layout === "vertical" ? "selected" : ""}>${this._L("Vertical")}</option>
+              <option value="horizontal" ${route.popup_layout === "horizontal" ? "selected" : ""}>${this._L("Horizontal")}</option>
             </select>
           </label>
           <label class="checkbox">
@@ -4530,14 +4524,14 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               ${route.match === "prefix" ? "checked" : ""}
             />
             <span class="toggle-switch" aria-hidden="true"></span>
-            <span>Marcar activa por prefijo</span>
+            <span>${this._L("Marcar activa por prefijo")}</span>
           </label>
         </div>
         <div class="subsection">
           <div class="route-head route-head--subsection">
-            <strong>Popup</strong>
+            <strong>${this._L("Popup")}</strong>
             <button type="button" data-editor-action="add-popup-item" data-route-index="${index}">
-              Anadir popup
+              ${this._L("Anadir popup")}
             </button>
           </div>
           ${popupMarkup}
@@ -4792,97 +4786,97 @@ class NodaliaNavigationBarEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Opciones base de la barra, layout y visibilidad general.</div>
+            <div class="editor-section__title">${this._L("General")}</div>
+            <div class="editor-section__hint">${this._L("Opciones base de la barra, layout y visibilidad general.")}</div>
           </div>
           <div class="editor-grid">
             <label>
-              <span>Titulo</span>
+              <span>${this._L("Titulo")}</span>
               <input type="text" data-field="title" data-optional="true" value="${escapeHtml(config.title || "")}" />
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="haptics.enabled" ${config.haptics.enabled ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
-              <span>Respuesta haptica</span>
+              <span>${this._L("Respuesta haptica")}</span>
             </label>
             <label>
-              <span>Estilo haptico</span>
+              <span>${this._L("Estilo haptico")}</span>
               <select data-field="haptics.style">
-                <option value="selection" ${config.haptics.style === "selection" ? "selected" : ""}>Selection</option>
-                <option value="light" ${config.haptics.style === "light" ? "selected" : ""}>Light</option>
-                <option value="medium" ${config.haptics.style === "medium" ? "selected" : ""}>Medium</option>
-                <option value="heavy" ${config.haptics.style === "heavy" ? "selected" : ""}>Heavy</option>
-                <option value="success" ${config.haptics.style === "success" ? "selected" : ""}>Success</option>
-                <option value="warning" ${config.haptics.style === "warning" ? "selected" : ""}>Warning</option>
-                <option value="failure" ${config.haptics.style === "failure" ? "selected" : ""}>Failure</option>
+                <option value="selection" ${config.haptics.style === "selection" ? "selected" : ""}>${this._L("Selección")}</option>
+                <option value="light" ${config.haptics.style === "light" ? "selected" : ""}>${this._L("Ligero")}</option>
+                <option value="medium" ${config.haptics.style === "medium" ? "selected" : ""}>${this._L("Medio")}</option>
+                <option value="heavy" ${config.haptics.style === "heavy" ? "selected" : ""}>${this._L("Intenso")}</option>
+                <option value="success" ${config.haptics.style === "success" ? "selected" : ""}>${this._L("Éxito")}</option>
+                <option value="warning" ${config.haptics.style === "warning" ? "selected" : ""}>${this._L("Aviso")}</option>
+                <option value="failure" ${config.haptics.style === "failure" ? "selected" : ""}>${this._L("Fallo")}</option>
               </select>
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="haptics.fallback_vibrate" ${config.haptics.fallback_vibrate ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
-              <span>Fallback con vibracion</span>
+              <span>${this._L("Fallback con vibracion")}</span>
             </label>
             <label>
-              <span>Breakpoint movil</span>
+              <span>${this._L("Breakpoint movil")}</span>
               <input type="number" data-field="layout.mobile_breakpoint" value="${escapeHtml(config.layout.mobile_breakpoint || 1279)}" />
             </label>
             <label>
-              <span>Posicion</span>
+              <span>${this._L("Posicion")}</span>
               <select data-field="layout.position">
-                <option value="bottom" ${config.layout.position === "bottom" ? "selected" : ""}>Inferior</option>
-                <option value="top" ${config.layout.position === "top" ? "selected" : ""}>Superior</option>
+                <option value="bottom" ${config.layout.position === "bottom" ? "selected" : ""}>${this._L("Inferior")}</option>
+                <option value="top" ${config.layout.position === "top" ? "selected" : ""}>${this._L("Superior")}</option>
               </select>
             </label>
             <label>
-              <span>Offset</span>
+              <span>${this._L("Offset")}</span>
               <input type="text" data-field="layout.offset" value="${escapeHtml(config.layout.offset || "")}" />
             </label>
             <label>
-              <span>Margen lateral</span>
+              <span>${this._L("Margen lateral")}</span>
               <input type="text" data-field="layout.side_margin" value="${escapeHtml(config.layout.side_margin || "")}" />
             </label>
             <label>
-              <span>Separacion stack</span>
+              <span>${this._L("Separacion stack")}</span>
               <input type="text" data-field="layout.stack_gap" value="${escapeHtml(config.layout.stack_gap || "")}" />
             </label>
             <label>
-              <span>Altura reservada</span>
+              <span>${this._L("Altura reservada")}</span>
               <input type="text" data-field="layout.reserve_height" value="${escapeHtml(config.layout.reserve_height || "")}" />
             </label>
             <label>
-              <span>Z-index</span>
+              <span>${this._L("Z-index")}</span>
               <input type="number" data-field="layout.z_index" value="${escapeHtml(config.layout.z_index || 2)}" />
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="show_labels" ${config.show_labels ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
-              <span>Mostrar etiquetas</span>
+              <span>${this._L("Mostrar etiquetas")}</span>
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="layout.fixed" ${config.layout.fixed ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
-              <span>Fijar a pantalla</span>
+              <span>${this._L("Fijar a pantalla")}</span>
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="layout.reserve_space" ${config.layout.reserve_space ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
-              <span>Reservar espacio</span>
+              <span>${this._L("Reservar espacio")}</span>
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="layout.show_desktop" ${config.layout.show_desktop ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
-              <span>Mostrar tambien en escritorio</span>
+              <span>${this._L("Mostrar tambien en escritorio")}</span>
             </label>
           </div>
           <p class="hint">
-            Aqui ya puedes editar popup y media player. Para acciones muy avanzadas, sigue siendo mejor completar el YAML.
+            ${this._L("Aqui ya puedes editar popup y media player. Para acciones muy avanzadas, sigue siendo mejor completar el YAML.")}
           </p>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Controla transiciones de barra, popup, media player y respuestas visuales.</div>
+            <div class="editor-section__title">${this._L("Animaciones")}</div>
+            <div class="editor-section__hint">${this._L("Controla transiciones de barra, popup, media player y respuestas visuales.")}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4891,7 +4885,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showAnimationSection ? "Ocultar ajustes de animación" : "Mostrar ajustes de animación"}</span>
+                <span>${this._showAnimationSection ? this._L("Ocultar ajustes de animación") : this._L("Mostrar ajustes de animación")}</span>
               </button>
             </div>
           </div>
@@ -4902,22 +4896,22 @@ class NodaliaNavigationBarEditor extends HTMLElement {
                   <label class="checkbox">
                     <input type="checkbox" data-field="animations.enabled" ${animationEnabled ? "checked" : ""} />
                     <span class="toggle-switch" aria-hidden="true"></span>
-                    <span>Activar animaciones</span>
+                    <span>${this._L("Activar animaciones")}</span>
                   </label>
                   <label>
-                    <span>Barra y hover (ms)</span>
+                    <span>${this._L("Barra y hover (ms)")}</span>
                     <input type="number" data-field="animations.bar_duration" value="${escapeHtml(config.animations.bar_duration || DEFAULT_CONFIG.animations.bar_duration)}" />
                   </label>
                   <label>
-                    <span>Popup (ms)</span>
+                    <span>${this._L("Popup (ms)")}</span>
                     <input type="number" data-field="animations.popup_duration" value="${escapeHtml(config.animations.popup_duration || DEFAULT_CONFIG.animations.popup_duration)}" />
                   </label>
                   <label>
-                    <span>Media player (ms)</span>
+                    <span>${this._L("Media player (ms)")}</span>
                     <input type="number" data-field="animations.media_duration" value="${escapeHtml(config.animations.media_duration || DEFAULT_CONFIG.animations.media_duration)}" />
                   </label>
                   <label>
-                    <span>Respuesta botones (ms)</span>
+                    <span>${this._L("Respuesta botones (ms)")}</span>
                     <input type="number" data-field="animations.button_bounce_duration" value="${escapeHtml(config.animations.button_bounce_duration || DEFAULT_CONFIG.animations.button_bounce_duration)}" />
                   </label>
                 </div>
@@ -4928,8 +4922,8 @@ class NodaliaNavigationBarEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales de barra, botones, popup y media player.</div>
+            <div class="editor-section__title">${this._L("Estilos")}</div>
+            <div class="editor-section__hint">${this._L("Ajustes visuales de barra, botones, popup y media player.")}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4938,7 +4932,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+                <span>${this._showStyleSection ? this._L("Ocultar ajustes de estilo") : this._L("Mostrar ajustes de estilo")}</span>
               </button>
             </div>
           </div>
@@ -4946,66 +4940,66 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             this._showStyleSection
               ? `
                 <div class="editor-grid">
-                  <label><span>Fondo barra</span><input type="text" data-field="styles.bar.background" value="${escapeHtml(config.styles.bar.background || "")}" /></label>
-                  <label><span>Borde barra</span><input type="text" data-field="styles.bar.border" value="${escapeHtml(config.styles.bar.border || "")}" /></label>
-                  <label><span>Radio barra</span><input type="text" data-field="styles.bar.border_radius" value="${escapeHtml(config.styles.bar.border_radius || "")}" /></label>
-                  <label><span>Sombra barra</span><input type="text" data-field="styles.bar.box_shadow" value="${escapeHtml(config.styles.bar.box_shadow || "")}" /></label>
-                  <label><span>Padding barra</span><input type="text" data-field="styles.bar.padding" value="${escapeHtml(config.styles.bar.padding || "")}" /></label>
-                  <label><span>Altura minima</span><input type="text" data-field="styles.bar.min_height" value="${escapeHtml(config.styles.bar.min_height || "")}" /></label>
-                  <label><span>Separacion botones</span><input type="text" data-field="styles.bar.gap" value="${escapeHtml(config.styles.bar.gap || "")}" /></label>
-                  <label><span>Justificacion</span><input type="text" data-field="styles.bar.justify_content" value="${escapeHtml(config.styles.bar.justify_content || "")}" /></label>
-                  <label><span>Ancho maximo barra</span><input type="text" data-field="styles.bar.max_width" value="${escapeHtml(config.styles.bar.max_width || "")}" /></label>
-                  <label><span>Backdrop filter</span><input type="text" data-field="styles.bar.backdrop_filter" value="${escapeHtml(config.styles.bar.backdrop_filter || "")}" /></label>
-                  <label><span>Fondo botones</span><input type="text" data-field="styles.button.background" value="${escapeHtml(config.styles.button.background || "")}" /></label>
-                  <label><span>Color botones</span><input type="text" data-field="styles.button.color" value="${escapeHtml(config.styles.button.color || "")}" /></label>
-                  <label><span>Color activo</span><input type="text" data-field="styles.button.active_color" value="${escapeHtml(config.styles.button.active_color || "")}" /></label>
-                  <label><span>Fondo activo</span><input type="text" data-field="styles.button.active_background" value="${escapeHtml(config.styles.button.active_background || "")}" /></label>
-                  <label><span>Radio boton</span><input type="text" data-field="styles.button.border_radius" value="${escapeHtml(config.styles.button.border_radius || "")}" /></label>
-                  <label><span>Tamano boton</span><input type="text" data-field="styles.button.size" value="${escapeHtml(config.styles.button.size || "")}" /></label>
-                  <label><span>Tamano icono</span><input type="text" data-field="styles.button.icon_size" value="${escapeHtml(config.styles.button.icon_size || "")}" /></label>
-                  <label><span>Offset icono X</span><input type="text" data-field="styles.button.icon_offset_x" value="${escapeHtml(config.styles.button.icon_offset_x || "")}" /></label>
-                  <label><span>Offset icono Y</span><input type="text" data-field="styles.button.icon_offset_y" value="${escapeHtml(config.styles.button.icon_offset_y || "")}" /></label>
-                  <label><span>Color etiqueta</span><input type="text" data-field="styles.button.label_color" value="${escapeHtml(config.styles.button.label_color || "")}" /></label>
-                  <label><span>Color etiqueta activa</span><input type="text" data-field="styles.button.active_label_color" value="${escapeHtml(config.styles.button.active_label_color || "")}" /></label>
-                  <label><span>Tamano etiqueta</span><input type="text" data-field="styles.button.label_size" value="${escapeHtml(config.styles.button.label_size || "")}" /></label>
-                  <label><span>Separacion etiqueta</span><input type="text" data-field="styles.button.label_gap" value="${escapeHtml(config.styles.button.label_gap || "")}" /></label>
-                  <label><span>Fondo badge</span><input type="text" data-field="styles.badge.background" value="${escapeHtml(config.styles.badge.background || "")}" /></label>
-                  <label><span>Color badge</span><input type="text" data-field="styles.badge.color" value="${escapeHtml(config.styles.badge.color || "")}" /></label>
-                  <label><span>Tamano minimo badge</span><input type="text" data-field="styles.badge.min_size" value="${escapeHtml(config.styles.badge.min_size || "")}" /></label>
-                  <label><span>Tamano texto badge</span><input type="text" data-field="styles.badge.font_size" value="${escapeHtml(config.styles.badge.font_size || "")}" /></label>
-                  <label><span>Fondo popup</span><input type="text" data-field="styles.popup.background" value="${escapeHtml(config.styles.popup.background || "")}" /></label>
-                  <label><span>Borde popup</span><input type="text" data-field="styles.popup.border" value="${escapeHtml(config.styles.popup.border || "")}" /></label>
-                  <label><span>Radio popup</span><input type="text" data-field="styles.popup.border_radius" value="${escapeHtml(config.styles.popup.border_radius || "")}" /></label>
-                  <label><span>Sombra popup</span><input type="text" data-field="styles.popup.box_shadow" value="${escapeHtml(config.styles.popup.box_shadow || "")}" /></label>
+                  <label><span>${this._L("Fondo barra")}</span><input type="text" data-field="styles.bar.background" value="${escapeHtml(config.styles.bar.background || "")}" /></label>
+                  <label><span>${this._L("Borde barra")}</span><input type="text" data-field="styles.bar.border" value="${escapeHtml(config.styles.bar.border || "")}" /></label>
+                  <label><span>${this._L("Radio barra")}</span><input type="text" data-field="styles.bar.border_radius" value="${escapeHtml(config.styles.bar.border_radius || "")}" /></label>
+                  <label><span>${this._L("Sombra barra")}</span><input type="text" data-field="styles.bar.box_shadow" value="${escapeHtml(config.styles.bar.box_shadow || "")}" /></label>
+                  <label><span>${this._L("Padding barra")}</span><input type="text" data-field="styles.bar.padding" value="${escapeHtml(config.styles.bar.padding || "")}" /></label>
+                  <label><span>${this._L("Altura minima")}</span><input type="text" data-field="styles.bar.min_height" value="${escapeHtml(config.styles.bar.min_height || "")}" /></label>
+                  <label><span>${this._L("Separacion botones")}</span><input type="text" data-field="styles.bar.gap" value="${escapeHtml(config.styles.bar.gap || "")}" /></label>
+                  <label><span>${this._L("Justificacion")}</span><input type="text" data-field="styles.bar.justify_content" value="${escapeHtml(config.styles.bar.justify_content || "")}" /></label>
+                  <label><span>${this._L("Ancho maximo barra")}</span><input type="text" data-field="styles.bar.max_width" value="${escapeHtml(config.styles.bar.max_width || "")}" /></label>
+                  <label><span>${this._L("Backdrop filter")}</span><input type="text" data-field="styles.bar.backdrop_filter" value="${escapeHtml(config.styles.bar.backdrop_filter || "")}" /></label>
+                  <label><span>${this._L("Fondo botones")}</span><input type="text" data-field="styles.button.background" value="${escapeHtml(config.styles.button.background || "")}" /></label>
+                  <label><span>${this._L("Color botones")}</span><input type="text" data-field="styles.button.color" value="${escapeHtml(config.styles.button.color || "")}" /></label>
+                  <label><span>${this._L("Color activo")}</span><input type="text" data-field="styles.button.active_color" value="${escapeHtml(config.styles.button.active_color || "")}" /></label>
+                  <label><span>${this._L("Fondo activo")}</span><input type="text" data-field="styles.button.active_background" value="${escapeHtml(config.styles.button.active_background || "")}" /></label>
+                  <label><span>${this._L("Radio boton")}</span><input type="text" data-field="styles.button.border_radius" value="${escapeHtml(config.styles.button.border_radius || "")}" /></label>
+                  <label><span>${this._L("Tamano boton")}</span><input type="text" data-field="styles.button.size" value="${escapeHtml(config.styles.button.size || "")}" /></label>
+                  <label><span>${this._L("Tamano icono")}</span><input type="text" data-field="styles.button.icon_size" value="${escapeHtml(config.styles.button.icon_size || "")}" /></label>
+                  <label><span>${this._L("Offset icono X")}</span><input type="text" data-field="styles.button.icon_offset_x" value="${escapeHtml(config.styles.button.icon_offset_x || "")}" /></label>
+                  <label><span>${this._L("Offset icono Y")}</span><input type="text" data-field="styles.button.icon_offset_y" value="${escapeHtml(config.styles.button.icon_offset_y || "")}" /></label>
+                  <label><span>${this._L("Color etiqueta")}</span><input type="text" data-field="styles.button.label_color" value="${escapeHtml(config.styles.button.label_color || "")}" /></label>
+                  <label><span>${this._L("Color etiqueta activa")}</span><input type="text" data-field="styles.button.active_label_color" value="${escapeHtml(config.styles.button.active_label_color || "")}" /></label>
+                  <label><span>${this._L("Tamano etiqueta")}</span><input type="text" data-field="styles.button.label_size" value="${escapeHtml(config.styles.button.label_size || "")}" /></label>
+                  <label><span>${this._L("Separacion etiqueta")}</span><input type="text" data-field="styles.button.label_gap" value="${escapeHtml(config.styles.button.label_gap || "")}" /></label>
+                  <label><span>${this._L("Fondo badge")}</span><input type="text" data-field="styles.badge.background" value="${escapeHtml(config.styles.badge.background || "")}" /></label>
+                  <label><span>${this._L("Color badge")}</span><input type="text" data-field="styles.badge.color" value="${escapeHtml(config.styles.badge.color || "")}" /></label>
+                  <label><span>${this._L("Tamano minimo badge")}</span><input type="text" data-field="styles.badge.min_size" value="${escapeHtml(config.styles.badge.min_size || "")}" /></label>
+                  <label><span>${this._L("Tamano texto badge")}</span><input type="text" data-field="styles.badge.font_size" value="${escapeHtml(config.styles.badge.font_size || "")}" /></label>
+                  <label><span>${this._L("Fondo popup")}</span><input type="text" data-field="styles.popup.background" value="${escapeHtml(config.styles.popup.background || "")}" /></label>
+                  <label><span>${this._L("Borde popup")}</span><input type="text" data-field="styles.popup.border" value="${escapeHtml(config.styles.popup.border || "")}" /></label>
+                  <label><span>${this._L("Radio popup")}</span><input type="text" data-field="styles.popup.border_radius" value="${escapeHtml(config.styles.popup.border_radius || "")}" /></label>
+                  <label><span>${this._L("Sombra popup")}</span><input type="text" data-field="styles.popup.box_shadow" value="${escapeHtml(config.styles.popup.box_shadow || "")}" /></label>
                   <label>
-                    <span>Layout popup</span>
+                    <span>${this._L("Layout popup")}</span>
                     <select data-field="styles.popup.layout" data-optional="true">
-                      <option value="" ${!config.styles.popup.layout || config.styles.popup.layout === "auto" ? "selected" : ""}>Auto</option>
-                      <option value="vertical" ${config.styles.popup.layout === "vertical" ? "selected" : ""}>Vertical</option>
-                      <option value="horizontal" ${config.styles.popup.layout === "horizontal" ? "selected" : ""}>Horizontal</option>
+                      <option value="" ${!config.styles.popup.layout || config.styles.popup.layout === "auto" ? "selected" : ""}>${this._L("Auto")}</option>
+                      <option value="vertical" ${config.styles.popup.layout === "vertical" ? "selected" : ""}>${this._L("Vertical")}</option>
+                      <option value="horizontal" ${config.styles.popup.layout === "horizontal" ? "selected" : ""}>${this._L("Horizontal")}</option>
                     </select>
                   </label>
-                  <label><span>Padding popup</span><input type="text" data-field="styles.popup.padding" value="${escapeHtml(config.styles.popup.padding || "")}" /></label>
-                  <label><span>Ancho minimo popup</span><input type="text" data-field="styles.popup.min_width" value="${escapeHtml(config.styles.popup.min_width || "")}" /></label>
-                  <label><span>Ancho maximo popup</span><input type="text" data-field="styles.popup.max_width" value="${escapeHtml(config.styles.popup.max_width || "")}" /></label>
-                  <label><span>Tamano item popup</span><input type="text" data-field="styles.popup.item_size" value="${escapeHtml(config.styles.popup.item_size || "")}" /></label>
-                  <label><span>Tamano etiqueta popup</span><input type="text" data-field="styles.popup.label_size" value="${escapeHtml(config.styles.popup.label_size || "")}" /></label>
-                  <label><span>Separacion popup</span><input type="text" data-field="styles.popup.item_gap" value="${escapeHtml(config.styles.popup.item_gap || "")}" /></label>
-                  <label><span>Veladura popup</span><input type="text" data-field="styles.popup.backdrop" value="${escapeHtml(config.styles.popup.backdrop || "")}" /></label>
-                  <label><span>Fondo media player</span><input type="text" data-field="styles.media_player.background" value="${escapeHtml(config.styles.media_player.background || "")}" /></label>
-                  <label><span>Borde media player</span><input type="text" data-field="styles.media_player.border" value="${escapeHtml(config.styles.media_player.border || "")}" /></label>
-                  <label><span>Radio media player</span><input type="text" data-field="styles.media_player.border_radius" value="${escapeHtml(config.styles.media_player.border_radius || "")}" /></label>
-                  <label><span>Sombra media player</span><input type="text" data-field="styles.media_player.box_shadow" value="${escapeHtml(config.styles.media_player.box_shadow || "")}" /></label>
-                  <label><span>Padding media player</span><input type="text" data-field="styles.media_player.padding" value="${escapeHtml(config.styles.media_player.padding || "")}" /></label>
-                  <label><span>Altura minima media player</span><input type="text" data-field="styles.media_player.min_height" value="${escapeHtml(config.styles.media_player.min_height || "")}" /></label>
-                  <label><span>Tamano portada</span><input type="text" data-field="styles.media_player.artwork_size" value="${escapeHtml(config.styles.media_player.artwork_size || "")}" /></label>
-                  <label><span>Tamano controles</span><input type="text" data-field="styles.media_player.control_size" value="${escapeHtml(config.styles.media_player.control_size || "")}" /></label>
-                  <label><span>Tamano titulo</span><input type="text" data-field="styles.media_player.title_size" value="${escapeHtml(config.styles.media_player.title_size || "")}" /></label>
-                  <label><span>Tamano subtitulo</span><input type="text" data-field="styles.media_player.subtitle_size" value="${escapeHtml(config.styles.media_player.subtitle_size || "")}" /></label>
-                  <label><span>Color progreso</span><input type="text" data-field="styles.media_player.progress_color" value="${escapeHtml(config.styles.media_player.progress_color || "")}" /></label>
-                  <label><span>Fondo progreso</span><input type="text" data-field="styles.media_player.progress_background" value="${escapeHtml(config.styles.media_player.progress_background || "")}" /></label>
-                  <label><span>Overlay portada</span><input type="text" data-field="styles.media_player.overlay_color" value="${escapeHtml(config.styles.media_player.overlay_color || "")}" /></label>
-                  <label><span>Tamano indicadores</span><input type="text" data-field="styles.media_player.dot_size" value="${escapeHtml(config.styles.media_player.dot_size || "")}" /></label>
+                  <label><span>${this._L("Padding popup")}</span><input type="text" data-field="styles.popup.padding" value="${escapeHtml(config.styles.popup.padding || "")}" /></label>
+                  <label><span>${this._L("Ancho minimo popup")}</span><input type="text" data-field="styles.popup.min_width" value="${escapeHtml(config.styles.popup.min_width || "")}" /></label>
+                  <label><span>${this._L("Ancho maximo popup")}</span><input type="text" data-field="styles.popup.max_width" value="${escapeHtml(config.styles.popup.max_width || "")}" /></label>
+                  <label><span>${this._L("Tamano item popup")}</span><input type="text" data-field="styles.popup.item_size" value="${escapeHtml(config.styles.popup.item_size || "")}" /></label>
+                  <label><span>${this._L("Tamano etiqueta popup")}</span><input type="text" data-field="styles.popup.label_size" value="${escapeHtml(config.styles.popup.label_size || "")}" /></label>
+                  <label><span>${this._L("Separacion popup")}</span><input type="text" data-field="styles.popup.item_gap" value="${escapeHtml(config.styles.popup.item_gap || "")}" /></label>
+                  <label><span>${this._L("Veladura popup")}</span><input type="text" data-field="styles.popup.backdrop" value="${escapeHtml(config.styles.popup.backdrop || "")}" /></label>
+                  <label><span>${this._L("Fondo media player")}</span><input type="text" data-field="styles.media_player.background" value="${escapeHtml(config.styles.media_player.background || "")}" /></label>
+                  <label><span>${this._L("Borde media player")}</span><input type="text" data-field="styles.media_player.border" value="${escapeHtml(config.styles.media_player.border || "")}" /></label>
+                  <label><span>${this._L("Radio media player")}</span><input type="text" data-field="styles.media_player.border_radius" value="${escapeHtml(config.styles.media_player.border_radius || "")}" /></label>
+                  <label><span>${this._L("Sombra media player")}</span><input type="text" data-field="styles.media_player.box_shadow" value="${escapeHtml(config.styles.media_player.box_shadow || "")}" /></label>
+                  <label><span>${this._L("Padding media player")}</span><input type="text" data-field="styles.media_player.padding" value="${escapeHtml(config.styles.media_player.padding || "")}" /></label>
+                  <label><span>${this._L("Altura minima media player")}</span><input type="text" data-field="styles.media_player.min_height" value="${escapeHtml(config.styles.media_player.min_height || "")}" /></label>
+                  <label><span>${this._L("Tamano portada")}</span><input type="text" data-field="styles.media_player.artwork_size" value="${escapeHtml(config.styles.media_player.artwork_size || "")}" /></label>
+                  <label><span>${this._L("Tamano controles")}</span><input type="text" data-field="styles.media_player.control_size" value="${escapeHtml(config.styles.media_player.control_size || "")}" /></label>
+                  <label><span>${this._L("Tamano titulo")}</span><input type="text" data-field="styles.media_player.title_size" value="${escapeHtml(config.styles.media_player.title_size || "")}" /></label>
+                  <label><span>${this._L("Tamano subtitulo")}</span><input type="text" data-field="styles.media_player.subtitle_size" value="${escapeHtml(config.styles.media_player.subtitle_size || "")}" /></label>
+                  <label><span>${this._L("Color progreso")}</span><input type="text" data-field="styles.media_player.progress_color" value="${escapeHtml(config.styles.media_player.progress_color || "")}" /></label>
+                  <label><span>${this._L("Fondo progreso")}</span><input type="text" data-field="styles.media_player.progress_background" value="${escapeHtml(config.styles.media_player.progress_background || "")}" /></label>
+                  <label><span>${this._L("Overlay portada")}</span><input type="text" data-field="styles.media_player.overlay_color" value="${escapeHtml(config.styles.media_player.overlay_color || "")}" /></label>
+                  <label><span>${this._L("Tamano indicadores")}</span><input type="text" data-field="styles.media_player.dot_size" value="${escapeHtml(config.styles.media_player.dot_size || "")}" /></label>
                 </div>
               `
               : ""
@@ -5014,61 +5008,61 @@ class NodaliaNavigationBarEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Media Player</div>
-            <div class="editor-section__hint">Opciones generales del reproductor integrado y lista de players visibles.</div>
+            <div class="editor-section__title">${this._L("Media Player")}</div>
+            <div class="editor-section__hint">${this._L("Opciones generales del reproductor integrado y lista de players visibles.")}</div>
             <div class="editor-section__actions">
-              <button type="button" data-editor-action="add-player">Anadir player</button>
+              <button type="button" data-editor-action="add-player">${this._L("Anadir player")}</button>
             </div>
           </div>
           <div class="editor-grid">
             <label class="checkbox">
               <input type="checkbox" data-field="media_player.show_desktop" ${config.media_player.show_desktop ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
-              <span>Mostrar tambien en escritorio</span>
+              <span>${this._L("Mostrar tambien en escritorio")}</span>
             </label>
             <label class="checkbox">
               <input type="checkbox" data-field="media_player.album_cover_background" ${config.media_player.album_cover_background ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
-              <span>Usar caratula de fondo</span>
+              <span>${this._L("Usar caratula de fondo")}</span>
             </label>
             <label>
-              <span>Altura reservada</span>
+              <span>${this._L("Altura reservada")}</span>
               <input type="text" data-field="media_player.reserve_height" value="${escapeHtml(config.media_player.reserve_height || "")}" />
             </label>
             <label>
-              <span>Separacion con navbar</span>
+              <span>${this._L("Separacion con navbar")}</span>
               <input type="text" data-field="media_player.gap" value="${escapeHtml(config.media_player.gap || "")}" />
             </label>
             <label>
-              <span>Tamano portada</span>
+              <span>${this._L("Tamano portada")}</span>
               <input type="text" data-field="styles.media_player.artwork_size" value="${escapeHtml(config.styles.media_player.artwork_size || "")}" />
             </label>
             <label>
-              <span>Tamano controles</span>
+              <span>${this._L("Tamano controles")}</span>
               <input type="text" data-field="styles.media_player.control_size" value="${escapeHtml(config.styles.media_player.control_size || "")}" />
             </label>
             <label>
-              <span>Tamano titulo</span>
+              <span>${this._L("Tamano titulo")}</span>
               <input type="text" data-field="styles.media_player.title_size" value="${escapeHtml(config.styles.media_player.title_size || "")}" />
             </label>
             <label>
-              <span>Tamano subtitulo</span>
+              <span>${this._L("Tamano subtitulo")}</span>
               <input type="text" data-field="styles.media_player.subtitle_size" value="${escapeHtml(config.styles.media_player.subtitle_size || "")}" />
             </label>
           </div>
           <div class="subsection">
-            ${playersMarkup || '<p class="hint">No hay reproductores configurados.</p>'}
+            ${playersMarkup || `<p class="hint">${this._L("No hay reproductores configurados.")}</p>`}
           </div>
         </section>
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Rutas</div>
-            <div class="editor-section__hint">Añade, reordena y personaliza los destinos de la barra y sus popups.</div>
+            <div class="editor-section__title">${this._L("Rutas")}</div>
+            <div class="editor-section__hint">${this._L("Añade, reordena y personaliza los destinos de la barra y sus popups.")}</div>
             <div class="editor-section__actions">
-              <button type="button" data-editor-action="add-route">Anadir ruta</button>
+              <button type="button" data-editor-action="add-route">${this._L("Anadir ruta")}</button>
             </div>
           </div>
-          ${routesMarkup || '<p class="hint">No hay rutas todavia.</p>'}
+          ${routesMarkup || `<p class="hint">${this._L("No hay rutas todavia.")}</p>`}
         </section>
       </div>
     `;

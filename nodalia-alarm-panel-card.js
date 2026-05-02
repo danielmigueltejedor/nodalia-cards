@@ -600,7 +600,18 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   }
 
   _getTitle(state) {
-    return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Alarma";
+    if (this._config?.name) {
+      return this._config.name;
+    }
+    if (state?.attributes?.friendly_name) {
+      return state.attributes.friendly_name;
+    }
+    if (this._config?.entity) {
+      return this._config.entity;
+    }
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    return window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.defaultTitle || "Alarma";
   }
 
   _getIcon() {
@@ -609,6 +620,13 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
   _translateState(state) {
     const key = normalizeTextKey(state?.state);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const alarmStrings = window.NodaliaI18n?.strings?.(lang)?.alarmPanel;
+    const translated = alarmStrings?.states?.[key];
+    if (translated) {
+      return translated;
+    }
 
     switch (key) {
       case "disarmed":
@@ -638,7 +656,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       case "unknown":
         return "Desconocida";
       default:
-        return state?.state ? String(state.state) : "Sin estado";
+        return state?.state ? String(state.state) : (alarmStrings?.noState || "Sin estado");
     }
   }
 
@@ -767,10 +785,13 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   }
 
   _getModeDefinitions(state) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const actionLabels = window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.actions || {};
     const modes = [
       {
         key: "disarm",
-        label: "Desarmar",
+        label: actionLabels.disarm || this._translateState({ state: "disarmed" }),
         icon: "mdi:shield-off-outline",
         service: "alarm_disarm",
         enabled: this._config?.show_disarm !== false && !this._matchesAlarmMode(state, "disarmed"),
@@ -778,7 +799,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       },
       {
         key: "home",
-        label: "Casa",
+        label: actionLabels.arm_home || this._translateState({ state: "armed_home" }),
         icon: "mdi:home-lock",
         service: "alarm_arm_home",
         enabled: this._config?.show_arm_home !== false
@@ -788,7 +809,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       },
       {
         key: "away",
-        label: "Ausente",
+        label: actionLabels.arm_away || this._translateState({ state: "armed_away" }),
         icon: "mdi:shield-lock",
         service: "alarm_arm_away",
         enabled: this._config?.show_arm_away !== false
@@ -798,7 +819,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       },
       {
         key: "night",
-        label: "Noche",
+        label: actionLabels.arm_night || this._translateState({ state: "armed_night" }),
         icon: "mdi:weather-night",
         service: "alarm_arm_night",
         enabled: this._config?.show_arm_night !== false
@@ -808,7 +829,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       },
       {
         key: "vacation",
-        label: "Vacaciones",
+        label: actionLabels.arm_vacation || this._translateState({ state: "armed_vacation" }),
         icon: "mdi:palm-tree",
         service: "alarm_arm_vacation",
         enabled: this._config?.show_arm_vacation === true
@@ -818,7 +839,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       },
       {
         key: "custom_bypass",
-        label: "Personalizado",
+        label: actionLabels.arm_custom_bypass || this._translateState({ state: "armed_custom_bypass" }),
         icon: "mdi:tune-variant",
         service: "alarm_arm_custom_bypass",
         enabled: this._config?.show_custom_bypass === true
@@ -1871,14 +1892,23 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(options.type || "text")}"
           data-field="${escapeHtml(field)}"
@@ -1891,6 +1921,8 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -1899,16 +1931,16 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -1918,6 +1950,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -1927,19 +1960,20 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options, renderOptions = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options.map(option => `
             <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-              ${escapeHtml(option.label)}
+              ${escapeHtml(this._editorLabel(option.label))}
             </option>
           `).join("")}
         </select>
@@ -1948,6 +1982,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
   }
 
   _renderEntityPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder || "";
     const domains = Array.isArray(options.domains)
@@ -1956,7 +1991,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity"
@@ -1970,12 +2005,13 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
@@ -2019,7 +2055,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = placeholder || "Selecciona una entidad";
+      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
       control.appendChild(emptyOption);
       this._getDomainEntityOptions(domains, field).forEach(option => {
         const optionElement = document.createElement("option");
@@ -2109,6 +2145,18 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
         }
 
         .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
           grid-column: 1 / -1;
         }
 
@@ -2302,8 +2350,8 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad principal, helper opcional del codigo, icono y comportamiento base de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal, helper opcional del codigo, icono y comportamiento base de la tarjeta."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityPickerField("Entidad principal", "entity", config.entity, {
@@ -2345,8 +2393,8 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Modos</div>
-            <div class="editor-section__hint">Botones de armado y desarmado visibles en la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Modos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Botones de armado y desarmado visibles en la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Mostrar desarmar", "show_disarm", config.show_disarm !== false)}
@@ -2360,8 +2408,8 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Entrada suave del contenido y pequeno rebote al pulsar acciones e icono.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave del contenido y pequeno rebote al pulsar acciones e icono."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -2370,7 +2418,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showAnimationSection ? "Ocultar ajustes de animacion" : "Mostrar ajustes de animacion"}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
               </button>
             </div>
           </div>
@@ -2393,8 +2441,8 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Respuesta haptica</div>
-            <div class="editor-section__hint">Respuesta tactil opcional al pulsar acciones.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta haptica"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional al pulsar acciones."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -2418,8 +2466,8 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales base de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base de la tarjeta."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -2428,7 +2476,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
               </button>
             </div>
           </div>

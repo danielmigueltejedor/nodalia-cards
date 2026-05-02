@@ -15,6 +15,7 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  language: "auto",
   tap_action: "more-info",
   show_condition: true,
   show_humidity_chip: true,
@@ -537,13 +538,15 @@ function getMeteoalarmAccentColor(state) {
   }
 }
 
-function formatMeteoalarmDate(value) {
+function formatMeteoalarmDate(value, hass, configLang) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return String(value || "").trim();
   }
 
-  return date.toLocaleString([], {
+  const lang = window.NodaliaI18n?.resolveLanguage?.(hass, configLang ?? "auto") ?? "es";
+  const tag = window.NodaliaI18n?.localeTag?.(lang) || lang;
+  return date.toLocaleString(tag, {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
@@ -551,7 +554,10 @@ function formatMeteoalarmDate(value) {
   });
 }
 
-function translateMeteoalarmValue(value) {
+function translateMeteoalarmValue(value, hass, configLang) {
+  if (window.NodaliaI18n?.translateMeteoalarmTerm) {
+    return window.NodaliaI18n.translateMeteoalarmTerm(hass, configLang ?? "auto", value);
+  }
   const text = String(value || "").trim();
   switch (normalizeTextKey(text)) {
     case "moderate":
@@ -599,7 +605,11 @@ function translateMeteoalarmValue(value) {
   }
 }
 
-function translateCondition(value) {
+function translateCondition(value, hass = null, configLang = null) {
+  const h = hass ?? (typeof window !== "undefined" ? window.NodaliaI18n?.resolveHass?.(null) : null);
+  if (window.NodaliaI18n?.translateWeatherCondition) {
+    return window.NodaliaI18n.translateWeatherCondition(h, configLang ?? "auto", value);
+  }
   switch (normalizeTextKey(value)) {
     case "clear_night":
       return "Despejado";
@@ -1282,11 +1292,24 @@ class NodaliaWeatherCard extends HTMLElement {
     const accentColor = getMeteoalarmAccentColor(state);
     const isActive = state?.state === "on";
     const awareness = getMeteoalarmAwarenessParts(state);
-    const label = isActive
-      ? String(attrs.event || attrs.headline || awareness.label || "Alerta").trim()
-      : state?.state === "off"
-        ? "Sin alertas"
-        : "Meteoalarm";
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "es";
+    const wm = window.NodaliaI18n?.strings?.(lang)?.weatherCard?.meteoalarm;
+    const ev = String(attrs.event || "").trim();
+    const headline = String(attrs.headline || "").trim();
+    const awareLabel = String(awareness.label || "").trim();
+    const label = !isActive
+      ? state?.state === "off"
+        ? (wm?.noAlerts || "Sin alertas")
+        : (wm?.name || "Meteoalarm")
+      : ev
+        ? ev
+        : headline
+          ? headline
+          : awareLabel
+            ? translateMeteoalarmValue(awareLabel, hass, langCfg)
+            : (wm?.alertFallback || "Alerta");
 
     return `
       <button
@@ -1320,19 +1343,23 @@ class NodaliaWeatherCard extends HTMLElement {
     const attrs = state?.attributes || {};
     const accentColor = getMeteoalarmAccentColor(state);
     const awareness = getMeteoalarmAwarenessParts(state);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "es";
+    const wm = window.NodaliaI18n?.strings?.(lang)?.weatherCard?.meteoalarm;
     const title = state?.state === "on"
-      ? String(attrs.headline || attrs.event || "Alerta meteorologica").trim()
+      ? String(attrs.headline || attrs.event || wm?.weatherAlert || "Alerta meteorologica").trim()
       : state?.state === "off"
-        ? "Sin alertas meteorologicas"
-        : "Meteoalarm";
+        ? (wm?.noWeatherAlerts || "Sin alertas meteorologicas")
+        : (wm?.name || "Meteoalarm");
     const rows = [
-      ["Nivel", translateMeteoalarmValue(awareness.label || attrs.severity || "")],
-      ["Tipo", attrs.event || attrs.awareness_type || ""],
-      ["Inicio", formatMeteoalarmDate(attrs.onset || attrs.effective)],
-      ["Fin", formatMeteoalarmDate(attrs.expires)],
-      ["Severidad", translateMeteoalarmValue(attrs.severity || "")],
-      ["Urgencia", translateMeteoalarmValue(attrs.urgency || "")],
-      ["Certeza", translateMeteoalarmValue(attrs.certainty || "")],
+      [wm?.level || "Nivel", translateMeteoalarmValue(awareness.label || attrs.severity || "", hass, langCfg)],
+      [wm?.type || "Tipo", attrs.event || attrs.awareness_type || ""],
+      [wm?.start || "Inicio", formatMeteoalarmDate(attrs.onset || attrs.effective, hass, langCfg)],
+      [wm?.end || "Fin", formatMeteoalarmDate(attrs.expires, hass, langCfg)],
+      [wm?.severity || "Severidad", translateMeteoalarmValue(attrs.severity || "", hass, langCfg)],
+      [wm?.urgency || "Urgencia", translateMeteoalarmValue(attrs.urgency || "", hass, langCfg)],
+      [wm?.certainty || "Certeza", translateMeteoalarmValue(attrs.certainty || "", hass, langCfg)],
     ].filter(([, value]) => String(value || "").trim());
     const description = String(attrs.description || "").trim();
     const instruction = String(attrs.instruction || "").trim();
@@ -1345,10 +1372,10 @@ class NodaliaWeatherCard extends HTMLElement {
               <ha-icon icon="${state?.state === "on" ? "mdi:alert" : "mdi:shield-check"}"></ha-icon>
             </div>
             <div class="weather-alert-panel__copy">
-              <div class="weather-alert-panel__eyebrow">Meteoalarm</div>
+              <div class="weather-alert-panel__eyebrow">${escapeHtml(wm?.name || "Meteoalarm")}</div>
               <div class="weather-alert-panel__title">${escapeHtml(title)}</div>
             </div>
-            <button type="button" class="weather-alert-panel__close" data-weather-action="close-meteoalarm" aria-label="Cerrar">
+            <button type="button" class="weather-alert-panel__close" data-weather-action="close-meteoalarm" aria-label="${escapeHtml(wm?.close || "Cerrar")}">
               <ha-icon icon="mdi:close"></ha-icon>
             </button>
           </div>
@@ -1362,8 +1389,8 @@ class NodaliaWeatherCard extends HTMLElement {
               `).join("")}</div>`
               : ""
           }
-          ${description ? `<div class="weather-alert-panel__section"><h3>Descripcion</h3><p>${escapeHtml(description)}</p></div>` : ""}
-          ${instruction ? `<div class="weather-alert-panel__section"><h3>Instrucciones</h3><p>${escapeHtml(instruction)}</p></div>` : ""}
+          ${description ? `<div class="weather-alert-panel__section"><h3>${escapeHtml(wm?.descriptionTitle || "Descripcion")}</h3><p>${escapeHtml(description)}</p></div>` : ""}
+          ${instruction ? `<div class="weather-alert-panel__section"><h3>${escapeHtml(wm?.instructionsTitle || "Instrucciones")}</h3><p>${escapeHtml(instruction)}</p></div>` : ""}
         </section>
       </div>
     `;
@@ -1380,12 +1407,19 @@ class NodaliaWeatherCard extends HTMLElement {
   }
 
   _renderForecastChart(items, type, state) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const cfgLang = this._config?.language ?? "auto";
+    const wf = key => (window.NodaliaI18n?.translateWeatherForecastUi
+      ? window.NodaliaI18n.translateWeatherForecastUi(hass, cfgLang, key)
+      : "");
+
     const sourcePoints = items
       .map((item, index) => ({ index, item }))
       .filter(point => Number.isFinite(getForecastTemperatureValue(point.item, type)));
 
     if (sourcePoints.length < 2) {
-      return `<div class="weather-card__forecast-empty">No hay suficientes datos para mostrar el gráfico.</div>`;
+      const emptyChart = wf("chartInsufficientData") || "No hay suficientes datos para mostrar el gráfico.";
+      return `<div class="weather-card__forecast-empty">${escapeHtml(emptyChart)}</div>`;
     }
 
     const hasDailyLow = type === "daily" && sourcePoints.some(point => Number.isFinite(Number(point.item?.templow)));
@@ -1403,7 +1437,8 @@ class NodaliaWeatherCard extends HTMLElement {
     const lowPoints = rawHighPoints.length >= 2 ? rawLowPoints : [];
 
     if (highPoints.length < 2) {
-      return `<div class="weather-card__forecast-empty">No hay suficientes datos para mostrar el gráfico.</div>`;
+      const emptyChart = wf("chartInsufficientData") || "No hay suficientes datos para mostrar el gráfico.";
+      return `<div class="weather-card__forecast-empty">${escapeHtml(emptyChart)}</div>`;
     }
 
     const showChartLabels = this._config?.forecast_chart_labels === true;
@@ -1498,12 +1533,12 @@ class NodaliaWeatherCard extends HTMLElement {
       const windLabel = formatNumber(item?.wind_speed);
       const windUnit = String(state?.attributes?.wind_speed_unit || item?.wind_speed_unit || "").trim();
       const popupRows = [
-        type === "daily" && highLabel ? ["Máxima", `${highLabel}${unitLabel}`] : null,
-        type === "daily" && lowLabel ? ["Mínima", `${lowLabel}${unitLabel}`] : null,
-        type !== "daily" ? ["Temperatura", `${formatNumber(popupPoint.value)}${unitLabel}`] : null,
-        precipitationLabel ? ["Lluvia", precipitationLabel] : null,
-        humidityLabel ? ["Humedad", `${humidityLabel}%`] : null,
-        windLabel ? ["Viento", windUnit ? `${windLabel} ${windUnit}` : windLabel] : null,
+        type === "daily" && highLabel ? [wf("maxLabel") || "Máxima", `${highLabel}${unitLabel}`] : null,
+        type === "daily" && lowLabel ? [wf("minLabel") || "Mínima", `${lowLabel}${unitLabel}`] : null,
+        type !== "daily" ? [wf("temperatureLabel") || "Temperatura", `${formatNumber(popupPoint.value)}${unitLabel}`] : null,
+        precipitationLabel ? [wf("rainLabel") || "Lluvia", precipitationLabel] : null,
+        humidityLabel ? [wf("humidityLabel") || "Humedad", `${humidityLabel}%`] : null,
+        windLabel ? [wf("windLabel") || "Viento", windUnit ? `${windLabel} ${windUnit}` : windLabel] : null,
       ].filter(Boolean);
       const vertical = this._forecastPopup?.vertical === "below" ? "below" : "above";
       const popupLeft = this._forecastPopup?.left || "50%";
@@ -1515,13 +1550,13 @@ class NodaliaWeatherCard extends HTMLElement {
           style="--forecast-accent:${escapeHtml(accent)}; --forecast-popup-left:${escapeHtml(popupLeft)}; --forecast-popup-top:${escapeHtml(popupTop)};"
           data-weather-action="noop"
         >
-          <button type="button" class="weather-card__forecast-popup-close" data-weather-action="close-forecast-popup" aria-label="Cerrar detalle">
+          <button type="button" class="weather-card__forecast-popup-close" data-weather-action="close-forecast-popup" aria-label="${escapeHtml(wf("closeDetail") || "Cerrar detalle")}">
             <ha-icon icon="mdi:close"></ha-icon>
           </button>
           <div class="weather-card__forecast-popup-time">${escapeHtml(formatForecastDateTime(item?.datetime, type))}</div>
           <div class="weather-card__forecast-popup-main">
             <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
-            <span>${escapeHtml(translateCondition(item?.condition || ""))}</span>
+            <span>${escapeHtml(translateCondition(item?.condition || "", this._hass, this._config?.language ?? "auto"))}</span>
           </div>
           <div class="weather-card__forecast-popup-rows">
             ${popupRows.map(([label, value]) => `
@@ -1560,7 +1595,7 @@ class NodaliaWeatherCard extends HTMLElement {
     })() : "";
 
     return `
-      <div class="weather-card__forecast-chart" style="--forecast-chart-height:${height + 8}px; --forecast-chart-svg-height:${height}px;" role="img" aria-label="Gráfico de previsión ${type === "hourly" ? "por horas" : "semanal"}">
+      <div class="weather-card__forecast-chart" style="--forecast-chart-height:${height + 8}px; --forecast-chart-svg-height:${height}px;" role="img" aria-label="${escapeHtml(type === "hourly" ? (wf("chartAriaHourly") || "Gráfico de previsión por horas") : (wf("chartAriaDaily") || "Gráfico de previsión semanal"))}">
         <svg viewBox="0 0 ${width} ${height}">
           <defs>
             ${
@@ -1650,6 +1685,14 @@ class NodaliaWeatherCard extends HTMLElement {
     const visibleItems = forecastItems.slice(0, slotCount);
     const precipitationUnit = String(state?.attributes?.precipitation_unit || "").trim();
     const activeView = normalizeForecastView(this._activeForecastView);
+    const hassFc = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const cfgLangFc = this._config?.language ?? "auto";
+    const wfFc = key => (window.NodaliaI18n?.translateWeatherForecastUi
+      ? window.NodaliaI18n.translateWeatherForecastUi(hassFc, cfgLangFc, key)
+      : "");
+    const emptyForecastMsg = activeType === "hourly"
+      ? (wfFc("emptyHourly") || "Sin previsión por horas disponible.")
+      : (wfFc("emptyDaily") || "Sin previsión semanal disponible.");
 
     return `
       <section class="weather-card__forecast ${shouldAnimateEntrance ? "weather-card__forecast--entering" : ""} ${shouldAnimateForecast ? "weather-card__forecast--switching" : ""}">
@@ -1658,14 +1701,14 @@ class NodaliaWeatherCard extends HTMLElement {
             this._config.show_forecast_toggle === false
               ? ""
               : `
-                <div class="weather-card__forecast-tabs" role="tablist" aria-label="Vista de la previsión">
+                <div class="weather-card__forecast-tabs" role="tablist" aria-label="${escapeHtml(wfFc("tabsAria") || "Vista de la previsión")}">
                   <button type="button" class="weather-card__forecast-tab ${activeView === "cards" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-view" data-forecast-view="cards" role="tab" aria-selected="${activeView === "cards" ? "true" : "false"}">
                     <ha-icon icon="mdi:view-grid-outline"></ha-icon>
-                    <span>Tarjetas</span>
+                    <span>${escapeHtml(wfFc("tabCards") || "Tarjetas")}</span>
                   </button>
                   <button type="button" class="weather-card__forecast-tab ${activeView === "chart" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-view" data-forecast-view="chart" role="tab" aria-selected="${activeView === "chart" ? "true" : "false"}">
                     <ha-icon icon="mdi:chart-line"></ha-icon>
-                    <span>Gráfico</span>
+                    <span>${escapeHtml(wfFc("tabChart") || "Gráfico")}</span>
                   </button>
                 </div>
               `
@@ -1675,10 +1718,10 @@ class NodaliaWeatherCard extends HTMLElement {
               ? `
                 <div class="weather-card__forecast-tabs" role="tablist">
                   ${supportedTypes.includes("hourly") ? `
-                    <button type="button" class="weather-card__forecast-tab ${activeType === "hourly" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-type" data-forecast-type="hourly" role="tab" aria-selected="${activeType === "hourly" ? "true" : "false"}">Horas</button>
+                    <button type="button" class="weather-card__forecast-tab ${activeType === "hourly" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-type" data-forecast-type="hourly" role="tab" aria-selected="${activeType === "hourly" ? "true" : "false"}">${escapeHtml(wfFc("hoursTab") || "Horas")}</button>
                   ` : ""}
                   ${supportedTypes.includes("daily") ? `
-                    <button type="button" class="weather-card__forecast-tab ${activeType === "daily" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-type" data-forecast-type="daily" role="tab" aria-selected="${activeType === "daily" ? "true" : "false"}">Semana</button>
+                    <button type="button" class="weather-card__forecast-tab ${activeType === "daily" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-type" data-forecast-type="daily" role="tab" aria-selected="${activeType === "daily" ? "true" : "false"}">${escapeHtml(wfFc("weekTab") || "Semana")}</button>
                   ` : ""}
                 </div>
               `
@@ -1702,12 +1745,12 @@ class NodaliaWeatherCard extends HTMLElement {
                                 <div class="weather-card__forecast-time">${escapeHtml(formatForecastDateTime(item?.datetime, activeType))}</div>
                                 <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
                                 <div class="weather-card__forecast-temp">${escapeHtml(formatForecastTemperature(item, activeType))}</div>
-                                <div class="weather-card__forecast-condition">${escapeHtml(translateCondition(item?.condition || ""))}</div>
+                                <div class="weather-card__forecast-condition">${escapeHtml(translateCondition(item?.condition || "", this._hass, this._config?.language ?? "auto"))}</div>
                                 ${precipitationLabel ? `<div class="weather-card__forecast-rain"><ha-icon icon="mdi:weather-rainy"></ha-icon><span>${escapeHtml(precipitationLabel)}</span></div>` : ""}
                               </article>
                             `;
                           }).join("")
-                          : `<div class="weather-card__forecast-empty">Sin previsión ${activeType === "hourly" ? "por horas" : "semanal"} disponible.</div>`
+                          : `<div class="weather-card__forecast-empty">${escapeHtml(emptyForecastMsg)}</div>`
                       }
                     </div>
                   `
@@ -1745,7 +1788,7 @@ class NodaliaWeatherCard extends HTMLElement {
     const icon = this._getIcon(state);
     const accentColor = this._getAccentColor(state);
     const showUnavailableBadge = isUnavailableState(state);
-    const conditionLabel = translateCondition(state?.state);
+    const conditionLabel = translateCondition(state?.state, this._hass, this._config?.language ?? "auto");
     const temperatureLabel = this._formatTemperature(state);
     const chips = [
       config.show_humidity_chip !== false
@@ -3247,14 +3290,23 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    const hass = this._hass ?? this.hass;
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
 
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(options.type || "text")}"
           data-field="${escapeHtml(field)}"
@@ -3267,6 +3319,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -3275,16 +3329,16 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(String(colorModel.alpha))}"
               value="${escapeHtml(colorModel.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
           </label>
@@ -3294,6 +3348,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input
@@ -3303,19 +3358,20 @@ class NodaliaWeatherCardEditor extends HTMLElement {
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options, renderOptions = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options.map(option => `
             <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-              ${escapeHtml(option.label)}
+              ${escapeHtml(this._editorLabel(option.label))}
             </option>
           `).join("")}
         </select>
@@ -3324,12 +3380,13 @@ class NodaliaWeatherCardEditor extends HTMLElement {
   }
 
   _renderEntityPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder || "";
     const domains = Array.isArray(options.domains) && options.domains.length ? options.domains : ["weather"];
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity"
@@ -3343,11 +3400,12 @@ class NodaliaWeatherCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
@@ -3391,7 +3449,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = placeholder || "Selecciona una entidad";
+      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
       control.appendChild(emptyOption);
       this._getEntityOptions(field, domains).forEach(option => {
         const optionElement = document.createElement("option");
@@ -3482,6 +3540,18 @@ class NodaliaWeatherCardEditor extends HTMLElement {
         }
 
         .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
           grid-column: 1 / -1;
         }
 
@@ -3675,8 +3745,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Entidad meteorologica principal, nombre visible, icono y contenido mostrado.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad meteorologica principal, nombre visible, icono y contenido mostrado."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityPickerField("Entidad principal", "entity", config.entity, {
@@ -3755,8 +3825,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Entrada suave del contenido y pequeno rebote al pulsar la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave del contenido y pequeno rebote al pulsar la tarjeta."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -3765,7 +3835,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showAnimationSection ? "Ocultar ajustes de animacion" : "Mostrar ajustes de animacion"}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
               </button>
             </div>
           </div>
@@ -3788,8 +3858,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Respuesta haptica</div>
-            <div class="editor-section__hint">Respuesta tactil opcional al tocar la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta haptica"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional al tocar la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -3813,8 +3883,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajustes visuales base de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base de la tarjeta."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -3823,7 +3893,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showStyleSection ? "Ocultar ajustes de estilo" : "Mostrar ajustes de estilo"}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
               </button>
             </div>
           </div>

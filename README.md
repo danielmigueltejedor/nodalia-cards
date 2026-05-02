@@ -1,10 +1,11 @@
 # 🎨 Nodalia Cards
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
+![Release](https://img.shields.io/badge/release-0.2.0-2ea043)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
-![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=beta)
+![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Status](https://img.shields.io/badge/status-beta-orange.svg)
+![Status](https://img.shields.io/badge/status-stable-success.svg)
 ![GitHub](https://img.shields.io/badge/hosted%20on-GitHub-black?logo=github)
 
 **Nodalia Cards** is a custom card bundle for Home Assistant focused on creating a cleaner, more polished and more app-like dashboard experience.
@@ -65,15 +66,17 @@ Animations and interactions in action:
 ### HACS
 
 ```yaml
-url: https://github.com/danielmigueltejedor/nodalia-cards
-type: dashboard
+url: /hacsfiles/nodalia-cards/nodalia-cards.js
+type: module
 ```
 
 ---
 
-## 🌍 Language support
+## 🌍 Translations
 
-Currently optimized for Spanish. English and more languages will be added over time.
+**0.2.0** includes **es, en, de, fr, it, nl** for the bundled cards and Lovelace visual editors (coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
+
+Further locale polish and card improvements ship in **0.3.x** prereleases.
 
 ---
 
@@ -84,7 +87,7 @@ Currently optimized for Spanish. English and more languages will be added over t
 - Redesign graph card  
 - Improve energy flow card  
 - Refine navigation bar  
-- Improve multilingual support 
+- Polish translations and UX (0.3.x)
 
 ---
 
