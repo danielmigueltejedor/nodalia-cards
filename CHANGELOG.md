@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.1] - 2026-05-03
+
+### Fixed
+
+- **HACS / Lovelace**: rebuilt **`nodalia-cards.js`** with a **`window.__NODALIA_BUNDLE__`** footer (`pkgVersion` + short content hash) so installs can confirm which script loaded; new bytes **break stale caches** that could keep an old bundle on the stable resource while prerelease looked correct. See **README** (HACS `hacstag` note).
+
 ## [0.3.0-beta.2] - 2026-05-03
 
 ### Changed
