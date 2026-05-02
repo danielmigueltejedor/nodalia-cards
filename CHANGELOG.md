@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.03] - 2026-05-03
+
+### Changed
+
+- **Prerelease track**: merge **`main` v0.2.1**; bump to **0.3.0-beta.03**; **`nodalia-cards.js`** rebundled with `__NODALIA_BUNDLE__.pkgVersion` set for the beta line.
+- **Tagging**: from this prerelease, Git tags use **`v0.3.0-beta.XX`** with **two-digit** `XX` (e.g. `…-beta.03`); see **CONTRIBUTING**.
+
 ## [0.2.1] - 2026-05-03
 
 ### Fixed
