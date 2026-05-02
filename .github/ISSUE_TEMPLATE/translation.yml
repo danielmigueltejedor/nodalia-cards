@@ -1,0 +1,97 @@
+name: 🌍 Translation correction
+description: Report wrong or awkward wording in a non‑Spanish UI language (community reviewed before release)
+title: "[Translation]: "
+labels: ["translation"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when **your Home Assistant UI language** is not Spanish and a label reads wrong, mixed, or unnatural (often where strings were machine-assisted).  
+        Proposals are **reviewed** before being merged into the next release—thank you for helping polish non‑Spanish locales.
+
+  - type: dropdown
+    id: ui_language
+    attributes:
+      label: UI language (Home Assistant profile)
+      description: The language you see in Settings → Profile → Language, or the closest match.
+      options:
+        - German (de)
+        - English (en)
+        - French (fr)
+        - Italian (it)
+        - Dutch (nl)
+        - Other / not listed
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where did you see it?
+      options:
+        - Lovelace card editor (visual editor)
+        - Card on the dashboard (runtime)
+        - Both
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: card_type
+    attributes:
+      label: Card / area
+      description: e.g. `custom:nodalia-climate-card`, navigation bar, advance vacuum, or “whole bundle”.
+      placeholder: e.g. nodalia-climate-card
+
+  - type: textarea
+    id: wrong_text
+    attributes:
+      label: Current text (wrong or awkward)
+      description: Copy-paste the exact string as shown on screen.
+      placeholder: Paste the label or sentence here...
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggested_text
+    attributes:
+      label: Suggested correction
+      description: What it should say instead (natural wording in your language).
+      placeholder: Your proposed translation...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context (optional but helpful)
+      description: e.g. section title nearby, button label next to it, or what you were doing.
+      placeholder: e.g. Under “Styles” → colour field for the dial...
+
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: Drag an image here if it helps (cropped panel is enough).
+
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant version (optional)
+      placeholder: e.g. 2026.4.2
+
+  - type: input
+    id: nodalia_version
+    attributes:
+      label: Nodalia Cards version (optional)
+      placeholder: e.g. HACS version / beta badge / git commit
+
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Agreement
+      options:
+        - label: I understand this suggestion may be adjusted or declined for consistency with the rest of the UI.
+          required: true

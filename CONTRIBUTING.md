@@ -98,15 +98,16 @@ If you want to help with translations:
 
 - Keep wording natural (not literal translations)
 - Focus on clarity and usability
-- Open a PR or issue with your proposal
+- **Wrong string on screen?** Open an issue using the **Translation correction** template (`.github/ISSUE_TEMPLATE/translation.yml`).
+- Alternatively, open a PR that updates the relevant locale data if you are comfortable editing the repo.
 
 Community help is especially useful for languages other than Spanish and English.
 
 ---
 
-## 🧪 Beta features
+## 🏷️ Releases and beta versions
 
-Some features may be experimental.
+Pre-releases use **`0.2.0-beta.N`** (increment **N** for each shipped beta). For maintainers: treat **each release commit** as a **new beta**—add a section to `CHANGELOG.md`, bump the **Current beta** badge in `README.md`, and run `npm run bundle` when artefacts change.
 
 ---
 
