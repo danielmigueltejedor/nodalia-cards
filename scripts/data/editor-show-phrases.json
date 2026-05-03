@@ -1,0 +1,415 @@
+{
+  "Show Meteoalarm chip": {
+    "pt": "Mostrar chip Meteoalarm",
+    "ru": "Показать чип Meteoalarm",
+    "el": "Εμφάνιση chip Meteoalarm",
+    "zh": "显示Meteoalarm 芯片",
+    "ro": "Afișează chip Meteoalarm"
+  },
+  "Show PIN text field": {
+    "pt": "Mostrar campo PIN",
+    "ru": "Показать поле PIN",
+    "el": "Εμφάνιση πεδίου PIN",
+    "zh": "显示PIN 输入框",
+    "ro": "Afișează câmp PIN"
+  },
+  "Show animation settings": {
+    "pt": "Mostrar definições de animação",
+    "ru": "Показать настройки анимации",
+    "el": "Εμφάνιση ρυθμίσεων κινούμενης εικόνας",
+    "zh": "显示动画设置",
+    "ro": "Afișează setările de animație"
+  },
+  "Show away": {
+    "pt": "Mostrar ausente",
+    "ru": "Показать режим «Не дома»",
+    "el": "Εμφάνιση «Δεν είναι στο σπίτι»",
+    "zh": "显示离家",
+    "ro": "Afișează plecat"
+  },
+  "Show bottom icon": {
+    "pt": "Mostrar ícone inferior",
+    "ru": "Показать нижний значок",
+    "el": "Εμφάνιση κάτω εικονιδίου",
+    "zh": "显示底部图标",
+    "ro": "Afișează pictograma de jos"
+  },
+  "Show brightness": {
+    "pt": "Mostrar brilho",
+    "ru": "Показать яркость",
+    "el": "Εμφάνιση φωτεινότητας",
+    "zh": "显示亮度",
+    "ro": "Afișează luminozitatea"
+  },
+  "Show card": {
+    "pt": "Mostrar cartão",
+    "ru": "Показать карточку",
+    "el": "Εμφάνιση κάρτας",
+    "zh": "显示卡片",
+    "ro": "Afișează cardul"
+  },
+  "Show chart labels": {
+    "pt": "Mostrar rótulos do gráfico",
+    "ru": "Показать подписи графика",
+    "el": "Εμφάνιση ετικετών γραφήματος",
+    "zh": "显示图表标签",
+    "ro": "Afișează etichetele graficului"
+  },
+  "Show condition": {
+    "pt": "Mostrar condição",
+    "ru": "Показать состояние",
+    "el": "Εμφάνιση κατάστασης",
+    "zh": "显示天气状况",
+    "ro": "Afișează condiția"
+  },
+  "Show current state": {
+    "pt": "Mostrar estado atual",
+    "ru": "Показать текущее состояние",
+    "el": "Εμφάνιση τρέχουσας κατάστασης",
+    "zh": "显示当前状态",
+    "ro": "Afișează starea curentă"
+  },
+  "Show current temperature chip": {
+    "pt": "Mostrar chip da temperatura atual",
+    "ru": "Показать чип текущей температуры",
+    "el": "Εμφάνιση chip τρέχουσας θερμοκρασίας",
+    "zh": "显示当前温度芯片",
+    "ro": "Afișează chip temperatură curentă"
+  },
+  "Show custom": {
+    "pt": "Mostrar personalizado",
+    "ru": "Показать свой",
+    "el": "Εμφάνιση προσαρμοσμένο",
+    "zh": "显示自定义",
+    "ro": "Afișează personalizat"
+  },
+  "Show disarm": {
+    "pt": "Mostrar desarmar",
+    "ru": "Показать снять с охраны",
+    "el": "Εμφάνιση αφόπλιση",
+    "zh": "显示撤防",
+    "ro": "Afișează dezarmare"
+  },
+  "Show energy button": {
+    "pt": "Mostrar botão de energia",
+    "ru": "Показать кнопку энергии",
+    "el": "Εμφάνιση κουμπιού ενέργειας",
+    "zh": "显示能源按钮",
+    "ro": "Afișează butonul de energie"
+  },
+  "Show extended forecast": {
+    "pt": "Mostrar previsão estendida",
+    "ru": "Показать расширенный прогноз",
+    "el": "Εμφάνιση εκτεταμένης πρόγνωσης",
+    "zh": "显示扩展预报",
+    "ro": "Afișează prognoza extinsă"
+  },
+  "Show fan chip": {
+    "pt": "Mostrar chip do ventilador",
+    "ru": "Показать чип вентилятора",
+    "el": "Εμφάνιση chip ανεμιστήρα",
+    "zh": "显示风扇芯片",
+    "ro": "Afișează chip ventilator"
+  },
+  "Show fan mode button": {
+    "pt": "Mostrar botão do modo ventilador",
+    "ru": "Показать кнопку режима вентилятора",
+    "el": "Εμφάνιση κουμπί λειτουργίας ανεμιστήρα",
+    "zh": "显示风扇模式按钮",
+    "ro": "Afișează buton mod ventilator"
+  },
+  "Show fill": {
+    "pt": "Mostrar preenchimento",
+    "ru": "Показать заливку",
+    "el": "Εμφάνιση γεμίσματος",
+    "zh": "显示填充",
+    "ro": "Afișează umplere"
+  },
+  "Show header": {
+    "pt": "Mostrar cabeçalho",
+    "ru": "Показать заголовок",
+    "el": "Εμφάνιση κεφαλίδας",
+    "zh": "显示标题栏",
+    "ro": "Afișează antet"
+  },
+  "Show home": {
+    "pt": "Mostrar em casa",
+    "ru": "Показать дома",
+    "el": "Εμφάνιση «Σπίτι»",
+    "zh": "显示在家",
+    "ro": "Afișează acasă"
+  },
+  "Show humidity chip": {
+    "pt": "Mostrar chip de humidade",
+    "ru": "Показать чип влажности",
+    "el": "Εμφάνιση chip υγρασίας",
+    "zh": "显示湿度芯片",
+    "ro": "Afișează chip umiditate"
+  },
+  "Show icon": {
+    "pt": "Mostrar ícone",
+    "ru": "Показать значок",
+    "el": "Εμφάνιση εικονιδίου",
+    "zh": "显示图标",
+    "ro": "Afișează pictograma"
+  },
+  "Show labels": {
+    "pt": "Mostrar rótulos",
+    "ru": "Показать подписи",
+    "el": "Εμφάνιση ετικετών",
+    "zh": "显示标签",
+    "ro": "Afișează etichete"
+  },
+  "Show large value": {
+    "pt": "Mostrar valor grande",
+    "ru": "Показать крупное значение",
+    "el": "Εμφάνιση μεγάλης τιμής",
+    "zh": "显示大数值",
+    "ro": "Afișează valoarea mare"
+  },
+  "Show legend": {
+    "pt": "Mostrar legenda",
+    "ru": "Показать легенду",
+    "el": "Εμφάνιση υπόμνημα",
+    "zh": "显示图例",
+    "ro": "Afișează legenda"
+  },
+  "Show location": {
+    "pt": "Mostrar localização",
+    "ru": "Показать местоположение",
+    "el": "Εμφάνιση τοποθεσίας",
+    "zh": "显示位置",
+    "ro": "Afișează locația"
+  },
+  "Show min/max range": {
+    "pt": "Mostrar intervalo mín/máx",
+    "ru": "Показать диапазон мин/макс",
+    "el": "Εμφάνιση εύρος ελάχ./μέγ.",
+    "zh": "显示最小/最大范围",
+    "ro": "Afișează interval min/max"
+  },
+  "Show mode button": {
+    "pt": "Mostrar botão de modo",
+    "ru": "Показать кнопку режима",
+    "el": "Εμφάνιση κουμπί λειτουργίας",
+    "zh": "显示模式按钮",
+    "ro": "Afișează buton mod"
+  },
+  "Show mode buttons": {
+    "pt": "Mostrar botões de modo",
+    "ru": "Показать кнопки режима",
+    "el": "Εμφάνιση κουμπιά λειτουργίας",
+    "zh": "显示模式按钮",
+    "ro": "Afișează butoane mod"
+  },
+  "Show mode chip": {
+    "pt": "Mostrar chip de modo",
+    "ru": "Показать чип режима",
+    "el": "Εμφάνιση chip λειτουργίας",
+    "zh": "显示模式芯片",
+    "ro": "Afișează chip mod"
+  },
+  "Show mode presets": {
+    "pt": "Mostrar predefinições de modo",
+    "ru": "Показать пресеты режима",
+    "el": "Εμφάνιση προκαθορισμένων λειτουργιών",
+    "zh": "显示模式预设",
+    "ro": "Afișează preseturi mod"
+  },
+  "Show name": {
+    "pt": "Mostrar nome",
+    "ru": "Показать имя",
+    "el": "Εμφάνιση όνομα",
+    "zh": "显示名称",
+    "ro": "Afișează numele"
+  },
+  "Show name in chip": {
+    "pt": "Mostrar nome no chip",
+    "ru": "Показать имя в чипе",
+    "el": "Εμφάνιση όνομα στο chip",
+    "zh": "显示芯片内名称",
+    "ro": "Afișează numele în chip"
+  },
+  "Show night": {
+    "pt": "Mostrar noite",
+    "ru": "Показать ночь",
+    "el": "Εμφάνιση νύχτα",
+    "zh": "显示夜间",
+    "ro": "Afișează noapte"
+  },
+  "Show on desktop": {
+    "pt": "Mostrar no ambiente de trabalho",
+    "ru": "Показать на компьютере",
+    "el": "Εμφάνιση στην επιφάνεια εργασίας",
+    "zh": "显示在桌面端",
+    "ro": "Afișează pe desktop"
+  },
+  "Show or hide each card block.": {
+    "pt": "Mostrar ou ocultar cada bloco do cartão.",
+    "ru": "Показать или скрыть каждый блок карточки.",
+    "el": "Εμφάνιση ή απόκρυψη κάθε μπλοκ κάρτας.",
+    "zh": "显示或隐藏每个卡片块。",
+    "ro": "Afișează sau ascunde fiecare bloc de card."
+  },
+  "Show oscillate button": {
+    "pt": "Mostrar botão oscilar",
+    "ru": "Показать кнопку качания",
+    "el": "Εμφάνιση κουμπί ταλάντευσης",
+    "zh": "显示摆动按钮",
+    "ro": "Afișează buton oscilație"
+  },
+  "Show percentage chip": {
+    "pt": "Mostrar chip de percentagem",
+    "ru": "Показать чип процента",
+    "el": "Εμφάνιση chip ποσοστού",
+    "zh": "显示百分比芯片",
+    "ro": "Afișează chip procent"
+  },
+  "Show pressure chip": {
+    "pt": "Mostrar chip de pressão",
+    "ru": "Показать чип давления",
+    "el": "Εμφάνιση chip πίεσης",
+    "zh": "显示气压芯片",
+    "ro": "Afișează chip presiune"
+  },
+  "Show primary chip": {
+    "pt": "Mostrar chip principal",
+    "ru": "Показать основной чип",
+    "el": "Εμφάνιση κύριο chip",
+    "zh": "显示主芯片",
+    "ro": "Afișează chip principal"
+  },
+  "Show room labels": {
+    "pt": "Mostrar rótulos das divisões",
+    "ru": "Показать подписи комнат",
+    "el": "Εμφάνιση ετικετών δωματίων",
+    "zh": "显示房间标签",
+    "ro": "Afișează etichete camere"
+  },
+  "Show room markers": {
+    "pt": "Mostrar marcadores das divisões",
+    "ru": "Показать маркеры комнат",
+    "el": "Εμφάνιση δείκτες δωματίων",
+    "zh": "显示房间标记",
+    "ro": "Afișează markere camere"
+  },
+  "Show secondary chip": {
+    "pt": "Mostrar chip secundário",
+    "ru": "Показать вторичный чип",
+    "el": "Εμφάνιση δευτερεύον chip",
+    "zh": "显示副芯片",
+    "ro": "Afișează chip secundar"
+  },
+  "Show slider": {
+    "pt": "Mostrar slider",
+    "ru": "Показать ползунок",
+    "el": "Εμφάνιση ολισθητήρα",
+    "zh": "显示滑块",
+    "ro": "Afișează slider"
+  },
+  "Show sources and apps": {
+    "pt": "Mostrar fontes e aplicações",
+    "ru": "Показать источники и приложения",
+    "el": "Εμφάνιση πηγές και εφαρμογές",
+    "zh": "显示来源与应用",
+    "ro": "Afișează surse și aplicații"
+  },
+  "Show speed chip": {
+    "pt": "Mostrar chip de velocidade",
+    "ru": "Показать чип скорости",
+    "el": "Εμφάνιση chip ταχύτητας",
+    "zh": "显示速度芯片",
+    "ro": "Afișează chip viteză"
+  },
+  "Show state": {
+    "pt": "Mostrar estado",
+    "ru": "Показать состояние",
+    "el": "Εμφάνιση κατάστασης",
+    "zh": "显示状态",
+    "ro": "Afișează starea"
+  },
+  "Show state bubble": {
+    "pt": "Mostrar bolha de estado",
+    "ru": "Показать пузырёк состояния",
+    "el": "Εμφάνιση φυσαλίδας κατάστασης",
+    "zh": "显示状态气泡",
+    "ro": "Afișează bula de stare"
+  },
+  "Show state chip": {
+    "pt": "Mostrar chip de estado",
+    "ru": "Показать чип состояния",
+    "el": "Εμφάνιση chip κατάστασης",
+    "zh": "显示状态芯片",
+    "ro": "Afișează chip stare"
+  },
+  "Show state in bubble": {
+    "pt": "Mostrar estado na bolha",
+    "ru": "Показать состояние в пузырьке",
+    "el": "Εμφάνιση κατάσταση στη φυσαλίδα",
+    "zh": "显示气泡内状态",
+    "ro": "Afișează starea în bulă"
+  },
+  "Show style settings": {
+    "pt": "Mostrar definições de estilo",
+    "ru": "Показать настройки стиля",
+    "el": "Εμφάνιση ρυθμίσεις στιλ",
+    "zh": "显示样式设置",
+    "ro": "Afișează setări stil"
+  },
+  "Show target humidity chip": {
+    "pt": "Mostrar chip da humidade alvo",
+    "ru": "Показать чип целевой влажности",
+    "el": "Εμφάνιση chip στόχου υγρασίας",
+    "zh": "显示目标湿度芯片",
+    "ro": "Afișează chip umiditate țintă"
+  },
+  "Show textual state": {
+    "pt": "Mostrar estado textual",
+    "ru": "Показать текстовое состояние",
+    "el": "Εμφάνιση κειμενικής κατάστασης",
+    "zh": "显示文本状态",
+    "ro": "Afișează stare textuală"
+  },
+  "Show unavailable badge": {
+    "pt": "Mostrar distintivo indisponível",
+    "ru": "Показать значок недоступности",
+    "el": "Εμφάνιση σήμα μη διαθεσιμότητας",
+    "zh": "显示不可用标记",
+    "ro": "Afișează insignă indisponibil"
+  },
+  "Show vacation": {
+    "pt": "Mostrar férias",
+    "ru": "Показать отпуск",
+    "el": "Εμφάνιση διακοπές",
+    "zh": "显示度假",
+    "ro": "Afișează vacanță"
+  },
+  "Show value": {
+    "pt": "Mostrar valor",
+    "ru": "Показать значение",
+    "el": "Εμφάνιση τιμής",
+    "zh": "显示数值",
+    "ro": "Afișează valoarea"
+  },
+  "Show view selector": {
+    "pt": "Mostrar seletor de vista",
+    "ru": "Показать переключатель вида",
+    "el": "Εμφάνιση επιλογέα προβολής",
+    "zh": "显示视图选择器",
+    "ro": "Afișează selector vizualizare"
+  },
+  "Show wind chip": {
+    "pt": "Mostrar chip do vento",
+    "ru": "Показать чип ветра",
+    "el": "Εμφάνιση chip ανέμου",
+    "zh": "显示风力芯片",
+    "ro": "Afișează chip vânt"
+  },
+  "Show zone badge": {
+    "pt": "Mostrar distintivo de zona",
+    "ru": "Показать значок зоны",
+    "el": "Εμφάνιση σήμα ζώνης",
+    "zh": "显示区域标记",
+    "ro": "Afișează insignă zonă"
+  }
+}

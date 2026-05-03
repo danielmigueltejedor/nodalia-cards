@@ -11,6 +11,22 @@ const EDITOR_EXTRA_FULL_LOCALE_BY_EN = JSON.parse(
   fs.readFileSync(path.join(__dirname, "editor-extra-locale-by-en.json"), "utf8"),
 );
 
+/** pt/ru/el/zh/ro for editor hints not covered by FULL_LOCALE_BY_EN (Show … chips + long sentences). */
+const EDITOR_SHOW_PHRASES = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "data", "editor-show-phrases.json"), "utf8"),
+);
+const EDITOR_REST_LONG_PHRASES = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "data", "editor-rest-long-phrases.json"), "utf8"),
+);
+const EDITOR_REST_COMPACT_LONG_PHRASES = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "data", "editor-rest-compact-long-phrases.json"), "utf8"),
+);
+const EDITOR_PHRASE_LANGS = {
+  ...EDITOR_SHOW_PHRASES,
+  ...EDITOR_REST_LONG_PHRASES,
+  ...EDITOR_REST_COMPACT_LONG_PHRASES,
+};
+
 const EXTRA_EDITOR_KEYS = `
 Ocultar ajustes de estilo
 Mostrar ajustes de estilo
@@ -232,6 +248,14 @@ function translateEsToEn(s) {
     [/Entidad vacuum/gi, "Vacuum entity"],
     [/Entidades individuales/gi, "Individual entities"],
     [/Entidades/gi, "Entities"],
+    [/Usar carátula como fondo/gi, "Use album art as background"],
+    [/Usar el icono de la entidad/gi, "Use entity icon"],
+    [/Usar foto de entidad/gi, "Use entity photo"],
+    [/Usar foto de la entidad/gi, "Use entity photo"],
+    [/Usar icono de la entidad/gi, "Use entity icon"],
+    [/Usar icono de zona/gi, "Use zone icon"],
+    [/Usar vibracion de respaldo/gi, "Use vibration fallback"],
+    [/Usar vibración si no hay háptica/gi, "Use vibration if haptics unavailable"],
     [/Entidad/gi, "Entity"],
     [/Entrada contenido \(ms\)/gi, "Content entrance (ms)"],
     [/Entrada del contenido \(ms\)/gi, "Content entrance (ms)"],
@@ -468,14 +492,6 @@ function translateEsToEn(s) {
     [/Unidad casa/gi, "Home unit"],
     [/Unidad secundaria/gi, "Secondary unit"],
     [/Unidad/gi, "Unit"],
-    [/Usar carátula como fondo/gi, "Use album art as background"],
-    [/Usar el icono de la entidad/gi, "Use entity icon"],
-    [/Usar foto de entidad/gi, "Use entity photo"],
-    [/Usar foto de la entidad/gi, "Use entity photo"],
-    [/Usar icono de la entidad/gi, "Use entity icon"],
-    [/Usar icono de zona/gi, "Use zone icon"],
-    [/Usar vibracion de respaldo/gi, "Use vibration fallback"],
-    [/Usar vibración si no hay háptica/gi, "Use vibration if haptics unavailable"],
     [/Valor casa/gi, "Home value"],
     [/Valor nodo/gi, "Node value"],
     [/Valores/gi, "Values"],
@@ -767,164 +783,494 @@ function enToNl(s) {
     .replace(/^Enable haptics$/i, "Haptiek inschakelen");
 }
 
+function enToPt(s) {
+  if (!isCompactUiEnglish(s)) {
+    return s;
+  }
+  return s
+    .replace(/^Show /, "Mostrar ")
+    .replace(/^Enable /, "Ativar ")
+    .replace(/^Open /, "Abrir ")
+    .replace(/^Icon$/i, "Ícone")
+    .replace(/^General$/i, "Geral")
+    .replace(/^Styles$/i, "Estilos")
+    .replace(/^Map$/i, "Mapa")
+    .replace(/^Border$/i, "Borda")
+    .replace(/^Shadow$/i, "Sombra")
+    .replace(/^Padding$/i, "Margem interna")
+    .replace(/^Color$/i, "Cor")
+    .replace(/^Title$/i, "Título")
+    .replace(/^Entity$/i, "Entidade")
+    .replace(/^Alarm$/i, "Alarme")
+    .replace(/^Layout$/i, "Layout")
+    .replace(/^Flow$/i, "Fluxo")
+    .replace(/^Players$/i, "Leitores")
+    .replace(/^Routes$/i, "Rotas")
+    .replace(/^Series$/i, "Séries")
+    .replace(/^Modes$/i, "Modos")
+    .replace(/^Individuals$/i, "Individuais")
+    .replace(/^Haptic feedback$/i, "Feedback háptico")
+    .replace(/^Enable animations$/i, "Ativar animações")
+    .replace(/^Enable haptics$/i, "Ativar háptico");
+}
+
+function enToRu(s) {
+  if (!isCompactUiEnglish(s)) {
+    return s;
+  }
+  return s
+    .replace(/^Show /, "Показать: ")
+    .replace(/^Enable /, "Включить ")
+    .replace(/^Open /, "Открыть ")
+    .replace(/^Icon$/i, "Значок")
+    .replace(/^General$/i, "Общее")
+    .replace(/^Styles$/i, "Стили")
+    .replace(/^Map$/i, "Карта")
+    .replace(/^Border$/i, "Граница")
+    .replace(/^Shadow$/i, "Тень")
+    .replace(/^Padding$/i, "Отступ")
+    .replace(/^Color$/i, "Цвет")
+    .replace(/^Title$/i, "Заголовок")
+    .replace(/^Entity$/i, "Объект")
+    .replace(/^Alarm$/i, "Сигнализация")
+    .replace(/^Layout$/i, "Макет")
+    .replace(/^Flow$/i, "Поток")
+    .replace(/^Players$/i, "Плееры")
+    .replace(/^Routes$/i, "Маршруты")
+    .replace(/^Series$/i, "Ряды")
+    .replace(/^Modes$/i, "Режимы")
+    .replace(/^Individuals$/i, "Отдельные")
+    .replace(/^Haptic feedback$/i, "Тактильная отдача")
+    .replace(/^Enable animations$/i, "Включить анимации")
+    .replace(/^Enable haptics$/i, "Включить тактильную отдачу");
+}
+
+function enToEl(s) {
+  if (!isCompactUiEnglish(s)) {
+    return s;
+  }
+  return s
+    .replace(/^Show /, "Εμφάνιση ")
+    .replace(/^Enable /, "Ενεργοποίηση ")
+    .replace(/^Open /, "Άνοιγμα ")
+    .replace(/^Icon$/i, "Εικονίδιο")
+    .replace(/^General$/i, "Γενικά")
+    .replace(/^Styles$/i, "Στυλ")
+    .replace(/^Map$/i, "Χάρτης")
+    .replace(/^Border$/i, "Περίγραμμα")
+    .replace(/^Shadow$/i, "Σκιά")
+    .replace(/^Padding$/i, "Εσωτερικό περιθώριο")
+    .replace(/^Color$/i, "Χρώμα")
+    .replace(/^Title$/i, "Τίτλος")
+    .replace(/^Entity$/i, "Οντότητα")
+    .replace(/^Alarm$/i, "Συναγερμός")
+    .replace(/^Layout$/i, "Διάταξη")
+    .replace(/^Flow$/i, "Ροή")
+    .replace(/^Players$/i, "Αναπαραγωγείς")
+    .replace(/^Routes$/i, "Διαδρομές")
+    .replace(/^Series$/i, "Σειρές")
+    .replace(/^Modes$/i, "Λειτουργίες")
+    .replace(/^Individuals$/i, "Μεμονωμένα")
+    .replace(/^Haptic feedback$/i, "Απτική ανάδραση")
+    .replace(/^Enable animations$/i, "Ενεργοποίηση κινούμενων εικόνων")
+    .replace(/^Enable haptics$/i, "Ενεργοποίηση απτικής ανάδρασης");
+}
+
+function enToZh(s) {
+  if (!isCompactUiEnglish(s)) {
+    return s;
+  }
+  return s
+    .replace(/^Show /, "显示")
+    .replace(/^Enable /, "启用")
+    .replace(/^Open /, "打开")
+    .replace(/^Icon$/i, "图标")
+    .replace(/^General$/i, "常规")
+    .replace(/^Styles$/i, "样式")
+    .replace(/^Map$/i, "地图")
+    .replace(/^Border$/i, "边框")
+    .replace(/^Shadow$/i, "阴影")
+    .replace(/^Padding$/i, "内边距")
+    .replace(/^Color$/i, "颜色")
+    .replace(/^Title$/i, "标题")
+    .replace(/^Entity$/i, "实体")
+    .replace(/^Alarm$/i, "警报")
+    .replace(/^Layout$/i, "布局")
+    .replace(/^Flow$/i, "流向")
+    .replace(/^Players$/i, "播放器")
+    .replace(/^Routes$/i, "路线")
+    .replace(/^Series$/i, "系列")
+    .replace(/^Modes$/i, "模式")
+    .replace(/^Individuals$/i, "单项")
+    .replace(/^Haptic feedback$/i, "触觉反馈")
+    .replace(/^Enable animations$/i, "启用动画")
+    .replace(/^Enable haptics$/i, "启用触觉反馈");
+}
+
+function enToRo(s) {
+  if (!isCompactUiEnglish(s)) {
+    return s;
+  }
+  return s
+    .replace(/^Show /, "Afișează ")
+    .replace(/^Enable /, "Activează ")
+    .replace(/^Open /, "Deschide ")
+    .replace(/^Icon$/i, "Pictogramă")
+    .replace(/^General$/i, "General")
+    .replace(/^Styles$/i, "Stiluri")
+    .replace(/^Map$/i, "Hartă")
+    .replace(/^Border$/i, "Chenar")
+    .replace(/^Shadow$/i, "Umbră")
+    .replace(/^Padding$/i, "Umplere")
+    .replace(/^Color$/i, "Culoare")
+    .replace(/^Title$/i, "Titlu")
+    .replace(/^Entity$/i, "Entitate")
+    .replace(/^Alarm$/i, "Alarmă")
+    .replace(/^Layout$/i, "Aranjament")
+    .replace(/^Flow$/i, "Flux")
+    .replace(/^Players$/i, "Playere")
+    .replace(/^Routes$/i, "Rute")
+    .replace(/^Series$/i, "Serii")
+    .replace(/^Modes$/i, "Moduri")
+    .replace(/^Individuals$/i, "Individuale")
+    .replace(/^Haptic feedback$/i, "Feedback haptic")
+    .replace(/^Enable animations$/i, "Activează animațiile")
+    .replace(/^Enable haptics$/i, "Activează haptic");
+}
+
 /** Full-sentence / editor phrases where compact locale shims cannot apply (length, commas). Key = English seed (`row.en`). */
 const FULL_LOCALE_BY_EN = {
-  Visibility: { de: "Sichtbarkeit", fr: "Visibilité", it: "Visibilità", nl: "Zichtbaarheid" },
+  Visibility: {
+    de: "Sichtbarkeit",
+    fr: "Visibilité",
+    it: "Visibilità",
+    nl: "Zichtbaarheid",
+    pt: "Visibilidade",
+    ru: "Видимость",
+    el: "Ορατότητα",
+    zh: "可见性",
+    ro: "Vizibilitate",
+  },
   "Choose which chips and controls should be shown.": {
     de: "Wähle, welche Chips und Steuerelemente angezeigt werden sollen.",
     fr: "Choisissez les puces et contrôles à afficher.",
     it: "Scegli quali chip e controlli mostrare.",
     nl: "Kies welke chips en bediening zichtbaar zijn.",
+    pt: "Escolha quais chips e controlos mostrar.",
+    ru: "Выберите, какие чипы и элементы управления показывать.",
+    el: "Επιλέξτε ποια chip και στοιχεία ελέγχου θα εμφανίζονται.",
+    zh: "选择要显示的芯片和控件。",
+    ro: "Alegeți ce chipuri și comenzi să fie afișate.",
   },
   "Choose the information and visible controls.": {
     de: "Wähle die sichtbaren Informationen und Steuerelemente.",
     fr: "Choisissez les informations et contrôles visibles.",
     it: "Scegli le informazioni e i controlli visibili.",
     nl: "Kies zichtbare informatie en bediening.",
+    pt: "Escolha as informações e os controlos visíveis.",
+    ru: "Выберите отображаемую информацию и элементы управления.",
+    el: "Επιλέξτε τις ορατές πληροφορίες και τα στοιχεία ελέγχου.",
+    zh: "选择可见信息与控件。",
+    ro: "Alegeți informațiile și comenzile vizibile.",
   },
-  "State chip": { de: "Status-Chip", fr: "Puce d’état", it: "Chip di stato", nl: "Statuschip" },
-  "Current temperature chip": { de: "Aktuelle Temperatur (Chip)", fr: "Puce température actuelle", it: "Chip temperatura attuale", nl: "Huidige temperatuur (chip)" },
-  "Humidity chip": { de: "Feuchtigkeits-Chip", fr: "Puce humidité", it: "Chip umidità", nl: "Vochtigheidschip" },
-  "Show state chip": { de: "Status-Chip anzeigen", fr: "Afficher la puce d’état", it: "Mostra chip di stato", nl: "Toon statuschip" },
+  "State chip": { de: "Status-Chip", fr: "Puce d’état", it: "Chip di stato", nl: "Statuschip", pt: "Chip de estado", ru: "Чип состояния", el: "Chip κατάστασης", zh: "状态芯片", ro: "Chip stare"},
+  "Current temperature chip": { de: "Aktuelle Temperatur (Chip)", fr: "Puce température actuelle", it: "Chip temperatura attuale", nl: "Huidige temperatuur (chip)", pt: "Chip da temperatura atual", ru: "Чип текущей температуры", el: "Chip τρέχουσας θερμοκρασίας", zh: "当前温度芯片", ro: "Chip temperatură curentă"},
+  "Humidity chip": { de: "Feuchtigkeits-Chip", fr: "Puce humidité", it: "Chip umidità", nl: "Vochtigheidschip", pt: "Chip de humidade", ru: "Чип влажности", el: "Chip υγρασίας", zh: "湿度芯片", ro: "Chip umiditate"},
+  "Show state chip": { de: "Status-Chip anzeigen", fr: "Afficher la puce d’état", it: "Mostra chip di stato", nl: "Toon statuschip", pt: "Mostrar chip de estado", ru: "Показать чип состояния", el: "Εμφάνιση chip κατάστασης", zh: "显示状态芯片", ro: "Afișează chip stare"},
   "Show current temperature chip": {
     de: "Aktuelle Temperatur anzeigen",
     fr: "Afficher la température actuelle",
     it: "Mostra chip temperatura attuale",
     nl: "Toon huidige temperatuur",
+    pt: "Mostrar temperatura atual",
+    ru: "Показать текущую температуру",
+    el: "Εμφάνιση τρέχουσας θερμοκρασίας",
+    zh: "显示当前温度",
+    ro: "Afișează temperatura curentă",
   },
-  "Show humidity chip": { de: "Feuchtigkeits-Chip anzeigen", fr: "Afficher l’humidité", it: "Mostra chip umidità", nl: "Toon vochtigheidschip" },
-  "Mode buttons": { de: "Modus-Tasten", fr: "Boutons de mode", it: "Pulsanti modalità", nl: "Modusknoppen" },
-  "Show mode buttons": { de: "Modus-Tasten anzeigen", fr: "Afficher les boutons de mode", it: "Mostra pulsanti modalità", nl: "Toon modusknoppen" },
-  "+ / − buttons": { de: "+/−-Tasten", fr: "Boutons +/−", it: "Pulsanti +/−", nl: "+/−-knoppen" },
-  "Unavailable badge": { de: "Nicht-verfügbar-Abzeichen", fr: "Badge indisponible", it: "Badge non disponibile", nl: "Niet-beschikbaar-badge" },
-  "Show unavailable badge": { de: "Abzeichen „Nicht verfügbar“ anzeigen", fr: "Afficher le badge indisponible", it: "Mostra badge non disponibile", nl: "Toon niet-beschikbaar-badge" },
+  "Show humidity chip": { de: "Feuchtigkeits-Chip anzeigen", fr: "Afficher l’humidité", it: "Mostra chip umidità", nl: "Toon vochtigheidschip", pt: "Mostrar chip de humidade", ru: "Показать чип влажности", el: "Εμφάνιση chip υγρασίας", zh: "显示湿度芯片", ro: "Afișează chip umiditate"},
+  "Mode buttons": { de: "Modus-Tasten", fr: "Boutons de mode", it: "Pulsanti modalità", nl: "Modusknoppen", pt: "Botões de modo", ru: "Кнопки режима", el: "Κουμπιά λειτουργίας", zh: "模式按钮", ro: "Butoane mod"},
+  "Show mode buttons": { de: "Modus-Tasten anzeigen", fr: "Afficher les boutons de mode", it: "Mostra pulsanti modalità", nl: "Toon modusknoppen", pt: "Mostrar botões de modo", ru: "Показать кнопки режима", el: "Εμφάνιση κουμπιών λειτουργίας", zh: "显示模式按钮", ro: "Afișează butoane mod"},
+  "+ / − buttons": { de: "+/−-Tasten", fr: "Boutons +/−", it: "Pulsanti +/−", nl: "+/−-knoppen", pt: "Botões + / −", ru: "Кнопки +/−", el: "Κουμπιά +/−", zh: "+/− 按钮", ro: "Butoane +/−"},
+  "Unavailable badge": { de: "Nicht-verfügbar-Abzeichen", fr: "Badge indisponible", it: "Badge non disponibile", nl: "Niet-beschikbaar-badge", pt: "Distintivo indisponível", ru: "Значок недоступности", el: "Σήμα μη διαθεσιμότητας", zh: "不可用标记", ro: "Insignă indisponibil"},
+  "Show unavailable badge": { de: "Abzeichen „Nicht verfügbar“ anzeigen", fr: "Afficher le badge indisponible", it: "Mostra badge non disponibile", nl: "Toon niet-beschikbaar-badge", pt: "Mostrar distintivo indisponível", ru: "Показать значок недоступности", el: "Εμφάνιση σήματος μη διαθεσιμότητας", zh: "显示不可用标记", ro: "Afișează insignă indisponibil"},
   "Optional tactile feedback when using the dial and buttons.": {
     de: "Optionales haptisches Feedback beim Drehregler und den Tasten.",
     fr: "Retour tactile optionnel pour le cadran et les boutons.",
     it: "Feedback tattile opzionale per il dial e i pulsanti.",
     nl: "Optionele haptische feedback bij draaiknop en knoppen.",
+    pt: "Feedback tátil opcional ao usar o mostrador e os botões.",
+    ru: "Дополнительная тактильная отдача при использовании диска и кнопок.",
+    el: "Προαιρετική απτική ανταπόκριση κατά τη χρήση του δίσκου και των κουμπιών.",
+    zh: "使用旋钮和按钮时的可选触觉反馈。",
+    ro: "Feedback tactil opțional la utilizarea discului și a butoanelor.",
   },
   "Optional haptic feedback for dial and controls.": {
     de: "Optionales haptisches Feedback für Drehregler und Steuerelemente.",
     fr: "Retour haptique optionnel pour le cadran et les contrôles.",
     it: "Feedback aptico opzionale per il dial e i controlli.",
     nl: "Optionele haptische feedback voor draaiknop en bediening.",
+    pt: "Feedback háptico opcional para o mostrador e controlos.",
+    ru: "Дополнительная тактильная отдача для диска и элементов управления.",
+    el: "Προαιρετική απτική ανταπόκριση για τον δίσκο και τα στοιχεία ελέγχου.",
+    zh: "旋钮与控件的可选触觉反馈。",
+    ro: "Feedback haptic opțional pentru disc și comenzi.",
   },
-  "Enable haptics": { de: "Haptik aktivieren", fr: "Activer le retour haptique", it: "Abilita feedback aptico", nl: "Haptiek inschakelen" },
-  "Vibration fallback": { de: "Vibrations-Fallback", fr: "Secours vibration", it: "Fallback vibrazione", nl: "Trilling reserve" },
+  "Enable haptics": { de: "Haptik aktivieren", fr: "Activer le retour haptique", it: "Abilita feedback aptico", nl: "Haptiek inschakelen", pt: "Ativar háptica", ru: "Включить тактильную отдачу", el: "Ενεργοποίηση απτικής ανταπόκρισης", zh: "启用触觉", ro: "Activează haptic"},
+  "Use entity icon": {
+    de: "Entitätssymbol verwenden",
+    fr: "Utiliser l’icône de l’entité",
+    it: "Usa l’icona dell’entità",
+    nl: "Pictogram van entiteit gebruiken",
+    pt: "Usar ícone da entidade",
+    ru: "Использовать значок объекта",
+    el: "Χρήση εικονιδίου οντότητας",
+    zh: "使用实体图标",
+    ro: "Folosește pictograma entității",
+  },
+  "Use zone icon": {
+    de: "Zonensymbol verwenden",
+    fr: "Utiliser l’icône de zone",
+    it: "Usa l’icona della zona",
+    nl: "Zonepictogram gebruiken",
+    pt: "Usar ícone da zona",
+    ru: "Использовать значок зоны",
+    el: "Χρήση εικονιδίου ζώνης",
+    zh: "使用区域图标",
+    ro: "Folosește pictograma zonei",
+  },
+  "Use entity photo": {
+    de: "Entitätsfoto verwenden",
+    fr: "Utiliser la photo de l’entité",
+    it: "Usa la foto dell’entità",
+    nl: "Entiteitsfoto gebruiken",
+    pt: "Usar foto da entidade",
+    ru: "Использовать фото объекта",
+    el: "Χρήση φωτογραφίας οντότητας",
+    zh: "使用实体照片",
+    ro: "Folosește fotografia entității",
+  },
+  "Tap action": {
+    de: "Tipp-Aktion",
+    fr: "Action au toucher",
+    it: "Azione al tocco",
+    nl: "Tikactie",
+    pt: "Ação ao tocar",
+    ru: "Действие при нажатии",
+    el: "Ενέργεια πατήματος",
+    zh: "点击操作",
+    ro: "Acțiune la atingere",
+  },
+  "Use vibration fallback": {
+    de: "Vibrations-Fallback verwenden",
+    fr: "Utiliser la vibration de secours",
+    it: "Usa vibrazione di riserva",
+    nl: "Trillen als reserve gebruiken",
+    pt: "Usar vibração de reserva",
+    ru: "Использовать вибрацию как запасной вариант",
+    el: "Χρήση δόνησης ως εφεδρικής",
+    zh: "使用振动后备",
+    ro: "Folosește vibrația de rezervă",
+  },
+  "Use vibration if haptics unavailable": {
+    de: "Vibration nutzen, wenn keine Haptik",
+    fr: "Vibrer si pas de retour haptique",
+    it: "Usa vibrazione se non c’è aptica",
+    nl: "Trillen als geen haptiek",
+    pt: "Vibrar se não houver háptica",
+    ru: "Вибрация, если тактильная отдача недоступна",
+    el: "Δόνηση όταν δεν υπάρχει απτική ανταπόκριση",
+    zh: "无触觉时使用振动",
+    ro: "Vibrație dacă nu e haptic",
+  },
+  "Vibration fallback": { de: "Vibrations-Fallback", fr: "Secours vibration", it: "Fallback vibrazione", nl: "Trilling reserve", pt: "Reserva por vibração", ru: "Резервная вибрация", el: "Εναλλακτικό δόνησης", zh: "振动后备", ro: "Rezervă vibrație"},
   "Customize the Nodalia look for the climate card, dial and controls.": {
     de: "Passe das Nodalia-Erscheinungsbild für die Thermostat-Karte, den Drehregler und die Steuerung an.",
     fr: "Personnalisez le rendu Nodalia de la carte climat, du cadran et des contrôles.",
     it: "Personalizza l’aspetto Nodalia della climate card, del dial e dei controlli.",
     nl: "Pas de Nodalia-stijl aan voor de thermostaatkaart, draaiknop en bediening.",
+    pt: "Personalize o aspeto Nodalia do cartão de clima, mostrador e controlos.",
+    ru: "Настройте вид Nodalia для карты климата, диска и элементов управления.",
+    el: "Προσαρμόστε την εμφάνιση Nodalia για την κάρτα κλίματος, τον δίσκο και τα στοιχεία ελέγχου.",
+    zh: "自定义气候卡片、旋钮与控件的 Nodalia 外观。",
+    ro: "Personalizați aspectul Nodalia pentru cardul climă, disc și comenzi.",
   },
   "Hide style settings": {
     de: "Stileinstellungen ausblenden",
     fr: "Masquer les paramètres de style",
     it: "Nascondi impostazioni di stile",
     nl: "Stijlinstellingen verbergen",
+    pt: "Ocultar definições de estilo",
+    ru: "Скрыть настройки стиля",
+    el: "Απόκρυψη ρυθμίσεων στιλ",
+    zh: "隐藏样式设置",
+    ro: "Ascunde setările de stil",
   },
   "Show style settings": {
     de: "Stileinstellungen anzeigen",
     fr: "Afficher les paramètres de style",
     it: "Mostra impostazioni di stile",
     nl: "Stijlinstellingen tonen",
+    pt: "Mostrar definições de estilo",
+    ru: "Показать настройки стиля",
+    el: "Εμφάνιση ρυθμίσεων στιλ",
+    zh: "显示样式设置",
+    ro: "Afișează setările de stil",
   },
   "Hide animation settings": {
     de: "Animationseinstellungen ausblenden",
     fr: "Masquer les paramètres d’animation",
     it: "Nascondi impostazioni animazioni",
     nl: "Animatie-instellingen verbergen",
+    pt: "Ocultar definições de animação",
+    ru: "Скрыть настройки анимации",
+    el: "Απόκρυψη ρυθμίσεων κινούμενης εικόνας",
+    zh: "隐藏动画设置",
+    ro: "Ascunde setările de animație",
   },
   "Show animation settings": {
     de: "Animationseinstellungen anzeigen",
     fr: "Afficher les paramètres d’animation",
     it: "Mostra impostazioni animazioni",
     nl: "Animatie-instellingen tonen",
+    pt: "Mostrar definições de animação",
+    ru: "Показать настройки анимации",
+    el: "Εμφάνιση ρυθμίσεων κινούμενης εικόνας",
+    zh: "显示动画设置",
+    ro: "Afișează setările de animație",
   },
   "Controls dial transition, content entrance and button bounce.": {
     de: "Steuert den Übergang des Drehreglers, den Eingang des Inhalts und den Tasten-Federungseffekt.",
     fr: "Contrôle la transition du cadran, l’entrée du contenu et le rebond des boutons.",
     it: "Controlla la transizione del dial, l’ingresso del contenuto e il rimbalzo dei pulsanti.",
     nl: "Regelt de draaiknop-overgang, binnenkomst van inhoud en knop-veer.",
+    pt: "Controla a transição do mostrador, a entrada do conteúdo e o salto dos botões.",
+    ru: "Управляет переходом диска, появлением содержимого и отскоком кнопок.",
+    el: "Ελέγχει τη μετάβαση του δίσκου, την είσοδο περιεχομένου και το αναπήδημα των κουμπιών.",
+    zh: "控制旋钮过渡、内容进入与按钮弹跳。",
+    ro: "Controlează tranziția discului, intrarea conținutului și săritura butoanelor.",
   },
-  "Card background": { de: "Kartenhintergrund", fr: "Fond de la carte", it: "Sfondo scheda", nl: "Kaartachtergrond" },
-  "Bubble background": { de: "Blasen-Hintergrund", fr: "Fond de la bulle", it: "Sfondo bolla", nl: "Bel-achtergrond" },
-  "Dial background": { de: "Drehregler-Hintergrund", fr: "Fond du cadran", it: "Sfondo dial", nl: "Draaiknop-achtergrond" },
-  "Button accent background": { de: "Akzent-Hintergrund der Tasten", fr: "Fond d’accent des boutons", it: "Sfondo accento pulsanti", nl: "Knopaccent-achtergrond" },
+  "Card background": { de: "Kartenhintergrund", fr: "Fond de la carte", it: "Sfondo scheda", nl: "Kaartachtergrond", pt: "Fundo do cartão", ru: "Фон карточки", el: "Φόντο κάρτας", zh: "卡片背景", ro: "Fundal card"},
+  "Bubble background": { de: "Blasen-Hintergrund", fr: "Fond de la bulle", it: "Sfondo bolla", nl: "Bel-achtergrond", pt: "Fundo da bolha", ru: "Фон пузырька", el: "Φόντο φυσαλίδας", zh: "气泡背景", ro: "Fundal bulă"},
+  "Dial background": { de: "Drehregler-Hintergrund", fr: "Fond du cadran", it: "Sfondo dial", nl: "Draaiknop-achtergrond", pt: "Fundo do mostrador", ru: "Фон диска", el: "Φόντο δίσκου", zh: "旋钮背景", ro: "Fundal disc"},
+  "Button accent background": { de: "Akzent-Hintergrund der Tasten", fr: "Fond d’accent des boutons", it: "Sfondo accento pulsanti", nl: "Knopaccent-achtergrond", pt: "Fundo de destaque dos botões", ru: "Фон акцента кнопок", el: "Φόντο τονισμού κουμπιών", zh: "按钮强调背景", ro: "Fundal accent butoane"},
   "Helps compact the climate card based on available space.": {
     de: "Hilft, die Thermostat-Karte je nach verfügbarem Platz zu kompaktieren.",
     fr: "Aide à compacter la carte climat selon l’espace disponible.",
     it: "Aiuta a compattare la climate card in base allo spazio.",
     nl: "Houdt de thermostaatkaart compact naargelang de ruimte.",
+    pt: "Ajuda a compactar o cartão de clima conforme o espaço disponível.",
+    ru: "Помогает компактнее отображать карту климата в зависимости от места.",
+    el: "Βοηθά στη συμπύκνωση της κάρτας κλίματος ανάλογα με τον διαθέσιμο χώρο.",
+    zh: "根据可用空间压缩气候卡片。",
+    ro: "Ajută la compactarea cardului climă în funcție de spațiul disponibil.",
   },
   "Entity bubble size": {
     de: "Größe Entitätsblase",
     fr: "Taille de la bulle d’entité",
     it: "Dimensione bolla entità",
     nl: "Grootte entiteitsbel",
+    pt: "Tamanho da bolha da entidade",
+    ru: "Размер пузырька сущности",
+    el: "Μέγεθος φυσαλίδας οντότητας",
+    zh: "实体气泡大小",
+    ro: "Dimensiune bulă entitate",
   },
-  "On icon color": { de: "Symbolfarbe (Ein)", fr: "Couleur icône (actif)", it: "Colore icona (acceso)", nl: "Pictogramkleur (aan)" },
-  "Off icon color": { de: "Symbolfarbe (Aus)", fr: "Couleur icône (inactif)", it: "Colore icona (spento)", nl: "Pictogramkleur (uit)" },
-  "Active icon color": { de: "Aktive Symbolfarbe", fr: "Couleur d’icône active", it: "Colore icona attivo", nl: "Actieve pictogramkleur" },
-  "Inactive icon color": { de: "Inaktive Symbolfarbe", fr: "Couleur d’icône inactive", it: "Colore icona inattivo", nl: "Inactieve pictogramkleur" },
-  "Icon bubble background": { de: "Hintergrund Symbolblase", fr: "Fond de la bulle d’icône", it: "Sfondo bolla icona", nl: "Achtergrond pictogrambel" },
-  "Heat color": { de: "Heizfarbe", fr: "Couleur chaleur", it: "Colore calore", nl: "Verwarmingskleur" },
-  "Cool color": { de: "Kühlfarbe", fr: "Couleur froid", it: "Colore freddo", nl: "Koelkleur" },
+  "On icon color": { de: "Symbolfarbe (Ein)", fr: "Couleur icône (actif)", it: "Colore icona (acceso)", nl: "Pictogramkleur (aan)", pt: "Cor do ícone (ligado)", ru: "Цвет значка (вкл.)", el: "Χρώμα εικονιδίου (ενεργό)", zh: "开启图标颜色", ro: "Culoare pictogramă (pornit)"},
+  "Off icon color": { de: "Symbolfarbe (Aus)", fr: "Couleur icône (inactif)", it: "Colore icona (spento)", nl: "Pictogramkleur (uit)", pt: "Cor do ícone (desligado)", ru: "Цвет значка (выкл.)", el: "Χρώμα εικονιδίου (ανενεργό)", zh: "关闭图标颜色", ro: "Culoare pictogramă (oprit)"},
+  "Active icon color": { de: "Aktive Symbolfarbe", fr: "Couleur d’icône active", it: "Colore icona attivo", nl: "Actieve pictogramkleur", pt: "Cor do ícone ativo", ru: "Цвет активного значка", el: "Χρώμα ενεργού εικονιδίου", zh: "活动图标颜色", ro: "Culoare pictogramă activă"},
+  "Inactive icon color": { de: "Inaktive Symbolfarbe", fr: "Couleur d’icône inactive", it: "Colore icona inattivo", nl: "Inactieve pictogramkleur", pt: "Cor do ícone inativo", ru: "Цвет неактивного значка", el: "Χρώμα ανενεργού εικονιδίου", zh: "非活动图标颜色", ro: "Culoare pictogramă inactivă"},
+  "Icon bubble background": { de: "Hintergrund Symbolblase", fr: "Fond de la bulle d’icône", it: "Sfondo bolla icona", nl: "Achtergrond pictogrambel", pt: "Fundo da bolha do ícone", ru: "Фон пузырька значка", el: "Φόντο φυσαλίδας εικονιδίου", zh: "图标气泡背景", ro: "Fundal bulă pictogramă"},
+  "Heat color": { de: "Heizfarbe", fr: "Couleur chaleur", it: "Colore calore", nl: "Verwarmingskleur", pt: "Cor de aquecimento", ru: "Цвет нагрева", el: "Χρώμα θέρμανσης", zh: "制热颜色", ro: "Culoare încălzire"},
+  "Cool color": { de: "Kühlfarbe", fr: "Couleur froid", it: "Colore freddo", nl: "Koelkleur", pt: "Cor de arrefecimento", ru: "Цвет охлаждения", el: "Χρώμα ψύξης", zh: "制冷颜色", ro: "Culoare răcire"},
   "Current temperature size": {
     de: "Größe aktuelle Temperatur",
     fr: "Taille température actuelle",
     it: "Dimensione temperatura attuale",
     nl: "Grootte huidige temperatuur",
+    pt: "Tamanho da temperatura atual",
+    ru: "Размер текущей температуры",
+    el: "Μέγεθος τρέχουσας θερμοκρασίας",
+    zh: "当前温度大小",
+    ro: "Dimensiune temperatură curentă",
   },
   "Target temperature size": {
     de: "Größe Solltemperatur",
     fr: "Taille consigne de température",
     it: "Dimensione temperatura obiettivo",
     nl: "Grootte doeltemperatuur",
+    pt: "Tamanho da temperatura alvo",
+    ru: "Размер целевой температуры",
+    el: "Μέγεθος στοχευμένης θερμοκρασίας",
+    zh: "目标温度大小",
+    ro: "Dimensiune temperatură țintă",
   },
-  "Target size": { de: "Ziel-Größe", fr: "Taille cible", it: "Dimensione obiettivo", nl: "Doelgrootte" },
-  "Condition size": { de: "Vorhersage-Größe", fr: "Taille condition", it: "Dimensione condizione", nl: "Voorwaardegrootte" },
-  "Chip text": { de: "Chip-Text", fr: "Texte de puce", it: "Testo chip", nl: "Chip-tekst" },
-  "Chip texts": { de: "Chip-Texte", fr: "Textes de puces", it: "Testi chip", nl: "Chip-teksten" },
-  "Icon Color": { de: "Symbolfarbe", fr: "Couleur d’icône", it: "Colore icona", nl: "Pictogramkleur" },
-  "Auto Color": { de: "Auto-Farbe", fr: "Couleur auto", it: "Colore auto", nl: "Autokleur" },
-  "Dry Color": { de: "Trocknungsfarbe", fr: "Couleur séchage", it: "Colore asciugatura", nl: "Droogkleur" },
-  "Fan Color": { de: "Lüfterfarbe", fr: "Couleur ventilateur", it: "Colore ventola", nl: "Ventilatorkleur" },
-  "Content entrance (ms)": { de: "Inhaltseingang (ms)", fr: "Entrée du contenu (ms)", it: "Ingresso contenuto (ms)", nl: "Inhoud binnenkomst (ms)" },
-  "Tap bounce (ms)": { de: "Tipp-Feder (ms)", fr: "Rebond au toucher (ms)", it: "Rimbalzo tap (ms)", nl: "Tik-veer (ms)" },
-  "Size + / − buttons": { de: "Größe +/−-Tasten", fr: "Taille des boutons +/−", it: "Dimensione pulsanti +/−", nl: "Grootte +/− knoppen" },
-  "Title size": { de: "Titelgröße", fr: "Taille du titre", it: "Dimensione titolo", nl: "Titelgrootte" },
-  "Temperature size": { de: "Temperatur-Größe", fr: "Taille température", it: "Dimensione temperatura", nl: "Temperatuurgrootte" },
-  "Thumb size": { de: "Griffgröße", fr: "Taille du curseur", it: "Dimensione thumb", nl: "Duimgrootte" },
-  "Dial track": { de: "Drehregler-Spur", fr: "Piste du cadran", it: "Traccia dial", nl: "Draaiknop-spoor" },
+  "Target size": { de: "Ziel-Größe", fr: "Taille cible", it: "Dimensione obiettivo", nl: "Doelgrootte", pt: "Tamanho do alvo", ru: "Размер цели", el: "Μέγεθος στόχου", zh: "目标大小", ro: "Dimensiune țintă"},
+  "Condition size": { de: "Vorhersage-Größe", fr: "Taille condition", it: "Dimensione condizione", nl: "Voorwaardegrootte", pt: "Tamanho da condição", ru: "Размер условия", el: "Μέγεθος συνθήκης", zh: "状况大小", ro: "Dimensiune condiție"},
+  "Chip text": { de: "Chip-Text", fr: "Texte de puce", it: "Testo chip", nl: "Chip-tekst", pt: "Texto do chip", ru: "Текст чипа", el: "Κείμενο chip", zh: "芯片文字", ro: "Text chip"},
+  "Chip texts": { de: "Chip-Texte", fr: "Textes de puces", it: "Testi chip", nl: "Chip-teksten", pt: "Textos dos chips", ru: "Тексты чипов", el: "Κείμενα chip", zh: "芯片文字", ro: "Texte chip"},
+  "Icon Color": { de: "Symbolfarbe", fr: "Couleur d’icône", it: "Colore icona", nl: "Pictogramkleur", pt: "Cor do ícone", ru: "Цвет значка", el: "Χρώμα εικονιδίου", zh: "图标颜色", ro: "Culoare pictogramă"},
+  "Auto Color": { de: "Auto-Farbe", fr: "Couleur auto", it: "Colore auto", nl: "Autokleur", pt: "Cor automática", ru: "Цвет авто", el: "Αυτόματο χρώμα", zh: "自动颜色", ro: "Culoare automată"},
+  "Dry Color": { de: "Trocknungsfarbe", fr: "Couleur séchage", it: "Colore asciugatura", nl: "Droogkleur", pt: "Cor de secagem", ru: "Цвет сушки", el: "Χρώμα στεγνώματος", zh: "除湿颜色", ro: "Culoare uscare"},
+  "Fan Color": { de: "Lüfterfarbe", fr: "Couleur ventilateur", it: "Colore ventola", nl: "Ventilatorkleur", pt: "Cor do ventilador", ru: "Цвет вентилятора", el: "Χρώμα ανεμιστήρα", zh: "风扇颜色", ro: "Culoare ventilator"},
+  "Content entrance (ms)": { de: "Inhaltseingang (ms)", fr: "Entrée du contenu (ms)", it: "Ingresso contenuto (ms)", nl: "Inhoud binnenkomst (ms)", pt: "Entrada do conteúdo (ms)", ru: "Появление содержимого (мс)", el: "Είσοδος περιεχομένου (ms)", zh: "内容进入（毫秒）", ro: "Intrare conținut (ms)"},
+  "Tap bounce (ms)": { de: "Tipp-Feder (ms)", fr: "Rebond au toucher (ms)", it: "Rimbalzo tap (ms)", nl: "Tik-veer (ms)", pt: "Salto ao toque (ms)", ru: "Отскок при нажатии (мс)", el: "Αναπήδηση πατήματος (ms)", zh: "点击弹跳（毫秒）", ro: "Săritură la atingere (ms)"},
+  "Size + / − buttons": { de: "Größe +/−-Tasten", fr: "Taille des boutons +/−", it: "Dimensione pulsanti +/−", nl: "Grootte +/− knoppen", pt: "Tamanho dos botões + / −", ru: "Размер кнопок +/−", el: "Μέγεθος κουμπιών +/−", zh: "+/− 按钮大小", ro: "Dimensiune butoane +/−"},
+  "Title size": { de: "Titelgröße", fr: "Taille du titre", it: "Dimensione titolo", nl: "Titelgrootte", pt: "Tamanho do título", ru: "Размер заголовка", el: "Μέγεθος τίτλου", zh: "标题大小", ro: "Dimensiune titlu"},
+  "Temperature size": { de: "Temperatur-Größe", fr: "Taille température", it: "Dimensione temperatura", nl: "Temperatuurgrootte", pt: "Tamanho da temperatura", ru: "Размер температуры", el: "Μέγεθος θερμοκρασίας", zh: "温度大小", ro: "Dimensiune temperatură"},
+  "Thumb size": { de: "Griffgröße", fr: "Taille du curseur", it: "Dimensione thumb", nl: "Duimgrootte", pt: "Tamanho do indicador", ru: "Размер ползунка", el: "Μέγεθος λαβής", zh: "滑块大小", ro: "Dimensiune cursor"},
+  "Dial track": { de: "Drehregler-Spur", fr: "Piste du cadran", it: "Traccia dial", nl: "Draaiknop-spoor", pt: "Trilho do mostrador", ru: "Дорожка диска", el: "Διαδρομή δίσκου", zh: "旋钮轨道", ro: "Pistă disc"},
   "Basic visual settings for the card.": {
     de: "Grundlegende visuelle Einstellungen für die Karte.",
     fr: "Réglages visuels de base pour la carte.",
     it: "Impostazioni visive di base per la scheda.",
     nl: "Basis visuele instellingen voor de kaart.",
+    pt: "Definições visuais básicas do cartão.",
+    ru: "Базовые визуальные настройки карточки.",
+    el: "Βασικές οπτικές ρυθμίσεις για την κάρτα.",
+    zh: "卡片的基本视觉设置。",
+    ro: "Setări vizuale de bază pentru card.",
   },
   "Basic visual settings for the favourite card.": {
     de: "Grundlegende visuelle Einstellungen für die Favoritenkarte.",
     fr: "Réglages visuels de base pour la carte favoris.",
     it: "Impostazioni visive di base per la scheda preferiti.",
     nl: "Basis visuele instellingen voor de favorietenkaart.",
+    pt: "Definições visuais básicas do cartão de favoritos.",
+    ru: "Базовые визуальные настройки карточки избранного.",
+    el: "Βασικές οπτικές ρυθμίσεις για την κάρτα αγαπημένων.",
+    zh: "收藏卡片的基本视觉设置。",
+    ro: "Setări vizuale de bază pentru cardul favorite.",
   },
 };
+
+function pickNewLang(rowEn, mergedVal, compactFn) {
+  if (mergedVal !== undefined && mergedVal !== "") {
+    return mergedVal;
+  }
+  if (isCompactUiEnglish(rowEn)) {
+    return compactFn(rowEn);
+  }
+  return rowEn;
+}
 
 function applyFullLocaleByEn(row) {
   const patch = FULL_LOCALE_BY_EN[row.en];
   const extra = EDITOR_EXTRA_FULL_LOCALE_BY_EN[row.en];
-  if (!patch && !extra) {
-    return row;
-  }
-  const merged = { ...(patch || {}), ...(extra || {}) };
+  const phrase = EDITOR_PHRASE_LANGS[row.en];
+  /** editor-extra → phrase overlays (Show/long hints) → FULL_LOCALE wins for climate card. */
+  const merged = { ...(extra || {}), ...(phrase || {}), ...(patch || {}) };
   return {
     ...row,
     de: merged.de !== undefined ? merged.de : row.de,
     fr: merged.fr !== undefined ? merged.fr : row.fr,
     it: merged.it !== undefined ? merged.it : row.it,
     nl: merged.nl !== undefined ? merged.nl : row.nl,
+    pt: pickNewLang(row.en, merged.pt, enToPt),
+    ru: pickNewLang(row.en, merged.ru, enToRu),
+    el: pickNewLang(row.en, merged.el, enToEl),
+    zh: pickNewLang(row.en, merged.zh, enToZh),
+    ro: pickNewLang(row.en, merged.ro, enToRo),
   };
 }
 
@@ -940,6 +1286,11 @@ for (const es of keys) {
       fr: enToFr(en),
       it: enToIt(en),
       nl: enToNl(en),
+      pt: enToPt(en),
+      ru: enToRu(en),
+      el: enToEl(en),
+      zh: enToZh(en),
+      ro: enToRo(en),
     }),
   );
   seenEs.add(es);
@@ -956,6 +1307,11 @@ for (const r of [...rows]) {
         fr: r.fr,
         it: r.it,
         nl: r.nl,
+        pt: r.pt,
+        ru: r.ru,
+        el: r.el,
+        zh: r.zh,
+        ro: r.ro,
       });
     }
   }
@@ -980,7 +1336,11 @@ const out = `/* eslint-disable max-len */
     return m;
   }
 
-  const MAP = { es: {}, en: buildMap("en"), de: buildMap("de"), fr: buildMap("fr"), it: buildMap("it"), nl: buildMap("nl") };
+  const EDITOR_LANGS = ["en", "de", "fr", "it", "nl", "pt", "ru", "el", "zh", "ro"];
+  const MAP = { es: {} };
+  for (const L of EDITOR_LANGS) {
+    MAP[L] = buildMap(L);
+  }
   for (const r of ROWS) {
     MAP.es[r.es] = r.es;
   }
@@ -996,7 +1356,21 @@ const out = `/* eslint-disable max-len */
     if (maps.es[spanishText] === undefined && maps.en[spanishText] === undefined) {
       return spanishText;
     }
-    return maps[lang]?.[spanishText] ?? maps.en[spanishText] ?? maps.es[spanishText] ?? spanishText;
+    const primary = maps[lang]?.[spanishText];
+    if (primary !== undefined && primary !== "") {
+      return primary;
+    }
+    if (lang !== "es") {
+      const enVal = maps.en?.[spanishText];
+      if (enVal !== undefined && enVal !== "") {
+        return enVal;
+      }
+    }
+    const esVal = maps.es?.[spanishText];
+    if (esVal !== undefined && esVal !== "") {
+      return esVal;
+    }
+    return spanishText;
   };
 })();
 `;

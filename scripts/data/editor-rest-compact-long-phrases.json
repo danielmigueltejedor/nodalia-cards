@@ -1,0 +1,205 @@
+{
+  "General player options and when the card should be shown.": {
+    "pt": "Opções gerais do leitor e quando o cartão deve ser mostrado.",
+    "ru": "Общие параметры плеера и когда показывать карточку.",
+    "el": "Γενικές επιλογές player και πότε θα εμφανίζεται η κάρτα.",
+    "zh": "播放器常规选项以及何时显示卡片。",
+    "ro": "Opțiuni generale pentru player și când se afișează cardul."
+  },
+  "Controls display of zero-consumption lines and animation speed.": {
+    "pt": "Controla a apresentação das linhas de consumo zero e a velocidade da animação.",
+    "ru": "Управляет отображением линий нулевого потребления и скоростью анимации.",
+    "el": "Ελέγχει την εμφάνιση γραμμών μηδενικής κατανάλωσης και την ταχύτητα κίνησης.",
+    "zh": "控制零功耗线条的显示与动画速度。",
+    "ro": "Controlează afișarea liniilor de consum zero și viteza animației."
+  },
+  "Controls tooltip entrance and visual chip bounce.": {
+    "pt": "Controla a entrada da tooltip e o salto visual dos chips.",
+    "ru": "Управляет появлением подсказки и визуальным отскоком чипов.",
+    "el": "Ελέγχει την είσοδο tooltip και το οπτικό αναπήδημα chip.",
+    "zh": "控制提示框进入与芯片视觉弹跳。",
+    "ro": "Controlează intrarea tooltip-ului și săritura vizuală a chipurilor."
+  },
+  "Extra options if the entity is an alarm panel.": {
+    "pt": "Opções extra se a entidade for um painel de alarme.",
+    "ru": "Дополнительные параметры, если сущность — панель сигнализации.",
+    "el": "Επιπλέον επιλογές αν η οντότητα είναι πίνακας συναγερμού.",
+    "zh": "若实体为报警面板时的额外选项。",
+    "ro": "Opțiuni extra dacă entitatea este un panou de alarmă."
+  },
+  "General options for the embedded player and visible player list.": {
+    "pt": "Opções gerais do leitor incorporado e da lista de leitores visível.",
+    "ru": "Общие параметры встроенного плеера и видимого списка плееров.",
+    "el": "Γενικές επιλογές για τον ενσωματωμένο player και τη λίστα ορατών players.",
+    "zh": "嵌入式播放器与可见播放器列表的常规选项。",
+    "ro": "Opțiuni generale pentru playerul încorporat și lista vizibilă de playere."
+  },
+  "Helps compact the gauge based on available space.": {
+    "pt": "Ajuda a compactar o indicador conforme o espaço disponível.",
+    "ru": "Помогает компактнее отображать индикатор в зависимости от места.",
+    "el": "Βοηθά στη συμπύκνωση του μέτρου ανάλογα με τον διαθέσιμο χώρο.",
+    "zh": "根据可用空间压缩仪表显示。",
+    "ro": "Ajută la compactarea gauge-ului în funcție de spațiul disponibil."
+  },
+  "Ideal if you want it fixed at the top or bottom of the dashboard.": {
+    "pt": "Ideal se quiser fixá-lo no topo ou na parte inferior do painel.",
+    "ru": "Удобно, если нужно закрепить сверху или снизу панели.",
+    "el": "Ιδανικό αν θέλετε να το καρφιτσώσετε πάνω ή κάτω στο ταμπλό.",
+    "zh": "适合固定在仪表盘顶部或底部。",
+    "ro": "Ideal dacă îl fixați sus sau jos în tabloul de bord."
+  },
+  "Optional haptic feedback for clicks and selections.": {
+    "pt": "Feedback háptico opcional para cliques e seleções.",
+    "ru": "Дополнительная тактильная отдача для щелчков и выбора.",
+    "el": "Προαιρετική απτική ανταπόκριση για κλικ και επιλογές.",
+    "zh": "点击与选择时的可选触觉反馈。",
+    "ro": "Feedback haptic opțional pentru clicuri și selecții."
+  },
+  "Optional haptic feedback when tapping the card.": {
+    "pt": "Feedback háptico opcional ao tocar no cartão.",
+    "ru": "Дополнительная тактильная отдача при нажатии на карточку.",
+    "el": "Προαιρετική απτική ανταπόκριση όταν πατάτε την κάρτα.",
+    "zh": "点击卡片时的可选触觉反馈。",
+    "ro": "Feedback haptic opțional la atingerea cardului."
+  },
+  "Optional sensors and selectors to enrich state and controls.": {
+    "pt": "Sensores e seletores opcionais para enriquecer o estado e os controlos.",
+    "ru": "Дополнительные датчики и переключатели для состояния и элементов управления.",
+    "el": "Προαιρετικοί αισθητήρες και επιλογείς για πλουσιότερη κατάσταση και έλεγχο.",
+    "zh": "用于丰富状态与控件的可选传感器和选择器。",
+    "ro": "Senzori și selectoare opționale pentru a îmbogăți starea și comenzile."
+  },
+  "Optional tactile feedback for player controls.": {
+    "pt": "Feedback tátil opcional para os controlos do leitor.",
+    "ru": "Дополнительная тактильная отдача для элементов управления плеером.",
+    "el": "Προαιρετική απτική ανταπόκριση για τα στοιχεία ελέγχου του player.",
+    "zh": "播放器控件的可选触觉反馈。",
+    "ro": "Feedback tactil opțional pentru comenzile playerului."
+  },
+  "Optional tactile feedback when tapping actions.": {
+    "pt": "Feedback tátil opcional ao tocar nas ações.",
+    "ru": "Дополнительная тактильная отдача при нажатии на действия.",
+    "el": "Προαιρετική απτική ανταπόκριση όταν πατάτε ενέργειες.",
+    "zh": "点击操作时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la atingerea acțiunilor."
+  },
+  "Optional tactile feedback when tapping nodes or buttons.": {
+    "pt": "Feedback tátil opcional ao tocar em nós ou botões.",
+    "ru": "Дополнительная тактильная отдача при нажатии на узлы или кнопки.",
+    "el": "Προαιρετική απτική ανταπόκριση όταν πατάτε κόμβους ή κουμπιά.",
+    "zh": "点击节点或按钮时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la atingerea nodurilor sau butoanelor."
+  },
+  "Optional tactile feedback when tapping the card.": {
+    "pt": "Feedback tátil opcional ao tocar no cartão.",
+    "ru": "Дополнительная тактильная отдача при нажатии на карточку.",
+    "el": "Προαιρετική απτική ανταπόκριση όταν πατάτε την κάρτα.",
+    "zh": "点击卡片时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la atingerea cardului."
+  },
+  "Optional tactile feedback when using controls.": {
+    "pt": "Feedback tátil opcional ao usar os controlos.",
+    "ru": "Дополнительная тактильная отдача при использовании элементов управления.",
+    "el": "Προαιρετική απτική ανταπόκριση κατά τη χρήση στοιχείων ελέγχου.",
+    "zh": "使用控件时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la utilizarea comenzilor."
+  },
+  "Optional tactile feedback when using the card and its actions.": {
+    "pt": "Feedback tátil opcional ao usar o cartão e as suas ações.",
+    "ru": "Дополнительная тактильная отдача при использовании карточки и её действий.",
+    "el": "Προαιρετική απτική ανταπόκριση όταν χρησιμοποιείτε την κάρτα και τις ενέργειές της.",
+    "zh": "使用卡片及其操作时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la utilizarea cardului și acțiunilor sale."
+  },
+  "Smooth content entrance and light bounce when tapping the card.": {
+    "pt": "Entrada suave do conteúdo e salto ligeiro ao tocar no cartão.",
+    "ru": "Плавное появление содержимого и лёгкий отскок при нажатии на карточку.",
+    "el": "Ομαλή είσοδος περιεχομένου και ελαφρύ αναπήδημα όταν πατάτε την κάρτα.",
+    "zh": "内容平滑进入，点击卡片时轻微弹跳。",
+    "ro": "Intrare lină a conținutului și săritură ușoară la atingerea cardului."
+  },
+  "Smooth content entrance and small bounce when tapping actions and icon.": {
+    "pt": "Entrada suave do conteúdo e pequeno salto ao tocar nas ações e no ícone.",
+    "ru": "Плавное появление содержимого и небольшой отскок при нажатии на действия и значок.",
+    "el": "Ομαλή είσοδος περιεχομένου και μικρό αναπήδημα όταν πατάτε ενέργειες και εικονίδιο.",
+    "zh": "内容平滑进入，点击操作与图标时轻微弹跳。",
+    "ro": "Intrare lină a conținutului și săritură mică la acțiuni și pictogramă."
+  },
+  "Smooth content entrance and small bounce when tapping the card.": {
+    "pt": "Entrada suave do conteúdo e pequeno salto ao tocar no cartão.",
+    "ru": "Плавное появление содержимого и небольшой отскок при нажатии на карточку.",
+    "el": "Ομαλή είσοδος περιεχομένου και μικρό αναπήδημα όταν πατάτε την κάρτα.",
+    "zh": "内容平滑进入，点击卡片时轻微弹跳。",
+    "ro": "Intrare lină a conținutului și săritură mică la atingerea cardului."
+  },
+  "Smooth flow entrance and bounce when tapping nodes or actions.": {
+    "pt": "Entrada suave do fluxo e salto ao tocar em nós ou ações.",
+    "ru": "Плавное появление потока и отскок при нажатии на узлы или действия.",
+    "el": "Ομαλή είσοδος ροής και αναπήδημα όταν πατάτε κόμβους ή ενέργειες.",
+    "zh": "流向平滑进入，点击节点或操作时弹跳。",
+    "ro": "Intrare lină a fluxului și săritură la noduri sau acțiuni."
+  },
+  "Visual settings for the Nodalia look and circular dial.": {
+    "pt": "Definições visuais para o aspeto Nodalia e o mostrador circular.",
+    "ru": "Визуальные настройки вида Nodalia и кругового диска.",
+    "el": "Οπτικές ρυθμίσεις για την εμφάνιση Nodalia και τον κυκλικό δίσκο.",
+    "zh": "Nodalia 外观与圆形旋钮的视觉设置。",
+    "ro": "Setări vizuale pentru aspectul Nodalia și discul circular."
+  },
+  "Visual settings for the chart and Nodalia look.": {
+    "pt": "Definições visuais do gráfico e do aspeto Nodalia.",
+    "ru": "Визуальные настройки графика и вида Nodalia.",
+    "el": "Οπτικές ρυθμίσεις για το γράφημα και την εμφάνιση Nodalia.",
+    "zh": "图表与 Nodalia 外观的视觉设置。",
+    "ro": "Setări vizuale pentru grafic și aspectul Nodalia."
+  },
+  "Visual settings for the main player and media browser.": {
+    "pt": "Definições visuais para o leitor principal e o navegador multimédia.",
+    "ru": "Визуальные настройки основного плеера и медиабраузера.",
+    "el": "Οπτικές ρυθμίσεις για τον κύριο player και τον περιηγητή μέσων.",
+    "zh": "主播放器与媒体浏览器的视觉设置。",
+    "ro": "Setări vizuale pentru playerul principal și browserul media."
+  },
+  "Which blocks you want to show inside the card.": {
+    "pt": "Que blocos quer mostrar dentro do cartão.",
+    "ru": "Какие блоки показывать внутри карточки.",
+    "el": "Ποια μπλοκ θέλετε να εμφανίζονται μέσα στην κάρτα.",
+    "zh": "要在卡片内显示哪些块。",
+    "ro": "Ce blocuri doriți să afișați în card."
+  },
+  "Which elements you want to keep always visible.": {
+    "pt": "Que elementos quer manter sempre visíveis.",
+    "ru": "Какие элементы всегда оставлять видимыми.",
+    "el": "Ποια στοιχεία θέλετε να παραμένουν πάντα ορατά.",
+    "zh": "要保持始终可见的元素。",
+    "ro": "Ce elemente doriți să rămână mereu vizibile."
+  },
+  "Which elements you want to show inside the card.": {
+    "pt": "Que elementos quer mostrar dentro do cartão.",
+    "ru": "Какие элементы показывать внутри карточки.",
+    "el": "Ποια στοιχεία θέλετε να εμφανίζονται μέσα στην κάρτα.",
+    "zh": "要在卡片内显示哪些元素。",
+    "ro": "Ce elemente doriți să afișați în card."
+  },
+  "Base visual settings for the card and bubbles.": {
+    "pt": "Definições visuais base do cartão e das bolhas.",
+    "ru": "Базовые визуальные настройки карточки и пузырьков.",
+    "el": "Βασικές οπτικές ρυθμίσεις για την κάρτα και τις φυσαλίδες.",
+    "zh": "卡片与气泡的基础视觉设置。",
+    "ro": "Setări vizuale de bază pentru card și bule."
+  },
+  "Compact layout and visible elements inside the card.": {
+    "pt": "Layout compacto e elementos visíveis dentro do cartão.",
+    "ru": "Компактная вёрстка и видимые элементы внутри карточки.",
+    "el": "Συμπαγής διάταξη και ορατά στοιχεία μέσα στην κάρτα.",
+    "zh": "紧凑布局与卡片内可见元素。",
+    "ro": "Layout compact și elemente vizibile în card."
+  },
+  "Arm and disarm buttons visible on the card.": {
+    "pt": "Botões de armar e desarmar visíveis no cartão.",
+    "ru": "Кнопки постановки и снятия с охраны на карточке.",
+    "el": "Ορατά κουμπιά όπλισης/αφόπλισης στην κάρτα.",
+    "zh": "卡片上可见的布防与撤防按钮。",
+    "ro": "Butoane armare/dezarmare vizibile pe card."
+  }
+}

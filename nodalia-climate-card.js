@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "0.10.1";
+const CARD_VERSION = "0.10.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1972,7 +1972,7 @@ class NodaliaClimateCard extends HTMLElement {
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          color: var(--secondary-text-color);
+          color: var(--primary-text-color);
           display: inline-flex;
           font-size: ${effectiveChipFontSize};
           font-weight: 700;
@@ -1984,10 +1984,6 @@ class NodaliaClimateCard extends HTMLElement {
           text-overflow: ellipsis;
           transition: background 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
           white-space: nowrap;
-        }
-
-        .climate-card__chip--state {
-          color: var(--primary-text-color);
         }
 
         .climate-card__dial-wrap {
@@ -2257,7 +2253,7 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__dial-meta {
           align-items: center;
-          color: var(--secondary-text-color);
+          color: var(--primary-text-color);
           display: flex;
           flex-wrap: wrap;
           font-size: ${effectiveCurrentSize};
@@ -2971,7 +2967,9 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -3832,7 +3830,9 @@ class NodaliaClimateCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 

@@ -110,6 +110,11 @@
       fr: "fr",
       it: "it",
       nl: "nl",
+      pt: "pt",
+      ru: "ru",
+      el: "el",
+      zh: "zh",
+      ro: "ro",
     };
     return map[langCode] || "es";
   }
@@ -137,6 +142,9 @@
           zone: "Zona",
           routines: "Rutinas",
           goto: "Ir a punto",
+        },
+        aria: {
+          modeTablist: "Modo de limpieza",
         },
         panelModes: {
           smart: "Inteligente",
@@ -362,7 +370,10 @@
         school: "Colegio",
         unavailable: "No disponible",
         unknown: "Desconocido",
-        locationUnknown: "Ubicacion desconocida",
+        locationUnknown: "Ubicación desconocida",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Configura `entity` para mostrar la tarjeta.",
+        defaultName: "Persona",
       },
       entityCard: {
         binarySensor: {
@@ -565,6 +576,9 @@
           zone: "Zone",
           routines: "Routines",
           goto: "Go to point",
+        },
+        aria: {
+          modeTablist: "Cleaning mode",
         },
         panelModes: {
           smart: "Smart",
@@ -791,6 +805,9 @@
         unavailable: "Unavailable",
         unknown: "Unknown",
         locationUnknown: "Unknown location",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Set `entity` to show this card.",
+        defaultName: "Person",
       },
       entityCard: {
         binarySensor: {
@@ -993,6 +1010,9 @@
           zone: "Zone",
           routines: "Routinen",
           goto: "Punkt anfahren",
+        },
+        aria: {
+          modeTablist: "Reinigungsmodus",
         },
         panelModes: {
           smart: "Smart",
@@ -1219,6 +1239,9 @@
         unavailable: "Nicht verfügbar",
         unknown: "Unbekannt",
         locationUnknown: "Unbekannter Ort",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Lege `entity` fest, um diese Karte anzuzeigen.",
+        defaultName: "Person",
       },
       entityCard: {
         binarySensor: {
@@ -1421,6 +1444,9 @@
           zone: "Zone",
           routines: "Routines",
           goto: "Aller au point",
+        },
+        aria: {
+          modeTablist: "Mode de nettoyage",
         },
         panelModes: {
           smart: "Intelligent",
@@ -1647,6 +1673,9 @@
         unavailable: "Indisponible",
         unknown: "Inconnu",
         locationUnknown: "Lieu inconnu",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Configurez `entity` pour afficher cette carte.",
+        defaultName: "Personne",
       },
       entityCard: {
         binarySensor: {
@@ -1849,6 +1878,9 @@
           zone: "Zona",
           routines: "Routine",
           goto: "Vai al punto",
+        },
+        aria: {
+          modeTablist: "Modalità di pulizia",
         },
         panelModes: {
           smart: "Smart",
@@ -2075,6 +2107,9 @@
         unavailable: "Non disponibile",
         unknown: "Sconosciuto",
         locationUnknown: "Posizione sconosciuta",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Imposta `entity` per mostrare questa scheda.",
+        defaultName: "Persona",
       },
       entityCard: {
         binarySensor: {
@@ -2277,6 +2312,9 @@
           zone: "Zone",
           routines: "Routes",
           goto: "Ga naar punt",
+        },
+        aria: {
+          modeTablist: "Schoonmaakmodus",
         },
         panelModes: {
           smart: "Slim",
@@ -2503,6 +2541,9 @@
         unavailable: "Niet beschikbaar",
         unknown: "Onbekend",
         locationUnknown: "Locatie onbekend",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Stel `entity` in om deze kaart te tonen.",
+        defaultName: "Persoon",
       },
       entityCard: {
         binarySensor: {
@@ -2697,22 +2738,2259 @@
         triggered: "Getriggerd",
       },
     },
+    pt: {
+      advanceVacuum: {
+        modeLabels: {
+          all: "Tudo",
+          rooms: "Divisões",
+          zone: "Zona",
+          routines: "Rotinas",
+          goto: "Ir ao ponto"
+        },
+        aria: {
+          modeTablist: "Modo de limpeza"
+        },
+        panelModes: {
+          smart: "Inteligente",
+          vacuum_mop: "Aspiração e esfregão",
+          vacuum: "Aspiração",
+          mop: "Esfregão",
+          custom: "Personalizado"
+        },
+        dockSections: {
+          control: "Controlo da base",
+          settings: "Definições da base"
+        },
+        dockSettings: {
+          mop_wash_frequency: "Frequência de lavagem da esfregona",
+          mop_mode: "Modo de esfregão",
+          auto_empty_frequency: "Frequência de esvaziamento automático",
+          empty_mode: "Modo de esvaziamento",
+          drying_duration: "Duração de secagem"
+        },
+        dockControls: {
+          empty: {
+            label: "Esvaziar depósito",
+            active: "Parar esvaziamento"
+          },
+          wash: {
+            label: "Lavar pano",
+            active: "Parar lavagem do pano"
+          },
+          dry: {
+            label: "Secar esfregona",
+            active: "Parar secagem"
+          }
+        },
+        vacuumModes: {
+          quiet: "Silencioso",
+          silent: "Silencioso",
+          balanced: "Equilibrado",
+          standard: "Padrão",
+          normal: "Normal",
+          turbo: "Turbo",
+          max: "Max",
+          maxplus: "Max+",
+          max_plus: "Max+",
+          gentle: "Suave",
+          strong: "Forte",
+          smart: "Inteligente",
+          smartmode: "Inteligente",
+          smart_mode: "Inteligente",
+          intelligent: "Inteligente",
+          custom: "Personalizado",
+          custommode: "Personalizado",
+          custom_mode: "Personalizado",
+          custom_water_flow: "Caudal de água personalizado",
+          custom_watter_flow: "Caudal de água personalizado",
+          off: "Sem esfregão",
+          low: "Baixa",
+          medium: "Média",
+          high: "Alta",
+          intense: "Intenso",
+          deep: "Profundo",
+          deep_plus: "Profundo+",
+          deepplus: "Profundo+",
+          fast: "Rápido",
+          rapido: "Rápido"
+        },
+        offSuction: "Desligado",
+        reportedStates: {
+          docked: "Na base",
+          charging: "A carregar",
+          charging_completed: "A carregar",
+          cleaning: "A limpar",
+          spot_cleaning: "A limpar",
+          segment_cleaning: "A limpar",
+          room_cleaning: "A limpar",
+          zone_cleaning: "A limpar",
+          clean_area: "A limpar",
+          paused: "Em pausa",
+          returning: "A regressar à base",
+          return_to_base: "A regressar à base",
+          returning_home: "A regressar à base",
+          washing: "A lavar esfregonas",
+          wash_mop: "A lavar esfregonas",
+          washing_mop: "A lavar esfregonas",
+          washing_pads: "A lavar esfregonas",
+          drying: "A secar",
+          drying_mop: "A secar",
+          emptying: "Esvaziamento automático",
+          self_emptying: "Esvaziamento automático",
+          unavailable: "Indisponível",
+          unknown: "Desconhecido",
+          error: "Erro",
+          fallback: "Desconhecido"
+        },
+        mapStatus: {
+          washing_mop: "A lavar a esfregona",
+          drying_mop: "A secar a esfregona",
+          emptying_dust: "A esvaziar o depósito",
+          charging: "A carregar"
+        },
+        descriptorLabels: {
+          suction: "Aspiração",
+          mop: "Esfregão",
+          mop_mode: "Modo da esfregona"
+        },
+        utility: {
+          cleaningMode: "Modo de limpeza",
+          cleaningCounter: "Passagens de limpeza",
+          dockActions: "Ações da base",
+          chargingStation: "Estação de carga",
+          zonesWord: "zonas",
+          pointWord: "ponto",
+          zoneTool: "Zona",
+          routineDefault: "Rotina",
+          customMenuDefault: "Base",
+          modesFallbackTitle: "Modos de aspiração e esfregão"
+        },
+        actions: {
+          returnToBase: "Regressar à base",
+          locate: "Localizar",
+          stop: "Parar",
+          run: "Executar",
+          addZoneToClean: "Adicionar zona à limpeza",
+          cleanZone: "Limpar zona"
+        },
+        handles: {
+          moveZone: "Mover zona",
+          deleteZone: "Eliminar zona",
+          resizeZone: "Redimensionar zona"
+        },
+        titles: {
+          editZone: "Editar zona",
+          backPanel: "Voltar ao painel principal",
+          addZone: "Adicionar zona",
+          gotoFallback: "Ponto"
+        }
+      },
+      vacuumSimple: {
+        quiet: "Silencioso",
+        silent: "Silencioso",
+        balanced: "Equilibrado",
+        standard: "Padrão",
+        normal: "Normal",
+        turbo: "Turbo",
+        max: "Max",
+        maxplus: "Max+",
+        max_plus: "Max+",
+        gentle: "Suave",
+        strong: "Forte",
+        smart: "Inteligente",
+        smartmode: "Inteligente",
+        smart_mode: "Inteligente",
+        intelligent: "Inteligente",
+        custom: "Personalizado",
+        custommode: "Personalizado",
+        custom_mode: "Personalizado",
+        custom_water_flow: "Caudal de água personalizado",
+        custom_watter_flow: "Caudal de água personalizado",
+        off: "Sem esfregão",
+        low: "Baixa",
+        medium: "Média",
+        high: "Alta",
+        intense: "Intenso",
+        deep: "Profundo"
+      },
+      navigationMusicAssist: {
+        artist: "Artistas",
+        artists: "Artistas",
+        album: "Álbuns",
+        albums: "Álbuns",
+        track: "Faixas",
+        tracks: "Faixas",
+        song: "Faixas",
+        songs: "Faixas",
+        playlist: "Listas de reprodução",
+        playlists: "Listas de reprodução",
+        "radio station": "Estações de rádio",
+        "radio stations": "Estações de rádio",
+        podcast: "Podcasts",
+        podcasts: "Podcasts",
+        audiobook: "Audiolivros",
+        audiobooks: "Audiolivros",
+        genre: "Géneros",
+        genres: "Géneros",
+        favorite: "Favoritos",
+        favorites: "Favoritos",
+        favourites: "Favoritos",
+        search: "Pesquisar",
+        "recently played": "Reproduzidos recentemente",
+        "recently added": "Adicionados recentemente",
+        "recently played tracks": "Faixas ouvidas recentemente",
+        browseFallback: "Item",
+      },
+      weatherCard: {
+        conditions: {
+          clear_night: "Noite limpa",
+          cloudy: "Nublado",
+          exceptional: "Excecional",
+          fog: "Nevoeiro",
+          hail: "Granizo",
+          lightning: "Relâmpago",
+          lightning_rainy: "Relâmpago e chuva",
+          partlycloudy: "Parcialmente nublado",
+          pouring: "Chuva forte",
+          rainy: "Chuvoso",
+          snowy: "Neve",
+          snowy_rainy: "Aguaneve",
+          sunny: "Sol",
+          windy: "Ventoso",
+          windy_variant: "Vento variável"
+        },
+        defaultCondition: "Meteorologia",
+        forecast: {
+          chartAriaHourly: "Gráfico da previsão horária",
+          chartAriaDaily: "Gráfico da previsão semanal",
+          tabsAria: "Vista da previsão",
+          tabCards: "Cartões",
+          tabChart: "Gráfico",
+          hoursTab: "Horas",
+          weekTab: "Semana",
+          emptyHourly: "Sem previsão horária disponível.",
+          emptyDaily: "Sem previsão semanal disponível.",
+          chartInsufficientData: "Dados insuficientes para o gráfico.",
+          closeDetail: "Fechar detalhe",
+          maxLabel: "Máx.",
+          minLabel: "Mín.",
+          temperatureLabel: "Temperatura",
+          rainLabel: "Chuva",
+          humidityLabel: "Humidade",
+          windLabel: "Vento"
+        },
+        meteoalarm: {
+          name: "Meteoalarm",
+          alertFallback: "Alerta",
+          noAlerts: "Sem alertas",
+          weatherAlert: "Alerta meteorológico",
+          noWeatherAlerts: "Sem alertas meteorológicos",
+          level: "Nível",
+          type: "Tipo",
+          start: "Início",
+          end: "Fim",
+          severity: "Gravidade",
+          urgency: "Urgência",
+          certainty: "Certeza",
+          close: "Fechar",
+          descriptionTitle: "Descrição",
+          instructionsTitle: "Instruções",
+          terms: {
+            moderate: "Moderado",
+            severe: "Grave",
+            high: "Alto",
+            extreme: "Extremo",
+            minor: "Menor",
+            yellow: "Amarelo",
+            orange: "Laranja",
+            red: "Vermelho",
+            green: "Verde",
+            future: "Futuro",
+            immediate: "Imediato",
+            expected: "Esperado",
+            past: "Passado",
+            likely: "Provável",
+            observed: "Observado",
+            possible: "Possível",
+            unlikely: "Improvável",
+            unknown: "Desconhecido",
+            met: "Meteorológico",
+            monitor: "Monitorizar"
+          }
+        }
+      },
+      humidifierCard: {
+        modes: {
+          auto: "Automático",
+          automatic: "Automático",
+          smart: "Inteligente",
+          smart_mode: "Inteligente",
+          sleep: "Noite",
+          night: "Noite",
+          eco: "Eco",
+          quiet: "Silencioso",
+          silent: "Silencioso",
+          low: "Baixa",
+          medium: "Média",
+          mid: "Média",
+          high: "Alta",
+          boost: "Boost",
+          turbo: "Turbo",
+          normal: "Normal",
+          balanced: "Normal",
+          dry: "Secagem",
+          drying: "Secagem",
+          continuous: "Contínuo",
+          clothes_dry: "Roupa",
+          laundry: "Roupa"
+        }
+      },
+      graphCard: {
+        emptyHistory: "Sem histórico disponível"
+      },
+      fan: {
+        off: "Desligado",
+        on: "Ligado",
+        unavailable: "Indisponível",
+        unknown: "Desconhecido",
+        noState: "Sem estado",
+        fallbackName: "Ventoinha"
+      },
+      alarmPanel: {
+        defaultTitle: "Alarme",
+        noState: "Sem estado",
+        actions: {
+          disarm: "Desarmar",
+          arm_home: "Casa",
+          arm_away: "Ausente",
+          arm_night: "Noite",
+          arm_vacation: "Férias",
+          arm_custom_bypass: "Personalizado"
+        },
+        states: {
+          disarmed: "Desarmado",
+          armed_home: "Em casa",
+          armed_away: "Ausente",
+          armed_night: "Noite",
+          armed_vacation: "Férias",
+          armed_custom_bypass: "Personalizado",
+          armed: "Armado",
+          arming: "A armar",
+          disarming: "A desarmar",
+          pending: "Pendente",
+          triggered: "Disparado",
+          unavailable: "Indisponível",
+          unknown: "Desconhecido"
+        }
+      },
+      person: {
+        home: "Em casa",
+        notHome: "Fora",
+        work: "Trabalho",
+        school: "Escola",
+        unavailable: "Indisponível",
+        unknown: "Desconhecido",
+        locationUnknown: "Localização desconhecida",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Defina `entity` para mostrar este cartão.",
+        defaultName: "Pessoa",
+      },
+      entityCard: {
+        binarySensor: {
+          doorOpen: "Aberta",
+          doorClosed: "Fechada",
+          motionOn: "Detetado",
+          motionOff: "Não detetado"
+        },
+        boolean: {
+          yes: "Sim",
+          no: "Não"
+        },
+        states: {
+          on: "Ligado",
+          off: "Desligado",
+          open: "Aberto",
+          opening: "A abrir",
+          closed: "Fechado",
+          closing: "A fechar",
+          playing: "A reproduzir",
+          paused: "Em pausa",
+          idle: "Em espera",
+          standby: "Standby",
+          home: "Em casa",
+          not_home: "Fora",
+          detected: "Detetado",
+          clear: "Limpo",
+          unavailable: "Indisponível",
+          unknown: "Desconhecido",
+          locked: "Trancado",
+          unlocked: "Destrancado",
+          locking: "A trancar",
+          unlocking: "A destrancar",
+          locking_failed: "Falha ao trancar",
+          unlocking_failed: "Falha ao destrancar",
+          jammed: "Encravado",
+          pending: "Pendente",
+          stopped: "Parado",
+          armed_away: "Armado ausente",
+          armed_home: "Armado em casa",
+          disarmed: "Desarmado",
+          triggered: "Disparado",
+          comfortable: "Confortável",
+          very_comfortable: "Muito confortável",
+          slightly_uncomfortable: "Ligeiramente desconfortável",
+          somewhat_uncomfortable: "Algo desconfortável",
+          quite_uncomfortable: "Bastante desconfortável",
+          extremely_uncomfortable: "Muito desconfortável",
+          ok_but_humid: "Aceitável, mas húmido",
+          little_or_no_discomfort: "Pouco ou nenhum desconforto",
+          some_discomfort: "Algum desconforto",
+          great_discomfort_avoid_exertion: "Grande desconforto",
+          dangerous_discomfort: "Desconforto perigoso",
+          heat_stroke_imminent: "Golpe de calor iminente",
+          dry: "Seco",
+          very_dry: "Muito seco",
+          too_dry: "Demasiado seco",
+          humid: "Húmido",
+          very_humid: "Muito húmido",
+          too_humid: "Demasiado húmido",
+          wet: "Molhado",
+          low: "Baixo",
+          medium: "Médio",
+          moderate: "Moderado",
+          high: "Alto",
+          very_high: "Muito alto",
+          severely_high: "Extremamente alto",
+          critical: "Crítico",
+          excellent: "Excelente",
+          good: "Bom",
+          fair: "Razoável",
+          poor: "Mau"
+        }
+      },
+      favCard: {
+        disarmedF: "Desarmada",
+        armed_home: "Em casa",
+        armed_away: "Ausente",
+        armed_night: "Noite",
+        armed_vacation: "Férias",
+        armed_custom_bypass: "Personalizado",
+        arming: "A armar",
+        disarming: "A desarmar",
+        pending: "Pendente",
+        triggered: "Disparado"
+      }
+    },
+    ru: {
+      advanceVacuum: {
+        modeLabels: {
+          all: "Всё",
+          rooms: "Комнаты",
+          zone: "Зона",
+          routines: "Сценарии",
+          goto: "К точке"
+        },
+        aria: {
+          modeTablist: "Режим уборки"
+        },
+        panelModes: {
+          smart: "Умный",
+          vacuum_mop: "Пылесос и мытьё",
+          vacuum: "Пылесос",
+          mop: "Мытьё",
+          custom: "Свой"
+        },
+        dockSections: {
+          control: "Управление базой",
+          settings: "Настройки базы"
+        },
+        dockSettings: {
+          mop_wash_frequency: "Частота промывки швабры",
+          mop_mode: "Режим мытья",
+          auto_empty_frequency: "Частота самоочистки",
+          empty_mode: "Режим опорожнения",
+          drying_duration: "Длительность сушки"
+        },
+        dockControls: {
+          empty: {
+            label: "Опорожнить контейнер",
+            active: "Остановить опорожнение"
+          },
+          wash: {
+            label: "Промыть швабру",
+            active: "Остановить промывку"
+          },
+          dry: {
+            label: "Сушить швабру",
+            active: "Остановить сушку"
+          }
+        },
+        vacuumModes: {
+          quiet: "Тихий",
+          silent: "Тихий",
+          balanced: "Сбалансированный",
+          standard: "Стандарт",
+          normal: "Обычный",
+          turbo: "Турбо",
+          max: "Макс",
+          maxplus: "Макс+",
+          max_plus: "Макс+",
+          gentle: "Мягкий",
+          strong: "Сильный",
+          smart: "Умный",
+          smartmode: "Умный",
+          smart_mode: "Умный",
+          intelligent: "Умный",
+          custom: "Свой",
+          custommode: "Свой",
+          custom_mode: "Свой",
+          custom_water_flow: "Свой расход воды",
+          custom_watter_flow: "Свой расход воды",
+          off: "Без мытья",
+          low: "Низкий",
+          medium: "Средний",
+          high: "Высокий",
+          intense: "Интенсивный",
+          deep: "Глубокий",
+          deep_plus: "Глубокий+",
+          deepplus: "Глубокий+",
+          fast: "Быстрый",
+          rapido: "Быстрый"
+        },
+        offSuction: "Выкл.",
+        reportedStates: {
+          docked: "На базе",
+          charging: "Зарядка",
+          charging_completed: "Зарядка",
+          cleaning: "Уборка",
+          spot_cleaning: "Уборка",
+          segment_cleaning: "Уборка",
+          room_cleaning: "Уборка",
+          zone_cleaning: "Уборка",
+          clean_area: "Уборка",
+          paused: "Пауза",
+          returning: "Возврат на базу",
+          return_to_base: "Возврат на базу",
+          returning_home: "Возврат на базу",
+          washing: "Промывка швабры",
+          wash_mop: "Промывка швабры",
+          washing_mop: "Промывка швабры",
+          washing_pads: "Промывка швабры",
+          drying: "Сушка",
+          drying_mop: "Сушка",
+          emptying: "Самоочистка",
+          self_emptying: "Самоочистка",
+          unavailable: "Недоступно",
+          unknown: "Неизвестно",
+          error: "Ошибка",
+          fallback: "Неизвестно"
+        },
+        mapStatus: {
+          washing_mop: "Промывка швабры",
+          drying_mop: "Сушка швабры",
+          emptying_dust: "Опорожнение контейнера",
+          charging: "Зарядка"
+        },
+        descriptorLabels: {
+          suction: "Пылесос",
+          mop: "Мытьё",
+          mop_mode: "Режим швабры"
+        },
+        utility: {
+          cleaningMode: "Режим уборки",
+          cleaningCounter: "Проходы уборки",
+          dockActions: "Действия базы",
+          chargingStation: "Зарядная база",
+          zonesWord: "зоны",
+          pointWord: "точка",
+          zoneTool: "Зона",
+          routineDefault: "Сценарий",
+          customMenuDefault: "База",
+          modesFallbackTitle: "Режимы пылесоса и мытья"
+        },
+        actions: {
+          returnToBase: "На базу",
+          locate: "Найти",
+          stop: "Стоп",
+          run: "Пуск",
+          addZoneToClean: "Добавить зону к уборке",
+          cleanZone: "Убрать зону"
+        },
+        handles: {
+          moveZone: "Переместить зону",
+          deleteZone: "Удалить зону",
+          resizeZone: "Размер зоны"
+        },
+        titles: {
+          editZone: "Редактировать зону",
+          backPanel: "К основной панели",
+          addZone: "Добавить зону",
+          gotoFallback: "Точка"
+        }
+      },
+      vacuumSimple: {
+        quiet: "Тихий",
+        silent: "Тихий",
+        balanced: "Сбалансированный",
+        standard: "Стандарт",
+        normal: "Обычный",
+        turbo: "Турбо",
+        max: "Макс",
+        maxplus: "Макс+",
+        max_plus: "Макс+",
+        gentle: "Мягкий",
+        strong: "Сильный",
+        smart: "Умный",
+        smartmode: "Умный",
+        smart_mode: "Умный",
+        intelligent: "Умный",
+        custom: "Свой",
+        custommode: "Свой",
+        custom_mode: "Свой",
+        custom_water_flow: "Свой расход воды",
+        custom_watter_flow: "Свой расход воды",
+        off: "Без мытья",
+        low: "Низкий",
+        medium: "Средний",
+        high: "Высокий",
+        intense: "Интенсивный",
+        deep: "Глубокий"
+      },
+      navigationMusicAssist: {
+        artist: "Артисты",
+        artists: "Артисты",
+        album: "Альбомы",
+        albums: "Альбомы",
+        track: "Треки",
+        tracks: "Треки",
+        song: "Треки",
+        songs: "Треки",
+        playlist: "Плейлисты",
+        playlists: "Плейлисты",
+        "radio station": "Радиостанции",
+        "radio stations": "Радиостанции",
+        podcast: "Подкасты",
+        podcasts: "Подкасты",
+        audiobook: "Аудиокниги",
+        audiobooks: "Аудиокниги",
+        genre: "Жанры",
+        genres: "Жанры",
+        favorite: "Избранное",
+        favorites: "Избранное",
+        favourites: "Избранное",
+        search: "Поиск",
+        "recently played": "Недавно воспроизведённые",
+        "recently added": "Недавно добавленные",
+        "recently played tracks": "Недавно воспроизведённые треки",
+        browseFallback: "Элемент",
+      },
+      weatherCard: {
+        conditions: {
+          clear_night: "Ясная ночь",
+          cloudy: "Облачно",
+          exceptional: "Исключительно",
+          fog: "Туман",
+          hail: "Град",
+          lightning: "Молния",
+          lightning_rainy: "Гроза с дождём",
+          partlycloudy: "Переменная облачность",
+          pouring: "Ливень",
+          rainy: "Дождь",
+          snowy: "Снег",
+          snowy_rainy: "Мокрый снег",
+          sunny: "Солнечно",
+          windy: "Ветрено",
+          windy_variant: "Переменный ветер"
+        },
+        defaultCondition: "Погода",
+        forecast: {
+          chartAriaHourly: "Почасовой прогноз",
+          chartAriaDaily: "Недельный прогноз",
+          tabsAria: "Вид прогноза",
+          tabCards: "Карточки",
+          tabChart: "График",
+          hoursTab: "Часы",
+          weekTab: "Неделя",
+          emptyHourly: "Почасовой прогноз недоступен.",
+          emptyDaily: "Недельный прогноз недоступен.",
+          chartInsufficientData: "Недостаточно данных для графика.",
+          closeDetail: "Закрыть детали",
+          maxLabel: "Макс.",
+          minLabel: "Мин.",
+          temperatureLabel: "Температура",
+          rainLabel: "Дождь",
+          humidityLabel: "Влажность",
+          windLabel: "Ветер"
+        },
+        meteoalarm: {
+          name: "Meteoalarm",
+          alertFallback: "Предупреждение",
+          noAlerts: "Нет предупреждений",
+          weatherAlert: "Погодное предупреждение",
+          noWeatherAlerts: "Нет погодных предупреждений",
+          level: "Уровень",
+          type: "Тип",
+          start: "Начало",
+          end: "Конец",
+          severity: "Серьёзность",
+          urgency: "Срочность",
+          certainty: "Достоверность",
+          close: "Закрыть",
+          descriptionTitle: "Описание",
+          instructionsTitle: "Инструкции",
+          terms: {
+            moderate: "Умеренный",
+            severe: "Сильный",
+            high: "Высокий",
+            extreme: "Экстремальный",
+            minor: "Низкий",
+            yellow: "Жёлтый",
+            orange: "Оранжевый",
+            red: "Красный",
+            green: "Зелёный",
+            future: "Будущее",
+            immediate: "Немедленно",
+            expected: "Ожидается",
+            past: "Прошлое",
+            likely: "Вероятно",
+            observed: "Наблюдается",
+            possible: "Возможно",
+            unlikely: "Маловероятно",
+            unknown: "Неизвестно",
+            met: "Метеорологический",
+            monitor: "Мониторинг"
+          }
+        }
+      },
+      humidifierCard: {
+        modes: {
+          auto: "Авто",
+          automatic: "Авто",
+          smart: "Умный",
+          smart_mode: "Умный",
+          sleep: "Ночь",
+          night: "Ночь",
+          eco: "Эко",
+          quiet: "Тихий",
+          silent: "Тихий",
+          low: "Низкий",
+          medium: "Средний",
+          mid: "Средний",
+          high: "Высокий",
+          boost: "Boost",
+          turbo: "Турбо",
+          normal: "Обычный",
+          balanced: "Обычный",
+          dry: "Сушка",
+          drying: "Сушка",
+          continuous: "Непрерывно",
+          clothes_dry: "Бельё",
+          laundry: "Бельё"
+        }
+      },
+      graphCard: {
+        emptyHistory: "История недоступна"
+      },
+      fan: {
+        off: "Выкл.",
+        on: "Вкл.",
+        unavailable: "Недоступно",
+        unknown: "Неизвестно",
+        noState: "Нет состояния",
+        fallbackName: "Вентилятор"
+      },
+      alarmPanel: {
+        defaultTitle: "Сигнализация",
+        noState: "Нет состояния",
+        actions: {
+          disarm: "Снять",
+          arm_home: "Дома",
+          arm_away: "Нет дома",
+          arm_night: "Ночь",
+          arm_vacation: "Отпуск",
+          arm_custom_bypass: "Свой режим"
+        },
+        states: {
+          disarmed: "Снята",
+          armed_home: "Дома",
+          armed_away: "Нет дома",
+          armed_night: "Ночь",
+          armed_vacation: "Отпуск",
+          armed_custom_bypass: "Свой режим",
+          armed: "Включена",
+          arming: "Включение",
+          disarming: "Выключение",
+          pending: "Ожидание",
+          triggered: "Сработала",
+          unavailable: "Недоступно",
+          unknown: "Неизвестно"
+        }
+      },
+      person: {
+        home: "Дома",
+        notHome: "Не дома",
+        work: "Работа",
+        school: "Школа",
+        unavailable: "Недоступно",
+        unknown: "Неизвестно",
+        locationUnknown: "Местоположение неизвестно",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Укажите `entity`, чтобы показать эту карточку.",
+        defaultName: "Человек",
+      },
+      entityCard: {
+        binarySensor: {
+          doorOpen: "Открыта",
+          doorClosed: "Закрыта",
+          motionOn: "Обнаружено",
+          motionOff: "Нет движения"
+        },
+        boolean: {
+          yes: "Да",
+          no: "Нет"
+        },
+        states: {
+          on: "Вкл.",
+          off: "Выкл.",
+          open: "Открыто",
+          opening: "Открывается",
+          closed: "Закрыто",
+          closing: "Закрывается",
+          playing: "Воспроизведение",
+          paused: "Пауза",
+          idle: "Ожидание",
+          standby: "Ожидание",
+          home: "Дома",
+          not_home: "Не дома",
+          detected: "Обнаружено",
+          clear: "Норма",
+          unavailable: "Недоступно",
+          unknown: "Неизвестно",
+          locked: "Заперто",
+          unlocked: "Открыто",
+          locking: "Запирание",
+          unlocking: "Отпирание",
+          locking_failed: "Ошибка запирания",
+          unlocking_failed: "Ошибка отпирания",
+          jammed: "Заклинило",
+          pending: "Ожидание",
+          stopped: "Остановлено",
+          armed_away: "Включена (нет дома)",
+          armed_home: "Включена (дома)",
+          disarmed: "Снята",
+          triggered: "Сработала",
+          comfortable: "Комфортно",
+          very_comfortable: "Очень комфортно",
+          slightly_uncomfortable: "Немного некомфортно",
+          somewhat_uncomfortable: "Некомфортно",
+          quite_uncomfortable: "Довольно некомфортно",
+          extremely_uncomfortable: "Очень некомфортно",
+          ok_but_humid: "Нормально, но влажно",
+          little_or_no_discomfort: "Нет дискомфорта",
+          some_discomfort: "Есть дискомфорт",
+          great_discomfort_avoid_exertion: "Сильный дискомфорт",
+          dangerous_discomfort: "Опасный дискомфорт",
+          heat_stroke_imminent: "Угроза теплового удара",
+          dry: "Сухо",
+          very_dry: "Очень сухо",
+          too_dry: "Слишком сухо",
+          humid: "Влажно",
+          very_humid: "Очень влажно",
+          too_humid: "Слишком влажно",
+          wet: "Мокро",
+          low: "Низкий",
+          medium: "Средний",
+          moderate: "Умеренный",
+          high: "Высокий",
+          very_high: "Очень высокий",
+          severely_high: "Критически высокий",
+          critical: "Критично",
+          excellent: "Отлично",
+          good: "Хорошо",
+          fair: "Удовлетворительно",
+          poor: "Плохо"
+        }
+      },
+      favCard: {
+        disarmedF: "Снята",
+        armed_home: "Дома",
+        armed_away: "Нет дома",
+        armed_night: "Ночь",
+        armed_vacation: "Отпуск",
+        armed_custom_bypass: "Свой режим",
+        arming: "Включение",
+        disarming: "Выключение",
+        pending: "Ожидание",
+        triggered: "Сработала"
+      }
+    },
+    el: {
+      advanceVacuum: {
+        modeLabels: {
+          all: "Όλα",
+          rooms: "Δωμάτια",
+          zone: "Ζώνη",
+          routines: "Ρουτίνες",
+          goto: "Μετάβαση σε σημείο"
+        },
+        aria: {
+          modeTablist: "Λειτουργία καθαρισμού"
+        },
+        panelModes: {
+          smart: "Έξυπνο",
+          vacuum_mop: "Σκούπισμα και σφουγγάρισμα",
+          vacuum: "Σκούπισμα",
+          mop: "Σφουγγάρισμα",
+          custom: "Προσαρμοσμένο"
+        },
+        dockSections: {
+          control: "Έλεγχος βάσης",
+          settings: "Ρυθμίσεις βάσης"
+        },
+        dockSettings: {
+          mop_wash_frequency: "Συχνότητα πλύσης πανιού",
+          mop_mode: "Λειτουργία σφουγγαρίσματος",
+          auto_empty_frequency: "Συχνότητα αυτόματου αδειάσματος",
+          empty_mode: "Λειτουργία αδειάσματος",
+          drying_duration: "Διάρκεια στεγνώματος"
+        },
+        dockControls: {
+          empty: {
+            label: "Άδειασμα δοχείου",
+            active: "Διακοπή αδειάσματος"
+          },
+          wash: {
+            label: "Πλύση πανιού",
+            active: "Διακοπή πλύσης"
+          },
+          dry: {
+            label: "Στέγνωμα πανιού",
+            active: "Διακοπή στεγνώματος"
+          }
+        },
+        vacuumModes: {
+          quiet: "Ήσυχο",
+          silent: "Ήσυχο",
+          balanced: "Ισορροπημένο",
+          standard: "Τυπικό",
+          normal: "Κανονικό",
+          turbo: "Turbo",
+          max: "Μέγιστο",
+          maxplus: "Μέγιστο+",
+          max_plus: "Μέγιστο+",
+          gentle: "Ήπιο",
+          strong: "Δυνατό",
+          smart: "Έξυπνο",
+          smartmode: "Έξυπνο",
+          smart_mode: "Έξυπνο",
+          intelligent: "Έξυπνο",
+          custom: "Προσαρμοσμένο",
+          custommode: "Προσαρμοσμένο",
+          custom_mode: "Προσαρμοσμένο",
+          custom_water_flow: "Προσαρμοσμένη ροή νερού",
+          custom_watter_flow: "Προσαρμοσμένη ροή νερού",
+          off: "Χωρίς σφουγγάρισμα",
+          low: "Χαμηλό",
+          medium: "Μέτριο",
+          high: "Υψηλό",
+          intense: "Έντονο",
+          deep: "Βαθύ",
+          deep_plus: "Βαθύ+",
+          deepplus: "Βαθύ+",
+          fast: "Γρήγορο",
+          rapido: "Γρήγορο"
+        },
+        offSuction: "Ανενεργό",
+        reportedStates: {
+          docked: "Στη βάση",
+          charging: "Φόρτιση",
+          charging_completed: "Φόρτιση",
+          cleaning: "Καθαρισμός",
+          spot_cleaning: "Καθαρισμός",
+          segment_cleaning: "Καθαρισμός",
+          room_cleaning: "Καθαρισμός",
+          zone_cleaning: "Καθαρισμός",
+          clean_area: "Καθαρισμός",
+          paused: "Παύση",
+          returning: "Επιστροφή στη βάση",
+          return_to_base: "Επιστροφή στη βάση",
+          returning_home: "Επιστροφή στη βάση",
+          washing: "Πλύση πανιού",
+          wash_mop: "Πλύση πανιού",
+          washing_mop: "Πλύση πανιού",
+          washing_pads: "Πλύση πανιού",
+          drying: "Στέγνωμα",
+          drying_mop: "Στέγνωμα",
+          emptying: "Αυτόματο άδειασμα",
+          self_emptying: "Αυτόματο άδειασμα",
+          unavailable: "Μη διαθέσιμο",
+          unknown: "Άγνωστο",
+          error: "Σφάλμα",
+          fallback: "Άγνωστο"
+        },
+        mapStatus: {
+          washing_mop: "Πλύση πανιού",
+          drying_mop: "Στέγνωμα πανιού",
+          emptying_dust: "Άδειασμα δοχείου σκόνης",
+          charging: "Φόρτιση"
+        },
+        descriptorLabels: {
+          suction: "Σκούπισμα",
+          mop: "Σφουγγάρισμα",
+          mop_mode: "Λειτουργία πανιού"
+        },
+        utility: {
+          cleaningMode: "Λειτουργία καθαρισμού",
+          cleaningCounter: "Διαβάσεις καθαρισμού",
+          dockActions: "Ενέργειες βάσης",
+          chargingStation: "Σταθμός φόρτισης",
+          zonesWord: "ζώνες",
+          pointWord: "σημείο",
+          zoneTool: "Ζώνη",
+          routineDefault: "Ρουτίνα",
+          customMenuDefault: "Βάση",
+          modesFallbackTitle: "Λειτουργίες σκουπίσματος και σφουγγαρίσματος"
+        },
+        actions: {
+          returnToBase: "Επιστροφή στη βάση",
+          locate: "Εντοπισμός",
+          stop: "Διακοπή",
+          run: "Εκτέλεση",
+          addZoneToClean: "Προσθήκη ζώνης στον καθαρισμό",
+          cleanZone: "Καθαρισμός ζώνης"
+        },
+        handles: {
+          moveZone: "Μετακίνηση ζώνης",
+          deleteZone: "Διαγραφή ζώνης",
+          resizeZone: "Αλλαγή μεγέθους ζώνης"
+        },
+        titles: {
+          editZone: "Επεξεργασία ζώνης",
+          backPanel: "Πίσω στο κύριο πάνελ",
+          addZone: "Προσθήκη ζώνης",
+          gotoFallback: "Σημείο"
+        }
+      },
+      vacuumSimple: {
+        quiet: "Ήσυχο",
+        silent: "Ήσυχο",
+        balanced: "Ισορροπημένο",
+        standard: "Τυπικό",
+        normal: "Κανονικό",
+        turbo: "Turbo",
+        max: "Μέγιστο",
+        maxplus: "Μέγιστο+",
+        max_plus: "Μέγιστο+",
+        gentle: "Ήπιο",
+        strong: "Δυνατό",
+        smart: "Έξυπνο",
+        smartmode: "Έξυπνο",
+        smart_mode: "Έξυπνο",
+        intelligent: "Έξυπνο",
+        custom: "Προσαρμοσμένο",
+        custommode: "Προσαρμοσμένο",
+        custom_mode: "Προσαρμοσμένο",
+        custom_water_flow: "Προσαρμοσμένη ροή νερού",
+        custom_watter_flow: "Προσαρμοσμένη ροή νερού",
+        off: "Χωρίς σφουγγάρισμα",
+        low: "Χαμηλό",
+        medium: "Μέτριο",
+        high: "Υψηλό",
+        intense: "Έντονο",
+        deep: "Βαθύ"
+      },
+      navigationMusicAssist: {
+        artist: "Καλλιτέχνες",
+        artists: "Καλλιτέχνες",
+        album: "Άλμπουμ",
+        albums: "Άλμπουμ",
+        track: "Κομμάτια",
+        tracks: "Κομμάτια",
+        song: "Κομμάτια",
+        songs: "Κομμάτια",
+        playlist: "Λίστες αναπαραγωγής",
+        playlists: "Λίστες αναπαραγωγής",
+        "radio station": "Ραδιοφωνικοί σταθμοί",
+        "radio stations": "Ραδιοφωνικοί σταθμοί",
+        podcast: "Podcasts",
+        podcasts: "Podcasts",
+        audiobook: "Ακουστικά βιβλία",
+        audiobooks: "Ακουστικά βιβλία",
+        genre: "Είδη",
+        genres: "Είδη",
+        favorite: "Αγαπημένα",
+        favorites: "Αγαπημένα",
+        favourites: "Αγαπημένα",
+        search: "Αναζήτηση",
+        "recently played": "Πρόσφατη αναπαραγωγή",
+        "recently added": "Πρόσφατα προστέθηκαν",
+        "recently played tracks": "Πρόσφατα κομμάτια",
+        browseFallback: "Στοιχείο",
+      },
+      weatherCard: {
+        conditions: {
+          clear_night: "Καθαρή νύχτα",
+          cloudy: "Νεφελώδης",
+          exceptional: "Εξαιρετικές συνθήκες",
+          fog: "Ομίχλη",
+          hail: "Χαλάζι",
+          lightning: "Κεραυνός",
+          lightning_rainy: "Καταιγίδα με βροχή",
+          partlycloudy: "Μερικώς νεφελώδης",
+          pouring: "Ισχυρή βροχή",
+          rainy: "Βροχερός",
+          snowy: "Χιονισμένος",
+          snowy_rainy: "Χιονόνερο",
+          sunny: "Ηλιόλουστος",
+          windy: "Ανεμώδης",
+          windy_variant: "Μεταβλητός άνεμος"
+        },
+        defaultCondition: "Καιρός",
+        forecast: {
+          chartAriaHourly: "Ωριαίο γράφημα πρόγνωσης",
+          chartAriaDaily: "Εβδομαδιαίο γράφημα πρόγνωσης",
+          tabsAria: "Προβολή πρόγνωσης",
+          tabCards: "Κάρτες",
+          tabChart: "Γράφημα",
+          hoursTab: "Ώρες",
+          weekTab: "Εβδομάδα",
+          emptyHourly: "Δεν υπάρχει ωριαία πρόγνωση.",
+          emptyDaily: "Δεν υπάρχει εβδομαδιαία πρόγνωση.",
+          chartInsufficientData: "Ανεπαρκή δεδομένα για το γράφημα.",
+          closeDetail: "Κλείσιμο λεπτομερειών",
+          maxLabel: "Μέγ.",
+          minLabel: "Ελάχ.",
+          temperatureLabel: "Θερμοκρασία",
+          rainLabel: "Βροχή",
+          humidityLabel: "Υγρασία",
+          windLabel: "Άνεμος"
+        },
+        meteoalarm: {
+          name: "Meteoalarm",
+          alertFallback: "Ειδοποίηση",
+          noAlerts: "Χωρίς ειδοποιήσεις",
+          weatherAlert: "Μετεωρολογική ειδοποίηση",
+          noWeatherAlerts: "Χωρίς μετεωρολογικές ειδοποιήσεις",
+          level: "Επίπεδο",
+          type: "Τύπος",
+          start: "Έναρξη",
+          end: "Λήξη",
+          severity: "Σοβαρότητα",
+          urgency: "Επείγον",
+          certainty: "Βεβαιότητα",
+          close: "Κλείσιμο",
+          descriptionTitle: "Περιγραφή",
+          instructionsTitle: "Οδηγίες",
+          terms: {
+            moderate: "Μέτριο",
+            severe: "Σοβαρό",
+            high: "Υψηλό",
+            extreme: "Ακραίο",
+            minor: "Μικρό",
+            yellow: "Κίτρινο",
+            orange: "Πορτοκαλί",
+            red: "Κόκκινο",
+            green: "Πράσινο",
+            future: "Μελλοντικό",
+            immediate: "Άμεσο",
+            expected: "Αναμενόμενο",
+            past: "Παρελθόν",
+            likely: "Πιθανό",
+            observed: "Παρατηρήθηκε",
+            possible: "Πιθανό",
+            unlikely: "Απίθανο",
+            unknown: "Άγνωστο",
+            met: "Μετεωρολογικό",
+            monitor: "Παρακολούθηση"
+          }
+        }
+      },
+      humidifierCard: {
+        modes: {
+          auto: "Αυτόματο",
+          automatic: "Αυτόματο",
+          smart: "Έξυπνο",
+          smart_mode: "Έξυπνο",
+          sleep: "Νύχτα",
+          night: "Νύχτα",
+          eco: "Eco",
+          quiet: "Ήσυχο",
+          silent: "Ήσυχο",
+          low: "Χαμηλό",
+          medium: "Μέτριο",
+          mid: "Μέτριο",
+          high: "Υψηλό",
+          boost: "Boost",
+          turbo: "Turbo",
+          normal: "Κανονικό",
+          balanced: "Κανονικό",
+          dry: "Στέγνωμα",
+          drying: "Στέγνωμα",
+          continuous: "Συνεχές",
+          clothes_dry: "Ρούχα",
+          laundry: "Ρούχα"
+        }
+      },
+      graphCard: {
+        emptyHistory: "Δεν υπάρχει διαθέσιμο ιστορικό"
+      },
+      fan: {
+        off: "Ανενεργό",
+        on: "Ενεργό",
+        unavailable: "Μη διαθέσιμο",
+        unknown: "Άγνωστο",
+        noState: "Χωρίς κατάσταση",
+        fallbackName: "Ανεμιστήρας"
+      },
+      alarmPanel: {
+        defaultTitle: "Συναγερμός",
+        noState: "Χωρίς κατάσταση",
+        actions: {
+          disarm: "Αφόπλιση",
+          arm_home: "Σπίτι",
+          arm_away: "Εκτός",
+          arm_night: "Νύχτα",
+          arm_vacation: "Διακοπές",
+          arm_custom_bypass: "Προσαρμοσμένο"
+        },
+        states: {
+          disarmed: "Αφοπλισμένο",
+          armed_home: "Σπίτι",
+          armed_away: "Εκτός",
+          armed_night: "Νύχτα",
+          armed_vacation: "Διακοπές",
+          armed_custom_bypass: "Προσαρμοσμένο",
+          armed: "Οπλισμένο",
+          arming: "Οπλισμός",
+          disarming: "Αφόπλιση",
+          pending: "Εκκρεμεί",
+          triggered: "Ενεργοποιήθηκε",
+          unavailable: "Μη διαθέσιμο",
+          unknown: "Άγνωστο"
+        }
+      },
+      person: {
+        home: "Σπίτι",
+        notHome: "Εκτός",
+        work: "Δουλειά",
+        school: "Σχολείο",
+        unavailable: "Μη διαθέσιμο",
+        unknown: "Άγνωστο",
+        locationUnknown: "Άγνωστη τοποθεσία",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Ορίστε `entity` για να εμφανιστεί αυτή η κάρτα.",
+        defaultName: "Άτομο",
+      },
+      entityCard: {
+        binarySensor: {
+          doorOpen: "Ανοιχτή",
+          doorClosed: "Κλειστή",
+          motionOn: "Ανιχνεύθηκε",
+          motionOff: "Καθαρό"
+        },
+        boolean: {
+          yes: "Ναι",
+          no: "Όχι"
+        },
+        states: {
+          on: "Ενεργό",
+          off: "Ανενεργό",
+          open: "Ανοιχτό",
+          opening: "Ανοίγει",
+          closed: "Κλειστό",
+          closing: "Κλείνει",
+          playing: "Αναπαραγωγή",
+          paused: "Παύση",
+          idle: "Αδράνεια",
+          standby: "Αναμονή",
+          home: "Σπίτι",
+          not_home: "Εκτός",
+          detected: "Ανιχνεύθηκε",
+          clear: "Καθαρό",
+          unavailable: "Μη διαθέσιμο",
+          unknown: "Άγνωστο",
+          locked: "Κλειδωμένο",
+          unlocked: "Ξεκλείδωτο",
+          locking: "Κλείδωμα",
+          unlocking: "Ξεκλείδωμα",
+          locking_failed: "Αποτυχία κλειδώματος",
+          unlocking_failed: "Αποτυχία ξεκλειδώματος",
+          jammed: "Κολλημένο",
+          pending: "Εκκρεμεί",
+          stopped: "Σταματημένο",
+          armed_away: "Οπλισμένο εκτός",
+          armed_home: "Οπλισμένο σπίτι",
+          disarmed: "Αφοπλισμένο",
+          triggered: "Ενεργοποιήθηκε",
+          comfortable: "Άνετο",
+          very_comfortable: "Πολύ άνετο",
+          slightly_uncomfortable: "Ελαφρώς άβολο",
+          somewhat_uncomfortable: "Κάπως άβολο",
+          quite_uncomfortable: "Αρκετά άβολο",
+          extremely_uncomfortable: "Εξαιρετικά άβολο",
+          ok_but_humid: "Εντάξει, αλλά υγρό",
+          little_or_no_discomfort: "Ελάχιστη ενόχληση",
+          some_discomfort: "Κάποια ενόχληση",
+          great_discomfort_avoid_exertion: "Μεγάλη ενόχληση",
+          dangerous_discomfort: "Επικίνδυνη ενόχληση",
+          heat_stroke_imminent: "Κίνδυνος θερμοπληξίας",
+          dry: "Ξηρό",
+          very_dry: "Πολύ ξηρό",
+          too_dry: "Πολύ ξηρό",
+          humid: "Υγρό",
+          very_humid: "Πολύ υγρό",
+          too_humid: "Πολύ υγρό",
+          wet: "Βρεγμένο",
+          low: "Χαμηλό",
+          medium: "Μέτριο",
+          moderate: "Μέτριο",
+          high: "Υψηλό",
+          very_high: "Πολύ υψηλό",
+          severely_high: "Εξαιρετικά υψηλό",
+          critical: "Κρίσιμο",
+          excellent: "Εξαιρετικό",
+          good: "Καλό",
+          fair: "Μέτριο",
+          poor: "Κακό"
+        }
+      },
+      favCard: {
+        disarmedF: "Αφοπλισμένο",
+        armed_home: "Σπίτι",
+        armed_away: "Εκτός",
+        armed_night: "Νύχτα",
+        armed_vacation: "Διακοπές",
+        armed_custom_bypass: "Προσαρμοσμένο",
+        arming: "Οπλισμός",
+        disarming: "Αφόπλιση",
+        pending: "Εκκρεμεί",
+        triggered: "Ενεργοποιήθηκε"
+      }
+    },
+    zh: {
+      advanceVacuum: {
+        modeLabels: {
+          all: "全部",
+          rooms: "房间",
+          zone: "区域",
+          routines: "例行程序",
+          goto: "前往点"
+        },
+        aria: {
+          modeTablist: "清洁模式"
+        },
+        panelModes: {
+          smart: "智能",
+          vacuum_mop: "吸尘与拖地",
+          vacuum: "吸尘",
+          mop: "拖地",
+          custom: "自定义"
+        },
+        dockSections: {
+          control: "基站控制",
+          settings: "基站设置"
+        },
+        dockSettings: {
+          mop_wash_frequency: "拖布清洗频率",
+          mop_mode: "拖地模式",
+          auto_empty_frequency: "自动集尘频率",
+          empty_mode: "清空模式",
+          drying_duration: "烘干时长"
+        },
+        dockControls: {
+          empty: {
+            label: "清空尘盒",
+            active: "停止清空"
+          },
+          wash: {
+            label: "清洗拖布",
+            active: "停止清洗"
+          },
+          dry: {
+            label: "烘干拖布",
+            active: "停止烘干"
+          }
+        },
+        vacuumModes: {
+          quiet: "安静",
+          silent: "安静",
+          balanced: "均衡",
+          standard: "标准",
+          normal: "正常",
+          turbo: "Turbo",
+          max: "最大",
+          maxplus: "最大+",
+          max_plus: "最大+",
+          gentle: "轻柔",
+          strong: "强力",
+          smart: "智能",
+          smartmode: "智能",
+          smart_mode: "智能",
+          intelligent: "智能",
+          custom: "自定义",
+          custommode: "自定义",
+          custom_mode: "自定义",
+          custom_water_flow: "自定义水量",
+          custom_watter_flow: "自定义水量",
+          off: "关闭拖地",
+          low: "低",
+          medium: "中",
+          high: "高",
+          intense: "强力",
+          deep: "深度",
+          deep_plus: "深度+",
+          deepplus: "深度+",
+          fast: "快速",
+          rapido: "快速"
+        },
+        offSuction: "关闭",
+        reportedStates: {
+          docked: "在基站",
+          charging: "充电中",
+          charging_completed: "充电中",
+          cleaning: "清扫中",
+          spot_cleaning: "清扫中",
+          segment_cleaning: "清扫中",
+          room_cleaning: "清扫中",
+          zone_cleaning: "清扫中",
+          clean_area: "清扫中",
+          paused: "已暂停",
+          returning: "返回基站",
+          return_to_base: "返回基站",
+          returning_home: "返回基站",
+          washing: "清洗拖布",
+          wash_mop: "清洗拖布",
+          washing_mop: "清洗拖布",
+          washing_pads: "清洗拖布",
+          drying: "烘干中",
+          drying_mop: "烘干中",
+          emptying: "自动集尘",
+          self_emptying: "自动集尘",
+          unavailable: "不可用",
+          unknown: "未知",
+          error: "错误",
+          fallback: "未知"
+        },
+        mapStatus: {
+          washing_mop: "清洗拖布",
+          drying_mop: "烘干拖布",
+          emptying_dust: "清空尘盒",
+          charging: "充电中"
+        },
+        descriptorLabels: {
+          suction: "吸尘",
+          mop: "拖地",
+          mop_mode: "拖布模式"
+        },
+        utility: {
+          cleaningMode: "清洁模式",
+          cleaningCounter: "清洁次数",
+          dockActions: "基站操作",
+          chargingStation: "充电座",
+          zonesWord: "区域",
+          pointWord: "点",
+          zoneTool: "区域",
+          routineDefault: "例行程序",
+          customMenuDefault: "基站",
+          modesFallbackTitle: "吸尘与拖地模式"
+        },
+        actions: {
+          returnToBase: "返回基站",
+          locate: "定位",
+          stop: "停止",
+          run: "开始",
+          addZoneToClean: "添加清扫区域",
+          cleanZone: "清扫区域"
+        },
+        handles: {
+          moveZone: "移动区域",
+          deleteZone: "删除区域",
+          resizeZone: "调整区域大小"
+        },
+        titles: {
+          editZone: "编辑区域",
+          backPanel: "返回主面板",
+          addZone: "添加区域",
+          gotoFallback: "点"
+        }
+      },
+      vacuumSimple: {
+        quiet: "安静",
+        silent: "安静",
+        balanced: "均衡",
+        standard: "标准",
+        normal: "正常",
+        turbo: "Turbo",
+        max: "最大",
+        maxplus: "最大+",
+        max_plus: "最大+",
+        gentle: "轻柔",
+        strong: "强力",
+        smart: "智能",
+        smartmode: "智能",
+        smart_mode: "智能",
+        intelligent: "智能",
+        custom: "自定义",
+        custommode: "自定义",
+        custom_mode: "自定义",
+        custom_water_flow: "自定义水量",
+        custom_watter_flow: "自定义水量",
+        off: "关闭拖地",
+        low: "低",
+        medium: "中",
+        high: "高",
+        intense: "强力",
+        deep: "深度"
+      },
+      navigationMusicAssist: {
+        artist: "艺术家",
+        artists: "艺术家",
+        album: "专辑",
+        albums: "专辑",
+        track: "曲目",
+        tracks: "曲目",
+        song: "曲目",
+        songs: "曲目",
+        playlist: "播放列表",
+        playlists: "播放列表",
+        "radio station": "广播电台",
+        "radio stations": "广播电台",
+        podcast: "播客",
+        podcasts: "播客",
+        audiobook: "有声书",
+        audiobooks: "有声书",
+        genre: "流派",
+        genres: "流派",
+        favorite: "收藏",
+        favorites: "收藏",
+        favourites: "收藏",
+        search: "搜索",
+        "recently played": "最近播放",
+        "recently added": "最近添加",
+        "recently played tracks": "最近播放的曲目",
+        browseFallback: "项目",
+      },
+      weatherCard: {
+        conditions: {
+          clear_night: "晴朗夜晚",
+          cloudy: "多云",
+          exceptional: "异常",
+          fog: "雾",
+          hail: "冰雹",
+          lightning: "雷电",
+          lightning_rainy: "雷雨",
+          partlycloudy: "局部多云",
+          pouring: "大雨",
+          rainy: "雨",
+          snowy: "雪",
+          snowy_rainy: "雨夹雪",
+          sunny: "晴",
+          windy: "大风",
+          windy_variant: "风力变化"
+        },
+        defaultCondition: "天气",
+        forecast: {
+          chartAriaHourly: "逐小时预报图",
+          chartAriaDaily: "一周预报图",
+          tabsAria: "预报视图",
+          tabCards: "卡片",
+          tabChart: "图表",
+          hoursTab: "小时",
+          weekTab: "周",
+          emptyHourly: "暂无逐小时预报。",
+          emptyDaily: "暂无一周预报。",
+          chartInsufficientData: "数据不足，无法显示图表。",
+          closeDetail: "关闭详情",
+          maxLabel: "最高",
+          minLabel: "最低",
+          temperatureLabel: "温度",
+          rainLabel: "降雨",
+          humidityLabel: "湿度",
+          windLabel: "风力"
+        },
+        meteoalarm: {
+          name: "Meteoalarm",
+          alertFallback: "警报",
+          noAlerts: "无警报",
+          weatherAlert: "天气警报",
+          noWeatherAlerts: "无天气警报",
+          level: "级别",
+          type: "类型",
+          start: "开始",
+          end: "结束",
+          severity: "严重程度",
+          urgency: "紧急程度",
+          certainty: "确定性",
+          close: "关闭",
+          descriptionTitle: "描述",
+          instructionsTitle: "说明",
+          terms: {
+            moderate: "中度",
+            severe: "严重",
+            high: "高",
+            extreme: "极端",
+            minor: "轻微",
+            yellow: "黄色",
+            orange: "橙色",
+            red: "红色",
+            green: "绿色",
+            future: "未来",
+            immediate: "立即",
+            expected: "预计",
+            past: "过去",
+            likely: "可能",
+            observed: "已观测",
+            possible: "可能",
+            unlikely: "不太可能",
+            unknown: "未知",
+            met: "气象",
+            monitor: "监测"
+          }
+        }
+      },
+      humidifierCard: {
+        modes: {
+          auto: "自动",
+          automatic: "自动",
+          smart: "智能",
+          smart_mode: "智能",
+          sleep: "夜间",
+          night: "夜间",
+          eco: "节能",
+          quiet: "静音",
+          silent: "静音",
+          low: "低",
+          medium: "中",
+          mid: "中",
+          high: "高",
+          boost: "强力",
+          turbo: "涡轮",
+          normal: "正常",
+          balanced: "正常",
+          dry: "烘干",
+          drying: "烘干",
+          continuous: "连续",
+          clothes_dry: "衣物",
+          laundry: "衣物"
+        }
+      },
+      graphCard: {
+        emptyHistory: "暂无历史数据"
+      },
+      fan: {
+        off: "关",
+        on: "开",
+        unavailable: "不可用",
+        unknown: "未知",
+        noState: "无状态",
+        fallbackName: "风扇"
+      },
+      alarmPanel: {
+        defaultTitle: "报警",
+        noState: "无状态",
+        actions: {
+          disarm: "撤防",
+          arm_home: "在家",
+          arm_away: "离家",
+          arm_night: "夜间",
+          arm_vacation: "度假",
+          arm_custom_bypass: "自定义"
+        },
+        states: {
+          disarmed: "已撤防",
+          armed_home: "在家布防",
+          armed_away: "离家布防",
+          armed_night: "夜间布防",
+          armed_vacation: "度假布防",
+          armed_custom_bypass: "自定义布防",
+          armed: "已布防",
+          arming: "布防中",
+          disarming: "撤防中",
+          pending: "等待",
+          triggered: "已触发",
+          unavailable: "不可用",
+          unknown: "未知"
+        }
+      },
+      person: {
+        home: "在家",
+        notHome: "外出",
+        work: "工作",
+        school: "学校",
+        unavailable: "不可用",
+        unknown: "未知",
+        locationUnknown: "位置未知",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "设置 `entity` 以显示此卡片。",
+        defaultName: "人员",
+      },
+      entityCard: {
+        binarySensor: {
+          doorOpen: "开启",
+          doorClosed: "关闭",
+          motionOn: "检测到",
+          motionOff: "未检测到"
+        },
+        boolean: {
+          yes: "是",
+          no: "否"
+        },
+        states: {
+          on: "开",
+          off: "关",
+          open: "打开",
+          opening: "正在打开",
+          closed: "关闭",
+          closing: "正在关闭",
+          playing: "播放中",
+          paused: "暂停",
+          idle: "空闲",
+          standby: "待机",
+          home: "在家",
+          not_home: "外出",
+          detected: "检测到",
+          clear: "正常",
+          unavailable: "不可用",
+          unknown: "未知",
+          locked: "已锁",
+          unlocked: "已解锁",
+          locking: "上锁中",
+          unlocking: "解锁中",
+          locking_failed: "上锁失败",
+          unlocking_failed: "解锁失败",
+          jammed: "卡住",
+          pending: "等待",
+          stopped: "已停止",
+          armed_away: "离家布防",
+          armed_home: "在家布防",
+          disarmed: "已撤防",
+          triggered: "已触发",
+          comfortable: "舒适",
+          very_comfortable: "非常舒适",
+          slightly_uncomfortable: "略不适",
+          somewhat_uncomfortable: "有些不适",
+          quite_uncomfortable: "相当不适",
+          extremely_uncomfortable: "极度不适",
+          ok_but_humid: "尚可但潮湿",
+          little_or_no_discomfort: "几乎无不适",
+          some_discomfort: "有些不适",
+          great_discomfort_avoid_exertion: "严重不适",
+          dangerous_discomfort: "危险不适",
+          heat_stroke_imminent: "中暑风险",
+          dry: "干燥",
+          very_dry: "很干燥",
+          too_dry: "过于干燥",
+          humid: "潮湿",
+          very_humid: "很潮湿",
+          too_humid: "过于潮湿",
+          wet: "潮湿",
+          low: "低",
+          medium: "中",
+          moderate: "中等",
+          high: "高",
+          very_high: "很高",
+          severely_high: "极高",
+          critical: "危急",
+          excellent: "极佳",
+          good: "良好",
+          fair: "一般",
+          poor: "差"
+        }
+      },
+      favCard: {
+        disarmedF: "已撤防",
+        armed_home: "在家",
+        armed_away: "离家",
+        armed_night: "夜间",
+        armed_vacation: "度假",
+        armed_custom_bypass: "自定义",
+        arming: "布防中",
+        disarming: "撤防中",
+        pending: "等待",
+        triggered: "已触发"
+      }
+    },
+    ro: {
+      advanceVacuum: {
+        modeLabels: {
+          all: "Tot",
+          rooms: "Camere",
+          zone: "Zonă",
+          routines: "Rutine",
+          goto: "Mergi la punct"
+        },
+        aria: {
+          modeTablist: "Mod de curățare"
+        },
+        panelModes: {
+          smart: "Inteligent",
+          vacuum_mop: "Aspirare și mop",
+          vacuum: "Aspirare",
+          mop: "Mop",
+          custom: "Personalizat"
+        },
+        dockSections: {
+          control: "Control bază",
+          settings: "Setări bază"
+        },
+        dockSettings: {
+          mop_wash_frequency: "Frecvență spălare mop",
+          mop_mode: "Mod mop",
+          auto_empty_frequency: "Frecvență golire automată",
+          empty_mode: "Mod golire",
+          drying_duration: "Durată uscare"
+        },
+        dockControls: {
+          empty: {
+            label: "Golește recipientul",
+            active: "Oprește golirea"
+          },
+          wash: {
+            label: "Spală mopul",
+            active: "Oprește spălarea"
+          },
+          dry: {
+            label: "Uscare mop",
+            active: "Oprește uscarea"
+          }
+        },
+        vacuumModes: {
+          quiet: "Silențios",
+          silent: "Silențios",
+          balanced: "Echilibrat",
+          standard: "Standard",
+          normal: "Normal",
+          turbo: "Turbo",
+          max: "Max",
+          maxplus: "Max+",
+          max_plus: "Max+",
+          gentle: "Ușor",
+          strong: "Puternic",
+          smart: "Inteligent",
+          smartmode: "Inteligent",
+          smart_mode: "Inteligent",
+          intelligent: "Inteligent",
+          custom: "Personalizat",
+          custommode: "Personalizat",
+          custom_mode: "Personalizat",
+          custom_water_flow: "Debit apă personalizat",
+          custom_watter_flow: "Debit apă personalizat",
+          off: "Fără mop",
+          low: "Scăzut",
+          medium: "Mediu",
+          high: "Ridicat",
+          intense: "Intens",
+          deep: "Profund",
+          deep_plus: "Profund+",
+          deepplus: "Profund+",
+          fast: "Rapid",
+          rapido: "Rapid"
+        },
+        offSuction: "Oprit",
+        reportedStates: {
+          docked: "La bază",
+          charging: "Încărcare",
+          charging_completed: "Încărcare",
+          cleaning: "Curățare",
+          spot_cleaning: "Curățare",
+          segment_cleaning: "Curățare",
+          room_cleaning: "Curățare",
+          zone_cleaning: "Curățare",
+          clean_area: "Curățare",
+          paused: "Pauză",
+          returning: "Întoarcere la bază",
+          return_to_base: "Întoarcere la bază",
+          returning_home: "Întoarcere la bază",
+          washing: "Spălare mop",
+          wash_mop: "Spălare mop",
+          washing_mop: "Spălare mop",
+          washing_pads: "Spălare mop",
+          drying: "Uscare",
+          drying_mop: "Uscare",
+          emptying: "Golire automată",
+          self_emptying: "Golire automată",
+          unavailable: "Indisponibil",
+          unknown: "Necunoscut",
+          error: "Eroare",
+          fallback: "Necunoscut"
+        },
+        mapStatus: {
+          washing_mop: "Spălare mop",
+          drying_mop: "Uscare mop",
+          emptying_dust: "Golire recipient praf",
+          charging: "Încărcare"
+        },
+        descriptorLabels: {
+          suction: "Aspirare",
+          mop: "Mop",
+          mop_mode: "Mod mop"
+        },
+        utility: {
+          cleaningMode: "Mod curățare",
+          cleaningCounter: "Treceri curățare",
+          dockActions: "Acțiuni bază",
+          chargingStation: "Stație încărcare",
+          zonesWord: "zone",
+          pointWord: "punct",
+          zoneTool: "Zonă",
+          routineDefault: "Rutină",
+          customMenuDefault: "Bază",
+          modesFallbackTitle: "Moduri aspirare și mop"
+        },
+        actions: {
+          returnToBase: "Înapoi la bază",
+          locate: "Localizare",
+          stop: "Stop",
+          run: "Pornește",
+          addZoneToClean: "Adaugă zonă la curățare",
+          cleanZone: "Curăță zona"
+        },
+        handles: {
+          moveZone: "Mută zona",
+          deleteZone: "Șterge zona",
+          resizeZone: "Redimensionează zona"
+        },
+        titles: {
+          editZone: "Editează zona",
+          backPanel: "Înapoi la panoul principal",
+          addZone: "Adaugă zonă",
+          gotoFallback: "Punct"
+        }
+      },
+      vacuumSimple: {
+        quiet: "Silențios",
+        silent: "Silențios",
+        balanced: "Echilibrat",
+        standard: "Standard",
+        normal: "Normal",
+        turbo: "Turbo",
+        max: "Max",
+        maxplus: "Max+",
+        max_plus: "Max+",
+        gentle: "Ușor",
+        strong: "Puternic",
+        smart: "Inteligent",
+        smartmode: "Inteligent",
+        smart_mode: "Inteligent",
+        intelligent: "Inteligent",
+        custom: "Personalizat",
+        custommode: "Personalizat",
+        custom_mode: "Personalizat",
+        custom_water_flow: "Debit apă personalizat",
+        custom_watter_flow: "Debit apă personalizat",
+        off: "Fără mop",
+        low: "Scăzut",
+        medium: "Mediu",
+        high: "Ridicat",
+        intense: "Intens",
+        deep: "Profund"
+      },
+      navigationMusicAssist: {
+        artist: "Artiști",
+        artists: "Artiști",
+        album: "Albume",
+        albums: "Albume",
+        track: "Piese",
+        tracks: "Piese",
+        song: "Piese",
+        songs: "Piese",
+        playlist: "Liste de redare",
+        playlists: "Liste de redare",
+        "radio station": "Stații radio",
+        "radio stations": "Stații radio",
+        podcast: "Podcasturi",
+        podcasts: "Podcasturi",
+        audiobook: "Cărți audio",
+        audiobooks: "Cărți audio",
+        genre: "Genuri",
+        genres: "Genuri",
+        favorite: "Favorite",
+        favorites: "Favorite",
+        favourites: "Favorite",
+        search: "Căutare",
+        "recently played": "Redări recente",
+        "recently added": "Adăugate recent",
+        "recently played tracks": "Piese redate recent",
+        browseFallback: "Element",
+      },
+      weatherCard: {
+        conditions: {
+          clear_night: "Noapte senină",
+          cloudy: "Înnorat",
+          exceptional: "Excepțional",
+          fog: "Ceață",
+          hail: "Grindină",
+          lightning: "Fulger",
+          lightning_rainy: "Furtună cu ploaie",
+          partlycloudy: "Parțial înnorat",
+          pouring: "Ploaie torențială",
+          rainy: "Ploios",
+          snowy: "Ninsoare",
+          snowy_rainy: "Lapoviță",
+          sunny: "Însorit",
+          windy: "Vânt puternic",
+          windy_variant: "Vânt variabil"
+        },
+        defaultCondition: "Vreme",
+        forecast: {
+          chartAriaHourly: "Grafic prognoză orară",
+          chartAriaDaily: "Grafic prognoză săptămânală",
+          tabsAria: "Vizualizare prognoză",
+          tabCards: "Carduri",
+          tabChart: "Grafic",
+          hoursTab: "Ore",
+          weekTab: "Săptămână",
+          emptyHourly: "Nu există prognoză orară.",
+          emptyDaily: "Nu există prognoză săptămânală.",
+          chartInsufficientData: "Date insuficiente pentru grafic.",
+          closeDetail: "Închide detaliu",
+          maxLabel: "Max.",
+          minLabel: "Min.",
+          temperatureLabel: "Temperatură",
+          rainLabel: "Ploaie",
+          humidityLabel: "Umiditate",
+          windLabel: "Vânt"
+        },
+        meteoalarm: {
+          name: "Meteoalarm",
+          alertFallback: "Alertă",
+          noAlerts: "Fără alerte",
+          weatherAlert: "Alertă meteorologică",
+          noWeatherAlerts: "Fără alerte meteorologice",
+          level: "Nivel",
+          type: "Tip",
+          start: "Început",
+          end: "Sfârșit",
+          severity: "Severitate",
+          urgency: "Urgență",
+          certainty: "Certitudine",
+          close: "Închide",
+          descriptionTitle: "Descriere",
+          instructionsTitle: "Instrucțiuni",
+          terms: {
+            moderate: "Moderat",
+            severe: "Sever",
+            high: "Ridicat",
+            extreme: "Extrem",
+            minor: "Minor",
+            yellow: "Galben",
+            orange: "Portocaliu",
+            red: "Roșu",
+            green: "Verde",
+            future: "Viitor",
+            immediate: "Imediat",
+            expected: "Așteptat",
+            past: "Trecut",
+            likely: "Probabil",
+            observed: "Observat",
+            possible: "Posibil",
+            unlikely: "Improbabil",
+            unknown: "Necunoscut",
+            met: "Meteorologic",
+            monitor: "Monitorizare"
+          }
+        }
+      },
+      humidifierCard: {
+        modes: {
+          auto: "Automat",
+          automatic: "Automat",
+          smart: "Inteligent",
+          smart_mode: "Inteligent",
+          sleep: "Noapte",
+          night: "Noapte",
+          eco: "Eco",
+          quiet: "Silențios",
+          silent: "Silențios",
+          low: "Scăzut",
+          medium: "Mediu",
+          mid: "Mediu",
+          high: "Ridicat",
+          boost: "Boost",
+          turbo: "Turbo",
+          normal: "Normal",
+          balanced: "Normal",
+          dry: "Uscare",
+          drying: "Uscare",
+          continuous: "Continuu",
+          clothes_dry: "Rufe",
+          laundry: "Rufe"
+        }
+      },
+      graphCard: {
+        emptyHistory: "Nu există istoric disponibil"
+      },
+      fan: {
+        off: "Oprit",
+        on: "Pornit",
+        unavailable: "Indisponibil",
+        unknown: "Necunoscut",
+        noState: "Fără stare",
+        fallbackName: "Ventilator"
+      },
+      alarmPanel: {
+        defaultTitle: "Alarmă",
+        noState: "Fără stare",
+        actions: {
+          disarm: "Dezarmare",
+          arm_home: "Acasă",
+          arm_away: "Plecat",
+          arm_night: "Noapte",
+          arm_vacation: "Vacanță",
+          arm_custom_bypass: "Personalizat"
+        },
+        states: {
+          disarmed: "Dezarmat",
+          armed_home: "Acasă",
+          armed_away: "Plecat",
+          armed_night: "Noapte",
+          armed_vacation: "Vacanță",
+          armed_custom_bypass: "Personalizat",
+          armed: "Armat",
+          arming: "Armare",
+          disarming: "Dezarmare",
+          pending: "În așteptare",
+          triggered: "Declanșat",
+          unavailable: "Indisponibil",
+          unknown: "Necunoscut"
+        }
+      },
+      person: {
+        home: "Acasă",
+        notHome: "Plecat",
+        work: "Serviciu",
+        school: "Școală",
+        unavailable: "Indisponibil",
+        unknown: "Necunoscut",
+        locationUnknown: "Locație necunoscută",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Setați `entity` pentru a afișa acest card.",
+        defaultName: "Persoană",
+      },
+      entityCard: {
+        binarySensor: {
+          doorOpen: "Deschisă",
+          doorClosed: "Închisă",
+          motionOn: "Detectat",
+          motionOff: "Nu este detectat"
+        },
+        boolean: {
+          yes: "Da",
+          no: "Nu"
+        },
+        states: {
+          on: "Pornit",
+          off: "Oprit",
+          open: "Deschis",
+          opening: "Se deschide",
+          closed: "Închis",
+          closing: "Se închide",
+          playing: "Redare",
+          paused: "Pauză",
+          idle: "Inactiv",
+          standby: "Standby",
+          home: "Acasă",
+          not_home: "Plecat",
+          detected: "Detectat",
+          clear: "Liber",
+          unavailable: "Indisponibil",
+          unknown: "Necunoscut",
+          locked: "Blocat",
+          unlocked: "Deblocat",
+          locking: "Se blochează",
+          unlocking: "Se deblochează",
+          locking_failed: "Blocare eșuată",
+          unlocking_failed: "Deblocare eșuată",
+          jammed: "Blocat",
+          pending: "În așteptare",
+          stopped: "Oprit",
+          armed_away: "Armat plecat",
+          armed_home: "Armat acasă",
+          disarmed: "Dezarmat",
+          triggered: "Declanșat",
+          comfortable: "Confortabil",
+          very_comfortable: "Foarte confortabil",
+          slightly_uncomfortable: "Ușor inconfortabil",
+          somewhat_uncomfortable: "Oarecum inconfortabil",
+          quite_uncomfortable: "Destul de inconfortabil",
+          extremely_uncomfortable: "Extrem de inconfortabil",
+          ok_but_humid: "Ok, dar umed",
+          little_or_no_discomfort: "Disconfort mic sau deloc",
+          some_discomfort: "Oarecare disconfort",
+          great_discomfort_avoid_exertion: "Disconfort mare",
+          dangerous_discomfort: "Disconfort periculos",
+          heat_stroke_imminent: "Risc de insolație",
+          dry: "Uscat",
+          very_dry: "Foarte uscat",
+          too_dry: "Prea uscat",
+          humid: "Umed",
+          very_humid: "Foarte umed",
+          too_humid: "Prea umed",
+          wet: "Ud",
+          low: "Scăzut",
+          medium: "Mediu",
+          moderate: "Moderat",
+          high: "Ridicat",
+          very_high: "Foarte ridicat",
+          severely_high: "Extrem de ridicat",
+          critical: "Critic",
+          excellent: "Excelent",
+          good: "Bun",
+          fair: "Acceptabil",
+          poor: "Slab"
+        }
+      },
+      favCard: {
+        disarmedF: "Dezarmat",
+        armed_home: "Acasă",
+        armed_away: "Plecat",
+        armed_night: "Noapte",
+        armed_vacation: "Vacanță",
+        armed_custom_bypass: "Personalizat",
+        arming: "Armare",
+        disarming: "Dezarmare",
+        pending: "În așteptare",
+        triggered: "Declanșat"
+      }
+    },
   };
+
+  /** Merge locale PACK trees so partial locales (pt/ru/…) inherit full card strings from English. */
+  function deepMergeLocale(base, override) {
+    if (override === undefined || override === null) {
+      return base;
+    }
+    if (typeof base !== "object" || base === null || Array.isArray(base)) {
+      return override !== undefined ? override : base;
+    }
+    if (typeof override !== "object" || override === null || Array.isArray(override)) {
+      return override;
+    }
+    const out = { ...base };
+    for (const k of Object.keys(override)) {
+      if (
+        Object.prototype.hasOwnProperty.call(base, k) &&
+        typeof base[k] === "object" &&
+        base[k] !== null &&
+        !Array.isArray(base[k]) &&
+        typeof override[k] === "object" &&
+        override[k] !== null &&
+        !Array.isArray(override[k])
+      ) {
+        out[k] = deepMergeLocale(base[k], override[k]);
+      } else {
+        out[k] = override[k];
+      }
+    }
+    return out;
+  }
 
   function strings(langCode) {
     const code = PACK[langCode] ? langCode : "es";
-    const p = PACK[code];
-    if (p.weatherCard && p.humidifierCard && p.graphCard && p.advanceVacuum) {
-      return p;
+    if (code === "es") {
+      return PACK.es;
     }
-    const fb = code === "es" ? PACK.es : PACK.en;
-    return {
-      ...p,
-      weatherCard: p.weatherCard || fb.weatherCard,
-      humidifierCard: p.humidifierCard || fb.humidifierCard,
-      graphCard: p.graphCard || fb.graphCard,
-      advanceVacuum: p.advanceVacuum || fb.advanceVacuum,
-    };
+    return deepMergeLocale(PACK.en, PACK[code]);
   }
 
   function normalizeHumidifierModeKey(value) {
@@ -3173,7 +5451,12 @@
     "de": "Öffnen: URL in new tab",
     "fr": "Ouvrir URL in new tab",
     "it": "Apri URL in new tab",
-    "nl": "Open URL in new tab"
+    "nl": "Open URL in new tab",
+    "pt": "Abrir URL in new tab",
+    "ru": "Открыть URL in new tab",
+    "el": "Άνοιγμα URL in new tab",
+    "zh": "打开URL in new tab",
+    "ro": "Deschide URL in new tab"
   },
   {
     "es": "Abrir URL en pestaña nueva",
@@ -3181,7 +5464,12 @@
     "de": "Öffnen: URL in new tab",
     "fr": "Ouvrir URL in new tab",
     "it": "Apri URL in new tab",
-    "nl": "Open URL in new tab"
+    "nl": "Open URL in new tab",
+    "pt": "Abrir URL in new tab",
+    "ru": "Открыть URL in new tab",
+    "el": "Άνοιγμα URL in new tab",
+    "zh": "打开URL in new tab",
+    "ro": "Deschide URL in new tab"
   },
   {
     "es": "Abrir en pestaña nueva",
@@ -3189,7 +5477,12 @@
     "de": "Öffnen: in new tab",
     "fr": "Ouvrir in new tab",
     "it": "Apri in new tab",
-    "nl": "Open in new tab"
+    "nl": "Open in new tab",
+    "pt": "Abrir in new tab",
+    "ru": "Открыть in new tab",
+    "el": "Άνοιγμα in new tab",
+    "zh": "打开in new tab",
+    "ro": "Deschide in new tab"
   },
   {
     "es": "Activar animaciones",
@@ -3197,7 +5490,12 @@
     "de": "Aktivieren: animations",
     "fr": "Activer animations",
     "it": "Abilita animations",
-    "nl": "Schakel animations"
+    "nl": "Schakel animations",
+    "pt": "Ativar animations",
+    "ru": "Включить animations",
+    "el": "Ενεργοποίηση animations",
+    "zh": "启用animations",
+    "ro": "Activează animations"
   },
   {
     "es": "Activar haptics",
@@ -3205,7 +5503,12 @@
     "de": "Haptik aktivieren",
     "fr": "Activer le retour haptique",
     "it": "Abilita feedback aptico",
-    "nl": "Haptiek inschakelen"
+    "nl": "Haptiek inschakelen",
+    "pt": "Ativar háptica",
+    "ru": "Включить тактильную отдачу",
+    "el": "Ενεργοποίηση απτικής ανταπόκρισης",
+    "zh": "启用触觉",
+    "ro": "Activează haptic"
   },
   {
     "es": "Activar respuesta háptica",
@@ -3213,7 +5516,12 @@
     "de": "Aktivieren: haptic feedback",
     "fr": "Activer haptic feedback",
     "it": "Abilita haptic feedback",
-    "nl": "Schakel haptic feedback"
+    "nl": "Schakel haptic feedback",
+    "pt": "Ativar haptic feedback",
+    "ru": "Включить haptic feedback",
+    "el": "Ενεργοποίηση haptic feedback",
+    "zh": "启用haptic feedback",
+    "ro": "Activează haptic feedback"
   },
   {
     "es": "Ajuste icono (solo icono)",
@@ -3221,7 +5529,12 @@
     "de": "Icon fit (icon only)",
     "fr": "Icon fit (icon only)",
     "it": "Icon fit (icon only)",
-    "nl": "Icon fit (icon only)"
+    "nl": "Icon fit (icon only)",
+    "pt": "Icon fit (icon only)",
+    "ru": "Icon fit (icon only)",
+    "el": "Icon fit (icon only)",
+    "zh": "Icon fit (icon only)",
+    "ro": "Icon fit (icon only)"
   },
   {
     "es": "Alto burbuja info",
@@ -3229,7 +5542,12 @@
     "de": "Info bubble height",
     "fr": "Info bubble height",
     "it": "Info bubble height",
-    "nl": "Info bubble height"
+    "nl": "Info bubble height",
+    "pt": "Info bubble height",
+    "ru": "Info bubble height",
+    "el": "Info bubble height",
+    "zh": "Info bubble height",
+    "ro": "Info bubble height"
   },
   {
     "es": "Alto burbuja informativa",
@@ -3237,7 +5555,12 @@
     "de": "Info bubble height",
     "fr": "Info bubble height",
     "it": "Info bubble height",
-    "nl": "Info bubble height"
+    "nl": "Info bubble height",
+    "pt": "Info bubble height",
+    "ru": "Info bubble height",
+    "el": "Info bubble height",
+    "zh": "Info bubble height",
+    "ro": "Info bubble height"
   },
   {
     "es": "Alto chip",
@@ -3245,7 +5568,12 @@
     "de": "Chip height",
     "fr": "Chip height",
     "it": "Chip height",
-    "nl": "Chip height"
+    "nl": "Chip height",
+    "pt": "Chip height",
+    "ru": "Chip height",
+    "el": "Chip height",
+    "zh": "Chip height",
+    "ro": "Chip height"
   },
   {
     "es": "Alto chips",
@@ -3253,7 +5581,12 @@
     "de": "Chip heights",
     "fr": "Chip heights",
     "it": "Chip heights",
-    "nl": "Chip heights"
+    "nl": "Chip heights",
+    "pt": "Chip heights",
+    "ru": "Chip heights",
+    "el": "Chip heights",
+    "zh": "Chip heights",
+    "ro": "Chip heights"
   },
   {
     "es": "Alto contenedor slider",
@@ -3261,7 +5594,12 @@
     "de": "Slider container height",
     "fr": "Slider container height",
     "it": "Slider container height",
-    "nl": "Slider container height"
+    "nl": "Slider container height",
+    "pt": "Slider container height",
+    "ru": "Slider container height",
+    "el": "Slider container height",
+    "zh": "Slider container height",
+    "ro": "Slider container height"
   },
   {
     "es": "Alto de chips",
@@ -3269,7 +5607,12 @@
     "de": "Chip height",
     "fr": "Chip height",
     "it": "Chip height",
-    "nl": "Chip height"
+    "nl": "Chip height",
+    "pt": "Chip height",
+    "ru": "Chip height",
+    "el": "Chip height",
+    "zh": "Chip height",
+    "ro": "Chip height"
   },
   {
     "es": "Alto del contenedor del slider",
@@ -3277,7 +5620,12 @@
     "de": "Slider container height",
     "fr": "Slider container height",
     "it": "Slider container height",
-    "nl": "Slider container height"
+    "nl": "Slider container height",
+    "pt": "Slider container height",
+    "ru": "Slider container height",
+    "el": "Slider container height",
+    "zh": "Slider container height",
+    "ro": "Slider container height"
   },
   {
     "es": "Alto grafica",
@@ -3285,7 +5633,12 @@
     "de": "Chart height",
     "fr": "Chart height",
     "it": "Chart height",
-    "nl": "Chart height"
+    "nl": "Chart height",
+    "pt": "Chart height",
+    "ru": "Chart height",
+    "el": "Chart height",
+    "zh": "Chart height",
+    "ro": "Chart height"
   },
   {
     "es": "Alto grafico",
@@ -3293,7 +5646,12 @@
     "de": "Chart height",
     "fr": "Chart height",
     "it": "Chart height",
-    "nl": "Chart height"
+    "nl": "Chart height",
+    "pt": "Chart height",
+    "ru": "Chart height",
+    "el": "Chart height",
+    "zh": "Chart height",
+    "ro": "Chart height"
   },
   {
     "es": "Alto input codigo",
@@ -3301,7 +5659,12 @@
     "de": "Code input height",
     "fr": "Code input height",
     "it": "Code input height",
-    "nl": "Code input height"
+    "nl": "Code input height",
+    "pt": "Code input height",
+    "ru": "Code input height",
+    "el": "Code input height",
+    "zh": "Code input height",
+    "ro": "Code input height"
   },
   {
     "es": "Altura mínima",
@@ -3309,7 +5672,12 @@
     "de": "Minimum height",
     "fr": "Minimum height",
     "it": "Minimum height",
-    "nl": "Minimum height"
+    "nl": "Minimum height",
+    "pt": "Minimum height",
+    "ru": "Minimum height",
+    "el": "Minimum height",
+    "zh": "Minimum height",
+    "ro": "Minimum height"
   },
   {
     "es": "Altura reservada",
@@ -3317,7 +5685,12 @@
     "de": "Reserved height",
     "fr": "Reserved height",
     "it": "Reserved height",
-    "nl": "Reserved height"
+    "nl": "Reserved height",
+    "pt": "Reserved height",
+    "ru": "Reserved height",
+    "el": "Reserved height",
+    "zh": "Reserved height",
+    "ro": "Reserved height"
   },
   {
     "es": "Ancho burbuja slider",
@@ -3325,7 +5698,12 @@
     "de": "Slider bubble width",
     "fr": "Slider bubble width",
     "it": "Slider bubble width",
-    "nl": "Slider bubble width"
+    "nl": "Slider bubble width",
+    "pt": "Slider bubble width",
+    "ru": "Slider bubble width",
+    "el": "Slider bubble width",
+    "zh": "Slider bubble width",
+    "ro": "Slider bubble width"
   },
   {
     "es": "Ancho máximo",
@@ -3333,7 +5711,12 @@
     "de": "Maximum width",
     "fr": "Maximum width",
     "it": "Maximum width",
-    "nl": "Maximum width"
+    "nl": "Maximum width",
+    "pt": "Maximum width",
+    "ru": "Maximum width",
+    "el": "Maximum width",
+    "zh": "Maximum width",
+    "ro": "Maximum width"
   },
   {
     "es": "Atributo a mostrar",
@@ -3341,7 +5724,12 @@
     "de": "Attribute to show",
     "fr": "Attribute to show",
     "it": "Attribute to show",
-    "nl": "Attribute to show"
+    "nl": "Attribute to show",
+    "pt": "Attribute to show",
+    "ru": "Attribute to show",
+    "el": "Attribute to show",
+    "zh": "Attribute to show",
+    "ro": "Attribute to show"
   },
   {
     "es": "Atributo chip principal",
@@ -3349,7 +5737,12 @@
     "de": "Primary chip attribute",
     "fr": "Primary chip attribute",
     "it": "Primary chip attribute",
-    "nl": "Primary chip attribute"
+    "nl": "Primary chip attribute",
+    "pt": "Primary chip attribute",
+    "ru": "Primary chip attribute",
+    "el": "Primary chip attribute",
+    "zh": "Primary chip attribute",
+    "ro": "Primary chip attribute"
   },
   {
     "es": "Atributo chip secundario",
@@ -3357,7 +5750,12 @@
     "de": "Secondary chip attribute",
     "fr": "Secondary chip attribute",
     "it": "Secondary chip attribute",
-    "nl": "Secondary chip attribute"
+    "nl": "Secondary chip attribute",
+    "pt": "Secondary chip attribute",
+    "ru": "Secondary chip attribute",
+    "el": "Secondary chip attribute",
+    "zh": "Secondary chip attribute",
+    "ro": "Secondary chip attribute"
   },
   {
     "es": "Atributo de estado",
@@ -3365,7 +5763,12 @@
     "de": "State attribute",
     "fr": "State attribute",
     "it": "State attribute",
-    "nl": "State attribute"
+    "nl": "State attribute",
+    "pt": "State attribute",
+    "ru": "State attribute",
+    "el": "State attribute",
+    "zh": "State attribute",
+    "ro": "State attribute"
   },
   {
     "es": "Atributo secundario",
@@ -3373,7 +5776,12 @@
     "de": "Secondary attribute",
     "fr": "Secondary attribute",
     "it": "Secondary attribute",
-    "nl": "Secondary attribute"
+    "nl": "Secondary attribute",
+    "pt": "Secondary attribute",
+    "ru": "Secondary attribute",
+    "el": "Secondary attribute",
+    "zh": "Secondary attribute",
+    "ro": "Secondary attribute"
   },
   {
     "es": "Background",
@@ -3381,7 +5789,12 @@
     "de": "Background",
     "fr": "Background",
     "it": "Background",
-    "nl": "Background"
+    "nl": "Background",
+    "pt": "Background",
+    "ru": "Background",
+    "el": "Background",
+    "zh": "Background",
+    "ro": "Background"
   },
   {
     "es": "Badge de no disponible",
@@ -3389,7 +5802,12 @@
     "de": "Nicht-verfügbar-Abzeichen",
     "fr": "Badge indisponible",
     "it": "Badge non disponibile",
-    "nl": "Niet-beschikbaar-badge"
+    "nl": "Niet-beschikbaar-badge",
+    "pt": "Distintivo indisponível",
+    "ru": "Значок недоступности",
+    "el": "Σήμα μη διαθεσιμότητας",
+    "zh": "不可用标记",
+    "ro": "Insignă indisponibil"
   },
   {
     "es": "Badge no disponible",
@@ -3397,7 +5815,12 @@
     "de": "Nicht-verfügbar-Abzeichen",
     "fr": "Badge indisponible",
     "it": "Badge non disponibile",
-    "nl": "Niet-beschikbaar-badge"
+    "nl": "Niet-beschikbaar-badge",
+    "pt": "Distintivo indisponível",
+    "ru": "Значок недоступности",
+    "el": "Σήμα μη διαθεσιμότητας",
+    "zh": "不可用标记",
+    "ro": "Insignă indisponibil"
   },
   {
     "es": "Borde",
@@ -3405,7 +5828,12 @@
     "de": "Rahmen",
     "fr": "Bordure",
     "it": "Bordo",
-    "nl": "Rand"
+    "nl": "Rand",
+    "pt": "Borda",
+    "ru": "Граница",
+    "el": "Περίγραμμα",
+    "zh": "边框",
+    "ro": "Chenar"
   },
   {
     "es": "Borde de la tarjeta",
@@ -3413,7 +5841,12 @@
     "de": "Card border",
     "fr": "Card border",
     "it": "Card border",
-    "nl": "Card border"
+    "nl": "Card border",
+    "pt": "Card border",
+    "ru": "Card border",
+    "el": "Card border",
+    "zh": "Card border",
+    "ro": "Card border"
   },
   {
     "es": "Borde del navegador",
@@ -3421,7 +5854,12 @@
     "de": "Browser border",
     "fr": "Browser border",
     "it": "Browser border",
-    "nl": "Browser border"
+    "nl": "Browser border",
+    "pt": "Browser border",
+    "ru": "Browser border",
+    "el": "Browser border",
+    "zh": "Browser border",
+    "ro": "Browser border"
   },
   {
     "es": "Borde del reproductor",
@@ -3429,7 +5867,12 @@
     "de": "Player border",
     "fr": "Player border",
     "it": "Player border",
-    "nl": "Player border"
+    "nl": "Player border",
+    "pt": "Player border",
+    "ru": "Player border",
+    "el": "Player border",
+    "zh": "Player border",
+    "ro": "Player border"
   },
   {
     "es": "Borde tarjeta",
@@ -3437,7 +5880,12 @@
     "de": "Card border",
     "fr": "Card border",
     "it": "Card border",
-    "nl": "Card border"
+    "nl": "Card border",
+    "pt": "Card border",
+    "ru": "Card border",
+    "el": "Card border",
+    "zh": "Card border",
+    "ro": "Card border"
   },
   {
     "es": "Border",
@@ -3445,7 +5893,12 @@
     "de": "Rahmen",
     "fr": "Bordure",
     "it": "Bordo",
-    "nl": "Rand"
+    "nl": "Rand",
+    "pt": "Borda",
+    "ru": "Граница",
+    "el": "Περίγραμμα",
+    "zh": "边框",
+    "ro": "Chenar"
   },
   {
     "es": "Boton localizar",
@@ -3453,7 +5906,12 @@
     "de": "Locate button",
     "fr": "Locate button",
     "it": "Locate button",
-    "nl": "Locate button"
+    "nl": "Locate button",
+    "pt": "Locate button",
+    "ru": "Locate button",
+    "el": "Locate button",
+    "zh": "Locate button",
+    "ro": "Locate button"
   },
   {
     "es": "Boton parar",
@@ -3461,7 +5919,12 @@
     "de": "Stop button",
     "fr": "Stop button",
     "it": "Stop button",
-    "nl": "Stop button"
+    "nl": "Stop button",
+    "pt": "Stop button",
+    "ru": "Stop button",
+    "el": "Stop button",
+    "zh": "Stop button",
+    "ro": "Stop button"
   },
   {
     "es": "Boton volver a base",
@@ -3469,7 +5932,12 @@
     "de": "Return to dock button",
     "fr": "Return to dock button",
     "it": "Return to dock button",
-    "nl": "Return to dock button"
+    "nl": "Return to dock button",
+    "pt": "Return to dock button",
+    "ru": "Return to dock button",
+    "el": "Return to dock button",
+    "zh": "Return to dock button",
+    "ro": "Return to dock button"
   },
   {
     "es": "Botones + / -",
@@ -3477,7 +5945,12 @@
     "de": "+/−-Tasten",
     "fr": "Boutons +/−",
     "it": "Pulsanti +/−",
-    "nl": "+/−-knoppen"
+    "nl": "+/−-knoppen",
+    "pt": "Botões + / −",
+    "ru": "Кнопки +/−",
+    "el": "Κουμπιά +/−",
+    "zh": "+/− 按钮",
+    "ro": "Butoane +/−"
   },
   {
     "es": "Botones de modo",
@@ -3485,7 +5958,12 @@
     "de": "Modus-Tasten",
     "fr": "Boutons de mode",
     "it": "Pulsanti modalità",
-    "nl": "Modusknoppen"
+    "nl": "Modusknoppen",
+    "pt": "Botões de modo",
+    "ru": "Кнопки режима",
+    "el": "Κουμπιά λειτουργίας",
+    "zh": "模式按钮",
+    "ro": "Butoane mod"
   },
   {
     "es": "Botones de modo junto al slider",
@@ -3493,7 +5971,12 @@
     "de": "Mode buttons next to slider",
     "fr": "Mode buttons next to slider",
     "it": "Mode buttons next to slider",
-    "nl": "Mode buttons next to slider"
+    "nl": "Mode buttons next to slider",
+    "pt": "Mode buttons next to slider",
+    "ru": "Mode buttons next to slider",
+    "el": "Mode buttons next to slider",
+    "zh": "Mode buttons next to slider",
+    "ro": "Mode buttons next to slider"
   },
   {
     "es": "Botón localizar",
@@ -3501,7 +5984,12 @@
     "de": "Locate button",
     "fr": "Locate button",
     "it": "Locate button",
-    "nl": "Locate button"
+    "nl": "Locate button",
+    "pt": "Locate button",
+    "ru": "Locate button",
+    "el": "Locate button",
+    "zh": "Locate button",
+    "ro": "Locate button"
   },
   {
     "es": "Botón parar",
@@ -3509,7 +5997,12 @@
     "de": "Stop button",
     "fr": "Stop button",
     "it": "Stop button",
-    "nl": "Stop button"
+    "nl": "Stop button",
+    "pt": "Stop button",
+    "ru": "Stop button",
+    "el": "Stop button",
+    "zh": "Stop button",
+    "ro": "Stop button"
   },
   {
     "es": "Botón volver a base",
@@ -3517,7 +6010,12 @@
     "de": "Return to dock button",
     "fr": "Return to dock button",
     "it": "Return to dock button",
-    "nl": "Return to dock button"
+    "nl": "Return to dock button",
+    "pt": "Return to dock button",
+    "ru": "Return to dock button",
+    "el": "Return to dock button",
+    "zh": "Return to dock button",
+    "ro": "Return to dock button"
   },
   {
     "es": "Breakpoint móvil",
@@ -3525,7 +6023,12 @@
     "de": "Mobile breakpoint",
     "fr": "Mobile breakpoint",
     "it": "Mobile breakpoint",
-    "nl": "Mobile breakpoint"
+    "nl": "Mobile breakpoint",
+    "pt": "Mobile breakpoint",
+    "ru": "Mobile breakpoint",
+    "el": "Mobile breakpoint",
+    "zh": "Mobile breakpoint",
+    "ro": "Mobile breakpoint"
   },
   {
     "es": "Calibracion desde camera",
@@ -3533,7 +6036,12 @@
     "de": "Calibration from camera",
     "fr": "Calibration from camera",
     "it": "Calibration from camera",
-    "nl": "Calibration from camera"
+    "nl": "Calibration from camera",
+    "pt": "Calibration from camera",
+    "ru": "Calibration from camera",
+    "el": "Calibration from camera",
+    "zh": "Calibration from camera",
+    "ro": "Calibration from camera"
   },
   {
     "es": "Cambio entre sliders (ms)",
@@ -3541,7 +6049,12 @@
     "de": "Slider switch (ms)",
     "fr": "Slider switch (ms)",
     "it": "Slider switch (ms)",
-    "nl": "Slider switch (ms)"
+    "nl": "Slider switch (ms)",
+    "pt": "Slider switch (ms)",
+    "ru": "Slider switch (ms)",
+    "el": "Slider switch (ms)",
+    "zh": "Slider switch (ms)",
+    "ro": "Slider switch (ms)"
   },
   {
     "es": "Chip de bateria",
@@ -3549,7 +6062,12 @@
     "de": "Battery chip",
     "fr": "Battery chip",
     "it": "Battery chip",
-    "nl": "Battery chip"
+    "nl": "Battery chip",
+    "pt": "Battery chip",
+    "ru": "Battery chip",
+    "el": "Battery chip",
+    "zh": "Battery chip",
+    "ro": "Battery chip"
   },
   {
     "es": "Chip de batería",
@@ -3557,7 +6075,12 @@
     "de": "Battery chip",
     "fr": "Battery chip",
     "it": "Battery chip",
-    "nl": "Battery chip"
+    "nl": "Battery chip",
+    "pt": "Battery chip",
+    "ru": "Battery chip",
+    "el": "Battery chip",
+    "zh": "Battery chip",
+    "ro": "Battery chip"
   },
   {
     "es": "Chip de estado",
@@ -3565,7 +6088,12 @@
     "de": "Status-Chip",
     "fr": "Puce d’état",
     "it": "Chip di stato",
-    "nl": "Statuschip"
+    "nl": "Statuschip",
+    "pt": "Chip de estado",
+    "ru": "Чип состояния",
+    "el": "Chip κατάστασης",
+    "zh": "状态芯片",
+    "ro": "Chip stare"
   },
   {
     "es": "Chip de humedad",
@@ -3573,7 +6101,12 @@
     "de": "Feuchtigkeits-Chip",
     "fr": "Puce humidité",
     "it": "Chip umidità",
-    "nl": "Vochtigheidschip"
+    "nl": "Vochtigheidschip",
+    "pt": "Chip de humidade",
+    "ru": "Чип влажности",
+    "el": "Chip υγρασίας",
+    "zh": "湿度芯片",
+    "ro": "Chip umiditate"
   },
   {
     "es": "Chip de temperatura actual",
@@ -3581,7 +6114,12 @@
     "de": "Aktuelle Temperatur (Chip)",
     "fr": "Puce température actuelle",
     "it": "Chip temperatura attuale",
-    "nl": "Huidige temperatuur (chip)"
+    "nl": "Huidige temperatuur (chip)",
+    "pt": "Chip da temperatura atual",
+    "ru": "Чип текущей температуры",
+    "el": "Chip τρέχουσας θερμοκρασίας",
+    "zh": "当前温度芯片",
+    "ro": "Chip temperatură curentă"
   },
   {
     "es": "Click entidades",
@@ -3589,7 +6127,12 @@
     "de": "Entity click",
     "fr": "Entity click",
     "it": "Entity click",
-    "nl": "Entity click"
+    "nl": "Entity click",
+    "pt": "Entity click",
+    "ru": "Entity click",
+    "el": "Entity click",
+    "zh": "Entity click",
+    "ro": "Entity click"
   },
   {
     "es": "Color",
@@ -3597,7 +6140,12 @@
     "de": "Farbe",
     "fr": "Couleur",
     "it": "Colore",
-    "nl": "Kleur"
+    "nl": "Kleur",
+    "pt": "Cor",
+    "ru": "Цвет",
+    "el": "Χρώμα",
+    "zh": "颜色",
+    "ro": "Culoare"
   },
   {
     "es": "Color auto",
@@ -3605,7 +6153,12 @@
     "de": "Auto-Farbe",
     "fr": "Couleur auto",
     "it": "Colore auto",
-    "nl": "Autokleur"
+    "nl": "Autokleur",
+    "pt": "Cor automática",
+    "ru": "Цвет авто",
+    "el": "Αυτόματο χρώμα",
+    "zh": "自动颜色",
+    "ro": "Culoare automată"
   },
   {
     "es": "Color calor",
@@ -3613,7 +6166,12 @@
     "de": "Heizfarbe",
     "fr": "Couleur chaleur",
     "it": "Colore calore",
-    "nl": "Verwarmingskleur"
+    "nl": "Verwarmingskleur",
+    "pt": "Cor de aquecimento",
+    "ru": "Цвет нагрева",
+    "el": "Χρώμα θέρμανσης",
+    "zh": "制热颜色",
+    "ro": "Culoare încălzire"
   },
   {
     "es": "Color frio",
@@ -3621,7 +6179,12 @@
     "de": "Kühlfarbe",
     "fr": "Couleur froid",
     "it": "Colore freddo",
-    "nl": "Koelkleur"
+    "nl": "Koelkleur",
+    "pt": "Cor de arrefecimento",
+    "ru": "Цвет охлаждения",
+    "el": "Χρώμα ψύξης",
+    "zh": "制冷颜色",
+    "ro": "Culoare răcire"
   },
   {
     "es": "Color frío",
@@ -3629,7 +6192,12 @@
     "de": "Kühlfarbe",
     "fr": "Couleur froid",
     "it": "Colore freddo",
-    "nl": "Koelkleur"
+    "nl": "Koelkleur",
+    "pt": "Cor de arrefecimento",
+    "ru": "Цвет охлаждения",
+    "el": "Χρώμα ψύξης",
+    "zh": "制冷颜色",
+    "ro": "Culoare răcire"
   },
   {
     "es": "Color gris RGB",
@@ -3637,7 +6205,12 @@
     "de": "Gray RGB Color",
     "fr": "Gray RGB Color",
     "it": "Gray RGB Color",
-    "nl": "Gray RGB Color"
+    "nl": "Gray RGB Color",
+    "pt": "Gray RGB Color",
+    "ru": "Gray RGB Color",
+    "el": "Gray RGB Color",
+    "zh": "Gray RGB Color",
+    "ro": "Gray RGB Color"
   },
   {
     "es": "Color icono activo",
@@ -3645,7 +6218,12 @@
     "de": "Aktive Symbolfarbe",
     "fr": "Couleur d’icône active",
     "it": "Colore icona attivo",
-    "nl": "Actieve pictogramkleur"
+    "nl": "Actieve pictogramkleur",
+    "pt": "Cor do ícone ativo",
+    "ru": "Цвет активного значка",
+    "el": "Χρώμα ενεργού εικονιδίου",
+    "zh": "活动图标颜色",
+    "ro": "Culoare pictogramă activă"
   },
   {
     "es": "Color icono apagado",
@@ -3653,7 +6231,12 @@
     "de": "Symbolfarbe (Aus)",
     "fr": "Couleur icône (inactif)",
     "it": "Colore icona (spento)",
-    "nl": "Pictogramkleur (uit)"
+    "nl": "Pictogramkleur (uit)",
+    "pt": "Cor do ícone (desligado)",
+    "ru": "Цвет значка (выкл.)",
+    "el": "Χρώμα εικονιδίου (ανενεργό)",
+    "zh": "关闭图标颜色",
+    "ro": "Culoare pictogramă (oprit)"
   },
   {
     "es": "Color icono encendido",
@@ -3661,7 +6244,12 @@
     "de": "Symbolfarbe (Ein)",
     "fr": "Couleur icône (actif)",
     "it": "Colore icona (acceso)",
-    "nl": "Pictogramkleur (aan)"
+    "nl": "Pictogramkleur (aan)",
+    "pt": "Cor do ícone (ligado)",
+    "ru": "Цвет значка (вкл.)",
+    "el": "Χρώμα εικονιδίου (ενεργό)",
+    "zh": "开启图标颜色",
+    "ro": "Culoare pictogramă (pornit)"
   },
   {
     "es": "Color icono inactivo",
@@ -3669,7 +6257,12 @@
     "de": "Inaktive Symbolfarbe",
     "fr": "Couleur d’icône inactive",
     "it": "Colore icona inattivo",
-    "nl": "Inactieve pictogramkleur"
+    "nl": "Inactieve pictogramkleur",
+    "pt": "Cor do ícone inativo",
+    "ru": "Цвет неактивного значка",
+    "el": "Χρώμα ανενεργού εικονιδίου",
+    "zh": "非活动图标颜色",
+    "ro": "Culoare pictogramă inactivă"
   },
   {
     "es": "Color iconos",
@@ -3677,7 +6270,12 @@
     "de": "Symbolfarbe",
     "fr": "Couleur d’icône",
     "it": "Colore icona",
-    "nl": "Pictogramkleur"
+    "nl": "Pictogramkleur",
+    "pt": "Cor do ícone",
+    "ru": "Цвет значка",
+    "el": "Χρώμα εικονιδίου",
+    "zh": "图标颜色",
+    "ro": "Culoare pictogramă"
   },
   {
     "es": "Color secado",
@@ -3685,7 +6283,12 @@
     "de": "Trocknungsfarbe",
     "fr": "Couleur séchage",
     "it": "Colore asciugatura",
-    "nl": "Droogkleur"
+    "nl": "Droogkleur",
+    "pt": "Cor de secagem",
+    "ru": "Цвет сушки",
+    "el": "Χρώμα στεγνώματος",
+    "zh": "除湿颜色",
+    "ro": "Culoare uscare"
   },
   {
     "es": "Color ventilador",
@@ -3693,7 +6296,12 @@
     "de": "Lüfterfarbe",
     "fr": "Couleur ventilateur",
     "it": "Colore ventola",
-    "nl": "Ventilatorkleur"
+    "nl": "Ventilatorkleur",
+    "pt": "Cor do ventilador",
+    "ru": "Цвет вентилятора",
+    "el": "Χρώμα ανεμιστήρα",
+    "zh": "风扇颜色",
+    "ro": "Culoare ventilator"
   },
   {
     "es": "Columnas de grid",
@@ -3701,7 +6309,12 @@
     "de": "Grid columns",
     "fr": "Grid columns",
     "it": "Grid columns",
-    "nl": "Grid columns"
+    "nl": "Grid columns",
+    "pt": "Grid columns",
+    "ru": "Grid columns",
+    "el": "Grid columns",
+    "zh": "Grid columns",
+    "ro": "Grid columns"
   },
   {
     "es": "Contracción horizontal del slider",
@@ -3709,7 +6322,12 @@
     "de": "Slider horizontal shrink",
     "fr": "Slider horizontal shrink",
     "it": "Slider horizontal shrink",
-    "nl": "Slider horizontal shrink"
+    "nl": "Slider horizontal shrink",
+    "pt": "Slider horizontal shrink",
+    "ru": "Slider horizontal shrink",
+    "el": "Slider horizontal shrink",
+    "zh": "Slider horizontal shrink",
+    "ro": "Slider horizontal shrink"
   },
   {
     "es": "Controles de color",
@@ -3717,7 +6335,12 @@
     "de": "Color controls",
     "fr": "Color controls",
     "it": "Color controls",
-    "nl": "Color controls"
+    "nl": "Color controls",
+    "pt": "Color controls",
+    "ru": "Color controls",
+    "el": "Color controls",
+    "zh": "Color controls",
+    "ro": "Color controls"
   },
   {
     "es": "Controles de modo",
@@ -3725,7 +6348,12 @@
     "de": "Mode controls",
     "fr": "Mode controls",
     "it": "Mode controls",
-    "nl": "Mode controls"
+    "nl": "Mode controls",
+    "pt": "Mode controls",
+    "ru": "Mode controls",
+    "el": "Mode controls",
+    "zh": "Mode controls",
+    "ro": "Mode controls"
   },
   {
     "es": "Controles de temperatura",
@@ -3733,7 +6361,12 @@
     "de": "Temperature controls",
     "fr": "Temperature controls",
     "it": "Temperature controls",
-    "nl": "Temperature controls"
+    "nl": "Temperature controls",
+    "pt": "Temperature controls",
+    "ru": "Temperature controls",
+    "el": "Temperature controls",
+    "zh": "Temperature controls",
+    "ro": "Temperature controls"
   },
   {
     "es": "Datos del servicio (JSON)",
@@ -3741,7 +6374,12 @@
     "de": "Service data (JSON)",
     "fr": "Service data (JSON)",
     "it": "Service data (JSON)",
-    "nl": "Service data (JSON)"
+    "nl": "Service data (JSON)",
+    "pt": "Service data (JSON)",
+    "ru": "Service data (JSON)",
+    "el": "Service data (JSON)",
+    "zh": "Service data (JSON)",
+    "ro": "Service data (JSON)"
   },
   {
     "es": "Decimales",
@@ -3749,7 +6387,12 @@
     "de": "Decimals",
     "fr": "Decimals",
     "it": "Decimals",
-    "nl": "Decimals"
+    "nl": "Decimals",
+    "pt": "Decimals",
+    "ru": "Decimals",
+    "el": "Decimals",
+    "zh": "Decimals",
+    "ro": "Decimals"
   },
   {
     "es": "Decimales en estado y chips",
@@ -3757,7 +6400,12 @@
     "de": "Decimals in state and chips",
     "fr": "Decimals in state and chips",
     "it": "Decimals in state and chips",
-    "nl": "Decimals in state and chips"
+    "nl": "Decimals in state and chips",
+    "pt": "Decimals in state and chips",
+    "ru": "Decimals in state and chips",
+    "el": "Decimals in state and chips",
+    "zh": "Decimals in state and chips",
+    "ro": "Decimals in state and chips"
   },
   {
     "es": "Decimales secundarios",
@@ -3765,7 +6413,12 @@
     "de": "Secondary decimals",
     "fr": "Secondary decimals",
     "it": "Secondary decimals",
-    "nl": "Secondary decimals"
+    "nl": "Secondary decimals",
+    "pt": "Secondary decimals",
+    "ru": "Secondary decimals",
+    "el": "Secondary decimals",
+    "zh": "Secondary decimals",
+    "ro": "Secondary decimals"
   },
   {
     "es": "Dial (ms)",
@@ -3773,7 +6426,12 @@
     "de": "Dial (ms)",
     "fr": "Dial (ms)",
     "it": "Dial (ms)",
-    "nl": "Dial (ms)"
+    "nl": "Dial (ms)",
+    "pt": "Dial (ms)",
+    "ru": "Dial (ms)",
+    "el": "Dial (ms)",
+    "zh": "Dial (ms)",
+    "ro": "Dial (ms)"
   },
   {
     "es": "Dias visibles",
@@ -3781,7 +6439,12 @@
     "de": "Visible days",
     "fr": "Visible days",
     "it": "Visible days",
-    "nl": "Visible days"
+    "nl": "Visible days",
+    "pt": "Visible days",
+    "ru": "Visible days",
+    "el": "Visible days",
+    "zh": "Visible days",
+    "ro": "Visible days"
   },
   {
     "es": "Empezar desde cero",
@@ -3789,7 +6452,12 @@
     "de": "Start from zero",
     "fr": "Start from zero",
     "it": "Start from zero",
-    "nl": "Start from zero"
+    "nl": "Start from zero",
+    "pt": "Start from zero",
+    "ru": "Start from zero",
+    "el": "Start from zero",
+    "zh": "Start from zero",
+    "ro": "Start from zero"
   },
   {
     "es": "Encendido y apagado (ms)",
@@ -3797,7 +6465,12 @@
     "de": "Power on/off (ms)",
     "fr": "Power on/off (ms)",
     "it": "Power on/off (ms)",
-    "nl": "Power on/off (ms)"
+    "nl": "Power on/off (ms)",
+    "pt": "Power on/off (ms)",
+    "ru": "Power on/off (ms)",
+    "el": "Power on/off (ms)",
+    "zh": "Power on/off (ms)",
+    "ro": "Power on/off (ms)"
   },
   {
     "es": "Enlace panel energia",
@@ -3805,7 +6478,12 @@
     "de": "Energy panel link",
     "fr": "Energy panel link",
     "it": "Energy panel link",
-    "nl": "Energy panel link"
+    "nl": "Energy panel link",
+    "pt": "Energy panel link",
+    "ru": "Energy panel link",
+    "el": "Energy panel link",
+    "zh": "Energy panel link",
+    "ro": "Energy panel link"
   },
   {
     "es": "Entidad",
@@ -3813,7 +6491,12 @@
     "de": "Entität",
     "fr": "Entité",
     "it": "Entità",
-    "nl": "Entiteit"
+    "nl": "Entiteit",
+    "pt": "Entidade",
+    "ru": "Объект",
+    "el": "Οντότητα",
+    "zh": "实体",
+    "ro": "Entitate"
   },
   {
     "es": "Entidad Meteoalarm",
@@ -3821,7 +6504,12 @@
     "de": "Meteoalarm entity",
     "fr": "Meteoalarm entity",
     "it": "Meteoalarm entity",
-    "nl": "Meteoalarm entity"
+    "nl": "Meteoalarm entity",
+    "pt": "Meteoalarm entity",
+    "ru": "Meteoalarm entity",
+    "el": "Meteoalarm entity",
+    "zh": "Meteoalarm entity",
+    "ro": "Meteoalarm entity"
   },
   {
     "es": "Entidad calibracion",
@@ -3829,7 +6517,12 @@
     "de": "Calibration entity",
     "fr": "Calibration entity",
     "it": "Calibration entity",
-    "nl": "Calibration entity"
+    "nl": "Calibration entity",
+    "pt": "Calibration entity",
+    "ru": "Calibration entity",
+    "el": "Calibration entity",
+    "zh": "Calibration entity",
+    "ro": "Calibration entity"
   },
   {
     "es": "Entidad del robot",
@@ -3837,7 +6530,12 @@
     "de": "Robot entity",
     "fr": "Robot entity",
     "it": "Robot entity",
-    "nl": "Robot entity"
+    "nl": "Robot entity",
+    "pt": "Robot entity",
+    "ru": "Robot entity",
+    "el": "Robot entity",
+    "zh": "Robot entity",
+    "ro": "Robot entity"
   },
   {
     "es": "Entidad mapa (camera/image)",
@@ -3845,7 +6543,12 @@
     "de": "Map entity (camera/image)",
     "fr": "Map entity (camera/image)",
     "it": "Map entity (camera/image)",
-    "nl": "Map entity (camera/image)"
+    "nl": "Map entity (camera/image)",
+    "pt": "Map entity (camera/image)",
+    "ru": "Map entity (camera/image)",
+    "el": "Map entity (camera/image)",
+    "zh": "Map entity (camera/image)",
+    "ro": "Map entity (camera/image)"
   },
   {
     "es": "Entidad principal",
@@ -3853,7 +6556,12 @@
     "de": "Main entity",
     "fr": "Main entity",
     "it": "Main entity",
-    "nl": "Main entity"
+    "nl": "Main entity",
+    "pt": "Main entity",
+    "ru": "Main entity",
+    "el": "Main entity",
+    "zh": "Main entity",
+    "ro": "Main entity"
   },
   {
     "es": "Entidad secundaria",
@@ -3861,7 +6569,12 @@
     "de": "Secondary entity",
     "fr": "Secondary entity",
     "it": "Secondary entity",
-    "nl": "Secondary entity"
+    "nl": "Secondary entity",
+    "pt": "Secondary entity",
+    "ru": "Secondary entity",
+    "el": "Secondary entity",
+    "zh": "Secondary entity",
+    "ro": "Secondary entity"
   },
   {
     "es": "Entidad vacuum",
@@ -3869,7 +6582,12 @@
     "de": "Vacuum entity",
     "fr": "Vacuum entity",
     "it": "Vacuum entity",
-    "nl": "Vacuum entity"
+    "nl": "Vacuum entity",
+    "pt": "Vacuum entity",
+    "ru": "Vacuum entity",
+    "el": "Vacuum entity",
+    "zh": "Vacuum entity",
+    "ro": "Vacuum entity"
   },
   {
     "es": "Entidades",
@@ -3877,7 +6595,12 @@
     "de": "Entities",
     "fr": "Entities",
     "it": "Entities",
-    "nl": "Entities"
+    "nl": "Entities",
+    "pt": "Entities",
+    "ru": "Entities",
+    "el": "Entities",
+    "zh": "Entities",
+    "ro": "Entities"
   },
   {
     "es": "Entidades individuales",
@@ -3885,7 +6608,12 @@
     "de": "Individual entities",
     "fr": "Individual entities",
     "it": "Individual entities",
-    "nl": "Individual entities"
+    "nl": "Individual entities",
+    "pt": "Individual entities",
+    "ru": "Individual entities",
+    "el": "Individual entities",
+    "zh": "Individual entities",
+    "ro": "Individual entities"
   },
   {
     "es": "Entrada contenido (ms)",
@@ -3893,7 +6621,12 @@
     "de": "Inhaltseingang (ms)",
     "fr": "Entrée du contenu (ms)",
     "it": "Ingresso contenuto (ms)",
-    "nl": "Inhoud binnenkomst (ms)"
+    "nl": "Inhoud binnenkomst (ms)",
+    "pt": "Entrada do conteúdo (ms)",
+    "ru": "Появление содержимого (мс)",
+    "el": "Είσοδος περιεχομένου (ms)",
+    "zh": "内容进入（毫秒）",
+    "ro": "Intrare conținut (ms)"
   },
   {
     "es": "Entrada del contenido (ms)",
@@ -3901,7 +6634,12 @@
     "de": "Inhaltseingang (ms)",
     "fr": "Entrée du contenu (ms)",
     "it": "Ingresso contenuto (ms)",
-    "nl": "Inhoud binnenkomst (ms)"
+    "nl": "Inhoud binnenkomst (ms)",
+    "pt": "Entrada do conteúdo (ms)",
+    "ru": "Появление содержимого (мс)",
+    "el": "Είσοδος περιεχομένου (ms)",
+    "zh": "内容进入（毫秒）",
+    "ro": "Intrare conținut (ms)"
   },
   {
     "es": "Estado a la derecha del nombre",
@@ -3909,7 +6647,12 @@
     "de": "State on title row",
     "fr": "State on title row",
     "it": "State on title row",
-    "nl": "State on title row"
+    "nl": "State on title row",
+    "pt": "State on title row",
+    "ru": "State on title row",
+    "el": "State on title row",
+    "zh": "State on title row",
+    "ro": "State on title row"
   },
   {
     "es": "Estados visibles",
@@ -3917,7 +6660,12 @@
     "de": "Visible states",
     "fr": "Visible states",
     "it": "Visible states",
-    "nl": "Visible states"
+    "nl": "Visible states",
+    "pt": "Visible states",
+    "ru": "Visible states",
+    "el": "Visible states",
+    "zh": "Visible states",
+    "ro": "Visible states"
   },
   {
     "es": "Estilo",
@@ -3925,7 +6673,12 @@
     "de": "Style",
     "fr": "Style",
     "it": "Style",
-    "nl": "Style"
+    "nl": "Style",
+    "pt": "Style",
+    "ru": "Style",
+    "el": "Style",
+    "zh": "Style",
+    "ro": "Style"
   },
   {
     "es": "Etiqueta",
@@ -3933,7 +6686,12 @@
     "de": "Label",
     "fr": "Label",
     "it": "Label",
-    "nl": "Label"
+    "nl": "Label",
+    "pt": "Label",
+    "ru": "Label",
+    "el": "Label",
+    "zh": "Label",
+    "ro": "Label"
   },
   {
     "es": "Etiqueta boton energia",
@@ -3941,7 +6699,12 @@
     "de": "Energy button label",
     "fr": "Energy button label",
     "it": "Energy button label",
-    "nl": "Energy button label"
+    "nl": "Energy button label",
+    "pt": "Energy button label",
+    "ru": "Energy button label",
+    "el": "Energy button label",
+    "zh": "Energy button label",
+    "ro": "Energy button label"
   },
   {
     "es": "Etiqueta maximo",
@@ -3949,7 +6712,12 @@
     "de": "Label Maximum",
     "fr": "Label Maximum",
     "it": "Label Maximum",
-    "nl": "Label Maximum"
+    "nl": "Label Maximum",
+    "pt": "Label Maximum",
+    "ru": "Label Maximum",
+    "el": "Label Maximum",
+    "zh": "Label Maximum",
+    "ro": "Label Maximum"
   },
   {
     "es": "Etiqueta menu derecho",
@@ -3957,7 +6725,12 @@
     "de": "Right menu label",
     "fr": "Right menu label",
     "it": "Right menu label",
-    "nl": "Right menu label"
+    "nl": "Right menu label",
+    "pt": "Right menu label",
+    "ru": "Right menu label",
+    "el": "Right menu label",
+    "zh": "Right menu label",
+    "ro": "Right menu label"
   },
   {
     "es": "Etiqueta minimo",
@@ -3965,7 +6738,12 @@
     "de": "Label Minimum",
     "fr": "Label Minimum",
     "it": "Label Minimum",
-    "nl": "Label Minimum"
+    "nl": "Label Minimum",
+    "pt": "Label Minimum",
+    "ru": "Label Minimum",
+    "el": "Label Minimum",
+    "zh": "Label Minimum",
+    "ro": "Label Minimum"
   },
   {
     "es": "Etiquetas",
@@ -3973,7 +6751,12 @@
     "de": "Labels",
     "fr": "Labels",
     "it": "Labels",
-    "nl": "Labels"
+    "nl": "Labels",
+    "pt": "Labels",
+    "ru": "Labels",
+    "el": "Labels",
+    "zh": "Labels",
+    "ro": "Labels"
   },
   {
     "es": "Expansión de controles (ms)",
@@ -3981,7 +6764,12 @@
     "de": "Controls expand (ms)",
     "fr": "Controls expand (ms)",
     "it": "Controls expand (ms)",
-    "nl": "Controls expand (ms)"
+    "nl": "Controls expand (ms)",
+    "pt": "Controls expand (ms)",
+    "ru": "Controls expand (ms)",
+    "el": "Controls expand (ms)",
+    "zh": "Controls expand (ms)",
+    "ro": "Controls expand (ms)"
   },
   {
     "es": "Fallback con vibracion",
@@ -3989,7 +6777,12 @@
     "de": "Vibrations-Fallback",
     "fr": "Secours vibration",
     "it": "Fallback vibrazione",
-    "nl": "Trilling reserve"
+    "nl": "Trilling reserve",
+    "pt": "Reserva por vibração",
+    "ru": "Резервная вибрация",
+    "el": "Εναλλακτικό δόνησης",
+    "zh": "振动后备",
+    "ro": "Rezervă vibrație"
   },
   {
     "es": "Fallback con vibración",
@@ -3997,7 +6790,12 @@
     "de": "Vibrations-Fallback",
     "fr": "Secours vibration",
     "it": "Fallback vibrazione",
-    "nl": "Trilling reserve"
+    "nl": "Trilling reserve",
+    "pt": "Reserva por vibração",
+    "ru": "Резервная вибрация",
+    "el": "Εναλλακτικό δόνησης",
+    "zh": "振动后备",
+    "ro": "Rezervă vibrație"
   },
   {
     "es": "Flujo maximo (s)",
@@ -4005,7 +6803,12 @@
     "de": "Maximum flow (s)",
     "fr": "Maximum flow (s)",
     "it": "Maximum flow (s)",
-    "nl": "Maximum flow (s)"
+    "nl": "Maximum flow (s)",
+    "pt": "Maximum flow (s)",
+    "ru": "Maximum flow (s)",
+    "el": "Maximum flow (s)",
+    "zh": "Maximum flow (s)",
+    "ro": "Maximum flow (s)"
   },
   {
     "es": "Flujo minimo (s)",
@@ -4013,7 +6816,12 @@
     "de": "Minimum flow (s)",
     "fr": "Minimum flow (s)",
     "it": "Minimum flow (s)",
-    "nl": "Minimum flow (s)"
+    "nl": "Minimum flow (s)",
+    "pt": "Minimum flow (s)",
+    "ru": "Minimum flow (s)",
+    "el": "Minimum flow (s)",
+    "zh": "Minimum flow (s)",
+    "ro": "Minimum flow (s)"
   },
   {
     "es": "Fondo burbuja icono",
@@ -4021,7 +6829,12 @@
     "de": "Hintergrund Symbolblase",
     "fr": "Fond de la bulle d’icône",
     "it": "Sfondo bolla icona",
-    "nl": "Achtergrond pictogrambel"
+    "nl": "Achtergrond pictogrambel",
+    "pt": "Fundo da bolha do ícone",
+    "ru": "Фон пузырька значка",
+    "el": "Φόντο φυσαλίδας εικονιδίου",
+    "zh": "图标气泡背景",
+    "ro": "Fundal bulă pictogramă"
   },
   {
     "es": "Gap",
@@ -4029,7 +6842,12 @@
     "de": "Gap",
     "fr": "Gap",
     "it": "Gap",
-    "nl": "Gap"
+    "nl": "Gap",
+    "pt": "Gap",
+    "ru": "Gap",
+    "el": "Gap",
+    "zh": "Gap",
+    "ro": "Gap"
   },
   {
     "es": "Grafico en color",
@@ -4037,7 +6855,12 @@
     "de": "Color chart",
     "fr": "Color chart",
     "it": "Color chart",
-    "nl": "Color chart"
+    "nl": "Color chart",
+    "pt": "Color chart",
+    "ru": "Color chart",
+    "el": "Color chart",
+    "zh": "Color chart",
+    "ro": "Color chart"
   },
   {
     "es": "Grosor del slider",
@@ -4045,7 +6868,12 @@
     "de": "Slider thickness",
     "fr": "Slider thickness",
     "it": "Slider thickness",
-    "nl": "Slider thickness"
+    "nl": "Slider thickness",
+    "pt": "Slider thickness",
+    "ru": "Slider thickness",
+    "el": "Slider thickness",
+    "zh": "Slider thickness",
+    "ro": "Slider thickness"
   },
   {
     "es": "Grosor dial",
@@ -4053,7 +6881,12 @@
     "de": "Dial thickness",
     "fr": "Dial thickness",
     "it": "Dial thickness",
-    "nl": "Dial thickness"
+    "nl": "Dial thickness",
+    "pt": "Dial thickness",
+    "ru": "Dial thickness",
+    "el": "Dial thickness",
+    "zh": "Dial thickness",
+    "ro": "Dial thickness"
   },
   {
     "es": "Grosor linea",
@@ -4061,7 +6894,12 @@
     "de": "Line thickness",
     "fr": "Line thickness",
     "it": "Line thickness",
-    "nl": "Line thickness"
+    "nl": "Line thickness",
+    "pt": "Line thickness",
+    "ru": "Line thickness",
+    "el": "Line thickness",
+    "zh": "Line thickness",
+    "ro": "Line thickness"
   },
   {
     "es": "Grosor lineas",
@@ -4069,7 +6907,12 @@
     "de": "Line thickness",
     "fr": "Line thickness",
     "it": "Line thickness",
-    "nl": "Line thickness"
+    "nl": "Line thickness",
+    "pt": "Line thickness",
+    "ru": "Line thickness",
+    "el": "Line thickness",
+    "zh": "Line thickness",
+    "ro": "Line thickness"
   },
   {
     "es": "Grosor slider",
@@ -4077,7 +6920,12 @@
     "de": "Slider thickness",
     "fr": "Slider thickness",
     "it": "Slider thickness",
-    "nl": "Slider thickness"
+    "nl": "Slider thickness",
+    "pt": "Slider thickness",
+    "ru": "Slider thickness",
+    "el": "Slider thickness",
+    "zh": "Slider thickness",
+    "ro": "Slider thickness"
   },
   {
     "es": "Helper codigo",
@@ -4085,7 +6933,12 @@
     "de": "Code helper",
     "fr": "Code helper",
     "it": "Code helper",
-    "nl": "Code helper"
+    "nl": "Code helper",
+    "pt": "Code helper",
+    "ru": "Code helper",
+    "el": "Code helper",
+    "zh": "Code helper",
+    "ro": "Code helper"
   },
   {
     "es": "Helper sesion compartida",
@@ -4093,7 +6946,12 @@
     "de": "Shared session helper",
     "fr": "Shared session helper",
     "it": "Shared session helper",
-    "nl": "Shared session helper"
+    "nl": "Shared session helper",
+    "pt": "Shared session helper",
+    "ru": "Shared session helper",
+    "el": "Shared session helper",
+    "zh": "Shared session helper",
+    "ro": "Shared session helper"
   },
   {
     "es": "Horas a mostrar",
@@ -4101,7 +6959,12 @@
     "de": "Hours to show",
     "fr": "Hours to show",
     "it": "Hours to show",
-    "nl": "Hours to show"
+    "nl": "Hours to show",
+    "pt": "Hours to show",
+    "ru": "Hours to show",
+    "el": "Hours to show",
+    "zh": "Hours to show",
+    "ro": "Hours to show"
   },
   {
     "es": "Horas visibles",
@@ -4109,7 +6972,12 @@
     "de": "Visible hours",
     "fr": "Visible hours",
     "it": "Visible hours",
-    "nl": "Visible hours"
+    "nl": "Visible hours",
+    "pt": "Visible hours",
+    "ru": "Visible hours",
+    "el": "Visible hours",
+    "zh": "Visible hours",
+    "ro": "Visible hours"
   },
   {
     "es": "Icono",
@@ -4117,7 +6985,12 @@
     "de": "Symbol",
     "fr": "Icône",
     "it": "Icona",
-    "nl": "Pictogram"
+    "nl": "Pictogram",
+    "pt": "Ícone",
+    "ru": "Значок",
+    "el": "Εικονίδιο",
+    "zh": "图标",
+    "ro": "Pictogramă"
   },
   {
     "es": "Icono fallback",
@@ -4125,7 +6998,12 @@
     "de": "Fallback icon",
     "fr": "Fallback icon",
     "it": "Fallback icon",
-    "nl": "Fallback icon"
+    "nl": "Fallback icon",
+    "pt": "Fallback icon",
+    "ru": "Fallback icon",
+    "el": "Fallback icon",
+    "zh": "Fallback icon",
+    "ro": "Fallback icon"
   },
   {
     "es": "Icono menu derecho",
@@ -4133,7 +7011,12 @@
     "de": "Right menu icon",
     "fr": "Right menu icon",
     "it": "Right menu icon",
-    "nl": "Right menu icon"
+    "nl": "Right menu icon",
+    "pt": "Right menu icon",
+    "ru": "Right menu icon",
+    "el": "Right menu icon",
+    "zh": "Right menu icon",
+    "ro": "Right menu icon"
   },
   {
     "es": "Iconos cabecera",
@@ -4141,7 +7024,12 @@
     "de": "Header icons",
     "fr": "Header icons",
     "it": "Header icons",
-    "nl": "Header icons"
+    "nl": "Header icons",
+    "pt": "Header icons",
+    "ru": "Header icons",
+    "el": "Header icons",
+    "zh": "Header icons",
+    "ro": "Header icons"
   },
   {
     "es": "Imagen personalizada",
@@ -4149,7 +7037,12 @@
     "de": "Custom image",
     "fr": "Custom image",
     "it": "Custom image",
-    "nl": "Custom image"
+    "nl": "Custom image",
+    "pt": "Custom image",
+    "ru": "Custom image",
+    "el": "Custom image",
+    "zh": "Custom image",
+    "ro": "Custom image"
   },
   {
     "es": "Info secundaria",
@@ -4157,7 +7050,12 @@
     "de": "Secondary info",
     "fr": "Secondary info",
     "it": "Secondary info",
-    "nl": "Secondary info"
+    "nl": "Secondary info",
+    "pt": "Secondary info",
+    "ru": "Secondary info",
+    "el": "Secondary info",
+    "zh": "Secondary info",
+    "ro": "Secondary info"
   },
   {
     "es": "Items del menu derecho (JSON)",
@@ -4165,7 +7063,12 @@
     "de": "Right menu items (JSON)",
     "fr": "Right menu items (JSON)",
     "it": "Right menu items (JSON)",
-    "nl": "Right menu items (JSON)"
+    "nl": "Right menu items (JSON)",
+    "pt": "Right menu items (JSON)",
+    "ru": "Right menu items (JSON)",
+    "el": "Right menu items (JSON)",
+    "zh": "Right menu items (JSON)",
+    "ro": "Right menu items (JSON)"
   },
   {
     "es": "Lineas a cero",
@@ -4173,7 +7076,12 @@
     "de": "Lines to zero",
     "fr": "Lines to zero",
     "it": "Lines to zero",
-    "nl": "Lines to zero"
+    "nl": "Lines to zero",
+    "pt": "Lines to zero",
+    "ru": "Lines to zero",
+    "el": "Lines to zero",
+    "zh": "Lines to zero",
+    "ro": "Lines to zero"
   },
   {
     "es": "Mapa bloqueado",
@@ -4181,7 +7089,12 @@
     "de": "Map locked",
     "fr": "Map locked",
     "it": "Map locked",
-    "nl": "Map locked"
+    "nl": "Map locked",
+    "pt": "Map locked",
+    "ru": "Map locked",
+    "el": "Map locked",
+    "zh": "Map locked",
+    "ro": "Map locked"
   },
   {
     "es": "Margen lateral",
@@ -4189,7 +7102,12 @@
     "de": "Side margin",
     "fr": "Side margin",
     "it": "Side margin",
-    "nl": "Side margin"
+    "nl": "Side margin",
+    "pt": "Side margin",
+    "ru": "Side margin",
+    "el": "Side margin",
+    "zh": "Side margin",
+    "ro": "Side margin"
   },
   {
     "es": "Max repeticiones",
@@ -4197,7 +7115,12 @@
     "de": "Max repeats",
     "fr": "Max repeats",
     "it": "Max repeats",
-    "nl": "Max repeats"
+    "nl": "Max repeats",
+    "pt": "Max repeats",
+    "ru": "Max repeats",
+    "el": "Max repeats",
+    "zh": "Max repeats",
+    "ro": "Max repeats"
   },
   {
     "es": "Max zonas",
@@ -4205,7 +7128,12 @@
     "de": "Max zones",
     "fr": "Max zones",
     "it": "Max zones",
-    "nl": "Max zones"
+    "nl": "Max zones",
+    "pt": "Max zones",
+    "ru": "Max zones",
+    "el": "Max zones",
+    "zh": "Max zones",
+    "ro": "Max zones"
   },
   {
     "es": "Maximo",
@@ -4213,7 +7141,12 @@
     "de": "Maximum",
     "fr": "Maximum",
     "it": "Maximum",
-    "nl": "Maximum"
+    "nl": "Maximum",
+    "pt": "Maximum",
+    "ru": "Maximum",
+    "el": "Maximum",
+    "zh": "Maximum",
+    "ro": "Maximum"
   },
   {
     "es": "Minimo",
@@ -4221,7 +7154,12 @@
     "de": "Minimum",
     "fr": "Minimum",
     "it": "Minimum",
-    "nl": "Minimum"
+    "nl": "Minimum",
+    "pt": "Minimum",
+    "ru": "Minimum",
+    "el": "Minimum",
+    "zh": "Minimum",
+    "ro": "Minimum"
   },
   {
     "es": "Modo TV / Apple TV",
@@ -4229,7 +7167,12 @@
     "de": "TV / Apple TV mode",
     "fr": "TV / Apple TV mode",
     "it": "TV / Apple TV mode",
-    "nl": "TV / Apple TV mode"
+    "nl": "TV / Apple TV mode",
+    "pt": "TV / Apple TV mode",
+    "ru": "TV / Apple TV mode",
+    "el": "TV / Apple TV mode",
+    "zh": "TV / Apple TV mode",
+    "ro": "TV / Apple TV mode"
   },
   {
     "es": "Modo habitaciones",
@@ -4237,7 +7180,12 @@
     "de": "Rooms mode",
     "fr": "Rooms mode",
     "it": "Rooms mode",
-    "nl": "Rooms mode"
+    "nl": "Rooms mode",
+    "pt": "Rooms mode",
+    "ru": "Rooms mode",
+    "el": "Rooms mode",
+    "zh": "Rooms mode",
+    "ro": "Rooms mode"
   },
   {
     "es": "Modo ir a punto",
@@ -4245,7 +7193,12 @@
     "de": "Go-to-point mode",
     "fr": "Go-to-point mode",
     "it": "Go-to-point mode",
-    "nl": "Go-to-point mode"
+    "nl": "Go-to-point mode",
+    "pt": "Go-to-point mode",
+    "ru": "Go-to-point mode",
+    "el": "Go-to-point mode",
+    "zh": "Go-to-point mode",
+    "ro": "Go-to-point mode"
   },
   {
     "es": "Modo todo",
@@ -4253,7 +7206,12 @@
     "de": "All mode",
     "fr": "All mode",
     "it": "All mode",
-    "nl": "All mode"
+    "nl": "All mode",
+    "pt": "All mode",
+    "ru": "All mode",
+    "el": "All mode",
+    "zh": "All mode",
+    "ro": "All mode"
   },
   {
     "es": "Modo zona",
@@ -4261,7 +7219,12 @@
     "de": "Zone mode",
     "fr": "Zone mode",
     "it": "Zone mode",
-    "nl": "Zone mode"
+    "nl": "Zone mode",
+    "pt": "Zone mode",
+    "ru": "Zone mode",
+    "el": "Zone mode",
+    "zh": "Zone mode",
+    "ro": "Zone mode"
   },
   {
     "es": "Modos rápidos de potencia",
@@ -4269,7 +7232,12 @@
     "de": "Quick power presets",
     "fr": "Quick power presets",
     "it": "Quick power presets",
-    "nl": "Quick power presets"
+    "nl": "Quick power presets",
+    "pt": "Quick power presets",
+    "ru": "Quick power presets",
+    "el": "Quick power presets",
+    "zh": "Quick power presets",
+    "ro": "Quick power presets"
   },
   {
     "es": "Mostrar ausente",
@@ -4277,7 +7245,12 @@
     "de": "Anzeigen: away",
     "fr": "Afficher Absent",
     "it": "Mostra away",
-    "nl": "Toon away"
+    "nl": "Toon away",
+    "pt": "Mostrar ausente",
+    "ru": "Показать режим «Не дома»",
+    "el": "Εμφάνιση «Δεν είναι στο σπίτι»",
+    "zh": "显示离家",
+    "ro": "Afișează plecat"
   },
   {
     "es": "Mostrar badge de no disponible",
@@ -4285,7 +7258,12 @@
     "de": "Abzeichen „Nicht verfügbar“ anzeigen",
     "fr": "Afficher le badge indisponible",
     "it": "Mostra badge non disponibile",
-    "nl": "Toon niet-beschikbaar-badge"
+    "nl": "Toon niet-beschikbaar-badge",
+    "pt": "Mostrar distintivo indisponível",
+    "ru": "Показать значок недоступности",
+    "el": "Εμφάνιση σήματος μη διαθεσιμότητας",
+    "zh": "显示不可用标记",
+    "ro": "Afișează insignă indisponibil"
   },
   {
     "es": "Mostrar badge de zona",
@@ -4293,7 +7271,12 @@
     "de": "Anzeigen: zone badge",
     "fr": "Afficher le badge de zone",
     "it": "Mostra zone badge",
-    "nl": "Toon zone badge"
+    "nl": "Toon zone badge",
+    "pt": "Mostrar distintivo de zona",
+    "ru": "Показать значок зоны",
+    "el": "Εμφάνιση σήμα ζώνης",
+    "zh": "显示区域标记",
+    "ro": "Afișează insignă zonă"
   },
   {
     "es": "Mostrar boton energia",
@@ -4301,7 +7284,12 @@
     "de": "Anzeigen: energy button",
     "fr": "Afficher le bouton énergie",
     "it": "Mostra energy button",
-    "nl": "Toon energy button"
+    "nl": "Toon energy button",
+    "pt": "Mostrar botão de energia",
+    "ru": "Показать кнопку энергии",
+    "el": "Εμφάνιση κουμπιού ενέργειας",
+    "zh": "显示能源按钮",
+    "ro": "Afișează butonul de energie"
   },
   {
     "es": "Mostrar botones +/-",
@@ -4309,7 +7297,12 @@
     "de": "Mostrar botones +/-",
     "fr": "Mostrar botones +/-",
     "it": "Mostrar botones +/-",
-    "nl": "Mostrar botones +/-"
+    "nl": "Mostrar botones +/-",
+    "pt": "Mostrar botones +/-",
+    "ru": "Mostrar botones +/-",
+    "el": "Mostrar botones +/-",
+    "zh": "Mostrar botones +/-",
+    "ro": "Mostrar botones +/-"
   },
   {
     "es": "Mostrar botones de modo",
@@ -4317,7 +7310,12 @@
     "de": "Modus-Tasten anzeigen",
     "fr": "Afficher les boutons de mode",
     "it": "Mostra pulsanti modalità",
-    "nl": "Toon modusknoppen"
+    "nl": "Toon modusknoppen",
+    "pt": "Mostrar botões de modo",
+    "ru": "Показать кнопки режима",
+    "el": "Εμφάνιση κουμπιών λειτουργίας",
+    "zh": "显示模式按钮",
+    "ro": "Afișează butoane mod"
   },
   {
     "es": "Mostrar botón de modo",
@@ -4325,7 +7323,12 @@
     "de": "Anzeigen: mode button",
     "fr": "Afficher le bouton de mode",
     "it": "Mostra mode button",
-    "nl": "Toon mode button"
+    "nl": "Toon mode button",
+    "pt": "Mostrar botão de modo",
+    "ru": "Показать кнопку режима",
+    "el": "Εμφάνιση κουμπί λειτουργίας",
+    "zh": "显示模式按钮",
+    "ro": "Afișează buton mod"
   },
   {
     "es": "Mostrar botón de oscilación",
@@ -4333,7 +7336,12 @@
     "de": "Anzeigen: oscillate button",
     "fr": "Afficher le bouton oscillation",
     "it": "Mostra oscillate button",
-    "nl": "Toon oscillate button"
+    "nl": "Toon oscillate button",
+    "pt": "Mostrar botão oscilar",
+    "ru": "Показать кнопку качания",
+    "el": "Εμφάνιση κουμπί ταλάντευσης",
+    "zh": "显示摆动按钮",
+    "ro": "Afișează buton oscilație"
   },
   {
     "es": "Mostrar botón de ventilación",
@@ -4341,7 +7349,12 @@
     "de": "Anzeigen: fan mode button",
     "fr": "Afficher le bouton mode ventilateur",
     "it": "Mostra fan mode button",
-    "nl": "Toon fan mode button"
+    "nl": "Toon fan mode button",
+    "pt": "Mostrar botão do modo ventilador",
+    "ru": "Показать кнопку режима вентилятора",
+    "el": "Εμφάνιση κουμπί λειτουργίας ανεμιστήρα",
+    "zh": "显示风扇模式按钮",
+    "ro": "Afișează buton mod ventilator"
   },
   {
     "es": "Mostrar brillo",
@@ -4349,7 +7362,12 @@
     "de": "Anzeigen: brightness",
     "fr": "Afficher la luminosité",
     "it": "Mostra brightness",
-    "nl": "Toon brightness"
+    "nl": "Toon brightness",
+    "pt": "Mostrar brilho",
+    "ru": "Показать яркость",
+    "el": "Εμφάνιση φωτεινότητας",
+    "zh": "显示亮度",
+    "ro": "Afișează luminozitatea"
   },
   {
     "es": "Mostrar burbuja de estado",
@@ -4357,7 +7375,12 @@
     "de": "Statusblase anzeigen",
     "fr": "Afficher la bulle d’état",
     "it": "Mostra bolla di stato",
-    "nl": "Statusbel tonen"
+    "nl": "Statusbel tonen",
+    "pt": "Mostrar bolha de estado",
+    "ru": "Показать пузырёк состояния",
+    "el": "Εμφάνιση φυσαλίδας κατάστασης",
+    "zh": "显示状态气泡",
+    "ro": "Afișează bula de stare"
   },
   {
     "es": "Mostrar cabecera",
@@ -4365,7 +7388,12 @@
     "de": "Anzeigen: header",
     "fr": "Afficher l’en-tête",
     "it": "Mostra header",
-    "nl": "Toon header"
+    "nl": "Toon header",
+    "pt": "Mostrar cabeçalho",
+    "ru": "Показать заголовок",
+    "el": "Εμφάνιση κεφαλίδας",
+    "zh": "显示标题栏",
+    "ro": "Afișează antet"
   },
   {
     "es": "Mostrar chip Meteoalarm",
@@ -4373,7 +7401,12 @@
     "de": "Anzeigen: Meteoalarm chip",
     "fr": "Afficher la puce Meteoalarm",
     "it": "Mostra Meteoalarm chip",
-    "nl": "Toon Meteoalarm chip"
+    "nl": "Toon Meteoalarm chip",
+    "pt": "Mostrar chip Meteoalarm",
+    "ru": "Показать чип Meteoalarm",
+    "el": "Εμφάνιση chip Meteoalarm",
+    "zh": "显示Meteoalarm 芯片",
+    "ro": "Afișează chip Meteoalarm"
   },
   {
     "es": "Mostrar chip de estado",
@@ -4381,15 +7414,25 @@
     "de": "Status-Chip anzeigen",
     "fr": "Afficher la puce d’état",
     "it": "Mostra chip di stato",
-    "nl": "Toon statuschip"
+    "nl": "Toon statuschip",
+    "pt": "Mostrar chip de estado",
+    "ru": "Показать чип состояния",
+    "el": "Εμφάνιση chip κατάστασης",
+    "zh": "显示状态芯片",
+    "ro": "Afișează chip stare"
   },
   {
     "es": "Mostrar chip de humedad",
     "en": "Show humidity chip",
     "de": "Feuchtigkeits-Chip anzeigen",
-    "fr": "Afficher la puce humidité",
+    "fr": "Afficher l’humidité",
     "it": "Mostra chip umidità",
-    "nl": "Toon vochtigheidschip"
+    "nl": "Toon vochtigheidschip",
+    "pt": "Mostrar chip de humidade",
+    "ru": "Показать чип влажности",
+    "el": "Εμφάνιση chip υγρασίας",
+    "zh": "显示湿度芯片",
+    "ro": "Afișează chip umiditate"
   },
   {
     "es": "Mostrar chip de humedad objetivo",
@@ -4397,7 +7440,12 @@
     "de": "Anzeigen: target humidity chip",
     "fr": "Afficher la puce humidité cible",
     "it": "Mostra target humidity chip",
-    "nl": "Toon target humidity chip"
+    "nl": "Toon target humidity chip",
+    "pt": "Mostrar chip da humidade alvo",
+    "ru": "Показать чип целевой влажности",
+    "el": "Εμφάνιση chip στόχου υγρασίας",
+    "zh": "显示目标湿度芯片",
+    "ro": "Afișează chip umiditate țintă"
   },
   {
     "es": "Mostrar chip de modo",
@@ -4405,7 +7453,12 @@
     "de": "Anzeigen: mode chip",
     "fr": "Afficher la puce de mode",
     "it": "Mostra mode chip",
-    "nl": "Toon mode chip"
+    "nl": "Toon mode chip",
+    "pt": "Mostrar chip de modo",
+    "ru": "Показать чип режима",
+    "el": "Εμφάνιση chip λειτουργίας",
+    "zh": "显示模式芯片",
+    "ro": "Afișează chip mod"
   },
   {
     "es": "Mostrar chip de porcentaje",
@@ -4413,7 +7466,12 @@
     "de": "Anzeigen: percentage chip",
     "fr": "Afficher la puce pourcentage",
     "it": "Mostra percentage chip",
-    "nl": "Toon percentage chip"
+    "nl": "Toon percentage chip",
+    "pt": "Mostrar chip de percentagem",
+    "ru": "Показать чип процента",
+    "el": "Εμφάνιση chip ποσοστού",
+    "zh": "显示百分比芯片",
+    "ro": "Afișează chip procent"
   },
   {
     "es": "Mostrar chip de temperatura actual",
@@ -4421,7 +7479,12 @@
     "de": "Aktuelle Temperatur anzeigen",
     "fr": "Afficher la température actuelle",
     "it": "Mostra chip temperatura attuale",
-    "nl": "Toon huidige temperatuur"
+    "nl": "Toon huidige temperatuur",
+    "pt": "Mostrar temperatura atual",
+    "ru": "Показать текущую температуру",
+    "el": "Εμφάνιση τρέχουσας θερμοκρασίας",
+    "zh": "显示当前温度",
+    "ro": "Afișează temperatura curentă"
   },
   {
     "es": "Mostrar chip de velocidad",
@@ -4429,7 +7492,12 @@
     "de": "Anzeigen: speed chip",
     "fr": "Afficher la puce vitesse",
     "it": "Mostra speed chip",
-    "nl": "Toon speed chip"
+    "nl": "Toon speed chip",
+    "pt": "Mostrar chip de velocidade",
+    "ru": "Показать чип скорости",
+    "el": "Εμφάνιση chip ταχύτητας",
+    "zh": "显示速度芯片",
+    "ro": "Afișează chip viteză"
   },
   {
     "es": "Mostrar chip de ventilación",
@@ -4437,15 +7505,25 @@
     "de": "Anzeigen: fan chip",
     "fr": "Afficher la puce ventilateur",
     "it": "Mostra fan chip",
-    "nl": "Toon fan chip"
+    "nl": "Toon fan chip",
+    "pt": "Mostrar chip do ventilador",
+    "ru": "Показать чип вентилятора",
+    "el": "Εμφάνιση chip ανεμιστήρα",
+    "zh": "显示风扇芯片",
+    "ro": "Afișează chip ventilator"
   },
   {
     "es": "Mostrar chip humedad",
     "en": "Show humidity chip",
     "de": "Feuchtigkeits-Chip anzeigen",
-    "fr": "Afficher la puce humidité",
+    "fr": "Afficher l’humidité",
     "it": "Mostra chip umidità",
-    "nl": "Toon vochtigheidschip"
+    "nl": "Toon vochtigheidschip",
+    "pt": "Mostrar chip de humidade",
+    "ru": "Показать чип влажности",
+    "el": "Εμφάνιση chip υγρασίας",
+    "zh": "显示湿度芯片",
+    "ro": "Afișează chip umiditate"
   },
   {
     "es": "Mostrar chip presion",
@@ -4453,7 +7531,12 @@
     "de": "Anzeigen: pressure chip",
     "fr": "Afficher la puce pression",
     "it": "Mostra pressure chip",
-    "nl": "Toon pressure chip"
+    "nl": "Toon pressure chip",
+    "pt": "Mostrar chip de pressão",
+    "ru": "Показать чип давления",
+    "el": "Εμφάνιση chip πίεσης",
+    "zh": "显示气压芯片",
+    "ro": "Afișează chip presiune"
   },
   {
     "es": "Mostrar chip principal",
@@ -4461,7 +7544,12 @@
     "de": "Anzeigen: primary chip",
     "fr": "Afficher la puce principale",
     "it": "Mostra primary chip",
-    "nl": "Toon primary chip"
+    "nl": "Toon primary chip",
+    "pt": "Mostrar chip principal",
+    "ru": "Показать основной чип",
+    "el": "Εμφάνιση κύριο chip",
+    "zh": "显示主芯片",
+    "ro": "Afișează chip principal"
   },
   {
     "es": "Mostrar chip secundario",
@@ -4469,7 +7557,12 @@
     "de": "Anzeigen: secondary chip",
     "fr": "Afficher la puce secondaire",
     "it": "Mostra secondary chip",
-    "nl": "Toon secondary chip"
+    "nl": "Toon secondary chip",
+    "pt": "Mostrar chip secundário",
+    "ru": "Показать вторичный чип",
+    "el": "Εμφάνιση δευτερεύον chip",
+    "zh": "显示副芯片",
+    "ro": "Afișează chip secundar"
   },
   {
     "es": "Mostrar chip viento",
@@ -4477,7 +7570,12 @@
     "de": "Anzeigen: wind chip",
     "fr": "Afficher la puce vent",
     "it": "Mostra wind chip",
-    "nl": "Toon wind chip"
+    "nl": "Toon wind chip",
+    "pt": "Mostrar chip do vento",
+    "ru": "Показать чип ветра",
+    "el": "Εμφάνιση chip ανέμου",
+    "zh": "显示风力芯片",
+    "ro": "Afișează chip vânt"
   },
   {
     "es": "Mostrar condicion",
@@ -4485,7 +7583,12 @@
     "de": "Vorhersage anzeigen",
     "fr": "Afficher la condition",
     "it": "Mostra condizione",
-    "nl": "Conditie tonen"
+    "nl": "Conditie tonen",
+    "pt": "Mostrar condição",
+    "ru": "Показать состояние",
+    "el": "Εμφάνιση κατάστασης",
+    "zh": "显示天气状况",
+    "ro": "Afișează condiția"
   },
   {
     "es": "Mostrar control deslizante",
@@ -4493,7 +7596,12 @@
     "de": "Anzeigen: slider",
     "fr": "Afficher le curseur",
     "it": "Mostra slider",
-    "nl": "Toon slider"
+    "nl": "Toon slider",
+    "pt": "Mostrar slider",
+    "ru": "Показать ползунок",
+    "el": "Εμφάνιση ολισθητήρα",
+    "zh": "显示滑块",
+    "ro": "Afișează slider"
   },
   {
     "es": "Mostrar cuadro de texto del PIN",
@@ -4501,7 +7609,12 @@
     "de": "Anzeigen: PIN text field",
     "fr": "Afficher le champ PIN",
     "it": "Mostra PIN text field",
-    "nl": "Toon PIN text field"
+    "nl": "Toon PIN text field",
+    "pt": "Mostrar campo PIN",
+    "ru": "Показать поле PIN",
+    "el": "Εμφάνιση πεδίου PIN",
+    "zh": "显示PIN 输入框",
+    "ro": "Afișează câmp PIN"
   },
   {
     "es": "Mostrar desarmar",
@@ -4509,7 +7622,12 @@
     "de": "Anzeigen: disarm",
     "fr": "Afficher Désarmer",
     "it": "Mostra disarm",
-    "nl": "Toon disarm"
+    "nl": "Toon disarm",
+    "pt": "Mostrar desarmar",
+    "ru": "Показать снять с охраны",
+    "el": "Εμφάνιση αφόπλιση",
+    "zh": "显示撤防",
+    "ro": "Afișează dezarmare"
   },
   {
     "es": "Mostrar en casa",
@@ -4517,7 +7635,12 @@
     "de": "Anzeigen: home",
     "fr": "Afficher Domicile",
     "it": "Mostra home",
-    "nl": "Toon home"
+    "nl": "Toon home",
+    "pt": "Mostrar em casa",
+    "ru": "Показать дома",
+    "el": "Εμφάνιση «Σπίτι»",
+    "zh": "显示在家",
+    "ro": "Afișează acasă"
   },
   {
     "es": "Mostrar en escritorio",
@@ -4525,7 +7648,12 @@
     "de": "Anzeigen: on desktop",
     "fr": "Afficher sur bureau",
     "it": "Mostra on desktop",
-    "nl": "Toon on desktop"
+    "nl": "Toon on desktop",
+    "pt": "Mostrar no ambiente de trabalho",
+    "ru": "Показать на компьютере",
+    "el": "Εμφάνιση στην επιφάνεια εργασίας",
+    "zh": "显示在桌面端",
+    "ro": "Afișează pe desktop"
   },
   {
     "es": "Mostrar estado",
@@ -4533,7 +7661,12 @@
     "de": "Status anzeigen",
     "fr": "Afficher l’état",
     "it": "Mostra stato",
-    "nl": "Status tonen"
+    "nl": "Status tonen",
+    "pt": "Mostrar estado",
+    "ru": "Показать состояние",
+    "el": "Εμφάνιση κατάστασης",
+    "zh": "显示状态",
+    "ro": "Afișează starea"
   },
   {
     "es": "Mostrar estado actual",
@@ -4541,7 +7674,12 @@
     "de": "Aktuellen Status anzeigen",
     "fr": "Afficher l’état actuel",
     "it": "Mostra stato attuale",
-    "nl": "Huidige status tonen"
+    "nl": "Huidige status tonen",
+    "pt": "Mostrar estado atual",
+    "ru": "Показать текущее состояние",
+    "el": "Εμφάνιση τρέχουσας κατάστασης",
+    "zh": "显示当前状态",
+    "ro": "Afișează starea curentă"
   },
   {
     "es": "Mostrar estado en burbuja",
@@ -4549,7 +7687,12 @@
     "de": "Status in Blase anzeigen",
     "fr": "Afficher l’état dans la bulle",
     "it": "Mostra stato nella bolla",
-    "nl": "Status in bel tonen"
+    "nl": "Status in bel tonen",
+    "pt": "Mostrar estado na bolha",
+    "ru": "Показать состояние в пузырьке",
+    "el": "Εμφάνιση κατάσταση στη φυσαλίδα",
+    "zh": "显示气泡内状态",
+    "ro": "Afișează starea în bulă"
   },
   {
     "es": "Mostrar estado textual",
@@ -4557,7 +7700,12 @@
     "de": "Textstatus anzeigen",
     "fr": "Afficher l’état textuel",
     "it": "Mostra stato testuale",
-    "nl": "Tekststatus tonen"
+    "nl": "Tekststatus tonen",
+    "pt": "Mostrar estado textual",
+    "ru": "Показать текстовое состояние",
+    "el": "Εμφάνιση κειμενικής κατάστασης",
+    "zh": "显示文本状态",
+    "ro": "Afișează stare textuală"
   },
   {
     "es": "Mostrar etiquetas del grafico",
@@ -4565,7 +7713,12 @@
     "de": "Anzeigen: chart labels",
     "fr": "Afficher les étiquettes du graphique",
     "it": "Mostra chart labels",
-    "nl": "Toon chart labels"
+    "nl": "Toon chart labels",
+    "pt": "Mostrar rótulos do gráfico",
+    "ru": "Показать подписи графика",
+    "el": "Εμφάνιση ετικετών γραφήματος",
+    "zh": "显示图表标签",
+    "ro": "Afișează etichetele graficului"
   },
   {
     "es": "Mostrar etiquetas habitaciones",
@@ -4573,7 +7726,12 @@
     "de": "Raumlabels anzeigen",
     "fr": "Afficher les noms des pièces",
     "it": "Mostra etichette stanze",
-    "nl": "Kamerlabels tonen"
+    "nl": "Kamerlabels tonen",
+    "pt": "Mostrar rótulos das divisões",
+    "ru": "Показать подписи комнат",
+    "el": "Εμφάνιση ετικετών δωματίων",
+    "zh": "显示房间标签",
+    "ro": "Afișează etichete camere"
   },
   {
     "es": "Mostrar fuentes y apps",
@@ -4581,7 +7739,12 @@
     "de": "Quellen und Apps anzeigen",
     "fr": "Afficher les sources et les applications",
     "it": "Mostra fonti e app",
-    "nl": "Bronnen en apps tonen"
+    "nl": "Bronnen en apps tonen",
+    "pt": "Mostrar fontes e aplicações",
+    "ru": "Показать источники и приложения",
+    "el": "Εμφάνιση πηγές και εφαρμογές",
+    "zh": "显示来源与应用",
+    "ro": "Afișează surse și aplicații"
   },
   {
     "es": "Mostrar icono",
@@ -4589,7 +7752,12 @@
     "de": "Symbol anzeigen",
     "fr": "Afficher l’icône",
     "it": "Mostra icona",
-    "nl": "Pictogram tonen"
+    "nl": "Pictogram tonen",
+    "pt": "Mostrar ícone",
+    "ru": "Показать значок",
+    "el": "Εμφάνιση εικονιδίου",
+    "zh": "显示图标",
+    "ro": "Afișează pictograma"
   },
   {
     "es": "Mostrar icono inferior",
@@ -4597,7 +7765,12 @@
     "de": "Unteres Symbol anzeigen",
     "fr": "Afficher l’icône inférieure",
     "it": "Mostra icona inferiore",
-    "nl": "Onderste pictogram tonen"
+    "nl": "Onderste pictogram tonen",
+    "pt": "Mostrar ícone inferior",
+    "ru": "Показать нижний значок",
+    "el": "Εμφάνιση κάτω εικονιδίου",
+    "zh": "显示底部图标",
+    "ro": "Afișează pictograma de jos"
   },
   {
     "es": "Mostrar leyenda",
@@ -4605,7 +7778,12 @@
     "de": "Anzeigen: legend",
     "fr": "Afficher la légende",
     "it": "Mostra legend",
-    "nl": "Toon legend"
+    "nl": "Toon legend",
+    "pt": "Mostrar legenda",
+    "ru": "Показать легенду",
+    "el": "Εμφάνιση υπόμνημα",
+    "zh": "显示图例",
+    "ro": "Afișează legenda"
   },
   {
     "es": "Mostrar marcadores habitaciones",
@@ -4613,7 +7791,12 @@
     "de": "Raummarkierungen anzeigen",
     "fr": "Afficher les marqueurs de pièces",
     "it": "Mostra indicatori stanze",
-    "nl": "Kamermarkers tonen"
+    "nl": "Kamermarkers tonen",
+    "pt": "Mostrar marcadores das divisões",
+    "ru": "Показать маркеры комнат",
+    "el": "Εμφάνιση δείκτες δωματίων",
+    "zh": "显示房间标记",
+    "ro": "Afișează markere camere"
   },
   {
     "es": "Mostrar noche",
@@ -4621,7 +7804,12 @@
     "de": "Anzeigen: night",
     "fr": "Afficher Nuit",
     "it": "Mostra night",
-    "nl": "Toon night"
+    "nl": "Toon night",
+    "pt": "Mostrar noite",
+    "ru": "Показать ночь",
+    "el": "Εμφάνιση νύχτα",
+    "zh": "显示夜间",
+    "ro": "Afișează noapte"
   },
   {
     "es": "Mostrar nombre",
@@ -4629,7 +7817,12 @@
     "de": "Anzeigen: name",
     "fr": "Afficher le nom",
     "it": "Mostra name",
-    "nl": "Toon name"
+    "nl": "Toon name",
+    "pt": "Mostrar nome",
+    "ru": "Показать имя",
+    "el": "Εμφάνιση όνομα",
+    "zh": "显示名称",
+    "ro": "Afișează numele"
   },
   {
     "es": "Mostrar nombre en chip",
@@ -4637,7 +7830,12 @@
     "de": "Anzeigen: name in chip",
     "fr": "Afficher le nom dans la puce",
     "it": "Mostra name in chip",
-    "nl": "Toon name in chip"
+    "nl": "Toon name in chip",
+    "pt": "Mostrar nome no chip",
+    "ru": "Показать имя в чипе",
+    "el": "Εμφάνιση όνομα στο chip",
+    "zh": "显示芯片内名称",
+    "ro": "Afișează numele în chip"
   },
   {
     "es": "Mostrar personalizado",
@@ -4645,7 +7843,12 @@
     "de": "Anzeigen: custom",
     "fr": "Afficher Personnalisé",
     "it": "Mostra custom",
-    "nl": "Toon custom"
+    "nl": "Toon custom",
+    "pt": "Mostrar personalizado",
+    "ru": "Показать свой",
+    "el": "Εμφάνιση προσαρμοσμένο",
+    "zh": "显示自定义",
+    "ro": "Afișează personalizat"
   },
   {
     "es": "Mostrar prediccion ampliada",
@@ -4653,7 +7856,12 @@
     "de": "Anzeigen: extended forecast",
     "fr": "Afficher les prévisions étendues",
     "it": "Mostra extended forecast",
-    "nl": "Toon extended forecast"
+    "nl": "Toon extended forecast",
+    "pt": "Mostrar previsão estendida",
+    "ru": "Показать расширенный прогноз",
+    "el": "Εμφάνιση εκτεταμένης πρόγνωσης",
+    "zh": "显示扩展预报",
+    "ro": "Afișează prognoza extinsă"
   },
   {
     "es": "Mostrar presets de modo",
@@ -4661,7 +7869,12 @@
     "de": "Anzeigen: mode presets",
     "fr": "Afficher les préréglages de mode",
     "it": "Mostra mode presets",
-    "nl": "Toon mode presets"
+    "nl": "Toon mode presets",
+    "pt": "Mostrar predefinições de modo",
+    "ru": "Показать пресеты режима",
+    "el": "Εμφάνιση προκαθορισμένων λειτουργιών",
+    "zh": "显示模式预设",
+    "ro": "Afișează preseturi mod"
   },
   {
     "es": "Mostrar rango min/max",
@@ -4669,7 +7882,12 @@
     "de": "Anzeigen: min/max range",
     "fr": "Afficher la plage min/max",
     "it": "Mostra min/max range",
-    "nl": "Toon min/max range"
+    "nl": "Toon min/max range",
+    "pt": "Mostrar intervalo mín/máx",
+    "ru": "Показать диапазон мин/макс",
+    "el": "Εμφάνιση εύρος ελάχ./μέγ.",
+    "zh": "显示最小/最大范围",
+    "ro": "Afișează interval min/max"
   },
   {
     "es": "Mostrar relleno",
@@ -4677,7 +7895,12 @@
     "de": "Anzeigen: fill",
     "fr": "Afficher le remplissage",
     "it": "Mostra fill",
-    "nl": "Toon fill"
+    "nl": "Toon fill",
+    "pt": "Mostrar preenchimento",
+    "ru": "Показать заливку",
+    "el": "Εμφάνιση γεμίσματος",
+    "zh": "显示填充",
+    "ro": "Afișează umplere"
   },
   {
     "es": "Mostrar selector de vista",
@@ -4685,7 +7908,12 @@
     "de": "Anzeigen: view selector",
     "fr": "Afficher le sélecteur de vue",
     "it": "Mostra view selector",
-    "nl": "Toon view selector"
+    "nl": "Toon view selector",
+    "pt": "Mostrar seletor de vista",
+    "ru": "Показать переключатель вида",
+    "el": "Εμφάνιση επιλογέα προβολής",
+    "zh": "显示视图选择器",
+    "ro": "Afișează selector vizualizare"
   },
   {
     "es": "Mostrar slider",
@@ -4693,7 +7921,12 @@
     "de": "Anzeigen: slider",
     "fr": "Afficher le curseur",
     "it": "Mostra slider",
-    "nl": "Toon slider"
+    "nl": "Toon slider",
+    "pt": "Mostrar slider",
+    "ru": "Показать ползунок",
+    "el": "Εμφάνιση ολισθητήρα",
+    "zh": "显示滑块",
+    "ro": "Afișează slider"
   },
   {
     "es": "Mostrar ubicacion",
@@ -4701,7 +7934,12 @@
     "de": "Anzeigen: location",
     "fr": "Afficher la position",
     "it": "Mostra location",
-    "nl": "Toon location"
+    "nl": "Toon location",
+    "pt": "Mostrar localização",
+    "ru": "Показать местоположение",
+    "el": "Εμφάνιση τοποθεσίας",
+    "zh": "显示位置",
+    "ro": "Afișează locația"
   },
   {
     "es": "Mostrar vacaciones",
@@ -4709,7 +7947,12 @@
     "de": "Anzeigen: vacation",
     "fr": "Afficher Vacances",
     "it": "Mostra vacation",
-    "nl": "Toon vacation"
+    "nl": "Toon vacation",
+    "pt": "Mostrar férias",
+    "ru": "Показать отпуск",
+    "el": "Εμφάνιση διακοπές",
+    "zh": "显示度假",
+    "ro": "Afișează vacanță"
   },
   {
     "es": "Mostrar valor",
@@ -4717,7 +7960,12 @@
     "de": "Anzeigen: value",
     "fr": "Afficher la valeur",
     "it": "Mostra value",
-    "nl": "Toon value"
+    "nl": "Toon value",
+    "pt": "Mostrar valor",
+    "ru": "Показать значение",
+    "el": "Εμφάνιση τιμής",
+    "zh": "显示数值",
+    "ro": "Afișează valoarea"
   },
   {
     "es": "Mostrar valor grande",
@@ -4725,7 +7973,12 @@
     "de": "Anzeigen: large value",
     "fr": "Afficher la grande valeur",
     "it": "Mostra large value",
-    "nl": "Toon large value"
+    "nl": "Toon large value",
+    "pt": "Mostrar valor grande",
+    "ru": "Показать крупное значение",
+    "el": "Εμφάνιση μεγάλης τιμής",
+    "zh": "显示大数值",
+    "ro": "Afișează valoarea mare"
   },
   {
     "es": "Máx ancho chip nombre",
@@ -4733,7 +7986,12 @@
     "de": "Max name chip width",
     "fr": "Max name chip width",
     "it": "Max name chip width",
-    "nl": "Max name chip width"
+    "nl": "Max name chip width",
+    "pt": "Max name chip width",
+    "ru": "Max name chip width",
+    "el": "Max name chip width",
+    "zh": "Max name chip width",
+    "ro": "Max name chip width"
   },
   {
     "es": "Máximo de fuentes",
@@ -4741,7 +7999,12 @@
     "de": "Maximum sources",
     "fr": "Maximum sources",
     "it": "Maximum sources",
-    "nl": "Maximum sources"
+    "nl": "Maximum sources",
+    "pt": "Maximum sources",
+    "ru": "Maximum sources",
+    "el": "Maximum sources",
+    "zh": "Maximum sources",
+    "ro": "Maximum sources"
   },
   {
     "es": "Navegador de medios (ms)",
@@ -4749,7 +8012,12 @@
     "de": "Media browser (ms)",
     "fr": "Media browser (ms)",
     "it": "Media browser (ms)",
-    "nl": "Media browser (ms)"
+    "nl": "Media browser (ms)",
+    "pt": "Media browser (ms)",
+    "ru": "Media browser (ms)",
+    "el": "Media browser (ms)",
+    "zh": "Media browser (ms)",
+    "ro": "Media browser (ms)"
   },
   {
     "es": "Nombre",
@@ -4757,7 +8025,12 @@
     "de": "Name",
     "fr": "Nom",
     "it": "Nome",
-    "nl": "Naam"
+    "nl": "Naam",
+    "pt": "Name",
+    "ru": "Name",
+    "el": "Name",
+    "zh": "Name",
+    "ro": "Name"
   },
   {
     "es": "Nombre corto",
@@ -4765,7 +8038,12 @@
     "de": "Short name",
     "fr": "Short name",
     "it": "Short name",
-    "nl": "Short name"
+    "nl": "Short name",
+    "pt": "Short name",
+    "ru": "Short name",
+    "el": "Short name",
+    "zh": "Short name",
+    "ro": "Short name"
   },
   {
     "es": "Nombre visible",
@@ -4773,7 +8051,12 @@
     "de": "Visible name",
     "fr": "Visible name",
     "it": "Visible name",
-    "nl": "Visible name"
+    "nl": "Visible name",
+    "pt": "Visible name",
+    "ru": "Visible name",
+    "el": "Visible name",
+    "zh": "Visible name",
+    "ro": "Visible name"
   },
   {
     "es": "Offset",
@@ -4781,7 +8064,12 @@
     "de": "Offset",
     "fr": "Offset",
     "it": "Offset",
-    "nl": "Offset"
+    "nl": "Offset",
+    "pt": "Offset",
+    "ru": "Offset",
+    "el": "Offset",
+    "zh": "Offset",
+    "ro": "Offset"
   },
   {
     "es": "PIN fijo",
@@ -4789,7 +8077,12 @@
     "de": "Fixed PIN",
     "fr": "Fixed PIN",
     "it": "Fixed PIN",
-    "nl": "Fixed PIN"
+    "nl": "Fixed PIN",
+    "pt": "Fixed PIN",
+    "ru": "Fixed PIN",
+    "el": "Fixed PIN",
+    "zh": "Fixed PIN",
+    "ro": "Fixed PIN"
   },
   {
     "es": "Padding",
@@ -4797,7 +8090,12 @@
     "de": "Innenabstand",
     "fr": "Marge intérieure",
     "it": "Padding",
-    "nl": "Opvulling"
+    "nl": "Opvulling",
+    "pt": "Margem interna",
+    "ru": "Отступ",
+    "el": "Εσωτερικό περιθώριο",
+    "zh": "内边距",
+    "ro": "Umplere"
   },
   {
     "es": "Padding burbuja info",
@@ -4805,7 +8103,12 @@
     "de": "Info bubble Padding",
     "fr": "Info bubble Padding",
     "it": "Info bubble Padding",
-    "nl": "Info bubble Padding"
+    "nl": "Info bubble Padding",
+    "pt": "Info bubble Padding",
+    "ru": "Info bubble Padding",
+    "el": "Info bubble Padding",
+    "zh": "Info bubble Padding",
+    "ro": "Info bubble Padding"
   },
   {
     "es": "Padding chip",
@@ -4813,7 +8116,12 @@
     "de": "Chip Padding",
     "fr": "Chip Padding",
     "it": "Chip Padding",
-    "nl": "Chip Padding"
+    "nl": "Chip Padding",
+    "pt": "Chip Padding",
+    "ru": "Chip Padding",
+    "el": "Chip Padding",
+    "zh": "Chip Padding",
+    "ro": "Chip Padding"
   },
   {
     "es": "Padding chips",
@@ -4821,7 +8129,12 @@
     "de": "Chip Paddings",
     "fr": "Chip Paddings",
     "it": "Chip Paddings",
-    "nl": "Chip Paddings"
+    "nl": "Chip Paddings",
+    "pt": "Chip Paddings",
+    "ru": "Chip Paddings",
+    "el": "Chip Paddings",
+    "zh": "Chip Paddings",
+    "ro": "Chip Paddings"
   },
   {
     "es": "Padding de chips",
@@ -4829,7 +8142,12 @@
     "de": "Chip Padding",
     "fr": "Chip Padding",
     "it": "Chip Padding",
-    "nl": "Chip Padding"
+    "nl": "Chip Padding",
+    "pt": "Chip Padding",
+    "ru": "Chip Padding",
+    "el": "Chip Padding",
+    "zh": "Chip Padding",
+    "ro": "Chip Padding"
   },
   {
     "es": "Padding interior",
@@ -4837,7 +8155,12 @@
     "de": "Inner Padding",
     "fr": "Inner Padding",
     "it": "Inner Padding",
-    "nl": "Inner Padding"
+    "nl": "Inner Padding",
+    "pt": "Inner Padding",
+    "ru": "Inner Padding",
+    "el": "Inner Padding",
+    "zh": "Inner Padding",
+    "ro": "Inner Padding"
   },
   {
     "es": "Padding tarjeta",
@@ -4845,7 +8168,12 @@
     "de": "Card Padding",
     "fr": "Card Padding",
     "it": "Card Padding",
-    "nl": "Card Padding"
+    "nl": "Card Padding",
+    "pt": "Card Padding",
+    "ru": "Card Padding",
+    "el": "Card Padding",
+    "zh": "Card Padding",
+    "ro": "Card Padding"
   },
   {
     "es": "Panel de modos (ms)",
@@ -4853,7 +8181,12 @@
     "de": "Mode panel (ms)",
     "fr": "Mode panel (ms)",
     "it": "Mode panel (ms)",
-    "nl": "Mode panel (ms)"
+    "nl": "Mode panel (ms)",
+    "pt": "Mode panel (ms)",
+    "ru": "Mode panel (ms)",
+    "el": "Mode panel (ms)",
+    "zh": "Mode panel (ms)",
+    "ro": "Mode panel (ms)"
   },
   {
     "es": "Paneles (ms)",
@@ -4861,7 +8194,12 @@
     "de": "Panels (ms)",
     "fr": "Panels (ms)",
     "it": "Panels (ms)",
-    "nl": "Panels (ms)"
+    "nl": "Panels (ms)",
+    "pt": "Panels (ms)",
+    "ru": "Panels (ms)",
+    "el": "Panels (ms)",
+    "zh": "Panels (ms)",
+    "ro": "Panels (ms)"
   },
   {
     "es": "Paneles TV (ms)",
@@ -4869,7 +8207,12 @@
     "de": "TV panels (ms)",
     "fr": "TV panels (ms)",
     "it": "TV panels (ms)",
-    "nl": "TV panels (ms)"
+    "nl": "TV panels (ms)",
+    "pt": "TV panels (ms)",
+    "ru": "TV panels (ms)",
+    "el": "TV panels (ms)",
+    "zh": "TV panels (ms)",
+    "ro": "TV panels (ms)"
   },
   {
     "es": "Plataforma",
@@ -4877,7 +8220,12 @@
     "de": "Platform",
     "fr": "Platform",
     "it": "Platform",
-    "nl": "Platform"
+    "nl": "Platform",
+    "pt": "Platform",
+    "ru": "Platform",
+    "el": "Platform",
+    "zh": "Platform",
+    "ro": "Platform"
   },
   {
     "es": "Presets de brillo",
@@ -4885,7 +8233,12 @@
     "de": "Brightness presets",
     "fr": "Brightness presets",
     "it": "Brightness presets",
-    "nl": "Brightness presets"
+    "nl": "Brightness presets",
+    "pt": "Brightness presets",
+    "ru": "Brightness presets",
+    "el": "Brightness presets",
+    "zh": "Brightness presets",
+    "ro": "Brightness presets"
   },
   {
     "es": "Puntos",
@@ -4893,7 +8246,12 @@
     "de": "Points",
     "fr": "Points",
     "it": "Points",
-    "nl": "Points"
+    "nl": "Points",
+    "pt": "Points",
+    "ru": "Points",
+    "el": "Points",
+    "zh": "Points",
+    "ro": "Points"
   },
   {
     "es": "Radio",
@@ -4901,7 +8259,12 @@
     "de": "Radius",
     "fr": "Radius",
     "it": "Radius",
-    "nl": "Radius"
+    "nl": "Radius",
+    "pt": "Radius",
+    "ru": "Radius",
+    "el": "Radius",
+    "zh": "Radius",
+    "ro": "Radius"
   },
   {
     "es": "Radio borde",
@@ -4909,7 +8272,12 @@
     "de": "Border radius",
     "fr": "Border radius",
     "it": "Border radius",
-    "nl": "Border radius"
+    "nl": "Border radius",
+    "pt": "Border radius",
+    "ru": "Border radius",
+    "el": "Border radius",
+    "zh": "Border radius",
+    "ro": "Border radius"
   },
   {
     "es": "Radio del borde",
@@ -4917,7 +8285,12 @@
     "de": "Border radius",
     "fr": "Border radius",
     "it": "Border radius",
-    "nl": "Border radius"
+    "nl": "Border radius",
+    "pt": "Border radius",
+    "ru": "Border radius",
+    "el": "Border radius",
+    "zh": "Border radius",
+    "ro": "Border radius"
   },
   {
     "es": "Radio del navegador",
@@ -4925,7 +8298,12 @@
     "de": "Browser radius",
     "fr": "Browser radius",
     "it": "Browser radius",
-    "nl": "Browser radius"
+    "nl": "Browser radius",
+    "pt": "Browser radius",
+    "ru": "Browser radius",
+    "el": "Browser radius",
+    "zh": "Browser radius",
+    "ro": "Browser radius"
   },
   {
     "es": "Radius",
@@ -4933,7 +8311,12 @@
     "de": "Radius",
     "fr": "Radius",
     "it": "Radius",
-    "nl": "Radius"
+    "nl": "Radius",
+    "pt": "Radius",
+    "ru": "Radius",
+    "el": "Radius",
+    "zh": "Radius",
+    "ro": "Radius"
   },
   {
     "es": "Radius mapa",
@@ -4941,7 +8324,12 @@
     "de": "Map radius",
     "fr": "Map radius",
     "it": "Map radius",
-    "nl": "Map radius"
+    "nl": "Map radius",
+    "pt": "Map radius",
+    "ru": "Map radius",
+    "el": "Map radius",
+    "zh": "Map radius",
+    "ro": "Map radius"
   },
   {
     "es": "Rebote botones (ms)",
@@ -4949,7 +8337,12 @@
     "de": "Button bounce (ms)",
     "fr": "Button bounce (ms)",
     "it": "Button bounce (ms)",
-    "nl": "Button bounce (ms)"
+    "nl": "Button bounce (ms)",
+    "pt": "Button bounce (ms)",
+    "ru": "Button bounce (ms)",
+    "el": "Button bounce (ms)",
+    "zh": "Button bounce (ms)",
+    "ro": "Button bounce (ms)"
   },
   {
     "es": "Rebote de botones (ms)",
@@ -4957,7 +8350,12 @@
     "de": "Button bounce (ms)",
     "fr": "Button bounce (ms)",
     "it": "Button bounce (ms)",
-    "nl": "Button bounce (ms)"
+    "nl": "Button bounce (ms)",
+    "pt": "Button bounce (ms)",
+    "ru": "Button bounce (ms)",
+    "el": "Button bounce (ms)",
+    "zh": "Button bounce (ms)",
+    "ro": "Button bounce (ms)"
   },
   {
     "es": "Rebote de chips (ms)",
@@ -4965,7 +8363,12 @@
     "de": "Chip bounce (ms)",
     "fr": "Chip bounce (ms)",
     "it": "Chip bounce (ms)",
-    "nl": "Chip bounce (ms)"
+    "nl": "Chip bounce (ms)",
+    "pt": "Chip bounce (ms)",
+    "ru": "Chip bounce (ms)",
+    "el": "Chip bounce (ms)",
+    "zh": "Chip bounce (ms)",
+    "ro": "Chip bounce (ms)"
   },
   {
     "es": "Rebote pulsacion (ms)",
@@ -4973,7 +8376,12 @@
     "de": "Tipp-Feder (ms)",
     "fr": "Rebond au toucher (ms)",
     "it": "Rimbalzo tap (ms)",
-    "nl": "Tik-veer (ms)"
+    "nl": "Tik-veer (ms)",
+    "pt": "Salto ao toque (ms)",
+    "ru": "Отскок при нажатии (мс)",
+    "el": "Αναπήδηση πατήματος (ms)",
+    "zh": "点击弹跳（毫秒）",
+    "ro": "Săritură la atingere (ms)"
   },
   {
     "es": "Rebote pulsación (ms)",
@@ -4981,7 +8389,12 @@
     "de": "Tipp-Feder (ms)",
     "fr": "Rebond au toucher (ms)",
     "it": "Rimbalzo tap (ms)",
-    "nl": "Tik-veer (ms)"
+    "nl": "Tik-veer (ms)",
+    "pt": "Salto ao toque (ms)",
+    "ru": "Отскок при нажатии (мс)",
+    "el": "Αναπήδηση πατήματος (ms)",
+    "zh": "点击弹跳（毫秒）",
+    "ro": "Săritură la atingere (ms)"
   },
   {
     "es": "Rebote tap (ms)",
@@ -4989,7 +8402,12 @@
     "de": "Tipp-Feder (ms)",
     "fr": "Rebond au toucher (ms)",
     "it": "Rimbalzo tap (ms)",
-    "nl": "Tik-veer (ms)"
+    "nl": "Tik-veer (ms)",
+    "pt": "Salto ao toque (ms)",
+    "ru": "Отскок при нажатии (мс)",
+    "el": "Αναπήδηση πατήματος (ms)",
+    "zh": "点击弹跳（毫秒）",
+    "ro": "Săritură la atingere (ms)"
   },
   {
     "es": "Relleno burbuja informativa",
@@ -4997,7 +8415,12 @@
     "de": "Info bubble padding",
     "fr": "Info bubble padding",
     "it": "Info bubble padding",
-    "nl": "Info bubble padding"
+    "nl": "Info bubble padding",
+    "pt": "Info bubble padding",
+    "ru": "Info bubble padding",
+    "el": "Info bubble padding",
+    "zh": "Info bubble padding",
+    "ro": "Info bubble padding"
   },
   {
     "es": "Relleno chips",
@@ -5005,7 +8428,12 @@
     "de": "Chip padding",
     "fr": "Chip padding",
     "it": "Chip padding",
-    "nl": "Chip padding"
+    "nl": "Chip padding",
+    "pt": "Chip padding",
+    "ru": "Chip padding",
+    "el": "Chip padding",
+    "zh": "Chip padding",
+    "ro": "Chip padding"
   },
   {
     "es": "Relleno interior",
@@ -5013,7 +8441,12 @@
     "de": "Inner padding",
     "fr": "Inner padding",
     "it": "Inner padding",
-    "nl": "Inner padding"
+    "nl": "Inner padding",
+    "pt": "Inner padding",
+    "ru": "Inner padding",
+    "el": "Inner padding",
+    "zh": "Inner padding",
+    "ro": "Inner padding"
   },
   {
     "es": "Reservar espacio",
@@ -5021,7 +8454,12 @@
     "de": "Reserve space",
     "fr": "Reserve space",
     "it": "Reserve space",
-    "nl": "Reserve space"
+    "nl": "Reserve space",
+    "pt": "Reserve space",
+    "ru": "Reserve space",
+    "el": "Reserve space",
+    "zh": "Reserve space",
+    "ro": "Reserve space"
   },
   {
     "es": "Rows de grid",
@@ -5029,7 +8467,12 @@
     "de": "Grid rows",
     "fr": "Grid rows",
     "it": "Grid rows",
-    "nl": "Grid rows"
+    "nl": "Grid rows",
+    "pt": "Grid rows",
+    "ru": "Grid rows",
+    "el": "Grid rows",
+    "zh": "Grid rows",
+    "ro": "Grid rows"
   },
   {
     "es": "Ruta de medios",
@@ -5037,7 +8480,12 @@
     "de": "Media path",
     "fr": "Media path",
     "it": "Media path",
-    "nl": "Media path"
+    "nl": "Media path",
+    "pt": "Media path",
+    "ru": "Media path",
+    "el": "Media path",
+    "zh": "Media path",
+    "ro": "Media path"
   },
   {
     "es": "Ruta de navegación",
@@ -5045,7 +8493,12 @@
     "de": "Navigation path",
     "fr": "Navigation path",
     "it": "Navigation path",
-    "nl": "Navigation path"
+    "nl": "Navigation path",
+    "pt": "Navigation path",
+    "ru": "Navigation path",
+    "el": "Navigation path",
+    "zh": "Navigation path",
+    "ro": "Navigation path"
   },
   {
     "es": "Rutinas (JSON)",
@@ -5053,7 +8506,12 @@
     "de": "Routines (JSON)",
     "fr": "Routines (JSON)",
     "it": "Routines (JSON)",
-    "nl": "Routines (JSON)"
+    "nl": "Routines (JSON)",
+    "pt": "Routines (JSON)",
+    "ru": "Routines (JSON)",
+    "el": "Routines (JSON)",
+    "zh": "Routines (JSON)",
+    "ro": "Routines (JSON)"
   },
   {
     "es": "Select aspirado",
@@ -5061,7 +8519,12 @@
     "de": "Suction select",
     "fr": "Suction select",
     "it": "Suction select",
-    "nl": "Suction select"
+    "nl": "Suction select",
+    "pt": "Suction select",
+    "ru": "Suction select",
+    "el": "Suction select",
+    "zh": "Suction select",
+    "ro": "Suction select"
   },
   {
     "es": "Select fregado",
@@ -5069,7 +8532,12 @@
     "de": "Mop select",
     "fr": "Mop select",
     "it": "Mop select",
-    "nl": "Mop select"
+    "nl": "Mop select",
+    "pt": "Mop select",
+    "ru": "Mop select",
+    "el": "Mop select",
+    "zh": "Mop select",
+    "ro": "Mop select"
   },
   {
     "es": "Select modo mopa",
@@ -5077,7 +8545,12 @@
     "de": "Mop mode select",
     "fr": "Mop mode select",
     "it": "Mop mode select",
-    "nl": "Mop mode select"
+    "nl": "Mop mode select",
+    "pt": "Mop mode select",
+    "ru": "Mop mode select",
+    "el": "Mop mode select",
+    "zh": "Mop mode select",
+    "ro": "Mop mode select"
   },
   {
     "es": "Selector de aspirado",
@@ -5085,7 +8558,12 @@
     "de": "Suction selector",
     "fr": "Suction selector",
     "it": "Suction selector",
-    "nl": "Suction selector"
+    "nl": "Suction selector",
+    "pt": "Suction selector",
+    "ru": "Suction selector",
+    "el": "Suction selector",
+    "zh": "Suction selector",
+    "ro": "Suction selector"
   },
   {
     "es": "Selector de fregado",
@@ -5093,7 +8571,12 @@
     "de": "Mop selector",
     "fr": "Mop selector",
     "it": "Mop selector",
-    "nl": "Mop selector"
+    "nl": "Mop selector",
+    "pt": "Mop selector",
+    "ru": "Mop selector",
+    "el": "Mop selector",
+    "zh": "Mop selector",
+    "ro": "Mop selector"
   },
   {
     "es": "Sensor de batería",
@@ -5101,7 +8584,12 @@
     "de": "Battery sensor",
     "fr": "Battery sensor",
     "it": "Battery sensor",
-    "nl": "Battery sensor"
+    "nl": "Battery sensor",
+    "pt": "Battery sensor",
+    "ru": "Battery sensor",
+    "el": "Battery sensor",
+    "zh": "Battery sensor",
+    "ro": "Battery sensor"
   },
   {
     "es": "Sensor de estado",
@@ -5109,7 +8597,12 @@
     "de": "State sensor",
     "fr": "State sensor",
     "it": "State sensor",
-    "nl": "State sensor"
+    "nl": "State sensor",
+    "pt": "State sensor",
+    "ru": "State sensor",
+    "el": "State sensor",
+    "zh": "State sensor",
+    "ro": "State sensor"
   },
   {
     "es": "Sensor de habitaciones",
@@ -5117,7 +8610,12 @@
     "de": "Rooms sensor",
     "fr": "Rooms sensor",
     "it": "Rooms sensor",
-    "nl": "Rooms sensor"
+    "nl": "Rooms sensor",
+    "pt": "Rooms sensor",
+    "ru": "Rooms sensor",
+    "el": "Rooms sensor",
+    "zh": "Rooms sensor",
+    "ro": "Rooms sensor"
   },
   {
     "es": "Separacion",
@@ -5125,7 +8623,12 @@
     "de": "Gap",
     "fr": "Gap",
     "it": "Gap",
-    "nl": "Gap"
+    "nl": "Gap",
+    "pt": "Gap",
+    "ru": "Gap",
+    "el": "Gap",
+    "zh": "Gap",
+    "ro": "Gap"
   },
   {
     "es": "Separacion interna",
@@ -5133,7 +8636,12 @@
     "de": "Inner gap",
     "fr": "Inner gap",
     "it": "Inner gap",
-    "nl": "Inner gap"
+    "nl": "Inner gap",
+    "pt": "Inner gap",
+    "ru": "Inner gap",
+    "el": "Inner gap",
+    "zh": "Inner gap",
+    "ro": "Inner gap"
   },
   {
     "es": "Separación",
@@ -5141,7 +8649,12 @@
     "de": "Gap",
     "fr": "Gap",
     "it": "Gap",
-    "nl": "Gap"
+    "nl": "Gap",
+    "pt": "Gap",
+    "ru": "Gap",
+    "el": "Gap",
+    "zh": "Gap",
+    "ro": "Gap"
   },
   {
     "es": "Separación interna",
@@ -5149,7 +8662,12 @@
     "de": "Inner gap",
     "fr": "Inner gap",
     "it": "Inner gap",
-    "nl": "Inner gap"
+    "nl": "Inner gap",
+    "pt": "Inner gap",
+    "ru": "Inner gap",
+    "el": "Inner gap",
+    "zh": "Inner gap",
+    "ro": "Inner gap"
   },
   {
     "es": "Service data JSON",
@@ -5157,7 +8675,12 @@
     "de": "Service data JSON",
     "fr": "Service data JSON",
     "it": "Service data JSON",
-    "nl": "Service data JSON"
+    "nl": "Service data JSON",
+    "pt": "Service data JSON",
+    "ru": "Service data JSON",
+    "el": "Service data JSON",
+    "zh": "Service data JSON",
+    "ro": "Service data JSON"
   },
   {
     "es": "Servicio",
@@ -5165,7 +8688,12 @@
     "de": "Service",
     "fr": "Service",
     "it": "Service",
-    "nl": "Service"
+    "nl": "Service",
+    "pt": "Service",
+    "ru": "Service",
+    "el": "Service",
+    "zh": "Service",
+    "ro": "Service"
   },
   {
     "es": "Servicio al tocar",
@@ -5173,7 +8701,12 @@
     "de": "Tap service",
     "fr": "Tap service",
     "it": "Tap service",
-    "nl": "Tap service"
+    "nl": "Tap service",
+    "pt": "Tap service",
+    "ru": "Tap service",
+    "el": "Tap service",
+    "zh": "Tap service",
+    "ro": "Tap service"
   },
   {
     "es": "Shadow",
@@ -5181,7 +8714,12 @@
     "de": "Schatten",
     "fr": "Ombre",
     "it": "Ombra",
-    "nl": "Schaduw"
+    "nl": "Schaduw",
+    "pt": "Sombra",
+    "ru": "Тень",
+    "el": "Σκιά",
+    "zh": "阴影",
+    "ro": "Umbră"
   },
   {
     "es": "Sombra",
@@ -5189,7 +8727,12 @@
     "de": "Schatten",
     "fr": "Ombre",
     "it": "Ombra",
-    "nl": "Schaduw"
+    "nl": "Schaduw",
+    "pt": "Sombra",
+    "ru": "Тень",
+    "el": "Σκιά",
+    "zh": "阴影",
+    "ro": "Umbră"
   },
   {
     "es": "Sombra del navegador",
@@ -5197,7 +8740,12 @@
     "de": "Browser shadow",
     "fr": "Browser shadow",
     "it": "Browser shadow",
-    "nl": "Browser shadow"
+    "nl": "Browser shadow",
+    "pt": "Browser shadow",
+    "ru": "Browser shadow",
+    "el": "Browser shadow",
+    "zh": "Browser shadow",
+    "ro": "Browser shadow"
   },
   {
     "es": "Subtítulo fijo",
@@ -5205,7 +8753,12 @@
     "de": "Fixed subtitle",
     "fr": "Fixed subtitle",
     "it": "Fixed subtitle",
-    "nl": "Fixed subtitle"
+    "nl": "Fixed subtitle",
+    "pt": "Fixed subtitle",
+    "ru": "Fixed subtitle",
+    "el": "Fixed subtitle",
+    "zh": "Fixed subtitle",
+    "ro": "Fixed subtitle"
   },
   {
     "es": "Tamano avatar",
@@ -5213,7 +8766,12 @@
     "de": "Avatar size",
     "fr": "Avatar size",
     "it": "Avatar size",
-    "nl": "Avatar size"
+    "nl": "Avatar size",
+    "pt": "Avatar size",
+    "ru": "Avatar size",
+    "el": "Avatar size",
+    "zh": "Avatar size",
+    "ro": "Avatar size"
   },
   {
     "es": "Tamano badge",
@@ -5221,7 +8779,12 @@
     "de": "Badge size",
     "fr": "Badge size",
     "it": "Badge size",
-    "nl": "Badge size"
+    "nl": "Badge size",
+    "pt": "Badge size",
+    "ru": "Badge size",
+    "el": "Badge size",
+    "zh": "Badge size",
+    "ro": "Badge size"
   },
   {
     "es": "Tamano boton +/-",
@@ -5229,7 +8792,12 @@
     "de": "Size boton +/-",
     "fr": "Size boton +/-",
     "it": "Size boton +/-",
-    "nl": "Size boton +/-"
+    "nl": "Size boton +/-",
+    "pt": "Size boton +/-",
+    "ru": "Size boton +/-",
+    "el": "Size boton +/-",
+    "zh": "Size boton +/-",
+    "ro": "Size boton +/-"
   },
   {
     "es": "Tamano boton modo",
@@ -5237,7 +8805,12 @@
     "de": "Mode button size",
     "fr": "Mode button size",
     "it": "Mode button size",
-    "nl": "Mode button size"
+    "nl": "Mode button size",
+    "pt": "Mode button size",
+    "ru": "Mode button size",
+    "el": "Mode button size",
+    "zh": "Mode button size",
+    "ro": "Mode button size"
   },
   {
     "es": "Tamano botones",
@@ -5245,7 +8818,12 @@
     "de": "Button size",
     "fr": "Button size",
     "it": "Button size",
-    "nl": "Button size"
+    "nl": "Button size",
+    "pt": "Button size",
+    "ru": "Button size",
+    "el": "Button size",
+    "zh": "Button size",
+    "ro": "Button size"
   },
   {
     "es": "Tamano burbuja entidad",
@@ -5253,7 +8831,12 @@
     "de": "Größe Entitätsblase",
     "fr": "Taille de la bulle d’entité",
     "it": "Dimensione bolla entità",
-    "nl": "Grootte entiteitsbel"
+    "nl": "Grootte entiteitsbel",
+    "pt": "Tamanho da bolha da entidade",
+    "ru": "Размер пузырька сущности",
+    "el": "Μέγεθος φυσαλίδας οντότητας",
+    "zh": "实体气泡大小",
+    "ro": "Dimensiune bulă entitate"
   },
   {
     "es": "Tamano casa",
@@ -5261,7 +8844,12 @@
     "de": "Home size",
     "fr": "Home size",
     "it": "Home size",
-    "nl": "Home size"
+    "nl": "Home size",
+    "pt": "Home size",
+    "ru": "Home size",
+    "el": "Home size",
+    "zh": "Home size",
+    "ro": "Home size"
   },
   {
     "es": "Tamano chip",
@@ -5269,7 +8857,12 @@
     "de": "Chip size",
     "fr": "Chip size",
     "it": "Chip size",
-    "nl": "Chip size"
+    "nl": "Chip size",
+    "pt": "Chip size",
+    "ru": "Chip size",
+    "el": "Chip size",
+    "zh": "Chip size",
+    "ro": "Chip size"
   },
   {
     "es": "Tamano chips",
@@ -5277,7 +8870,12 @@
     "de": "Chip sizes",
     "fr": "Chip sizes",
     "it": "Chip sizes",
-    "nl": "Chip sizes"
+    "nl": "Chip sizes",
+    "pt": "Chip sizes",
+    "ru": "Chip sizes",
+    "el": "Chip sizes",
+    "zh": "Chip sizes",
+    "ro": "Chip sizes"
   },
   {
     "es": "Tamano condicion",
@@ -5285,7 +8883,12 @@
     "de": "Vorhersage-Größe",
     "fr": "Taille condition",
     "it": "Dimensione condizione",
-    "nl": "Voorwaardegrootte"
+    "nl": "Voorwaardegrootte",
+    "pt": "Tamanho da condição",
+    "ru": "Размер условия",
+    "el": "Μέγεθος συνθήκης",
+    "zh": "状况大小",
+    "ro": "Dimensiune condiție"
   },
   {
     "es": "Tamano dial",
@@ -5293,7 +8896,12 @@
     "de": "Dial size",
     "fr": "Dial size",
     "it": "Dial size",
-    "nl": "Dial size"
+    "nl": "Dial size",
+    "pt": "Dial size",
+    "ru": "Dial size",
+    "el": "Dial size",
+    "zh": "Dial size",
+    "ro": "Dial size"
   },
   {
     "es": "Tamano icono",
@@ -5301,7 +8909,12 @@
     "de": "Icon size",
     "fr": "Icon size",
     "it": "Icon size",
-    "nl": "Icon size"
+    "nl": "Icon size",
+    "pt": "Icon size",
+    "ru": "Icon size",
+    "el": "Icon size",
+    "zh": "Icon size",
+    "ro": "Icon size"
   },
   {
     "es": "Tamano individual",
@@ -5309,7 +8922,12 @@
     "de": "Individual size",
     "fr": "Individual size",
     "it": "Individual size",
-    "nl": "Individual size"
+    "nl": "Individual size",
+    "pt": "Individual size",
+    "ru": "Individual size",
+    "el": "Individual size",
+    "zh": "Individual size",
+    "ro": "Individual size"
   },
   {
     "es": "Tamano leyenda",
@@ -5317,7 +8935,12 @@
     "de": "Legend size",
     "fr": "Legend size",
     "it": "Legend size",
-    "nl": "Legend size"
+    "nl": "Legend size",
+    "pt": "Legend size",
+    "ru": "Legend size",
+    "el": "Legend size",
+    "zh": "Legend size",
+    "ro": "Legend size"
   },
   {
     "es": "Tamano marcadores",
@@ -5325,7 +8948,12 @@
     "de": "Marker size",
     "fr": "Marker size",
     "it": "Marker size",
-    "nl": "Marker size"
+    "nl": "Marker size",
+    "pt": "Marker size",
+    "ru": "Marker size",
+    "el": "Marker size",
+    "zh": "Marker size",
+    "ro": "Marker size"
   },
   {
     "es": "Tamano nodo",
@@ -5333,7 +8961,12 @@
     "de": "Node size",
     "fr": "Node size",
     "it": "Node size",
-    "nl": "Node size"
+    "nl": "Node size",
+    "pt": "Node size",
+    "ru": "Node size",
+    "el": "Node size",
+    "zh": "Node size",
+    "ro": "Node size"
   },
   {
     "es": "Tamano nombre",
@@ -5341,7 +8974,12 @@
     "de": "Size Name",
     "fr": "Size Name",
     "it": "Size Name",
-    "nl": "Size Name"
+    "nl": "Size Name",
+    "pt": "Size Name",
+    "ru": "Size Name",
+    "el": "Size Name",
+    "zh": "Size Name",
+    "ro": "Size Name"
   },
   {
     "es": "Tamano subtitulo",
@@ -5349,7 +8987,12 @@
     "de": "Subtitle size",
     "fr": "Subtitle size",
     "it": "Subtitle size",
-    "nl": "Subtitle size"
+    "nl": "Subtitle size",
+    "pt": "Subtitle size",
+    "ru": "Subtitle size",
+    "el": "Subtitle size",
+    "zh": "Subtitle size",
+    "ro": "Subtitle size"
   },
   {
     "es": "Tamano temperatura",
@@ -5357,7 +9000,12 @@
     "de": "Temperatur-Größe",
     "fr": "Taille température",
     "it": "Dimensione temperatura",
-    "nl": "Temperatuurgrootte"
+    "nl": "Temperatuurgrootte",
+    "pt": "Tamanho da temperatura",
+    "ru": "Размер температуры",
+    "el": "Μέγεθος θερμοκρασίας",
+    "zh": "温度大小",
+    "ro": "Dimensiune temperatură"
   },
   {
     "es": "Tamano temperatura actual",
@@ -5365,7 +9013,12 @@
     "de": "Größe aktuelle Temperatur",
     "fr": "Taille température actuelle",
     "it": "Dimensione temperatura attuale",
-    "nl": "Grootte huidige temperatuur"
+    "nl": "Grootte huidige temperatuur",
+    "pt": "Tamanho da temperatura atual",
+    "ru": "Размер текущей температуры",
+    "el": "Μέγεθος τρέχουσας θερμοκρασίας",
+    "zh": "当前温度大小",
+    "ro": "Dimensiune temperatură curentă"
   },
   {
     "es": "Tamano temperatura objetivo",
@@ -5373,7 +9026,12 @@
     "de": "Größe Solltemperatur",
     "fr": "Taille consigne de température",
     "it": "Dimensione temperatura obiettivo",
-    "nl": "Grootte doeltemperatuur"
+    "nl": "Grootte doeltemperatuur",
+    "pt": "Tamanho da temperatura alvo",
+    "ru": "Размер целевой температуры",
+    "el": "Μέγεθος στοχευμένης θερμοκρασίας",
+    "zh": "目标温度大小",
+    "ro": "Dimensiune temperatură țintă"
   },
   {
     "es": "Tamano thumb dial",
@@ -5381,7 +9039,12 @@
     "de": "Dial thumb size",
     "fr": "Dial thumb size",
     "it": "Dial thumb size",
-    "nl": "Dial thumb size"
+    "nl": "Dial thumb size",
+    "pt": "Dial thumb size",
+    "ru": "Dial thumb size",
+    "el": "Dial thumb size",
+    "zh": "Dial thumb size",
+    "ro": "Dial thumb size"
   },
   {
     "es": "Tamano titulo",
@@ -5389,7 +9052,12 @@
     "de": "Titelgröße",
     "fr": "Taille du titre",
     "it": "Dimensione titolo",
-    "nl": "Titelgrootte"
+    "nl": "Titelgrootte",
+    "pt": "Tamanho do título",
+    "ru": "Размер заголовка",
+    "el": "Μέγεθος τίτλου",
+    "zh": "标题大小",
+    "ro": "Dimensiune titlu"
   },
   {
     "es": "Tamano unidad",
@@ -5397,7 +9065,12 @@
     "de": "Unit size",
     "fr": "Unit size",
     "it": "Unit size",
-    "nl": "Unit size"
+    "nl": "Unit size",
+    "pt": "Unit size",
+    "ru": "Unit size",
+    "el": "Unit size",
+    "zh": "Unit size",
+    "ro": "Unit size"
   },
   {
     "es": "Tamano valor",
@@ -5405,7 +9078,12 @@
     "de": "Value size",
     "fr": "Value size",
     "it": "Value size",
-    "nl": "Value size"
+    "nl": "Value size",
+    "pt": "Value size",
+    "ru": "Value size",
+    "el": "Value size",
+    "zh": "Value size",
+    "ro": "Value size"
   },
   {
     "es": "Tamaño botones",
@@ -5413,7 +9091,12 @@
     "de": "Button size",
     "fr": "Button size",
     "it": "Button size",
-    "nl": "Button size"
+    "nl": "Button size",
+    "pt": "Button size",
+    "ru": "Button size",
+    "el": "Button size",
+    "zh": "Button size",
+    "ro": "Button size"
   },
   {
     "es": "Tamaño botones + / -",
@@ -5421,7 +9104,12 @@
     "de": "Größe +/−-Tasten",
     "fr": "Taille des boutons +/−",
     "it": "Dimensione pulsanti +/−",
-    "nl": "Grootte +/− knoppen"
+    "nl": "Grootte +/− knoppen",
+    "pt": "Tamanho dos botões + / −",
+    "ru": "Размер кнопок +/−",
+    "el": "Μέγεθος κουμπιών +/−",
+    "zh": "+/− 按钮大小",
+    "ro": "Dimensiune butoane +/−"
   },
   {
     "es": "Tamaño botones auxiliares",
@@ -5429,7 +9117,12 @@
     "de": "Auxiliary button size",
     "fr": "Auxiliary button size",
     "it": "Auxiliary button size",
-    "nl": "Auxiliary button size"
+    "nl": "Auxiliary button size",
+    "pt": "Auxiliary button size",
+    "ru": "Auxiliary button size",
+    "el": "Auxiliary button size",
+    "zh": "Auxiliary button size",
+    "ro": "Auxiliary button size"
   },
   {
     "es": "Tamaño botones modo",
@@ -5437,7 +9130,12 @@
     "de": "Mode button size",
     "fr": "Mode button size",
     "it": "Mode button size",
-    "nl": "Mode button size"
+    "nl": "Mode button size",
+    "pt": "Mode button size",
+    "ru": "Mode button size",
+    "el": "Mode button size",
+    "zh": "Mode button size",
+    "ro": "Mode button size"
   },
   {
     "es": "Tamaño botón",
@@ -5445,7 +9143,12 @@
     "de": "Button size",
     "fr": "Button size",
     "it": "Button size",
-    "nl": "Button size"
+    "nl": "Button size",
+    "pt": "Button size",
+    "ru": "Button size",
+    "el": "Button size",
+    "zh": "Button size",
+    "ro": "Button size"
   },
   {
     "es": "Tamaño botón principal",
@@ -5453,7 +9156,12 @@
     "de": "Primary button size",
     "fr": "Primary button size",
     "it": "Primary button size",
-    "nl": "Primary button size"
+    "nl": "Primary button size",
+    "pt": "Primary button size",
+    "ru": "Primary button size",
+    "el": "Primary button size",
+    "zh": "Primary button size",
+    "ro": "Primary button size"
   },
   {
     "es": "Tamaño burbuja",
@@ -5461,7 +9169,12 @@
     "de": "Bubble size",
     "fr": "Bubble size",
     "it": "Bubble size",
-    "nl": "Bubble size"
+    "nl": "Bubble size",
+    "pt": "Bubble size",
+    "ru": "Bubble size",
+    "el": "Bubble size",
+    "zh": "Bubble size",
+    "ro": "Bubble size"
   },
   {
     "es": "Tamaño burbuja entidad",
@@ -5469,7 +9182,12 @@
     "de": "Größe Entitätsblase",
     "fr": "Taille de la bulle d’entité",
     "it": "Dimensione bolla entità",
-    "nl": "Grootte entiteitsbel"
+    "nl": "Grootte entiteitsbel",
+    "pt": "Tamanho da bolha da entidade",
+    "ru": "Размер пузырька сущности",
+    "el": "Μέγεθος φυσαλίδας οντότητας",
+    "zh": "实体气泡大小",
+    "ro": "Dimensiune bulă entitate"
   },
   {
     "es": "Tamaño burbuja principal",
@@ -5477,7 +9195,12 @@
     "de": "Primary bubble size",
     "fr": "Primary bubble size",
     "it": "Primary bubble size",
-    "nl": "Primary bubble size"
+    "nl": "Primary bubble size",
+    "pt": "Primary bubble size",
+    "ru": "Primary bubble size",
+    "el": "Primary bubble size",
+    "zh": "Primary bubble size",
+    "ro": "Primary bubble size"
   },
   {
     "es": "Tamaño chip",
@@ -5485,7 +9208,12 @@
     "de": "Chip size",
     "fr": "Chip size",
     "it": "Chip size",
-    "nl": "Chip size"
+    "nl": "Chip size",
+    "pt": "Chip size",
+    "ru": "Chip size",
+    "el": "Chip size",
+    "zh": "Chip size",
+    "ro": "Chip size"
   },
   {
     "es": "Tamaño de botones",
@@ -5493,7 +9221,12 @@
     "de": "Button size",
     "fr": "Button size",
     "it": "Button size",
-    "nl": "Button size"
+    "nl": "Button size",
+    "pt": "Button size",
+    "ru": "Button size",
+    "el": "Button size",
+    "zh": "Button size",
+    "ro": "Button size"
   },
   {
     "es": "Tamaño de indicadores",
@@ -5501,7 +9234,12 @@
     "de": "Indicator size",
     "fr": "Indicator size",
     "it": "Indicator size",
-    "nl": "Indicator size"
+    "nl": "Indicator size",
+    "pt": "Indicator size",
+    "ru": "Indicator size",
+    "el": "Indicator size",
+    "zh": "Indicator size",
+    "ro": "Indicator size"
   },
   {
     "es": "Tamaño de la burbuja",
@@ -5509,7 +9247,12 @@
     "de": "Bubble size",
     "fr": "Bubble size",
     "it": "Bubble size",
-    "nl": "Bubble size"
+    "nl": "Bubble size",
+    "pt": "Bubble size",
+    "ru": "Bubble size",
+    "el": "Bubble size",
+    "zh": "Bubble size",
+    "ro": "Bubble size"
   },
   {
     "es": "Tamaño de portada",
@@ -5517,7 +9260,12 @@
     "de": "Cover art size",
     "fr": "Cover art size",
     "it": "Cover art size",
-    "nl": "Cover art size"
+    "nl": "Cover art size",
+    "pt": "Cover art size",
+    "ru": "Cover art size",
+    "el": "Cover art size",
+    "zh": "Cover art size",
+    "ro": "Cover art size"
   },
   {
     "es": "Tamaño de portada TV",
@@ -5525,7 +9273,12 @@
     "de": "TV cover art size",
     "fr": "TV cover art size",
     "it": "TV cover art size",
-    "nl": "TV cover art size"
+    "nl": "TV cover art size",
+    "pt": "TV cover art size",
+    "ru": "TV cover art size",
+    "el": "TV cover art size",
+    "zh": "TV cover art size",
+    "ro": "TV cover art size"
   },
   {
     "es": "Tamaño del subtítulo",
@@ -5533,7 +9286,12 @@
     "de": "Subtitle size",
     "fr": "Subtitle size",
     "it": "Subtitle size",
-    "nl": "Subtitle size"
+    "nl": "Subtitle size",
+    "pt": "Subtitle size",
+    "ru": "Subtitle size",
+    "el": "Subtitle size",
+    "zh": "Subtitle size",
+    "ro": "Subtitle size"
   },
   {
     "es": "Tamaño del thumb del slider",
@@ -5541,7 +9299,12 @@
     "de": "Slider thumb size",
     "fr": "Slider thumb size",
     "it": "Slider thumb size",
-    "nl": "Slider thumb size"
+    "nl": "Slider thumb size",
+    "pt": "Slider thumb size",
+    "ru": "Slider thumb size",
+    "el": "Slider thumb size",
+    "zh": "Slider thumb size",
+    "ro": "Slider thumb size"
   },
   {
     "es": "Tamaño del título",
@@ -5549,7 +9312,12 @@
     "de": "Titelgröße",
     "fr": "Taille du titre",
     "it": "Dimensione titolo",
-    "nl": "Titelgrootte"
+    "nl": "Titelgrootte",
+    "pt": "Tamanho do título",
+    "ru": "Размер заголовка",
+    "el": "Μέγεθος τίτλου",
+    "zh": "标题大小",
+    "ro": "Dimensiune titlu"
   },
   {
     "es": "Tamaño dial",
@@ -5557,7 +9325,12 @@
     "de": "Dial size",
     "fr": "Dial size",
     "it": "Dial size",
-    "nl": "Dial size"
+    "nl": "Dial size",
+    "pt": "Dial size",
+    "ru": "Dial size",
+    "el": "Dial size",
+    "zh": "Dial size",
+    "ro": "Dial size"
   },
   {
     "es": "Tamaño objetivo",
@@ -5565,7 +9338,12 @@
     "de": "Ziel-Größe",
     "fr": "Taille cible",
     "it": "Dimensione obiettivo",
-    "nl": "Doelgrootte"
+    "nl": "Doelgrootte",
+    "pt": "Tamanho do alvo",
+    "ru": "Размер цели",
+    "el": "Μέγεθος στόχου",
+    "zh": "目标大小",
+    "ro": "Dimensiune țintă"
   },
   {
     "es": "Tamaño rango",
@@ -5573,7 +9351,12 @@
     "de": "Range size",
     "fr": "Range size",
     "it": "Range size",
-    "nl": "Range size"
+    "nl": "Range size",
+    "pt": "Range size",
+    "ru": "Range size",
+    "el": "Range size",
+    "zh": "Range size",
+    "ro": "Range size"
   },
   {
     "es": "Tamaño temperatura actual",
@@ -5581,7 +9364,12 @@
     "de": "Größe aktuelle Temperatur",
     "fr": "Taille température actuelle",
     "it": "Dimensione temperatura attuale",
-    "nl": "Grootte huidige temperatuur"
+    "nl": "Grootte huidige temperatuur",
+    "pt": "Tamanho da temperatura atual",
+    "ru": "Размер текущей температуры",
+    "el": "Μέγεθος τρέχουσας θερμοκρασίας",
+    "zh": "当前温度大小",
+    "ro": "Dimensiune temperatură curentă"
   },
   {
     "es": "Tamaño thumb",
@@ -5589,7 +9377,12 @@
     "de": "Griffgröße",
     "fr": "Taille du curseur",
     "it": "Dimensione thumb",
-    "nl": "Duimgrootte"
+    "nl": "Duimgrootte",
+    "pt": "Tamanho do indicador",
+    "ru": "Размер ползунка",
+    "el": "Μέγεθος λαβής",
+    "zh": "滑块大小",
+    "ro": "Dimensiune cursor"
   },
   {
     "es": "Tamaño título",
@@ -5597,7 +9390,12 @@
     "de": "Titelgröße",
     "fr": "Taille du titre",
     "it": "Dimensione titolo",
-    "nl": "Titelgrootte"
+    "nl": "Titelgrootte",
+    "pt": "Tamanho do título",
+    "ru": "Размер заголовка",
+    "el": "Μέγεθος τίτλου",
+    "zh": "标题大小",
+    "ro": "Dimensiune titlu"
   },
   {
     "es": "Tamaño valor",
@@ -5605,15 +9403,25 @@
     "de": "Value size",
     "fr": "Value size",
     "it": "Value size",
-    "nl": "Value size"
+    "nl": "Value size",
+    "pt": "Value size",
+    "ru": "Value size",
+    "el": "Value size",
+    "zh": "Value size",
+    "ro": "Value size"
   },
   {
     "es": "Tap action",
     "en": "Tap action",
-    "de": "Tap action",
-    "fr": "Tap action",
-    "it": "Tap action",
-    "nl": "Tap action"
+    "de": "Tipp-Aktion",
+    "fr": "Action au toucher",
+    "it": "Azione al tocco",
+    "nl": "Tikactie",
+    "pt": "Ação ao tocar",
+    "ru": "Действие при нажатии",
+    "el": "Ενέργεια πατήματος",
+    "zh": "点击操作",
+    "ro": "Acțiune la atingere"
   },
   {
     "es": "Tap card",
@@ -5621,7 +9429,12 @@
     "de": "Tap card",
     "fr": "Tap card",
     "it": "Tap card",
-    "nl": "Tap card"
+    "nl": "Tap card",
+    "pt": "Tap card",
+    "ru": "Tap card",
+    "el": "Tap card",
+    "zh": "Tap card",
+    "ro": "Tap card"
   },
   {
     "es": "Tarjeta fija",
@@ -5629,7 +9442,12 @@
     "de": "Fixed card",
     "fr": "Fixed card",
     "it": "Fixed card",
-    "nl": "Fixed card"
+    "nl": "Fixed card",
+    "pt": "Fixed card",
+    "ru": "Fixed card",
+    "el": "Fixed card",
+    "zh": "Fixed card",
+    "ro": "Fixed card"
   },
   {
     "es": "Texto burbuja info",
@@ -5637,7 +9455,12 @@
     "de": "Info bubble text",
     "fr": "Info bubble text",
     "it": "Info bubble text",
-    "nl": "Info bubble text"
+    "nl": "Info bubble text",
+    "pt": "Info bubble text",
+    "ru": "Info bubble text",
+    "el": "Info bubble text",
+    "zh": "Info bubble text",
+    "ro": "Info bubble text"
   },
   {
     "es": "Texto burbuja informativa",
@@ -5645,7 +9468,12 @@
     "de": "Info bubble text",
     "fr": "Info bubble text",
     "it": "Info bubble text",
-    "nl": "Info bubble text"
+    "nl": "Info bubble text",
+    "pt": "Info bubble text",
+    "ru": "Info bubble text",
+    "el": "Info bubble text",
+    "zh": "Info bubble text",
+    "ro": "Info bubble text"
   },
   {
     "es": "Texto chip",
@@ -5653,7 +9481,12 @@
     "de": "Chip-Text",
     "fr": "Texte de puce",
     "it": "Testo chip",
-    "nl": "Chip-tekst"
+    "nl": "Chip-tekst",
+    "pt": "Texto do chip",
+    "ru": "Текст чипа",
+    "el": "Κείμενο chip",
+    "zh": "芯片文字",
+    "ro": "Text chip"
   },
   {
     "es": "Texto chips",
@@ -5661,7 +9494,12 @@
     "de": "Chip-Texte",
     "fr": "Textes de puces",
     "it": "Testi chip",
-    "nl": "Chip-teksten"
+    "nl": "Chip-teksten",
+    "pt": "Textos dos chips",
+    "ru": "Тексты чипов",
+    "el": "Κείμενα chip",
+    "zh": "芯片文字",
+    "ro": "Texte chip"
   },
   {
     "es": "Texto de chips",
@@ -5669,7 +9507,12 @@
     "de": "Chip-Text",
     "fr": "Texte de puce",
     "it": "Testo chip",
-    "nl": "Chip-tekst"
+    "nl": "Chip-tekst",
+    "pt": "Texto do chip",
+    "ru": "Текст чипа",
+    "el": "Κείμενο chip",
+    "zh": "芯片文字",
+    "ro": "Text chip"
   },
   {
     "es": "Texto marcadores",
@@ -5677,7 +9520,12 @@
     "de": "Marker text",
     "fr": "Marker text",
     "it": "Marker text",
-    "nl": "Marker text"
+    "nl": "Marker text",
+    "pt": "Marker text",
+    "ru": "Marker text",
+    "el": "Marker text",
+    "zh": "Marker text",
+    "ro": "Marker text"
   },
   {
     "es": "Texto secundario",
@@ -5685,7 +9533,12 @@
     "de": "Secondary text",
     "fr": "Secondary text",
     "it": "Secondary text",
-    "nl": "Secondary text"
+    "nl": "Secondary text",
+    "pt": "Secondary text",
+    "ru": "Secondary text",
+    "el": "Secondary text",
+    "zh": "Secondary text",
+    "ro": "Secondary text"
   },
   {
     "es": "Tinte",
@@ -5693,7 +9546,12 @@
     "de": "Tint",
     "fr": "Tint",
     "it": "Tint",
-    "nl": "Tint"
+    "nl": "Tint",
+    "pt": "Tint",
+    "ru": "Tint",
+    "el": "Tint",
+    "zh": "Tint",
+    "ro": "Tint"
   },
   {
     "es": "Titulo",
@@ -5701,7 +9559,12 @@
     "de": "Titel",
     "fr": "Titre",
     "it": "Titolo",
-    "nl": "Titel"
+    "nl": "Titel",
+    "pt": "Título",
+    "ru": "Заголовок",
+    "el": "Τίτλος",
+    "zh": "标题",
+    "ro": "Titlu"
   },
   {
     "es": "Tooltip y hover (ms)",
@@ -5709,7 +9572,12 @@
     "de": "Tooltip and hover (ms)",
     "fr": "Tooltip and hover (ms)",
     "it": "Tooltip and hover (ms)",
-    "nl": "Tooltip and hover (ms)"
+    "nl": "Tooltip and hover (ms)",
+    "pt": "Tooltip and hover (ms)",
+    "ru": "Tooltip and hover (ms)",
+    "el": "Tooltip and hover (ms)",
+    "zh": "Tooltip and hover (ms)",
+    "ro": "Tooltip and hover (ms)"
   },
   {
     "es": "Track dial",
@@ -5717,7 +9585,12 @@
     "de": "Drehregler-Spur",
     "fr": "Piste du cadran",
     "it": "Traccia dial",
-    "nl": "Draaiknop-spoor"
+    "nl": "Draaiknop-spoor",
+    "pt": "Trilho do mostrador",
+    "ru": "Дорожка диска",
+    "el": "Διαδρομή δίσκου",
+    "zh": "旋钮轨道",
+    "ro": "Pistă disc"
   },
   {
     "es": "Transparencia lineas cero",
@@ -5725,7 +9598,12 @@
     "de": "Zero-line transparency",
     "fr": "Zero-line transparency",
     "it": "Zero-line transparency",
-    "nl": "Zero-line transparency"
+    "nl": "Zero-line transparency",
+    "pt": "Zero-line transparency",
+    "ru": "Zero-line transparency",
+    "el": "Zero-line transparency",
+    "zh": "Zero-line transparency",
+    "ro": "Zero-line transparency"
   },
   {
     "es": "Título fijo",
@@ -5733,7 +9611,12 @@
     "de": "Fixed title",
     "fr": "Fixed title",
     "it": "Fixed title",
-    "nl": "Fixed title"
+    "nl": "Fixed title",
+    "pt": "Fixed title",
+    "ru": "Fixed title",
+    "el": "Fixed title",
+    "zh": "Fixed title",
+    "ro": "Fixed title"
   },
   {
     "es": "URL",
@@ -5741,7 +9624,12 @@
     "de": "URL",
     "fr": "URL",
     "it": "URL",
-    "nl": "URL"
+    "nl": "URL",
+    "pt": "URL",
+    "ru": "URL",
+    "el": "URL",
+    "zh": "URL",
+    "ro": "URL"
   },
   {
     "es": "URL al tocar",
@@ -5749,7 +9637,12 @@
     "de": "Tap URL",
     "fr": "Tap URL",
     "it": "Tap URL",
-    "nl": "Tap URL"
+    "nl": "Tap URL",
+    "pt": "Tap URL",
+    "ru": "Tap URL",
+    "el": "Tap URL",
+    "zh": "Tap URL",
+    "ro": "Tap URL"
   },
   {
     "es": "Unidad",
@@ -5757,7 +9650,12 @@
     "de": "Unit",
     "fr": "Unit",
     "it": "Unit",
-    "nl": "Unit"
+    "nl": "Unit",
+    "pt": "Unit",
+    "ru": "Unit",
+    "el": "Unit",
+    "zh": "Unit",
+    "ro": "Unit"
   },
   {
     "es": "Unidad casa",
@@ -5765,7 +9663,12 @@
     "de": "Home unit",
     "fr": "Home unit",
     "it": "Home unit",
-    "nl": "Home unit"
+    "nl": "Home unit",
+    "pt": "Home unit",
+    "ru": "Home unit",
+    "el": "Home unit",
+    "zh": "Home unit",
+    "ro": "Home unit"
   },
   {
     "es": "Unidad secundaria",
@@ -5773,7 +9676,12 @@
     "de": "Secondary unit",
     "fr": "Secondary unit",
     "it": "Secondary unit",
-    "nl": "Secondary unit"
+    "nl": "Secondary unit",
+    "pt": "Secondary unit",
+    "ru": "Secondary unit",
+    "el": "Secondary unit",
+    "zh": "Secondary unit",
+    "ro": "Secondary unit"
   },
   {
     "es": "Usar carátula como fondo",
@@ -5781,63 +9689,103 @@
     "de": "Use album art as background",
     "fr": "Use album art as background",
     "it": "Use album art as background",
-    "nl": "Use album art as background"
+    "nl": "Use album art as background",
+    "pt": "Use album art as background",
+    "ru": "Use album art as background",
+    "el": "Use album art as background",
+    "zh": "Use album art as background",
+    "ro": "Use album art as background"
   },
   {
     "es": "Usar el icono de la entidad",
-    "en": "Usar el Icon de la Entity",
-    "de": "Usar el Icon de la Entity",
-    "fr": "Usar el Icon de la Entity",
-    "it": "Usar el Icon de la Entity",
-    "nl": "Usar el Icon de la Entity"
+    "en": "Use entity icon",
+    "de": "Entitätssymbol verwenden",
+    "fr": "Utiliser l’icône de l’entité",
+    "it": "Usa l’icona dell’entità",
+    "nl": "Pictogram van entiteit gebruiken",
+    "pt": "Usar ícone da entidade",
+    "ru": "Использовать значок объекта",
+    "el": "Χρήση εικονιδίου οντότητας",
+    "zh": "使用实体图标",
+    "ro": "Folosește pictograma entității"
   },
   {
     "es": "Usar foto de entidad",
-    "en": "Usar foto de Entity",
-    "de": "Usar foto de Entity",
-    "fr": "Usar foto de Entity",
-    "it": "Usar foto de Entity",
-    "nl": "Usar foto de Entity"
+    "en": "Use entity photo",
+    "de": "Entitätsfoto verwenden",
+    "fr": "Utiliser la photo de l’entité",
+    "it": "Usa la foto dell’entità",
+    "nl": "Entiteitsfoto gebruiken",
+    "pt": "Usar foto da entidade",
+    "ru": "Использовать фото объекта",
+    "el": "Χρήση φωτογραφίας οντότητας",
+    "zh": "使用实体照片",
+    "ro": "Folosește fotografia entității"
   },
   {
     "es": "Usar foto de la entidad",
-    "en": "Usar foto de la Entity",
-    "de": "Usar foto de la Entity",
-    "fr": "Usar foto de la Entity",
-    "it": "Usar foto de la Entity",
-    "nl": "Usar foto de la Entity"
+    "en": "Use entity photo",
+    "de": "Entitätsfoto verwenden",
+    "fr": "Utiliser la photo de l’entité",
+    "it": "Usa la foto dell’entità",
+    "nl": "Entiteitsfoto gebruiken",
+    "pt": "Usar foto da entidade",
+    "ru": "Использовать фото объекта",
+    "el": "Χρήση φωτογραφίας οντότητας",
+    "zh": "使用实体照片",
+    "ro": "Folosește fotografia entității"
   },
   {
     "es": "Usar icono de la entidad",
-    "en": "Usar Icon de la Entity",
-    "de": "Usar Icon de la Entity",
-    "fr": "Usar Icon de la Entity",
-    "it": "Usar Icon de la Entity",
-    "nl": "Usar Icon de la Entity"
+    "en": "Use entity icon",
+    "de": "Entitätssymbol verwenden",
+    "fr": "Utiliser l’icône de l’entité",
+    "it": "Usa l’icona dell’entità",
+    "nl": "Pictogram van entiteit gebruiken",
+    "pt": "Usar ícone da entidade",
+    "ru": "Использовать значок объекта",
+    "el": "Χρήση εικονιδίου οντότητας",
+    "zh": "使用实体图标",
+    "ro": "Folosește pictograma entității"
   },
   {
     "es": "Usar icono de zona",
-    "en": "Usar Icon de zona",
-    "de": "Usar Icon de zona",
-    "fr": "Usar Icon de zona",
-    "it": "Usar Icon de zona",
-    "nl": "Usar Icon de zona"
+    "en": "Use zone icon",
+    "de": "Zonensymbol verwenden",
+    "fr": "Utiliser l’icône de zone",
+    "it": "Usa l’icona della zona",
+    "nl": "Zonepictogram gebruiken",
+    "pt": "Usar ícone da zona",
+    "ru": "Использовать значок зоны",
+    "el": "Χρήση εικονιδίου ζώνης",
+    "zh": "使用区域图标",
+    "ro": "Folosește pictograma zonei"
   },
   {
     "es": "Usar vibracion de respaldo",
     "en": "Use vibration fallback",
-    "de": "Use vibration fallback",
-    "fr": "Use vibration fallback",
-    "it": "Use vibration fallback",
-    "nl": "Use vibration fallback"
+    "de": "Vibrations-Fallback verwenden",
+    "fr": "Utiliser la vibration de secours",
+    "it": "Usa vibrazione di riserva",
+    "nl": "Trillen als reserve gebruiken",
+    "pt": "Usar vibração de reserva",
+    "ru": "Использовать вибрацию как запасной вариант",
+    "el": "Χρήση δόνησης ως εφεδρικής",
+    "zh": "使用振动后备",
+    "ro": "Folosește vibrația de rezervă"
   },
   {
     "es": "Usar vibración si no hay háptica",
     "en": "Use vibration if haptics unavailable",
-    "de": "Use vibration if haptics unavailable",
-    "fr": "Use vibration if haptics unavailable",
-    "it": "Use vibration if haptics unavailable",
-    "nl": "Use vibration if haptics unavailable"
+    "de": "Vibration nutzen, wenn keine Haptik",
+    "fr": "Vibrer si pas de retour haptique",
+    "it": "Usa vibrazione se non c’è aptica",
+    "nl": "Trillen als geen haptiek",
+    "pt": "Vibrar se não houver háptica",
+    "ru": "Вибрация, если тактильная отдача недоступна",
+    "el": "Δόνηση όταν δεν υπάρχει απτική ανταπόκριση",
+    "zh": "无触觉时使用振动",
+    "ro": "Vibrație dacă nu e haptic"
   },
   {
     "es": "Valor casa",
@@ -5845,7 +9793,12 @@
     "de": "Home value",
     "fr": "Home value",
     "it": "Home value",
-    "nl": "Home value"
+    "nl": "Home value",
+    "pt": "Home value",
+    "ru": "Home value",
+    "el": "Home value",
+    "zh": "Home value",
+    "ro": "Home value"
   },
   {
     "es": "Valor nodo",
@@ -5853,7 +9806,12 @@
     "de": "Node value",
     "fr": "Node value",
     "it": "Node value",
-    "nl": "Node value"
+    "nl": "Node value",
+    "pt": "Node value",
+    "ru": "Node value",
+    "el": "Node value",
+    "zh": "Node value",
+    "ro": "Node value"
   },
   {
     "es": "Valores",
@@ -5861,7 +9819,12 @@
     "de": "Values",
     "fr": "Values",
     "it": "Values",
-    "nl": "Values"
+    "nl": "Values",
+    "pt": "Values",
+    "ru": "Values",
+    "el": "Values",
+    "zh": "Values",
+    "ro": "Values"
   },
   {
     "es": "Serie",
@@ -5869,7 +9832,12 @@
     "de": "Serien",
     "fr": "Séries",
     "it": "Serie",
-    "nl": "Reeksen"
+    "nl": "Reeksen",
+    "pt": "Séries",
+    "ru": "Ряды",
+    "el": "Σειρές",
+    "zh": "系列",
+    "ro": "Serii"
   },
   {
     "es": "Datos",
@@ -5877,7 +9845,12 @@
     "de": "Data",
     "fr": "Data",
     "it": "Data",
-    "nl": "Data"
+    "nl": "Data",
+    "pt": "Data",
+    "ru": "Data",
+    "el": "Data",
+    "zh": "Data",
+    "ro": "Data"
   },
   {
     "es": "Color de la linea",
@@ -5885,7 +9858,12 @@
     "de": "Line color",
     "fr": "Line color",
     "it": "Line color",
-    "nl": "Line color"
+    "nl": "Line color",
+    "pt": "Line color",
+    "ru": "Line color",
+    "el": "Line color",
+    "zh": "Line color",
+    "ro": "Line color"
   },
   {
     "es": "Selecciona una entidad",
@@ -5893,7 +9871,12 @@
     "de": "Select an entity",
     "fr": "Select an entity",
     "it": "Select an entity",
-    "nl": "Select an entity"
+    "nl": "Select an entity",
+    "pt": "Select an entity",
+    "ru": "Select an entity",
+    "el": "Select an entity",
+    "zh": "Select an entity",
+    "ro": "Select an entity"
   },
   {
     "es": "Todavia no has anadido ninguna serie.",
@@ -5901,7 +9884,12 @@
     "de": "Sie haben noch keine Serien hinzugefügt.",
     "fr": "Vous n’avez pas encore ajouté de série.",
     "it": "Non hai ancora aggiunto serie.",
-    "nl": "Je hebt nog geen reeksen toegevoegd."
+    "nl": "Je hebt nog geen reeksen toegevoegd.",
+    "pt": "You have not added any series yet.",
+    "ru": "You have not added any series yet.",
+    "el": "You have not added any series yet.",
+    "zh": "You have not added any series yet.",
+    "ro": "You have not added any series yet."
   },
   {
     "es": "Anadir serie",
@@ -5909,7 +9897,12 @@
     "de": "Add series",
     "fr": "Add series",
     "it": "Add series",
-    "nl": "Add series"
+    "nl": "Add series",
+    "pt": "Add series",
+    "ru": "Add series",
+    "el": "Add series",
+    "zh": "Add series",
+    "ro": "Add series"
   },
   {
     "es": "Borde barra",
@@ -5917,7 +9910,12 @@
     "de": "Bar border",
     "fr": "Bar border",
     "it": "Bar border",
-    "nl": "Bar border"
+    "nl": "Bar border",
+    "pt": "Bar border",
+    "ru": "Bar border",
+    "el": "Bar border",
+    "zh": "Bar border",
+    "ro": "Bar border"
   },
   {
     "es": "Dejalo vacio para solo icono",
@@ -5925,7 +9923,12 @@
     "de": "Leave empty for icon only",
     "fr": "Leave empty for icon only",
     "it": "Leave empty for icon only",
-    "nl": "Leave empty for icon only"
+    "nl": "Leave empty for icon only",
+    "pt": "Leave empty for icon only",
+    "ru": "Leave empty for icon only",
+    "el": "Leave empty for icon only",
+    "zh": "Leave empty for icon only",
+    "ro": "Leave empty for icon only"
   },
   {
     "es": "Aqui ya puedes editar popup y media player. Para acciones muy avanzadas, sigue siendo mejor completar el YAML.",
@@ -5933,7 +9936,12 @@
     "de": "Popup und Media Player hier bearbeiten. Für sehr fortgeschrittene Aktionen bleibt YAML besser.",
     "fr": "Vous pouvez modifier le popup et le lecteur ici. Pour les actions très avancées, le YAML reste préférable.",
     "it": "Modifica popup e lettore qui. Per azioni avanzate YAML è ancora meglio.",
-    "nl": "Bewerk pop-up en speler hier. Voor geavanceerde acties blijft YAML beter."
+    "nl": "Bewerk pop-up en speler hier. Voor geavanceerde acties blijft YAML beter.",
+    "pt": "Pode editar o popup e o leitor multimédia aqui. Para ações muito avançadas, continua a ser melhor completar o YAML.",
+    "ru": "Здесь можно редактировать всплывающее окно и медиаплеер. Для очень сложных действий по-прежнему лучше дописать YAML.",
+    "el": "Μπορείτε να επεξεργαστείτε το αναδυόμενο και το media player εδώ. Για πολύ προχωρημένες ενέργειες, είναι καλύτερο να συμπληρώσετε YAML.",
+    "zh": "可在此编辑弹出窗口和媒体播放器。非常复杂操作建议仍直接编写 YAML。",
+    "ro": "Puteți edita popup-ul și playerul aici. Pentru acțiuni foarte avansate, e mai bine să completați YAML."
   },
   {
     "es": "Selección",
@@ -5941,7 +9949,12 @@
     "de": "Selection",
     "fr": "Selection",
     "it": "Selection",
-    "nl": "Selection"
+    "nl": "Selection",
+    "pt": "Selection",
+    "ru": "Selection",
+    "el": "Selection",
+    "zh": "Selection",
+    "ro": "Selection"
   },
   {
     "es": "Ligero",
@@ -5949,7 +9962,12 @@
     "de": "Light",
     "fr": "Light",
     "it": "Light",
-    "nl": "Light"
+    "nl": "Light",
+    "pt": "Light",
+    "ru": "Light",
+    "el": "Light",
+    "zh": "Light",
+    "ro": "Light"
   },
   {
     "es": "Medio",
@@ -5957,7 +9975,12 @@
     "de": "Medium",
     "fr": "Medium",
     "it": "Medium",
-    "nl": "Medium"
+    "nl": "Medium",
+    "pt": "Medium",
+    "ru": "Medium",
+    "el": "Medium",
+    "zh": "Medium",
+    "ro": "Medium"
   },
   {
     "es": "Intenso",
@@ -5965,7 +9988,12 @@
     "de": "Heavy",
     "fr": "Heavy",
     "it": "Heavy",
-    "nl": "Heavy"
+    "nl": "Heavy",
+    "pt": "Heavy",
+    "ru": "Heavy",
+    "el": "Heavy",
+    "zh": "Heavy",
+    "ro": "Heavy"
   },
   {
     "es": "Éxito",
@@ -5973,7 +10001,12 @@
     "de": "Success",
     "fr": "Success",
     "it": "Success",
-    "nl": "Success"
+    "nl": "Success",
+    "pt": "Success",
+    "ru": "Success",
+    "el": "Success",
+    "zh": "Success",
+    "ro": "Success"
   },
   {
     "es": "Aviso",
@@ -5981,7 +10014,12 @@
     "de": "Warning",
     "fr": "Warning",
     "it": "Warning",
-    "nl": "Warning"
+    "nl": "Warning",
+    "pt": "Warning",
+    "ru": "Warning",
+    "el": "Warning",
+    "zh": "Warning",
+    "ro": "Warning"
   },
   {
     "es": "Fallo",
@@ -5989,7 +10027,12 @@
     "de": "Failure",
     "fr": "Failure",
     "it": "Failure",
-    "nl": "Failure"
+    "nl": "Failure",
+    "pt": "Failure",
+    "ru": "Failure",
+    "el": "Failure",
+    "zh": "Failure",
+    "ro": "Failure"
   },
   {
     "es": "Inferior",
@@ -5997,7 +10040,12 @@
     "de": "Bottom",
     "fr": "Bottom",
     "it": "Bottom",
-    "nl": "Bottom"
+    "nl": "Bottom",
+    "pt": "Bottom",
+    "ru": "Bottom",
+    "el": "Bottom",
+    "zh": "Bottom",
+    "ro": "Bottom"
   },
   {
     "es": "Superior",
@@ -6005,7 +10053,12 @@
     "de": "Top",
     "fr": "Top",
     "it": "Top",
-    "nl": "Top"
+    "nl": "Top",
+    "pt": "Top",
+    "ru": "Top",
+    "el": "Top",
+    "zh": "Top",
+    "ro": "Top"
   },
   {
     "es": "Auto",
@@ -6013,7 +10066,12 @@
     "de": "Auto",
     "fr": "Auto",
     "it": "Auto",
-    "nl": "Auto"
+    "nl": "Auto",
+    "pt": "Auto",
+    "ru": "Auto",
+    "el": "Auto",
+    "zh": "Auto",
+    "ro": "Auto"
   },
   {
     "es": "Vertical",
@@ -6021,7 +10079,12 @@
     "de": "Vertical",
     "fr": "Vertical",
     "it": "Vertical",
-    "nl": "Vertical"
+    "nl": "Vertical",
+    "pt": "Vertical",
+    "ru": "Vertical",
+    "el": "Vertical",
+    "zh": "Vertical",
+    "ro": "Vertical"
   },
   {
     "es": "Horizontal",
@@ -6029,7 +10092,12 @@
     "de": "Horizontal",
     "fr": "Horizontal",
     "it": "Horizontal",
-    "nl": "Horizontal"
+    "nl": "Horizontal",
+    "pt": "Horizontal",
+    "ru": "Horizontal",
+    "el": "Horizontal",
+    "zh": "Horizontal",
+    "ro": "Horizontal"
   },
   {
     "es": "Veladura del navegador",
@@ -6037,7 +10105,12 @@
     "de": "Browser backdrop",
     "fr": "Browser backdrop",
     "it": "Browser backdrop",
-    "nl": "Browser backdrop"
+    "nl": "Browser backdrop",
+    "pt": "Browser backdrop",
+    "ru": "Browser backdrop",
+    "el": "Browser backdrop",
+    "zh": "Browser backdrop",
+    "ro": "Browser backdrop"
   },
   {
     "es": "Entidad de más información",
@@ -6045,7 +10118,12 @@
     "de": "More-info entity",
     "fr": "More-info entity",
     "it": "More-info entity",
-    "nl": "More-info entity"
+    "nl": "More-info entity",
+    "pt": "More-info entity",
+    "ru": "More-info entity",
+    "el": "More-info entity",
+    "zh": "More-info entity",
+    "ro": "More-info entity"
   },
   {
     "es": "Botón de encendido cuando está apagado o en espera",
@@ -6053,7 +10131,12 @@
     "de": "Power button when off or standby",
     "fr": "Power button when off or standby",
     "it": "Power button when off or standby",
-    "nl": "Power button when off or standby"
+    "nl": "Power button when off or standby",
+    "pt": "Power button when off or standby",
+    "ru": "Power button when off or standby",
+    "el": "Power button when off or standby",
+    "zh": "Power button when off or standby",
+    "ro": "Power button when off or standby"
   },
   {
     "es": "Botón de encendido cuando está activo",
@@ -6061,7 +10144,12 @@
     "de": "Power button when active",
     "fr": "Power button when active",
     "it": "Power button when active",
-    "nl": "Power button when active"
+    "nl": "Power button when active",
+    "pt": "Power button when active",
+    "ru": "Power button when active",
+    "el": "Power button when active",
+    "zh": "Power button when active",
+    "ro": "Power button when active"
   },
   {
     "es": "Botón de encendido cuando no está disponible",
@@ -6069,7 +10157,12 @@
     "de": "Power button when unavailable",
     "fr": "Power button when unavailable",
     "it": "Power button when unavailable",
-    "nl": "Power button when unavailable"
+    "nl": "Power button when unavailable",
+    "pt": "Power button when unavailable",
+    "ru": "Power button when unavailable",
+    "el": "Power button when unavailable",
+    "zh": "Power button when unavailable",
+    "ro": "Power button when unavailable"
   },
   {
     "es": "Añadir reproductor",
@@ -6077,7 +10170,12 @@
     "de": "Add player",
     "fr": "Add player",
     "it": "Add player",
-    "nl": "Add player"
+    "nl": "Add player",
+    "pt": "Add player",
+    "ru": "Add player",
+    "el": "Add player",
+    "zh": "Add player",
+    "ro": "Add player"
   },
   {
     "es": "Mostrar ajustes de animación",
@@ -6085,7 +10183,12 @@
     "de": "Animationseinstellungen anzeigen",
     "fr": "Afficher les paramètres d’animation",
     "it": "Mostra impostazioni animazioni",
-    "nl": "Animatie-instellingen tonen"
+    "nl": "Animatie-instellingen tonen",
+    "pt": "Mostrar definições de animação",
+    "ru": "Показать настройки анимации",
+    "el": "Εμφάνιση ρυθμίσεων κινούμενης εικόνας",
+    "zh": "显示动画设置",
+    "ro": "Afișează setările de animație"
   },
   {
     "es": "Ocultar ajustes de animación",
@@ -6093,7 +10196,12 @@
     "de": "Animationseinstellungen ausblenden",
     "fr": "Masquer les paramètres d’animation",
     "it": "Nascondi impostazioni animazioni",
-    "nl": "Animatie-instellingen verbergen"
+    "nl": "Animatie-instellingen verbergen",
+    "pt": "Ocultar definições de animação",
+    "ru": "Скрыть настройки анимации",
+    "el": "Απόκρυψη ρυθμίσεων κινούμενης εικόνας",
+    "zh": "隐藏动画设置",
+    "ro": "Ascunde setările de animație"
   },
   {
     "es": "Mostrar ajustes de estilo",
@@ -6101,7 +10209,12 @@
     "de": "Stileinstellungen anzeigen",
     "fr": "Afficher les paramètres de style",
     "it": "Mostra impostazioni di stile",
-    "nl": "Stijlinstellingen tonen"
+    "nl": "Stijlinstellingen tonen",
+    "pt": "Mostrar definições de estilo",
+    "ru": "Показать настройки стиля",
+    "el": "Εμφάνιση ρυθμίσεων στιλ",
+    "zh": "显示样式设置",
+    "ro": "Afișează setările de stil"
   },
   {
     "es": "Ocultar ajustes de estilo",
@@ -6109,7 +10222,12 @@
     "de": "Stileinstellungen ausblenden",
     "fr": "Masquer les paramètres de style",
     "it": "Nascondi impostazioni di stile",
-    "nl": "Stijlinstellingen verbergen"
+    "nl": "Stijlinstellingen verbergen",
+    "pt": "Ocultar definições de estilo",
+    "ru": "Скрыть настройки стиля",
+    "el": "Απόκρυψη ρυθμίσεων στιλ",
+    "zh": "隐藏样式设置",
+    "ro": "Ascunde setările de stil"
   },
   {
     "es": "Por defecto",
@@ -6117,7 +10235,12 @@
     "de": "Default",
     "fr": "Default",
     "it": "Default",
-    "nl": "Default"
+    "nl": "Default",
+    "pt": "Default",
+    "ru": "Default",
+    "el": "Default",
+    "zh": "Default",
+    "ro": "Default"
   },
   {
     "es": "Navegar",
@@ -6125,7 +10248,12 @@
     "de": "Navigate",
     "fr": "Navigate",
     "it": "Navigate",
-    "nl": "Navigate"
+    "nl": "Navigate",
+    "pt": "Navigate",
+    "ru": "Navigate",
+    "el": "Navigate",
+    "zh": "Navigate",
+    "ro": "Navigate"
   },
   {
     "es": "Sin acción",
@@ -6133,7 +10261,12 @@
     "de": "No action",
     "fr": "No action",
     "it": "No action",
-    "nl": "No action"
+    "nl": "No action",
+    "pt": "No action",
+    "ru": "No action",
+    "el": "No action",
+    "zh": "No action",
+    "ro": "No action"
   },
   {
     "es": "Más información",
@@ -6141,7 +10274,12 @@
     "de": "More info",
     "fr": "More info",
     "it": "More info",
-    "nl": "More info"
+    "nl": "More info",
+    "pt": "More info",
+    "ru": "More info",
+    "el": "More info",
+    "zh": "More info",
+    "ro": "More info"
   },
   {
     "es": "Abrir URL",
@@ -6149,7 +10287,12 @@
     "de": "Öffnen: URL",
     "fr": "Ouvrir URL",
     "it": "Apri URL",
-    "nl": "Open URL"
+    "nl": "Open URL",
+    "pt": "Abrir URL",
+    "ru": "Открыть URL",
+    "el": "Άνοιγμα URL",
+    "zh": "打开URL",
+    "ro": "Deschide URL"
   },
   {
     "es": "Llamar servicio",
@@ -6157,7 +10300,12 @@
     "de": "Call service",
     "fr": "Call service",
     "it": "Call service",
-    "nl": "Call service"
+    "nl": "Call service",
+    "pt": "Call service",
+    "ru": "Call service",
+    "el": "Call service",
+    "zh": "Call service",
+    "ro": "Call service"
   },
   {
     "es": "Color del progreso",
@@ -6165,7 +10313,12 @@
     "de": "Progress color",
     "fr": "Progress color",
     "it": "Progress color",
-    "nl": "Progress color"
+    "nl": "Progress color",
+    "pt": "Progress color",
+    "ru": "Progress color",
+    "el": "Progress color",
+    "zh": "Progress color",
+    "ro": "Progress color"
   },
   {
     "es": "Fondo del progreso",
@@ -6173,7 +10326,12 @@
     "de": "Progress background",
     "fr": "Progress background",
     "it": "Progress background",
-    "nl": "Progress background"
+    "nl": "Progress background",
+    "pt": "Progress background",
+    "ru": "Progress background",
+    "el": "Progress background",
+    "zh": "Progress background",
+    "ro": "Progress background"
   },
   {
     "es": "Tintado activo TV",
@@ -6181,7 +10339,12 @@
     "de": "TV active tint",
     "fr": "TV active tint",
     "it": "TV active tint",
-    "nl": "TV active tint"
+    "nl": "TV active tint",
+    "pt": "TV active tint",
+    "ru": "TV active tint",
+    "el": "TV active tint",
+    "zh": "TV active tint",
+    "ro": "TV active tint"
   },
   {
     "es": "Color de acento",
@@ -6189,7 +10352,12 @@
     "de": "Accent color",
     "fr": "Accent color",
     "it": "Accent color",
-    "nl": "Accent color"
+    "nl": "Accent color",
+    "pt": "Accent color",
+    "ru": "Accent color",
+    "el": "Accent color",
+    "zh": "Accent color",
+    "ro": "Accent color"
   },
   {
     "es": "Fondo del navegador",
@@ -6197,7 +10365,12 @@
     "de": "Browser background",
     "fr": "Browser background",
     "it": "Browser background",
-    "nl": "Browser background"
+    "nl": "Browser background",
+    "pt": "Browser background",
+    "ru": "Browser background",
+    "el": "Browser background",
+    "zh": "Browser background",
+    "ro": "Browser background"
   },
   {
     "es": "Comportamiento",
@@ -6205,7 +10378,12 @@
     "de": "Behavior",
     "fr": "Behavior",
     "it": "Behavior",
-    "nl": "Behavior"
+    "nl": "Behavior",
+    "pt": "Behavior",
+    "ru": "Behavior",
+    "el": "Behavior",
+    "zh": "Behavior",
+    "ro": "Behavior"
   },
   {
     "es": "Todavía no has añadido ningún reproductor.",
@@ -6213,7 +10391,12 @@
     "de": "Sie haben noch keine Player hinzugefügt.",
     "fr": "Vous n’avez pas encore ajouté de lecteur.",
     "it": "Non hai ancora aggiunto lettori.",
-    "nl": "Je hebt nog geen spelers toegevoegd."
+    "nl": "Je hebt nog geen spelers toegevoegd.",
+    "pt": "You have not added any players yet.",
+    "ru": "You have not added any players yet.",
+    "el": "You have not added any players yet.",
+    "zh": "You have not added any players yet.",
+    "ro": "You have not added any players yet."
   },
   {
     "es": "Z-index",
@@ -6221,7 +10404,12 @@
     "de": "Z-index",
     "fr": "Z-index",
     "it": "Z-index",
-    "nl": "Z-index"
+    "nl": "Z-index",
+    "pt": "Z-index",
+    "ru": "Z-index",
+    "el": "Z-index",
+    "zh": "Z-index",
+    "ro": "Z-index"
   },
   {
     "es": "__H__:Activa o desactiva cabecera, valor grande, leyenda y relleno.",
@@ -6229,7 +10417,12 @@
     "de": "Kopfzeile, großen Wert, Legende und Füllung aktivieren oder deaktivieren.",
     "fr": "Active ou désactive l’en-tête, la grande valeur, la légende et le remplissage.",
     "it": "Attiva o disattiva intestazione, valore grande, legenda e riempimento.",
-    "nl": "Kop, grote waarde, legenda en vulling in-/uitschakelen."
+    "nl": "Kop, grote waarde, legenda en vulling in-/uitschakelen.",
+    "pt": "Ative ou desative o cabeçalho, o valor grande, a legenda e o preenchimento.",
+    "ru": "Включите или отключите заголовок, крупное значение, легенду и заливку.",
+    "el": "Ενεργοποιήστε ή απενεργοποιήστε κεφαλίδα, μεγάλη τιμή, υπόμνημα και γέμισμα.",
+    "zh": "启用或禁用标题栏、大数值、图例与填充。",
+    "ro": "Activați sau dezactivați antetul, valoarea mare, legenda și umplerea."
   },
   {
     "es": "__H__:Activa o desactiva cabecera, valor, leyenda y relleno.",
@@ -6237,7 +10430,12 @@
     "de": "Kopfzeile, Wert, Legende und Füllung aktivieren oder deaktivieren.",
     "fr": "Active ou désactive l’en-tête, la valeur, la légende et le remplissage.",
     "it": "Attiva o disattiva intestazione, valore, legenda e riempimento.",
-    "nl": "Kop, waarde, legenda en vulling in-/uitschakelen."
+    "nl": "Kop, waarde, legenda en vulling in-/uitschakelen.",
+    "pt": "Ative ou desative o cabeçalho, o valor, a legenda e o preenchimento.",
+    "ru": "Включите или отключите заголовок, значение, легенду и заливку.",
+    "el": "Ενεργοποιήστε ή απενεργοποιήστε κεφαλίδα, τιμή, υπόμνημα και γέμισμα.",
+    "zh": "启用或禁用标题栏、数值、图例与填充。",
+    "ro": "Activați sau dezactivați antetul, valoarea, legenda și umplerea."
   },
   {
     "es": "__H__:Activa u oculta cada bloque de la tarjeta.",
@@ -6245,7 +10443,12 @@
     "de": "Anzeigen: or hide each card block.",
     "fr": "Afficher ou masquer chaque bloc de la carte.",
     "it": "Mostra or hide each card block.",
-    "nl": "Toon or hide each card block."
+    "nl": "Toon or hide each card block.",
+    "pt": "Mostrar ou ocultar cada bloco do cartão.",
+    "ru": "Показать или скрыть каждый блок карточки.",
+    "el": "Εμφάνιση ή απόκρυψη κάθε μπλοκ κάρτας.",
+    "zh": "显示或隐藏每个卡片块。",
+    "ro": "Afișează sau ascunde fiecare bloc de card."
   },
   {
     "es": "__H__:Ajusta la apertura de paneles, navegador y el rebote de los botones.",
@@ -6253,7 +10456,12 @@
     "de": "Panelöffnung, Browser und Button-Federung anpassen.",
     "fr": "Ajustez l’ouverture des panneaux, du navigateur et le rebond des boutons.",
     "it": "Regola apertura pannelli, browser e rimbalzo pulsanti.",
-    "nl": "Paneelopening, browser en knop-veer aanpassen."
+    "nl": "Paneelopening, browser en knop-veer aanpassen.",
+    "pt": "Ajuste a abertura dos painéis, do navegador e o salto dos botões.",
+    "ru": "Настройте открытие панелей, браузера и отскок кнопок.",
+    "el": "Ρυθμίστε το άνοιγμα πάνελ, τον περιηγητή και το αναπήδημα κουμπιών.",
+    "zh": "调整面板展开、浏览器与按钮弹跳效果。",
+    "ro": "Ajustați deschiderea panourilor, browserul și săritura butoanelor."
   },
   {
     "es": "__H__:Ajustes de cabecera, chips y rango visible.",
@@ -6261,7 +10469,12 @@
     "de": "Kopfzeile, Chips und sichtbarer Bereich.",
     "fr": "Réglages de l’en-tête, des puces et de la plage visible.",
     "it": "Intestazione, chip e intervallo visibile.",
-    "nl": "Kop, chips en zichtbaar bereik."
+    "nl": "Kop, chips en zichtbaar bereik.",
+    "pt": "Cabeçalho, chips e definições do intervalo visível.",
+    "ru": "Заголовок, чипы и настройки видимого диапазона.",
+    "el": "Κεφαλίδα, chip και ρυθμίσεις ορατού εύρους.",
+    "zh": "标题栏、芯片与可见范围设置。",
+    "ro": "Antet, chipuri și setări pentru intervalul vizibil."
   },
   {
     "es": "__H__:Ajustes visuales base de la tarjeta favorita.",
@@ -6269,7 +10482,12 @@
     "de": "Grundlegende visuelle Einstellungen für die Favoritenkarte.",
     "fr": "Réglages visuels de base pour la carte favorite.",
     "it": "Impostazioni visive di base per la scheda preferita.",
-    "nl": "Basis visuele instellingen voor de favorietenkaart."
+    "nl": "Basis visuele instellingen voor de favorietenkaart.",
+    "pt": "Base visual settings for the favourite card.",
+    "ru": "Base visual settings for the favourite card.",
+    "el": "Base visual settings for the favourite card.",
+    "zh": "Base visual settings for the favourite card.",
+    "ro": "Base visual settings for the favourite card."
   },
   {
     "es": "__H__:Ajustes visuales base de la tarjeta y las burbujas.",
@@ -6277,7 +10495,12 @@
     "de": "Grundlegende visuelle Einstellungen für Karte und Blasen.",
     "fr": "Réglages visuels de base pour la carte et les bulles.",
     "it": "Impostazioni visive di base per scheda e bolle.",
-    "nl": "Basis visuele instellingen voor kaart en bellen."
+    "nl": "Basis visuele instellingen voor kaart en bellen.",
+    "pt": "Definições visuais base do cartão e das bolhas.",
+    "ru": "Базовые визуальные настройки карточки и пузырьков.",
+    "el": "Βασικές οπτικές ρυθμίσεις για την κάρτα και τις φυσαλίδες.",
+    "zh": "卡片与气泡的基础视觉设置。",
+    "ro": "Setări vizuale de bază pentru card și bule."
   },
   {
     "es": "__H__:Ajustes visuales base de la tarjeta.",
@@ -6285,7 +10508,12 @@
     "de": "Grundlegende visuelle Einstellungen für die Karte.",
     "fr": "Réglages visuels de base pour la carte.",
     "it": "Impostazioni visive di base per la scheda.",
-    "nl": "Basis visuele instellingen voor de kaart."
+    "nl": "Basis visuele instellingen voor de kaart.",
+    "pt": "Base visual settings for the card.",
+    "ru": "Base visual settings for the card.",
+    "el": "Base visual settings for the card.",
+    "zh": "Base visual settings for the card.",
+    "ro": "Base visual settings for the card."
   },
   {
     "es": "__H__:Ajustes visuales base del mapa y las burbujas.",
@@ -6293,7 +10521,12 @@
     "de": "Grundlegende visuelle Einstellungen für Karte und Blasen.",
     "fr": "Réglages visuels de base pour la carte et les bulles.",
     "it": "Impostazioni visive di base per mappa e bolle.",
-    "nl": "Basis visuele instellingen voor kaart en bellen."
+    "nl": "Basis visuele instellingen voor kaart en bellen.",
+    "pt": "Base visual settings for the map and bubbles.",
+    "ru": "Base visual settings for the map and bubbles.",
+    "el": "Base visual settings for the map and bubbles.",
+    "zh": "Base visual settings for the map and bubbles.",
+    "ro": "Base visual settings for the map and bubbles."
   },
   {
     "es": "__H__:Ajustes visuales básicos del look Nodalia.",
@@ -6301,7 +10534,12 @@
     "de": "Grundlegende visuelle Einstellungen für den Nodalia-Look.",
     "fr": "Réglages visuels de base pour le style Nodalia.",
     "it": "Impostazioni visive di base per il look Nodalia.",
-    "nl": "Basis visuele instellingen voor de Nodalia-stijl."
+    "nl": "Basis visuele instellingen voor de Nodalia-stijl.",
+    "pt": "Basic visual settings for the Nodalia look.",
+    "ru": "Basic visual settings for the Nodalia look.",
+    "el": "Basic visual settings for the Nodalia look.",
+    "zh": "Basic visual settings for the Nodalia look.",
+    "ro": "Basic visual settings for the Nodalia look."
   },
   {
     "es": "__H__:Ajustes visuales de barra, botones, popup y media player.",
@@ -6309,7 +10547,12 @@
     "de": "Visuelle Einstellungen für Leiste, Tasten, Popup und Media Player.",
     "fr": "Réglages visuels pour la barre, les boutons, la fenêtre contextuelle et le lecteur média.",
     "it": "Impostazioni visive per barra, pulsanti, popup e lettore.",
-    "nl": "Visuele instellingen voor balk, knoppen, pop-up en mediaspeler."
+    "nl": "Visuele instellingen voor balk, knoppen, pop-up en mediaspeler.",
+    "pt": "Definições visuais para a barra, botões, popup e leitor multimédia.",
+    "ru": "Визуальные настройки панели, кнопок, всплывающего окна и медиаплеера.",
+    "el": "Οπτικές ρυθμίσεις για γραμμή, κουμπιά, αναδυόμενο και media player.",
+    "zh": "导航栏、按钮、弹出窗口与媒体播放器的视觉设置。",
+    "ro": "Setări vizuale pentru bară, butoane, popup și media player."
   },
   {
     "es": "__H__:Ajustes visuales de la card, el icono y el grafico.",
@@ -6317,7 +10560,12 @@
     "de": "Visuelle Einstellungen für Karte, Symbol und Diagramm.",
     "fr": "Réglages visuels pour la carte, l’icône et le graphique.",
     "it": "Impostazioni visive per scheda, icona e grafico.",
-    "nl": "Visuele instellingen voor kaart, pictogram en grafiek."
+    "nl": "Visuele instellingen voor kaart, pictogram en grafiek.",
+    "pt": "Definições visuais do cartão, ícone e gráfico.",
+    "ru": "Визуальные настройки карточки, значка и графика.",
+    "el": "Οπτικές ρυθμίσεις για την κάρτα, το εικονίδιο και το γράφημα.",
+    "zh": "卡片、图标与图表的视觉设置。",
+    "ro": "Setări vizuale pentru card, pictogramă și grafic."
   },
   {
     "es": "__H__:Ajustes visuales del grafico y el look Nodalia.",
@@ -6325,7 +10573,12 @@
     "de": "Visuelle Einstellungen für Diagramm und Nodalia-Look.",
     "fr": "Réglages visuels pour le graphique et le style Nodalia.",
     "it": "Impostazioni visive per grafico e look Nodalia.",
-    "nl": "Visuele instellingen voor grafiek en Nodalia-stijl."
+    "nl": "Visuele instellingen voor grafiek en Nodalia-stijl.",
+    "pt": "Definições visuais do gráfico e do aspeto Nodalia.",
+    "ru": "Визуальные настройки графика и вида Nodalia.",
+    "el": "Οπτικές ρυθμίσεις για το γράφημα και την εμφάνιση Nodalia.",
+    "zh": "图表与 Nodalia 外观的视觉设置。",
+    "ro": "Setări vizuale pentru grafic și aspectul Nodalia."
   },
   {
     "es": "__H__:Ajustes visuales del look Nodalia y el dial circular.",
@@ -6333,7 +10586,12 @@
     "de": "Visuelle Einstellungen für Nodalia-Look und Drehregler.",
     "fr": "Réglages visuels pour le style Nodalia et le cadran circulaire.",
     "it": "Impostazioni visive per look Nodalia e dial circolare.",
-    "nl": "Visuele instellingen voor Nodalia-stijl en ronde wijzerplaat."
+    "nl": "Visuele instellingen voor Nodalia-stijl en ronde wijzerplaat.",
+    "pt": "Definições visuais para o aspeto Nodalia e o mostrador circular.",
+    "ru": "Визуальные настройки вида Nodalia и кругового диска.",
+    "el": "Οπτικές ρυθμίσεις για την εμφάνιση Nodalia και τον κυκλικό δίσκο.",
+    "zh": "Nodalia 外观与圆形旋钮的视觉设置。",
+    "ro": "Setări vizuale pentru aspectul Nodalia și discul circular."
   },
   {
     "es": "__H__:Ajustes visuales del reproductor principal y del navegador de medios.",
@@ -6341,7 +10599,12 @@
     "de": "Visuelle Einstellungen für Hauptplayer und Medienbrowser.",
     "fr": "Réglages visuels pour le lecteur principal et le navigateur multimédia.",
     "it": "Impostazioni visive per lettore principale e browser media.",
-    "nl": "Visuele instellingen voor hoofdspeler en mediabrowser."
+    "nl": "Visuele instellingen voor hoofdspeler en mediabrowser.",
+    "pt": "Definições visuais para o leitor principal e o navegador multimédia.",
+    "ru": "Визуальные настройки основного плеера и медиабраузера.",
+    "el": "Οπτικές ρυθμίσεις για τον κύριο player και τον περιηγητή μέσων.",
+    "zh": "主播放器与媒体浏览器的视觉设置。",
+    "ro": "Setări vizuale pentru playerul principal și browserul media."
   },
   {
     "es": "__H__:Ajustes visuales principales de la tarjeta.",
@@ -6349,7 +10612,12 @@
     "de": "Hauptvisuelle Einstellungen für die Karte.",
     "fr": "Réglages visuels principaux de la carte.",
     "it": "Impostazioni visive principali della scheda.",
-    "nl": "Belangrijkste visuele instellingen voor de kaart."
+    "nl": "Belangrijkste visuele instellingen voor de kaart.",
+    "pt": "Main visual settings for the card.",
+    "ru": "Main visual settings for the card.",
+    "el": "Main visual settings for the card.",
+    "zh": "Main visual settings for the card.",
+    "ro": "Main visual settings for the card."
   },
   {
     "es": "__H__:Anade, reordena y personaliza cada entidad mostrada en la grafica.",
@@ -6357,7 +10625,12 @@
     "de": "Jede Entität im Diagramm hinzufügen, sortieren und anpassen.",
     "fr": "Ajoutez, réorganisez et personnalisez chaque entité affichée sur le graphique.",
     "it": "Aggiungi, riordina e personalizza ogni entità nel grafico.",
-    "nl": "Elke entiteit in de grafiek toevoegen, sorteren en aanpassen."
+    "nl": "Elke entiteit in de grafiek toevoegen, sorteren en aanpassen.",
+    "pt": "Adicione, reordene e personalize cada entidade mostrada no gráfico.",
+    "ru": "Добавляйте, упорядочивайте и настраивайте каждую сущность на графике.",
+    "el": "Προσθέστε, αναδιατάξτε και προσαρμόστε κάθε οντότητα που εμφανίζεται στο γράφημα.",
+    "zh": "添加、排序并自定义图表上显示的每个实体。",
+    "ro": "Adăugați, reordonați și personalizați fiecare entitate afișată pe grafic."
   },
   {
     "es": "__H__:Ayuda a compactar el gauge según el espacio disponible en la vista.",
@@ -6365,7 +10638,12 @@
     "de": "Kompaktiert die Gauge je nach Platz.",
     "fr": "Aide à compacter le jauge selon l’espace disponible.",
     "it": "Compatta il gauge in base allo spazio.",
-    "nl": "Maakt de gauge compacter naargelang ruimte."
+    "nl": "Maakt de gauge compacter naargelang ruimte.",
+    "pt": "Ajuda a compactar o indicador conforme o espaço disponível.",
+    "ru": "Помогает компактнее отображать индикатор в зависимости от места.",
+    "el": "Βοηθά στη συμπύκνωση του μέτρου ανάλογα με τον διαθέσιμο χώρο.",
+    "zh": "根据可用空间压缩仪表显示。",
+    "ro": "Ajută la compactarea gauge-ului în funcție de spațiul disponibil."
   },
   {
     "es": "__H__:Ayuda a compactar la climate card según el espacio disponible en la vista.",
@@ -6373,7 +10651,12 @@
     "de": "Hilft, die Thermostat-Karte je nach verfügbarem Platz zu kompaktieren.",
     "fr": "Aide à compacter la carte climat selon l’espace disponible.",
     "it": "Aiuta a compattare la climate card in base allo spazio.",
-    "nl": "Houdt de thermostaatkaart compact naargelang de ruimte."
+    "nl": "Houdt de thermostaatkaart compact naargelang de ruimte.",
+    "pt": "Ajuda a compactar o cartão de clima conforme o espaço disponível.",
+    "ru": "Помогает компактнее отображать карту климата в зависимости от места.",
+    "el": "Βοηθά στη συμπύκνωση της κάρτας κλίματος ανάλογα με τον διαθέσιμο χώρο.",
+    "zh": "根据可用空间压缩气候卡片。",
+    "ro": "Ajută la compactarea cardului climă în funcție de spațiul disponibil."
   },
   {
     "es": "__H__:Añade, reordena y personaliza cada reproductor visible en la tarjeta.",
@@ -6381,7 +10664,12 @@
     "de": "Jeden Player auf der Karte hinzufügen, sortieren und anpassen.",
     "fr": "Ajoutez, réorganisez et personnalisez chaque lecteur affiché sur la carte.",
     "it": "Aggiungi, riordina e personalizza ogni lettore sulla scheda.",
-    "nl": "Elke speler op de kaart toevoegen, sorteren en aanpassen."
+    "nl": "Elke speler op de kaart toevoegen, sorteren en aanpassen.",
+    "pt": "Adicione, reordene e personalize cada leitor mostrado no cartão.",
+    "ru": "Добавляйте, упорядочивайте и настраивайте каждый плеер на карточке.",
+    "el": "Προσθέστε, αναδιατάξτε και προσαρμόστε κάθε player που εμφανίζεται στην κάρτα.",
+    "zh": "添加、排序并自定义卡片上显示的每个播放器。",
+    "ro": "Adăugați, reordonați și personalizați fiecare player afișat pe card."
   },
   {
     "es": "__H__:Añade, reordena y personaliza los destinos de la barra y sus popups.",
@@ -6389,7 +10677,12 @@
     "de": "Leisten-Ziele und Popups hinzufügen, sortieren und anpassen.",
     "fr": "Ajoutez, réorganisez et personnalisez les destinations de la barre et leurs fenêtres.",
     "it": "Aggiungi, riordina e personalizza destinazioni della barra e relativi popup.",
-    "nl": "Bestemmingsbalk en pop-ups toevoegen, sorteren en aanpassen."
+    "nl": "Bestemmingsbalk en pop-ups toevoegen, sorteren en aanpassen.",
+    "pt": "Adicione, reordene e personalize os destinos da barra e os respetivos popups.",
+    "ru": "Добавляйте, упорядочивайте и настраивайте пункты назначения панели и их всплывающие окна.",
+    "el": "Προσθέστε, αναδιατάξτε και προσαρμόστε τους προορισμούς της γραμμής και τα αναδυόμενα τους.",
+    "zh": "添加、排序并自定义导航栏目标及其弹出窗口。",
+    "ro": "Adăugați, reordonați și personalizați destinațiile barei și popup-urile acestora."
   },
   {
     "es": "__H__:Botones de armado y desarmado visibles en la tarjeta.",
@@ -6397,7 +10690,12 @@
     "de": "Scharf-/Unscharf-Schaltflächen auf der Karte.",
     "fr": "Boutons d’armement et de désarmement visibles sur la carte.",
     "it": "Pulsanti inserimento/disinserimento visibili sulla scheda.",
-    "nl": "Zichtbare in-/uitschakelknoppen op de kaart."
+    "nl": "Zichtbare in-/uitschakelknoppen op de kaart.",
+    "pt": "Botões de armar e desarmar visíveis no cartão.",
+    "ru": "Кнопки постановки и снятия с охраны на карточке.",
+    "el": "Ορατά κουμπιά όπλισης/αφόπλισης στην κάρτα.",
+    "zh": "卡片上可见的布防与撤防按钮。",
+    "ro": "Butoane armare/dezarmare vizibile pe card."
   },
   {
     "es": "__H__:Botones secundarios con icono para alternar, abrir más información o llamar un servicio.",
@@ -6405,7 +10703,12 @@
     "de": "Sekundäre Symboltasten zum Umschalten, Infos oder Service.",
     "fr": "Boutons d’icônes secondaires pour basculer, ouvrir les infos ou appeler un service.",
     "it": "Pulsanti icona secondari per toggle, info o servizio.",
-    "nl": "Secundaire pictogramknoppen voor toggle, info of service."
+    "nl": "Secundaire pictogramknoppen voor toggle, info of service.",
+    "pt": "Botões de ícone secundários para alternar, abrir mais informação ou chamar um serviço.",
+    "ru": "Дополнительные значковые кнопки для переключения, подробностей или вызова службы.",
+    "el": "Δευτερεύοντα κουμπιά εικονιδίων για εναλλαγή, περισσότερες πληροφορίες ή κλήση υπηρεσίας.",
+    "zh": "用于切换、打开更多信息或调用服务的次要图标按钮。",
+    "ro": "Butoane pictogramă secundare pentru comutare, mai multe informații sau apel serviciu."
   },
   {
     "es": "__H__:Configura titulo, entidades y rango visible de la grafica.",
@@ -6413,7 +10716,12 @@
     "de": "Titel, Entitäten und sichtbaren Diagrammbereich konfigurieren.",
     "fr": "Configurez le titre, les entités et la plage visible du graphique.",
     "it": "Configura titolo, entità e intervallo visibile del grafico.",
-    "nl": "Titel, entiteiten en zichtbaar grafiekbereik configureren."
+    "nl": "Titel, entiteiten en zichtbaar grafiekbereik configureren.",
+    "pt": "Configure o título, as entidades e o intervalo visível do gráfico.",
+    "ru": "Настройте заголовок, сущности и видимый диапазон графика.",
+    "el": "Ρυθμίστε τίτλο, οντότητες και ορατό εύρος γραφήματος.",
+    "zh": "配置标题、实体与图表可见范围。",
+    "ro": "Configurați titlul, entitățile și intervalul vizibil al graficului."
   },
   {
     "es": "__H__:Controla la entrada del tooltip y el rebote visual de los chips.",
@@ -6421,7 +10729,12 @@
     "de": "Tooltip-Eingang und Chip-Federung steuern.",
     "fr": "Contrôle l’entrée du tooltip et le rebond visuel des puces.",
     "it": "Ingresso tooltip e rimbalzo chip.",
-    "nl": "Tooltip en chip-animatie regelen."
+    "nl": "Tooltip en chip-animatie regelen.",
+    "pt": "Controla a entrada da tooltip e o salto visual dos chips.",
+    "ru": "Управляет появлением подсказки и визуальным отскоком чипов.",
+    "el": "Ελέγχει την είσοδο tooltip και το οπτικό αναπήδημα chip.",
+    "zh": "控制提示框进入与芯片视觉弹跳。",
+    "ro": "Controlează intrarea tooltip-ului și săritura vizuală a chipurilor."
   },
   {
     "es": "__H__:Controla la transición del dial, la entrada del contenido y el rebote al tocar la tarjeta.",
@@ -6429,7 +10742,12 @@
     "de": "Steuert Drehregler-Übergang, Inhaltseingang und Tap-Federung.",
     "fr": "Contrôle la transition du cadran, l’entrée du contenu et le rebond au toucher.",
     "it": "Controlla transizione dial, ingresso contenuto e rimbalzo tocco.",
-    "nl": "Regelt draaiknop-overgang, inhoud en tik-veer."
+    "nl": "Regelt draaiknop-overgang, inhoud en tik-veer.",
+    "pt": "Controla a transição do mostrador, a entrada do conteúdo e o salto ao toque.",
+    "ru": "Управляет переходом диска, появлением содержимого и отскоком при нажатии.",
+    "el": "Ελέγχει τη μετάβαση του δίσκου, την είσοδο περιεχομένου και το αναπήδημα πατήματος.",
+    "zh": "控制旋钮过渡、内容进入与点击弹跳。",
+    "ro": "Controlează tranziția discului, intrarea conținutului și săritura la atingere."
   },
   {
     "es": "__H__:Controla la transición del dial, la entrada del contenido y el rebote de los botones.",
@@ -6437,7 +10755,12 @@
     "de": "Steuert den Übergang des Drehreglers, den Eingang des Inhalts und den Tasten-Federungseffekt.",
     "fr": "Contrôle la transition du cadran, l’entrée du contenu et le rebond des boutons.",
     "it": "Controlla la transizione del dial, l’ingresso del contenuto e il rimbalzo dei pulsanti.",
-    "nl": "Regelt de draaiknop-overgang, binnenkomst van inhoud en knop-veer."
+    "nl": "Regelt de draaiknop-overgang, binnenkomst van inhoud en knop-veer.",
+    "pt": "Controla a transição do mostrador, a entrada do conteúdo e o salto dos botões.",
+    "ru": "Управляет переходом диска, появлением содержимого и отскоком кнопок.",
+    "el": "Ελέγχει τη μετάβαση του δίσκου, την είσοδο περιεχομένου και το αναπήδημα των κουμπιών.",
+    "zh": "控制旋钮过渡、内容进入与按钮弹跳。",
+    "ro": "Controlează tranziția discului, intrarea conținutului și săritura butoanelor."
   },
   {
     "es": "__H__:Controla la visualizacion de lineas sin consumo y la velocidad de animacion.",
@@ -6445,7 +10768,12 @@
     "de": "Nullverbrauchslinien und Animationsgeschwindigkeit steuern.",
     "fr": "Contrôle l’affichage des lignes à zéro et la vitesse d’animation.",
     "it": "Visualizza linee a zero consumo e velocità animazione.",
-    "nl": "Nul-lijnen en animatiesnelheid regelen."
+    "nl": "Nul-lijnen en animatiesnelheid regelen.",
+    "pt": "Controla a apresentação das linhas de consumo zero e a velocidade da animação.",
+    "ru": "Управляет отображением линий нулевого потребления и скоростью анимации.",
+    "el": "Ελέγχει την εμφάνιση γραμμών μηδενικής κατανάλωσης και την ταχύτητα κίνησης.",
+    "zh": "控制零功耗线条的显示与动画速度。",
+    "ro": "Controlează afișarea liniilor de consum zero și viteza animației."
   },
   {
     "es": "__H__:Controla las lineas a cero y la velocidad del flujo.",
@@ -6453,7 +10781,12 @@
     "de": "Null-Linien und Flussgeschwindigkeit steuern.",
     "fr": "Contrôle les lignes à zéro et la vitesse du flux.",
     "it": "Linee a zero e velocità del flusso.",
-    "nl": "Nul-lijnen en stroomsnelheid."
+    "nl": "Nul-lijnen en stroomsnelheid.",
+    "pt": "Controls zero lines and flow speed.",
+    "ru": "Controls zero lines and flow speed.",
+    "el": "Controls zero lines and flow speed.",
+    "zh": "Controls zero lines and flow speed.",
+    "ro": "Controls zero lines and flow speed."
   },
   {
     "es": "__H__:Controla transiciones de barra, popup, media player y respuestas visuales.",
@@ -6461,7 +10794,12 @@
     "de": "Steuert Übergänge für Leiste, Popup, Media Player und visuelles Feedback.",
     "fr": "Contrôle les transitions de la barre, du popup, du lecteur média et le retour visuel.",
     "it": "Controlla transizioni barra, popup, lettore e feedback visivo.",
-    "nl": "Regelt overgangen voor balk, pop-up, mediaspeler en visuele feedback."
+    "nl": "Regelt overgangen voor balk, pop-up, mediaspeler en visuele feedback.",
+    "pt": "Controla as transições da barra, popup, leitor multimédia e feedback visual.",
+    "ru": "Управляет переходами панели, всплывающего окна, медиаплеера и визуальной отдачей.",
+    "el": "Ελέγχει τις μεταβάσεις γραμμής, αναδυόμενου, media player και οπτική ανταπόκριση.",
+    "zh": "控制导航栏、弹出窗口、媒体播放器与视觉反馈的过渡。",
+    "ro": "Controlează tranzițiile pentru bară, popup, media player și feedback vizual."
   },
   {
     "es": "__H__:Elige la informacion y los controles visibles.",
@@ -6469,7 +10807,12 @@
     "de": "Wähle die sichtbaren Informationen und Steuerelemente.",
     "fr": "Choisissez les informations et contrôles visibles.",
     "it": "Scegli le informazioni e i controlli visibili.",
-    "nl": "Kies zichtbare informatie en bediening."
+    "nl": "Kies zichtbare informatie en bediening.",
+    "pt": "Escolha as informações e os controlos visíveis.",
+    "ru": "Выберите отображаемую информацию и элементы управления.",
+    "el": "Επιλέξτε τις ορατές πληροφορίες και τα στοιχεία ελέγχου.",
+    "zh": "选择可见信息与控件。",
+    "ro": "Alegeți informațiile și comenzile vizibile."
   },
   {
     "es": "__H__:Elige qué chips y controles deben mostrarse.",
@@ -6477,7 +10820,12 @@
     "de": "Wähle, welche Chips und Steuerelemente angezeigt werden sollen.",
     "fr": "Choisissez les puces et contrôles à afficher.",
     "it": "Scegli quali chip e controlli mostrare.",
-    "nl": "Kies welke chips en bediening zichtbaar zijn."
+    "nl": "Kies welke chips en bediening zichtbaar zijn.",
+    "pt": "Escolha quais chips e controlos mostrar.",
+    "ru": "Выберите, какие чипы и элементы управления показывать.",
+    "el": "Επιλέξτε ποια chip και στοιχεία ελέγχου θα εμφανίζονται.",
+    "zh": "选择要显示的芯片和控件。",
+    "ro": "Alegeți ce chipuri și comenzi să fie afișate."
   },
   {
     "es": "__H__:Entidad del robot y fuente principal del mapa.",
@@ -6485,7 +10833,12 @@
     "de": "Roboter-Entität und Hauptkartenquelle.",
     "fr": "Entité robot et source principale de la carte.",
     "it": "Entità robot e sorgente mappa principale.",
-    "nl": "Robotentiteit en hoofdkaartbron."
+    "nl": "Robotentiteit en hoofdkaartbron.",
+    "pt": "Robot entity and main map source.",
+    "ru": "Robot entity and main map source.",
+    "el": "Robot entity and main map source.",
+    "zh": "Robot entity and main map source.",
+    "ro": "Robot entity and main map source."
   },
   {
     "es": "__H__:Entidad favorita, nombre visible e icono principal.",
@@ -6493,7 +10846,12 @@
     "de": "Favoriten-Entität, sichtbarer Name und Hauptsymbol.",
     "fr": "Entité favorite, nom visible et icône principale.",
     "it": "Entità preferita, nome visibile e icona principale.",
-    "nl": "Favoriete entiteit, zichtbare naam en hoofdpictogram."
+    "nl": "Favoriete entiteit, zichtbare naam en hoofdpictogram.",
+    "pt": "Entidade favorita, nome visível e ícone principal.",
+    "ru": "Избранная сущность, видимое имя и основной значок.",
+    "el": "Αγαπημένη οντότητα, ορατό όνομα και κύριο εικονίδιο.",
+    "zh": "收藏实体、可见名称与主图标。",
+    "ro": "Entitate favorită, nume vizibil și pictogramă principală."
   },
   {
     "es": "__H__:Entidad meteorologica principal, nombre visible, icono y contenido mostrado.",
@@ -6501,7 +10859,12 @@
     "de": "Haupt-Wetterentität, sichtbarer Name, Symbol und angezeigter Inhalt.",
     "fr": "Entité météo principale, nom visible, icône et contenu affiché.",
     "it": "Entità meteo principale, nome visibile, icona e contenuto.",
-    "nl": "Hoofdweerentiteit, zichtbare naam, pictogram en inhoud."
+    "nl": "Hoofdweerentiteit, zichtbare naam, pictogram en inhoud.",
+    "pt": "Entidade meteorológica principal, nome visível, ícone e conteúdo mostrado.",
+    "ru": "Основная погодная сущность, видимое имя, значок и отображаемое содержимое.",
+    "el": "Κύρια μετεωρολογική οντότητα, ορατό όνομα, εικονίδιο και εμφανιζόμενο περιεχόμενο.",
+    "zh": "主天气实体、可见名称、图标与显示内容。",
+    "ro": "Entitate meteo principală, nume vizibil, pictogramă și conținut afișat."
   },
   {
     "es": "__H__:Entidad numérica principal, nombre, icono y rango del gauge.",
@@ -6509,7 +10872,12 @@
     "de": "Numerische Hauptentität, Name, Symbol und Messbereich.",
     "fr": "Entité numérique principale, nom, icône et plage du jauge.",
     "it": "Entità numerica principale, nome, icona e intervallo gauge.",
-    "nl": "Hoofdnumerieke entiteit, naam, pictogram en bereik."
+    "nl": "Hoofdnumerieke entiteit, naam, pictogram en bereik.",
+    "pt": "Entidade numérica principal, nome, ícone e intervalo do indicador.",
+    "ru": "Основная числовая сущность, имя, значок и диапазон индикатора.",
+    "el": "Κύρια αριθμητική οντότητα, όνομα, εικονίδιο και εύρος μέτρου.",
+    "zh": "主数值实体、名称、图标与仪表范围。",
+    "ro": "Entitate numerică principală, nume, pictogramă și interval gauge."
   },
   {
     "es": "__H__:Entidad persona, foto, icono de zona y comportamiento principal de la tarjeta.",
@@ -6517,7 +10885,12 @@
     "de": "Personenentität, Foto, Zonensymbol und Hauptverhalten.",
     "fr": "Entité personne, photo, icône de zone et comportement principal.",
     "it": "Entità persona, foto, icona zona e comportamento principale.",
-    "nl": "Persoonentiteit, foto, zonepictogram en hoofdgedrag."
+    "nl": "Persoonentiteit, foto, zonepictogram en hoofdgedrag.",
+    "pt": "Entidade pessoa, foto, ícone da zona e comportamento principal do cartão.",
+    "ru": "Сущность человека, фото, значок зоны и основное поведение карточки.",
+    "el": "Οντότητα προσώπου, φωτογραφία, εικονίδιο ζώνης και κύρια συμπεριφορά κάρτας.",
+    "zh": "人员实体、照片、区域图标与卡片主要行为。",
+    "ro": "Entitate persoană, fotografie, pictogramă zonă și comportament principal al cardului."
   },
   {
     "es": "__H__:Entidad principal y textos visibles.",
@@ -6525,7 +10898,12 @@
     "de": "Hauptentität und sichtbare Texte.",
     "fr": "Entité principale et textes visibles.",
     "it": "Entità principale e testi visibili.",
-    "nl": "Hoofdentiteit en zichtbare teksten."
+    "nl": "Hoofdentiteit en zichtbare teksten.",
+    "pt": "Main entity and visible texts.",
+    "ru": "Main entity and visible texts.",
+    "el": "Main entity and visible texts.",
+    "zh": "Main entity and visible texts.",
+    "ro": "Main entity and visible texts."
   },
   {
     "es": "__H__:Entidad principal, helper opcional del codigo, icono y comportamiento base de la tarjeta.",
@@ -6533,7 +10911,12 @@
     "de": "Hauptentität, optionaler Code-Helfer, Symbol und Grundverhalten.",
     "fr": "Entité principale, aide code optionnelle, icône et comportement de base.",
     "it": "Entità principale, helper codice opzionale, icona e comportamento base.",
-    "nl": "Hoofdentiteit, optionele code-helper, pictogram en basisgedrag."
+    "nl": "Hoofdentiteit, optionele code-helper, pictogram en basisgedrag.",
+    "pt": "Entidade principal, ajudante de código opcional, ícone e comportamento base do cartão.",
+    "ru": "Основная сущность, опциональный помощник кода, значок и базовое поведение карточки.",
+    "el": "Κύρια οντότητα, προαιρετικός βοηθός κώδικα, εικονίδιο και βασική συμπεριφορά κάρτας.",
+    "zh": "主实体、可选代码助手、图标与卡片基础行为。",
+    "ro": "Entitate principală, ajutor de cod opțional, pictogramă și comportament de bază al cardului."
   },
   {
     "es": "__H__:Entidad principal, nombre visible e icono base de la tarjeta.",
@@ -6541,7 +10924,12 @@
     "de": "Hauptentität, sichtbarer Name und Basissymbol.",
     "fr": "Entité principale, nom visible et icône de base de la carte.",
     "it": "Entità principale, nome visibile e icona base.",
-    "nl": "Hoofdentiteit, zichtbare naam en basispictogram."
+    "nl": "Hoofdentiteit, zichtbare naam en basispictogram.",
+    "pt": "Entidade principal, nome visível e ícone base do cartão.",
+    "ru": "Основная сущность, видимое имя и базовый значок карточки.",
+    "el": "Κύρια οντότητα, ορατό όνομα και βασικό εικονίδιο κάρτας.",
+    "zh": "主实体、可见名称与卡片基础图标。",
+    "ro": "Entitate principală, nume vizibil și pictogramă de bază a cardului."
   },
   {
     "es": "__H__:Entidad principal, nombre visible e icono de la tarjeta.",
@@ -6549,7 +10937,12 @@
     "de": "Hauptentität, sichtbarer Name und Kartensymbol.",
     "fr": "Entité principale, nom visible et icône de la carte.",
     "it": "Entità principale, nome visibile e icona scheda.",
-    "nl": "Hoofdentiteit, zichtbare naam en kaartpictogram."
+    "nl": "Hoofdentiteit, zichtbare naam en kaartpictogram.",
+    "pt": "Entidade principal, nome visível e ícone do cartão.",
+    "ru": "Основная сущность, видимое имя и значок карточки.",
+    "el": "Κύρια οντότητα, ορατό όνομα και εικονίδιο κάρτας.",
+    "zh": "主实体、可见名称与卡片图标。",
+    "ro": "Entitate principală, nume vizibil și pictograma cardului."
   },
   {
     "es": "__H__:Entidad principal, nombre visible y comportamiento al tocar la tarjeta.",
@@ -6557,7 +10950,12 @@
     "de": "Hauptentität, sichtbarer Name und Tap-Verhalten.",
     "fr": "Entité principale, nom visible et comportement au toucher.",
     "it": "Entità principale, nome visibile e comportamento al tocco.",
-    "nl": "Hoofdentiteit, zichtbare naam en tikgedrag."
+    "nl": "Hoofdentiteit, zichtbare naam en tikgedrag.",
+    "pt": "Entidade principal, nome visível e comportamento ao toque.",
+    "ru": "Основная сущность, видимое имя и поведение при нажатии.",
+    "el": "Κύρια οντότητα, ορατό όνομα και συμπεριφορά πατήματος.",
+    "zh": "主实体、可见名称与点击行为。",
+    "ro": "Entitate principală, nume vizibil și comportament la atingere."
   },
   {
     "es": "__H__:Entrada suave de la tarjeta, paneles y respuesta visual al pulsar controles.",
@@ -6565,7 +10963,12 @@
     "de": "Sanfter Karteneingang, Panels und visuelles Feedback bei Bedienung.",
     "fr": "Entrée fluide de la carte, panneaux et retour visuel en pressant les contrôles.",
     "it": "Entrata fluida scheda, pannelli e feedback visivo ai controlli.",
-    "nl": "Vloeiende kaartingang, panelen en visuele feedback."
+    "nl": "Vloeiende kaartingang, panelen en visuele feedback.",
+    "pt": "Entrada suave do cartão, painéis e feedback visual ao premir controlos.",
+    "ru": "Плавное появление карточки, панелей и визуальная отдача при нажатии элементов управления.",
+    "el": "Ομαλή είσοδος κάρτας, πάνελ και οπτική ανταπόκριση κατά το πάτημα στοιχείων ελέγχου.",
+    "zh": "卡片入场、面板平滑过渡及按下控件时的视觉反馈。",
+    "ro": "Intrare lină a cardului, panouri și feedback vizual la apăsarea comenzilor."
   },
   {
     "es": "__H__:Entrada suave del contenido y pequeno rebote al pulsar acciones e icono.",
@@ -6573,7 +10976,12 @@
     "de": "Sanfter Inhaltseingang und kleine Feder bei Aktionen und Symbol.",
     "fr": "Entrée fluide du contenu et petit rebond sur les actions et l’icône.",
     "it": "Ingresso fluido e piccolo rimbalzo su azioni e icona.",
-    "nl": "Vloeiende inhoud en kleine veer op acties en pictogram."
+    "nl": "Vloeiende inhoud en kleine veer op acties en pictogram.",
+    "pt": "Entrada suave do conteúdo e pequeno salto ao tocar nas ações e no ícone.",
+    "ru": "Плавное появление содержимого и небольшой отскок при нажатии на действия и значок.",
+    "el": "Ομαλή είσοδος περιεχομένου και μικρό αναπήδημα όταν πατάτε ενέργειες και εικονίδιο.",
+    "zh": "内容平滑进入，点击操作与图标时轻微弹跳。",
+    "ro": "Intrare lină a conținutului și săritură mică la acțiuni și pictogramă."
   },
   {
     "es": "__H__:Entrada suave del contenido y pequeno rebote al pulsar la tarjeta.",
@@ -6581,7 +10989,12 @@
     "de": "Sanfter Inhaltseingang und kleine Feder beim Tippen.",
     "fr": "Entrée fluide du contenu et petit rebond au toucher sur la carte.",
     "it": "Ingresso fluido e piccolo rimbalzo al tocco.",
-    "nl": "Vloeiende inhoud en kleine tik-animatie."
+    "nl": "Vloeiende inhoud en kleine tik-animatie.",
+    "pt": "Entrada suave do conteúdo e pequeno salto ao tocar no cartão.",
+    "ru": "Плавное появление содержимого и небольшой отскок при нажатии на карточку.",
+    "el": "Ομαλή είσοδος περιεχομένου και μικρό αναπήδημα όταν πατάτε την κάρτα.",
+    "zh": "内容平滑进入，点击卡片时轻微弹跳。",
+    "ro": "Intrare lină a conținutului și săritură mică la atingerea cardului."
   },
   {
     "es": "__H__:Entrada suave del contenido y pequeño rebote al pulsar la tarjeta o sus acciones.",
@@ -6589,7 +11002,12 @@
     "de": "Sanfter Inhaltseingang und kleine Feder bei Karte oder Aktionen.",
     "fr": "Entrée fluide du contenu et petit rebond au toucher sur la carte ou ses actions.",
     "it": "Ingresso fluido e piccolo rimbalzo su scheda o azioni.",
-    "nl": "Vloeiende inhoud en kleine veer op kaart of acties."
+    "nl": "Vloeiende inhoud en kleine veer op kaart of acties.",
+    "pt": "Entrada suave do conteúdo e pequeno salto ao tocar no cartão ou nas suas ações.",
+    "ru": "Плавное появление содержимого и лёгкий отскок при нажатии на карточку или её действия.",
+    "el": "Ομαλή είσοδος περιεχομένου και ελαφρύ αναπήδημα όταν πατάτε την κάρτα ή τις ενέργειές της.",
+    "zh": "内容平滑进入，点击卡片或其操作时轻微弹跳。",
+    "ro": "Intrare lină a conținutului și săritură mică la atingerea cardului sau acțiunilor sale."
   },
   {
     "es": "__H__:Entrada suave del contenido y rebote ligero al pulsar la tarjeta.",
@@ -6597,7 +11015,12 @@
     "de": "Sanfter Inhaltseingang und leichter Feder-Tap.",
     "fr": "Entrée fluide du contenu et léger rebond au toucher sur la carte.",
     "it": "Ingresso fluido e leggero rimbalzo al tocco.",
-    "nl": "Vloeiende inhoud en lichte tik-animatie."
+    "nl": "Vloeiende inhoud en lichte tik-animatie.",
+    "pt": "Entrada suave do conteúdo e salto ligeiro ao tocar no cartão.",
+    "ru": "Плавное появление содержимого и лёгкий отскок при нажатии на карточку.",
+    "el": "Ομαλή είσοδος περιεχομένου και ελαφρύ αναπήδημα όταν πατάτε την κάρτα.",
+    "zh": "内容平滑进入，点击卡片时轻微弹跳。",
+    "ro": "Intrare lină a conținutului și săritură ușoară la atingerea cardului."
   },
   {
     "es": "__H__:Entrada suave del flujo y rebote al pulsar nodos o acciones.",
@@ -6605,7 +11028,12 @@
     "de": "Sanfter Flusseingang und Feder bei Knoten oder Aktionen.",
     "fr": "Entrée fluide du flux et rebond au toucher sur les nœuds ou actions.",
     "it": "Ingresso fluido del flusso e rimbalzo su nodi o azioni.",
-    "nl": "Vloeiende stroom en veer bij knopen of acties."
+    "nl": "Vloeiende stroom en veer bij knopen of acties.",
+    "pt": "Entrada suave do fluxo e salto ao tocar em nós ou ações.",
+    "ru": "Плавное появление потока и отскок при нажатии на узлы или действия.",
+    "el": "Ομαλή είσοδος ροής και αναπήδημα όταν πατάτε κόμβους ή ενέργειες.",
+    "zh": "流向平滑进入，点击节点或操作时弹跳。",
+    "ro": "Intrare lină a fluxului și săritură la noduri sau acțiuni."
   },
   {
     "es": "__H__:Estado visible, chips adicionales, decimales de los valores y comportamiento en modo compacto.",
@@ -6613,7 +11041,12 @@
     "de": "Sichtbarer Status, Extra-Chips, Dezimalstellen und Kompaktmodus.",
     "fr": "État visible, puces supplémentaires, décimales et comportement en mode compact.",
     "it": "Stato visibile, chip extra, decimali e modalità compatta.",
-    "nl": "Zichtbare status, extra chips, decimalen en compacte modus."
+    "nl": "Zichtbare status, extra chips, decimalen en compacte modus.",
+    "pt": "Estado visível, chips extra, casas decimais do valor e comportamento em modo compacto.",
+    "ru": "Видимое состояние, дополнительные чипы, десятичные знаки значения и поведение компактного режима.",
+    "el": "Ορατή κατάσταση, επιπλέον chip, δεκαδικά τιμής και συμπεριφορά συμπαγούς λειτουργίας.",
+    "zh": "可见状态、额外芯片、数值小数与紧凑模式行为。",
+    "ro": "Stare vizibilă, chipuri extra, zecimale valoare și comportament mod compact."
   },
   {
     "es": "__H__:Feedback visual para botones y paneles del robot.",
@@ -6621,7 +11054,12 @@
     "de": "Visuelles Feedback für Roboter-Tasten und Panels.",
     "fr": "Retour visuel pour les boutons et panneaux du robot.",
     "it": "Feedback visivo per pulsanti e pannelli robot.",
-    "nl": "Visuele feedback voor robotknoppen en panelen."
+    "nl": "Visuele feedback voor robotknoppen en panelen.",
+    "pt": "Visual feedback for robot buttons and panels.",
+    "ru": "Visual feedback for robot buttons and panels.",
+    "el": "Visual feedback for robot buttons and panels.",
+    "zh": "Visual feedback for robot buttons and panels.",
+    "ro": "Visual feedback for robot buttons and panels."
   },
   {
     "es": "__H__:Ideal si quieres usarlo fijo arriba o abajo del dashboard.",
@@ -6629,7 +11067,12 @@
     "de": "Ideal zum Fixieren oben oder unten im Dashboard.",
     "fr": "Idéal pour une barre fixe en haut ou en bas du tableau de bord.",
     "it": "Ideale se vuoi fissarlo in alto o in basso.",
-    "nl": "Handig om vast te pinnen boven of onderaan."
+    "nl": "Handig om vast te pinnen boven of onderaan.",
+    "pt": "Ideal se quiser fixá-lo no topo ou na parte inferior do painel.",
+    "ru": "Удобно, если нужно закрепить сверху или снизу панели.",
+    "el": "Ιδανικό αν θέλετε να το καρφιτσώσετε πάνω ή κάτω στο ταμπλό.",
+    "zh": "适合固定在仪表盘顶部或底部。",
+    "ro": "Ideal dacă îl fixați sus sau jos în tabloul de bord."
   },
   {
     "es": "__H__:Nombre, icono, rango visible y comportamiento basico de la grafica.",
@@ -6637,7 +11080,12 @@
     "de": "Name, Symbol, sichtbarer Bereich und Basisdiagrammverhalten.",
     "fr": "Nom, icône, plage visible et comportement de base du graphique.",
     "it": "Nome, icona, intervallo visibile e comportamento grafico base.",
-    "nl": "Naam, pictogram, zichtbaar bereik en basisgrafiekgedrag."
+    "nl": "Naam, pictogram, zichtbaar bereik en basisgrafiekgedrag.",
+    "pt": "Nome, ícone, intervalo visível e comportamento base do gráfico.",
+    "ru": "Имя, значок, видимый диапазон и базовое поведение графика.",
+    "el": "Όνομα, εικονίδιο, ορατό εύρος και βασική συμπεριφορά γραφήματος.",
+    "zh": "名称、图标、可见范围与图表基础行为。",
+    "ro": "Nume, pictogramă, interval vizibil și comportament de bază al graficului."
   },
   {
     "es": "__H__:Opciones base de la barra, layout y visibilidad general.",
@@ -6645,7 +11093,12 @@
     "de": "Grundoptionen der Leiste, Layout und allgemeine Sichtbarkeit.",
     "fr": "Options de base de la barre, mise en page et visibilité générale.",
     "it": "Opzioni base della barra, layout e visibilità generale.",
-    "nl": "Basisopties balk, lay-out en algemene zichtbaarheid."
+    "nl": "Basisopties balk, lay-out en algemene zichtbaarheid.",
+    "pt": "Opções base da barra, layout e visibilidade geral.",
+    "ru": "Базовые параметры панели, макет и общая видимость.",
+    "el": "Βασικές επιλογές γραμμής, διάταξη και γενική ορατότητα.",
+    "zh": "导航栏基础选项、布局和总体可见性。",
+    "ro": "Opțiuni de bază pentru bară, aranjament și vizibilitate generală."
   },
   {
     "es": "__H__:Opciones extra si la entidad es un panel de alarma.",
@@ -6653,7 +11106,12 @@
     "de": "Zusätzliche Optionen für Alarmfelder.",
     "fr": "Options supplémentaires si l’entité est un panneau d’alarme.",
     "it": "Opzioni extra se l’entità è un pannello allarme.",
-    "nl": "Extra opties voor alarmpaneel-entiteiten."
+    "nl": "Extra opties voor alarmpaneel-entiteiten.",
+    "pt": "Opções extra se a entidade for um painel de alarme.",
+    "ru": "Дополнительные параметры, если сущность — панель сигнализации.",
+    "el": "Επιπλέον επιλογές αν η οντότητα είναι πίνακας συναγερμού.",
+    "zh": "若实体为报警面板时的额外选项。",
+    "ro": "Opțiuni extra dacă entitatea este un panou de alarmă."
   },
   {
     "es": "__H__:Opciones generales del reproductor integrado y lista de players visibles.",
@@ -6661,7 +11119,12 @@
     "de": "Allgemeine Optionen für eingebetteten Player und sichtbare Player-Liste.",
     "fr": "Options générales du lecteur intégré et liste des lecteurs visibles.",
     "it": "Opzioni generali del lettore incorporato e elenco lettori.",
-    "nl": "Algemene opties voor ingesloten speler en zichtbare spelerslijst."
+    "nl": "Algemene opties voor ingesloten speler en zichtbare spelerslijst.",
+    "pt": "Opções gerais do leitor incorporado e da lista de leitores visível.",
+    "ru": "Общие параметры встроенного плеера и видимого списка плееров.",
+    "el": "Γενικές επιλογές για τον ενσωματωμένο player και τη λίστα ορατών players.",
+    "zh": "嵌入式播放器与可见播放器列表的常规选项。",
+    "ro": "Opțiuni generale pentru playerul încorporat și lista vizibilă de playere."
   },
   {
     "es": "__H__:Opciones generales del reproductor y cuándo debe mostrarse la tarjeta.",
@@ -6669,15 +11132,25 @@
     "de": "Allgemeine Player-Optionen und wann die Karte angezeigt wird.",
     "fr": "Options générales du lecteur et affichage de la carte.",
     "it": "Opzioni generali del lettore e quando mostrare la scheda.",
-    "nl": "Algemene speleropties en wanneer de kaart wordt getoond."
+    "nl": "Algemene speleropties en wanneer de kaart wordt getoond.",
+    "pt": "Opções gerais do leitor e quando o cartão deve ser mostrado.",
+    "ru": "Общие параметры плеера и когда показывать карточку.",
+    "el": "Γενικές επιλογές player και πότε θα εμφανίζεται η κάρτα.",
+    "zh": "播放器常规选项以及何时显示卡片。",
+    "ro": "Opțiuni generale pentru player și când se afișează cardul."
   },
   {
     "es": "__H__:Personaliza el look Nodalia de la climate card, el dial y los controles.",
     "en": "Customize the Nodalia look for the climate card, dial and controls.",
-    "de": "Passe das Nodalia-Erscheinungsbild für Thermostat, Drehregler und Steuerung an.",
+    "de": "Passe das Nodalia-Erscheinungsbild für die Thermostat-Karte, den Drehregler und die Steuerung an.",
     "fr": "Personnalisez le rendu Nodalia de la carte climat, du cadran et des contrôles.",
-    "it": "Personalizza look Nodalia per climate card, dial e controlli.",
-    "nl": "Pas Nodalia-stijl aan voor thermostaat, wijzerplaat en bediening."
+    "it": "Personalizza l’aspetto Nodalia della climate card, del dial e dei controlli.",
+    "nl": "Pas de Nodalia-stijl aan voor de thermostaatkaart, draaiknop en bediening.",
+    "pt": "Personalize o aspeto Nodalia do cartão de clima, mostrador e controlos.",
+    "ru": "Настройте вид Nodalia для карты климата, диска и элементов управления.",
+    "el": "Προσαρμόστε την εμφάνιση Nodalia για την κάρτα κλίματος, τον δίσκο και τα στοιχεία ελέγχου.",
+    "zh": "自定义气候卡片、旋钮与控件的 Nodalia 外观。",
+    "ro": "Personalizați aspectul Nodalia pentru cardul climă, disc și comenzi."
   },
   {
     "es": "__H__:Personaliza el look Nodalia, el dial circular, la nueva burbuja del thumb y la escala de tinte del gauge.",
@@ -6685,7 +11158,12 @@
     "de": "Nodalia-Look, Drehregler, Thumb-Blase und Gauge-Tönung anpassen.",
     "fr": "Personnalisez le rendu Nodalia, le cadran circulaire, la bulle du curseur et l’échelle de teinte.",
     "it": "Personalizza look Nodalia, dial circolare, bolla thumb e scala tinta gauge.",
-    "nl": "Nodalia-stijl, draaiknop, thumb-bel en tintschaal aanpassen."
+    "nl": "Nodalia-stijl, draaiknop, thumb-bel en tintschaal aanpassen.",
+    "pt": "Personalize o aspeto Nodalia, o esfera circular, a nova bolha do cursor e a escala de tonalidade do indicador.",
+    "ru": "Настройте вид Nodalia, круговой диск, новый пузырёк ползунка и цветовую шкалу индикатора.",
+    "el": "Προσαρμόστε την εμφάνιση Nodalia, τον κυκλικό δίσκο, τη νέα φυσαλίδα χειριστηρίου και την κλίμακα απόχρωσης του μέτρου.",
+    "zh": "自定义 Nodalia 外观、圆形旋钮、新拇指气泡与仪表色调刻度。",
+    "ro": "Personalizați aspectul Nodalia, discul circular, noua bulă thumb și scala de nuanțe a gauge-ului."
   },
   {
     "es": "__H__:Presentación compacta y elementos visibles dentro de la tarjeta.",
@@ -6693,7 +11171,12 @@
     "de": "Kompaktes Layout und sichtbare Elemente in der Karte.",
     "fr": "Mise en page compacte et éléments visibles dans la carte.",
     "it": "Layout compatto ed elementi visibili nella scheda.",
-    "nl": "Compacte lay-out en zichtbare elementen op de kaart."
+    "nl": "Compacte lay-out en zichtbare elementen op de kaart.",
+    "pt": "Layout compacto e elementos visíveis dentro do cartão.",
+    "ru": "Компактная вёрстка и видимые элементы внутри карточки.",
+    "el": "Συμπαγής διάταξη και ορατά στοιχεία μέσα στην κάρτα.",
+    "zh": "紧凑布局与卡片内可见元素。",
+    "ro": "Layout compact și elemente vizibile în card."
   },
   {
     "es": "__H__:Que elementos quieres mantener siempre visibles.",
@@ -6701,7 +11184,12 @@
     "de": "Welche Elemente immer sichtbar bleiben.",
     "fr": "Quels éléments garder toujours visibles.",
     "it": "Quali elementi tenere sempre visibili.",
-    "nl": "Welke elementen altijd zichtbaar houden."
+    "nl": "Welke elementen altijd zichtbaar houden.",
+    "pt": "Que elementos quer manter sempre visíveis.",
+    "ru": "Какие элементы всегда оставлять видимыми.",
+    "el": "Ποια στοιχεία θέλετε να παραμένουν πάντα ορατά.",
+    "zh": "要保持始终可见的元素。",
+    "ro": "Ce elemente doriți să rămână mereu vizibile."
   },
   {
     "es": "__H__:Qué bloques quieres mostrar dentro de la tarjeta.",
@@ -6709,7 +11197,12 @@
     "de": "Welche Blöcke in der Karte angezeigt werden.",
     "fr": "Quels blocs afficher dans la carte.",
     "it": "Quali blocchi mostrare nella scheda.",
-    "nl": "Welke blokken op de kaart tonen."
+    "nl": "Welke blokken op de kaart tonen.",
+    "pt": "Que blocos quer mostrar dentro do cartão.",
+    "ru": "Какие блоки показывать внутри карточки.",
+    "el": "Ποια μπλοκ θέλετε να εμφανίζονται μέσα στην κάρτα.",
+    "zh": "要在卡片内显示哪些块。",
+    "ro": "Ce blocuri doriți să afișați în card."
   },
   {
     "es": "__H__:Qué elementos quieres mostrar dentro de la tarjeta.",
@@ -6717,7 +11210,12 @@
     "de": "Welche Elemente in der Karte angezeigt werden.",
     "fr": "Quels éléments afficher dans la carte.",
     "it": "Quali elementi mostrare nella scheda.",
-    "nl": "Welke elementen op de kaart tonen."
+    "nl": "Welke elementen op de kaart tonen.",
+    "pt": "Que elementos quer mostrar dentro do cartão.",
+    "ru": "Какие элементы показывать внутри карточки.",
+    "el": "Ποια στοιχεία θέλετε να εμφανίζονται μέσα στην κάρτα.",
+    "zh": "要在卡片内显示哪些元素。",
+    "ro": "Ce elemente doriți să afișați în card."
   },
   {
     "es": "__H__:Qué hace la tarjeta cuando la tocas.",
@@ -6725,7 +11223,12 @@
     "de": "Was die Karte beim Tippen tut.",
     "fr": "Ce que fait la carte lorsque vous la touchez.",
     "it": "Cosa fa la scheda al tocco.",
-    "nl": "Wat de kaart doet bij tikken."
+    "nl": "Wat de kaart doet bij tikken.",
+    "pt": "What the card does when you tap it.",
+    "ru": "What the card does when you tap it.",
+    "el": "What the card does when you tap it.",
+    "zh": "What the card does when you tap it.",
+    "ro": "What the card does when you tap it."
   },
   {
     "es": "__H__:Respuesta haptica opcional al tocar la tarjeta.",
@@ -6733,7 +11236,12 @@
     "de": "Optionales haptisches Feedback beim Tippen auf die Karte.",
     "fr": "Retour haptique optionnel au toucher sur la carte.",
     "it": "Feedback aptico opzionale al tocco sulla scheda.",
-    "nl": "Optionele haptische feedback bij tikken op de kaart."
+    "nl": "Optionele haptische feedback bij tikken op de kaart.",
+    "pt": "Feedback háptico opcional ao tocar no cartão.",
+    "ru": "Дополнительная тактильная отдача при нажатии на карточку.",
+    "el": "Προαιρετική απτική ανταπόκριση όταν πατάτε την κάρτα.",
+    "zh": "点击卡片时的可选触觉反馈。",
+    "ro": "Feedback haptic opțional la atingerea cardului."
   },
   {
     "es": "__H__:Respuesta haptica opcional para clicks y selecciones.",
@@ -6741,7 +11249,12 @@
     "de": "Optionales haptisches Feedback für Klicks und Auswahl.",
     "fr": "Retour haptique optionnel pour les clics et les sélections.",
     "it": "Feedback aptico opzionale per clic e selezioni.",
-    "nl": "Optionele haptische feedback voor klikken en selectie."
+    "nl": "Optionele haptische feedback voor klikken en selectie.",
+    "pt": "Feedback háptico opcional para cliques e seleções.",
+    "ru": "Дополнительная тактильная отдача для щелчков и выбора.",
+    "el": "Προαιρετική απτική ανταπόκριση για κλικ και επιλογές.",
+    "zh": "点击与选择时的可选触觉反馈。",
+    "ro": "Feedback haptic opțional pentru clicuri și selecții."
   },
   {
     "es": "__H__:Respuesta haptica opcional para dial y controles.",
@@ -6749,7 +11262,12 @@
     "de": "Optionales haptisches Feedback für Drehregler und Steuerelemente.",
     "fr": "Retour haptique optionnel pour le cadran et les contrôles.",
     "it": "Feedback aptico opzionale per il dial e i controlli.",
-    "nl": "Optionele haptische feedback voor draaiknop en bediening."
+    "nl": "Optionele haptische feedback voor draaiknop en bediening.",
+    "pt": "Feedback háptico opcional para o mostrador e controlos.",
+    "ru": "Дополнительная тактильная отдача для диска и элементов управления.",
+    "el": "Προαιρετική απτική ανταπόκριση για τον δίσκο και τα στοιχεία ελέγχου.",
+    "zh": "旋钮与控件的可选触觉反馈。",
+    "ro": "Feedback haptic opțional pentru disc și comenzi."
   },
   {
     "es": "__H__:Respuesta háptica opcional para los controles.",
@@ -6757,7 +11275,12 @@
     "de": "Optionales haptisches Feedback für Steuerelemente.",
     "fr": "Retour haptique optionnel pour les contrôles.",
     "it": "Feedback aptico opzionale per i controlli.",
-    "nl": "Optionele haptische feedback voor bediening."
+    "nl": "Optionele haptische feedback voor bediening.",
+    "pt": "Optional haptic feedback for controls.",
+    "ru": "Optional haptic feedback for controls.",
+    "el": "Optional haptic feedback for controls.",
+    "zh": "Optional haptic feedback for controls.",
+    "ro": "Optional haptic feedback for controls."
   },
   {
     "es": "__H__:Respuesta tactil opcional al pulsar acciones.",
@@ -6765,7 +11288,12 @@
     "de": "Optionales haptisches Feedback beim Tippen auf Aktionen.",
     "fr": "Retour tactile optionnel lors des actions.",
     "it": "Feedback tattile opzionale al tocco sulle azioni.",
-    "nl": "Optionele tactiele feedback bij acties."
+    "nl": "Optionele tactiele feedback bij acties.",
+    "pt": "Feedback tátil opcional ao tocar nas ações.",
+    "ru": "Дополнительная тактильная отдача при нажатии на действия.",
+    "el": "Προαιρετική απτική ανταπόκριση όταν πατάτε ενέργειες.",
+    "zh": "点击操作时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la atingerea acțiunilor."
   },
   {
     "es": "__H__:Respuesta tactil opcional al pulsar nodos o botones.",
@@ -6773,7 +11301,12 @@
     "de": "Optionales haptisches Feedback bei Knoten oder Tasten.",
     "fr": "Retour tactile optionnel sur les nœuds ou boutons.",
     "it": "Feedback tattile opzionale su nodi o pulsanti.",
-    "nl": "Optionele tactiele feedback bij knopen of knoppen."
+    "nl": "Optionele tactiele feedback bij knopen of knoppen.",
+    "pt": "Feedback tátil opcional ao tocar em nós ou botões.",
+    "ru": "Дополнительная тактильная отдача при нажатии на узлы или кнопки.",
+    "el": "Προαιρετική απτική ανταπόκριση όταν πατάτε κόμβους ή κουμπιά.",
+    "zh": "点击节点或按钮时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la atingerea nodurilor sau butoanelor."
   },
   {
     "es": "__H__:Respuesta tactil opcional al tocar la tarjeta.",
@@ -6781,7 +11314,12 @@
     "de": "Optionales haptisches Feedback beim Tippen auf die Karte.",
     "fr": "Retour tactile optionnel au toucher sur la carte.",
     "it": "Feedback tattile opzionale al tocco sulla scheda.",
-    "nl": "Optionele tactiele feedback bij tikken op de kaart."
+    "nl": "Optionele tactiele feedback bij tikken op de kaart.",
+    "pt": "Feedback tátil opcional ao tocar no cartão.",
+    "ru": "Дополнительная тактильная отдача при нажатии на карточку.",
+    "el": "Προαιρετική απτική ανταπόκριση όταν πατάτε την κάρτα.",
+    "zh": "点击卡片时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la atingerea cardului."
   },
   {
     "es": "__H__:Respuesta tactil opcional para taps, hover y cambios de serie.",
@@ -6789,7 +11327,12 @@
     "de": "Optionales haptisches Feedback für Tippen, Hover und Serienwechsel.",
     "fr": "Retour tactile optionnel pour les appuis, le survol et les changements de série.",
     "it": "Feedback tattile opzionale per tap, hover e cambio serie.",
-    "nl": "Optionele tactiele feedback voor tikken, hover en serie."
+    "nl": "Optionele tactiele feedback voor tikken, hover en serie.",
+    "pt": "Feedback tátil opcional para toques, hover e alterações de séries.",
+    "ru": "Дополнительная тактильная отдача при нажатиях, наведении и смене рядов.",
+    "el": "Προαιρετική απτική ανταπόκριση για πατήματα, hover και αλλαγές σειρών.",
+    "zh": "点击、悬停与系列变更的可选触觉反馈。",
+    "ro": "Feedback tactil opțional pentru atingeri, hover și schimbări de serii."
   },
   {
     "es": "__H__:Respuesta táctil opcional al interactuar con el dial y los botones.",
@@ -6797,7 +11340,12 @@
     "de": "Optionales haptisches Feedback beim Drehregler und den Tasten.",
     "fr": "Retour tactile optionnel pour le cadran et les boutons.",
     "it": "Feedback tattile opzionale per il dial e i pulsanti.",
-    "nl": "Optionele haptische feedback bij draaiknop en knoppen."
+    "nl": "Optionele haptische feedback bij draaiknop en knoppen.",
+    "pt": "Feedback tátil opcional ao usar o mostrador e os botões.",
+    "ru": "Дополнительная тактильная отдача при использовании диска и кнопок.",
+    "el": "Προαιρετική απτική ανταπόκριση κατά τη χρήση του δίσκου και των κουμπιών.",
+    "zh": "使用旋钮和按钮时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la utilizarea discului și a butoanelor."
   },
   {
     "es": "__H__:Respuesta táctil opcional al tocar la tarjeta.",
@@ -6805,7 +11353,12 @@
     "de": "Optionales haptisches Feedback beim Tippen auf die Karte.",
     "fr": "Retour tactile optionnel au toucher sur la carte.",
     "it": "Feedback tattile opzionale al tocco sulla scheda.",
-    "nl": "Optionele tactiele feedback bij tikken op de kaart."
+    "nl": "Optionele tactiele feedback bij tikken op de kaart.",
+    "pt": "Feedback tátil opcional ao tocar no cartão.",
+    "ru": "Дополнительная тактильная отдача при нажатии на карточку.",
+    "el": "Προαιρετική απτική ανταπόκριση όταν πατάτε την κάρτα.",
+    "zh": "点击卡片时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la atingerea cardului."
   },
   {
     "es": "__H__:Respuesta táctil opcional al usar la tarjeta y sus acciones.",
@@ -6813,7 +11366,12 @@
     "de": "Optionales haptisches Feedback bei Karte und Aktionen.",
     "fr": "Retour tactile optionnel lors de l’utilisation de la carte et de ses actions.",
     "it": "Feedback tattile opzionale usando la scheda e le azioni.",
-    "nl": "Optionele tactiele feedback bij kaart en acties."
+    "nl": "Optionele tactiele feedback bij kaart en acties.",
+    "pt": "Feedback tátil opcional ao usar o cartão e as suas ações.",
+    "ru": "Дополнительная тактильная отдача при использовании карточки и её действий.",
+    "el": "Προαιρετική απτική ανταπόκριση όταν χρησιμοποιείτε την κάρτα και τις ενέργειές της.",
+    "zh": "使用卡片及其操作时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la utilizarea cardului și acțiunilor sale."
   },
   {
     "es": "__H__:Respuesta táctil opcional al usar los controles.",
@@ -6821,7 +11379,12 @@
     "de": "Optionales haptisches Feedback bei Steuerung.",
     "fr": "Retour tactile optionnel lors de l’utilisation des contrôles.",
     "it": "Feedback tattile opzionale usando i controlli.",
-    "nl": "Optionele tactiele feedback bij bediening."
+    "nl": "Optionele tactiele feedback bij bediening.",
+    "pt": "Feedback tátil opcional ao usar os controlos.",
+    "ru": "Дополнительная тактильная отдача при использовании элементов управления.",
+    "el": "Προαιρετική απτική ανταπόκριση κατά τη χρήση στοιχείων ελέγχου.",
+    "zh": "使用控件时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la utilizarea comenzilor."
   },
   {
     "es": "__H__:Respuesta táctil opcional para los controles del reproductor.",
@@ -6829,7 +11392,12 @@
     "de": "Optionales haptisches Feedback für Player-Steuerung.",
     "fr": "Retour tactile optionnel pour les contrôles du lecteur.",
     "it": "Feedback tattile opzionale per i controlli del lettore.",
-    "nl": "Optionele tactiele feedback voor spelerbediening."
+    "nl": "Optionele tactiele feedback voor spelerbediening.",
+    "pt": "Feedback tátil opcional para os controlos do leitor.",
+    "ru": "Дополнительная тактильная отдача для элементов управления плеером.",
+    "el": "Προαιρετική απτική ανταπόκριση για τα στοιχεία ελέγχου του player.",
+    "zh": "播放器控件的可选触觉反馈。",
+    "ro": "Feedback tactil opțional pentru comenzile playerului."
   },
   {
     "es": "Ajustes visuales base de la tarjeta favorita.",
@@ -6837,7 +11405,12 @@
     "de": "Grundlegende visuelle Einstellungen für die Favoritenkarte.",
     "fr": "Réglages visuels de base pour la carte favoris.",
     "it": "Impostazioni visive di base per la scheda preferiti.",
-    "nl": "Basis visuele instellingen voor de favorietenkaart."
+    "nl": "Basis visuele instellingen voor de favorietenkaart.",
+    "pt": "Definições visuais básicas do cartão de favoritos.",
+    "ru": "Базовые визуальные настройки карточки избранного.",
+    "el": "Βασικές οπτικές ρυθμίσεις για την κάρτα αγαπημένων.",
+    "zh": "收藏卡片的基本视觉设置。",
+    "ro": "Setări vizuale de bază pentru cardul favorite."
   },
   {
     "es": "Ajustes visuales base de la tarjeta.",
@@ -6845,7 +11418,12 @@
     "de": "Grundlegende visuelle Einstellungen für die Karte.",
     "fr": "Réglages visuels de base pour la carte.",
     "it": "Impostazioni visive di base per la scheda.",
-    "nl": "Basis visuele instellingen voor de kaart."
+    "nl": "Basis visuele instellingen voor de kaart.",
+    "pt": "Definições visuais básicas do cartão.",
+    "ru": "Базовые визуальные настройки карточки.",
+    "el": "Βασικές οπτικές ρυθμίσεις για την κάρτα.",
+    "zh": "卡片的基本视觉设置。",
+    "ro": "Setări vizuale de bază pentru card."
   },
   {
     "es": "Automático (perfil Home Assistant)",
@@ -6853,7 +11431,12 @@
     "de": "Automático (perfil Home Assistant)",
     "fr": "Automático (perfil Home Assistant)",
     "it": "Automático (perfil Home Assistant)",
-    "nl": "Automático (perfil Home Assistant)"
+    "nl": "Automático (perfil Home Assistant)",
+    "pt": "Automático (perfil Home Assistant)",
+    "ru": "Automático (perfil Home Assistant)",
+    "el": "Automático (perfil Home Assistant)",
+    "zh": "Automático (perfil Home Assistant)",
+    "ro": "Automático (perfil Home Assistant)"
   },
   {
     "es": "Idioma de la tarjeta",
@@ -6861,7 +11444,12 @@
     "de": "Idioma de la tarjeta",
     "fr": "Idioma de la tarjeta",
     "it": "Idioma de la tarjeta",
-    "nl": "Idioma de la tarjeta"
+    "nl": "Idioma de la tarjeta",
+    "pt": "Idioma de la tarjeta",
+    "ru": "Idioma de la tarjeta",
+    "el": "Idioma de la tarjeta",
+    "zh": "Idioma de la tarjeta",
+    "ro": "Idioma de la tarjeta"
   },
   {
     "es": "Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado).",
@@ -6869,7 +11457,12 @@
     "de": "Wenn der Text nicht zur Profilsprache passt, wählen Sie Automatisch bei Kartensprache (alte Konfigurationen können Spanisch enthalten).",
     "fr": "Si le texte ne correspond pas à la langue du profil, choisissez Automatique dans Langue de la carte (les anciennes configs peuvent avoir l’espagnol enregistré).",
     "it": "Se il testo non coincide con la lingua del profilo, scegli Automatico in Lingua della scheda (le vecchie config possono avere lo spagnolo).",
-    "nl": "Als de tekst niet overeenkomt met de profieltaal, kies Automatisch bij Kaarttaal (oude configs kunnen Spaans bevatten)."
+    "nl": "Als de tekst niet overeenkomt met de profieltaal, kies Automatisch bij Kaarttaal (oude configs kunnen Spaans bevatten).",
+    "pt": "Se o texto não corresponder ao idioma do perfil, escolha Automático em Idioma do cartão (configurações antigas podem ter espanhol guardado).",
+    "ru": "Если текст не совпадает с языком профиля, выберите «Авто» в языке карточки (в старых настройках мог сохраниться испанский).",
+    "el": "Αν το κείμενο δεν ταιριάζει με τη γλώσσα προφίλ, επιλέξτε Αυτόματο στη γλώσσα κάρτας (παλιές ρυθμίσεις μπορεί να έχουν αποθηκευμένα ισπανικά).",
+    "zh": "若文本与用户档案语言不符，请在卡片语言中选择“自动”（旧配置可能仍保存西班牙语）。",
+    "ro": "Dacă textul nu se potrivește cu limba profilului, alegeți Automat la limba cardului (configurările vechi pot avea spaniolă salvată)."
   },
   {
     "es": "__H__:Selectores opcionales para el modo principal y la ventilación.",
@@ -6877,7 +11470,12 @@
     "de": "Optionale Selektoren für Hauptmodus und Lüfter.",
     "fr": "Sélecteurs optionnels pour le mode principal et le ventilateur.",
     "it": "Selettori opzionali per modalità principale e ventola.",
-    "nl": "Optionele selecteurs voor hoofdmodus en ventilator."
+    "nl": "Optionele selecteurs voor hoofdmodus en ventilator.",
+    "pt": "Optional selectors for main mode and fan.",
+    "ru": "Optional selectors for main mode and fan.",
+    "el": "Optional selectors for main mode and fan.",
+    "zh": "Optional selectors for main mode and fan.",
+    "ro": "Optional selectors for main mode and fan."
   },
   {
     "es": "__H__:Sensores y selectores opcionales para enriquecer el estado y los controles.",
@@ -6885,7 +11483,12 @@
     "de": "Optionale Sensoren und Selektoren für Status und Steuerung.",
     "fr": "Capteurs et sélecteurs optionnels pour enrichir l’état et les contrôles.",
     "it": "Sensori e selettori opzionali per arricchire stato e controlli.",
-    "nl": "Optionele sensoren en selecteurs voor status en bediening."
+    "nl": "Optionele sensoren en selecteurs voor status en bediening.",
+    "pt": "Sensores e seletores opcionais para enriquecer o estado e os controlos.",
+    "ru": "Дополнительные датчики и переключатели для состояния и элементов управления.",
+    "el": "Προαιρετικοί αισθητήρες και επιλογείς για πλουσιότερη κατάσταση και έλεγχο.",
+    "zh": "用于丰富状态与控件的可选传感器和选择器。",
+    "ro": "Senzori și selectoare opționale pentru a îmbogăți starea și comenzile."
   },
   {
     "es": "__H__:Titulo, enlace al panel de energia y comportamiento general de la tarjeta.",
@@ -6893,7 +11496,12 @@
     "de": "Titel, Energiepanel-Link und allgemeines Kartenverhalten.",
     "fr": "Titre, lien vers le panneau énergie et comportement général de la carte.",
     "it": "Titolo, link pannello energia e comportamento generale.",
-    "nl": "Titel, energiepaneel-link en algemeen kaartgedrag."
+    "nl": "Titel, energiepaneel-link en algemeen kaartgedrag.",
+    "pt": "Título, ligação ao painel de energia e comportamento geral do cartão.",
+    "ru": "Заголовок, ссылка на энергопанель и общее поведение карточки.",
+    "el": "Τίτλος, σύνδεσμος ενεργειακού πάνελ και γενική συμπεριφορά κάρτας.",
+    "zh": "标题、能源面板链接与卡片总体行为。",
+    "ro": "Titlu, legătură panou energie și comportament general al cardului."
   },
   {
     "es": "__H__:Transiciones suaves al encender, apagar, desplegar controles, abrir modos y dar respuesta visual a los botones.",
@@ -6901,7 +11509,12 @@
     "de": "Sanfte Übergänge beim Ein/Aus, Aufklappen, Modus öffnen und Button-Feedback.",
     "fr": "Transitions fluides à l’alimentation, au déploiement des contrôles, à l’ouverture des modes et au retour visuel des boutons.",
     "it": "Transizioni fluide accensione, espansione, apertura modalità e feedback pulsanti.",
-    "nl": "Vloeiende overgangen bij aan/uit, uitklappen, modi en knopfeedback."
+    "nl": "Vloeiende overgangen bij aan/uit, uitklappen, modi en knopfeedback.",
+    "pt": "Transições suaves ao ligar/desligar, expandir controlos, abrir modos e feedback visual dos botões.",
+    "ru": "Плавные переходы при вкл/выкл, разворачивании элементов управления, открытии режимов и визуальной отдаче кнопок.",
+    "el": "Ομαλές μεταβάσεις κατά την ενεργοποίηση/απενεργοποίηση, επέκταση στοιχείων ελέγχου, άνοιγμα λειτουργιών και οπτική ανταπόκριση κουμπιών.",
+    "zh": "开关机、展开控件、打开模式及按钮视觉反馈的平滑过渡。",
+    "ro": "Tranziții line la pornire/oprire, extinderea comenzilor, deschiderea modurilor și feedback vizual la butoane."
   },
   {
     "es": "__H__:Transiciones suaves al encender, apagar, desplegar controles, cambiar entre sliders y dar respuesta visual a los botones.",
@@ -6909,7 +11522,12 @@
     "de": "Sanfte Übergänge beim Ein/Aus, Aufklappen, Slider-Wechsel und Button-Feedback.",
     "fr": "Transitions fluides à l’alimentation, au déploiement des contrôles, au changement de curseurs et au retour visuel des boutons.",
     "it": "Transizioni fluide accensione, espansione, slider e feedback pulsanti.",
-    "nl": "Vloeiende overgangen bij aan/uit, uitklappen, sliders en knopfeedback."
+    "nl": "Vloeiende overgangen bij aan/uit, uitklappen, sliders en knopfeedback.",
+    "pt": "Transições suaves ao ligar/desligar, expandir controlos, mudar sliders e feedback visual dos botões.",
+    "ru": "Плавные переходы при вкл/выкл, разворачивании элементов управления, переключении ползунков и визуальной отдаче кнопок.",
+    "el": "Ομαλές μεταβάσεις κατά την ενεργοποίηση/απενεργοποίηση, επέκταση στοιχείων ελέγχου, εναλλαγή ρυθμιστών και οπτική ανταπόκριση κουμπιών.",
+    "zh": "开关机、展开控件、切换滑块及按钮视觉反馈的平滑过渡。",
+    "ro": "Tranziții line la pornire/oprire, extinderea comenzilor, comutarea sliderelor și feedback vizual la butoane."
   },
   {
     "es": "__H__:Transiciones suaves al encender, apagar, desplegar controles, cambiar paneles y dar respuesta visual a los botones.",
@@ -6917,7 +11535,12 @@
     "de": "Sanfte Übergänge beim Ein/Aus, Aufklappen, Panelwechsel und Button-Feedback.",
     "fr": "Transitions fluides à l’alimentation, au déploiement des contrôles, au changement de panneaux et au retour visuel des boutons.",
     "it": "Transizioni fluide accensione, espansione controlli, pannelli e feedback pulsanti.",
-    "nl": "Vloeiende overgangen bij aan/uit, uitklappen, panelen en knopfeedback."
+    "nl": "Vloeiende overgangen bij aan/uit, uitklappen, panelen en knopfeedback.",
+    "pt": "Transições suaves ao ligar/desligar, expandir controlos, mudar painéis e feedback visual dos botões.",
+    "ru": "Плавные переходы при вкл/выкл, разворачивании элементов управления, смене панелей и визуальной отдаче кнопок.",
+    "el": "Ομαλές μεταβάσεις κατά την ενεργοποίηση/απενεργοποίηση, επέκταση στοιχείων ελέγχου, αλλαγή πάνελ και οπτική ανταπόκριση κουμπιών.",
+    "zh": "开关机、展开控件、切换面板及按钮视觉反馈的平滑过渡。",
+    "ro": "Tranziții line la pornire/oprire, extinderea comenzilor, schimbarea panourilor și feedback vizual la butoane."
   },
   {
     "es": "__T__:Acciones rápidas",
@@ -6925,7 +11548,12 @@
     "de": "Quick actions",
     "fr": "Quick actions",
     "it": "Quick actions",
-    "nl": "Quick actions"
+    "nl": "Quick actions",
+    "pt": "Quick actions",
+    "ru": "Quick actions",
+    "el": "Quick actions",
+    "zh": "Quick actions",
+    "ro": "Quick actions"
   },
   {
     "es": "__T__:Acción",
@@ -6933,7 +11561,12 @@
     "de": "Action",
     "fr": "Action",
     "it": "Action",
-    "nl": "Action"
+    "nl": "Action",
+    "pt": "Action",
+    "ru": "Action",
+    "el": "Action",
+    "zh": "Action",
+    "ro": "Action"
   },
   {
     "es": "__T__:Alarma",
@@ -6941,7 +11574,12 @@
     "de": "Alarm",
     "fr": "Alarme",
     "it": "Allarme",
-    "nl": "Alarm"
+    "nl": "Alarm",
+    "pt": "Alarme",
+    "ru": "Сигнализация",
+    "el": "Συναγερμός",
+    "zh": "警报",
+    "ro": "Alarmă"
   },
   {
     "es": "__T__:Animaciones",
@@ -6949,7 +11587,12 @@
     "de": "Animations",
     "fr": "Animations",
     "it": "Animations",
-    "nl": "Animations"
+    "nl": "Animations",
+    "pt": "Animations",
+    "ru": "Animations",
+    "el": "Animations",
+    "zh": "Animations",
+    "ro": "Animations"
   },
   {
     "es": "__T__:Contenido",
@@ -6957,7 +11600,12 @@
     "de": "Content",
     "fr": "Content",
     "it": "Content",
-    "nl": "Content"
+    "nl": "Content",
+    "pt": "Content",
+    "ru": "Content",
+    "el": "Content",
+    "zh": "Content",
+    "ro": "Content"
   },
   {
     "es": "__T__:Controles avanzados",
@@ -6965,7 +11613,12 @@
     "de": "Advanced controls",
     "fr": "Advanced controls",
     "it": "Advanced controls",
-    "nl": "Advanced controls"
+    "nl": "Advanced controls",
+    "pt": "Advanced controls",
+    "ru": "Advanced controls",
+    "el": "Advanced controls",
+    "zh": "Advanced controls",
+    "ro": "Advanced controls"
   },
   {
     "es": "__T__:Entidades auxiliares",
@@ -6973,7 +11626,12 @@
     "de": "Auxiliary entities",
     "fr": "Auxiliary entities",
     "it": "Auxiliary entities",
-    "nl": "Auxiliary entities"
+    "nl": "Auxiliary entities",
+    "pt": "Auxiliary entities",
+    "ru": "Auxiliary entities",
+    "el": "Auxiliary entities",
+    "zh": "Auxiliary entities",
+    "ro": "Auxiliary entities"
   },
   {
     "es": "__T__:Estilo",
@@ -6981,7 +11639,12 @@
     "de": "Style",
     "fr": "Style",
     "it": "Style",
-    "nl": "Style"
+    "nl": "Style",
+    "pt": "Style",
+    "ru": "Style",
+    "el": "Style",
+    "zh": "Style",
+    "ro": "Style"
   },
   {
     "es": "__T__:Estilos",
@@ -6989,7 +11652,12 @@
     "de": "Stile",
     "fr": "Styles",
     "it": "Stili",
-    "nl": "Stijlen"
+    "nl": "Stijlen",
+    "pt": "Estilos",
+    "ru": "Стили",
+    "el": "Στυλ",
+    "zh": "样式",
+    "ro": "Stiluri"
   },
   {
     "es": "__T__:Flujo",
@@ -6997,7 +11665,12 @@
     "de": "Fluss",
     "fr": "Flux",
     "it": "Flusso",
-    "nl": "Stroom"
+    "nl": "Stroom",
+    "pt": "Fluxo",
+    "ru": "Поток",
+    "el": "Ροή",
+    "zh": "流向",
+    "ro": "Flux"
   },
   {
     "es": "__T__:General",
@@ -7005,7 +11678,12 @@
     "de": "Allgemein",
     "fr": "Général",
     "it": "Generale",
-    "nl": "Algemeen"
+    "nl": "Algemeen",
+    "pt": "Geral",
+    "ru": "Общее",
+    "el": "Γενικά",
+    "zh": "常规",
+    "ro": "General"
   },
   {
     "es": "__T__:Haptics",
@@ -7013,7 +11691,12 @@
     "de": "Haptik",
     "fr": "Haptique",
     "it": "Aptica",
-    "nl": "Haptiek"
+    "nl": "Haptiek",
+    "pt": "Haptics",
+    "ru": "Haptics",
+    "el": "Haptics",
+    "zh": "Haptics",
+    "ro": "Haptics"
   },
   {
     "es": "__T__:Individuales",
@@ -7021,7 +11704,12 @@
     "de": "Einzelwerte",
     "fr": "Individuels",
     "it": "Singoli",
-    "nl": "Individueel"
+    "nl": "Individueel",
+    "pt": "Individuais",
+    "ru": "Отдельные",
+    "el": "Μεμονωμένα",
+    "zh": "单项",
+    "ro": "Individuale"
   },
   {
     "es": "__T__:Layout",
@@ -7029,7 +11717,12 @@
     "de": "Layout",
     "fr": "Mise en page",
     "it": "Layout",
-    "nl": "Lay-out"
+    "nl": "Lay-out",
+    "pt": "Layout",
+    "ru": "Макет",
+    "el": "Διάταξη",
+    "zh": "布局",
+    "ro": "Aranjament"
   },
   {
     "es": "__T__:Mapa",
@@ -7037,7 +11730,12 @@
     "de": "Karte",
     "fr": "Carte",
     "it": "Mappa",
-    "nl": "Kaart"
+    "nl": "Kaart",
+    "pt": "Mapa",
+    "ru": "Карта",
+    "el": "Χάρτης",
+    "zh": "地图",
+    "ro": "Hartă"
   },
   {
     "es": "__T__:Media Player",
@@ -7045,7 +11743,12 @@
     "de": "Media player",
     "fr": "Media player",
     "it": "Media player",
-    "nl": "Media player"
+    "nl": "Media player",
+    "pt": "Media player",
+    "ru": "Media player",
+    "el": "Media player",
+    "zh": "Media player",
+    "ro": "Media player"
   },
   {
     "es": "__T__:Modos",
@@ -7053,7 +11756,12 @@
     "de": "Modi",
     "fr": "Modes",
     "it": "Modalità",
-    "nl": "Modi"
+    "nl": "Modi",
+    "pt": "Modos",
+    "ru": "Режимы",
+    "el": "Λειτουργίες",
+    "zh": "模式",
+    "ro": "Moduri"
   },
   {
     "es": "__T__:Reproductores",
@@ -7061,7 +11769,12 @@
     "de": "Player",
     "fr": "Lecteurs",
     "it": "Lettori",
-    "nl": "Spelers"
+    "nl": "Spelers",
+    "pt": "Leitores",
+    "ru": "Плееры",
+    "el": "Αναπαραγωγείς",
+    "zh": "播放器",
+    "ro": "Playere"
   },
   {
     "es": "__T__:Respuesta haptica",
@@ -7069,7 +11782,12 @@
     "de": "Haptisches Feedback",
     "fr": "Retour haptique",
     "it": "Feedback aptico",
-    "nl": "Haptische feedback"
+    "nl": "Haptische feedback",
+    "pt": "Feedback háptico",
+    "ru": "Тактильная отдача",
+    "el": "Απτική ανάδραση",
+    "zh": "触觉反馈",
+    "ro": "Feedback haptic"
   },
   {
     "es": "__T__:Respuesta háptica",
@@ -7077,7 +11795,12 @@
     "de": "Haptisches Feedback",
     "fr": "Retour haptique",
     "it": "Feedback aptico",
-    "nl": "Haptische feedback"
+    "nl": "Haptische feedback",
+    "pt": "Feedback háptico",
+    "ru": "Тактильная отдача",
+    "el": "Απτική ανάδραση",
+    "zh": "触觉反馈",
+    "ro": "Feedback haptic"
   },
   {
     "es": "__T__:Rutas",
@@ -7085,7 +11808,12 @@
     "de": "Routen",
     "fr": "Routes",
     "it": "Percorsi",
-    "nl": "Routes"
+    "nl": "Routes",
+    "pt": "Rotas",
+    "ru": "Маршруты",
+    "el": "Διαδρομές",
+    "zh": "路线",
+    "ro": "Rute"
   },
   {
     "es": "__T__:Series",
@@ -7093,7 +11821,12 @@
     "de": "Serien",
     "fr": "Séries",
     "it": "Serie",
-    "nl": "Reeksen"
+    "nl": "Reeksen",
+    "pt": "Séries",
+    "ru": "Ряды",
+    "el": "Σειρές",
+    "zh": "系列",
+    "ro": "Serii"
   },
   {
     "es": "__T__:Visibilidad",
@@ -7101,7 +11834,12 @@
     "de": "Sichtbarkeit",
     "fr": "Visibilité",
     "it": "Visibilità",
-    "nl": "Zichtbaarheid"
+    "nl": "Zichtbaarheid",
+    "pt": "Visibilidade",
+    "ru": "Видимость",
+    "el": "Ορατότητα",
+    "zh": "可见性",
+    "ro": "Vizibilitate"
   },
   {
     "es": "Anadir ruta",
@@ -7109,7 +11847,12 @@
     "de": "Add route",
     "fr": "Add route",
     "it": "Add route",
-    "nl": "Add route"
+    "nl": "Add route",
+    "pt": "Add route",
+    "ru": "Add route",
+    "el": "Add route",
+    "zh": "Add route",
+    "ro": "Add route"
   },
   {
     "es": "Anadir player",
@@ -7117,7 +11860,12 @@
     "de": "Add player",
     "fr": "Add player",
     "it": "Add player",
-    "nl": "Add player"
+    "nl": "Add player",
+    "pt": "Add player",
+    "ru": "Add player",
+    "el": "Add player",
+    "zh": "Add player",
+    "ro": "Add player"
   },
   {
     "es": "Anadir popup",
@@ -7125,7 +11873,12 @@
     "de": "Add popup",
     "fr": "Add popup",
     "it": "Add popup",
-    "nl": "Add popup"
+    "nl": "Add popup",
+    "pt": "Add popup",
+    "ru": "Add popup",
+    "el": "Add popup",
+    "zh": "Add popup",
+    "ro": "Add popup"
   },
   {
     "es": "Mostrar tarjeta",
@@ -7133,7 +11886,12 @@
     "de": "Karte anzeigen",
     "fr": "Afficher la carte",
     "it": "Mostra scheda",
-    "nl": "Kaart tonen"
+    "nl": "Kaart tonen",
+    "pt": "Mostrar cartão",
+    "ru": "Показать карточку",
+    "el": "Εμφάνιση κάρτας",
+    "zh": "显示卡片",
+    "ro": "Afișează cardul"
   },
   {
     "es": "Layout estrecho",
@@ -7141,7 +11899,12 @@
     "de": "Schmales Layout",
     "fr": "Disposition étroite",
     "it": "Layout compatto",
-    "nl": "Smalle lay-out"
+    "nl": "Smalle lay-out",
+    "pt": "Narrow layout",
+    "ru": "Narrow layout",
+    "el": "Narrow layout",
+    "zh": "Narrow layout",
+    "ro": "Narrow layout"
   },
   {
     "es": "No hay reproductores configurados.",
@@ -7149,7 +11912,12 @@
     "de": "Keine Player konfiguriert.",
     "fr": "Aucun lecteur configuré.",
     "it": "Nessun lettore configurato.",
-    "nl": "Geen spelers geconfigureerd."
+    "nl": "Geen spelers geconfigureerd.",
+    "pt": "No players configured.",
+    "ru": "No players configured.",
+    "el": "No players configured.",
+    "zh": "No players configured.",
+    "ro": "No players configured."
   },
   {
     "es": "No hay rutas todavia.",
@@ -7157,7 +11925,12 @@
     "de": "Noch keine Routen.",
     "fr": "Aucune route pour le moment.",
     "it": "Nessuna route ancora.",
-    "nl": "Nog geen routes."
+    "nl": "Nog geen routes.",
+    "pt": "No routes yet.",
+    "ru": "No routes yet.",
+    "el": "No routes yet.",
+    "zh": "No routes yet.",
+    "ro": "No routes yet."
   },
   {
     "es": "Esta ruta no tiene popup todavia.",
@@ -7165,7 +11938,12 @@
     "de": "Diese Route hat noch kein Popup.",
     "fr": "Cette route n’a pas encore de fenêtre contextuelle.",
     "it": "Questa route non ha ancora popup.",
-    "nl": "Deze route heeft nog geen pop-up."
+    "nl": "Deze route heeft nog geen pop-up.",
+    "pt": "This route has no popup yet.",
+    "ru": "This route has no popup yet.",
+    "el": "This route has no popup yet.",
+    "zh": "This route has no popup yet.",
+    "ro": "This route has no popup yet."
   },
   {
     "es": "Player",
@@ -7173,7 +11951,12 @@
     "de": "Player",
     "fr": "Player",
     "it": "Player",
-    "nl": "Player"
+    "nl": "Player",
+    "pt": "Player",
+    "ru": "Player",
+    "el": "Player",
+    "zh": "Player",
+    "ro": "Player"
   },
   {
     "es": "Popup",
@@ -7181,7 +11964,12 @@
     "de": "Popup",
     "fr": "Popup",
     "it": "Popup",
-    "nl": "Popup"
+    "nl": "Popup",
+    "pt": "Popup",
+    "ru": "Popup",
+    "el": "Popup",
+    "zh": "Popup",
+    "ro": "Popup"
   },
   {
     "es": "Ruta",
@@ -7189,7 +11977,12 @@
     "de": "Route",
     "fr": "Route",
     "it": "Route",
-    "nl": "Route"
+    "nl": "Route",
+    "pt": "Route",
+    "ru": "Route",
+    "el": "Route",
+    "zh": "Route",
+    "ro": "Route"
   },
   {
     "es": "Altura minima media player",
@@ -7197,7 +11990,12 @@
     "de": "Media player minimum height",
     "fr": "Media player minimum height",
     "it": "Media player minimum height",
-    "nl": "Media player minimum height"
+    "nl": "Media player minimum height",
+    "pt": "Media player minimum height",
+    "ru": "Media player minimum height",
+    "el": "Media player minimum height",
+    "zh": "Media player minimum height",
+    "ro": "Media player minimum height"
   },
   {
     "es": "Tamano etiqueta popup",
@@ -7205,7 +12003,12 @@
     "de": "Popup label size",
     "fr": "Popup label size",
     "it": "Popup label size",
-    "nl": "Popup label size"
+    "nl": "Popup label size",
+    "pt": "Popup label size",
+    "ru": "Popup label size",
+    "el": "Popup label size",
+    "zh": "Popup label size",
+    "ro": "Popup label size"
   },
   {
     "es": "Tamano minimo badge",
@@ -7213,7 +12016,12 @@
     "de": "Minimum badge size",
     "fr": "Minimum badge size",
     "it": "Minimum badge size",
-    "nl": "Minimum badge size"
+    "nl": "Minimum badge size",
+    "pt": "Minimum badge size",
+    "ru": "Minimum badge size",
+    "el": "Minimum badge size",
+    "zh": "Minimum badge size",
+    "ro": "Minimum badge size"
   },
   {
     "es": "Mostrar tambien en escritorio",
@@ -7221,7 +12029,12 @@
     "de": "Also show on desktop",
     "fr": "Also show on desktop",
     "it": "Also show on desktop",
-    "nl": "Also show on desktop"
+    "nl": "Also show on desktop",
+    "pt": "Also show on desktop",
+    "ru": "Also show on desktop",
+    "el": "Also show on desktop",
+    "zh": "Also show on desktop",
+    "ro": "Also show on desktop"
   },
   {
     "es": "Marcar activa por prefijo",
@@ -7229,7 +12042,12 @@
     "de": "Mark active by prefix",
     "fr": "Mark active by prefix",
     "it": "Mark active by prefix",
-    "nl": "Mark active by prefix"
+    "nl": "Mark active by prefix",
+    "pt": "Mark active by prefix",
+    "ru": "Mark active by prefix",
+    "el": "Mark active by prefix",
+    "zh": "Mark active by prefix",
+    "ro": "Mark active by prefix"
   },
   {
     "es": "Altura minima",
@@ -7237,7 +12055,12 @@
     "de": "Minimum height",
     "fr": "Minimum height",
     "it": "Minimum height",
-    "nl": "Minimum height"
+    "nl": "Minimum height",
+    "pt": "Minimum height",
+    "ru": "Minimum height",
+    "el": "Minimum height",
+    "zh": "Minimum height",
+    "ro": "Minimum height"
   },
   {
     "es": "Ancho maximo barra",
@@ -7245,7 +12068,12 @@
     "de": "Bar maximum width",
     "fr": "Bar maximum width",
     "it": "Bar maximum width",
-    "nl": "Bar maximum width"
+    "nl": "Bar maximum width",
+    "pt": "Bar maximum width",
+    "ru": "Bar maximum width",
+    "el": "Bar maximum width",
+    "zh": "Bar maximum width",
+    "ro": "Bar maximum width"
   },
   {
     "es": "Ancho maximo popup",
@@ -7253,7 +12081,12 @@
     "de": "Popup maximum width",
     "fr": "Popup maximum width",
     "it": "Popup maximum width",
-    "nl": "Popup maximum width"
+    "nl": "Popup maximum width",
+    "pt": "Popup maximum width",
+    "ru": "Popup maximum width",
+    "el": "Popup maximum width",
+    "zh": "Popup maximum width",
+    "ro": "Popup maximum width"
   },
   {
     "es": "Ancho minimo popup",
@@ -7261,7 +12094,12 @@
     "de": "Popup minimum width",
     "fr": "Popup minimum width",
     "it": "Popup minimum width",
-    "nl": "Popup minimum width"
+    "nl": "Popup minimum width",
+    "pt": "Popup minimum width",
+    "ru": "Popup minimum width",
+    "el": "Popup minimum width",
+    "zh": "Popup minimum width",
+    "ro": "Popup minimum width"
   },
   {
     "es": "Barra y hover (ms)",
@@ -7269,7 +12107,12 @@
     "de": "Bar and hover (ms)",
     "fr": "Bar and hover (ms)",
     "it": "Bar and hover (ms)",
-    "nl": "Bar and hover (ms)"
+    "nl": "Bar and hover (ms)",
+    "pt": "Bar and hover (ms)",
+    "ru": "Bar and hover (ms)",
+    "el": "Bar and hover (ms)",
+    "zh": "Bar and hover (ms)",
+    "ro": "Bar and hover (ms)"
   },
   {
     "es": "Breakpoint movil",
@@ -7277,7 +12120,12 @@
     "de": "Mobile breakpoint",
     "fr": "Mobile breakpoint",
     "it": "Mobile breakpoint",
-    "nl": "Mobile breakpoint"
+    "nl": "Mobile breakpoint",
+    "pt": "Mobile breakpoint",
+    "ru": "Mobile breakpoint",
+    "el": "Mobile breakpoint",
+    "zh": "Mobile breakpoint",
+    "ro": "Mobile breakpoint"
   },
   {
     "es": "Color etiqueta activa",
@@ -7285,7 +12133,12 @@
     "de": "Active label color",
     "fr": "Active label color",
     "it": "Active label color",
-    "nl": "Active label color"
+    "nl": "Active label color",
+    "pt": "Active label color",
+    "ru": "Active label color",
+    "el": "Active label color",
+    "zh": "Active label color",
+    "ro": "Active label color"
   },
   {
     "es": "Etiqueta opcional",
@@ -7293,7 +12146,12 @@
     "de": "Optional label",
     "fr": "Optional label",
     "it": "Optional label",
-    "nl": "Optional label"
+    "nl": "Optional label",
+    "pt": "Optional label",
+    "ru": "Optional label",
+    "el": "Optional label",
+    "zh": "Optional label",
+    "ro": "Optional label"
   },
   {
     "es": "Estilo haptico",
@@ -7301,7 +12159,12 @@
     "de": "Haptic style",
     "fr": "Haptic style",
     "it": "Haptic style",
-    "nl": "Haptic style"
+    "nl": "Haptic style",
+    "pt": "Haptic style",
+    "ru": "Haptic style",
+    "el": "Haptic style",
+    "zh": "Haptic style",
+    "ro": "Haptic style"
   },
   {
     "es": "Fijar a pantalla",
@@ -7309,7 +12172,12 @@
     "de": "Pin to screen",
     "fr": "Pin to screen",
     "it": "Pin to screen",
-    "nl": "Pin to screen"
+    "nl": "Pin to screen",
+    "pt": "Pin to screen",
+    "ru": "Pin to screen",
+    "el": "Pin to screen",
+    "zh": "Pin to screen",
+    "ro": "Pin to screen"
   },
   {
     "es": "Layout popup",
@@ -7317,7 +12185,12 @@
     "de": "Popup layout",
     "fr": "Popup layout",
     "it": "Popup layout",
-    "nl": "Popup layout"
+    "nl": "Popup layout",
+    "pt": "Popup layout",
+    "ru": "Popup layout",
+    "el": "Popup layout",
+    "zh": "Popup layout",
+    "ro": "Popup layout"
   },
   {
     "es": "Media player (ms)",
@@ -7325,7 +12198,12 @@
     "de": "Media player (ms)",
     "fr": "Media player (ms)",
     "it": "Media player (ms)",
-    "nl": "Media player (ms)"
+    "nl": "Media player (ms)",
+    "pt": "Media player (ms)",
+    "ru": "Media player (ms)",
+    "el": "Media player (ms)",
+    "zh": "Media player (ms)",
+    "ro": "Media player (ms)"
   },
   {
     "es": "Mostrar etiquetas",
@@ -7333,7 +12211,12 @@
     "de": "Anzeigen: labels",
     "fr": "Afficher les étiquettes",
     "it": "Mostra labels",
-    "nl": "Toon labels"
+    "nl": "Toon labels",
+    "pt": "Mostrar rótulos",
+    "ru": "Показать подписи",
+    "el": "Εμφάνιση ετικετών",
+    "zh": "显示标签",
+    "ro": "Afișează etichete"
   },
   {
     "es": "Nombre reproductor",
@@ -7341,7 +12224,12 @@
     "de": "Player name",
     "fr": "Player name",
     "it": "Player name",
-    "nl": "Player name"
+    "nl": "Player name",
+    "pt": "Player name",
+    "ru": "Player name",
+    "el": "Player name",
+    "zh": "Player name",
+    "ro": "Player name"
   },
   {
     "es": "Offset icono X",
@@ -7349,7 +12237,12 @@
     "de": "Icon offset X",
     "fr": "Icon offset X",
     "it": "Icon offset X",
-    "nl": "Icon offset X"
+    "nl": "Icon offset X",
+    "pt": "Icon offset X",
+    "ru": "Icon offset X",
+    "el": "Icon offset X",
+    "zh": "Icon offset X",
+    "ro": "Icon offset X"
   },
   {
     "es": "Offset icono Y",
@@ -7357,7 +12250,12 @@
     "de": "Icon offset Y",
     "fr": "Icon offset Y",
     "it": "Icon offset Y",
-    "nl": "Icon offset Y"
+    "nl": "Icon offset Y",
+    "pt": "Icon offset Y",
+    "ru": "Icon offset Y",
+    "el": "Icon offset Y",
+    "zh": "Icon offset Y",
+    "ro": "Icon offset Y"
   },
   {
     "es": "Path activo extra",
@@ -7365,7 +12263,12 @@
     "de": "Extra active path",
     "fr": "Extra active path",
     "it": "Extra active path",
-    "nl": "Extra active path"
+    "nl": "Extra active path",
+    "pt": "Extra active path",
+    "ru": "Extra active path",
+    "el": "Extra active path",
+    "zh": "Extra active path",
+    "ro": "Extra active path"
   },
   {
     "es": "Radio media player",
@@ -7373,7 +12276,12 @@
     "de": "Media player radius",
     "fr": "Media player radius",
     "it": "Media player radius",
-    "nl": "Media player radius"
+    "nl": "Media player radius",
+    "pt": "Media player radius",
+    "ru": "Media player radius",
+    "el": "Media player radius",
+    "zh": "Media player radius",
+    "ro": "Media player radius"
   },
   {
     "es": "Respuesta botones (ms)",
@@ -7381,7 +12289,12 @@
     "de": "Button feedback (ms)",
     "fr": "Button feedback (ms)",
     "it": "Button feedback (ms)",
-    "nl": "Button feedback (ms)"
+    "nl": "Button feedback (ms)",
+    "pt": "Button feedback (ms)",
+    "ru": "Button feedback (ms)",
+    "el": "Button feedback (ms)",
+    "zh": "Button feedback (ms)",
+    "ro": "Button feedback (ms)"
   },
   {
     "es": "Respuesta haptica",
@@ -7389,7 +12302,12 @@
     "de": "Haptisches Feedback",
     "fr": "Retour haptique",
     "it": "Feedback aptico",
-    "nl": "Haptische feedback"
+    "nl": "Haptische feedback",
+    "pt": "Feedback háptico",
+    "ru": "Тактильная отдача",
+    "el": "Απτική ανάδραση",
+    "zh": "触觉反馈",
+    "ro": "Feedback haptic"
   },
   {
     "es": "Ruta medios",
@@ -7397,7 +12315,12 @@
     "de": "Media path",
     "fr": "Media path",
     "it": "Media path",
-    "nl": "Media path"
+    "nl": "Media path",
+    "pt": "Media path",
+    "ru": "Media path",
+    "el": "Media path",
+    "zh": "Media path",
+    "ro": "Media path"
   },
   {
     "es": "Separacion botones",
@@ -7405,7 +12328,12 @@
     "de": "Button spacing",
     "fr": "Button spacing",
     "it": "Button spacing",
-    "nl": "Button spacing"
+    "nl": "Button spacing",
+    "pt": "Button spacing",
+    "ru": "Button spacing",
+    "el": "Button spacing",
+    "zh": "Button spacing",
+    "ro": "Button spacing"
   },
   {
     "es": "Separacion con navbar",
@@ -7413,7 +12341,12 @@
     "de": "Spacing from navbar",
     "fr": "Spacing from navbar",
     "it": "Spacing from navbar",
-    "nl": "Spacing from navbar"
+    "nl": "Spacing from navbar",
+    "pt": "Spacing from navbar",
+    "ru": "Spacing from navbar",
+    "el": "Spacing from navbar",
+    "zh": "Spacing from navbar",
+    "ro": "Spacing from navbar"
   },
   {
     "es": "Separacion etiqueta",
@@ -7421,7 +12354,12 @@
     "de": "Label spacing",
     "fr": "Label spacing",
     "it": "Label spacing",
-    "nl": "Label spacing"
+    "nl": "Label spacing",
+    "pt": "Label spacing",
+    "ru": "Label spacing",
+    "el": "Label spacing",
+    "zh": "Label spacing",
+    "ro": "Label spacing"
   },
   {
     "es": "Separacion popup",
@@ -7429,7 +12367,12 @@
     "de": "Popup spacing",
     "fr": "Popup spacing",
     "it": "Popup spacing",
-    "nl": "Popup spacing"
+    "nl": "Popup spacing",
+    "pt": "Popup spacing",
+    "ru": "Popup spacing",
+    "el": "Popup spacing",
+    "zh": "Popup spacing",
+    "ro": "Popup spacing"
   },
   {
     "es": "Separacion stack",
@@ -7437,7 +12380,12 @@
     "de": "Stack spacing",
     "fr": "Stack spacing",
     "it": "Stack spacing",
-    "nl": "Stack spacing"
+    "nl": "Stack spacing",
+    "pt": "Stack spacing",
+    "ru": "Stack spacing",
+    "el": "Stack spacing",
+    "zh": "Stack spacing",
+    "ro": "Stack spacing"
   },
   {
     "es": "Sombra media player",
@@ -7445,7 +12393,12 @@
     "de": "Media player shadow",
     "fr": "Media player shadow",
     "it": "Media player shadow",
-    "nl": "Media player shadow"
+    "nl": "Media player shadow",
+    "pt": "Media player shadow",
+    "ru": "Media player shadow",
+    "el": "Media player shadow",
+    "zh": "Media player shadow",
+    "ro": "Media player shadow"
   },
   {
     "es": "Tamano controles",
@@ -7453,7 +12406,12 @@
     "de": "Control size",
     "fr": "Control size",
     "it": "Control size",
-    "nl": "Control size"
+    "nl": "Control size",
+    "pt": "Control size",
+    "ru": "Control size",
+    "el": "Control size",
+    "zh": "Control size",
+    "ro": "Control size"
   },
   {
     "es": "Tamano etiqueta",
@@ -7461,7 +12419,12 @@
     "de": "Label size",
     "fr": "Label size",
     "it": "Label size",
-    "nl": "Label size"
+    "nl": "Label size",
+    "pt": "Label size",
+    "ru": "Label size",
+    "el": "Label size",
+    "zh": "Label size",
+    "ro": "Label size"
   },
   {
     "es": "Tamano indicadores",
@@ -7469,7 +12432,12 @@
     "de": "Indicator size",
     "fr": "Indicator size",
     "it": "Indicator size",
-    "nl": "Indicator size"
+    "nl": "Indicator size",
+    "pt": "Indicator size",
+    "ru": "Indicator size",
+    "el": "Indicator size",
+    "zh": "Indicator size",
+    "ro": "Indicator size"
   },
   {
     "es": "Tamano item popup",
@@ -7477,7 +12445,12 @@
     "de": "Popup item size",
     "fr": "Popup item size",
     "it": "Popup item size",
-    "nl": "Popup item size"
+    "nl": "Popup item size",
+    "pt": "Popup item size",
+    "ru": "Popup item size",
+    "el": "Popup item size",
+    "zh": "Popup item size",
+    "ro": "Popup item size"
   },
   {
     "es": "Tamano portada",
@@ -7485,7 +12458,12 @@
     "de": "Cover art size",
     "fr": "Cover art size",
     "it": "Cover art size",
-    "nl": "Cover art size"
+    "nl": "Cover art size",
+    "pt": "Cover art size",
+    "ru": "Cover art size",
+    "el": "Cover art size",
+    "zh": "Cover art size",
+    "ro": "Cover art size"
   },
   {
     "es": "Tamano texto badge",
@@ -7493,7 +12471,12 @@
     "de": "Badge text size",
     "fr": "Badge text size",
     "it": "Badge text size",
-    "nl": "Badge text size"
+    "nl": "Badge text size",
+    "pt": "Badge text size",
+    "ru": "Badge text size",
+    "el": "Badge text size",
+    "zh": "Badge text size",
+    "ro": "Badge text size"
   },
   {
     "es": "Usar caratula de fondo",
@@ -7501,7 +12484,12 @@
     "de": "Use cover art as background",
     "fr": "Use cover art as background",
     "it": "Use cover art as background",
-    "nl": "Use cover art as background"
+    "nl": "Use cover art as background",
+    "pt": "Use cover art as background",
+    "ru": "Use cover art as background",
+    "el": "Use cover art as background",
+    "zh": "Use cover art as background",
+    "ro": "Use cover art as background"
   },
   {
     "es": "Veladura popup",
@@ -7509,7 +12497,12 @@
     "de": "Popup dimming",
     "fr": "Popup dimming",
     "it": "Popup dimming",
-    "nl": "Popup dimming"
+    "nl": "Popup dimming",
+    "pt": "Popup dimming",
+    "ru": "Popup dimming",
+    "el": "Popup dimming",
+    "zh": "Popup dimming",
+    "ro": "Popup dimming"
   },
   {
     "es": "Backdrop filter",
@@ -7517,7 +12510,12 @@
     "de": "Backdrop filter",
     "fr": "Backdrop filter",
     "it": "Backdrop filter",
-    "nl": "Backdrop filter"
+    "nl": "Backdrop filter",
+    "pt": "Backdrop filter",
+    "ru": "Backdrop filter",
+    "el": "Backdrop filter",
+    "zh": "Backdrop filter",
+    "ro": "Backdrop filter"
   },
   {
     "es": "Borde media player",
@@ -7525,7 +12523,12 @@
     "de": "Media player border",
     "fr": "Media player border",
     "it": "Media player border",
-    "nl": "Media player border"
+    "nl": "Media player border",
+    "pt": "Media player border",
+    "ru": "Media player border",
+    "el": "Media player border",
+    "zh": "Media player border",
+    "ro": "Media player border"
   },
   {
     "es": "Color etiqueta",
@@ -7533,7 +12536,12 @@
     "de": "Label color",
     "fr": "Label color",
     "it": "Label color",
-    "nl": "Label color"
+    "nl": "Label color",
+    "pt": "Label color",
+    "ru": "Label color",
+    "el": "Label color",
+    "zh": "Label color",
+    "ro": "Label color"
   },
   {
     "es": "Color progreso",
@@ -7541,7 +12549,12 @@
     "de": "Progress color",
     "fr": "Progress color",
     "it": "Progress color",
-    "nl": "Progress color"
+    "nl": "Progress color",
+    "pt": "Progress color",
+    "ru": "Progress color",
+    "el": "Progress color",
+    "zh": "Progress color",
+    "ro": "Progress color"
   },
   {
     "es": "Descripcion",
@@ -7549,7 +12562,12 @@
     "de": "Description",
     "fr": "Description",
     "it": "Description",
-    "nl": "Description"
+    "nl": "Description",
+    "pt": "Description",
+    "ru": "Description",
+    "el": "Description",
+    "zh": "Description",
+    "ro": "Description"
   },
   {
     "es": "Fondo media player",
@@ -7557,7 +12575,12 @@
     "de": "Media player background",
     "fr": "Media player background",
     "it": "Media player background",
-    "nl": "Media player background"
+    "nl": "Media player background",
+    "pt": "Media player background",
+    "ru": "Media player background",
+    "el": "Media player background",
+    "zh": "Media player background",
+    "ro": "Media player background"
   },
   {
     "es": "Fondo progreso",
@@ -7565,7 +12588,12 @@
     "de": "Progress background",
     "fr": "Progress background",
     "it": "Progress background",
-    "nl": "Progress background"
+    "nl": "Progress background",
+    "pt": "Progress background",
+    "ru": "Progress background",
+    "el": "Progress background",
+    "zh": "Progress background",
+    "ro": "Progress background"
   },
   {
     "es": "Fondo tarjeta",
@@ -7573,7 +12601,12 @@
     "de": "Kartenhintergrund",
     "fr": "Fond de la carte",
     "it": "Sfondo scheda",
-    "nl": "Kaartachtergrond"
+    "nl": "Kaartachtergrond",
+    "pt": "Fundo do cartão",
+    "ru": "Фон карточки",
+    "el": "Φόντο κάρτας",
+    "zh": "卡片背景",
+    "ro": "Fundal card"
   },
   {
     "es": "Fondo burbuja",
@@ -7581,7 +12614,12 @@
     "de": "Blasen-Hintergrund",
     "fr": "Fond de la bulle",
     "it": "Sfondo bolla",
-    "nl": "Bel-achtergrond"
+    "nl": "Bel-achtergrond",
+    "pt": "Fundo da bolha",
+    "ru": "Фон пузырька",
+    "el": "Φόντο φυσαλίδας",
+    "zh": "气泡背景",
+    "ro": "Fundal bulă"
   },
   {
     "es": "Fondo dial",
@@ -7589,7 +12627,12 @@
     "de": "Drehregler-Hintergrund",
     "fr": "Fond du cadran",
     "it": "Sfondo dial",
-    "nl": "Draaiknop-achtergrond"
+    "nl": "Draaiknop-achtergrond",
+    "pt": "Fundo do mostrador",
+    "ru": "Фон диска",
+    "el": "Φόντο δίσκου",
+    "zh": "旋钮背景",
+    "ro": "Fundal disc"
   },
   {
     "es": "Fondo acento botones",
@@ -7597,7 +12640,12 @@
     "de": "Akzent-Hintergrund der Tasten",
     "fr": "Fond d’accent des boutons",
     "it": "Sfondo accento pulsanti",
-    "nl": "Knopaccent-achtergrond"
+    "nl": "Knopaccent-achtergrond",
+    "pt": "Fundo de destaque dos botões",
+    "ru": "Фон акцента кнопок",
+    "el": "Φόντο τονισμού κουμπιών",
+    "zh": "按钮强调背景",
+    "ro": "Fundal accent butoane"
   },
   {
     "es": "Imagen fija",
@@ -7605,7 +12653,12 @@
     "de": "Fixed image",
     "fr": "Fixed image",
     "it": "Fixed image",
-    "nl": "Fixed image"
+    "nl": "Fixed image",
+    "pt": "Fixed image",
+    "ru": "Fixed image",
+    "el": "Fixed image",
+    "zh": "Fixed image",
+    "ro": "Fixed image"
   },
   {
     "es": "Justificacion",
@@ -7613,7 +12666,12 @@
     "de": "Justification",
     "fr": "Justification",
     "it": "Justification",
-    "nl": "Justification"
+    "nl": "Justification",
+    "pt": "Justification",
+    "ru": "Justification",
+    "el": "Justification",
+    "zh": "Justification",
+    "ro": "Justification"
   },
   {
     "es": "Mostrar siempre",
@@ -7621,7 +12679,12 @@
     "de": "Always show",
     "fr": "Always show",
     "it": "Always show",
-    "nl": "Always show"
+    "nl": "Always show",
+    "pt": "Always show",
+    "ru": "Always show",
+    "el": "Always show",
+    "zh": "Always show",
+    "ro": "Always show"
   },
   {
     "es": "Overlay portada",
@@ -7629,7 +12692,12 @@
     "de": "Cover overlay",
     "fr": "Cover overlay",
     "it": "Cover overlay",
-    "nl": "Cover overlay"
+    "nl": "Cover overlay",
+    "pt": "Cover overlay",
+    "ru": "Cover overlay",
+    "el": "Cover overlay",
+    "zh": "Cover overlay",
+    "ro": "Cover overlay"
   },
   {
     "es": "Padding media player",
@@ -7637,7 +12705,12 @@
     "de": "Media player padding",
     "fr": "Media player padding",
     "it": "Media player padding",
-    "nl": "Media player padding"
+    "nl": "Media player padding",
+    "pt": "Media player padding",
+    "ru": "Media player padding",
+    "el": "Media player padding",
+    "zh": "Media player padding",
+    "ro": "Media player padding"
   },
   {
     "es": "Paths activos",
@@ -7645,7 +12718,12 @@
     "de": "Active paths",
     "fr": "Active paths",
     "it": "Active paths",
-    "nl": "Active paths"
+    "nl": "Active paths",
+    "pt": "Active paths",
+    "ru": "Active paths",
+    "el": "Active paths",
+    "zh": "Active paths",
+    "ro": "Active paths"
   },
   {
     "es": "Radio boton",
@@ -7653,7 +12731,12 @@
     "de": "Button radius",
     "fr": "Button radius",
     "it": "Button radius",
-    "nl": "Button radius"
+    "nl": "Button radius",
+    "pt": "Button radius",
+    "ru": "Button radius",
+    "el": "Button radius",
+    "zh": "Button radius",
+    "ro": "Button radius"
   },
   {
     "es": "Sombra barra",
@@ -7661,7 +12744,12 @@
     "de": "Bar shadow",
     "fr": "Bar shadow",
     "it": "Bar shadow",
-    "nl": "Bar shadow"
+    "nl": "Bar shadow",
+    "pt": "Bar shadow",
+    "ru": "Bar shadow",
+    "el": "Bar shadow",
+    "zh": "Bar shadow",
+    "ro": "Bar shadow"
   },
   {
     "es": "Sombra popup",
@@ -7669,7 +12757,12 @@
     "de": "Popup shadow",
     "fr": "Popup shadow",
     "it": "Popup shadow",
-    "nl": "Popup shadow"
+    "nl": "Popup shadow",
+    "pt": "Popup shadow",
+    "ru": "Popup shadow",
+    "el": "Popup shadow",
+    "zh": "Popup shadow",
+    "ro": "Popup shadow"
   },
   {
     "es": "Tamano boton",
@@ -7677,7 +12770,12 @@
     "de": "Button size",
     "fr": "Button size",
     "it": "Button size",
-    "nl": "Button size"
+    "nl": "Button size",
+    "pt": "Button size",
+    "ru": "Button size",
+    "el": "Button size",
+    "zh": "Button size",
+    "ro": "Button size"
   },
   {
     "es": "Activa por prefijo",
@@ -7685,7 +12783,12 @@
     "de": "Active by prefix",
     "fr": "Active by prefix",
     "it": "Active by prefix",
-    "nl": "Active by prefix"
+    "nl": "Active by prefix",
+    "pt": "Active by prefix",
+    "ru": "Active by prefix",
+    "el": "Active by prefix",
+    "zh": "Active by prefix",
+    "ro": "Active by prefix"
   },
   {
     "es": "Color botones",
@@ -7693,7 +12796,12 @@
     "de": "Button color",
     "fr": "Button color",
     "it": "Button color",
-    "nl": "Button color"
+    "nl": "Button color",
+    "pt": "Button color",
+    "ru": "Button color",
+    "el": "Button color",
+    "zh": "Button color",
+    "ro": "Button color"
   },
   {
     "es": "Fondo botones",
@@ -7701,7 +12809,12 @@
     "de": "Button background",
     "fr": "Button background",
     "it": "Button background",
-    "nl": "Button background"
+    "nl": "Button background",
+    "pt": "Button background",
+    "ru": "Button background",
+    "el": "Button background",
+    "zh": "Button background",
+    "ro": "Button background"
   },
   {
     "es": "Fondo popup",
@@ -7709,7 +12822,12 @@
     "de": "Popup background",
     "fr": "Popup background",
     "it": "Popup background",
-    "nl": "Popup background"
+    "nl": "Popup background",
+    "pt": "Popup background",
+    "ru": "Popup background",
+    "el": "Popup background",
+    "zh": "Popup background",
+    "ro": "Popup background"
   },
   {
     "es": "Padding popup",
@@ -7717,7 +12835,12 @@
     "de": "Popup padding",
     "fr": "Popup padding",
     "it": "Popup padding",
-    "nl": "Popup padding"
+    "nl": "Popup padding",
+    "pt": "Popup padding",
+    "ru": "Popup padding",
+    "el": "Popup padding",
+    "zh": "Popup padding",
+    "ro": "Popup padding"
   },
   {
     "es": "Popup (ms)",
@@ -7725,7 +12848,12 @@
     "de": "Popup (ms)",
     "fr": "Popup (ms)",
     "it": "Popup (ms)",
-    "nl": "Popup (ms)"
+    "nl": "Popup (ms)",
+    "pt": "Popup (ms)",
+    "ru": "Popup (ms)",
+    "el": "Popup (ms)",
+    "zh": "Popup (ms)",
+    "ro": "Popup (ms)"
   },
   {
     "es": "Radio popup",
@@ -7733,7 +12861,12 @@
     "de": "Popup radius",
     "fr": "Popup radius",
     "it": "Popup radius",
-    "nl": "Popup radius"
+    "nl": "Popup radius",
+    "pt": "Popup radius",
+    "ru": "Popup radius",
+    "el": "Popup radius",
+    "zh": "Popup radius",
+    "ro": "Popup radius"
   },
   {
     "es": "Borde popup",
@@ -7741,7 +12874,12 @@
     "de": "Popup border",
     "fr": "Popup border",
     "it": "Popup border",
-    "nl": "Popup border"
+    "nl": "Popup border",
+    "pt": "Popup border",
+    "ru": "Popup border",
+    "el": "Popup border",
+    "zh": "Popup border",
+    "ro": "Popup border"
   },
   {
     "es": "Color activo",
@@ -7749,7 +12887,12 @@
     "de": "Active color",
     "fr": "Active color",
     "it": "Active color",
-    "nl": "Active color"
+    "nl": "Active color",
+    "pt": "Active color",
+    "ru": "Active color",
+    "el": "Active color",
+    "zh": "Active color",
+    "ro": "Active color"
   },
   {
     "es": "Color badge",
@@ -7757,7 +12900,12 @@
     "de": "Badge color",
     "fr": "Badge color",
     "it": "Badge color",
-    "nl": "Badge color"
+    "nl": "Badge color",
+    "pt": "Badge color",
+    "ru": "Badge color",
+    "el": "Badge color",
+    "zh": "Badge color",
+    "ro": "Badge color"
   },
   {
     "es": "Fondo activo",
@@ -7765,7 +12913,12 @@
     "de": "Active background",
     "fr": "Active background",
     "it": "Active background",
-    "nl": "Active background"
+    "nl": "Active background",
+    "pt": "Active background",
+    "ru": "Active background",
+    "el": "Active background",
+    "zh": "Active background",
+    "ro": "Active background"
   },
   {
     "es": "Fondo badge",
@@ -7773,7 +12926,12 @@
     "de": "Badge background",
     "fr": "Badge background",
     "it": "Badge background",
-    "nl": "Badge background"
+    "nl": "Badge background",
+    "pt": "Badge background",
+    "ru": "Badge background",
+    "el": "Badge background",
+    "zh": "Badge background",
+    "ro": "Badge background"
   },
   {
     "es": "Fondo barra",
@@ -7781,7 +12939,12 @@
     "de": "Bar background",
     "fr": "Bar background",
     "it": "Bar background",
-    "nl": "Bar background"
+    "nl": "Bar background",
+    "pt": "Bar background",
+    "ru": "Bar background",
+    "el": "Bar background",
+    "zh": "Bar background",
+    "ro": "Bar background"
   },
   {
     "es": "Padding barra",
@@ -7789,7 +12952,12 @@
     "de": "Bar padding",
     "fr": "Bar padding",
     "it": "Bar padding",
-    "nl": "Bar padding"
+    "nl": "Bar padding",
+    "pt": "Bar padding",
+    "ru": "Bar padding",
+    "el": "Bar padding",
+    "zh": "Bar padding",
+    "ro": "Bar padding"
   },
   {
     "es": "Radio barra",
@@ -7797,7 +12965,12 @@
     "de": "Bar radius",
     "fr": "Bar radius",
     "it": "Bar radius",
-    "nl": "Bar radius"
+    "nl": "Bar radius",
+    "pt": "Bar radius",
+    "ru": "Bar radius",
+    "el": "Bar radius",
+    "zh": "Bar radius",
+    "ro": "Bar radius"
   },
   {
     "es": "Todavía no hay acciones rápidas.",
@@ -7805,7 +12978,12 @@
     "de": "Noch keine Schnellaktionen.",
     "fr": "Aucune action rapide pour le moment.",
     "it": "Nessuna azione rapida ancora.",
-    "nl": "Nog geen snelle acties."
+    "nl": "Nog geen snelle acties.",
+    "pt": "No quick actions yet.",
+    "ru": "No quick actions yet.",
+    "el": "No quick actions yet.",
+    "zh": "No quick actions yet.",
+    "ro": "No quick actions yet."
   },
   {
     "es": "Añadir acción",
@@ -7813,7 +12991,12 @@
     "de": "Add action",
     "fr": "Add action",
     "it": "Add action",
-    "nl": "Add action"
+    "nl": "Add action",
+    "pt": "Add action",
+    "ru": "Add action",
+    "el": "Add action",
+    "zh": "Add action",
+    "ro": "Add action"
   },
   {
     "es": "Tipo de acción",
@@ -7821,7 +13004,12 @@
     "de": "Action type",
     "fr": "Action type",
     "it": "Action type",
-    "nl": "Action type"
+    "nl": "Action type",
+    "pt": "Action type",
+    "ru": "Action type",
+    "el": "Action type",
+    "zh": "Action type",
+    "ro": "Action type"
   },
   {
     "es": "Automática (toggle o info)",
@@ -7829,7 +13017,12 @@
     "de": "Automatic (toggle or info)",
     "fr": "Automatic (toggle or info)",
     "it": "Automatic (toggle or info)",
-    "nl": "Automatic (toggle or info)"
+    "nl": "Automatic (toggle or info)",
+    "pt": "Automatic (toggle or info)",
+    "ru": "Automatic (toggle or info)",
+    "el": "Automatic (toggle or info)",
+    "zh": "Automatic (toggle or info)",
+    "ro": "Automatic (toggle or info)"
   },
   {
     "es": "Modo compacto",
@@ -7837,7 +13030,12 @@
     "de": "Compact mode",
     "fr": "Compact mode",
     "it": "Compact mode",
-    "nl": "Compact mode"
+    "nl": "Compact mode",
+    "pt": "Compact mode",
+    "ru": "Compact mode",
+    "el": "Compact mode",
+    "zh": "Compact mode",
+    "ro": "Compact mode"
   },
   {
     "es": "Automático (<4 columnas)",
@@ -7845,7 +13043,12 @@
     "de": "Automatic (<4 columns)",
     "fr": "Automatic (<4 columns)",
     "it": "Automatic (<4 columns)",
-    "nl": "Automatic (<4 columns)"
+    "nl": "Automatic (<4 columns)",
+    "pt": "Automatic (<4 columns)",
+    "ru": "Automatic (<4 columns)",
+    "el": "Automatic (<4 columns)",
+    "zh": "Automatic (<4 columns)",
+    "ro": "Automatic (<4 columns)"
   },
   {
     "es": "Compacto siempre",
@@ -7853,7 +13056,12 @@
     "de": "Always compact",
     "fr": "Always compact",
     "it": "Always compact",
-    "nl": "Always compact"
+    "nl": "Always compact",
+    "pt": "Always compact",
+    "ru": "Always compact",
+    "el": "Always compact",
+    "zh": "Always compact",
+    "ro": "Always compact"
   },
   {
     "es": "Nunca compacto",
@@ -7861,15 +13069,25 @@
     "de": "Never compact",
     "fr": "Never compact",
     "it": "Never compact",
-    "nl": "Never compact"
+    "nl": "Never compact",
+    "pt": "Never compact",
+    "ru": "Never compact",
+    "el": "Never compact",
+    "zh": "Never compact",
+    "ro": "Never compact"
   },
   {
     "es": "Acción al tocar",
     "en": "Tap action",
-    "de": "Tap action",
-    "fr": "Tap action",
-    "it": "Tap action",
-    "nl": "Tap action"
+    "de": "Tipp-Aktion",
+    "fr": "Action au toucher",
+    "it": "Azione al tocco",
+    "nl": "Tikactie",
+    "pt": "Ação ao tocar",
+    "ru": "Действие при нажатии",
+    "el": "Ενέργεια πατήματος",
+    "zh": "点击操作",
+    "ro": "Acțiune la atingere"
   },
   {
     "es": "Color personalizado",
@@ -7877,7 +13095,12 @@
     "de": "Custom color",
     "fr": "Custom color",
     "it": "Custom color",
-    "nl": "Custom color"
+    "nl": "Custom color",
+    "pt": "Custom color",
+    "ru": "Custom color",
+    "el": "Custom color",
+    "zh": "Custom color",
+    "ro": "Custom color"
   },
   {
     "es": "Acción",
@@ -7885,7 +13108,12 @@
     "de": "Action",
     "fr": "Action",
     "it": "Action",
-    "nl": "Action"
+    "nl": "Action",
+    "pt": "Action",
+    "ru": "Action",
+    "el": "Action",
+    "zh": "Action",
+    "ro": "Action"
   },
   {
     "es": "Subir",
@@ -7893,7 +13121,12 @@
     "de": "Move up",
     "fr": "Move up",
     "it": "Move up",
-    "nl": "Move up"
+    "nl": "Move up",
+    "pt": "Move up",
+    "ru": "Move up",
+    "el": "Move up",
+    "zh": "Move up",
+    "ro": "Move up"
   },
   {
     "es": "Bajar",
@@ -7901,7 +13134,12 @@
     "de": "Move down",
     "fr": "Move down",
     "it": "Move down",
-    "nl": "Move down"
+    "nl": "Move down",
+    "pt": "Move down",
+    "ru": "Move down",
+    "el": "Move down",
+    "zh": "Move down",
+    "ro": "Move down"
   },
   {
     "es": "Eliminar",
@@ -7909,7 +13147,12 @@
     "de": "Delete",
     "fr": "Delete",
     "it": "Delete",
-    "nl": "Delete"
+    "nl": "Delete",
+    "pt": "Delete",
+    "ru": "Delete",
+    "el": "Delete",
+    "zh": "Delete",
+    "ro": "Delete"
   },
   {
     "es": "Activa o desactiva cabecera, valor grande, leyenda y relleno.",
@@ -7917,7 +13160,12 @@
     "de": "Kopfzeile, großen Wert, Legende und Füllung aktivieren oder deaktivieren.",
     "fr": "Active ou désactive l’en-tête, la grande valeur, la légende et le remplissage.",
     "it": "Attiva o disattiva intestazione, valore grande, legenda e riempimento.",
-    "nl": "Kop, grote waarde, legenda en vulling in-/uitschakelen."
+    "nl": "Kop, grote waarde, legenda en vulling in-/uitschakelen.",
+    "pt": "Ative ou desative o cabeçalho, o valor grande, a legenda e o preenchimento.",
+    "ru": "Включите или отключите заголовок, крупное значение, легенду и заливку.",
+    "el": "Ενεργοποιήστε ή απενεργοποιήστε κεφαλίδα, μεγάλη τιμή, υπόμνημα και γέμισμα.",
+    "zh": "启用或禁用标题栏、大数值、图例与填充。",
+    "ro": "Activați sau dezactivați antetul, valoarea mare, legenda și umplerea."
   },
   {
     "es": "Activa o desactiva cabecera, valor, leyenda y relleno.",
@@ -7925,7 +13173,12 @@
     "de": "Kopfzeile, Wert, Legende und Füllung aktivieren oder deaktivieren.",
     "fr": "Active ou désactive l’en-tête, la valeur, la légende et le remplissage.",
     "it": "Attiva o disattiva intestazione, valore, legenda e riempimento.",
-    "nl": "Kop, waarde, legenda en vulling in-/uitschakelen."
+    "nl": "Kop, waarde, legenda en vulling in-/uitschakelen.",
+    "pt": "Ative ou desative o cabeçalho, o valor, a legenda e o preenchimento.",
+    "ru": "Включите или отключите заголовок, значение, легенду и заливку.",
+    "el": "Ενεργοποιήστε ή απενεργοποιήστε κεφαλίδα, τιμή, υπόμνημα και γέμισμα.",
+    "zh": "启用或禁用标题栏、数值、图例与填充。",
+    "ro": "Activați sau dezactivați antetul, valoarea, legenda și umplerea."
   },
   {
     "es": "Activa u oculta cada bloque de la tarjeta.",
@@ -7933,7 +13186,12 @@
     "de": "Anzeigen: or hide each card block.",
     "fr": "Afficher ou masquer chaque bloc de la carte.",
     "it": "Mostra or hide each card block.",
-    "nl": "Toon or hide each card block."
+    "nl": "Toon or hide each card block.",
+    "pt": "Mostrar ou ocultar cada bloco do cartão.",
+    "ru": "Показать или скрыть каждый блок карточки.",
+    "el": "Εμφάνιση ή απόκρυψη κάθε μπλοκ κάρτας.",
+    "zh": "显示或隐藏每个卡片块。",
+    "ro": "Afișează sau ascunde fiecare bloc de card."
   },
   {
     "es": "Ajusta la apertura de paneles, navegador y el rebote de los botones.",
@@ -7941,7 +13199,12 @@
     "de": "Panelöffnung, Browser und Button-Federung anpassen.",
     "fr": "Ajustez l’ouverture des panneaux, du navigateur et le rebond des boutons.",
     "it": "Regola apertura pannelli, browser e rimbalzo pulsanti.",
-    "nl": "Paneelopening, browser en knop-veer aanpassen."
+    "nl": "Paneelopening, browser en knop-veer aanpassen.",
+    "pt": "Ajuste a abertura dos painéis, do navegador e o salto dos botões.",
+    "ru": "Настройте открытие панелей, браузера и отскок кнопок.",
+    "el": "Ρυθμίστε το άνοιγμα πάνελ, τον περιηγητή και το αναπήδημα κουμπιών.",
+    "zh": "调整面板展开、浏览器与按钮弹跳效果。",
+    "ro": "Ajustați deschiderea panourilor, browserul și săritura butoanelor."
   },
   {
     "es": "Ajustes de cabecera, chips y rango visible.",
@@ -7949,7 +13212,12 @@
     "de": "Kopfzeile, Chips und sichtbarer Bereich.",
     "fr": "Réglages de l’en-tête, des puces et de la plage visible.",
     "it": "Intestazione, chip e intervallo visibile.",
-    "nl": "Kop, chips en zichtbaar bereik."
+    "nl": "Kop, chips en zichtbaar bereik.",
+    "pt": "Cabeçalho, chips e definições do intervalo visível.",
+    "ru": "Заголовок, чипы и настройки видимого диапазона.",
+    "el": "Κεφαλίδα, chip και ρυθμίσεις ορατού εύρους.",
+    "zh": "标题栏、芯片与可见范围设置。",
+    "ro": "Antet, chipuri și setări pentru intervalul vizibil."
   },
   {
     "es": "Ajustes visuales base de la tarjeta y las burbujas.",
@@ -7957,7 +13225,12 @@
     "de": "Grundlegende visuelle Einstellungen für Karte und Blasen.",
     "fr": "Réglages visuels de base pour la carte et les bulles.",
     "it": "Impostazioni visive di base per scheda e bolle.",
-    "nl": "Basis visuele instellingen voor kaart en bellen."
+    "nl": "Basis visuele instellingen voor kaart en bellen.",
+    "pt": "Definições visuais base do cartão e das bolhas.",
+    "ru": "Базовые визуальные настройки карточки и пузырьков.",
+    "el": "Βασικές οπτικές ρυθμίσεις για την κάρτα και τις φυσαλίδες.",
+    "zh": "卡片与气泡的基础视觉设置。",
+    "ro": "Setări vizuale de bază pentru card și bule."
   },
   {
     "es": "Ajustes visuales base del mapa y las burbujas.",
@@ -7965,7 +13238,12 @@
     "de": "Grundlegende visuelle Einstellungen für Karte und Blasen.",
     "fr": "Réglages visuels de base pour la carte et les bulles.",
     "it": "Impostazioni visive di base per mappa e bolle.",
-    "nl": "Basis visuele instellingen voor kaart en bellen."
+    "nl": "Basis visuele instellingen voor kaart en bellen.",
+    "pt": "Base visual settings for the map and bubbles.",
+    "ru": "Base visual settings for the map and bubbles.",
+    "el": "Base visual settings for the map and bubbles.",
+    "zh": "Base visual settings for the map and bubbles.",
+    "ro": "Base visual settings for the map and bubbles."
   },
   {
     "es": "Ajustes visuales básicos del look Nodalia.",
@@ -7973,7 +13251,12 @@
     "de": "Grundlegende visuelle Einstellungen für den Nodalia-Look.",
     "fr": "Réglages visuels de base pour le style Nodalia.",
     "it": "Impostazioni visive di base per il look Nodalia.",
-    "nl": "Basis visuele instellingen voor de Nodalia-stijl."
+    "nl": "Basis visuele instellingen voor de Nodalia-stijl.",
+    "pt": "Basic visual settings for the Nodalia look.",
+    "ru": "Basic visual settings for the Nodalia look.",
+    "el": "Basic visual settings for the Nodalia look.",
+    "zh": "Basic visual settings for the Nodalia look.",
+    "ro": "Basic visual settings for the Nodalia look."
   },
   {
     "es": "Ajustes visuales de barra, botones, popup y media player.",
@@ -7981,7 +13264,12 @@
     "de": "Visuelle Einstellungen für Leiste, Tasten, Popup und Media Player.",
     "fr": "Réglages visuels pour la barre, les boutons, la fenêtre contextuelle et le lecteur média.",
     "it": "Impostazioni visive per barra, pulsanti, popup e lettore.",
-    "nl": "Visuele instellingen voor balk, knoppen, pop-up en mediaspeler."
+    "nl": "Visuele instellingen voor balk, knoppen, pop-up en mediaspeler.",
+    "pt": "Definições visuais para a barra, botões, popup e leitor multimédia.",
+    "ru": "Визуальные настройки панели, кнопок, всплывающего окна и медиаплеера.",
+    "el": "Οπτικές ρυθμίσεις για γραμμή, κουμπιά, αναδυόμενο και media player.",
+    "zh": "导航栏、按钮、弹出窗口与媒体播放器的视觉设置。",
+    "ro": "Setări vizuale pentru bară, butoane, popup și media player."
   },
   {
     "es": "Ajustes visuales de la card, el icono y el grafico.",
@@ -7989,7 +13277,12 @@
     "de": "Visuelle Einstellungen für Karte, Symbol und Diagramm.",
     "fr": "Réglages visuels pour la carte, l’icône et le graphique.",
     "it": "Impostazioni visive per scheda, icona e grafico.",
-    "nl": "Visuele instellingen voor kaart, pictogram en grafiek."
+    "nl": "Visuele instellingen voor kaart, pictogram en grafiek.",
+    "pt": "Definições visuais do cartão, ícone e gráfico.",
+    "ru": "Визуальные настройки карточки, значка и графика.",
+    "el": "Οπτικές ρυθμίσεις για την κάρτα, το εικονίδιο και το γράφημα.",
+    "zh": "卡片、图标与图表的视觉设置。",
+    "ro": "Setări vizuale pentru card, pictogramă și grafic."
   },
   {
     "es": "Ajustes visuales del grafico y el look Nodalia.",
@@ -7997,7 +13290,12 @@
     "de": "Visuelle Einstellungen für Diagramm und Nodalia-Look.",
     "fr": "Réglages visuels pour le graphique et le style Nodalia.",
     "it": "Impostazioni visive per grafico e look Nodalia.",
-    "nl": "Visuele instellingen voor grafiek en Nodalia-stijl."
+    "nl": "Visuele instellingen voor grafiek en Nodalia-stijl.",
+    "pt": "Definições visuais do gráfico e do aspeto Nodalia.",
+    "ru": "Визуальные настройки графика и вида Nodalia.",
+    "el": "Οπτικές ρυθμίσεις για το γράφημα και την εμφάνιση Nodalia.",
+    "zh": "图表与 Nodalia 外观的视觉设置。",
+    "ro": "Setări vizuale pentru grafic și aspectul Nodalia."
   },
   {
     "es": "Ajustes visuales del look Nodalia y el dial circular.",
@@ -8005,7 +13303,12 @@
     "de": "Visuelle Einstellungen für Nodalia-Look und Drehregler.",
     "fr": "Réglages visuels pour le style Nodalia et le cadran circulaire.",
     "it": "Impostazioni visive per look Nodalia e dial circolare.",
-    "nl": "Visuele instellingen voor Nodalia-stijl en ronde wijzerplaat."
+    "nl": "Visuele instellingen voor Nodalia-stijl en ronde wijzerplaat.",
+    "pt": "Definições visuais para o aspeto Nodalia e o mostrador circular.",
+    "ru": "Визуальные настройки вида Nodalia и кругового диска.",
+    "el": "Οπτικές ρυθμίσεις για την εμφάνιση Nodalia και τον κυκλικό δίσκο.",
+    "zh": "Nodalia 外观与圆形旋钮的视觉设置。",
+    "ro": "Setări vizuale pentru aspectul Nodalia și discul circular."
   },
   {
     "es": "Ajustes visuales del reproductor principal y del navegador de medios.",
@@ -8013,7 +13316,12 @@
     "de": "Visuelle Einstellungen für Hauptplayer und Medienbrowser.",
     "fr": "Réglages visuels pour le lecteur principal et le navigateur multimédia.",
     "it": "Impostazioni visive per lettore principale e browser media.",
-    "nl": "Visuele instellingen voor hoofdspeler en mediabrowser."
+    "nl": "Visuele instellingen voor hoofdspeler en mediabrowser.",
+    "pt": "Definições visuais para o leitor principal e o navegador multimédia.",
+    "ru": "Визуальные настройки основного плеера и медиабраузера.",
+    "el": "Οπτικές ρυθμίσεις για τον κύριο player και τον περιηγητή μέσων.",
+    "zh": "主播放器与媒体浏览器的视觉设置。",
+    "ro": "Setări vizuale pentru playerul principal și browserul media."
   },
   {
     "es": "Ajustes visuales principales de la tarjeta.",
@@ -8021,7 +13329,12 @@
     "de": "Hauptvisuelle Einstellungen für die Karte.",
     "fr": "Réglages visuels principaux de la carte.",
     "it": "Impostazioni visive principali della scheda.",
-    "nl": "Belangrijkste visuele instellingen voor de kaart."
+    "nl": "Belangrijkste visuele instellingen voor de kaart.",
+    "pt": "Main visual settings for the card.",
+    "ru": "Main visual settings for the card.",
+    "el": "Main visual settings for the card.",
+    "zh": "Main visual settings for the card.",
+    "ro": "Main visual settings for the card."
   },
   {
     "es": "Anade, reordena y personaliza cada entidad mostrada en la grafica.",
@@ -8029,7 +13342,12 @@
     "de": "Jede Entität im Diagramm hinzufügen, sortieren und anpassen.",
     "fr": "Ajoutez, réorganisez et personnalisez chaque entité affichée sur le graphique.",
     "it": "Aggiungi, riordina e personalizza ogni entità nel grafico.",
-    "nl": "Elke entiteit in de grafiek toevoegen, sorteren en aanpassen."
+    "nl": "Elke entiteit in de grafiek toevoegen, sorteren en aanpassen.",
+    "pt": "Adicione, reordene e personalize cada entidade mostrada no gráfico.",
+    "ru": "Добавляйте, упорядочивайте и настраивайте каждую сущность на графике.",
+    "el": "Προσθέστε, αναδιατάξτε και προσαρμόστε κάθε οντότητα που εμφανίζεται στο γράφημα.",
+    "zh": "添加、排序并自定义图表上显示的每个实体。",
+    "ro": "Adăugați, reordonați și personalizați fiecare entitate afișată pe grafic."
   },
   {
     "es": "Ayuda a compactar el gauge según el espacio disponible en la vista.",
@@ -8037,7 +13355,12 @@
     "de": "Kompaktiert die Gauge je nach Platz.",
     "fr": "Aide à compacter le jauge selon l’espace disponible.",
     "it": "Compatta il gauge in base allo spazio.",
-    "nl": "Maakt de gauge compacter naargelang ruimte."
+    "nl": "Maakt de gauge compacter naargelang ruimte.",
+    "pt": "Ajuda a compactar o indicador conforme o espaço disponível.",
+    "ru": "Помогает компактнее отображать индикатор в зависимости от места.",
+    "el": "Βοηθά στη συμπύκνωση του μέτρου ανάλογα με τον διαθέσιμο χώρο.",
+    "zh": "根据可用空间压缩仪表显示。",
+    "ro": "Ajută la compactarea gauge-ului în funcție de spațiul disponibil."
   },
   {
     "es": "Ayuda a compactar la climate card según el espacio disponible en la vista.",
@@ -8045,7 +13368,12 @@
     "de": "Hilft, die Thermostat-Karte je nach verfügbarem Platz zu kompaktieren.",
     "fr": "Aide à compacter la carte climat selon l’espace disponible.",
     "it": "Aiuta a compattare la climate card in base allo spazio.",
-    "nl": "Houdt de thermostaatkaart compact naargelang de ruimte."
+    "nl": "Houdt de thermostaatkaart compact naargelang de ruimte.",
+    "pt": "Ajuda a compactar o cartão de clima conforme o espaço disponível.",
+    "ru": "Помогает компактнее отображать карту климата в зависимости от места.",
+    "el": "Βοηθά στη συμπύκνωση της κάρτας κλίματος ανάλογα με τον διαθέσιμο χώρο.",
+    "zh": "根据可用空间压缩气候卡片。",
+    "ro": "Ajută la compactarea cardului climă în funcție de spațiul disponibil."
   },
   {
     "es": "Añade, reordena y personaliza cada reproductor visible en la tarjeta.",
@@ -8053,7 +13381,12 @@
     "de": "Jeden Player auf der Karte hinzufügen, sortieren und anpassen.",
     "fr": "Ajoutez, réorganisez et personnalisez chaque lecteur affiché sur la carte.",
     "it": "Aggiungi, riordina e personalizza ogni lettore sulla scheda.",
-    "nl": "Elke speler op de kaart toevoegen, sorteren en aanpassen."
+    "nl": "Elke speler op de kaart toevoegen, sorteren en aanpassen.",
+    "pt": "Adicione, reordene e personalize cada leitor mostrado no cartão.",
+    "ru": "Добавляйте, упорядочивайте и настраивайте каждый плеер на карточке.",
+    "el": "Προσθέστε, αναδιατάξτε και προσαρμόστε κάθε player που εμφανίζεται στην κάρτα.",
+    "zh": "添加、排序并自定义卡片上显示的每个播放器。",
+    "ro": "Adăugați, reordonați și personalizați fiecare player afișat pe card."
   },
   {
     "es": "Añade, reordena y personaliza los destinos de la barra y sus popups.",
@@ -8061,7 +13394,12 @@
     "de": "Leisten-Ziele und Popups hinzufügen, sortieren und anpassen.",
     "fr": "Ajoutez, réorganisez et personnalisez les destinations de la barre et leurs fenêtres.",
     "it": "Aggiungi, riordina e personalizza destinazioni della barra e relativi popup.",
-    "nl": "Bestemmingsbalk en pop-ups toevoegen, sorteren en aanpassen."
+    "nl": "Bestemmingsbalk en pop-ups toevoegen, sorteren en aanpassen.",
+    "pt": "Adicione, reordene e personalize os destinos da barra e os respetivos popups.",
+    "ru": "Добавляйте, упорядочивайте и настраивайте пункты назначения панели и их всплывающие окна.",
+    "el": "Προσθέστε, αναδιατάξτε και προσαρμόστε τους προορισμούς της γραμμής και τα αναδυόμενα τους.",
+    "zh": "添加、排序并自定义导航栏目标及其弹出窗口。",
+    "ro": "Adăugați, reordonați și personalizați destinațiile barei și popup-urile acestora."
   },
   {
     "es": "Botones de armado y desarmado visibles en la tarjeta.",
@@ -8069,7 +13407,12 @@
     "de": "Scharf-/Unscharf-Schaltflächen auf der Karte.",
     "fr": "Boutons d’armement et de désarmement visibles sur la carte.",
     "it": "Pulsanti inserimento/disinserimento visibili sulla scheda.",
-    "nl": "Zichtbare in-/uitschakelknoppen op de kaart."
+    "nl": "Zichtbare in-/uitschakelknoppen op de kaart.",
+    "pt": "Botões de armar e desarmar visíveis no cartão.",
+    "ru": "Кнопки постановки и снятия с охраны на карточке.",
+    "el": "Ορατά κουμπιά όπλισης/αφόπλισης στην κάρτα.",
+    "zh": "卡片上可见的布防与撤防按钮。",
+    "ro": "Butoane armare/dezarmare vizibile pe card."
   },
   {
     "es": "Botones secundarios con icono para alternar, abrir más información o llamar un servicio.",
@@ -8077,7 +13420,12 @@
     "de": "Sekundäre Symboltasten zum Umschalten, Infos oder Service.",
     "fr": "Boutons d’icônes secondaires pour basculer, ouvrir les infos ou appeler un service.",
     "it": "Pulsanti icona secondari per toggle, info o servizio.",
-    "nl": "Secundaire pictogramknoppen voor toggle, info of service."
+    "nl": "Secundaire pictogramknoppen voor toggle, info of service.",
+    "pt": "Botões de ícone secundários para alternar, abrir mais informação ou chamar um serviço.",
+    "ru": "Дополнительные значковые кнопки для переключения, подробностей или вызова службы.",
+    "el": "Δευτερεύοντα κουμπιά εικονιδίων για εναλλαγή, περισσότερες πληροφορίες ή κλήση υπηρεσίας.",
+    "zh": "用于切换、打开更多信息或调用服务的次要图标按钮。",
+    "ro": "Butoane pictogramă secundare pentru comutare, mai multe informații sau apel serviciu."
   },
   {
     "es": "Configura titulo, entidades y rango visible de la grafica.",
@@ -8085,7 +13433,12 @@
     "de": "Titel, Entitäten und sichtbaren Diagrammbereich konfigurieren.",
     "fr": "Configurez le titre, les entités et la plage visible du graphique.",
     "it": "Configura titolo, entità e intervallo visibile del grafico.",
-    "nl": "Titel, entiteiten en zichtbaar grafiekbereik configureren."
+    "nl": "Titel, entiteiten en zichtbaar grafiekbereik configureren.",
+    "pt": "Configure o título, as entidades e o intervalo visível do gráfico.",
+    "ru": "Настройте заголовок, сущности и видимый диапазон графика.",
+    "el": "Ρυθμίστε τίτλο, οντότητες και ορατό εύρος γραφήματος.",
+    "zh": "配置标题、实体与图表可见范围。",
+    "ro": "Configurați titlul, entitățile și intervalul vizibil al graficului."
   },
   {
     "es": "Controla la entrada del tooltip y el rebote visual de los chips.",
@@ -8093,7 +13446,12 @@
     "de": "Tooltip-Eingang und Chip-Federung steuern.",
     "fr": "Contrôle l’entrée du tooltip et le rebond visuel des puces.",
     "it": "Ingresso tooltip e rimbalzo chip.",
-    "nl": "Tooltip en chip-animatie regelen."
+    "nl": "Tooltip en chip-animatie regelen.",
+    "pt": "Controla a entrada da tooltip e o salto visual dos chips.",
+    "ru": "Управляет появлением подсказки и визуальным отскоком чипов.",
+    "el": "Ελέγχει την είσοδο tooltip και το οπτικό αναπήδημα chip.",
+    "zh": "控制提示框进入与芯片视觉弹跳。",
+    "ro": "Controlează intrarea tooltip-ului și săritura vizuală a chipurilor."
   },
   {
     "es": "Controla la transición del dial, la entrada del contenido y el rebote al tocar la tarjeta.",
@@ -8101,7 +13459,12 @@
     "de": "Steuert Drehregler-Übergang, Inhaltseingang und Tap-Federung.",
     "fr": "Contrôle la transition du cadran, l’entrée du contenu et le rebond au toucher.",
     "it": "Controlla transizione dial, ingresso contenuto e rimbalzo tocco.",
-    "nl": "Regelt draaiknop-overgang, inhoud en tik-veer."
+    "nl": "Regelt draaiknop-overgang, inhoud en tik-veer.",
+    "pt": "Controla a transição do mostrador, a entrada do conteúdo e o salto ao toque.",
+    "ru": "Управляет переходом диска, появлением содержимого и отскоком при нажатии.",
+    "el": "Ελέγχει τη μετάβαση του δίσκου, την είσοδο περιεχομένου και το αναπήδημα πατήματος.",
+    "zh": "控制旋钮过渡、内容进入与点击弹跳。",
+    "ro": "Controlează tranziția discului, intrarea conținutului și săritura la atingere."
   },
   {
     "es": "Controla la transición del dial, la entrada del contenido y el rebote de los botones.",
@@ -8109,7 +13472,12 @@
     "de": "Steuert den Übergang des Drehreglers, den Eingang des Inhalts und den Tasten-Federungseffekt.",
     "fr": "Contrôle la transition du cadran, l’entrée du contenu et le rebond des boutons.",
     "it": "Controlla la transizione del dial, l’ingresso del contenuto e il rimbalzo dei pulsanti.",
-    "nl": "Regelt de draaiknop-overgang, binnenkomst van inhoud en knop-veer."
+    "nl": "Regelt de draaiknop-overgang, binnenkomst van inhoud en knop-veer.",
+    "pt": "Controla a transição do mostrador, a entrada do conteúdo e o salto dos botões.",
+    "ru": "Управляет переходом диска, появлением содержимого и отскоком кнопок.",
+    "el": "Ελέγχει τη μετάβαση του δίσκου, την είσοδο περιεχομένου και το αναπήδημα των κουμπιών.",
+    "zh": "控制旋钮过渡、内容进入与按钮弹跳。",
+    "ro": "Controlează tranziția discului, intrarea conținutului și săritura butoanelor."
   },
   {
     "es": "Controla la visualizacion de lineas sin consumo y la velocidad de animacion.",
@@ -8117,7 +13485,12 @@
     "de": "Nullverbrauchslinien und Animationsgeschwindigkeit steuern.",
     "fr": "Contrôle l’affichage des lignes à zéro et la vitesse d’animation.",
     "it": "Visualizza linee a zero consumo e velocità animazione.",
-    "nl": "Nul-lijnen en animatiesnelheid regelen."
+    "nl": "Nul-lijnen en animatiesnelheid regelen.",
+    "pt": "Controla a apresentação das linhas de consumo zero e a velocidade da animação.",
+    "ru": "Управляет отображением линий нулевого потребления и скоростью анимации.",
+    "el": "Ελέγχει την εμφάνιση γραμμών μηδενικής κατανάλωσης και την ταχύτητα κίνησης.",
+    "zh": "控制零功耗线条的显示与动画速度。",
+    "ro": "Controlează afișarea liniilor de consum zero și viteza animației."
   },
   {
     "es": "Controla las lineas a cero y la velocidad del flujo.",
@@ -8125,7 +13498,12 @@
     "de": "Null-Linien und Flussgeschwindigkeit steuern.",
     "fr": "Contrôle les lignes à zéro et la vitesse du flux.",
     "it": "Linee a zero e velocità del flusso.",
-    "nl": "Nul-lijnen en stroomsnelheid."
+    "nl": "Nul-lijnen en stroomsnelheid.",
+    "pt": "Controls zero lines and flow speed.",
+    "ru": "Controls zero lines and flow speed.",
+    "el": "Controls zero lines and flow speed.",
+    "zh": "Controls zero lines and flow speed.",
+    "ro": "Controls zero lines and flow speed."
   },
   {
     "es": "Controla transiciones de barra, popup, media player y respuestas visuales.",
@@ -8133,7 +13511,12 @@
     "de": "Steuert Übergänge für Leiste, Popup, Media Player und visuelles Feedback.",
     "fr": "Contrôle les transitions de la barre, du popup, du lecteur média et le retour visuel.",
     "it": "Controlla transizioni barra, popup, lettore e feedback visivo.",
-    "nl": "Regelt overgangen voor balk, pop-up, mediaspeler en visuele feedback."
+    "nl": "Regelt overgangen voor balk, pop-up, mediaspeler en visuele feedback.",
+    "pt": "Controla as transições da barra, popup, leitor multimédia e feedback visual.",
+    "ru": "Управляет переходами панели, всплывающего окна, медиаплеера и визуальной отдачей.",
+    "el": "Ελέγχει τις μεταβάσεις γραμμής, αναδυόμενου, media player και οπτική ανταπόκριση.",
+    "zh": "控制导航栏、弹出窗口、媒体播放器与视觉反馈的过渡。",
+    "ro": "Controlează tranzițiile pentru bară, popup, media player și feedback vizual."
   },
   {
     "es": "Elige la informacion y los controles visibles.",
@@ -8141,7 +13524,12 @@
     "de": "Wähle die sichtbaren Informationen und Steuerelemente.",
     "fr": "Choisissez les informations et contrôles visibles.",
     "it": "Scegli le informazioni e i controlli visibili.",
-    "nl": "Kies zichtbare informatie en bediening."
+    "nl": "Kies zichtbare informatie en bediening.",
+    "pt": "Escolha as informações e os controlos visíveis.",
+    "ru": "Выберите отображаемую информацию и элементы управления.",
+    "el": "Επιλέξτε τις ορατές πληροφορίες και τα στοιχεία ελέγχου.",
+    "zh": "选择可见信息与控件。",
+    "ro": "Alegeți informațiile și comenzile vizibile."
   },
   {
     "es": "Elige qué chips y controles deben mostrarse.",
@@ -8149,7 +13537,12 @@
     "de": "Wähle, welche Chips und Steuerelemente angezeigt werden sollen.",
     "fr": "Choisissez les puces et contrôles à afficher.",
     "it": "Scegli quali chip e controlli mostrare.",
-    "nl": "Kies welke chips en bediening zichtbaar zijn."
+    "nl": "Kies welke chips en bediening zichtbaar zijn.",
+    "pt": "Escolha quais chips e controlos mostrar.",
+    "ru": "Выберите, какие чипы и элементы управления показывать.",
+    "el": "Επιλέξτε ποια chip και στοιχεία ελέγχου θα εμφανίζονται.",
+    "zh": "选择要显示的芯片和控件。",
+    "ro": "Alegeți ce chipuri și comenzi să fie afișate."
   },
   {
     "es": "Entidad del robot y fuente principal del mapa.",
@@ -8157,7 +13550,12 @@
     "de": "Roboter-Entität und Hauptkartenquelle.",
     "fr": "Entité robot et source principale de la carte.",
     "it": "Entità robot e sorgente mappa principale.",
-    "nl": "Robotentiteit en hoofdkaartbron."
+    "nl": "Robotentiteit en hoofdkaartbron.",
+    "pt": "Robot entity and main map source.",
+    "ru": "Robot entity and main map source.",
+    "el": "Robot entity and main map source.",
+    "zh": "Robot entity and main map source.",
+    "ro": "Robot entity and main map source."
   },
   {
     "es": "Entidad favorita, nombre visible e icono principal.",
@@ -8165,7 +13563,12 @@
     "de": "Favoriten-Entität, sichtbarer Name und Hauptsymbol.",
     "fr": "Entité favorite, nom visible et icône principale.",
     "it": "Entità preferita, nome visibile e icona principale.",
-    "nl": "Favoriete entiteit, zichtbare naam en hoofdpictogram."
+    "nl": "Favoriete entiteit, zichtbare naam en hoofdpictogram.",
+    "pt": "Entidade favorita, nome visível e ícone principal.",
+    "ru": "Избранная сущность, видимое имя и основной значок.",
+    "el": "Αγαπημένη οντότητα, ορατό όνομα και κύριο εικονίδιο.",
+    "zh": "收藏实体、可见名称与主图标。",
+    "ro": "Entitate favorită, nume vizibil și pictogramă principală."
   },
   {
     "es": "Entidad meteorologica principal, nombre visible, icono y contenido mostrado.",
@@ -8173,7 +13576,12 @@
     "de": "Haupt-Wetterentität, sichtbarer Name, Symbol und angezeigter Inhalt.",
     "fr": "Entité météo principale, nom visible, icône et contenu affiché.",
     "it": "Entità meteo principale, nome visibile, icona e contenuto.",
-    "nl": "Hoofdweerentiteit, zichtbare naam, pictogram en inhoud."
+    "nl": "Hoofdweerentiteit, zichtbare naam, pictogram en inhoud.",
+    "pt": "Entidade meteorológica principal, nome visível, ícone e conteúdo mostrado.",
+    "ru": "Основная погодная сущность, видимое имя, значок и отображаемое содержимое.",
+    "el": "Κύρια μετεωρολογική οντότητα, ορατό όνομα, εικονίδιο και εμφανιζόμενο περιεχόμενο.",
+    "zh": "主天气实体、可见名称、图标与显示内容。",
+    "ro": "Entitate meteo principală, nume vizibil, pictogramă și conținut afișat."
   },
   {
     "es": "Entidad numérica principal, nombre, icono y rango del gauge.",
@@ -8181,7 +13589,12 @@
     "de": "Numerische Hauptentität, Name, Symbol und Messbereich.",
     "fr": "Entité numérique principale, nom, icône et plage du jauge.",
     "it": "Entità numerica principale, nome, icona e intervallo gauge.",
-    "nl": "Hoofdnumerieke entiteit, naam, pictogram en bereik."
+    "nl": "Hoofdnumerieke entiteit, naam, pictogram en bereik.",
+    "pt": "Entidade numérica principal, nome, ícone e intervalo do indicador.",
+    "ru": "Основная числовая сущность, имя, значок и диапазон индикатора.",
+    "el": "Κύρια αριθμητική οντότητα, όνομα, εικονίδιο και εύρος μέτρου.",
+    "zh": "主数值实体、名称、图标与仪表范围。",
+    "ro": "Entitate numerică principală, nume, pictogramă și interval gauge."
   },
   {
     "es": "Entidad persona, foto, icono de zona y comportamiento principal de la tarjeta.",
@@ -8189,7 +13602,12 @@
     "de": "Personenentität, Foto, Zonensymbol und Hauptverhalten.",
     "fr": "Entité personne, photo, icône de zone et comportement principal.",
     "it": "Entità persona, foto, icona zona e comportamento principale.",
-    "nl": "Persoonentiteit, foto, zonepictogram en hoofdgedrag."
+    "nl": "Persoonentiteit, foto, zonepictogram en hoofdgedrag.",
+    "pt": "Entidade pessoa, foto, ícone da zona e comportamento principal do cartão.",
+    "ru": "Сущность человека, фото, значок зоны и основное поведение карточки.",
+    "el": "Οντότητα προσώπου, φωτογραφία, εικονίδιο ζώνης και κύρια συμπεριφορά κάρτας.",
+    "zh": "人员实体、照片、区域图标与卡片主要行为。",
+    "ro": "Entitate persoană, fotografie, pictogramă zonă și comportament principal al cardului."
   },
   {
     "es": "Entidad principal y textos visibles.",
@@ -8197,7 +13615,12 @@
     "de": "Hauptentität und sichtbare Texte.",
     "fr": "Entité principale et textes visibles.",
     "it": "Entità principale e testi visibili.",
-    "nl": "Hoofdentiteit en zichtbare teksten."
+    "nl": "Hoofdentiteit en zichtbare teksten.",
+    "pt": "Main entity and visible texts.",
+    "ru": "Main entity and visible texts.",
+    "el": "Main entity and visible texts.",
+    "zh": "Main entity and visible texts.",
+    "ro": "Main entity and visible texts."
   },
   {
     "es": "Entidad principal, helper opcional del codigo, icono y comportamiento base de la tarjeta.",
@@ -8205,7 +13628,12 @@
     "de": "Hauptentität, optionaler Code-Helfer, Symbol und Grundverhalten.",
     "fr": "Entité principale, aide code optionnelle, icône et comportement de base.",
     "it": "Entità principale, helper codice opzionale, icona e comportamento base.",
-    "nl": "Hoofdentiteit, optionele code-helper, pictogram en basisgedrag."
+    "nl": "Hoofdentiteit, optionele code-helper, pictogram en basisgedrag.",
+    "pt": "Entidade principal, ajudante de código opcional, ícone e comportamento base do cartão.",
+    "ru": "Основная сущность, опциональный помощник кода, значок и базовое поведение карточки.",
+    "el": "Κύρια οντότητα, προαιρετικός βοηθός κώδικα, εικονίδιο και βασική συμπεριφορά κάρτας.",
+    "zh": "主实体、可选代码助手、图标与卡片基础行为。",
+    "ro": "Entitate principală, ajutor de cod opțional, pictogramă și comportament de bază al cardului."
   },
   {
     "es": "Entidad principal, nombre visible e icono base de la tarjeta.",
@@ -8213,7 +13641,12 @@
     "de": "Hauptentität, sichtbarer Name und Basissymbol.",
     "fr": "Entité principale, nom visible et icône de base de la carte.",
     "it": "Entità principale, nome visibile e icona base.",
-    "nl": "Hoofdentiteit, zichtbare naam en basispictogram."
+    "nl": "Hoofdentiteit, zichtbare naam en basispictogram.",
+    "pt": "Entidade principal, nome visível e ícone base do cartão.",
+    "ru": "Основная сущность, видимое имя и базовый значок карточки.",
+    "el": "Κύρια οντότητα, ορατό όνομα και βασικό εικονίδιο κάρτας.",
+    "zh": "主实体、可见名称与卡片基础图标。",
+    "ro": "Entitate principală, nume vizibil și pictogramă de bază a cardului."
   },
   {
     "es": "Entidad principal, nombre visible e icono de la tarjeta.",
@@ -8221,7 +13654,12 @@
     "de": "Hauptentität, sichtbarer Name und Kartensymbol.",
     "fr": "Entité principale, nom visible et icône de la carte.",
     "it": "Entità principale, nome visibile e icona scheda.",
-    "nl": "Hoofdentiteit, zichtbare naam en kaartpictogram."
+    "nl": "Hoofdentiteit, zichtbare naam en kaartpictogram.",
+    "pt": "Entidade principal, nome visível e ícone do cartão.",
+    "ru": "Основная сущность, видимое имя и значок карточки.",
+    "el": "Κύρια οντότητα, ορατό όνομα και εικονίδιο κάρτας.",
+    "zh": "主实体、可见名称与卡片图标。",
+    "ro": "Entitate principală, nume vizibil și pictograma cardului."
   },
   {
     "es": "Entidad principal, nombre visible y comportamiento al tocar la tarjeta.",
@@ -8229,7 +13667,12 @@
     "de": "Hauptentität, sichtbarer Name und Tap-Verhalten.",
     "fr": "Entité principale, nom visible et comportement au toucher.",
     "it": "Entità principale, nome visibile e comportamento al tocco.",
-    "nl": "Hoofdentiteit, zichtbare naam en tikgedrag."
+    "nl": "Hoofdentiteit, zichtbare naam en tikgedrag.",
+    "pt": "Entidade principal, nome visível e comportamento ao toque.",
+    "ru": "Основная сущность, видимое имя и поведение при нажатии.",
+    "el": "Κύρια οντότητα, ορατό όνομα και συμπεριφορά πατήματος.",
+    "zh": "主实体、可见名称与点击行为。",
+    "ro": "Entitate principală, nume vizibil și comportament la atingere."
   },
   {
     "es": "Entrada suave de la tarjeta, paneles y respuesta visual al pulsar controles.",
@@ -8237,7 +13680,12 @@
     "de": "Sanfter Karteneingang, Panels und visuelles Feedback bei Bedienung.",
     "fr": "Entrée fluide de la carte, panneaux et retour visuel en pressant les contrôles.",
     "it": "Entrata fluida scheda, pannelli e feedback visivo ai controlli.",
-    "nl": "Vloeiende kaartingang, panelen en visuele feedback."
+    "nl": "Vloeiende kaartingang, panelen en visuele feedback.",
+    "pt": "Entrada suave do cartão, painéis e feedback visual ao premir controlos.",
+    "ru": "Плавное появление карточки, панелей и визуальная отдача при нажатии элементов управления.",
+    "el": "Ομαλή είσοδος κάρτας, πάνελ και οπτική ανταπόκριση κατά το πάτημα στοιχείων ελέγχου.",
+    "zh": "卡片入场、面板平滑过渡及按下控件时的视觉反馈。",
+    "ro": "Intrare lină a cardului, panouri și feedback vizual la apăsarea comenzilor."
   },
   {
     "es": "Entrada suave del contenido y pequeno rebote al pulsar acciones e icono.",
@@ -8245,7 +13693,12 @@
     "de": "Sanfter Inhaltseingang und kleine Feder bei Aktionen und Symbol.",
     "fr": "Entrée fluide du contenu et petit rebond sur les actions et l’icône.",
     "it": "Ingresso fluido e piccolo rimbalzo su azioni e icona.",
-    "nl": "Vloeiende inhoud en kleine veer op acties en pictogram."
+    "nl": "Vloeiende inhoud en kleine veer op acties en pictogram.",
+    "pt": "Entrada suave do conteúdo e pequeno salto ao tocar nas ações e no ícone.",
+    "ru": "Плавное появление содержимого и небольшой отскок при нажатии на действия и значок.",
+    "el": "Ομαλή είσοδος περιεχομένου και μικρό αναπήδημα όταν πατάτε ενέργειες και εικονίδιο.",
+    "zh": "内容平滑进入，点击操作与图标时轻微弹跳。",
+    "ro": "Intrare lină a conținutului și săritură mică la acțiuni și pictogramă."
   },
   {
     "es": "Entrada suave del contenido y pequeno rebote al pulsar la tarjeta.",
@@ -8253,7 +13706,12 @@
     "de": "Sanfter Inhaltseingang und kleine Feder beim Tippen.",
     "fr": "Entrée fluide du contenu et petit rebond au toucher sur la carte.",
     "it": "Ingresso fluido e piccolo rimbalzo al tocco.",
-    "nl": "Vloeiende inhoud en kleine tik-animatie."
+    "nl": "Vloeiende inhoud en kleine tik-animatie.",
+    "pt": "Entrada suave do conteúdo e pequeno salto ao tocar no cartão.",
+    "ru": "Плавное появление содержимого и небольшой отскок при нажатии на карточку.",
+    "el": "Ομαλή είσοδος περιεχομένου και μικρό αναπήδημα όταν πατάτε την κάρτα.",
+    "zh": "内容平滑进入，点击卡片时轻微弹跳。",
+    "ro": "Intrare lină a conținutului și săritură mică la atingerea cardului."
   },
   {
     "es": "Entrada suave del contenido y pequeño rebote al pulsar la tarjeta o sus acciones.",
@@ -8261,7 +13719,12 @@
     "de": "Sanfter Inhaltseingang und kleine Feder bei Karte oder Aktionen.",
     "fr": "Entrée fluide du contenu et petit rebond au toucher sur la carte ou ses actions.",
     "it": "Ingresso fluido e piccolo rimbalzo su scheda o azioni.",
-    "nl": "Vloeiende inhoud en kleine veer op kaart of acties."
+    "nl": "Vloeiende inhoud en kleine veer op kaart of acties.",
+    "pt": "Entrada suave do conteúdo e pequeno salto ao tocar no cartão ou nas suas ações.",
+    "ru": "Плавное появление содержимого и лёгкий отскок при нажатии на карточку или её действия.",
+    "el": "Ομαλή είσοδος περιεχομένου και ελαφρύ αναπήδημα όταν πατάτε την κάρτα ή τις ενέργειές της.",
+    "zh": "内容平滑进入，点击卡片或其操作时轻微弹跳。",
+    "ro": "Intrare lină a conținutului și săritură mică la atingerea cardului sau acțiunilor sale."
   },
   {
     "es": "Entrada suave del contenido y rebote ligero al pulsar la tarjeta.",
@@ -8269,7 +13732,12 @@
     "de": "Sanfter Inhaltseingang und leichter Feder-Tap.",
     "fr": "Entrée fluide du contenu et léger rebond au toucher sur la carte.",
     "it": "Ingresso fluido e leggero rimbalzo al tocco.",
-    "nl": "Vloeiende inhoud en lichte tik-animatie."
+    "nl": "Vloeiende inhoud en lichte tik-animatie.",
+    "pt": "Entrada suave do conteúdo e salto ligeiro ao tocar no cartão.",
+    "ru": "Плавное появление содержимого и лёгкий отскок при нажатии на карточку.",
+    "el": "Ομαλή είσοδος περιεχομένου και ελαφρύ αναπήδημα όταν πατάτε την κάρτα.",
+    "zh": "内容平滑进入，点击卡片时轻微弹跳。",
+    "ro": "Intrare lină a conținutului și săritură ușoară la atingerea cardului."
   },
   {
     "es": "Entrada suave del flujo y rebote al pulsar nodos o acciones.",
@@ -8277,7 +13745,12 @@
     "de": "Sanfter Flusseingang und Feder bei Knoten oder Aktionen.",
     "fr": "Entrée fluide du flux et rebond au toucher sur les nœuds ou actions.",
     "it": "Ingresso fluido del flusso e rimbalzo su nodi o azioni.",
-    "nl": "Vloeiende stroom en veer bij knopen of acties."
+    "nl": "Vloeiende stroom en veer bij knopen of acties.",
+    "pt": "Entrada suave do fluxo e salto ao tocar em nós ou ações.",
+    "ru": "Плавное появление потока и отскок при нажатии на узлы или действия.",
+    "el": "Ομαλή είσοδος ροής και αναπήδημα όταν πατάτε κόμβους ή ενέργειες.",
+    "zh": "流向平滑进入，点击节点或操作时弹跳。",
+    "ro": "Intrare lină a fluxului și săritură la noduri sau acțiuni."
   },
   {
     "es": "Estado visible, chips adicionales, decimales de los valores y comportamiento en modo compacto.",
@@ -8285,7 +13758,12 @@
     "de": "Sichtbarer Status, Extra-Chips, Dezimalstellen und Kompaktmodus.",
     "fr": "État visible, puces supplémentaires, décimales et comportement en mode compact.",
     "it": "Stato visibile, chip extra, decimali e modalità compatta.",
-    "nl": "Zichtbare status, extra chips, decimalen en compacte modus."
+    "nl": "Zichtbare status, extra chips, decimalen en compacte modus.",
+    "pt": "Estado visível, chips extra, casas decimais do valor e comportamento em modo compacto.",
+    "ru": "Видимое состояние, дополнительные чипы, десятичные знаки значения и поведение компактного режима.",
+    "el": "Ορατή κατάσταση, επιπλέον chip, δεκαδικά τιμής και συμπεριφορά συμπαγούς λειτουργίας.",
+    "zh": "可见状态、额外芯片、数值小数与紧凑模式行为。",
+    "ro": "Stare vizibilă, chipuri extra, zecimale valoare și comportament mod compact."
   },
   {
     "es": "Feedback visual para botones y paneles del robot.",
@@ -8293,7 +13771,12 @@
     "de": "Visuelles Feedback für Roboter-Tasten und Panels.",
     "fr": "Retour visuel pour les boutons et panneaux du robot.",
     "it": "Feedback visivo per pulsanti e pannelli robot.",
-    "nl": "Visuele feedback voor robotknoppen en panelen."
+    "nl": "Visuele feedback voor robotknoppen en panelen.",
+    "pt": "Visual feedback for robot buttons and panels.",
+    "ru": "Visual feedback for robot buttons and panels.",
+    "el": "Visual feedback for robot buttons and panels.",
+    "zh": "Visual feedback for robot buttons and panels.",
+    "ro": "Visual feedback for robot buttons and panels."
   },
   {
     "es": "Ideal si quieres usarlo fijo arriba o abajo del dashboard.",
@@ -8301,7 +13784,12 @@
     "de": "Ideal zum Fixieren oben oder unten im Dashboard.",
     "fr": "Idéal pour une barre fixe en haut ou en bas du tableau de bord.",
     "it": "Ideale se vuoi fissarlo in alto o in basso.",
-    "nl": "Handig om vast te pinnen boven of onderaan."
+    "nl": "Handig om vast te pinnen boven of onderaan.",
+    "pt": "Ideal se quiser fixá-lo no topo ou na parte inferior do painel.",
+    "ru": "Удобно, если нужно закрепить сверху или снизу панели.",
+    "el": "Ιδανικό αν θέλετε να το καρφιτσώσετε πάνω ή κάτω στο ταμπλό.",
+    "zh": "适合固定在仪表盘顶部或底部。",
+    "ro": "Ideal dacă îl fixați sus sau jos în tabloul de bord."
   },
   {
     "es": "Nombre, icono, rango visible y comportamiento basico de la grafica.",
@@ -8309,7 +13797,12 @@
     "de": "Name, Symbol, sichtbarer Bereich und Basisdiagrammverhalten.",
     "fr": "Nom, icône, plage visible et comportement de base du graphique.",
     "it": "Nome, icona, intervallo visibile e comportamento grafico base.",
-    "nl": "Naam, pictogram, zichtbaar bereik en basisgrafiekgedrag."
+    "nl": "Naam, pictogram, zichtbaar bereik en basisgrafiekgedrag.",
+    "pt": "Nome, ícone, intervalo visível e comportamento base do gráfico.",
+    "ru": "Имя, значок, видимый диапазон и базовое поведение графика.",
+    "el": "Όνομα, εικονίδιο, ορατό εύρος και βασική συμπεριφορά γραφήματος.",
+    "zh": "名称、图标、可见范围与图表基础行为。",
+    "ro": "Nume, pictogramă, interval vizibil și comportament de bază al graficului."
   },
   {
     "es": "Opciones base de la barra, layout y visibilidad general.",
@@ -8317,7 +13810,12 @@
     "de": "Grundoptionen der Leiste, Layout und allgemeine Sichtbarkeit.",
     "fr": "Options de base de la barre, mise en page et visibilité générale.",
     "it": "Opzioni base della barra, layout e visibilità generale.",
-    "nl": "Basisopties balk, lay-out en algemene zichtbaarheid."
+    "nl": "Basisopties balk, lay-out en algemene zichtbaarheid.",
+    "pt": "Opções base da barra, layout e visibilidade geral.",
+    "ru": "Базовые параметры панели, макет и общая видимость.",
+    "el": "Βασικές επιλογές γραμμής, διάταξη και γενική ορατότητα.",
+    "zh": "导航栏基础选项、布局和总体可见性。",
+    "ro": "Opțiuni de bază pentru bară, aranjament și vizibilitate generală."
   },
   {
     "es": "Opciones extra si la entidad es un panel de alarma.",
@@ -8325,7 +13823,12 @@
     "de": "Zusätzliche Optionen für Alarmfelder.",
     "fr": "Options supplémentaires si l’entité est un panneau d’alarme.",
     "it": "Opzioni extra se l’entità è un pannello allarme.",
-    "nl": "Extra opties voor alarmpaneel-entiteiten."
+    "nl": "Extra opties voor alarmpaneel-entiteiten.",
+    "pt": "Opções extra se a entidade for um painel de alarme.",
+    "ru": "Дополнительные параметры, если сущность — панель сигнализации.",
+    "el": "Επιπλέον επιλογές αν η οντότητα είναι πίνακας συναγερμού.",
+    "zh": "若实体为报警面板时的额外选项。",
+    "ro": "Opțiuni extra dacă entitatea este un panou de alarmă."
   },
   {
     "es": "Opciones generales del reproductor integrado y lista de players visibles.",
@@ -8333,7 +13836,12 @@
     "de": "Allgemeine Optionen für eingebetteten Player und sichtbare Player-Liste.",
     "fr": "Options générales du lecteur intégré et liste des lecteurs visibles.",
     "it": "Opzioni generali del lettore incorporato e elenco lettori.",
-    "nl": "Algemene opties voor ingesloten speler en zichtbare spelerslijst."
+    "nl": "Algemene opties voor ingesloten speler en zichtbare spelerslijst.",
+    "pt": "Opções gerais do leitor incorporado e da lista de leitores visível.",
+    "ru": "Общие параметры встроенного плеера и видимого списка плееров.",
+    "el": "Γενικές επιλογές για τον ενσωματωμένο player και τη λίστα ορατών players.",
+    "zh": "嵌入式播放器与可见播放器列表的常规选项。",
+    "ro": "Opțiuni generale pentru playerul încorporat și lista vizibilă de playere."
   },
   {
     "es": "Opciones generales del reproductor y cuándo debe mostrarse la tarjeta.",
@@ -8341,15 +13849,25 @@
     "de": "Allgemeine Player-Optionen und wann die Karte angezeigt wird.",
     "fr": "Options générales du lecteur et affichage de la carte.",
     "it": "Opzioni generali del lettore e quando mostrare la scheda.",
-    "nl": "Algemene speleropties en wanneer de kaart wordt getoond."
+    "nl": "Algemene speleropties en wanneer de kaart wordt getoond.",
+    "pt": "Opções gerais do leitor e quando o cartão deve ser mostrado.",
+    "ru": "Общие параметры плеера и когда показывать карточку.",
+    "el": "Γενικές επιλογές player και πότε θα εμφανίζεται η κάρτα.",
+    "zh": "播放器常规选项以及何时显示卡片。",
+    "ro": "Opțiuni generale pentru player și când se afișează cardul."
   },
   {
     "es": "Personaliza el look Nodalia de la climate card, el dial y los controles.",
     "en": "Customize the Nodalia look for the climate card, dial and controls.",
-    "de": "Passe das Nodalia-Erscheinungsbild für Thermostat, Drehregler und Steuerung an.",
+    "de": "Passe das Nodalia-Erscheinungsbild für die Thermostat-Karte, den Drehregler und die Steuerung an.",
     "fr": "Personnalisez le rendu Nodalia de la carte climat, du cadran et des contrôles.",
-    "it": "Personalizza look Nodalia per climate card, dial e controlli.",
-    "nl": "Pas Nodalia-stijl aan voor thermostaat, wijzerplaat en bediening."
+    "it": "Personalizza l’aspetto Nodalia della climate card, del dial e dei controlli.",
+    "nl": "Pas de Nodalia-stijl aan voor de thermostaatkaart, draaiknop en bediening.",
+    "pt": "Personalize o aspeto Nodalia do cartão de clima, mostrador e controlos.",
+    "ru": "Настройте вид Nodalia для карты климата, диска и элементов управления.",
+    "el": "Προσαρμόστε την εμφάνιση Nodalia για την κάρτα κλίματος, τον δίσκο και τα στοιχεία ελέγχου.",
+    "zh": "自定义气候卡片、旋钮与控件的 Nodalia 外观。",
+    "ro": "Personalizați aspectul Nodalia pentru cardul climă, disc și comenzi."
   },
   {
     "es": "Personaliza el look Nodalia, el dial circular, la nueva burbuja del thumb y la escala de tinte del gauge.",
@@ -8357,7 +13875,12 @@
     "de": "Nodalia-Look, Drehregler, Thumb-Blase und Gauge-Tönung anpassen.",
     "fr": "Personnalisez le rendu Nodalia, le cadran circulaire, la bulle du curseur et l’échelle de teinte.",
     "it": "Personalizza look Nodalia, dial circolare, bolla thumb e scala tinta gauge.",
-    "nl": "Nodalia-stijl, draaiknop, thumb-bel en tintschaal aanpassen."
+    "nl": "Nodalia-stijl, draaiknop, thumb-bel en tintschaal aanpassen.",
+    "pt": "Personalize o aspeto Nodalia, o esfera circular, a nova bolha do cursor e a escala de tonalidade do indicador.",
+    "ru": "Настройте вид Nodalia, круговой диск, новый пузырёк ползунка и цветовую шкалу индикатора.",
+    "el": "Προσαρμόστε την εμφάνιση Nodalia, τον κυκλικό δίσκο, τη νέα φυσαλίδα χειριστηρίου και την κλίμακα απόχρωσης του μέτρου.",
+    "zh": "自定义 Nodalia 外观、圆形旋钮、新拇指气泡与仪表色调刻度。",
+    "ro": "Personalizați aspectul Nodalia, discul circular, noua bulă thumb și scala de nuanțe a gauge-ului."
   },
   {
     "es": "Presentación compacta y elementos visibles dentro de la tarjeta.",
@@ -8365,7 +13888,12 @@
     "de": "Kompaktes Layout und sichtbare Elemente in der Karte.",
     "fr": "Mise en page compacte et éléments visibles dans la carte.",
     "it": "Layout compatto ed elementi visibili nella scheda.",
-    "nl": "Compacte lay-out en zichtbare elementen op de kaart."
+    "nl": "Compacte lay-out en zichtbare elementen op de kaart.",
+    "pt": "Layout compacto e elementos visíveis dentro do cartão.",
+    "ru": "Компактная вёрстка и видимые элементы внутри карточки.",
+    "el": "Συμπαγής διάταξη και ορατά στοιχεία μέσα στην κάρτα.",
+    "zh": "紧凑布局与卡片内可见元素。",
+    "ro": "Layout compact și elemente vizibile în card."
   },
   {
     "es": "Que elementos quieres mantener siempre visibles.",
@@ -8373,7 +13901,12 @@
     "de": "Welche Elemente immer sichtbar bleiben.",
     "fr": "Quels éléments garder toujours visibles.",
     "it": "Quali elementi tenere sempre visibili.",
-    "nl": "Welke elementen altijd zichtbaar houden."
+    "nl": "Welke elementen altijd zichtbaar houden.",
+    "pt": "Que elementos quer manter sempre visíveis.",
+    "ru": "Какие элементы всегда оставлять видимыми.",
+    "el": "Ποια στοιχεία θέλετε να παραμένουν πάντα ορατά.",
+    "zh": "要保持始终可见的元素。",
+    "ro": "Ce elemente doriți să rămână mereu vizibile."
   },
   {
     "es": "Qué bloques quieres mostrar dentro de la tarjeta.",
@@ -8381,7 +13914,12 @@
     "de": "Welche Blöcke in der Karte angezeigt werden.",
     "fr": "Quels blocs afficher dans la carte.",
     "it": "Quali blocchi mostrare nella scheda.",
-    "nl": "Welke blokken op de kaart tonen."
+    "nl": "Welke blokken op de kaart tonen.",
+    "pt": "Que blocos quer mostrar dentro do cartão.",
+    "ru": "Какие блоки показывать внутри карточки.",
+    "el": "Ποια μπλοκ θέλετε να εμφανίζονται μέσα στην κάρτα.",
+    "zh": "要在卡片内显示哪些块。",
+    "ro": "Ce blocuri doriți să afișați în card."
   },
   {
     "es": "Qué elementos quieres mostrar dentro de la tarjeta.",
@@ -8389,7 +13927,12 @@
     "de": "Welche Elemente in der Karte angezeigt werden.",
     "fr": "Quels éléments afficher dans la carte.",
     "it": "Quali elementi mostrare nella scheda.",
-    "nl": "Welke elementen op de kaart tonen."
+    "nl": "Welke elementen op de kaart tonen.",
+    "pt": "Que elementos quer mostrar dentro do cartão.",
+    "ru": "Какие элементы показывать внутри карточки.",
+    "el": "Ποια στοιχεία θέλετε να εμφανίζονται μέσα στην κάρτα.",
+    "zh": "要在卡片内显示哪些元素。",
+    "ro": "Ce elemente doriți să afișați în card."
   },
   {
     "es": "Qué hace la tarjeta cuando la tocas.",
@@ -8397,7 +13940,12 @@
     "de": "Was die Karte beim Tippen tut.",
     "fr": "Ce que fait la carte lorsque vous la touchez.",
     "it": "Cosa fa la scheda al tocco.",
-    "nl": "Wat de kaart doet bij tikken."
+    "nl": "Wat de kaart doet bij tikken.",
+    "pt": "What the card does when you tap it.",
+    "ru": "What the card does when you tap it.",
+    "el": "What the card does when you tap it.",
+    "zh": "What the card does when you tap it.",
+    "ro": "What the card does when you tap it."
   },
   {
     "es": "Respuesta haptica opcional al tocar la tarjeta.",
@@ -8405,7 +13953,12 @@
     "de": "Optionales haptisches Feedback beim Tippen auf die Karte.",
     "fr": "Retour haptique optionnel au toucher sur la carte.",
     "it": "Feedback aptico opzionale al tocco sulla scheda.",
-    "nl": "Optionele haptische feedback bij tikken op de kaart."
+    "nl": "Optionele haptische feedback bij tikken op de kaart.",
+    "pt": "Feedback háptico opcional ao tocar no cartão.",
+    "ru": "Дополнительная тактильная отдача при нажатии на карточку.",
+    "el": "Προαιρετική απτική ανταπόκριση όταν πατάτε την κάρτα.",
+    "zh": "点击卡片时的可选触觉反馈。",
+    "ro": "Feedback haptic opțional la atingerea cardului."
   },
   {
     "es": "Respuesta haptica opcional para clicks y selecciones.",
@@ -8413,7 +13966,12 @@
     "de": "Optionales haptisches Feedback für Klicks und Auswahl.",
     "fr": "Retour haptique optionnel pour les clics et les sélections.",
     "it": "Feedback aptico opzionale per clic e selezioni.",
-    "nl": "Optionele haptische feedback voor klikken en selectie."
+    "nl": "Optionele haptische feedback voor klikken en selectie.",
+    "pt": "Feedback háptico opcional para cliques e seleções.",
+    "ru": "Дополнительная тактильная отдача для щелчков и выбора.",
+    "el": "Προαιρετική απτική ανταπόκριση για κλικ και επιλογές.",
+    "zh": "点击与选择时的可选触觉反馈。",
+    "ro": "Feedback haptic opțional pentru clicuri și selecții."
   },
   {
     "es": "Respuesta haptica opcional para dial y controles.",
@@ -8421,7 +13979,12 @@
     "de": "Optionales haptisches Feedback für Drehregler und Steuerelemente.",
     "fr": "Retour haptique optionnel pour le cadran et les contrôles.",
     "it": "Feedback aptico opzionale per il dial e i controlli.",
-    "nl": "Optionele haptische feedback voor draaiknop en bediening."
+    "nl": "Optionele haptische feedback voor draaiknop en bediening.",
+    "pt": "Feedback háptico opcional para o mostrador e controlos.",
+    "ru": "Дополнительная тактильная отдача для диска и элементов управления.",
+    "el": "Προαιρετική απτική ανταπόκριση για τον δίσκο και τα στοιχεία ελέγχου.",
+    "zh": "旋钮与控件的可选触觉反馈。",
+    "ro": "Feedback haptic opțional pentru disc și comenzi."
   },
   {
     "es": "Respuesta háptica opcional para los controles.",
@@ -8429,7 +13992,12 @@
     "de": "Optionales haptisches Feedback für Steuerelemente.",
     "fr": "Retour haptique optionnel pour les contrôles.",
     "it": "Feedback aptico opzionale per i controlli.",
-    "nl": "Optionele haptische feedback voor bediening."
+    "nl": "Optionele haptische feedback voor bediening.",
+    "pt": "Optional haptic feedback for controls.",
+    "ru": "Optional haptic feedback for controls.",
+    "el": "Optional haptic feedback for controls.",
+    "zh": "Optional haptic feedback for controls.",
+    "ro": "Optional haptic feedback for controls."
   },
   {
     "es": "Respuesta tactil opcional al pulsar acciones.",
@@ -8437,7 +14005,12 @@
     "de": "Optionales haptisches Feedback beim Tippen auf Aktionen.",
     "fr": "Retour tactile optionnel lors des actions.",
     "it": "Feedback tattile opzionale al tocco sulle azioni.",
-    "nl": "Optionele tactiele feedback bij acties."
+    "nl": "Optionele tactiele feedback bij acties.",
+    "pt": "Feedback tátil opcional ao tocar nas ações.",
+    "ru": "Дополнительная тактильная отдача при нажатии на действия.",
+    "el": "Προαιρετική απτική ανταπόκριση όταν πατάτε ενέργειες.",
+    "zh": "点击操作时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la atingerea acțiunilor."
   },
   {
     "es": "Respuesta tactil opcional al pulsar nodos o botones.",
@@ -8445,7 +14018,12 @@
     "de": "Optionales haptisches Feedback bei Knoten oder Tasten.",
     "fr": "Retour tactile optionnel sur les nœuds ou boutons.",
     "it": "Feedback tattile opzionale su nodi o pulsanti.",
-    "nl": "Optionele tactiele feedback bij knopen of knoppen."
+    "nl": "Optionele tactiele feedback bij knopen of knoppen.",
+    "pt": "Feedback tátil opcional ao tocar em nós ou botões.",
+    "ru": "Дополнительная тактильная отдача при нажатии на узлы или кнопки.",
+    "el": "Προαιρετική απτική ανταπόκριση όταν πατάτε κόμβους ή κουμπιά.",
+    "zh": "点击节点或按钮时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la atingerea nodurilor sau butoanelor."
   },
   {
     "es": "Respuesta tactil opcional al tocar la tarjeta.",
@@ -8453,7 +14031,12 @@
     "de": "Optionales haptisches Feedback beim Tippen auf die Karte.",
     "fr": "Retour tactile optionnel au toucher sur la carte.",
     "it": "Feedback tattile opzionale al tocco sulla scheda.",
-    "nl": "Optionele tactiele feedback bij tikken op de kaart."
+    "nl": "Optionele tactiele feedback bij tikken op de kaart.",
+    "pt": "Feedback tátil opcional ao tocar no cartão.",
+    "ru": "Дополнительная тактильная отдача при нажатии на карточку.",
+    "el": "Προαιρετική απτική ανταπόκριση όταν πατάτε την κάρτα.",
+    "zh": "点击卡片时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la atingerea cardului."
   },
   {
     "es": "Respuesta tactil opcional para taps, hover y cambios de serie.",
@@ -8461,7 +14044,12 @@
     "de": "Optionales haptisches Feedback für Tippen, Hover und Serienwechsel.",
     "fr": "Retour tactile optionnel pour les appuis, le survol et les changements de série.",
     "it": "Feedback tattile opzionale per tap, hover e cambio serie.",
-    "nl": "Optionele tactiele feedback voor tikken, hover en serie."
+    "nl": "Optionele tactiele feedback voor tikken, hover en serie.",
+    "pt": "Feedback tátil opcional para toques, hover e alterações de séries.",
+    "ru": "Дополнительная тактильная отдача при нажатиях, наведении и смене рядов.",
+    "el": "Προαιρετική απτική ανταπόκριση για πατήματα, hover και αλλαγές σειρών.",
+    "zh": "点击、悬停与系列变更的可选触觉反馈。",
+    "ro": "Feedback tactil opțional pentru atingeri, hover și schimbări de serii."
   },
   {
     "es": "Respuesta táctil opcional al interactuar con el dial y los botones.",
@@ -8469,7 +14057,12 @@
     "de": "Optionales haptisches Feedback beim Drehregler und den Tasten.",
     "fr": "Retour tactile optionnel pour le cadran et les boutons.",
     "it": "Feedback tattile opzionale per il dial e i pulsanti.",
-    "nl": "Optionele haptische feedback bij draaiknop en knoppen."
+    "nl": "Optionele haptische feedback bij draaiknop en knoppen.",
+    "pt": "Feedback tátil opcional ao usar o mostrador e os botões.",
+    "ru": "Дополнительная тактильная отдача при использовании диска и кнопок.",
+    "el": "Προαιρετική απτική ανταπόκριση κατά τη χρήση του δίσκου και των κουμπιών.",
+    "zh": "使用旋钮和按钮时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la utilizarea discului și a butoanelor."
   },
   {
     "es": "Respuesta táctil opcional al tocar la tarjeta.",
@@ -8477,7 +14070,12 @@
     "de": "Optionales haptisches Feedback beim Tippen auf die Karte.",
     "fr": "Retour tactile optionnel au toucher sur la carte.",
     "it": "Feedback tattile opzionale al tocco sulla scheda.",
-    "nl": "Optionele tactiele feedback bij tikken op de kaart."
+    "nl": "Optionele tactiele feedback bij tikken op de kaart.",
+    "pt": "Feedback tátil opcional ao tocar no cartão.",
+    "ru": "Дополнительная тактильная отдача при нажатии на карточку.",
+    "el": "Προαιρετική απτική ανταπόκριση όταν πατάτε την κάρτα.",
+    "zh": "点击卡片时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la atingerea cardului."
   },
   {
     "es": "Respuesta táctil opcional al usar la tarjeta y sus acciones.",
@@ -8485,7 +14083,12 @@
     "de": "Optionales haptisches Feedback bei Karte und Aktionen.",
     "fr": "Retour tactile optionnel lors de l’utilisation de la carte et de ses actions.",
     "it": "Feedback tattile opzionale usando la scheda e le azioni.",
-    "nl": "Optionele tactiele feedback bij kaart en acties."
+    "nl": "Optionele tactiele feedback bij kaart en acties.",
+    "pt": "Feedback tátil opcional ao usar o cartão e as suas ações.",
+    "ru": "Дополнительная тактильная отдача при использовании карточки и её действий.",
+    "el": "Προαιρετική απτική ανταπόκριση όταν χρησιμοποιείτε την κάρτα και τις ενέργειές της.",
+    "zh": "使用卡片及其操作时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la utilizarea cardului și acțiunilor sale."
   },
   {
     "es": "Respuesta táctil opcional al usar los controles.",
@@ -8493,7 +14096,12 @@
     "de": "Optionales haptisches Feedback bei Steuerung.",
     "fr": "Retour tactile optionnel lors de l’utilisation des contrôles.",
     "it": "Feedback tattile opzionale usando i controlli.",
-    "nl": "Optionele tactiele feedback bij bediening."
+    "nl": "Optionele tactiele feedback bij bediening.",
+    "pt": "Feedback tátil opcional ao usar os controlos.",
+    "ru": "Дополнительная тактильная отдача при использовании элементов управления.",
+    "el": "Προαιρετική απτική ανταπόκριση κατά τη χρήση στοιχείων ελέγχου.",
+    "zh": "使用控件时的可选触觉反馈。",
+    "ro": "Feedback tactil opțional la utilizarea comenzilor."
   },
   {
     "es": "Respuesta táctil opcional para los controles del reproductor.",
@@ -8501,7 +14109,12 @@
     "de": "Optionales haptisches Feedback für Player-Steuerung.",
     "fr": "Retour tactile optionnel pour les contrôles du lecteur.",
     "it": "Feedback tattile opzionale per i controlli del lettore.",
-    "nl": "Optionele tactiele feedback voor spelerbediening."
+    "nl": "Optionele tactiele feedback voor spelerbediening.",
+    "pt": "Feedback tátil opcional para os controlos do leitor.",
+    "ru": "Дополнительная тактильная отдача для элементов управления плеером.",
+    "el": "Προαιρετική απτική ανταπόκριση για τα στοιχεία ελέγχου του player.",
+    "zh": "播放器控件的可选触觉反馈。",
+    "ro": "Feedback tactil opțional pentru comenzile playerului."
   },
   {
     "es": "Selectores opcionales para el modo principal y la ventilación.",
@@ -8509,7 +14122,12 @@
     "de": "Optionale Selektoren für Hauptmodus und Lüfter.",
     "fr": "Sélecteurs optionnels pour le mode principal et le ventilateur.",
     "it": "Selettori opzionali per modalità principale e ventola.",
-    "nl": "Optionele selecteurs voor hoofdmodus en ventilator."
+    "nl": "Optionele selecteurs voor hoofdmodus en ventilator.",
+    "pt": "Optional selectors for main mode and fan.",
+    "ru": "Optional selectors for main mode and fan.",
+    "el": "Optional selectors for main mode and fan.",
+    "zh": "Optional selectors for main mode and fan.",
+    "ro": "Optional selectors for main mode and fan."
   },
   {
     "es": "Sensores y selectores opcionales para enriquecer el estado y los controles.",
@@ -8517,7 +14135,12 @@
     "de": "Optionale Sensoren und Selektoren für Status und Steuerung.",
     "fr": "Capteurs et sélecteurs optionnels pour enrichir l’état et les contrôles.",
     "it": "Sensori e selettori opzionali per arricchire stato e controlli.",
-    "nl": "Optionele sensoren en selecteurs voor status en bediening."
+    "nl": "Optionele sensoren en selecteurs voor status en bediening.",
+    "pt": "Sensores e seletores opcionais para enriquecer o estado e os controlos.",
+    "ru": "Дополнительные датчики и переключатели для состояния и элементов управления.",
+    "el": "Προαιρετικοί αισθητήρες και επιλογείς για πλουσιότερη κατάσταση και έλεγχο.",
+    "zh": "用于丰富状态与控件的可选传感器和选择器。",
+    "ro": "Senzori și selectoare opționale pentru a îmbogăți starea și comenzile."
   },
   {
     "es": "Titulo, enlace al panel de energia y comportamiento general de la tarjeta.",
@@ -8525,7 +14148,12 @@
     "de": "Titel, Energiepanel-Link und allgemeines Kartenverhalten.",
     "fr": "Titre, lien vers le panneau énergie et comportement général de la carte.",
     "it": "Titolo, link pannello energia e comportamento generale.",
-    "nl": "Titel, energiepaneel-link en algemeen kaartgedrag."
+    "nl": "Titel, energiepaneel-link en algemeen kaartgedrag.",
+    "pt": "Título, ligação ao painel de energia e comportamento geral do cartão.",
+    "ru": "Заголовок, ссылка на энергопанель и общее поведение карточки.",
+    "el": "Τίτλος, σύνδεσμος ενεργειακού πάνελ και γενική συμπεριφορά κάρτας.",
+    "zh": "标题、能源面板链接与卡片总体行为。",
+    "ro": "Titlu, legătură panou energie și comportament general al cardului."
   },
   {
     "es": "Transiciones suaves al encender, apagar, desplegar controles, abrir modos y dar respuesta visual a los botones.",
@@ -8533,7 +14161,12 @@
     "de": "Sanfte Übergänge beim Ein/Aus, Aufklappen, Modus öffnen und Button-Feedback.",
     "fr": "Transitions fluides à l’alimentation, au déploiement des contrôles, à l’ouverture des modes et au retour visuel des boutons.",
     "it": "Transizioni fluide accensione, espansione, apertura modalità e feedback pulsanti.",
-    "nl": "Vloeiende overgangen bij aan/uit, uitklappen, modi en knopfeedback."
+    "nl": "Vloeiende overgangen bij aan/uit, uitklappen, modi en knopfeedback.",
+    "pt": "Transições suaves ao ligar/desligar, expandir controlos, abrir modos e feedback visual dos botões.",
+    "ru": "Плавные переходы при вкл/выкл, разворачивании элементов управления, открытии режимов и визуальной отдаче кнопок.",
+    "el": "Ομαλές μεταβάσεις κατά την ενεργοποίηση/απενεργοποίηση, επέκταση στοιχείων ελέγχου, άνοιγμα λειτουργιών και οπτική ανταπόκριση κουμπιών.",
+    "zh": "开关机、展开控件、打开模式及按钮视觉反馈的平滑过渡。",
+    "ro": "Tranziții line la pornire/oprire, extinderea comenzilor, deschiderea modurilor și feedback vizual la butoane."
   },
   {
     "es": "Transiciones suaves al encender, apagar, desplegar controles, cambiar entre sliders y dar respuesta visual a los botones.",
@@ -8541,7 +14174,12 @@
     "de": "Sanfte Übergänge beim Ein/Aus, Aufklappen, Slider-Wechsel und Button-Feedback.",
     "fr": "Transitions fluides à l’alimentation, au déploiement des contrôles, au changement de curseurs et au retour visuel des boutons.",
     "it": "Transizioni fluide accensione, espansione, slider e feedback pulsanti.",
-    "nl": "Vloeiende overgangen bij aan/uit, uitklappen, sliders en knopfeedback."
+    "nl": "Vloeiende overgangen bij aan/uit, uitklappen, sliders en knopfeedback.",
+    "pt": "Transições suaves ao ligar/desligar, expandir controlos, mudar sliders e feedback visual dos botões.",
+    "ru": "Плавные переходы при вкл/выкл, разворачивании элементов управления, переключении ползунков и визуальной отдаче кнопок.",
+    "el": "Ομαλές μεταβάσεις κατά την ενεργοποίηση/απενεργοποίηση, επέκταση στοιχείων ελέγχου, εναλλαγή ρυθμιστών και οπτική ανταπόκριση κουμπιών.",
+    "zh": "开关机、展开控件、切换滑块及按钮视觉反馈的平滑过渡。",
+    "ro": "Tranziții line la pornire/oprire, extinderea comenzilor, comutarea sliderelor și feedback vizual la butoane."
   },
   {
     "es": "Transiciones suaves al encender, apagar, desplegar controles, cambiar paneles y dar respuesta visual a los botones.",
@@ -8549,7 +14187,12 @@
     "de": "Sanfte Übergänge beim Ein/Aus, Aufklappen, Panelwechsel und Button-Feedback.",
     "fr": "Transitions fluides à l’alimentation, au déploiement des contrôles, au changement de panneaux et au retour visuel des boutons.",
     "it": "Transizioni fluide accensione, espansione controlli, pannelli e feedback pulsanti.",
-    "nl": "Vloeiende overgangen bij aan/uit, uitklappen, panelen en knopfeedback."
+    "nl": "Vloeiende overgangen bij aan/uit, uitklappen, panelen en knopfeedback.",
+    "pt": "Transições suaves ao ligar/desligar, expandir controlos, mudar painéis e feedback visual dos botões.",
+    "ru": "Плавные переходы при вкл/выкл, разворачивании элементов управления, смене панелей и визуальной отдаче кнопок.",
+    "el": "Ομαλές μεταβάσεις κατά την ενεργοποίηση/απενεργοποίηση, επέκταση στοιχείων ελέγχου, αλλαγή πάνελ και οπτική ανταπόκριση κουμπιών.",
+    "zh": "开关机、展开控件、切换面板及按钮视觉反馈的平滑过渡。",
+    "ro": "Tranziții line la pornire/oprire, extinderea comenzilor, schimbarea panourilor și feedback vizual la butoane."
   },
   {
     "es": "Acciones rápidas",
@@ -8557,7 +14200,12 @@
     "de": "Quick actions",
     "fr": "Quick actions",
     "it": "Quick actions",
-    "nl": "Quick actions"
+    "nl": "Quick actions",
+    "pt": "Quick actions",
+    "ru": "Quick actions",
+    "el": "Quick actions",
+    "zh": "Quick actions",
+    "ro": "Quick actions"
   },
   {
     "es": "Alarma",
@@ -8565,7 +14213,12 @@
     "de": "Alarm",
     "fr": "Alarme",
     "it": "Allarme",
-    "nl": "Alarm"
+    "nl": "Alarm",
+    "pt": "Alarme",
+    "ru": "Сигнализация",
+    "el": "Συναγερμός",
+    "zh": "警报",
+    "ro": "Alarmă"
   },
   {
     "es": "Animaciones",
@@ -8573,7 +14226,12 @@
     "de": "Animations",
     "fr": "Animations",
     "it": "Animations",
-    "nl": "Animations"
+    "nl": "Animations",
+    "pt": "Animations",
+    "ru": "Animations",
+    "el": "Animations",
+    "zh": "Animations",
+    "ro": "Animations"
   },
   {
     "es": "Contenido",
@@ -8581,7 +14239,12 @@
     "de": "Content",
     "fr": "Content",
     "it": "Content",
-    "nl": "Content"
+    "nl": "Content",
+    "pt": "Content",
+    "ru": "Content",
+    "el": "Content",
+    "zh": "Content",
+    "ro": "Content"
   },
   {
     "es": "Controles avanzados",
@@ -8589,7 +14252,12 @@
     "de": "Advanced controls",
     "fr": "Advanced controls",
     "it": "Advanced controls",
-    "nl": "Advanced controls"
+    "nl": "Advanced controls",
+    "pt": "Advanced controls",
+    "ru": "Advanced controls",
+    "el": "Advanced controls",
+    "zh": "Advanced controls",
+    "ro": "Advanced controls"
   },
   {
     "es": "Entidades auxiliares",
@@ -8597,7 +14265,12 @@
     "de": "Auxiliary entities",
     "fr": "Auxiliary entities",
     "it": "Auxiliary entities",
-    "nl": "Auxiliary entities"
+    "nl": "Auxiliary entities",
+    "pt": "Auxiliary entities",
+    "ru": "Auxiliary entities",
+    "el": "Auxiliary entities",
+    "zh": "Auxiliary entities",
+    "ro": "Auxiliary entities"
   },
   {
     "es": "Estilos",
@@ -8605,7 +14278,12 @@
     "de": "Stile",
     "fr": "Styles",
     "it": "Stili",
-    "nl": "Stijlen"
+    "nl": "Stijlen",
+    "pt": "Estilos",
+    "ru": "Стили",
+    "el": "Στυλ",
+    "zh": "样式",
+    "ro": "Stiluri"
   },
   {
     "es": "Flujo",
@@ -8613,7 +14291,12 @@
     "de": "Fluss",
     "fr": "Flux",
     "it": "Flusso",
-    "nl": "Stroom"
+    "nl": "Stroom",
+    "pt": "Fluxo",
+    "ru": "Поток",
+    "el": "Ροή",
+    "zh": "流向",
+    "ro": "Flux"
   },
   {
     "es": "General",
@@ -8621,7 +14304,12 @@
     "de": "Allgemein",
     "fr": "Général",
     "it": "Generale",
-    "nl": "Algemeen"
+    "nl": "Algemeen",
+    "pt": "Geral",
+    "ru": "Общее",
+    "el": "Γενικά",
+    "zh": "常规",
+    "ro": "General"
   },
   {
     "es": "Haptics",
@@ -8629,7 +14317,12 @@
     "de": "Haptik",
     "fr": "Haptique",
     "it": "Aptica",
-    "nl": "Haptiek"
+    "nl": "Haptiek",
+    "pt": "Haptics",
+    "ru": "Haptics",
+    "el": "Haptics",
+    "zh": "Haptics",
+    "ro": "Haptics"
   },
   {
     "es": "Individuales",
@@ -8637,7 +14330,12 @@
     "de": "Einzelwerte",
     "fr": "Individuels",
     "it": "Singoli",
-    "nl": "Individueel"
+    "nl": "Individueel",
+    "pt": "Individuais",
+    "ru": "Отдельные",
+    "el": "Μεμονωμένα",
+    "zh": "单项",
+    "ro": "Individuale"
   },
   {
     "es": "Layout",
@@ -8645,7 +14343,12 @@
     "de": "Layout",
     "fr": "Mise en page",
     "it": "Layout",
-    "nl": "Lay-out"
+    "nl": "Lay-out",
+    "pt": "Layout",
+    "ru": "Макет",
+    "el": "Διάταξη",
+    "zh": "布局",
+    "ro": "Aranjament"
   },
   {
     "es": "Mapa",
@@ -8653,7 +14356,12 @@
     "de": "Karte",
     "fr": "Carte",
     "it": "Mappa",
-    "nl": "Kaart"
+    "nl": "Kaart",
+    "pt": "Mapa",
+    "ru": "Карта",
+    "el": "Χάρτης",
+    "zh": "地图",
+    "ro": "Hartă"
   },
   {
     "es": "Media Player",
@@ -8661,7 +14369,12 @@
     "de": "Media player",
     "fr": "Media player",
     "it": "Media player",
-    "nl": "Media player"
+    "nl": "Media player",
+    "pt": "Media player",
+    "ru": "Media player",
+    "el": "Media player",
+    "zh": "Media player",
+    "ro": "Media player"
   },
   {
     "es": "Modos",
@@ -8669,7 +14382,12 @@
     "de": "Modi",
     "fr": "Modes",
     "it": "Modalità",
-    "nl": "Modi"
+    "nl": "Modi",
+    "pt": "Modos",
+    "ru": "Режимы",
+    "el": "Λειτουργίες",
+    "zh": "模式",
+    "ro": "Moduri"
   },
   {
     "es": "Reproductores",
@@ -8677,7 +14395,12 @@
     "de": "Player",
     "fr": "Lecteurs",
     "it": "Lettori",
-    "nl": "Spelers"
+    "nl": "Spelers",
+    "pt": "Leitores",
+    "ru": "Плееры",
+    "el": "Αναπαραγωγείς",
+    "zh": "播放器",
+    "ro": "Playere"
   },
   {
     "es": "Respuesta háptica",
@@ -8685,7 +14408,12 @@
     "de": "Haptisches Feedback",
     "fr": "Retour haptique",
     "it": "Feedback aptico",
-    "nl": "Haptische feedback"
+    "nl": "Haptische feedback",
+    "pt": "Feedback háptico",
+    "ru": "Тактильная отдача",
+    "el": "Απτική ανάδραση",
+    "zh": "触觉反馈",
+    "ro": "Feedback haptic"
   },
   {
     "es": "Rutas",
@@ -8693,7 +14421,12 @@
     "de": "Routen",
     "fr": "Routes",
     "it": "Percorsi",
-    "nl": "Routes"
+    "nl": "Routes",
+    "pt": "Rotas",
+    "ru": "Маршруты",
+    "el": "Διαδρομές",
+    "zh": "路线",
+    "ro": "Rute"
   },
   {
     "es": "Series",
@@ -8701,7 +14434,12 @@
     "de": "Serien",
     "fr": "Séries",
     "it": "Serie",
-    "nl": "Reeksen"
+    "nl": "Reeksen",
+    "pt": "Séries",
+    "ru": "Ряды",
+    "el": "Σειρές",
+    "zh": "系列",
+    "ro": "Serii"
   },
   {
     "es": "Visibilidad",
@@ -8709,7 +14447,12 @@
     "de": "Sichtbarkeit",
     "fr": "Visibilité",
     "it": "Visibilità",
-    "nl": "Zichtbaarheid"
+    "nl": "Zichtbaarheid",
+    "pt": "Visibilidade",
+    "ru": "Видимость",
+    "el": "Ορατότητα",
+    "zh": "可见性",
+    "ro": "Vizibilitate"
   }
 ];
 
@@ -8721,7 +14464,11 @@
     return m;
   }
 
-  const MAP = { es: {}, en: buildMap("en"), de: buildMap("de"), fr: buildMap("fr"), it: buildMap("it"), nl: buildMap("nl") };
+  const EDITOR_LANGS = ["en", "de", "fr", "it", "nl", "pt", "ru", "el", "zh", "ro"];
+  const MAP = { es: {} };
+  for (const L of EDITOR_LANGS) {
+    MAP[L] = buildMap(L);
+  }
   for (const r of ROWS) {
     MAP.es[r.es] = r.es;
   }
@@ -8737,7 +14484,21 @@
     if (maps.es[spanishText] === undefined && maps.en[spanishText] === undefined) {
       return spanishText;
     }
-    return maps[lang]?.[spanishText] ?? maps.en[spanishText] ?? maps.es[spanishText] ?? spanishText;
+    const primary = maps[lang]?.[spanishText];
+    if (primary !== undefined && primary !== "") {
+      return primary;
+    }
+    if (lang !== "es") {
+      const enVal = maps.en?.[spanishText];
+      if (enVal !== undefined && enVal !== "") {
+        return enVal;
+      }
+    }
+    const esVal = maps.es?.[spanishText];
+    if (esVal !== undefined && esVal !== "") {
+      return esVal;
+    }
+    return spanishText;
   };
 })();
 
@@ -8777,17 +14538,124 @@ const MUSIC_ASSISTANT_BROWSER_EXCLUDE_PATTERNS = [
   "imagenes",
 ];
 const MUSIC_ASSISTANT_DIRECTORY_ICON_RULES = [
-  { patterns: ["artists", "artistas"], icon: "mdi:account-music" },
-  { patterns: ["albums", "albumes", "álbumes"], icon: "mdi:album" },
-  { patterns: ["tracks", "songs", "canciones", "temas", "pistas"], icon: "mdi:music-note" },
-  { patterns: ["playlists", "listas", "listas de reproduccion", "listas de reproducción"], icon: "mdi:playlist-music" },
-  { patterns: ["radio stations", "radios", "emisoras", "stations"], icon: "mdi:radio" },
-  { patterns: ["podcasts"], icon: "mdi:podcast" },
-  { patterns: ["audiobooks", "audiolibros"], icon: "mdi:book-music" },
-  { patterns: ["genres", "generos", "géneros"], icon: "mdi:shape" },
-  { patterns: ["favorites", "favourites", "favoritos"], icon: "mdi:heart" },
-  { patterns: ["recent", "recently", "recientes"], icon: "mdi:history" },
-  { patterns: ["search", "buscar", "busqueda", "búsqueda"], icon: "mdi:magnify" },
+  {
+    patterns: [
+      "artists",
+      "artistas",
+      "artistes",
+      "артисты",
+      "artiști",
+      "艺术家",
+      "καλλιτέχνες",
+    ],
+    icon: "mdi:account-music",
+  },
+  {
+    patterns: [
+      "albums",
+      "albumes",
+      "álbumes",
+      "álbums",
+      "albuns",
+      "альбомы",
+      "专辑",
+      "άλμπουμ",
+    ],
+    icon: "mdi:album",
+  },
+  {
+    patterns: [
+      "tracks",
+      "songs",
+      "canciones",
+      "temas",
+      "pistas",
+      "faixas",
+      "músicas",
+      "треки",
+      "曲目",
+      "κομμάτια",
+      "piese",
+    ],
+    icon: "mdi:music-note",
+  },
+  {
+    patterns: [
+      "playlists",
+      "listas",
+      "listas de reproduccion",
+      "listas de reproducción",
+      "listas de reprodução",
+      "плейлисты",
+      "播放列表",
+      "liste de redare",
+      "λίστες αναπαραγωγής",
+    ],
+    icon: "mdi:playlist-music",
+  },
+  {
+    patterns: [
+      "radio stations",
+      "radios",
+      "emisoras",
+      "stations",
+      "estações",
+      "радио",
+      "радиостанции",
+      "广播电台",
+      "stații radio",
+      "ραδιοφωνικοί",
+    ],
+    icon: "mdi:radio",
+  },
+  { patterns: ["podcasts", "подкасты", "播客", "podcasturi"], icon: "mdi:podcast" },
+  {
+    patterns: ["audiobooks", "audiolibros", "audiolivros", "аудиокниги", "有声书", "cărți audio", "ακουστικά βιβλία"],
+    icon: "mdi:book-music",
+  },
+  {
+    patterns: ["genres", "generos", "géneros", "жанры", "流派", "genuri", "είδη"],
+    icon: "mdi:shape",
+  },
+  {
+    patterns: [
+      "favorites",
+      "favourites",
+      "favoritos",
+      "избранное",
+      "收藏",
+      "favorite",
+      "αγαπημένα",
+    ],
+    icon: "mdi:heart",
+  },
+  {
+    patterns: [
+      "recent",
+      "recently",
+      "recientes",
+      "recentemente",
+      "недавно",
+      "最近",
+      "πρόσφατα",
+      "redări recente",
+    ],
+    icon: "mdi:history",
+  },
+  {
+    patterns: [
+      "search",
+      "buscar",
+      "busqueda",
+      "búsqueda",
+      "pesquisar",
+      "поиск",
+      "搜索",
+      "căutare",
+      "αναζήτηση",
+    ],
+    icon: "mdi:magnify",
+  },
 ];
 
 const DEFAULT_CONFIG = {
@@ -10464,11 +16332,12 @@ class NodaliaNavigationBarCard extends HTMLElement {
   _getMediaBrowserDisplayTitle(value) {
     const label = typeof value === "string" ? value : value?.title;
     const fallback = String(label || "").trim();
-    const lang = window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language);
+    const lang = window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language ?? "auto");
     const dict = window.NodaliaI18n.strings(lang).navigationMusicAssist || {};
+    const enDict = window.NodaliaI18n.strings("en").navigationMusicAssist || {};
 
     if (!fallback) {
-      return dict.browseFallback || "Item";
+      return dict.browseFallback || enDict.browseFallback || "Item";
     }
 
     if (!this._mediaBrowserState?.isMusicAssistant) {
@@ -10476,7 +16345,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
 
     const key = normalizeTextKey(fallback);
-    return dict[key] || fallback;
+    return dict[key] || enDict[key] || fallback;
   }
 
   _getMediaBrowserIcon(item) {
@@ -13873,45 +19742,125 @@ const MUSIC_ASSISTANT_BROWSER_EXCLUDE_PATTERNS = [
   "imagenes",
 ];
 const MUSIC_ASSISTANT_DIRECTORY_ICON_RULES = [
-  { patterns: ["artists", "artistas"], icon: "mdi:account-music" },
-  { patterns: ["albums", "albumes", "álbumes"], icon: "mdi:album" },
-  { patterns: ["tracks", "songs", "canciones", "temas", "pistas"], icon: "mdi:music-note" },
-  { patterns: ["playlists", "listas", "listas de reproduccion", "listas de reproducción"], icon: "mdi:playlist-music" },
-  { patterns: ["radio stations", "radios", "emisoras", "stations"], icon: "mdi:radio" },
-  { patterns: ["podcasts"], icon: "mdi:podcast" },
-  { patterns: ["audiobooks", "audiolibros"], icon: "mdi:book-music" },
-  { patterns: ["genres", "generos", "géneros"], icon: "mdi:shape" },
-  { patterns: ["favorites", "favourites", "favoritos"], icon: "mdi:heart" },
-  { patterns: ["recent", "recently", "recientes"], icon: "mdi:history" },
-  { patterns: ["search", "buscar", "busqueda", "búsqueda"], icon: "mdi:magnify" },
+  {
+    patterns: [
+      "artists",
+      "artistas",
+      "artistes",
+      "артисты",
+      "artiști",
+      "艺术家",
+      "καλλιτέχνες",
+    ],
+    icon: "mdi:account-music",
+  },
+  {
+    patterns: [
+      "albums",
+      "albumes",
+      "álbumes",
+      "álbums",
+      "albuns",
+      "альбомы",
+      "专辑",
+      "άλμπουμ",
+    ],
+    icon: "mdi:album",
+  },
+  {
+    patterns: [
+      "tracks",
+      "songs",
+      "canciones",
+      "temas",
+      "pistas",
+      "faixas",
+      "músicas",
+      "треки",
+      "曲目",
+      "κομμάτια",
+      "piese",
+    ],
+    icon: "mdi:music-note",
+  },
+  {
+    patterns: [
+      "playlists",
+      "listas",
+      "listas de reproduccion",
+      "listas de reproducción",
+      "listas de reprodução",
+      "плейлисты",
+      "播放列表",
+      "liste de redare",
+      "λίστες αναπαραγωγής",
+    ],
+    icon: "mdi:playlist-music",
+  },
+  {
+    patterns: [
+      "radio stations",
+      "radios",
+      "emisoras",
+      "stations",
+      "estações",
+      "радио",
+      "радиостанции",
+      "广播电台",
+      "stații radio",
+      "ραδιοφωνικοί",
+    ],
+    icon: "mdi:radio",
+  },
+  { patterns: ["podcasts", "подкасты", "播客", "podcasturi"], icon: "mdi:podcast" },
+  {
+    patterns: ["audiobooks", "audiolibros", "audiolivros", "аудиокниги", "有声书", "cărți audio", "ακουστικά βιβλία"],
+    icon: "mdi:book-music",
+  },
+  {
+    patterns: ["genres", "generos", "géneros", "жанры", "流派", "genuri", "είδη"],
+    icon: "mdi:shape",
+  },
+  {
+    patterns: [
+      "favorites",
+      "favourites",
+      "favoritos",
+      "избранное",
+      "收藏",
+      "favorite",
+      "αγαπημένα",
+    ],
+    icon: "mdi:heart",
+  },
+  {
+    patterns: [
+      "recent",
+      "recently",
+      "recientes",
+      "recentemente",
+      "недавно",
+      "最近",
+      "πρόσφατα",
+      "redări recente",
+    ],
+    icon: "mdi:history",
+  },
+  {
+    patterns: [
+      "search",
+      "buscar",
+      "busqueda",
+      "búsqueda",
+      "pesquisar",
+      "поиск",
+      "搜索",
+      "căutare",
+      "αναζήτηση",
+    ],
+    icon: "mdi:magnify",
+  },
 ];
-const MUSIC_ASSISTANT_LABEL_TRANSLATIONS = {
-  artist: "Artistas",
-  artists: "Artistas",
-  album: "Álbumes",
-  albums: "Álbumes",
-  track: "Canciones",
-  tracks: "Canciones",
-  song: "Canciones",
-  songs: "Canciones",
-  playlist: "Listas de reproducción",
-  playlists: "Listas de reproducción",
-  "radio station": "Emisoras",
-  "radio stations": "Emisoras",
-  podcast: "Podcasts",
-  podcasts: "Podcasts",
-  audiobook: "Audiolibros",
-  audiobooks: "Audiolibros",
-  genre: "Géneros",
-  genres: "Géneros",
-  favorite: "Favoritos",
-  favorites: "Favoritos",
-  favourites: "Favoritos",
-  search: "Buscar",
-  "recently played": "Reproducido recientemente",
-  "recently added": "Añadido recientemente",
-  "recently played tracks": "Canciones reproducidas recientemente",
-};
 
 const DEFAULT_CONFIG = {
   title: "",
@@ -16399,9 +22348,13 @@ class NodaliaMediaPlayer extends HTMLElement {
   _getMediaBrowserDisplayTitle(value) {
     const label = typeof value === "string" ? value : value?.title;
     const fallback = String(label || "").trim();
+    const lang =
+      window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") ?? "es";
+    const dict = window.NodaliaI18n?.strings?.(lang)?.navigationMusicAssist || {};
+    const enDict = window.NodaliaI18n?.strings?.("en")?.navigationMusicAssist || {};
 
     if (!fallback) {
-      return "Elemento";
+      return dict.browseFallback || enDict.browseFallback || "Item";
     }
 
     if (!this._mediaBrowserState?.isMusicAssistant) {
@@ -16409,7 +22362,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     const key = normalizeTextKey(fallback);
-    return MUSIC_ASSISTANT_LABEL_TRANSLATIONS[key] || fallback;
+    return dict[key] || enDict[key] || fallback;
   }
 
   _getMediaBrowserViewKey(state = this._mediaBrowserState) {
@@ -19689,7 +25642,9 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -24487,7 +30442,9 @@ class NodaliaLightCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -28015,7 +33972,9 @@ class NodaliaFanCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -31935,7 +37894,9 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -34879,7 +40840,9 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -37960,7 +43923,9 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -38966,7 +44931,9 @@ class NodaliaGraphCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -39238,7 +45205,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
               placeholder: "mdi:chart-line",
             })}
             ${this._renderSelectField(
-              "Accion al tocar",
+              "Acción al tocar",
               "tap_action",
               config.tap_action || "more-info",
               [
@@ -39429,7 +45396,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "0.14.0";
+const CARD_VERSION = "0.16.11";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -39524,6 +45491,12 @@ const DEFAULT_CONFIG = {
     content_duration: 460,
     button_bounce_duration: 320,
   },
+  grid_options: {
+    rows: "auto",
+    columns: "full",
+    min_rows: 1,
+    min_columns: 6,
+  },
   styles: {
     card: {
       background: "var(--ha-card-background)",
@@ -39547,7 +45520,7 @@ const DEFAULT_CONFIG = {
     home_unit_size: "14px",
     node_value_size: "11px",
     secondary_size: "10px",
-    flow_width: "3px",
+    flow_width: "2.5px",
   },
 };
 
@@ -39893,6 +45866,39 @@ function resolveNodeConfig(kind, config) {
   return mergeConfig(NODE_DEFAULTS[kind] || {}, config?.entities?.[kind] || {});
 }
 
+/** True if the YAML `entity` field is set (string id or split consumption/production object). */
+function isEntitySourceConfigured(entity) {
+  if (entity == null || entity === false) {
+    return false;
+  }
+  if (typeof entity === "string") {
+    return entity.trim().length > 0;
+  }
+  if (isObject(entity)) {
+    return Boolean(
+      String(entity.entity || "").trim()
+      || String(entity.consumption || "").trim()
+      || String(entity.production || "").trim(),
+    );
+  }
+  return false;
+}
+
+/** Short UI line when grid power is negative (export); keyed by HA language code prefix. */
+const POWER_FLOW_LABELS_GRID_EXPORT = {
+  es: "A la red",
+  en: "To grid",
+  de: "Ins Netz",
+  fr: "Vers le réseau",
+  it: "In rete",
+  nl: "Naar net",
+  pt: "Para a rede",
+  ru: "В сеть",
+  el: "Προς δίκτυο",
+  zh: "馈网",
+  ro: "Către rețea",
+};
+
 function resolveIndividualConfigs(config) {
   return arrayFromMaybe(config?.entities?.individual)
     .filter(isObject)
@@ -39914,19 +45920,39 @@ function normalizeConfig(rawConfig) {
 }
 
 function getNodePosition(kind, index = 0, total = 0, hasBottomUtilities = false) {
-  return getNodePositionForLayout(kind, index, total, hasBottomUtilities, "full");
+  return getNodePositionForLayout(kind, index, total, hasBottomUtilities, "full", {});
+}
+
+/** Active grid / solar / battery branches so %-layout can spread vertically when several sources exist. */
+function getFlowLayoutFlagsFromConfig(config) {
+  const c = config || {};
+  const activeTopKinds = ["grid", "solar", "battery"].filter(kind => Boolean(resolveNodeConfig(kind, c)?.entity));
+  const topCount = activeTopKinds.length;
+  const hasGrid = activeTopKinds.includes("grid");
+  const hasSolar = activeTopKinds.includes("solar");
+  const hasBattery = activeTopKinds.includes("battery");
+  const bottomUtilities = [resolveNodeConfig("water", c), resolveNodeConfig("gas", c)].filter(item => item.entity).length;
+  const individualCount = resolveIndividualConfigs(c).length;
+  return {
+    hasGrid,
+    hasSolar,
+    hasBattery,
+    topCount,
+    activeTopKinds,
+    bottomUtilities,
+    individualCount,
+  };
 }
 
 function getLayoutPreset(nodeCounts = {}) {
   const topCount = Number(nodeCounts.top || 0);
   const bottomCount = Number(nodeCounts.bottom || 0);
   const individualCount = Number(nodeCounts.individual || 0);
-  const total = topCount + bottomCount + individualCount;
 
-  if (total <= 1 && bottomCount === 0) {
-    return "simple";
-  }
-
+  /**
+   * Always use the same SVG bubble diagram as multi-source layouts.
+   * (The old "simple" horizontal rail made a single branch look like a different card.)
+   */
   if (bottomCount === 0 && individualCount <= 1 && topCount <= 3) {
     return "compact";
   }
@@ -39934,7 +45960,50 @@ function getLayoutPreset(nodeCounts = {}) {
   return "full";
 }
 
-function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities = false, layoutPreset = "full") {
+function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities = false, layoutPreset = "full", flowFlags = {}) {
+  const flags = flowFlags && typeof flowFlags === "object" ? flowFlags : {};
+  const topN = Number(flags.topCount) || 0;
+  const crowdedTop = topN >= 2;
+  const packedTop = topN >= 3;
+  const bottomN = Number(flags.bottomUtilities) || 0;
+  const bottomSpread = bottomN >= 2 ? 6 : 0;
+  const topSpread = crowdedTop ? 10 : 0;
+  const packSpread = packedTop ? 6 : 0;
+  const activeTop = Array.isArray(flags.activeTopKinds) ? flags.activeTopKinds : [];
+  const hasIndividuals = Number(flags.individualCount) > 0;
+  const useTopStrip = activeTop.length >= 1
+    && activeTop.length <= 2
+    && !hasIndividuals
+    && layoutPreset !== "simple"
+    && (layoutPreset === "compact" || layoutPreset === "full");
+
+  /**
+   * 1 fuente: fuente a la izquierda, casa a la derecha (misma fila).
+   * 2 fuentes: primera (orden grid→solar→batería) a la derecha, segunda a la izquierda, casa al centro.
+   * 3+ fuentes: layout triangular clásico más abajo.
+   */
+  if (useTopStrip && (kind === "home" || kind === "grid" || kind === "solar" || kind === "battery")) {
+    const rowY = hasBottomUtilities ? 42 : 51;
+    if (activeTop.length === 1) {
+      if (kind === "home") {
+        return { x: 86, y: rowY };
+      }
+      if (kind === activeTop[0]) {
+        return { x: 14, y: rowY };
+      }
+    } else if (activeTop.length === 2) {
+      if (kind === "home") {
+        return { x: 50, y: rowY };
+      }
+      if (kind === activeTop[0]) {
+        return { x: 86, y: rowY };
+      }
+      if (kind === activeTop[1]) {
+        return { x: 14, y: rowY };
+      }
+    }
+  }
+
   if (layoutPreset === "simple") {
     if (kind === "home") {
       return { x: 58, y: 42 };
@@ -39961,67 +46030,136 @@ function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities
 
   if (layoutPreset === "compact") {
     if (kind === "home") {
-      return { x: 53, y: 54 };
+      let y = 54;
+      if (crowdedTop) {
+        y += 6;
+      }
+      if (packedTop) {
+        y += 4;
+      }
+      return { x: 50, y: Math.min(y, 66) };
     }
     if (kind === "solar") {
-      return { x: 50, y: 20 };
+      let y = 20;
+      if (topN >= 2) {
+        y = 12;
+      }
+      if (packedTop) {
+        y = 9;
+      }
+      return { x: 50, y };
     }
     if (kind === "grid") {
-      return { x: 20, y: 54 };
+      let y = 54;
+      if (crowdedTop) {
+        y -= 8;
+      }
+      if (packedTop) {
+        y -= 4;
+      }
+      return { x: 20, y: Math.max(y, 38) };
     }
     if (kind === "battery") {
-      return { x: 80, y: 54 };
+      let y = 54;
+      if (crowdedTop) {
+        y -= 8;
+      }
+      if (packedTop) {
+        y -= 4;
+      }
+      return { x: 80, y: Math.max(y, 38) };
     }
     if (kind === "water") {
-      return total > 1 ? { x: 33, y: 80 } : { x: 41, y: 80 };
+      const y = (total > 1 ? 80 : 80) + topSpread + bottomSpread;
+      return total > 1 ? { x: 33, y } : { x: 41, y };
     }
     if (kind === "gas") {
-      return total > 1 ? { x: 67, y: 80 } : { x: 59, y: 80 };
+      const y = (total > 1 ? 80 : 80) + topSpread + bottomSpread;
+      return total > 1 ? { x: 67, y } : { x: 59, y };
     }
     if (kind === "individual") {
-      const y = hasBottomUtilities ? 88 : 80;
+      let y = hasBottomUtilities ? 88 : 80;
+      y += topSpread + bottomSpread + packSpread;
       if (total <= 1) {
-        return { x: 79, y: 54 };
+        let yHome = 54;
+        if (crowdedTop) {
+          yHome += 6;
+        }
+        if (packedTop) {
+          yHome += 4;
+        }
+        return { x: 79, y: Math.min(yHome, 66) };
       }
       const start = 28;
       const end = 72;
       const step = (end - start) / Math.max(total - 1, 1);
       return {
         x: start + (step * index),
-        y,
+        y: Math.min(y, 96),
       };
     }
   }
 
   if (kind === "home") {
-    return { x: 50, y: hasBottomUtilities ? 46 : 54 };
+    let y = hasBottomUtilities ? 48 : 54;
+    if (crowdedTop) {
+      y += 8;
+    }
+    if (packedTop) {
+      y += 6;
+    }
+    return { x: 50, y: Math.min(y, 68) };
   }
   if (kind === "solar") {
-    return { x: 50, y: 20 };
+    let y = 20;
+    if (topN >= 2) {
+      y = 11;
+    }
+    if (packedTop) {
+      y = 8;
+    }
+    return { x: 50, y };
   }
   if (kind === "grid") {
-    return { x: 21, y: hasBottomUtilities ? 48 : 54 };
+    let y = hasBottomUtilities ? 46 : 52;
+    if (crowdedTop) {
+      y -= 8;
+    }
+    if (packedTop) {
+      y -= 4;
+    }
+    return { x: 19, y: Math.max(y, 34) };
   }
   if (kind === "battery") {
-    return { x: 79, y: hasBottomUtilities ? 48 : 54 };
+    let y = hasBottomUtilities ? 46 : 52;
+    if (crowdedTop) {
+      y -= 8;
+    }
+    if (packedTop) {
+      y -= 4;
+    }
+    return { x: 81, y: Math.max(y, 34) };
   }
   if (kind === "water") {
-    return total > 1 ? { x: 32, y: 81 } : { x: 40, y: 81 };
+    const y = (total > 1 ? 81 : 81) + topSpread + bottomSpread + packSpread;
+    return total > 1 ? { x: 32, y: Math.min(y, 94) } : { x: 40, y: Math.min(y, 94) };
   }
   if (kind === "gas") {
-    return total > 1 ? { x: 68, y: 81 } : { x: 60, y: 81 };
+    const y = (total > 1 ? 81 : 81) + topSpread + bottomSpread + packSpread;
+    return total > 1 ? { x: 68, y: Math.min(y, 94) } : { x: 60, y: Math.min(y, 94) };
   }
   if (kind === "individual") {
-    const y = hasBottomUtilities ? 90 : 81;
+    let y = hasBottomUtilities ? 90 : 81;
+    y += topSpread + bottomSpread + packSpread;
     if (total <= 1) {
-      return { x: 50, y };
+      return { x: 50, y: Math.min(y, 96) };
     }
     const start = 26;
     const end = 74;
     const step = (end - start) / Math.max(total - 1, 1);
     return {
       x: start + (step * index),
-      y,
+      y: Math.min(y, 96),
     };
   }
   return { x: 50, y: 50 };
@@ -40042,15 +46180,43 @@ function buildFlowPath(from, to, fromRadius = 0, toRadius = 0) {
   const end = offsetPoint(to, from, toRadius);
   const dx = end.x - start.x;
   const dy = end.y - start.y;
-  const horizontalBias = Math.abs(dx) >= Math.abs(dy);
-  const cp1 = horizontalBias
-    ? { x: start.x + (dx * 0.42), y: start.y }
-    : { x: start.x, y: start.y + (dy * 0.42) };
-  const cp2 = horizontalBias
-    ? { x: end.x - (dx * 0.42), y: end.y }
-    : { x: end.x, y: end.y - (dy * 0.42) };
+  const adx = Math.abs(dx);
+  const ady = Math.abs(dy);
+  /** Pure vertical/horizontal cubics collapse to a hairline and sit under wide nodes; pull control points sideways. */
+  const nearlyVertical = adx < 5.5 && ady > adx * 1.35;
+  const nearlyHorizontal = ady < 5.5 && adx > ady * 1.35;
+  let cp1;
+  let cp2;
+  if (nearlyVertical) {
+    const pull = Math.min(20, Math.max(9, ady * 0.24));
+    const side = adx < 0.35 ? 1 : Math.sign(dx || 1);
+    cp1 = { x: start.x + (side * pull), y: start.y + (dy * 0.4) };
+    cp2 = { x: end.x + (side * pull), y: end.y - (dy * 0.4) };
+  } else if (nearlyHorizontal) {
+    /** Long mostly-horizontal spans: small vertical pull + controls near endpoints so the stroke spans almost the full chord. */
+    const pull = Math.min(4, Math.max(0.65, adx * 0.022));
+    const side = ady < 0.35 ? 1 : Math.sign(dy || 1);
+    const hx = Math.min(0.14, Math.max(0.06, adx * 0.0018));
+    cp1 = { x: start.x + (dx * hx), y: start.y + (side * pull) };
+    cp2 = { x: end.x - (dx * hx), y: end.y - (side * pull) };
+  } else {
+    const horizontalBias = adx >= ady;
+    cp1 = horizontalBias
+      ? { x: start.x + (dx * 0.42), y: start.y }
+      : { x: start.x, y: start.y + (dy * 0.42) };
+    cp2 = horizontalBias
+      ? { x: end.x - (dx * 0.42), y: end.y }
+      : { x: end.x, y: end.y - (dy * 0.42) };
+  }
 
   return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} C ${cp1.x.toFixed(2)} ${cp1.y.toFixed(2)}, ${cp2.x.toFixed(2)} ${cp2.y.toFixed(2)}, ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+}
+
+/** Straight segment between trimmed endpoints (1–2 top sources / strip layout). */
+function buildStraightFlowPath(from, to, fromRadius = 0, toRadius = 0) {
+  const start = offsetPoint(from, to, fromRadius);
+  const end = offsetPoint(to, from, toRadius);
+  return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} L ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
 }
 
 class NodaliaPowerFlowCard extends HTMLElement {
@@ -40154,11 +46320,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
       individual: individualCount,
     });
 
+    const base = mergeConfig(DEFAULT_CONFIG.grid_options || {}, this._config?.grid_options || {});
+    const minRows = Math.max(1, Number(base.min_rows) || 1);
     return {
-      rows: "auto",
-      columns: "full",
-      min_rows: layoutPreset === "simple" ? 3 : 3,
-      min_columns: 6,
+      rows: base.rows === undefined || base.rows === "" ? "auto" : base.rows,
+      columns: base.columns === undefined || base.columns === "" ? "full" : base.columns,
+      min_rows: layoutPreset === "simple" ? Math.max(minRows, 3) : minRows,
+      min_columns: Math.max(1, Number(base.min_columns) || 6),
     };
   }
 
@@ -40349,7 +46517,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return `${formatRawValue(rawValue, decimals)}${unit ? ` ${unit}` : ""}`;
   }
 
-  _resolveNodeDescriptor(kind, configOverride = null, index = 0, total = 0, hasBottomUtilities = false) {
+  _resolveNodeDescriptor(kind, configOverride = null, index = 0, total = 0, hasBottomUtilities = false, flowFlags = {}) {
     const nodeConfig = configOverride || resolveNodeConfig(kind, this._config);
     const sourceResult = this._resolveSourceValue(nodeConfig.entity);
     const state = sourceResult.state;
@@ -40375,7 +46543,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       state,
       secondary,
       unavailable,
-      position: getNodePositionForLayout(nodeKind, index, total, hasBottomUtilities, this._layoutPreset || "full"),
+      position: getNodePositionForLayout(nodeKind, index, total, hasBottomUtilities, this._layoutPreset || "full", flowFlags),
       sourceConfig: nodeConfig,
     };
   }
@@ -40441,38 +46609,111 @@ class NodaliaPowerFlowCard extends HTMLElement {
     });
   }
 
+  _powerFlowStrGridExport() {
+    let lang = "es";
+    try {
+      lang = window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") || lang;
+    } catch (_e) {
+      // ignore
+    }
+    const two = String(lang || "es").slice(0, 2).toLowerCase();
+    return POWER_FLOW_LABELS_GRID_EXPORT[two] || POWER_FLOW_LABELS_GRID_EXPORT.en || POWER_FLOW_LABELS_GRID_EXPORT.es;
+  }
+
+  /**
+   * Sin entidad en "Casa": consumo instantáneo ≈ solar + red + batería (convenciones de la tarjeta:
+   * red +import / -export, batería +descarga / -carga).
+   * Nodo red con exportación: número en positivo y subtítulo "A la red" si no hay secundario.
+   */
+  _applyDerivedHomeAndGridDisplay(nodes) {
+    const homeCfg = resolveNodeConfig("home", this._config);
+    if (!isEntitySourceConfigured(homeCfg.entity)) {
+      const grid = nodes.grid;
+      const solar = nodes.solar;
+      const battery = nodes.battery;
+      const branchCount = [grid, solar, battery].filter(n => n.entityId).length;
+      const canCompute = branchCount >= 2 || (branchCount === 1 && grid.entityId);
+
+      if (canCompute) {
+        let invalid = false;
+        let sum = 0;
+        const add = (n) => {
+          if (!n.entityId) {
+            return;
+          }
+          if (n.unavailable) {
+            invalid = true;
+            return;
+          }
+          if (!Number.isFinite(n.value)) {
+            invalid = true;
+            return;
+          }
+          sum += n.value;
+        };
+        add(grid);
+        add(solar);
+        add(battery);
+
+        if (invalid) {
+          nodes.home.unavailable = true;
+          nodes.home.value = null;
+          nodes.home.valueText = "--";
+          nodes.home.unitText = "";
+        } else {
+          nodes.home.unavailable = false;
+          nodes.home.value = sum;
+          const unit = String(grid.unit || solar.unit || battery.unit || "").trim();
+          const display = formatDisplayValue(sum, unit);
+          nodes.home.valueText = display.value;
+          nodes.home.unitText = display.unit;
+          nodes.home.state = grid.state || solar.state || battery.state;
+        }
+      }
+    }
+
+    const g = nodes.grid;
+    if (g.entityId && !g.unavailable && Number.isFinite(g.value) && g.value < -0.001) {
+      const display = formatDisplayValue(Math.abs(g.value), g.unit);
+      g.valueText = display.value;
+      g.unitText = display.unit;
+      if (!String(g.secondary || "").trim()) {
+        g.secondary = this._powerFlowStrGridExport();
+      }
+    }
+  }
+
   _getNodes() {
-    const bottomUtilities = [
-      resolveNodeConfig("water", this._config),
-      resolveNodeConfig("gas", this._config),
-    ].filter(item => item.entity).length;
+    const flowFlags = getFlowLayoutFlagsFromConfig(this._config);
+    const bottomUtilities = flowFlags.bottomUtilities;
     const individualConfigs = resolveIndividualConfigs(this._config);
-    const topCount = [
-      resolveNodeConfig("grid", this._config),
-      resolveNodeConfig("solar", this._config),
-      resolveNodeConfig("battery", this._config),
-    ].filter(item => item.entity).length;
     this._layoutPreset = getLayoutPreset({
-      top: topCount,
+      top: flowFlags.topCount,
       bottom: bottomUtilities,
       individual: individualConfigs.length,
     });
 
+    const hasBottom = bottomUtilities > 0;
     const nodes = {
-      home: this._resolveNodeDescriptor("home"),
-      grid: this._resolveNodeDescriptor("grid"),
-      solar: this._resolveNodeDescriptor("solar"),
-      battery: this._resolveNodeDescriptor("battery"),
-      water: this._resolveNodeDescriptor("water", null, 0, bottomUtilities, bottomUtilities > 0),
-      gas: this._resolveNodeDescriptor("gas", null, 1, bottomUtilities, bottomUtilities > 0),
-      individual: individualConfigs.map((config, index) => this._resolveNodeDescriptor("individual", config, index, individualConfigs.length, bottomUtilities > 0)),
+      home: this._resolveNodeDescriptor("home", null, 0, 0, hasBottom, flowFlags),
+      grid: this._resolveNodeDescriptor("grid", null, 0, 0, hasBottom, flowFlags),
+      solar: this._resolveNodeDescriptor("solar", null, 0, 0, hasBottom, flowFlags),
+      battery: this._resolveNodeDescriptor("battery", null, 0, 0, hasBottom, flowFlags),
+      water: this._resolveNodeDescriptor("water", null, 0, bottomUtilities, hasBottom, flowFlags),
+      gas: this._resolveNodeDescriptor("gas", null, 1, bottomUtilities, hasBottom, flowFlags),
+      individual: individualConfigs.map((config, index) =>
+        this._resolveNodeDescriptor("individual", config, index, individualConfigs.length, hasBottom, flowFlags),
+      ),
     };
 
     if (!nodes.home.entityId) {
       nodes.home.entityId = nodes.grid.entityId || nodes.solar.entityId || nodes.battery.entityId || "";
     }
 
+    this._applyDerivedHomeAndGridDisplay(nodes);
+
     nodes._layoutPreset = this._layoutPreset;
+    nodes._flowFlags = flowFlags;
 
     return nodes;
   }
@@ -40512,9 +46753,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const layoutPreset = nodes._layoutPreset || "full";
     const zeroLineVisible = this._shouldShowZeroLines();
     const neutralStyle = this._getLineNeutralStyle();
-    const homeRadius = layoutPreset === "simple" ? 11.8 : layoutPreset === "compact" ? 13 : 14.5;
-    const nodeRadius = layoutPreset === "simple" ? 5.1 : layoutPreset === "compact" ? 5.8 : 6.5;
-    const individualRadius = layoutPreset === "simple" ? 4.6 : layoutPreset === "compact" ? 5.1 : 5.5;
+    /** In viewBox units; distance from node centre toward the other node so the stroke meets the bubble edge. */
+    const homeRadius = layoutPreset === "simple" ? 8.8 : layoutPreset === "compact" ? 10.2 : 11.8;
+    const nodeRadius = layoutPreset === "simple" ? 4.8 : layoutPreset === "compact" ? 5.5 : 6.1;
+    const individualRadius = layoutPreset === "simple" ? 4.2 : layoutPreset === "compact" ? 4.6 : 5;
     const lineCandidates = [];
 
     const pushLine = (id, sourceNode, targetNode, value, unit, color, bidirectional = true) => {
@@ -40532,8 +46774,27 @@ class NodaliaPowerFlowCard extends HTMLElement {
         toNode = sourceNode;
       }
 
-      const fromRadius = fromNode.kind === "home" ? homeRadius : fromNode.kind === "individual" ? individualRadius : nodeRadius;
-      const toRadius = toNode.kind === "home" ? homeRadius : toNode.kind === "individual" ? individualRadius : nodeRadius;
+      const baseFromR = fromNode.kind === "home" ? homeRadius : fromNode.kind === "individual" ? individualRadius : nodeRadius;
+      const baseToR = toNode.kind === "home" ? homeRadius : toNode.kind === "individual" ? individualRadius : nodeRadius;
+      const chord = Math.hypot(
+        toNode.position.x - fromNode.position.x,
+        toNode.position.y - fromNode.position.y,
+      ) || 0.001;
+      /**
+       * Endpoints sit on the chord at `baseFromR` / `baseToR` from each centre (toward the other node).
+       * Capping each side with a small fraction of the chord (old behaviour) made long spans (1–2 sources)
+       * use tiny trims so the stroke never reached the bubble outline. Only scale down when the sum would
+       * exceed most of the chord (short diagonal / cramped layouts).
+       */
+      const maxSum = Math.max(chord * 0.92, 0.55);
+      let fromRadius = baseFromR;
+      let toRadius = baseToR;
+      const sum = fromRadius + toRadius;
+      if (sum > maxSum) {
+        const scale = maxSum / sum;
+        fromRadius *= scale;
+        toRadius *= scale;
+      }
 
       lineCandidates.push({
         id,
@@ -40570,14 +46831,42 @@ class NodaliaPowerFlowCard extends HTMLElement {
       pushLine(node.id, home, node, node.value, node.unit, node.color, true);
     });
 
+    /** Solar often shares the vertical with home; paint it last so it is not covered by other strokes at the hub. */
+    const lineStackOrder = (id) => {
+      if (id === "solar") {
+        return 50;
+      }
+      if (id === "gas") {
+        return 40;
+      }
+      if (id === "water") {
+        return 35;
+      }
+      if (id === "battery") {
+        return 25;
+      }
+      if (id === "grid") {
+        return 15;
+      }
+      return 5;
+    };
+    lineCandidates.sort((left, right) => lineStackOrder(left.id) - lineStackOrder(right.id));
+
     const maxMagnitude = Math.max(
       ...lineCandidates.filter(item => item.active).map(item => item.magnitude),
       1,
     );
 
+    const flowFlags = nodes._flowFlags || getFlowLayoutFlagsFromConfig(this._config || {});
+    const straightStripLines = flowFlags.topCount >= 1
+      && flowFlags.topCount <= 2
+      && !(flowFlags.individualCount > 0);
+
     return lineCandidates.map(line => ({
       ...line,
-      path: buildFlowPath(line.fromNode.position, line.toNode.position, line.fromRadius, line.toRadius),
+      path: straightStripLines
+        ? buildStraightFlowPath(line.fromNode.position, line.toNode.position, line.fromRadius, line.toRadius)
+        : buildFlowPath(line.fromNode.position, line.toNode.position, line.fromRadius, line.toRadius),
       duration: this._flowDuration(line.magnitude, maxMagnitude),
     }));
   }
@@ -40590,20 +46879,27 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return active[0]?.color || "#f6b73c";
   }
 
-  _renderFlowDots(line) {
+  _renderFlowDots(line, dotMetrics = {}) {
     if (!line.active) {
       return "";
     }
 
     const bubbleDuration = 5.6;
+    const glowR = Number(dotMetrics.glowR) || 2.1;
+    const coreR = Number(dotMetrics.coreR) || 1.08;
+    const coreStroke = Number(dotMetrics.coreStroke) || 0.26;
+    const viewAspect = Number(dotMetrics.viewAspect) > 0 ? Number(dotMetrics.viewAspect) : 1;
+    /** With preserveAspectRatio none, user Y is squeezed vs X on wide surfaces; taller ry in viewBox renders round on screen. */
+    const glowRy = glowR * viewAspect;
+    const coreRy = coreR * viewAspect;
     return `
       <g class="power-flow-card__dot-group" style="--dot-color:${escapeHtml(line.color)};">
-        <circle class="power-flow-card__dot-glow" r="0.92">
+        <ellipse class="power-flow-card__dot-glow" rx="${glowR.toFixed(3)}" ry="${glowRy.toFixed(3)}">
           <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"></animateMotion>
-        </circle>
-        <circle class="power-flow-card__dot-core" r="0.52">
+        </ellipse>
+        <ellipse class="power-flow-card__dot-core" rx="${coreR.toFixed(3)}" ry="${coreRy.toFixed(3)}" stroke-width="${coreStroke.toFixed(2)}">
           <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"></animateMotion>
-        </circle>
+        </ellipse>
       </g>
     `;
   }
@@ -40942,19 +47238,85 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const nodes = this._getNodes();
     const lines = this._buildLines(nodes);
     const dominantColor = this._getDominantColor(lines);
-    const flowWidth = Math.max(3, parseSizeToPixels(styles.flow_width, 4));
+    const flowWidth = Math.max(2.5, parseSizeToPixels(styles.flow_width, 3.2));
     const hasLowerNodes = Boolean(nodes.water.entityId || nodes.gas.entityId || nodes.individual.length);
     const layoutPreset = nodes._layoutPreset || "full";
+    const flowFlags = nodes._flowFlags || getFlowLayoutFlagsFromConfig(this._config);
+    const horizontalStripDiagram = flowFlags.topCount >= 1 && flowFlags.topCount <= 2 && !(flowFlags.individualCount > 0);
+    const flowDotBoost = 1 + Math.max(0, flowWidth - 2.5) * 0.065;
+    const flowDotGlowR = (horizontalStripDiagram ? 2.58 : 2.1) * flowDotBoost;
+    const flowDotCoreR = (horizontalStripDiagram ? 1.48 : 1.12) * flowDotBoost;
+    const flowDotCoreStroke = horizontalStripDiagram ? 0.33 : 0.26;
+    const surfaceLayoutExtras = (() => {
+      let add = 0;
+      if (layoutPreset !== "simple") {
+        if (flowFlags.topCount >= 3) {
+          add += 92;
+        }
+        if (flowFlags.bottomUtilities >= 2 && flowFlags.topCount >= 3) {
+          add += 28;
+        }
+        add += Math.min(Math.max(0, flowFlags.individualCount - 1), 5) * 22;
+      }
+      return add;
+    })();
+    const stripNoLower = horizontalStripDiagram && !hasLowerNodes;
+    const stripWithLower = horizontalStripDiagram && hasLowerNodes;
+    let baseSurfaceDiagram = layoutPreset === "compact" ? (hasLowerNodes ? 296 : 228) : (hasLowerNodes ? 328 : 248);
+    if (stripNoLower) {
+      baseSurfaceDiagram = layoutPreset === "compact" ? 150 : 158;
+    } else if (stripWithLower) {
+      baseSurfaceDiagram = layoutPreset === "compact" ? Math.min(baseSurfaceDiagram, 236) : Math.min(baseSurfaceDiagram, 256);
+    }
+    const surfaceFloor = layoutPreset === "simple" ? 148 : (stripNoLower ? 132 : 200);
+    const surfaceMinHeight = Math.min(
+      Math.max(
+        (layoutPreset === "simple" ? 162 : baseSurfaceDiagram) + surfaceLayoutExtras,
+        surfaceFloor,
+      ),
+      540,
+    );
+    let baseSurfaceMobile = layoutPreset === "simple" ? 144 : (hasLowerNodes ? 304 : 230);
+    if (stripNoLower) {
+      baseSurfaceMobile = layoutPreset === "compact" ? 140 : 146;
+    } else if (stripWithLower) {
+      baseSurfaceMobile = Math.min(baseSurfaceMobile, layoutPreset === "compact" ? 220 : 236);
+    }
+    const surfaceMinHeightMobile = Math.min(
+      Math.max(
+        baseSurfaceMobile + surfaceLayoutExtras,
+        layoutPreset === "simple" ? 132 : (stripNoLower ? 124 : 208),
+      ),
+      520,
+    );
+    const surfaceAspectCss = stripNoLower
+      ? "1.52 / 1"
+      : stripWithLower
+        ? "1.2 / 1"
+        : "1 / 1.02";
+    const flowDotViewAspect = (() => {
+      const m = String(surfaceAspectCss).trim().match(/^([\d.]+)\s*\/\s*([\d.]+)/);
+      if (!m) {
+        return 1;
+      }
+      const a = Number(m[1]);
+      const b = Number(m[2]);
+      if (a > 0 && b > 0) {
+        return a / b;
+      }
+      return 1;
+    })();
+    const flowDotOpts = {
+      glowR: flowDotGlowR,
+      coreR: flowDotCoreR,
+      coreStroke: flowDotCoreStroke,
+      viewAspect: flowDotViewAspect,
+    };
     const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
     const titleText = this._config?.title || this._config?.name || (layoutPreset === "simple" ? "" : "Flujo");
     const hasHeader = this._config?.show_header !== false && (Boolean(titleText) || (showDashboardButton && layoutPreset !== "simple"));
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
-    const surfaceMinHeight = layoutPreset === "simple"
-      ? 162
-      : layoutPreset === "compact"
-        ? (hasLowerNodes ? 296 : 228)
-        : (hasLowerNodes ? 328 : 248);
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -40962,7 +47324,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           --power-flow-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
           --power-flow-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           display: block;
-          height: 100%;
+          height: auto;
           min-height: 0;
         }
 
@@ -40973,7 +47335,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         ha-card {
           background-color: var(--ha-card-background, var(--card-background-color, #fff));
           border-radius: ${styles.card.border_radius};
-          height: 100%;
+          height: auto;
           isolation: isolate;
           min-height: 0;
           overflow: hidden;
@@ -41002,7 +47364,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           display: flex;
           flex-direction: column;
           gap: ${styles.card.gap};
-          height: 100%;
+          height: auto;
           isolation: isolate;
           min-height: 0;
           overflow: hidden;
@@ -41010,7 +47372,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
           position: relative;
           transform-origin: center;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 160ms ease;
-          will-change: transform;
         }
 
         .power-flow-card__header {
@@ -41018,6 +47379,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
           display: grid;
           gap: 10px;
           grid-template-columns: minmax(0, 1fr) auto;
+          isolation: isolate;
+          position: relative;
+          z-index: 4;
         }
 
         .power-flow-card__header--entering {
@@ -41025,10 +47389,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__title {
+          color: var(--primary-text-color);
           font-size: ${Math.max(14, parseSizeToPixels(styles.title_size, 16))}px;
           font-weight: 700;
           line-height: 1.1;
           min-width: 0;
+          opacity: 1;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -41036,9 +47402,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__dashboard-button {
           align-items: center;
-          background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%);
-          border: 1px solid rgba(255,255,255,0.08);
+          background: linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--primary-text-color) 7%, transparent) 0%,
+            color-mix(in srgb, var(--primary-text-color) 3%, transparent) 100%
+          );
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
           border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent);
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
@@ -41050,16 +47421,28 @@ class NodaliaPowerFlowCard extends HTMLElement {
           will-change: transform;
         }
 
+        .power-flow-card__dashboard-button:hover {
+          background: linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--primary-text-color) 11%, transparent) 0%,
+            color-mix(in srgb, var(--primary-text-color) 5%, transparent) 100%
+          );
+          border-color: color-mix(in srgb, var(--primary-text-color) 20%, transparent);
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 12%, transparent),
+            0 6px 16px rgba(0, 0, 0, 0.08);
+        }
+
         .power-flow-card__dashboard-button ha-icon {
           --mdc-icon-size: 16px;
         }
 
         .power-flow-card__content {
-          flex: 1;
+          flex: 0 1 auto;
           min-height: 0;
           position: relative;
           transform-origin: center;
-          will-change: opacity, transform;
+          z-index: 1;
         }
 
         .power-flow-card__content--entering {
@@ -41076,11 +47459,17 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__surface {
           background: linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 18%, transparent) 0%, transparent 100%);
           border-radius: calc(${styles.card.border_radius} - 6px);
+          height: auto;
           min-height: ${surfaceMinHeight}px;
           position: relative;
           transform-origin: center;
-          will-change: opacity, transform;
           width: 100%;
+        }
+
+        .power-flow-card--compact .power-flow-card__surface,
+        .power-flow-card--full .power-flow-card__surface {
+          aspect-ratio: ${surfaceAspectCss};
+          max-height: none;
         }
 
         .power-flow-card__surface--entering {
@@ -41094,6 +47483,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           position: absolute;
           width: 100%;
           pointer-events: none;
+          shape-rendering: geometricPrecision;
         }
 
         .power-flow-card__svg--lines {
@@ -41101,7 +47491,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__surface--entering .power-flow-card__svg--lines {
-          animation: power-flow-card-lines-in calc(var(--power-flow-card-content-duration) * 0.92) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: power-flow-card-lines-in calc(var(--power-flow-card-content-duration) * 0.92) cubic-bezier(0.22, 0.84, 0.26, 1) forwards;
           animation-delay: 82ms;
           transform-origin: center;
         }
@@ -41111,14 +47501,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__surface--entering .power-flow-card__svg--dots {
-          animation: power-flow-card-dots-in calc(var(--power-flow-card-content-duration) * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: power-flow-card-dots-in calc(var(--power-flow-card-content-duration) * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) forwards;
           animation-delay: 124ms;
           transform-origin: center;
         }
 
         .power-flow-card__line {
           fill: none;
-          filter: url(#power-flow-soften);
           stroke-linecap: round;
           stroke-linejoin: round;
           stroke-width: ${flowWidth}px;
@@ -41130,18 +47519,17 @@ class NodaliaPowerFlowCard extends HTMLElement {
           opacity: 0.08;
           stroke-linecap: round;
           stroke-linejoin: round;
-          stroke-width: ${flowWidth * 1.5}px;
+          stroke-width: ${flowWidth * 1.35}px;
         }
 
         .power-flow-card__dot-glow {
-          fill: color-mix(in srgb, var(--dot-color) 26%, rgba(255,255,255,0.14));
-          opacity: 0.72;
+          fill: color-mix(in srgb, var(--dot-color) 32%, rgba(255,255,255,0.2));
+          opacity: 0.88;
         }
 
         .power-flow-card__dot-core {
-          fill: rgba(255, 255, 255, 0.96);
-          stroke: color-mix(in srgb, var(--dot-color) 30%, rgba(255,255,255,0.42));
-          stroke-width: 0.16;
+          fill: rgba(255, 255, 255, 0.98);
+          stroke: color-mix(in srgb, var(--dot-color) 36%, rgba(255,255,255,0.5));
         }
 
         .power-flow-card__node {
@@ -41381,30 +47769,39 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__simple-line {
           background: linear-gradient(180deg, color-mix(in srgb, var(--line-background) 100%, transparent) 0%, color-mix(in srgb, var(--line-background) 78%, transparent) 100%);
           border-radius: 999px;
-          height: ${Math.max(flowWidth, 4)}px;
+          height: ${Math.max(flowWidth, 3)}px;
           opacity: var(--line-opacity);
           position: relative;
           width: 100%;
         }
 
         .power-flow-card__simple-line.is-active {
-          box-shadow: 0 0 14px color-mix(in srgb, var(--line-color) 18%, transparent);
+          box-shadow: 0 0 12px color-mix(in srgb, var(--line-color) 16%, transparent);
         }
 
         .power-flow-card__simple-dot {
           background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.98) 0 35%, color-mix(in srgb, var(--line-color) 44%, rgba(255,255,255,0.92)) 36% 100%);
           border-radius: 999px;
           box-shadow:
-            0 0 0 4px color-mix(in srgb, var(--line-color) 14%, transparent),
-            0 0 12px color-mix(in srgb, var(--line-color) 22%, transparent);
-          height: 9px;
+            0 0 0 3px color-mix(in srgb, var(--line-color) 14%, transparent),
+            0 0 10px color-mix(in srgb, var(--line-color) 20%, transparent);
+          height: 8px;
           left: 0;
           position: absolute;
           top: 50%;
           transform: translateY(-50%);
-          width: 9px;
+          width: 8px;
           will-change: left, opacity;
           animation: power-flow-card-simple-dot linear infinite;
+        }
+
+        .power-flow-card--strip .power-flow-card__simple-dot {
+          box-shadow:
+            0 0 0 4px color-mix(in srgb, var(--line-color) 15%, transparent),
+            0 0 13px color-mix(in srgb, var(--line-color) 22%, transparent);
+          height: 12px;
+          width: 12px;
+          animation-name: power-flow-card-simple-dot-strip;
         }
 
         @keyframes power-flow-card-simple-dot {
@@ -41419,7 +47816,24 @@ class NodaliaPowerFlowCard extends HTMLElement {
             opacity: 1;
           }
           100% {
-            left: calc(100% - 9px);
+            left: calc(100% - 8px);
+            opacity: 0;
+          }
+        }
+
+        @keyframes power-flow-card-simple-dot-strip {
+          0% {
+            left: 0;
+            opacity: 0;
+          }
+          8% {
+            opacity: 1;
+          }
+          92% {
+            opacity: 1;
+          }
+          100% {
+            left: calc(100% - 12px);
             opacity: 0;
           }
         }
@@ -41498,9 +47912,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__home-icon-wrap {
           align-items: center;
-          background: rgba(255,255,255,0.06);
-          border: 1px solid rgba(255,255,255,0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
           border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent);
           display: inline-flex;
           height: 31px;
           justify-content: center;
@@ -41556,9 +47971,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__chip {
           align-items: center;
-          background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.03) 100%);
-          border: 1px solid rgba(255,255,255,0.08);
+          background: linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--primary-text-color) 6%, transparent) 0%,
+            color-mix(in srgb, var(--primary-text-color) 3%, transparent) 100%
+          );
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
           border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           color: var(--primary-text-color);
           display: inline-flex;
           font-size: var(--chip-font-size, 10px);
@@ -41579,8 +47999,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__chip--value {
-          background: linear-gradient(180deg, color-mix(in srgb, var(--chip-tint) 14%, rgba(255,255,255,0.05)) 0%, rgba(255,255,255,0.035) 100%);
-          border-color: color-mix(in srgb, var(--chip-tint) 26%, rgba(255,255,255,0.08));
+          background: linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--chip-tint) 16%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)) 0%,
+            color-mix(in srgb, var(--primary-text-color) 4%, transparent) 100%
+          );
+          border-color: color-mix(in srgb, var(--chip-tint) 30%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 
         .power-flow-card__chip-unit {
@@ -41723,13 +48148,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         @media (max-width: 640px) {
           .power-flow-card__surface {
-            min-height: ${
-              layoutPreset === "simple"
-                ? 144
-                : hasLowerNodes
-                  ? 304
-                  : 230
-            }px;
+            min-height: ${surfaceMinHeightMobile}px;
           }
 
           .power-flow-card__dashboard-button {
@@ -41748,7 +48167,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
         `}
       </style>
-      <ha-card class="power-flow-card power-flow-card--${layoutPreset}">
+      <ha-card class="power-flow-card power-flow-card--${layoutPreset}${horizontalStripDiagram ? " power-flow-card--strip" : ""}">
         ${
           hasHeader
             ? `
@@ -41776,13 +48195,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
               })
               : `
                 <div class="power-flow-card__surface ${shouldAnimateEntrance ? "power-flow-card__surface--entering" : ""}">
-                  <svg class="power-flow-card__svg power-flow-card__svg--lines" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                  <svg class="power-flow-card__svg power-flow-card__svg--lines" viewBox="0 0 100 100" preserveAspectRatio="none" shape-rendering="geometricPrecision">
                     <defs>
                       <filter id="power-flow-glow" x="-30%" y="-30%" width="160%" height="160%">
-                        <feGaussianBlur stdDeviation="1.2"></feGaussianBlur>
+                        <feGaussianBlur stdDeviation="0.85"></feGaussianBlur>
                       </filter>
                       <filter id="power-flow-soften" x="-20%" y="-20%" width="140%" height="140%">
-                        <feGaussianBlur stdDeviation="0.18"></feGaussianBlur>
+                        <feGaussianBlur stdDeviation="0.06"></feGaussianBlur>
                       </filter>
                     </defs>
                     ${lines.map(line => `
@@ -41825,8 +48244,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
                     animateEntrance: shouldAnimateEntrance,
                     enterDelay: this._getNodeAnimationDelay(node, index),
                   })).join("")}
-                  <svg class="power-flow-card__svg power-flow-card__svg--dots" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
-                    ${lines.map(line => this._renderFlowDots(line)).join("")}
+                  <svg class="power-flow-card__svg power-flow-card__svg--dots" viewBox="0 0 100 100" preserveAspectRatio="none" shape-rendering="geometricPrecision">
+                    ${lines.map(line => this._renderFlowDots(line, flowDotOpts)).join("")}
                   </svg>
                 </div>
               `
@@ -42222,7 +48641,9 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -42365,8 +48786,8 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
           </div>
         </section>
 
-        ${this._renderNodeSection("Red", "Sensor de red con potencia positiva de consumo y negativa de exportacion, o split de consumo/produccion.", "entities.grid", grid)}
-        ${this._renderNodeSection("Casa", "Entidad central del hogar que se abrira en more-info si pulsas la burbuja central.", "entities.home", home)}
+        ${this._renderNodeSection("Red", "Sensor de red: positivo importacion, negativo exportacion (split consumo/produccion permitido). Si exportas, el valor se muestra en positivo y el subtitulo indica entrega a la red.", "entities.grid", grid)}
+        ${this._renderNodeSection("Casa", "Opcional: si dejas la entidad vacia, el consumo se calcula como solar + red + bateria (mismos signos que en esos nodos). Si configuras entidad, se usa el sensor. More-info usa red/solar/bateria si no hay entidad casa.", "entities.home", home)}
         ${this._renderNodeSection("Solar", "Produccion solar instantanea.", "entities.solar", solar)}
         ${this._renderNodeSection("Bateria", "Potencia de bateria. Positiva descarga hacia casa, negativa carga desde casa.", "entities.battery", battery)}
         ${this._renderNodeSection("Agua", "Caudal o consumo de agua hacia el hogar.", "entities.water", water)}
@@ -42561,6 +48982,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
   _ensureEditorControlsReady() {
     this._watchEditorControlTag("ha-entity-picker");
+    this._watchEditorControlTag("ha-selector");
     this._watchEditorControlTag("ha-icon-picker");
   }
 
@@ -42989,6 +49411,13 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
       if (placeholder) {
         control.setAttribute("placeholder", placeholder);
       }
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = {
+        entity: {
+          domain: ["sensor", "number", "input_number"],
+        },
+      };
     } else {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
@@ -43140,7 +49569,9 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -43250,6 +49681,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
         .editor-field ha-icon-picker,
         .editor-field ha-entity-picker,
+        .editor-field ha-selector,
         .editor-control-host,
         .editor-control-host > * {
           display: block;
@@ -43353,8 +49785,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
           </div>
         </section>
 
-        ${this._renderNodeSection("Red", "Sensor de red con potencia positiva de consumo y negativa de exportacion.", "entities.grid", grid)}
-        ${this._renderNodeSection("Casa", "Entidad central del hogar y objetivo del more-info principal.", "entities.home", home)}
+        ${this._renderNodeSection("Red", "Positivo importacion, negativo exportacion. Si exportas, valor en positivo y subtitulo «A la red» (o traduccion).", "entities.grid", grid)}
+        ${this._renderNodeSection("Casa", "Opcional: entidad vacia = consumo calculado (solar + red + bateria). Con entidad, valor del sensor.", "entities.home", home)}
         ${this._renderNodeSection("Solar", "Produccion solar instantanea.", "entities.solar", solar)}
         ${this._renderNodeSection("Bateria", "Potencia de bateria. Positiva descarga, negativa carga.", "entities.battery", battery)}
         ${this._renderNodeSection("Agua", "Caudal o consumo de agua hacia el hogar.", "entities.water", water)}
@@ -43536,7 +49968,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "0.10.1";
+const CARD_VERSION = "0.10.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -45508,7 +51940,7 @@ class NodaliaClimateCard extends HTMLElement {
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          color: var(--secondary-text-color);
+          color: var(--primary-text-color);
           display: inline-flex;
           font-size: ${effectiveChipFontSize};
           font-weight: 700;
@@ -45520,10 +51952,6 @@ class NodaliaClimateCard extends HTMLElement {
           text-overflow: ellipsis;
           transition: background 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
           white-space: nowrap;
-        }
-
-        .climate-card__chip--state {
-          color: var(--primary-text-color);
         }
 
         .climate-card__dial-wrap {
@@ -45793,7 +52221,7 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__dial-meta {
           align-items: center;
-          color: var(--secondary-text-color);
+          color: var(--primary-text-color);
           display: flex;
           flex-wrap: wrap;
           font-size: ${effectiveCurrentSize};
@@ -46507,7 +52935,9 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -47368,7 +53798,9 @@ class NodaliaClimateCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -49918,7 +56350,9 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -50333,7 +56767,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.13.2";
+const CARD_VERSION = "0.13.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -57047,7 +63481,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           width: ${controlSize}px;
         }
 
-        .advance-vacuum-card__control:hover,
+        .advance-vacuum-card__control:hover {
+          transform: translateY(-1px);
+        }
+
         .advance-vacuum-card__mode-button:hover {
           transform: translateY(-1px);
         }
@@ -57072,36 +63509,49 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__modes {
           display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
           justify-content: center;
           width: 100%;
         }
 
+        .advance-vacuum-card__modes-bubble {
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          border-radius: 999px;
+          display: inline-flex;
+          flex-wrap: wrap;
+          gap: 3px;
+          justify-content: center;
+          max-width: 100%;
+          padding: 3px;
+        }
+
         .advance-vacuum-card__mode-button {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          background: transparent;
+          border: 1px solid transparent;
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          box-shadow: none;
           color: var(--secondary-text-color);
           display: inline-flex;
           font-size: 12px;
           font-weight: 600;
           gap: 8px;
-          min-height: 34px;
-          padding: 0 12px;
+          min-height: 30px;
+          padding: 0 11px;
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 180ms ease, color 160ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.24, 1);
+        }
+
+        .advance-vacuum-card__mode-button:hover {
+          background: color-mix(in srgb, ${accentColor} 12%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
+          box-shadow: 0 6px 14px color-mix(in srgb, ${accentColor} 10%, transparent);
         }
 
         .advance-vacuum-card__mode-button.is-active {
-          background: color-mix(in srgb, var(--primary-color) 22%, color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)));
-          border-color: color-mix(in srgb, var(--primary-color) 52%, color-mix(in srgb, ${accentColor} 38%, var(--primary-text-color)));
+          background: color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 7%, transparent));
+          border-color: color-mix(in srgb, ${accentColor} 35%, transparent);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent);
           color: var(--primary-text-color);
           font-weight: 700;
-          box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-color) 18%, transparent),
-            0 0 0 2px color-mix(in srgb, var(--primary-color) 38%, transparent),
-            0 10px 22px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.14));
         }
 
         .advance-vacuum-card__mode-button ha-icon {
@@ -57905,12 +64355,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           !isCleaningSessionActive
             ? `
               <div class="advance-vacuum-card__modes">
+                <div class="advance-vacuum-card__modes-bubble" role="tablist" aria-label="${escapeHtml(advanceVacuumStrings?.aria?.modeTablist || "Modo de limpieza")}">
                 ${modes.map(mode => `
-                  <button class="advance-vacuum-card__mode-button ${mode.id === currentMode.id ? "is-active" : ""}" data-mode-id="${escapeHtml(mode.id)}">
+                  <button type="button" class="advance-vacuum-card__mode-button ${mode.id === currentMode.id ? "is-active" : ""}" data-mode-id="${escapeHtml(mode.id)}" role="tab" aria-selected="${mode.id === currentMode.id ? "true" : "false"}">
                     ${["all", "rooms", "zone", "routines"].includes(mode.id) ? "" : `<ha-icon icon="${escapeHtml(mode.icon)}"></ha-icon>`}
                     <span>${escapeHtml(mode.label)}</span>
                   </button>
                 `).join("")}
+                </div>
               </div>
             `
             : ""
@@ -58593,7 +65045,9 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -61275,7 +67729,9 @@ class NodaliaEntityCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -64446,7 +70902,9 @@ class NodaliaFavCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -66176,7 +72634,7 @@ if (!window.customBadges.some(item => item?.type === CARD_TAG)) {
 {
 const CARD_TAG = "nodalia-person-card";
 const EDITOR_TAG = "nodalia-person-card-editor";
-const CARD_VERSION = "0.9.0";
+const CARD_VERSION = "0.9.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -66589,7 +73047,8 @@ class NodaliaPersonCard extends HTMLElement {
   }
 
   _getTitle(state) {
-    return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Persona";
+    const fallback = this._personUiCopy().defaultName;
+    return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || fallback;
   }
 
   _getPersonPicture(state) {
@@ -66976,11 +73435,30 @@ class NodaliaPersonCard extends HTMLElement {
     this._performTapAction();
   }
 
+  _personUiCopy() {
+    const NI = window.NodaliaI18n;
+    if (!NI?.strings || !NI.resolveLanguage) {
+      return {
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Configura `entity` para mostrar la tarjeta.",
+        defaultName: "Persona",
+      };
+    }
+    const lang = NI.resolveLanguage(this._hass, this._config?.language);
+    const person = NI.strings(lang).person || {};
+    return {
+      emptyTitle: person.emptyTitle || "Nodalia Person Card",
+      emptyBody: person.emptyBody || "Configura `entity` para mostrar la tarjeta.",
+      defaultName: person.defaultName || "Persona",
+    };
+  }
+
   _renderEmptyState() {
+    const ui = this._personUiCopy();
     return `
       <ha-card class="person-card person-card--empty">
-        <div class="person-card__empty-title">Nodalia Person Card</div>
-        <div class="person-card__empty-text">Configura \`entity\` para mostrar la tarjeta.</div>
+        <div class="person-card__empty-title">${escapeHtml(ui.emptyTitle)}</div>
+        <div class="person-card__empty-text">${escapeHtml(ui.emptyBody)}</div>
       </ha-card>
     `;
   }
@@ -67043,8 +73521,9 @@ class NodaliaPersonCard extends HTMLElement {
         :host {
           --person-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --person-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
-          display: block;
-          height: ${singleRowLayout ? "auto" : "100%"};
+          display: flex;
+          flex-direction: column;
+          height: 100%;
           min-height: 0;
         }
 
@@ -67058,7 +73537,10 @@ class NodaliaPersonCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
-          height: ${singleRowLayout ? "auto" : "100%"};
+          display: flex;
+          flex-direction: column;
+          flex: 1 1 auto;
+          justify-content: center;
           min-height: 0;
           overflow: hidden;
           position: relative;
@@ -67078,22 +73560,31 @@ class NodaliaPersonCard extends HTMLElement {
 
         .person-card__content {
           align-items: center;
-          align-content: center;
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
-          display: grid;
+          display: flex;
+          flex: ${singleRowLayout ? "0 0 auto" : "1 1 auto"};
+          flex-direction: row;
           gap: ${effectiveGap};
-          grid-template-columns: ${avatarTrackSize} minmax(0, 1fr);
-          grid-template-rows: 1fr;
           height: ${singleRowLayout ? "auto" : "100%"};
-          min-height: ${effectiveContentMinHeight};
+          min-height: ${singleRowLayout ? "0" : effectiveContentMinHeight};
           min-width: 0;
           padding: ${effectivePadding};
           position: relative;
-          place-items: center start;
           transform-origin: center;
           transition: transform 160ms ease;
           will-change: transform;
           z-index: 1;
+        }
+
+        .person-card__avatar-track {
+          align-items: center;
+          align-self: stretch;
+          display: flex;
+          flex: 0 0 ${avatarTrackSize};
+          justify-content: center;
+          min-height: 0;
+          min-width: 0;
+          width: ${avatarTrackSize};
         }
 
         .person-card__content--entering {
@@ -67105,18 +73596,12 @@ class NodaliaPersonCard extends HTMLElement {
         }
 
         .person-card--single-row {
-          height: auto;
           min-height: ${effectiveCardHeightPx}px;
         }
 
-        .person-card--single-row .person-card__content {
-          padding-bottom: ${singleRowPaddingY - 1}px;
-          padding-top: ${singleRowPaddingY + 1}px;
-        }
-
         .person-card__avatar {
-          align-self: center;
           align-items: center;
+          flex-shrink: 0;
           background: ${styles.avatar.background};
           border: 1px solid color-mix(in srgb, ${accentColor} 16%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
           border-radius: 999px;
@@ -67190,11 +73675,10 @@ class NodaliaPersonCard extends HTMLElement {
 
         .person-card__copy {
           align-content: center;
-          align-self: center;
           display: grid;
+          flex: 1 1 auto;
           gap: ${singleRowLayout ? "4px" : "6px"};
           min-width: 0;
-          width: 100%;
         }
 
         .person-card__copy--entering {
@@ -67332,7 +73816,8 @@ class NodaliaPersonCard extends HTMLElement {
       </style>
       <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""}">
         <div class="person-card__content ${animateWithPicture ? "person-card__content--entering" : ""}" ${canRunPrimaryAction ? 'data-person-action="primary"' : ""}>
-          <div class="person-card__avatar ${animateWithPicture ? "person-card__avatar--entering" : ""}">
+          <div class="person-card__avatar-track">
+            <div class="person-card__avatar ${animateWithPicture ? "person-card__avatar--entering" : ""}">
             ${
               picture
                 ? `<img src="${escapeHtml(picture)}" alt="${escapeHtml(title)}" />`
@@ -67343,6 +73828,7 @@ class NodaliaPersonCard extends HTMLElement {
                 ? `<span class="person-card__badge" style="--badge-color:${escapeHtml(badge.color)};"><ha-icon icon="${escapeHtml(badge.icon)}"></ha-icon></span>`
                 : ""
             }
+            </div>
           </div>
           <div class="person-card__copy ${animateWithPicture ? "person-card__copy--entering" : ""}">
             <div class="person-card__title">${escapeHtml(title)}</div>
@@ -67933,7 +74419,9 @@ class NodaliaPersonCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -68145,7 +74633,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
               fullWidth: true,
             })}
             ${this._renderSelectField(
-              "Accion al tocar",
+              "Acción al tocar",
               "tap_action",
               tapAction,
               [
@@ -71845,7 +78333,9 @@ class NodaliaWeatherCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -72056,7 +78546,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
               fullWidth: true,
             })}
             ${this._renderSelectField(
-              "Accion al tocar",
+              "Acción al tocar",
               "tap_action",
               tapAction,
               [
@@ -76141,7 +82631,9 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -76629,4 +83121,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.2.1","contentSha256_12":"c0d5fa633893"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.3.0","contentSha256_12":"02af6ffa4f8c"};}

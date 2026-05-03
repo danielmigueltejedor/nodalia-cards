@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "0.14.0";
+const CARD_VERSION = "0.16.11";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -95,6 +95,12 @@ const DEFAULT_CONFIG = {
     content_duration: 460,
     button_bounce_duration: 320,
   },
+  grid_options: {
+    rows: "auto",
+    columns: "full",
+    min_rows: 1,
+    min_columns: 6,
+  },
   styles: {
     card: {
       background: "var(--ha-card-background)",
@@ -118,7 +124,7 @@ const DEFAULT_CONFIG = {
     home_unit_size: "14px",
     node_value_size: "11px",
     secondary_size: "10px",
-    flow_width: "3px",
+    flow_width: "2.5px",
   },
 };
 
@@ -464,6 +470,39 @@ function resolveNodeConfig(kind, config) {
   return mergeConfig(NODE_DEFAULTS[kind] || {}, config?.entities?.[kind] || {});
 }
 
+/** True if the YAML `entity` field is set (string id or split consumption/production object). */
+function isEntitySourceConfigured(entity) {
+  if (entity == null || entity === false) {
+    return false;
+  }
+  if (typeof entity === "string") {
+    return entity.trim().length > 0;
+  }
+  if (isObject(entity)) {
+    return Boolean(
+      String(entity.entity || "").trim()
+      || String(entity.consumption || "").trim()
+      || String(entity.production || "").trim(),
+    );
+  }
+  return false;
+}
+
+/** Short UI line when grid power is negative (export); keyed by HA language code prefix. */
+const POWER_FLOW_LABELS_GRID_EXPORT = {
+  es: "A la red",
+  en: "To grid",
+  de: "Ins Netz",
+  fr: "Vers le réseau",
+  it: "In rete",
+  nl: "Naar net",
+  pt: "Para a rede",
+  ru: "В сеть",
+  el: "Προς δίκτυο",
+  zh: "馈网",
+  ro: "Către rețea",
+};
+
 function resolveIndividualConfigs(config) {
   return arrayFromMaybe(config?.entities?.individual)
     .filter(isObject)
@@ -485,19 +524,39 @@ function normalizeConfig(rawConfig) {
 }
 
 function getNodePosition(kind, index = 0, total = 0, hasBottomUtilities = false) {
-  return getNodePositionForLayout(kind, index, total, hasBottomUtilities, "full");
+  return getNodePositionForLayout(kind, index, total, hasBottomUtilities, "full", {});
+}
+
+/** Active grid / solar / battery branches so %-layout can spread vertically when several sources exist. */
+function getFlowLayoutFlagsFromConfig(config) {
+  const c = config || {};
+  const activeTopKinds = ["grid", "solar", "battery"].filter(kind => Boolean(resolveNodeConfig(kind, c)?.entity));
+  const topCount = activeTopKinds.length;
+  const hasGrid = activeTopKinds.includes("grid");
+  const hasSolar = activeTopKinds.includes("solar");
+  const hasBattery = activeTopKinds.includes("battery");
+  const bottomUtilities = [resolveNodeConfig("water", c), resolveNodeConfig("gas", c)].filter(item => item.entity).length;
+  const individualCount = resolveIndividualConfigs(c).length;
+  return {
+    hasGrid,
+    hasSolar,
+    hasBattery,
+    topCount,
+    activeTopKinds,
+    bottomUtilities,
+    individualCount,
+  };
 }
 
 function getLayoutPreset(nodeCounts = {}) {
   const topCount = Number(nodeCounts.top || 0);
   const bottomCount = Number(nodeCounts.bottom || 0);
   const individualCount = Number(nodeCounts.individual || 0);
-  const total = topCount + bottomCount + individualCount;
 
-  if (total <= 1 && bottomCount === 0) {
-    return "simple";
-  }
-
+  /**
+   * Always use the same SVG bubble diagram as multi-source layouts.
+   * (The old "simple" horizontal rail made a single branch look like a different card.)
+   */
   if (bottomCount === 0 && individualCount <= 1 && topCount <= 3) {
     return "compact";
   }
@@ -505,7 +564,50 @@ function getLayoutPreset(nodeCounts = {}) {
   return "full";
 }
 
-function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities = false, layoutPreset = "full") {
+function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities = false, layoutPreset = "full", flowFlags = {}) {
+  const flags = flowFlags && typeof flowFlags === "object" ? flowFlags : {};
+  const topN = Number(flags.topCount) || 0;
+  const crowdedTop = topN >= 2;
+  const packedTop = topN >= 3;
+  const bottomN = Number(flags.bottomUtilities) || 0;
+  const bottomSpread = bottomN >= 2 ? 6 : 0;
+  const topSpread = crowdedTop ? 10 : 0;
+  const packSpread = packedTop ? 6 : 0;
+  const activeTop = Array.isArray(flags.activeTopKinds) ? flags.activeTopKinds : [];
+  const hasIndividuals = Number(flags.individualCount) > 0;
+  const useTopStrip = activeTop.length >= 1
+    && activeTop.length <= 2
+    && !hasIndividuals
+    && layoutPreset !== "simple"
+    && (layoutPreset === "compact" || layoutPreset === "full");
+
+  /**
+   * 1 fuente: fuente a la izquierda, casa a la derecha (misma fila).
+   * 2 fuentes: primera (orden grid→solar→batería) a la derecha, segunda a la izquierda, casa al centro.
+   * 3+ fuentes: layout triangular clásico más abajo.
+   */
+  if (useTopStrip && (kind === "home" || kind === "grid" || kind === "solar" || kind === "battery")) {
+    const rowY = hasBottomUtilities ? 42 : 51;
+    if (activeTop.length === 1) {
+      if (kind === "home") {
+        return { x: 86, y: rowY };
+      }
+      if (kind === activeTop[0]) {
+        return { x: 14, y: rowY };
+      }
+    } else if (activeTop.length === 2) {
+      if (kind === "home") {
+        return { x: 50, y: rowY };
+      }
+      if (kind === activeTop[0]) {
+        return { x: 86, y: rowY };
+      }
+      if (kind === activeTop[1]) {
+        return { x: 14, y: rowY };
+      }
+    }
+  }
+
   if (layoutPreset === "simple") {
     if (kind === "home") {
       return { x: 58, y: 42 };
@@ -532,67 +634,136 @@ function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities
 
   if (layoutPreset === "compact") {
     if (kind === "home") {
-      return { x: 53, y: 54 };
+      let y = 54;
+      if (crowdedTop) {
+        y += 6;
+      }
+      if (packedTop) {
+        y += 4;
+      }
+      return { x: 50, y: Math.min(y, 66) };
     }
     if (kind === "solar") {
-      return { x: 50, y: 20 };
+      let y = 20;
+      if (topN >= 2) {
+        y = 12;
+      }
+      if (packedTop) {
+        y = 9;
+      }
+      return { x: 50, y };
     }
     if (kind === "grid") {
-      return { x: 20, y: 54 };
+      let y = 54;
+      if (crowdedTop) {
+        y -= 8;
+      }
+      if (packedTop) {
+        y -= 4;
+      }
+      return { x: 20, y: Math.max(y, 38) };
     }
     if (kind === "battery") {
-      return { x: 80, y: 54 };
+      let y = 54;
+      if (crowdedTop) {
+        y -= 8;
+      }
+      if (packedTop) {
+        y -= 4;
+      }
+      return { x: 80, y: Math.max(y, 38) };
     }
     if (kind === "water") {
-      return total > 1 ? { x: 33, y: 80 } : { x: 41, y: 80 };
+      const y = (total > 1 ? 80 : 80) + topSpread + bottomSpread;
+      return total > 1 ? { x: 33, y } : { x: 41, y };
     }
     if (kind === "gas") {
-      return total > 1 ? { x: 67, y: 80 } : { x: 59, y: 80 };
+      const y = (total > 1 ? 80 : 80) + topSpread + bottomSpread;
+      return total > 1 ? { x: 67, y } : { x: 59, y };
     }
     if (kind === "individual") {
-      const y = hasBottomUtilities ? 88 : 80;
+      let y = hasBottomUtilities ? 88 : 80;
+      y += topSpread + bottomSpread + packSpread;
       if (total <= 1) {
-        return { x: 79, y: 54 };
+        let yHome = 54;
+        if (crowdedTop) {
+          yHome += 6;
+        }
+        if (packedTop) {
+          yHome += 4;
+        }
+        return { x: 79, y: Math.min(yHome, 66) };
       }
       const start = 28;
       const end = 72;
       const step = (end - start) / Math.max(total - 1, 1);
       return {
         x: start + (step * index),
-        y,
+        y: Math.min(y, 96),
       };
     }
   }
 
   if (kind === "home") {
-    return { x: 50, y: hasBottomUtilities ? 46 : 54 };
+    let y = hasBottomUtilities ? 48 : 54;
+    if (crowdedTop) {
+      y += 8;
+    }
+    if (packedTop) {
+      y += 6;
+    }
+    return { x: 50, y: Math.min(y, 68) };
   }
   if (kind === "solar") {
-    return { x: 50, y: 20 };
+    let y = 20;
+    if (topN >= 2) {
+      y = 11;
+    }
+    if (packedTop) {
+      y = 8;
+    }
+    return { x: 50, y };
   }
   if (kind === "grid") {
-    return { x: 21, y: hasBottomUtilities ? 48 : 54 };
+    let y = hasBottomUtilities ? 46 : 52;
+    if (crowdedTop) {
+      y -= 8;
+    }
+    if (packedTop) {
+      y -= 4;
+    }
+    return { x: 19, y: Math.max(y, 34) };
   }
   if (kind === "battery") {
-    return { x: 79, y: hasBottomUtilities ? 48 : 54 };
+    let y = hasBottomUtilities ? 46 : 52;
+    if (crowdedTop) {
+      y -= 8;
+    }
+    if (packedTop) {
+      y -= 4;
+    }
+    return { x: 81, y: Math.max(y, 34) };
   }
   if (kind === "water") {
-    return total > 1 ? { x: 32, y: 81 } : { x: 40, y: 81 };
+    const y = (total > 1 ? 81 : 81) + topSpread + bottomSpread + packSpread;
+    return total > 1 ? { x: 32, y: Math.min(y, 94) } : { x: 40, y: Math.min(y, 94) };
   }
   if (kind === "gas") {
-    return total > 1 ? { x: 68, y: 81 } : { x: 60, y: 81 };
+    const y = (total > 1 ? 81 : 81) + topSpread + bottomSpread + packSpread;
+    return total > 1 ? { x: 68, y: Math.min(y, 94) } : { x: 60, y: Math.min(y, 94) };
   }
   if (kind === "individual") {
-    const y = hasBottomUtilities ? 90 : 81;
+    let y = hasBottomUtilities ? 90 : 81;
+    y += topSpread + bottomSpread + packSpread;
     if (total <= 1) {
-      return { x: 50, y };
+      return { x: 50, y: Math.min(y, 96) };
     }
     const start = 26;
     const end = 74;
     const step = (end - start) / Math.max(total - 1, 1);
     return {
       x: start + (step * index),
-      y,
+      y: Math.min(y, 96),
     };
   }
   return { x: 50, y: 50 };
@@ -613,15 +784,43 @@ function buildFlowPath(from, to, fromRadius = 0, toRadius = 0) {
   const end = offsetPoint(to, from, toRadius);
   const dx = end.x - start.x;
   const dy = end.y - start.y;
-  const horizontalBias = Math.abs(dx) >= Math.abs(dy);
-  const cp1 = horizontalBias
-    ? { x: start.x + (dx * 0.42), y: start.y }
-    : { x: start.x, y: start.y + (dy * 0.42) };
-  const cp2 = horizontalBias
-    ? { x: end.x - (dx * 0.42), y: end.y }
-    : { x: end.x, y: end.y - (dy * 0.42) };
+  const adx = Math.abs(dx);
+  const ady = Math.abs(dy);
+  /** Pure vertical/horizontal cubics collapse to a hairline and sit under wide nodes; pull control points sideways. */
+  const nearlyVertical = adx < 5.5 && ady > adx * 1.35;
+  const nearlyHorizontal = ady < 5.5 && adx > ady * 1.35;
+  let cp1;
+  let cp2;
+  if (nearlyVertical) {
+    const pull = Math.min(20, Math.max(9, ady * 0.24));
+    const side = adx < 0.35 ? 1 : Math.sign(dx || 1);
+    cp1 = { x: start.x + (side * pull), y: start.y + (dy * 0.4) };
+    cp2 = { x: end.x + (side * pull), y: end.y - (dy * 0.4) };
+  } else if (nearlyHorizontal) {
+    /** Long mostly-horizontal spans: small vertical pull + controls near endpoints so the stroke spans almost the full chord. */
+    const pull = Math.min(4, Math.max(0.65, adx * 0.022));
+    const side = ady < 0.35 ? 1 : Math.sign(dy || 1);
+    const hx = Math.min(0.14, Math.max(0.06, adx * 0.0018));
+    cp1 = { x: start.x + (dx * hx), y: start.y + (side * pull) };
+    cp2 = { x: end.x - (dx * hx), y: end.y - (side * pull) };
+  } else {
+    const horizontalBias = adx >= ady;
+    cp1 = horizontalBias
+      ? { x: start.x + (dx * 0.42), y: start.y }
+      : { x: start.x, y: start.y + (dy * 0.42) };
+    cp2 = horizontalBias
+      ? { x: end.x - (dx * 0.42), y: end.y }
+      : { x: end.x, y: end.y - (dy * 0.42) };
+  }
 
   return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} C ${cp1.x.toFixed(2)} ${cp1.y.toFixed(2)}, ${cp2.x.toFixed(2)} ${cp2.y.toFixed(2)}, ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+}
+
+/** Straight segment between trimmed endpoints (1–2 top sources / strip layout). */
+function buildStraightFlowPath(from, to, fromRadius = 0, toRadius = 0) {
+  const start = offsetPoint(from, to, fromRadius);
+  const end = offsetPoint(to, from, toRadius);
+  return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} L ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
 }
 
 class NodaliaPowerFlowCard extends HTMLElement {
@@ -725,11 +924,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
       individual: individualCount,
     });
 
+    const base = mergeConfig(DEFAULT_CONFIG.grid_options || {}, this._config?.grid_options || {});
+    const minRows = Math.max(1, Number(base.min_rows) || 1);
     return {
-      rows: "auto",
-      columns: "full",
-      min_rows: layoutPreset === "simple" ? 3 : 3,
-      min_columns: 6,
+      rows: base.rows === undefined || base.rows === "" ? "auto" : base.rows,
+      columns: base.columns === undefined || base.columns === "" ? "full" : base.columns,
+      min_rows: layoutPreset === "simple" ? Math.max(minRows, 3) : minRows,
+      min_columns: Math.max(1, Number(base.min_columns) || 6),
     };
   }
 
@@ -920,7 +1121,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return `${formatRawValue(rawValue, decimals)}${unit ? ` ${unit}` : ""}`;
   }
 
-  _resolveNodeDescriptor(kind, configOverride = null, index = 0, total = 0, hasBottomUtilities = false) {
+  _resolveNodeDescriptor(kind, configOverride = null, index = 0, total = 0, hasBottomUtilities = false, flowFlags = {}) {
     const nodeConfig = configOverride || resolveNodeConfig(kind, this._config);
     const sourceResult = this._resolveSourceValue(nodeConfig.entity);
     const state = sourceResult.state;
@@ -946,7 +1147,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       state,
       secondary,
       unavailable,
-      position: getNodePositionForLayout(nodeKind, index, total, hasBottomUtilities, this._layoutPreset || "full"),
+      position: getNodePositionForLayout(nodeKind, index, total, hasBottomUtilities, this._layoutPreset || "full", flowFlags),
       sourceConfig: nodeConfig,
     };
   }
@@ -1012,38 +1213,111 @@ class NodaliaPowerFlowCard extends HTMLElement {
     });
   }
 
+  _powerFlowStrGridExport() {
+    let lang = "es";
+    try {
+      lang = window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") || lang;
+    } catch (_e) {
+      // ignore
+    }
+    const two = String(lang || "es").slice(0, 2).toLowerCase();
+    return POWER_FLOW_LABELS_GRID_EXPORT[two] || POWER_FLOW_LABELS_GRID_EXPORT.en || POWER_FLOW_LABELS_GRID_EXPORT.es;
+  }
+
+  /**
+   * Sin entidad en "Casa": consumo instantáneo ≈ solar + red + batería (convenciones de la tarjeta:
+   * red +import / -export, batería +descarga / -carga).
+   * Nodo red con exportación: número en positivo y subtítulo "A la red" si no hay secundario.
+   */
+  _applyDerivedHomeAndGridDisplay(nodes) {
+    const homeCfg = resolveNodeConfig("home", this._config);
+    if (!isEntitySourceConfigured(homeCfg.entity)) {
+      const grid = nodes.grid;
+      const solar = nodes.solar;
+      const battery = nodes.battery;
+      const branchCount = [grid, solar, battery].filter(n => n.entityId).length;
+      const canCompute = branchCount >= 2 || (branchCount === 1 && grid.entityId);
+
+      if (canCompute) {
+        let invalid = false;
+        let sum = 0;
+        const add = (n) => {
+          if (!n.entityId) {
+            return;
+          }
+          if (n.unavailable) {
+            invalid = true;
+            return;
+          }
+          if (!Number.isFinite(n.value)) {
+            invalid = true;
+            return;
+          }
+          sum += n.value;
+        };
+        add(grid);
+        add(solar);
+        add(battery);
+
+        if (invalid) {
+          nodes.home.unavailable = true;
+          nodes.home.value = null;
+          nodes.home.valueText = "--";
+          nodes.home.unitText = "";
+        } else {
+          nodes.home.unavailable = false;
+          nodes.home.value = sum;
+          const unit = String(grid.unit || solar.unit || battery.unit || "").trim();
+          const display = formatDisplayValue(sum, unit);
+          nodes.home.valueText = display.value;
+          nodes.home.unitText = display.unit;
+          nodes.home.state = grid.state || solar.state || battery.state;
+        }
+      }
+    }
+
+    const g = nodes.grid;
+    if (g.entityId && !g.unavailable && Number.isFinite(g.value) && g.value < -0.001) {
+      const display = formatDisplayValue(Math.abs(g.value), g.unit);
+      g.valueText = display.value;
+      g.unitText = display.unit;
+      if (!String(g.secondary || "").trim()) {
+        g.secondary = this._powerFlowStrGridExport();
+      }
+    }
+  }
+
   _getNodes() {
-    const bottomUtilities = [
-      resolveNodeConfig("water", this._config),
-      resolveNodeConfig("gas", this._config),
-    ].filter(item => item.entity).length;
+    const flowFlags = getFlowLayoutFlagsFromConfig(this._config);
+    const bottomUtilities = flowFlags.bottomUtilities;
     const individualConfigs = resolveIndividualConfigs(this._config);
-    const topCount = [
-      resolveNodeConfig("grid", this._config),
-      resolveNodeConfig("solar", this._config),
-      resolveNodeConfig("battery", this._config),
-    ].filter(item => item.entity).length;
     this._layoutPreset = getLayoutPreset({
-      top: topCount,
+      top: flowFlags.topCount,
       bottom: bottomUtilities,
       individual: individualConfigs.length,
     });
 
+    const hasBottom = bottomUtilities > 0;
     const nodes = {
-      home: this._resolveNodeDescriptor("home"),
-      grid: this._resolveNodeDescriptor("grid"),
-      solar: this._resolveNodeDescriptor("solar"),
-      battery: this._resolveNodeDescriptor("battery"),
-      water: this._resolveNodeDescriptor("water", null, 0, bottomUtilities, bottomUtilities > 0),
-      gas: this._resolveNodeDescriptor("gas", null, 1, bottomUtilities, bottomUtilities > 0),
-      individual: individualConfigs.map((config, index) => this._resolveNodeDescriptor("individual", config, index, individualConfigs.length, bottomUtilities > 0)),
+      home: this._resolveNodeDescriptor("home", null, 0, 0, hasBottom, flowFlags),
+      grid: this._resolveNodeDescriptor("grid", null, 0, 0, hasBottom, flowFlags),
+      solar: this._resolveNodeDescriptor("solar", null, 0, 0, hasBottom, flowFlags),
+      battery: this._resolveNodeDescriptor("battery", null, 0, 0, hasBottom, flowFlags),
+      water: this._resolveNodeDescriptor("water", null, 0, bottomUtilities, hasBottom, flowFlags),
+      gas: this._resolveNodeDescriptor("gas", null, 1, bottomUtilities, hasBottom, flowFlags),
+      individual: individualConfigs.map((config, index) =>
+        this._resolveNodeDescriptor("individual", config, index, individualConfigs.length, hasBottom, flowFlags),
+      ),
     };
 
     if (!nodes.home.entityId) {
       nodes.home.entityId = nodes.grid.entityId || nodes.solar.entityId || nodes.battery.entityId || "";
     }
 
+    this._applyDerivedHomeAndGridDisplay(nodes);
+
     nodes._layoutPreset = this._layoutPreset;
+    nodes._flowFlags = flowFlags;
 
     return nodes;
   }
@@ -1083,9 +1357,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const layoutPreset = nodes._layoutPreset || "full";
     const zeroLineVisible = this._shouldShowZeroLines();
     const neutralStyle = this._getLineNeutralStyle();
-    const homeRadius = layoutPreset === "simple" ? 11.8 : layoutPreset === "compact" ? 13 : 14.5;
-    const nodeRadius = layoutPreset === "simple" ? 5.1 : layoutPreset === "compact" ? 5.8 : 6.5;
-    const individualRadius = layoutPreset === "simple" ? 4.6 : layoutPreset === "compact" ? 5.1 : 5.5;
+    /** In viewBox units; distance from node centre toward the other node so the stroke meets the bubble edge. */
+    const homeRadius = layoutPreset === "simple" ? 8.8 : layoutPreset === "compact" ? 10.2 : 11.8;
+    const nodeRadius = layoutPreset === "simple" ? 4.8 : layoutPreset === "compact" ? 5.5 : 6.1;
+    const individualRadius = layoutPreset === "simple" ? 4.2 : layoutPreset === "compact" ? 4.6 : 5;
     const lineCandidates = [];
 
     const pushLine = (id, sourceNode, targetNode, value, unit, color, bidirectional = true) => {
@@ -1103,8 +1378,27 @@ class NodaliaPowerFlowCard extends HTMLElement {
         toNode = sourceNode;
       }
 
-      const fromRadius = fromNode.kind === "home" ? homeRadius : fromNode.kind === "individual" ? individualRadius : nodeRadius;
-      const toRadius = toNode.kind === "home" ? homeRadius : toNode.kind === "individual" ? individualRadius : nodeRadius;
+      const baseFromR = fromNode.kind === "home" ? homeRadius : fromNode.kind === "individual" ? individualRadius : nodeRadius;
+      const baseToR = toNode.kind === "home" ? homeRadius : toNode.kind === "individual" ? individualRadius : nodeRadius;
+      const chord = Math.hypot(
+        toNode.position.x - fromNode.position.x,
+        toNode.position.y - fromNode.position.y,
+      ) || 0.001;
+      /**
+       * Endpoints sit on the chord at `baseFromR` / `baseToR` from each centre (toward the other node).
+       * Capping each side with a small fraction of the chord (old behaviour) made long spans (1–2 sources)
+       * use tiny trims so the stroke never reached the bubble outline. Only scale down when the sum would
+       * exceed most of the chord (short diagonal / cramped layouts).
+       */
+      const maxSum = Math.max(chord * 0.92, 0.55);
+      let fromRadius = baseFromR;
+      let toRadius = baseToR;
+      const sum = fromRadius + toRadius;
+      if (sum > maxSum) {
+        const scale = maxSum / sum;
+        fromRadius *= scale;
+        toRadius *= scale;
+      }
 
       lineCandidates.push({
         id,
@@ -1141,14 +1435,42 @@ class NodaliaPowerFlowCard extends HTMLElement {
       pushLine(node.id, home, node, node.value, node.unit, node.color, true);
     });
 
+    /** Solar often shares the vertical with home; paint it last so it is not covered by other strokes at the hub. */
+    const lineStackOrder = (id) => {
+      if (id === "solar") {
+        return 50;
+      }
+      if (id === "gas") {
+        return 40;
+      }
+      if (id === "water") {
+        return 35;
+      }
+      if (id === "battery") {
+        return 25;
+      }
+      if (id === "grid") {
+        return 15;
+      }
+      return 5;
+    };
+    lineCandidates.sort((left, right) => lineStackOrder(left.id) - lineStackOrder(right.id));
+
     const maxMagnitude = Math.max(
       ...lineCandidates.filter(item => item.active).map(item => item.magnitude),
       1,
     );
 
+    const flowFlags = nodes._flowFlags || getFlowLayoutFlagsFromConfig(this._config || {});
+    const straightStripLines = flowFlags.topCount >= 1
+      && flowFlags.topCount <= 2
+      && !(flowFlags.individualCount > 0);
+
     return lineCandidates.map(line => ({
       ...line,
-      path: buildFlowPath(line.fromNode.position, line.toNode.position, line.fromRadius, line.toRadius),
+      path: straightStripLines
+        ? buildStraightFlowPath(line.fromNode.position, line.toNode.position, line.fromRadius, line.toRadius)
+        : buildFlowPath(line.fromNode.position, line.toNode.position, line.fromRadius, line.toRadius),
       duration: this._flowDuration(line.magnitude, maxMagnitude),
     }));
   }
@@ -1161,20 +1483,27 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return active[0]?.color || "#f6b73c";
   }
 
-  _renderFlowDots(line) {
+  _renderFlowDots(line, dotMetrics = {}) {
     if (!line.active) {
       return "";
     }
 
     const bubbleDuration = 5.6;
+    const glowR = Number(dotMetrics.glowR) || 2.1;
+    const coreR = Number(dotMetrics.coreR) || 1.08;
+    const coreStroke = Number(dotMetrics.coreStroke) || 0.26;
+    const viewAspect = Number(dotMetrics.viewAspect) > 0 ? Number(dotMetrics.viewAspect) : 1;
+    /** With preserveAspectRatio none, user Y is squeezed vs X on wide surfaces; taller ry in viewBox renders round on screen. */
+    const glowRy = glowR * viewAspect;
+    const coreRy = coreR * viewAspect;
     return `
       <g class="power-flow-card__dot-group" style="--dot-color:${escapeHtml(line.color)};">
-        <circle class="power-flow-card__dot-glow" r="0.92">
+        <ellipse class="power-flow-card__dot-glow" rx="${glowR.toFixed(3)}" ry="${glowRy.toFixed(3)}">
           <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"></animateMotion>
-        </circle>
-        <circle class="power-flow-card__dot-core" r="0.52">
+        </ellipse>
+        <ellipse class="power-flow-card__dot-core" rx="${coreR.toFixed(3)}" ry="${coreRy.toFixed(3)}" stroke-width="${coreStroke.toFixed(2)}">
           <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"></animateMotion>
-        </circle>
+        </ellipse>
       </g>
     `;
   }
@@ -1513,19 +1842,85 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const nodes = this._getNodes();
     const lines = this._buildLines(nodes);
     const dominantColor = this._getDominantColor(lines);
-    const flowWidth = Math.max(3, parseSizeToPixels(styles.flow_width, 4));
+    const flowWidth = Math.max(2.5, parseSizeToPixels(styles.flow_width, 3.2));
     const hasLowerNodes = Boolean(nodes.water.entityId || nodes.gas.entityId || nodes.individual.length);
     const layoutPreset = nodes._layoutPreset || "full";
+    const flowFlags = nodes._flowFlags || getFlowLayoutFlagsFromConfig(this._config);
+    const horizontalStripDiagram = flowFlags.topCount >= 1 && flowFlags.topCount <= 2 && !(flowFlags.individualCount > 0);
+    const flowDotBoost = 1 + Math.max(0, flowWidth - 2.5) * 0.065;
+    const flowDotGlowR = (horizontalStripDiagram ? 2.58 : 2.1) * flowDotBoost;
+    const flowDotCoreR = (horizontalStripDiagram ? 1.48 : 1.12) * flowDotBoost;
+    const flowDotCoreStroke = horizontalStripDiagram ? 0.33 : 0.26;
+    const surfaceLayoutExtras = (() => {
+      let add = 0;
+      if (layoutPreset !== "simple") {
+        if (flowFlags.topCount >= 3) {
+          add += 92;
+        }
+        if (flowFlags.bottomUtilities >= 2 && flowFlags.topCount >= 3) {
+          add += 28;
+        }
+        add += Math.min(Math.max(0, flowFlags.individualCount - 1), 5) * 22;
+      }
+      return add;
+    })();
+    const stripNoLower = horizontalStripDiagram && !hasLowerNodes;
+    const stripWithLower = horizontalStripDiagram && hasLowerNodes;
+    let baseSurfaceDiagram = layoutPreset === "compact" ? (hasLowerNodes ? 296 : 228) : (hasLowerNodes ? 328 : 248);
+    if (stripNoLower) {
+      baseSurfaceDiagram = layoutPreset === "compact" ? 150 : 158;
+    } else if (stripWithLower) {
+      baseSurfaceDiagram = layoutPreset === "compact" ? Math.min(baseSurfaceDiagram, 236) : Math.min(baseSurfaceDiagram, 256);
+    }
+    const surfaceFloor = layoutPreset === "simple" ? 148 : (stripNoLower ? 132 : 200);
+    const surfaceMinHeight = Math.min(
+      Math.max(
+        (layoutPreset === "simple" ? 162 : baseSurfaceDiagram) + surfaceLayoutExtras,
+        surfaceFloor,
+      ),
+      540,
+    );
+    let baseSurfaceMobile = layoutPreset === "simple" ? 144 : (hasLowerNodes ? 304 : 230);
+    if (stripNoLower) {
+      baseSurfaceMobile = layoutPreset === "compact" ? 140 : 146;
+    } else if (stripWithLower) {
+      baseSurfaceMobile = Math.min(baseSurfaceMobile, layoutPreset === "compact" ? 220 : 236);
+    }
+    const surfaceMinHeightMobile = Math.min(
+      Math.max(
+        baseSurfaceMobile + surfaceLayoutExtras,
+        layoutPreset === "simple" ? 132 : (stripNoLower ? 124 : 208),
+      ),
+      520,
+    );
+    const surfaceAspectCss = stripNoLower
+      ? "1.52 / 1"
+      : stripWithLower
+        ? "1.2 / 1"
+        : "1 / 1.02";
+    const flowDotViewAspect = (() => {
+      const m = String(surfaceAspectCss).trim().match(/^([\d.]+)\s*\/\s*([\d.]+)/);
+      if (!m) {
+        return 1;
+      }
+      const a = Number(m[1]);
+      const b = Number(m[2]);
+      if (a > 0 && b > 0) {
+        return a / b;
+      }
+      return 1;
+    })();
+    const flowDotOpts = {
+      glowR: flowDotGlowR,
+      coreR: flowDotCoreR,
+      coreStroke: flowDotCoreStroke,
+      viewAspect: flowDotViewAspect,
+    };
     const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
     const titleText = this._config?.title || this._config?.name || (layoutPreset === "simple" ? "" : "Flujo");
     const hasHeader = this._config?.show_header !== false && (Boolean(titleText) || (showDashboardButton && layoutPreset !== "simple"));
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
-    const surfaceMinHeight = layoutPreset === "simple"
-      ? 162
-      : layoutPreset === "compact"
-        ? (hasLowerNodes ? 296 : 228)
-        : (hasLowerNodes ? 328 : 248);
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1533,7 +1928,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           --power-flow-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
           --power-flow-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           display: block;
-          height: 100%;
+          height: auto;
           min-height: 0;
         }
 
@@ -1544,7 +1939,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         ha-card {
           background-color: var(--ha-card-background, var(--card-background-color, #fff));
           border-radius: ${styles.card.border_radius};
-          height: 100%;
+          height: auto;
           isolation: isolate;
           min-height: 0;
           overflow: hidden;
@@ -1573,7 +1968,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           display: flex;
           flex-direction: column;
           gap: ${styles.card.gap};
-          height: 100%;
+          height: auto;
           isolation: isolate;
           min-height: 0;
           overflow: hidden;
@@ -1581,7 +1976,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
           position: relative;
           transform-origin: center;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 160ms ease;
-          will-change: transform;
         }
 
         .power-flow-card__header {
@@ -1589,6 +1983,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
           display: grid;
           gap: 10px;
           grid-template-columns: minmax(0, 1fr) auto;
+          isolation: isolate;
+          position: relative;
+          z-index: 4;
         }
 
         .power-flow-card__header--entering {
@@ -1596,10 +1993,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__title {
+          color: var(--primary-text-color);
           font-size: ${Math.max(14, parseSizeToPixels(styles.title_size, 16))}px;
           font-weight: 700;
           line-height: 1.1;
           min-width: 0;
+          opacity: 1;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -1607,9 +2006,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__dashboard-button {
           align-items: center;
-          background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%);
-          border: 1px solid rgba(255,255,255,0.08);
+          background: linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--primary-text-color) 7%, transparent) 0%,
+            color-mix(in srgb, var(--primary-text-color) 3%, transparent) 100%
+          );
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
           border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent);
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
@@ -1621,16 +2025,28 @@ class NodaliaPowerFlowCard extends HTMLElement {
           will-change: transform;
         }
 
+        .power-flow-card__dashboard-button:hover {
+          background: linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--primary-text-color) 11%, transparent) 0%,
+            color-mix(in srgb, var(--primary-text-color) 5%, transparent) 100%
+          );
+          border-color: color-mix(in srgb, var(--primary-text-color) 20%, transparent);
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 12%, transparent),
+            0 6px 16px rgba(0, 0, 0, 0.08);
+        }
+
         .power-flow-card__dashboard-button ha-icon {
           --mdc-icon-size: 16px;
         }
 
         .power-flow-card__content {
-          flex: 1;
+          flex: 0 1 auto;
           min-height: 0;
           position: relative;
           transform-origin: center;
-          will-change: opacity, transform;
+          z-index: 1;
         }
 
         .power-flow-card__content--entering {
@@ -1647,11 +2063,17 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__surface {
           background: linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 18%, transparent) 0%, transparent 100%);
           border-radius: calc(${styles.card.border_radius} - 6px);
+          height: auto;
           min-height: ${surfaceMinHeight}px;
           position: relative;
           transform-origin: center;
-          will-change: opacity, transform;
           width: 100%;
+        }
+
+        .power-flow-card--compact .power-flow-card__surface,
+        .power-flow-card--full .power-flow-card__surface {
+          aspect-ratio: ${surfaceAspectCss};
+          max-height: none;
         }
 
         .power-flow-card__surface--entering {
@@ -1665,6 +2087,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           position: absolute;
           width: 100%;
           pointer-events: none;
+          shape-rendering: geometricPrecision;
         }
 
         .power-flow-card__svg--lines {
@@ -1672,7 +2095,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__surface--entering .power-flow-card__svg--lines {
-          animation: power-flow-card-lines-in calc(var(--power-flow-card-content-duration) * 0.92) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: power-flow-card-lines-in calc(var(--power-flow-card-content-duration) * 0.92) cubic-bezier(0.22, 0.84, 0.26, 1) forwards;
           animation-delay: 82ms;
           transform-origin: center;
         }
@@ -1682,14 +2105,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__surface--entering .power-flow-card__svg--dots {
-          animation: power-flow-card-dots-in calc(var(--power-flow-card-content-duration) * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: power-flow-card-dots-in calc(var(--power-flow-card-content-duration) * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) forwards;
           animation-delay: 124ms;
           transform-origin: center;
         }
 
         .power-flow-card__line {
           fill: none;
-          filter: url(#power-flow-soften);
           stroke-linecap: round;
           stroke-linejoin: round;
           stroke-width: ${flowWidth}px;
@@ -1701,18 +2123,17 @@ class NodaliaPowerFlowCard extends HTMLElement {
           opacity: 0.08;
           stroke-linecap: round;
           stroke-linejoin: round;
-          stroke-width: ${flowWidth * 1.5}px;
+          stroke-width: ${flowWidth * 1.35}px;
         }
 
         .power-flow-card__dot-glow {
-          fill: color-mix(in srgb, var(--dot-color) 26%, rgba(255,255,255,0.14));
-          opacity: 0.72;
+          fill: color-mix(in srgb, var(--dot-color) 32%, rgba(255,255,255,0.2));
+          opacity: 0.88;
         }
 
         .power-flow-card__dot-core {
-          fill: rgba(255, 255, 255, 0.96);
-          stroke: color-mix(in srgb, var(--dot-color) 30%, rgba(255,255,255,0.42));
-          stroke-width: 0.16;
+          fill: rgba(255, 255, 255, 0.98);
+          stroke: color-mix(in srgb, var(--dot-color) 36%, rgba(255,255,255,0.5));
         }
 
         .power-flow-card__node {
@@ -1952,30 +2373,39 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__simple-line {
           background: linear-gradient(180deg, color-mix(in srgb, var(--line-background) 100%, transparent) 0%, color-mix(in srgb, var(--line-background) 78%, transparent) 100%);
           border-radius: 999px;
-          height: ${Math.max(flowWidth, 4)}px;
+          height: ${Math.max(flowWidth, 3)}px;
           opacity: var(--line-opacity);
           position: relative;
           width: 100%;
         }
 
         .power-flow-card__simple-line.is-active {
-          box-shadow: 0 0 14px color-mix(in srgb, var(--line-color) 18%, transparent);
+          box-shadow: 0 0 12px color-mix(in srgb, var(--line-color) 16%, transparent);
         }
 
         .power-flow-card__simple-dot {
           background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.98) 0 35%, color-mix(in srgb, var(--line-color) 44%, rgba(255,255,255,0.92)) 36% 100%);
           border-radius: 999px;
           box-shadow:
-            0 0 0 4px color-mix(in srgb, var(--line-color) 14%, transparent),
-            0 0 12px color-mix(in srgb, var(--line-color) 22%, transparent);
-          height: 9px;
+            0 0 0 3px color-mix(in srgb, var(--line-color) 14%, transparent),
+            0 0 10px color-mix(in srgb, var(--line-color) 20%, transparent);
+          height: 8px;
           left: 0;
           position: absolute;
           top: 50%;
           transform: translateY(-50%);
-          width: 9px;
+          width: 8px;
           will-change: left, opacity;
           animation: power-flow-card-simple-dot linear infinite;
+        }
+
+        .power-flow-card--strip .power-flow-card__simple-dot {
+          box-shadow:
+            0 0 0 4px color-mix(in srgb, var(--line-color) 15%, transparent),
+            0 0 13px color-mix(in srgb, var(--line-color) 22%, transparent);
+          height: 12px;
+          width: 12px;
+          animation-name: power-flow-card-simple-dot-strip;
         }
 
         @keyframes power-flow-card-simple-dot {
@@ -1990,7 +2420,24 @@ class NodaliaPowerFlowCard extends HTMLElement {
             opacity: 1;
           }
           100% {
-            left: calc(100% - 9px);
+            left: calc(100% - 8px);
+            opacity: 0;
+          }
+        }
+
+        @keyframes power-flow-card-simple-dot-strip {
+          0% {
+            left: 0;
+            opacity: 0;
+          }
+          8% {
+            opacity: 1;
+          }
+          92% {
+            opacity: 1;
+          }
+          100% {
+            left: calc(100% - 12px);
             opacity: 0;
           }
         }
@@ -2069,9 +2516,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__home-icon-wrap {
           align-items: center;
-          background: rgba(255,255,255,0.06);
-          border: 1px solid rgba(255,255,255,0.08);
+          background: color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
           border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent);
           display: inline-flex;
           height: 31px;
           justify-content: center;
@@ -2127,9 +2575,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__chip {
           align-items: center;
-          background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.03) 100%);
-          border: 1px solid rgba(255,255,255,0.08);
+          background: linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--primary-text-color) 6%, transparent) 0%,
+            color-mix(in srgb, var(--primary-text-color) 3%, transparent) 100%
+          );
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
           border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           color: var(--primary-text-color);
           display: inline-flex;
           font-size: var(--chip-font-size, 10px);
@@ -2150,8 +2603,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__chip--value {
-          background: linear-gradient(180deg, color-mix(in srgb, var(--chip-tint) 14%, rgba(255,255,255,0.05)) 0%, rgba(255,255,255,0.035) 100%);
-          border-color: color-mix(in srgb, var(--chip-tint) 26%, rgba(255,255,255,0.08));
+          background: linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--chip-tint) 16%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)) 0%,
+            color-mix(in srgb, var(--primary-text-color) 4%, transparent) 100%
+          );
+          border-color: color-mix(in srgb, var(--chip-tint) 30%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 
         .power-flow-card__chip-unit {
@@ -2294,13 +2752,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         @media (max-width: 640px) {
           .power-flow-card__surface {
-            min-height: ${
-              layoutPreset === "simple"
-                ? 144
-                : hasLowerNodes
-                  ? 304
-                  : 230
-            }px;
+            min-height: ${surfaceMinHeightMobile}px;
           }
 
           .power-flow-card__dashboard-button {
@@ -2319,7 +2771,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
         `}
       </style>
-      <ha-card class="power-flow-card power-flow-card--${layoutPreset}">
+      <ha-card class="power-flow-card power-flow-card--${layoutPreset}${horizontalStripDiagram ? " power-flow-card--strip" : ""}">
         ${
           hasHeader
             ? `
@@ -2347,13 +2799,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
               })
               : `
                 <div class="power-flow-card__surface ${shouldAnimateEntrance ? "power-flow-card__surface--entering" : ""}">
-                  <svg class="power-flow-card__svg power-flow-card__svg--lines" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                  <svg class="power-flow-card__svg power-flow-card__svg--lines" viewBox="0 0 100 100" preserveAspectRatio="none" shape-rendering="geometricPrecision">
                     <defs>
                       <filter id="power-flow-glow" x="-30%" y="-30%" width="160%" height="160%">
-                        <feGaussianBlur stdDeviation="1.2"></feGaussianBlur>
+                        <feGaussianBlur stdDeviation="0.85"></feGaussianBlur>
                       </filter>
                       <filter id="power-flow-soften" x="-20%" y="-20%" width="140%" height="140%">
-                        <feGaussianBlur stdDeviation="0.18"></feGaussianBlur>
+                        <feGaussianBlur stdDeviation="0.06"></feGaussianBlur>
                       </filter>
                     </defs>
                     ${lines.map(line => `
@@ -2396,8 +2848,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
                     animateEntrance: shouldAnimateEntrance,
                     enterDelay: this._getNodeAnimationDelay(node, index),
                   })).join("")}
-                  <svg class="power-flow-card__svg power-flow-card__svg--dots" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
-                    ${lines.map(line => this._renderFlowDots(line)).join("")}
+                  <svg class="power-flow-card__svg power-flow-card__svg--dots" viewBox="0 0 100 100" preserveAspectRatio="none" shape-rendering="geometricPrecision">
+                    ${lines.map(line => this._renderFlowDots(line, flowDotOpts)).join("")}
                   </svg>
                 </div>
               `
@@ -2793,7 +3245,9 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -2936,8 +3390,8 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
           </div>
         </section>
 
-        ${this._renderNodeSection("Red", "Sensor de red con potencia positiva de consumo y negativa de exportacion, o split de consumo/produccion.", "entities.grid", grid)}
-        ${this._renderNodeSection("Casa", "Entidad central del hogar que se abrira en more-info si pulsas la burbuja central.", "entities.home", home)}
+        ${this._renderNodeSection("Red", "Sensor de red: positivo importacion, negativo exportacion (split consumo/produccion permitido). Si exportas, el valor se muestra en positivo y el subtitulo indica entrega a la red.", "entities.grid", grid)}
+        ${this._renderNodeSection("Casa", "Opcional: si dejas la entidad vacia, el consumo se calcula como solar + red + bateria (mismos signos que en esos nodos). Si configuras entidad, se usa el sensor. More-info usa red/solar/bateria si no hay entidad casa.", "entities.home", home)}
         ${this._renderNodeSection("Solar", "Produccion solar instantanea.", "entities.solar", solar)}
         ${this._renderNodeSection("Bateria", "Potencia de bateria. Positiva descarga hacia casa, negativa carga desde casa.", "entities.battery", battery)}
         ${this._renderNodeSection("Agua", "Caudal o consumo de agua hacia el hogar.", "entities.water", water)}
@@ -3132,6 +3586,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
   _ensureEditorControlsReady() {
     this._watchEditorControlTag("ha-entity-picker");
+    this._watchEditorControlTag("ha-selector");
     this._watchEditorControlTag("ha-icon-picker");
   }
 
@@ -3560,6 +4015,13 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
       if (placeholder) {
         control.setAttribute("placeholder", placeholder);
       }
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = {
+        entity: {
+          domain: ["sensor", "number", "input_number"],
+        },
+      };
     } else {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
@@ -3711,7 +4173,9 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -3821,6 +4285,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
         .editor-field ha-icon-picker,
         .editor-field ha-entity-picker,
+        .editor-field ha-selector,
         .editor-control-host,
         .editor-control-host > * {
           display: block;
@@ -3924,8 +4389,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
           </div>
         </section>
 
-        ${this._renderNodeSection("Red", "Sensor de red con potencia positiva de consumo y negativa de exportacion.", "entities.grid", grid)}
-        ${this._renderNodeSection("Casa", "Entidad central del hogar y objetivo del more-info principal.", "entities.home", home)}
+        ${this._renderNodeSection("Red", "Positivo importacion, negativo exportacion. Si exportas, valor en positivo y subtitulo «A la red» (o traduccion).", "entities.grid", grid)}
+        ${this._renderNodeSection("Casa", "Opcional: entidad vacia = consumo calculado (solar + red + bateria). Con entidad, valor del sensor.", "entities.home", home)}
         ${this._renderNodeSection("Solar", "Produccion solar instantanea.", "entities.solar", solar)}
         ${this._renderNodeSection("Bateria", "Potencia de bateria. Positiva descarga, negativa carga.", "entities.battery", battery)}
         ${this._renderNodeSection("Agua", "Caudal o consumo de agua hacia el hogar.", "entities.water", water)}

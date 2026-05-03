@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-person-card";
 const EDITOR_TAG = "nodalia-person-card-editor";
-const CARD_VERSION = "0.9.0";
+const CARD_VERSION = "0.9.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -413,7 +413,8 @@ class NodaliaPersonCard extends HTMLElement {
   }
 
   _getTitle(state) {
-    return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Persona";
+    const fallback = this._personUiCopy().defaultName;
+    return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || fallback;
   }
 
   _getPersonPicture(state) {
@@ -800,11 +801,30 @@ class NodaliaPersonCard extends HTMLElement {
     this._performTapAction();
   }
 
+  _personUiCopy() {
+    const NI = window.NodaliaI18n;
+    if (!NI?.strings || !NI.resolveLanguage) {
+      return {
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Configura `entity` para mostrar la tarjeta.",
+        defaultName: "Persona",
+      };
+    }
+    const lang = NI.resolveLanguage(this._hass, this._config?.language);
+    const person = NI.strings(lang).person || {};
+    return {
+      emptyTitle: person.emptyTitle || "Nodalia Person Card",
+      emptyBody: person.emptyBody || "Configura `entity` para mostrar la tarjeta.",
+      defaultName: person.defaultName || "Persona",
+    };
+  }
+
   _renderEmptyState() {
+    const ui = this._personUiCopy();
     return `
       <ha-card class="person-card person-card--empty">
-        <div class="person-card__empty-title">Nodalia Person Card</div>
-        <div class="person-card__empty-text">Configura \`entity\` para mostrar la tarjeta.</div>
+        <div class="person-card__empty-title">${escapeHtml(ui.emptyTitle)}</div>
+        <div class="person-card__empty-text">${escapeHtml(ui.emptyBody)}</div>
       </ha-card>
     `;
   }
@@ -867,8 +887,9 @@ class NodaliaPersonCard extends HTMLElement {
         :host {
           --person-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --person-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
-          display: block;
-          height: ${singleRowLayout ? "auto" : "100%"};
+          display: flex;
+          flex-direction: column;
+          height: 100%;
           min-height: 0;
         }
 
@@ -882,7 +903,10 @@ class NodaliaPersonCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
-          height: ${singleRowLayout ? "auto" : "100%"};
+          display: flex;
+          flex-direction: column;
+          flex: 1 1 auto;
+          justify-content: center;
           min-height: 0;
           overflow: hidden;
           position: relative;
@@ -902,22 +926,31 @@ class NodaliaPersonCard extends HTMLElement {
 
         .person-card__content {
           align-items: center;
-          align-content: center;
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
-          display: grid;
+          display: flex;
+          flex: ${singleRowLayout ? "0 0 auto" : "1 1 auto"};
+          flex-direction: row;
           gap: ${effectiveGap};
-          grid-template-columns: ${avatarTrackSize} minmax(0, 1fr);
-          grid-template-rows: 1fr;
           height: ${singleRowLayout ? "auto" : "100%"};
-          min-height: ${effectiveContentMinHeight};
+          min-height: ${singleRowLayout ? "0" : effectiveContentMinHeight};
           min-width: 0;
           padding: ${effectivePadding};
           position: relative;
-          place-items: center start;
           transform-origin: center;
           transition: transform 160ms ease;
           will-change: transform;
           z-index: 1;
+        }
+
+        .person-card__avatar-track {
+          align-items: center;
+          align-self: stretch;
+          display: flex;
+          flex: 0 0 ${avatarTrackSize};
+          justify-content: center;
+          min-height: 0;
+          min-width: 0;
+          width: ${avatarTrackSize};
         }
 
         .person-card__content--entering {
@@ -929,18 +962,12 @@ class NodaliaPersonCard extends HTMLElement {
         }
 
         .person-card--single-row {
-          height: auto;
           min-height: ${effectiveCardHeightPx}px;
         }
 
-        .person-card--single-row .person-card__content {
-          padding-bottom: ${singleRowPaddingY - 1}px;
-          padding-top: ${singleRowPaddingY + 1}px;
-        }
-
         .person-card__avatar {
-          align-self: center;
           align-items: center;
+          flex-shrink: 0;
           background: ${styles.avatar.background};
           border: 1px solid color-mix(in srgb, ${accentColor} 16%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
           border-radius: 999px;
@@ -1014,11 +1041,10 @@ class NodaliaPersonCard extends HTMLElement {
 
         .person-card__copy {
           align-content: center;
-          align-self: center;
           display: grid;
+          flex: 1 1 auto;
           gap: ${singleRowLayout ? "4px" : "6px"};
           min-width: 0;
-          width: 100%;
         }
 
         .person-card__copy--entering {
@@ -1156,7 +1182,8 @@ class NodaliaPersonCard extends HTMLElement {
       </style>
       <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""}">
         <div class="person-card__content ${animateWithPicture ? "person-card__content--entering" : ""}" ${canRunPrimaryAction ? 'data-person-action="primary"' : ""}>
-          <div class="person-card__avatar ${animateWithPicture ? "person-card__avatar--entering" : ""}">
+          <div class="person-card__avatar-track">
+            <div class="person-card__avatar ${animateWithPicture ? "person-card__avatar--entering" : ""}">
             ${
               picture
                 ? `<img src="${escapeHtml(picture)}" alt="${escapeHtml(title)}" />`
@@ -1167,6 +1194,7 @@ class NodaliaPersonCard extends HTMLElement {
                 ? `<span class="person-card__badge" style="--badge-color:${escapeHtml(badge.color)};"><ha-icon icon="${escapeHtml(badge.icon)}"></ha-icon></span>`
                 : ""
             }
+            </div>
           </div>
           <div class="person-card__copy ${animateWithPicture ? "person-card__copy--entering" : ""}">
             <div class="person-card__title">${escapeHtml(title)}</div>
@@ -1757,7 +1785,9 @@ class NodaliaPersonCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -1969,7 +1999,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
               fullWidth: true,
             })}
             ${this._renderSelectField(
-              "Accion al tocar",
+              "Acción al tocar",
               "tap_action",
               tapAction,
               [

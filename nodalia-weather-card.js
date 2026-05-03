@@ -3551,7 +3551,9 @@ class NodaliaWeatherCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -3762,7 +3764,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
               fullWidth: true,
             })}
             ${this._renderSelectField(
-              "Accion al tocar",
+              "Acción al tocar",
               "tap_action",
               tapAction,
               [

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.13.2";
+const CARD_VERSION = "0.13.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -6714,7 +6714,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           width: ${controlSize}px;
         }
 
-        .advance-vacuum-card__control:hover,
+        .advance-vacuum-card__control:hover {
+          transform: translateY(-1px);
+        }
+
         .advance-vacuum-card__mode-button:hover {
           transform: translateY(-1px);
         }
@@ -6739,36 +6742,49 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__modes {
           display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
           justify-content: center;
           width: 100%;
         }
 
+        .advance-vacuum-card__modes-bubble {
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          border-radius: 999px;
+          display: inline-flex;
+          flex-wrap: wrap;
+          gap: 3px;
+          justify-content: center;
+          max-width: 100%;
+          padding: 3px;
+        }
+
         .advance-vacuum-card__mode-button {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          background: transparent;
+          border: 1px solid transparent;
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          box-shadow: none;
           color: var(--secondary-text-color);
           display: inline-flex;
           font-size: 12px;
           font-weight: 600;
           gap: 8px;
-          min-height: 34px;
-          padding: 0 12px;
+          min-height: 30px;
+          padding: 0 11px;
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 180ms ease, color 160ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.24, 1);
+        }
+
+        .advance-vacuum-card__mode-button:hover {
+          background: color-mix(in srgb, ${accentColor} 12%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
+          box-shadow: 0 6px 14px color-mix(in srgb, ${accentColor} 10%, transparent);
         }
 
         .advance-vacuum-card__mode-button.is-active {
-          background: color-mix(in srgb, var(--primary-color) 22%, color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)));
-          border-color: color-mix(in srgb, var(--primary-color) 52%, color-mix(in srgb, ${accentColor} 38%, var(--primary-text-color)));
+          background: color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 7%, transparent));
+          border-color: color-mix(in srgb, ${accentColor} 35%, transparent);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent);
           color: var(--primary-text-color);
           font-weight: 700;
-          box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-color) 18%, transparent),
-            0 0 0 2px color-mix(in srgb, var(--primary-color) 38%, transparent),
-            0 10px 22px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.14));
         }
 
         .advance-vacuum-card__mode-button ha-icon {
@@ -7572,12 +7588,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           !isCleaningSessionActive
             ? `
               <div class="advance-vacuum-card__modes">
+                <div class="advance-vacuum-card__modes-bubble" role="tablist" aria-label="${escapeHtml(advanceVacuumStrings?.aria?.modeTablist || "Modo de limpieza")}">
                 ${modes.map(mode => `
-                  <button class="advance-vacuum-card__mode-button ${mode.id === currentMode.id ? "is-active" : ""}" data-mode-id="${escapeHtml(mode.id)}">
+                  <button type="button" class="advance-vacuum-card__mode-button ${mode.id === currentMode.id ? "is-active" : ""}" data-mode-id="${escapeHtml(mode.id)}" role="tab" aria-selected="${mode.id === currentMode.id ? "true" : "false"}">
                     ${["all", "rooms", "zone", "routines"].includes(mode.id) ? "" : `<ha-icon icon="${escapeHtml(mode.icon)}"></ha-icon>`}
                     <span>${escapeHtml(mode.label)}</span>
                   </button>
                 `).join("")}
+                </div>
               </div>
             `
             : ""
@@ -8260,7 +8278,9 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
