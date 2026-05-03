@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.19] - 2026-05-04
+
+### Changed
+
+- **Advance vacuum card**: Los botones de modo (**Todo**, **Habitaciones**, **Zona**, **Rutinas**, etc.) van dentro de una **burbuja segmentada** al estilo de la weather card (contenedor con fondo/borde redondeado y pestañas internas transparentes; la activa resalta dentro). **`nodalia-advance-vacuum-card.js`**: `CARD_VERSION` **0.13.3**. **`nodalia-i18n.js`**: `advanceVacuum.aria.modeTablist` para el `aria-label` del `tablist`.
+
+## [0.3.0-beta.18] - 2026-05-04
+
+### Changed
+
+- **Power flow card**: El **punto animado** del flujo de energía era demasiado pequeño en coords del viewBox; **radios** del halo y del núcleo aumentados (`r` ~0,92/0,52 → ~1,65/0,95), **borde** del núcleo algo más grueso y halo un poco más visible. **`nodalia-power-flow-card.js`**: `CARD_VERSION` **0.16.5**.
+
+## [0.3.0-beta.17] - 2026-05-04
+
+### Fixed
+
+- **Power flow card**: El trazo seguía corto porque los **radios de recorte** eran demasiado grandes respecto a la **cuerda** entre nodos; ahora cada extremo usa `min(radioBase, 5.5% de la distancia)` (mínimo 0,3). En curvas casi horizontales los **puntos de control** van casi en línea con los extremos (`hx` pequeño) para que el trazo ocupe casi todo el hueco. Quitado **`vector-effect: non-scaling-stroke`** en las líneas (evita desalineación visual de los extremos). **Título «Flujo»** que se oscurecía al pasar el ratón: **`will-change: transform`** en la tarjeta/contenido/superficie eliminado (capas GPU raras), cabecera con **`z-index: 4`**, título con **`color` / `opacity`** explícitos, animación de líneas/puntos con **`forwards`** en lugar de **`both`**. **`nodalia-power-flow-card.js`**: `CARD_VERSION` **0.16.4**.
+
 ## [0.3.0-beta.16] - 2026-05-04
 
 ### Fixed

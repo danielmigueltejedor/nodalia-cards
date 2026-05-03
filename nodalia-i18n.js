@@ -142,6 +142,9 @@
           routines: "Rutinas",
           goto: "Ir a punto",
         },
+        aria: {
+          modeTablist: "Modo de limpieza",
+        },
         panelModes: {
           smart: "Inteligente",
           vacuum_mop: "Aspirado y fregado",
@@ -572,6 +575,9 @@
           zone: "Zone",
           routines: "Routines",
           goto: "Go to point",
+        },
+        aria: {
+          modeTablist: "Cleaning mode",
         },
         panelModes: {
           smart: "Smart",
@@ -1004,6 +1010,9 @@
           routines: "Routinen",
           goto: "Punkt anfahren",
         },
+        aria: {
+          modeTablist: "Reinigungsmodus",
+        },
         panelModes: {
           smart: "Smart",
           vacuum_mop: "Saugen & Wischen",
@@ -1434,6 +1443,9 @@
           zone: "Zone",
           routines: "Routines",
           goto: "Aller au point",
+        },
+        aria: {
+          modeTablist: "Mode de nettoyage",
         },
         panelModes: {
           smart: "Intelligent",
@@ -1866,6 +1878,9 @@
           routines: "Routine",
           goto: "Vai al punto",
         },
+        aria: {
+          modeTablist: "Modalità di pulizia",
+        },
         panelModes: {
           smart: "Smart",
           vacuum_mop: "Aspira e lava",
@@ -2297,6 +2312,9 @@
           routines: "Routes",
           goto: "Ga naar punt",
         },
+        aria: {
+          modeTablist: "Schoonmaakmodus",
+        },
         panelModes: {
           smart: "Slim",
           vacuum_mop: "Zuigen & dweilen",
@@ -2727,6 +2745,9 @@
           zone: "Zona",
           routines: "Rotinas",
           goto: "Ir ao ponto"
+        },
+        aria: {
+          modeTablist: "Modo de limpeza"
         },
         panelModes: {
           smart: "Inteligente",
@@ -3168,6 +3189,9 @@
           routines: "Сценарии",
           goto: "К точке"
         },
+        aria: {
+          modeTablist: "Режим уборки"
+        },
         panelModes: {
           smart: "Умный",
           vacuum_mop: "Пылесос и мытьё",
@@ -3607,6 +3631,9 @@
           zone: "Ζώνη",
           routines: "Ρουτίνες",
           goto: "Μετάβαση σε σημείο"
+        },
+        aria: {
+          modeTablist: "Λειτουργία καθαρισμού"
         },
         panelModes: {
           smart: "Έξυπνο",
@@ -4048,6 +4075,9 @@
           routines: "例行程序",
           goto: "前往点"
         },
+        aria: {
+          modeTablist: "清洁模式"
+        },
         panelModes: {
           smart: "智能",
           vacuum_mop: "吸尘与拖地",
@@ -4487,6 +4517,9 @@
           zone: "Zonă",
           routines: "Rutine",
           goto: "Mergi la punct"
+        },
+        aria: {
+          modeTablist: "Mod de curățare"
         },
         panelModes: {
           smart: "Inteligent",

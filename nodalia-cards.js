@@ -143,6 +143,9 @@
           routines: "Rutinas",
           goto: "Ir a punto",
         },
+        aria: {
+          modeTablist: "Modo de limpieza",
+        },
         panelModes: {
           smart: "Inteligente",
           vacuum_mop: "Aspirado y fregado",
@@ -573,6 +576,9 @@
           zone: "Zone",
           routines: "Routines",
           goto: "Go to point",
+        },
+        aria: {
+          modeTablist: "Cleaning mode",
         },
         panelModes: {
           smart: "Smart",
@@ -1005,6 +1011,9 @@
           routines: "Routinen",
           goto: "Punkt anfahren",
         },
+        aria: {
+          modeTablist: "Reinigungsmodus",
+        },
         panelModes: {
           smart: "Smart",
           vacuum_mop: "Saugen & Wischen",
@@ -1435,6 +1444,9 @@
           zone: "Zone",
           routines: "Routines",
           goto: "Aller au point",
+        },
+        aria: {
+          modeTablist: "Mode de nettoyage",
         },
         panelModes: {
           smart: "Intelligent",
@@ -1867,6 +1879,9 @@
           routines: "Routine",
           goto: "Vai al punto",
         },
+        aria: {
+          modeTablist: "Modalità di pulizia",
+        },
         panelModes: {
           smart: "Smart",
           vacuum_mop: "Aspira e lava",
@@ -2298,6 +2313,9 @@
           routines: "Routes",
           goto: "Ga naar punt",
         },
+        aria: {
+          modeTablist: "Schoonmaakmodus",
+        },
         panelModes: {
           smart: "Slim",
           vacuum_mop: "Zuigen & dweilen",
@@ -2728,6 +2746,9 @@
           zone: "Zona",
           routines: "Rotinas",
           goto: "Ir ao ponto"
+        },
+        aria: {
+          modeTablist: "Modo de limpeza"
         },
         panelModes: {
           smart: "Inteligente",
@@ -3169,6 +3190,9 @@
           routines: "Сценарии",
           goto: "К точке"
         },
+        aria: {
+          modeTablist: "Режим уборки"
+        },
         panelModes: {
           smart: "Умный",
           vacuum_mop: "Пылесос и мытьё",
@@ -3608,6 +3632,9 @@
           zone: "Ζώνη",
           routines: "Ρουτίνες",
           goto: "Μετάβαση σε σημείο"
+        },
+        aria: {
+          modeTablist: "Λειτουργία καθαρισμού"
         },
         panelModes: {
           smart: "Έξυπνο",
@@ -4049,6 +4076,9 @@
           routines: "例行程序",
           goto: "前往点"
         },
+        aria: {
+          modeTablist: "清洁模式"
+        },
         panelModes: {
           smart: "智能",
           vacuum_mop: "吸尘与拖地",
@@ -4488,6 +4518,9 @@
           zone: "Zonă",
           routines: "Rutine",
           goto: "Mergi la punct"
+        },
+        aria: {
+          modeTablist: "Mod de curățare"
         },
         panelModes: {
           smart: "Inteligent",
@@ -45363,7 +45396,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "0.16.3";
+const CARD_VERSION = "0.16.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -46160,11 +46193,12 @@ function buildFlowPath(from, to, fromRadius = 0, toRadius = 0) {
     cp1 = { x: start.x + (side * pull), y: start.y + (dy * 0.4) };
     cp2 = { x: end.x + (side * pull), y: end.y - (dy * 0.4) };
   } else if (nearlyHorizontal) {
-    /** Long mostly-horizontal spans: keep pull small so the curve hugs the chord and meets the nodes cleanly. */
-    const pull = Math.min(5, Math.max(0.9, adx * 0.028));
+    /** Long mostly-horizontal spans: small vertical pull + controls near endpoints so the stroke spans almost the full chord. */
+    const pull = Math.min(4, Math.max(0.65, adx * 0.022));
     const side = ady < 0.35 ? 1 : Math.sign(dy || 1);
-    cp1 = { x: start.x + (dx * 0.4), y: start.y + (side * pull) };
-    cp2 = { x: end.x - (dx * 0.4), y: end.y - (side * pull) };
+    const hx = Math.min(0.14, Math.max(0.06, adx * 0.0018));
+    cp1 = { x: start.x + (dx * hx), y: start.y + (side * pull) };
+    cp2 = { x: end.x - (dx * hx), y: end.y - (side * pull) };
   } else {
     const horizontalBias = adx >= ady;
     cp1 = horizontalBias
@@ -46733,8 +46767,16 @@ class NodaliaPowerFlowCard extends HTMLElement {
         toNode = sourceNode;
       }
 
-      const fromRadius = fromNode.kind === "home" ? homeRadius : fromNode.kind === "individual" ? individualRadius : nodeRadius;
-      const toRadius = toNode.kind === "home" ? homeRadius : toNode.kind === "individual" ? individualRadius : nodeRadius;
+      const baseFromR = fromNode.kind === "home" ? homeRadius : fromNode.kind === "individual" ? individualRadius : nodeRadius;
+      const baseToR = toNode.kind === "home" ? homeRadius : toNode.kind === "individual" ? individualRadius : nodeRadius;
+      const chord = Math.hypot(
+        toNode.position.x - fromNode.position.x,
+        toNode.position.y - fromNode.position.y,
+      ) || 0.001;
+      /** Cap trim so endpoints stay near node centres (large fixed radii left a visible gap on long chords). */
+      const maxTrim = Math.max(0.3, chord * 0.055);
+      const fromRadius = Math.min(baseFromR, maxTrim);
+      const toRadius = Math.min(baseToR, maxTrim);
 
       lineCandidates.push({
         id,
@@ -46820,10 +46862,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const bubbleDuration = 5.6;
     return `
       <g class="power-flow-card__dot-group" style="--dot-color:${escapeHtml(line.color)};">
-        <circle class="power-flow-card__dot-glow" r="0.92">
+        <circle class="power-flow-card__dot-glow" r="1.65">
           <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"></animateMotion>
         </circle>
-        <circle class="power-flow-card__dot-core" r="0.52">
+        <circle class="power-flow-card__dot-core" r="0.95">
           <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"></animateMotion>
         </circle>
       </g>
@@ -47276,7 +47318,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
           position: relative;
           transform-origin: center;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 160ms ease;
-          will-change: transform;
         }
 
         .power-flow-card__header {
@@ -47284,6 +47325,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
           display: grid;
           gap: 10px;
           grid-template-columns: minmax(0, 1fr) auto;
+          isolation: isolate;
+          position: relative;
+          z-index: 4;
         }
 
         .power-flow-card__header--entering {
@@ -47291,10 +47335,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__title {
+          color: var(--primary-text-color);
           font-size: ${Math.max(14, parseSizeToPixels(styles.title_size, 16))}px;
           font-weight: 700;
           line-height: 1.1;
           min-width: 0;
+          opacity: 1;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -47325,7 +47371,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           min-height: 0;
           position: relative;
           transform-origin: center;
-          will-change: opacity, transform;
+          z-index: 1;
         }
 
         .power-flow-card__content--entering {
@@ -47346,7 +47392,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
           min-height: ${surfaceMinHeight}px;
           position: relative;
           transform-origin: center;
-          will-change: opacity, transform;
           width: 100%;
         }
 
@@ -47375,7 +47420,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__surface--entering .power-flow-card__svg--lines {
-          animation: power-flow-card-lines-in calc(var(--power-flow-card-content-duration) * 0.92) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: power-flow-card-lines-in calc(var(--power-flow-card-content-duration) * 0.92) cubic-bezier(0.22, 0.84, 0.26, 1) forwards;
           animation-delay: 82ms;
           transform-origin: center;
         }
@@ -47385,7 +47430,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__surface--entering .power-flow-card__svg--dots {
-          animation: power-flow-card-dots-in calc(var(--power-flow-card-content-duration) * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: power-flow-card-dots-in calc(var(--power-flow-card-content-duration) * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) forwards;
           animation-delay: 124ms;
           transform-origin: center;
         }
@@ -47395,7 +47440,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
           stroke-linecap: round;
           stroke-linejoin: round;
           stroke-width: ${flowWidth}px;
-          vector-effect: non-scaling-stroke;
         }
 
         .power-flow-card__line-glow {
@@ -47405,18 +47449,17 @@ class NodaliaPowerFlowCard extends HTMLElement {
           stroke-linecap: round;
           stroke-linejoin: round;
           stroke-width: ${flowWidth * 1.5}px;
-          vector-effect: non-scaling-stroke;
         }
 
         .power-flow-card__dot-glow {
-          fill: color-mix(in srgb, var(--dot-color) 26%, rgba(255,255,255,0.14));
-          opacity: 0.72;
+          fill: color-mix(in srgb, var(--dot-color) 32%, rgba(255,255,255,0.2));
+          opacity: 0.88;
         }
 
         .power-flow-card__dot-core {
-          fill: rgba(255, 255, 255, 0.96);
-          stroke: color-mix(in srgb, var(--dot-color) 30%, rgba(255,255,255,0.42));
-          stroke-width: 0.16;
+          fill: rgba(255, 255, 255, 0.98);
+          stroke: color-mix(in srgb, var(--dot-color) 36%, rgba(255,255,255,0.5));
+          stroke-width: 0.24;
         }
 
         .power-flow-card__node {
@@ -56617,7 +56660,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.13.2";
+const CARD_VERSION = "0.13.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -63331,7 +63374,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           width: ${controlSize}px;
         }
 
-        .advance-vacuum-card__control:hover,
+        .advance-vacuum-card__control:hover {
+          transform: translateY(-1px);
+        }
+
         .advance-vacuum-card__mode-button:hover {
           transform: translateY(-1px);
         }
@@ -63356,36 +63402,49 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__modes {
           display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
           justify-content: center;
           width: 100%;
         }
 
+        .advance-vacuum-card__modes-bubble {
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          border-radius: 999px;
+          display: inline-flex;
+          flex-wrap: wrap;
+          gap: 3px;
+          justify-content: center;
+          max-width: 100%;
+          padding: 3px;
+        }
+
         .advance-vacuum-card__mode-button {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          background: transparent;
+          border: 1px solid transparent;
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          box-shadow: none;
           color: var(--secondary-text-color);
           display: inline-flex;
           font-size: 12px;
           font-weight: 600;
           gap: 8px;
-          min-height: 34px;
-          padding: 0 12px;
+          min-height: 30px;
+          padding: 0 11px;
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 180ms ease, color 160ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.24, 1);
+        }
+
+        .advance-vacuum-card__mode-button:hover {
+          background: color-mix(in srgb, ${accentColor} 12%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
+          box-shadow: 0 6px 14px color-mix(in srgb, ${accentColor} 10%, transparent);
         }
 
         .advance-vacuum-card__mode-button.is-active {
-          background: color-mix(in srgb, var(--primary-color) 22%, color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)));
-          border-color: color-mix(in srgb, var(--primary-color) 52%, color-mix(in srgb, ${accentColor} 38%, var(--primary-text-color)));
+          background: color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 7%, transparent));
+          border-color: color-mix(in srgb, ${accentColor} 35%, transparent);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent);
           color: var(--primary-text-color);
           font-weight: 700;
-          box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-color) 18%, transparent),
-            0 0 0 2px color-mix(in srgb, var(--primary-color) 38%, transparent),
-            0 10px 22px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.14));
         }
 
         .advance-vacuum-card__mode-button ha-icon {
@@ -64189,12 +64248,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           !isCleaningSessionActive
             ? `
               <div class="advance-vacuum-card__modes">
+                <div class="advance-vacuum-card__modes-bubble" role="tablist" aria-label="${escapeHtml(advanceVacuumStrings?.aria?.modeTablist || "Modo de limpieza")}">
                 ${modes.map(mode => `
-                  <button class="advance-vacuum-card__mode-button ${mode.id === currentMode.id ? "is-active" : ""}" data-mode-id="${escapeHtml(mode.id)}">
+                  <button type="button" class="advance-vacuum-card__mode-button ${mode.id === currentMode.id ? "is-active" : ""}" data-mode-id="${escapeHtml(mode.id)}" role="tab" aria-selected="${mode.id === currentMode.id ? "true" : "false"}">
                     ${["all", "rooms", "zone", "routines"].includes(mode.id) ? "" : `<ha-icon icon="${escapeHtml(mode.icon)}"></ha-icon>`}
                     <span>${escapeHtml(mode.label)}</span>
                   </button>
                 `).join("")}
+                </div>
               </div>
             `
             : ""
@@ -82953,4 +83014,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.3.0-beta.16","contentSha256_12":"0e871d9f20fd"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.3.0-beta.19","contentSha256_12":"9c5e809c7b7b"};}
