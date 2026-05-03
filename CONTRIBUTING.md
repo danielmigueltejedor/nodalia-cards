@@ -129,11 +129,30 @@ Community help is especially useful for languages other than Spanish and English
 
 ## 🏷️ Releases and beta versions
 
-Stable releases (**`0.2.x`**, **`0.3.x`**, …) ship from **`main`**. Prereleases are cut from the **`beta`** branch for translation polish and card work ahead of the next minor.
+Stable releases (**`0.2.x`**, **`0.3.x`**, **`0.4.x`**, …) ship from **`main`**. Prereleases are cut from the **`beta`** branch for translation polish and card work ahead of the next minor.
 
-**Beta tags and versions:** use **`v0.3.0-beta.XX`** on GitHub with **`XX` as two digits** (`01`, `02`, … `09`, `10`, …) so release lists stay ordered. Example: third beta → **`v0.3.0-beta.03`**. Keep **`package.json`** `version` identical to that prerelease string (without the leading `v`) so HACS and `__NODALIA_BUNDLE__` match the tag.
+**Beta tags and versions:** use **`v0.4.0-beta.XX`** on GitHub with **`XX` as two digits** (`01`, `02`, … `09`, `10`, …) so release lists stay ordered. Example: third beta → **`v0.4.0-beta.03`**. Keep **`package.json`** `version` identical to that prerelease string (without the leading `v`) so HACS and `__NODALIA_BUNDLE__` match the tag.
 
-For maintainers: each shipped beta—add a section to **`CHANGELOG.md`**, bump the **Current beta** badge in **`README.md`** (same file on **`main`** and **`beta`**), tag **`v0.3.0-beta.XX`**, and run **`npm run bundle`** when artefacts change.
+For maintainers: each shipped beta—add a section to **`CHANGELOG.md`**, bump the **Current beta** (or **Next prerelease**) badge in **`README.md`** as appropriate, tag **`v0.4.0-beta.XX`**, and run **`npm run bundle`** when artefacts change.
+
+### Stable first, then the next beta line
+
+Use this order so **`main`** and **`beta`** stay predictable for HACS and tags.
+
+1. **`main` (stable)**  
+   - Set **`package.json`** `version` to the stable release (e.g. **`0.3.0`**).  
+   - Ensure **`CHANGELOG.md`** includes the **`[0.3.0]`** (or matching) section.  
+   - Run **`npm run bundle`**, commit, push **`main`**.  
+   - Tag **`v0.3.0`** (or matching) and publish the GitHub **Release**.
+
+2. **`beta` (first prerelease of the next minor)**  
+   - Merge **`main`** into **`beta`**.  
+   - Bump **`package.json`** to **`0.4.0-beta.01`** (first **`0.4.x`** prerelease; use **`beta.01`**, **`beta.02`**, … with **two digits** in the tag: **`v0.4.0-beta.01`**, **`v0.4.0-beta.02`**, …).  
+   - Add **`## [0.4.0-beta.01] - YYYY-MM-DD`** at the top of **`CHANGELOG.md`** (you can remove or empty **`[Unreleased]`** on **`beta`** if it was only a planning stub).  
+   - Update **`README.md`** prerelease badge to the orange **current beta** style with **`0.4.0-beta.01`** when you want to advertise the live prerelease.  
+   - Run **`npm run bundle`**, commit, push **`beta`**, tag **`v0.4.0-beta.01`**.
+
+Afterwards, keep **`CHANGELOG.md` / `README.md` / `CONTRIBUTING.md`** in sync across branches when possible (see *Documentation parity* above); **`package.json`** `version` is the usual intentional difference between **`main`** and **`beta`** until the next stable merge.
 
 ---
 

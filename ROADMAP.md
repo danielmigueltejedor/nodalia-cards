@@ -6,9 +6,9 @@ This roadmap is flexible and may change depending on feedback, testing and real 
 
 ## Current status
 
-Nodalia Cards is currently in beta.
+**Stable `0.3.0`** ships from **`main`** (tag **`v0.3.0`**). The next prerelease line starts on **`beta`** with **`0.4.0-beta.01`** / **`v0.4.0-beta.01`** after **`main`** is updated—see **CONTRIBUTING** (*Stable first, then the next beta line*). Focus: Power Flow polish, translations, Graph Card line work, stronger default styles.
 
-The current stable base is usable, but the project is still being refined before a real `1.0.0` release.
+The project is still being refined before a real **`1.0.0`** release.
 
 ---
 

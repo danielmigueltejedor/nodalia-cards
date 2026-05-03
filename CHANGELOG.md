@@ -4,6 +4,52 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+Planned **0.4.x** line: first prerelease **`0.4.0-beta.01`** (tag **`v0.4.0-beta.01`**, then **`v0.4.0-beta.02`**, … two-digit **`XX`** per **CONTRIBUTING**). Focus: **Power Flow** follow-ups, **translations**, **Graph Card** line/axis rework, **curated default styles**. Bump **`package.json`** and this file on **`beta`** only **after** **`v0.3.0`** is on **`main`** (see **CONTRIBUTING → Stable first, then the next beta line**).
+
+---
+
+## [0.3.0] - 2026-05-04
+
+### Nodalia Cards v0.3.0
+
+This release brings substantial improvements across the bundle and is the new recommended **stable** version. Everything below shipped across the **0.3.0-beta** prerelease line (**beta.01** through **beta.25**); per-build notes remain under *Historical: 0.3.0 beta series* for detail.
+
+### 🌍 Translations & locales
+
+- **Portuguese, Russian, Greek, Chinese, Romanian**: reliable runtime dictionaries by merging each partial `PACK` over English (`deepMergeLocale` / `strings()`), so sparse locales no longer miss `fan`, `alarmPanel`, `entityCard`, and other sections.
+- **Weather, humidifier, graph, fan, alarm panel, person, entity, fav** strings for **pt / ru / el / zh / ro** via locale data scripts; **Music Assistant** browse folder titles use **`NodaliaI18n.navigationMusicAssist`** (plus broader keyword lists for directory icons) instead of hard-coded Spanish.
+- **Advanced vacuum** and **simple vacuum** copy for **pt / ru / el / zh / ro** (`locale-vacuum-packs`).
+- **Lovelace editor UI** (`scripts/gen-editor-ui.mjs` → `nodalia-editor-ui.js`): editor maps and `enToPt` / `enToRu` / … helpers; phrase overlays for *Show …* chips and long REST strings; merge order so climate/visual `FULL_LOCALE` wins; **`editorStr`** prefers English when the profile is not Spanish; **`translateEsToEn`** ordering so *Usar … entidad* / zone / vibration phrases translate before blanket replacements.
+- **Person / graph / weather** editors: consistent *Tap action* keys for `editorStr`. Spanish **`locationUnknown`** accent fix under `person`.
+
+### ⚡ Energy Flow (Power Flow) card
+
+- **Layout & diagram**: Dynamic %-positions when many branches are active (grid, solar, battery, water, gas, individuals), extra vertical spacing, adaptive **`min-height`**, **`aspect-ratio`**, and **`height: auto`** so the tile grows with content instead of squashing the SVG. **1–2** top branches use a wide strip (sources left/right or flanking a centred home); **3** branches keep the classic triangle. **Single electrical source** reuses the same **bubble + SVG** diagram as compact multi-source (no separate “simple” map for one branch only). **Home** x-centre aligned between **compact** and **full**.
+- **Lines & motion**: Chord-based endpoint trims, improved nearly-horizontal / nearly-vertical cubic control points, **straight `M L` paths** for **1–2** top branches (curves kept for 3+ or individuals), crisp main stroke (blur removed from the primary path; soft halo kept). **`preserveAspectRatio="none"`** so SVG user space lines up with `%`-positioned nodes on wide surfaces; trim radii and **92%** chord cap so strokes meet bubbles; default **`flow_width`** **2.5px** and subtler glow multiplier.
+- **Markers**: Larger flow dot, then **ellipse** geometry with **`ry` scaled by surface aspect** so the dot stays visually round under non-uniform stretch; strip/simple rail dot sizes and animation keyframes; **`flow_width`**-linked sizing.
+- **Semantics**: If **Home** has no entity, estimated consumption from branches (grid-only and sign conventions); export chip magnitude and *to grid* style secondary text where applicable.
+- **Light theme**: Label/value chips, home icon chip, and **Energy** dashboard button use **`color-mix` with `var(--primary-text-color)`** for readable borders and fills; header/title hover fixes (drop stray **`will-change`**, header **`z-index`**, explicit title colour/opacity, line/dot animations use **`forwards`**).
+- **Editor**: Prefer **`ha-selector`** / **`ha-entity-picker`** when Lovelace registers late instead of a hand-rolled `<select>`.
+
+### 🧹 Other cards & polish
+
+- **Climate card**: dial and bubble chips use **primary** text colour where they were washed out on **secondary**.
+- **Person card**: pill vertical centring (avatar track, flex/grid tweaks) when the dashboard cell is taller than content.
+- **Advance vacuum card**: mode controls (**All / Rooms / Zone / Routines**) wrapped in a **segmented pill** like Weather forecast tabs; **`advanceVacuum.aria.modeTablist`** in all `PACK` locales.
+
+### Notes
+
+- Newer locales are still being refined—reports and PRs for wording are welcome.
+- **v0.4.x** will continue Power Flow polish, i18n, **Graph Card** line work, and **default style presets** for a stronger out-of-the-box look.
+
+---
+
+### Historical: 0.3.0 beta series
+
+Per-prerelease entries (Spanish + technical detail) from **beta.03** through **beta.25**:
+
 ## [0.3.0-beta.25] - 2026-05-04
 
 ### Changed
