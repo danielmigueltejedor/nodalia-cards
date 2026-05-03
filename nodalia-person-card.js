@@ -933,11 +933,6 @@ class NodaliaPersonCard extends HTMLElement {
           min-height: ${effectiveCardHeightPx}px;
         }
 
-        .person-card--single-row .person-card__content {
-          padding-bottom: ${singleRowPaddingY - 1}px;
-          padding-top: ${singleRowPaddingY + 1}px;
-        }
-
         .person-card__avatar {
           align-self: center;
           align-items: center;
@@ -1757,7 +1752,9 @@ class NodaliaPersonCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -1969,7 +1966,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
               fullWidth: true,
             })}
             ${this._renderSelectField(
-              "Accion al tocar",
+              "Acción al tocar",
               "tap_action",
               tapAction,
               [

@@ -4,6 +4,19 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.08] - 2026-05-04
+
+### Fixed
+
+- **Person card**: Avatar / entity photo is vertically centred with the card in compact single-row layout (removed asymmetric vertical padding that shifted content upward).
+- **Visual editors (all Nodalia card editors using the shared grid)**: `ha-icon-picker` and mounted icon-picker hosts span the full editor row (`grid-column: 1 / -1`), matching entity pickers so long icon paths do not clip.
+
+### Changed
+
+- **Editor i18n (`scripts/gen-editor-ui.mjs` → `nodalia-editor-ui.js`)**: `translateEsToEn` applies **`Usar … entidad` / `Usar … zona` / vibration phrases before** the blanket **`Entidad → Entity`** replacement, fixing broken English seeds and duplicate wrong rows (for example **Use entity icon** and locale columns no longer stuck on mixed Spanish/English).
+- **`FULL_LOCALE_BY_EN`**: Proper **`de`/`fr`/…** strings for **Use entity icon**, **Use zone icon**, **Use entity photo**, **Tap action**, **Use vibration fallback**, and **Use vibration if haptics unavailable**.
+- **Person, graph, weather card editors**: Section label key **`Acción al tocar`** (accented) so `editorStr` resolves **`Tap action`** and translations consistently.
+
 ## [0.3.0-beta.07] - 2026-05-03
 
 ### Added

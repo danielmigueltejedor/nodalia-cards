@@ -9347,15 +9347,15 @@
   {
     "es": "Tap action",
     "en": "Tap action",
-    "de": "Tap action",
-    "fr": "Tap action",
-    "it": "Tap action",
-    "nl": "Tap action",
-    "pt": "Tap action",
-    "ru": "Tap action",
-    "el": "Tap action",
-    "zh": "Tap action",
-    "ro": "Tap action"
+    "de": "Tipp-Aktion",
+    "fr": "Action au toucher",
+    "it": "Azione al tocco",
+    "nl": "Tikactie",
+    "pt": "Ação ao tocar",
+    "ru": "Действие при нажатии",
+    "el": "Ενέργεια πατήματος",
+    "zh": "点击操作",
+    "ro": "Acțiune la atingere"
   },
   {
     "es": "Tap card",
@@ -9632,94 +9632,94 @@
   },
   {
     "es": "Usar el icono de la entidad",
-    "en": "Usar el Icon de la Entity",
-    "de": "Usar el Icon de la Entity",
-    "fr": "Usar el Icon de la Entity",
-    "it": "Usar el Icon de la Entity",
-    "nl": "Usar el Icon de la Entity",
-    "pt": "Usar el Icon de la Entity",
-    "ru": "Usar el Icon de la Entity",
-    "el": "Usar el Icon de la Entity",
-    "zh": "Usar el Icon de la Entity",
-    "ro": "Usar el Icon de la Entity"
+    "en": "Use entity icon",
+    "de": "Entitätssymbol verwenden",
+    "fr": "Utiliser l’icône de l’entité",
+    "it": "Usa l’icona dell’entità",
+    "nl": "Pictogram van entiteit gebruiken",
+    "pt": "Usar ícone da entidade",
+    "ru": "Использовать значок объекта",
+    "el": "Χρήση εικονιδίου οντότητας",
+    "zh": "使用实体图标",
+    "ro": "Folosește pictograma entității"
   },
   {
     "es": "Usar foto de entidad",
-    "en": "Usar foto de Entity",
-    "de": "Usar foto de Entity",
-    "fr": "Usar foto de Entity",
-    "it": "Usar foto de Entity",
-    "nl": "Usar foto de Entity",
-    "pt": "Usar foto de Entity",
-    "ru": "Usar foto de Entity",
-    "el": "Usar foto de Entity",
-    "zh": "Usar foto de Entity",
-    "ro": "Usar foto de Entity"
+    "en": "Use entity photo",
+    "de": "Entitätsfoto verwenden",
+    "fr": "Utiliser la photo de l’entité",
+    "it": "Usa la foto dell’entità",
+    "nl": "Entiteitsfoto gebruiken",
+    "pt": "Usar foto da entidade",
+    "ru": "Использовать фото объекта",
+    "el": "Χρήση φωτογραφίας οντότητας",
+    "zh": "使用实体照片",
+    "ro": "Folosește fotografia entității"
   },
   {
     "es": "Usar foto de la entidad",
-    "en": "Usar foto de la Entity",
-    "de": "Usar foto de la Entity",
-    "fr": "Usar foto de la Entity",
-    "it": "Usar foto de la Entity",
-    "nl": "Usar foto de la Entity",
-    "pt": "Usar foto de la Entity",
-    "ru": "Usar foto de la Entity",
-    "el": "Usar foto de la Entity",
-    "zh": "Usar foto de la Entity",
-    "ro": "Usar foto de la Entity"
+    "en": "Use entity photo",
+    "de": "Entitätsfoto verwenden",
+    "fr": "Utiliser la photo de l’entité",
+    "it": "Usa la foto dell’entità",
+    "nl": "Entiteitsfoto gebruiken",
+    "pt": "Usar foto da entidade",
+    "ru": "Использовать фото объекта",
+    "el": "Χρήση φωτογραφίας οντότητας",
+    "zh": "使用实体照片",
+    "ro": "Folosește fotografia entității"
   },
   {
     "es": "Usar icono de la entidad",
-    "en": "Usar Icon de la Entity",
-    "de": "Usar Icon de la Entity",
-    "fr": "Usar Icon de la Entity",
-    "it": "Usar Icon de la Entity",
-    "nl": "Usar Icon de la Entity",
-    "pt": "Usar Icon de la Entity",
-    "ru": "Usar Icon de la Entity",
-    "el": "Usar Icon de la Entity",
-    "zh": "Usar Icon de la Entity",
-    "ro": "Usar Icon de la Entity"
+    "en": "Use entity icon",
+    "de": "Entitätssymbol verwenden",
+    "fr": "Utiliser l’icône de l’entité",
+    "it": "Usa l’icona dell’entità",
+    "nl": "Pictogram van entiteit gebruiken",
+    "pt": "Usar ícone da entidade",
+    "ru": "Использовать значок объекта",
+    "el": "Χρήση εικονιδίου οντότητας",
+    "zh": "使用实体图标",
+    "ro": "Folosește pictograma entității"
   },
   {
     "es": "Usar icono de zona",
-    "en": "Usar Icon de zona",
-    "de": "Usar Icon de zona",
-    "fr": "Usar Icon de zona",
-    "it": "Usar Icon de zona",
-    "nl": "Usar Icon de zona",
-    "pt": "Usar Icon de zona",
-    "ru": "Usar Icon de zona",
-    "el": "Usar Icon de zona",
-    "zh": "Usar Icon de zona",
-    "ro": "Usar Icon de zona"
+    "en": "Use zone icon",
+    "de": "Zonensymbol verwenden",
+    "fr": "Utiliser l’icône de zone",
+    "it": "Usa l’icona della zona",
+    "nl": "Zonepictogram gebruiken",
+    "pt": "Usar ícone da zona",
+    "ru": "Использовать значок зоны",
+    "el": "Χρήση εικονιδίου ζώνης",
+    "zh": "使用区域图标",
+    "ro": "Folosește pictograma zonei"
   },
   {
     "es": "Usar vibracion de respaldo",
     "en": "Use vibration fallback",
-    "de": "Use vibration fallback",
-    "fr": "Use vibration fallback",
-    "it": "Use vibration fallback",
-    "nl": "Use vibration fallback",
-    "pt": "Use vibration fallback",
-    "ru": "Use vibration fallback",
-    "el": "Use vibration fallback",
-    "zh": "Use vibration fallback",
-    "ro": "Use vibration fallback"
+    "de": "Vibrations-Fallback verwenden",
+    "fr": "Utiliser la vibration de secours",
+    "it": "Usa vibrazione di riserva",
+    "nl": "Trillen als reserve gebruiken",
+    "pt": "Usar vibração de reserva",
+    "ru": "Использовать вибрацию как запасной вариант",
+    "el": "Χρήση δόνησης ως εφεδρικής",
+    "zh": "使用振动后备",
+    "ro": "Folosește vibrația de rezervă"
   },
   {
     "es": "Usar vibración si no hay háptica",
     "en": "Use vibration if haptics unavailable",
-    "de": "Use vibration if haptics unavailable",
-    "fr": "Use vibration if haptics unavailable",
-    "it": "Use vibration if haptics unavailable",
-    "nl": "Use vibration if haptics unavailable",
-    "pt": "Use vibration if haptics unavailable",
-    "ru": "Use vibration if haptics unavailable",
-    "el": "Use vibration if haptics unavailable",
-    "zh": "Use vibration if haptics unavailable",
-    "ro": "Use vibration if haptics unavailable"
+    "de": "Vibration nutzen, wenn keine Haptik",
+    "fr": "Vibrer si pas de retour haptique",
+    "it": "Usa vibrazione se non c’è aptica",
+    "nl": "Trillen als geen haptiek",
+    "pt": "Vibrar se não houver háptica",
+    "ru": "Вибрация, если тактильная отдача недоступна",
+    "el": "Δόνηση όταν δεν υπάρχει απτική ανταπόκριση",
+    "zh": "无触觉时使用振动",
+    "ro": "Vibrație dacă nu e haptic"
   },
   {
     "es": "Valor casa",
@@ -13013,15 +13013,15 @@
   {
     "es": "Acción al tocar",
     "en": "Tap action",
-    "de": "Tap action",
-    "fr": "Tap action",
-    "it": "Tap action",
-    "nl": "Tap action",
-    "pt": "Tap action",
-    "ru": "Tap action",
-    "el": "Tap action",
-    "zh": "Tap action",
-    "ro": "Tap action"
+    "de": "Tipp-Aktion",
+    "fr": "Action au toucher",
+    "it": "Azione al tocco",
+    "nl": "Tikactie",
+    "pt": "Ação ao tocar",
+    "ru": "Действие при нажатии",
+    "el": "Ενέργεια πατήματος",
+    "zh": "点击操作",
+    "ro": "Acțiune la atingere"
   },
   {
     "es": "Color personalizado",
@@ -25576,7 +25576,9 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -30374,7 +30376,9 @@ class NodaliaLightCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -33902,7 +33906,9 @@ class NodaliaFanCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -37822,7 +37828,9 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -40766,7 +40774,9 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -43847,7 +43857,9 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -44853,7 +44865,9 @@ class NodaliaGraphCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -45125,7 +45139,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
               placeholder: "mdi:chart-line",
             })}
             ${this._renderSelectField(
-              "Accion al tocar",
+              "Acción al tocar",
               "tap_action",
               config.tap_action || "more-info",
               [
@@ -48109,7 +48123,9 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -49027,7 +49043,9 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -52394,7 +52412,9 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -53255,7 +53275,9 @@ class NodaliaClimateCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -55805,7 +55827,9 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -64480,7 +64504,9 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -67162,7 +67188,9 @@ class NodaliaEntityCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -70333,7 +70361,9 @@ class NodaliaFavCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -72996,11 +73026,6 @@ class NodaliaPersonCard extends HTMLElement {
           min-height: ${effectiveCardHeightPx}px;
         }
 
-        .person-card--single-row .person-card__content {
-          padding-bottom: ${singleRowPaddingY - 1}px;
-          padding-top: ${singleRowPaddingY + 1}px;
-        }
-
         .person-card__avatar {
           align-self: center;
           align-items: center;
@@ -73820,7 +73845,9 @@ class NodaliaPersonCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -74032,7 +74059,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
               fullWidth: true,
             })}
             ${this._renderSelectField(
-              "Accion al tocar",
+              "Acción al tocar",
               "tap_action",
               tapAction,
               [
@@ -77732,7 +77759,9 @@ class NodaliaWeatherCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -77943,7 +77972,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
               fullWidth: true,
             })}
             ${this._renderSelectField(
-              "Accion al tocar",
+              "Acción al tocar",
               "tap_action",
               tapAction,
               [
@@ -82028,7 +82057,9 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
 
@@ -82516,4 +82547,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.3.0-beta.07","contentSha256_12":"c1157747ad3a"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.3.0-beta.08","contentSha256_12":"3e56e5e21305"};}
