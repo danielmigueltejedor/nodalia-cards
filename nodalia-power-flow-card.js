@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "0.15.1";
+const CARD_VERSION = "0.16.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -469,6 +469,39 @@ function arrayFromMaybe(value) {
 function resolveNodeConfig(kind, config) {
   return mergeConfig(NODE_DEFAULTS[kind] || {}, config?.entities?.[kind] || {});
 }
+
+/** True if the YAML `entity` field is set (string id or split consumption/production object). */
+function isEntitySourceConfigured(entity) {
+  if (entity == null || entity === false) {
+    return false;
+  }
+  if (typeof entity === "string") {
+    return entity.trim().length > 0;
+  }
+  if (isObject(entity)) {
+    return Boolean(
+      String(entity.entity || "").trim()
+      || String(entity.consumption || "").trim()
+      || String(entity.production || "").trim(),
+    );
+  }
+  return false;
+}
+
+/** Short UI line when grid power is negative (export); keyed by HA language code prefix. */
+const POWER_FLOW_LABELS_GRID_EXPORT = {
+  es: "A la red",
+  en: "To grid",
+  de: "Ins Netz",
+  fr: "Vers le réseau",
+  it: "In rete",
+  nl: "Naar net",
+  pt: "Para a rede",
+  ru: "В сеть",
+  el: "Προς δίκτυο",
+  zh: "馈网",
+  ro: "Către rețea",
+};
 
 function resolveIndividualConfigs(config) {
   return arrayFromMaybe(config?.entities?.individual)
@@ -1129,6 +1162,80 @@ class NodaliaPowerFlowCard extends HTMLElement {
     });
   }
 
+  _powerFlowStrGridExport() {
+    let lang = "es";
+    try {
+      lang = window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") || lang;
+    } catch (_e) {
+      // ignore
+    }
+    const two = String(lang || "es").slice(0, 2).toLowerCase();
+    return POWER_FLOW_LABELS_GRID_EXPORT[two] || POWER_FLOW_LABELS_GRID_EXPORT.en || POWER_FLOW_LABELS_GRID_EXPORT.es;
+  }
+
+  /**
+   * Sin entidad en "Casa": consumo instantáneo ≈ solar + red + batería (convenciones de la tarjeta:
+   * red +import / -export, batería +descarga / -carga).
+   * Nodo red con exportación: número en positivo y subtítulo "A la red" si no hay secundario.
+   */
+  _applyDerivedHomeAndGridDisplay(nodes) {
+    const homeCfg = resolveNodeConfig("home", this._config);
+    if (!isEntitySourceConfigured(homeCfg.entity)) {
+      const grid = nodes.grid;
+      const solar = nodes.solar;
+      const battery = nodes.battery;
+      const branchCount = [grid, solar, battery].filter(n => n.entityId).length;
+      const canCompute = branchCount >= 2 || (branchCount === 1 && grid.entityId);
+
+      if (canCompute) {
+        let invalid = false;
+        let sum = 0;
+        const add = (n) => {
+          if (!n.entityId) {
+            return;
+          }
+          if (n.unavailable) {
+            invalid = true;
+            return;
+          }
+          if (!Number.isFinite(n.value)) {
+            invalid = true;
+            return;
+          }
+          sum += n.value;
+        };
+        add(grid);
+        add(solar);
+        add(battery);
+
+        if (invalid) {
+          nodes.home.unavailable = true;
+          nodes.home.value = null;
+          nodes.home.valueText = "--";
+          nodes.home.unitText = "";
+        } else {
+          nodes.home.unavailable = false;
+          nodes.home.value = sum;
+          const unit = String(grid.unit || solar.unit || battery.unit || "").trim();
+          const display = formatDisplayValue(sum, unit);
+          nodes.home.valueText = display.value;
+          nodes.home.unitText = display.unit;
+          nodes.home.state = grid.state || solar.state || battery.state;
+        }
+      }
+    }
+
+    const g = nodes.grid;
+    if (g.entityId && !g.unavailable && Number.isFinite(g.value) && g.value < -0.001) {
+      const display = formatDisplayValue(Math.abs(g.value), g.unit);
+      g.valueText = display.value;
+      g.unitText = display.unit;
+      if (!String(g.secondary || "").trim()) {
+        g.secondary = this._powerFlowStrGridExport();
+      }
+    }
+  }
+
   _getNodes() {
     const flowFlags = getFlowLayoutFlagsFromConfig(this._config);
     const bottomUtilities = flowFlags.bottomUtilities;
@@ -1155,6 +1262,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
     if (!nodes.home.entityId) {
       nodes.home.entityId = nodes.grid.entityId || nodes.solar.entityId || nodes.battery.entityId || "";
     }
+
+    this._applyDerivedHomeAndGridDisplay(nodes);
 
     nodes._layoutPreset = this._layoutPreset;
     nodes._flowFlags = flowFlags;
@@ -3107,8 +3216,8 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
           </div>
         </section>
 
-        ${this._renderNodeSection("Red", "Sensor de red con potencia positiva de consumo y negativa de exportacion, o split de consumo/produccion.", "entities.grid", grid)}
-        ${this._renderNodeSection("Casa", "Entidad central del hogar que se abrira en more-info si pulsas la burbuja central.", "entities.home", home)}
+        ${this._renderNodeSection("Red", "Sensor de red: positivo importacion, negativo exportacion (split consumo/produccion permitido). Si exportas, el valor se muestra en positivo y el subtitulo indica entrega a la red.", "entities.grid", grid)}
+        ${this._renderNodeSection("Casa", "Opcional: si dejas la entidad vacia, el consumo se calcula como solar + red + bateria (mismos signos que en esos nodos). Si configuras entidad, se usa el sensor. More-info usa red/solar/bateria si no hay entidad casa.", "entities.home", home)}
         ${this._renderNodeSection("Solar", "Produccion solar instantanea.", "entities.solar", solar)}
         ${this._renderNodeSection("Bateria", "Potencia de bateria. Positiva descarga hacia casa, negativa carga desde casa.", "entities.battery", battery)}
         ${this._renderNodeSection("Agua", "Caudal o consumo de agua hacia el hogar.", "entities.water", water)}
@@ -3303,6 +3412,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
   _ensureEditorControlsReady() {
     this._watchEditorControlTag("ha-entity-picker");
+    this._watchEditorControlTag("ha-selector");
     this._watchEditorControlTag("ha-icon-picker");
   }
 
@@ -3731,6 +3841,13 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
       if (placeholder) {
         control.setAttribute("placeholder", placeholder);
       }
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = {
+        entity: {
+          domain: ["sensor", "number", "input_number"],
+        },
+      };
     } else {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
@@ -3994,6 +4111,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
         .editor-field ha-icon-picker,
         .editor-field ha-entity-picker,
+        .editor-field ha-selector,
         .editor-control-host,
         .editor-control-host > * {
           display: block;
@@ -4097,8 +4215,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
           </div>
         </section>
 
-        ${this._renderNodeSection("Red", "Sensor de red con potencia positiva de consumo y negativa de exportacion.", "entities.grid", grid)}
-        ${this._renderNodeSection("Casa", "Entidad central del hogar y objetivo del more-info principal.", "entities.home", home)}
+        ${this._renderNodeSection("Red", "Positivo importacion, negativo exportacion. Si exportas, valor en positivo y subtitulo «A la red» (o traduccion).", "entities.grid", grid)}
+        ${this._renderNodeSection("Casa", "Opcional: entidad vacia = consumo calculado (solar + red + bateria). Con entidad, valor del sensor.", "entities.home", home)}
         ${this._renderNodeSection("Solar", "Produccion solar instantanea.", "entities.solar", solar)}
         ${this._renderNodeSection("Bateria", "Potencia de bateria. Positiva descarga, negativa carga.", "entities.battery", battery)}
         ${this._renderNodeSection("Agua", "Caudal o consumo de agua hacia el hogar.", "entities.water", water)}

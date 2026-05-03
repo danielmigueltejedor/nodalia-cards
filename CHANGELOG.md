@@ -4,6 +4,26 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.12] - 2026-05-04
+
+### Added
+
+- **Power flow card**: Si **no** configuras entidad en **Casa**, el valor central es el **consumo estimado** `P_solar + P_red + P_batería` (misma convención que ya usa la tarjeta: red +importación / −exportación, batería +descarga / −carga). Con **una sola** rama solo se calcula si es la **red** (equivalente a solo contador). En **Red**, cuando la potencia es **exportación** (valor negativo del sensor), el chip muestra el **módulo** y, si no hay secundario configurado, un texto tipo **«A la red»** (traducible según idioma HA vía Nodalia i18n).
+
+### Changed
+
+- **`nodalia-power-flow-card.js`**: `CARD_VERSION` **0.16.0**; textos de ayuda del editor (Casa / Red).
+
+## [0.3.0-beta.11] - 2026-05-04
+
+### Fixed
+
+- **Power flow card (editor visual)**: Si **`ha-entity-picker`** aún no está registrado en el primer pintado, se usa **`ha-selector`** con selector de entidad (`domain: sensor, number, input_number`) en lugar del `<select>` generado a mano; se observa **`whenDefined("ha-selector")`** para volver a montar controles nativos al cargar el frontend.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`**: `CARD_VERSION` **0.15.2**.
+
 ## [0.3.0-beta.10] - 2026-05-04
 
 ### Fixed
