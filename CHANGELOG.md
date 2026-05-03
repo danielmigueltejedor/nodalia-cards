@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.15] - 2026-05-04
+
+### Fixed
+
+- **Climate card**: Los chips burbuja de **temperatura actual** y **humedad** usaban `var(--secondary-text-color)` y se veían apagados frente al chip de **estado** (y al resto del título); ahora usan **`var(--primary-text-color)`** como el de estado. **`nodalia-climate-card.js`**: `CARD_VERSION` **0.10.2**.
+
+## [0.3.0-beta.14] - 2026-05-04
+
+### Changed
+
+- **Power flow card**: Con **1** rama eléctrica (red/solar/batería), la **fuente queda a la izquierda** y **Casa a la derecha** en la misma fila; con **2** ramas, **Casa al centro**, la **segunda** en el orden grid→solar→batería a la **izquierda** y la **primera** a la **derecha**. Con **3** ramas se mantiene el triángulo clásico. La superficie usa **menos altura** y **aspect-ratio más ancho** (`1.52/1` sin fila inferior, `1.2/1` con agua/gas) y ya no suma el extra vertical pensado para 3 fuentes cuando solo hay 1–2. Si hay **individuales**, se conserva el layout anterior para no solaparlos. **`nodalia-power-flow-card.js`**: `CARD_VERSION` **0.16.2**.
+
 ## [0.3.0-beta.13] - 2026-05-04
 
 ### Changed

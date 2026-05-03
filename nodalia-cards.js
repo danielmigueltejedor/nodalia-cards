@@ -45363,7 +45363,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "0.16.1";
+const CARD_VERSION = "0.16.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -45893,13 +45893,22 @@ function getNodePosition(kind, index = 0, total = 0, hasBottomUtilities = false)
 /** Active grid / solar / battery branches so %-layout can spread vertically when several sources exist. */
 function getFlowLayoutFlagsFromConfig(config) {
   const c = config || {};
-  const hasGrid = Boolean(resolveNodeConfig("grid", c)?.entity);
-  const hasSolar = Boolean(resolveNodeConfig("solar", c)?.entity);
-  const hasBattery = Boolean(resolveNodeConfig("battery", c)?.entity);
-  const topCount = [hasGrid, hasSolar, hasBattery].filter(Boolean).length;
+  const activeTopKinds = ["grid", "solar", "battery"].filter(kind => Boolean(resolveNodeConfig(kind, c)?.entity));
+  const topCount = activeTopKinds.length;
+  const hasGrid = activeTopKinds.includes("grid");
+  const hasSolar = activeTopKinds.includes("solar");
+  const hasBattery = activeTopKinds.includes("battery");
   const bottomUtilities = [resolveNodeConfig("water", c), resolveNodeConfig("gas", c)].filter(item => item.entity).length;
   const individualCount = resolveIndividualConfigs(c).length;
-  return { hasGrid, hasSolar, hasBattery, topCount, bottomUtilities, individualCount };
+  return {
+    hasGrid,
+    hasSolar,
+    hasBattery,
+    topCount,
+    activeTopKinds,
+    bottomUtilities,
+    individualCount,
+  };
 }
 
 function getLayoutPreset(nodeCounts = {}) {
@@ -45927,6 +45936,40 @@ function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities
   const bottomSpread = bottomN >= 2 ? 6 : 0;
   const topSpread = crowdedTop ? 10 : 0;
   const packSpread = packedTop ? 6 : 0;
+  const activeTop = Array.isArray(flags.activeTopKinds) ? flags.activeTopKinds : [];
+  const hasIndividuals = Number(flags.individualCount) > 0;
+  const useTopStrip = activeTop.length >= 1
+    && activeTop.length <= 2
+    && !hasIndividuals
+    && layoutPreset !== "simple"
+    && (layoutPreset === "compact" || layoutPreset === "full");
+
+  /**
+   * 1 fuente: fuente a la izquierda, casa a la derecha (misma fila).
+   * 2 fuentes: primera (orden grid→solar→batería) a la derecha, segunda a la izquierda, casa al centro.
+   * 3+ fuentes: layout triangular clásico más abajo.
+   */
+  if (useTopStrip && (kind === "home" || kind === "grid" || kind === "solar" || kind === "battery")) {
+    const rowY = hasBottomUtilities ? 42 : 51;
+    if (activeTop.length === 1) {
+      if (kind === "home") {
+        return { x: 86, y: rowY };
+      }
+      if (kind === activeTop[0]) {
+        return { x: 14, y: rowY };
+      }
+    } else if (activeTop.length === 2) {
+      if (kind === "home") {
+        return { x: 50, y: rowY };
+      }
+      if (kind === activeTop[0]) {
+        return { x: 86, y: rowY };
+      }
+      if (kind === activeTop[1]) {
+        return { x: 14, y: rowY };
+      }
+    }
+  }
 
   if (layoutPreset === "simple") {
     if (kind === "home") {
@@ -47123,40 +47166,54 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const hasLowerNodes = Boolean(nodes.water.entityId || nodes.gas.entityId || nodes.individual.length);
     const layoutPreset = nodes._layoutPreset || "full";
     const flowFlags = nodes._flowFlags || getFlowLayoutFlagsFromConfig(this._config);
+    const horizontalStripDiagram = flowFlags.topCount >= 1 && flowFlags.topCount <= 2 && !(flowFlags.individualCount > 0);
     const surfaceLayoutExtras = (() => {
       let add = 0;
       if (layoutPreset !== "simple") {
-        if (flowFlags.topCount >= 2) {
-          add += 52;
-        }
         if (flowFlags.topCount >= 3) {
-          add += 40;
+          add += 92;
         }
-        if (flowFlags.bottomUtilities >= 2 && flowFlags.topCount >= 2) {
+        if (flowFlags.bottomUtilities >= 2 && flowFlags.topCount >= 3) {
           add += 28;
         }
         add += Math.min(Math.max(0, flowFlags.individualCount - 1), 5) * 22;
       }
       return add;
     })();
+    const stripNoLower = horizontalStripDiagram && !hasLowerNodes;
+    const stripWithLower = horizontalStripDiagram && hasLowerNodes;
+    let baseSurfaceDiagram = layoutPreset === "compact" ? (hasLowerNodes ? 296 : 228) : (hasLowerNodes ? 328 : 248);
+    if (stripNoLower) {
+      baseSurfaceDiagram = layoutPreset === "compact" ? 150 : 158;
+    } else if (stripWithLower) {
+      baseSurfaceDiagram = layoutPreset === "compact" ? Math.min(baseSurfaceDiagram, 236) : Math.min(baseSurfaceDiagram, 256);
+    }
+    const surfaceFloor = layoutPreset === "simple" ? 148 : (stripNoLower ? 132 : 200);
     const surfaceMinHeight = Math.min(
       Math.max(
-        (layoutPreset === "simple"
-          ? 162
-          : layoutPreset === "compact"
-            ? (hasLowerNodes ? 296 : 228)
-            : (hasLowerNodes ? 328 : 248)) + surfaceLayoutExtras,
-        layoutPreset === "simple" ? 148 : 220,
+        (layoutPreset === "simple" ? 162 : baseSurfaceDiagram) + surfaceLayoutExtras,
+        surfaceFloor,
       ),
       540,
     );
+    let baseSurfaceMobile = layoutPreset === "simple" ? 144 : (hasLowerNodes ? 304 : 230);
+    if (stripNoLower) {
+      baseSurfaceMobile = layoutPreset === "compact" ? 140 : 146;
+    } else if (stripWithLower) {
+      baseSurfaceMobile = Math.min(baseSurfaceMobile, layoutPreset === "compact" ? 220 : 236);
+    }
     const surfaceMinHeightMobile = Math.min(
       Math.max(
-        (layoutPreset === "simple" ? 144 : hasLowerNodes ? 304 : 230) + surfaceLayoutExtras,
-        layoutPreset === "simple" ? 132 : 208,
+        baseSurfaceMobile + surfaceLayoutExtras,
+        layoutPreset === "simple" ? 132 : (stripNoLower ? 124 : 208),
       ),
       520,
     );
+    const surfaceAspectCss = stripNoLower
+      ? "1.52 / 1"
+      : stripWithLower
+        ? "1.2 / 1"
+        : "1 / 1.02";
     const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
     const titleText = this._config?.title || this._config?.name || (layoutPreset === "simple" ? "" : "Flujo");
     const hasHeader = this._config?.show_header !== false && (Boolean(titleText) || (showDashboardButton && layoutPreset !== "simple"));
@@ -47293,7 +47350,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card--compact .power-flow-card__surface,
         .power-flow-card--full .power-flow-card__surface {
-          aspect-ratio: 1 / 1.02;
+          aspect-ratio: ${surfaceAspectCss};
           max-height: none;
         }
 
@@ -49760,7 +49817,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "0.10.1";
+const CARD_VERSION = "0.10.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -51732,7 +51789,7 @@ class NodaliaClimateCard extends HTMLElement {
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          color: var(--secondary-text-color);
+          color: var(--primary-text-color);
           display: inline-flex;
           font-size: ${effectiveChipFontSize};
           font-weight: 700;
@@ -51744,10 +51801,6 @@ class NodaliaClimateCard extends HTMLElement {
           text-overflow: ellipsis;
           transition: background 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
           white-space: nowrap;
-        }
-
-        .climate-card__chip--state {
-          color: var(--primary-text-color);
         }
 
         .climate-card__dial-wrap {
@@ -82899,4 +82952,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.3.0-beta.13","contentSha256_12":"92fa94824549"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.3.0-beta.15","contentSha256_12":"a2ffdb8721fb"};}
