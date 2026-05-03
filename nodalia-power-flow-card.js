@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "0.16.9";
+const CARD_VERSION = "0.16.10";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1492,14 +1492,18 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const glowR = Number(dotMetrics.glowR) || 2.35;
     const coreR = Number(dotMetrics.coreR) || 1.22;
     const coreStroke = Number(dotMetrics.coreStroke) || 0.3;
+    const viewAspect = Number(dotMetrics.viewAspect) > 0 ? Number(dotMetrics.viewAspect) : 1;
+    /** With preserveAspectRatio none, user Y is squeezed vs X on wide surfaces; taller ry in viewBox renders round on screen. */
+    const glowRy = glowR * viewAspect;
+    const coreRy = coreR * viewAspect;
     return `
       <g class="power-flow-card__dot-group" style="--dot-color:${escapeHtml(line.color)};">
-        <circle class="power-flow-card__dot-glow" r="${glowR.toFixed(2)}">
+        <ellipse class="power-flow-card__dot-glow" rx="${glowR.toFixed(3)}" ry="${glowRy.toFixed(3)}">
           <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"></animateMotion>
-        </circle>
-        <circle class="power-flow-card__dot-core" r="${coreR.toFixed(2)}" stroke-width="${coreStroke.toFixed(2)}">
+        </ellipse>
+        <ellipse class="power-flow-card__dot-core" rx="${coreR.toFixed(3)}" ry="${coreRy.toFixed(3)}" stroke-width="${coreStroke.toFixed(2)}">
           <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"></animateMotion>
-        </circle>
+        </ellipse>
       </g>
     `;
   }
@@ -1847,7 +1851,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const flowDotGlowR = (horizontalStripDiagram ? 2.92 : 2.38) * flowDotBoost;
     const flowDotCoreR = (horizontalStripDiagram ? 1.68 : 1.26) * flowDotBoost;
     const flowDotCoreStroke = horizontalStripDiagram ? 0.38 : 0.3;
-    const flowDotOpts = { glowR: flowDotGlowR, coreR: flowDotCoreR, coreStroke: flowDotCoreStroke };
     const surfaceLayoutExtras = (() => {
       let add = 0;
       if (layoutPreset !== "simple") {
@@ -1895,6 +1898,24 @@ class NodaliaPowerFlowCard extends HTMLElement {
       : stripWithLower
         ? "1.2 / 1"
         : "1 / 1.02";
+    const flowDotViewAspect = (() => {
+      const m = String(surfaceAspectCss).trim().match(/^([\d.]+)\s*\/\s*([\d.]+)/);
+      if (!m) {
+        return 1;
+      }
+      const a = Number(m[1]);
+      const b = Number(m[2]);
+      if (a > 0 && b > 0) {
+        return a / b;
+      }
+      return 1;
+    })();
+    const flowDotOpts = {
+      glowR: flowDotGlowR,
+      coreR: flowDotCoreR,
+      coreStroke: flowDotCoreStroke,
+      viewAspect: flowDotViewAspect,
+    };
     const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
     const titleText = this._config?.title || this._config?.name || (layoutPreset === "simple" ? "" : "Flujo");
     const hasHeader = this._config?.show_header !== false && (Boolean(titleText) || (showDashboardButton && layoutPreset !== "simple"));

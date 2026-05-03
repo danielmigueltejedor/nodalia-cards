@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.24] - 2026-05-04
+
+### Fixed
+
+- **Power flow card**: Con **`preserveAspectRatio="none"`** el marcador de flujo se veía **ovalado**; el punto pasa a **`ellipse`** con **`ry = rx * (aspect-ratio ancho/alto)`** de la superficie para compensar el estiramiento y verse **circular** en pantalla. **`nodalia-power-flow-card.js`**: `CARD_VERSION` **0.16.10**.
+
 ## [0.3.0-beta.23] - 2026-05-04
 
 ### Changed
