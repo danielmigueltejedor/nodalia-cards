@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.23] - 2026-05-04
+
+### Changed
+
+- **Power flow card**: Con **1 o 2 fuentes** el trazo entre nodos pasa a ser **recto** (`M … L …`) en lugar de la curva cúbica; con **3 fuentes** o **individuales** se mantiene el trazado curvo. **`nodalia-power-flow-card.js`**: `CARD_VERSION` **0.16.9**.
+
+## [0.3.0-beta.22] - 2026-05-04
+
+### Fixed
+
+- **Power flow card**: **Chips** de etiqueta y valor (**Red**, **Casa**, etc.) y **icono casa** en la burbuja: borde/fondo con **`color-mix` + `var(--primary-text-color)`** (como el botón Energía) para que se lean en **modo claro**. **Líneas SVG**: `preserveAspectRatio` de **`meet` a `none`** para que el viewBox **0–100** coincida con el mismo rectángulo que las posiciones en `%` de los nodos (con **superficie alargada** 1–2 fuentes, `meet` centraba el SVG y el trazo **no alineaba** con las burbujas). Radios de acercamiento al trazo **mayores** y tope de suma **92%** de la cuerda. **`nodalia-power-flow-card.js`**: `CARD_VERSION` **0.16.8**.
+
 ## [0.3.0-beta.21] - 2026-05-04
 
 ### Changed
