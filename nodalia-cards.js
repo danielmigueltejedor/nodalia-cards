@@ -45396,7 +45396,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "0.16.10";
+const CARD_VERSION = "0.16.11";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -45520,7 +45520,7 @@ const DEFAULT_CONFIG = {
     home_unit_size: "14px",
     node_value_size: "11px",
     secondary_size: "10px",
-    flow_width: "3px",
+    flow_width: "2.5px",
   },
 };
 
@@ -46885,9 +46885,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
 
     const bubbleDuration = 5.6;
-    const glowR = Number(dotMetrics.glowR) || 2.35;
-    const coreR = Number(dotMetrics.coreR) || 1.22;
-    const coreStroke = Number(dotMetrics.coreStroke) || 0.3;
+    const glowR = Number(dotMetrics.glowR) || 2.1;
+    const coreR = Number(dotMetrics.coreR) || 1.08;
+    const coreStroke = Number(dotMetrics.coreStroke) || 0.26;
     const viewAspect = Number(dotMetrics.viewAspect) > 0 ? Number(dotMetrics.viewAspect) : 1;
     /** With preserveAspectRatio none, user Y is squeezed vs X on wide surfaces; taller ry in viewBox renders round on screen. */
     const glowRy = glowR * viewAspect;
@@ -47238,15 +47238,15 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const nodes = this._getNodes();
     const lines = this._buildLines(nodes);
     const dominantColor = this._getDominantColor(lines);
-    const flowWidth = Math.max(3, parseSizeToPixels(styles.flow_width, 4));
+    const flowWidth = Math.max(2.5, parseSizeToPixels(styles.flow_width, 3.2));
     const hasLowerNodes = Boolean(nodes.water.entityId || nodes.gas.entityId || nodes.individual.length);
     const layoutPreset = nodes._layoutPreset || "full";
     const flowFlags = nodes._flowFlags || getFlowLayoutFlagsFromConfig(this._config);
     const horizontalStripDiagram = flowFlags.topCount >= 1 && flowFlags.topCount <= 2 && !(flowFlags.individualCount > 0);
-    const flowDotBoost = 1 + Math.max(0, flowWidth - 3) * 0.065;
-    const flowDotGlowR = (horizontalStripDiagram ? 2.92 : 2.38) * flowDotBoost;
-    const flowDotCoreR = (horizontalStripDiagram ? 1.68 : 1.26) * flowDotBoost;
-    const flowDotCoreStroke = horizontalStripDiagram ? 0.38 : 0.3;
+    const flowDotBoost = 1 + Math.max(0, flowWidth - 2.5) * 0.065;
+    const flowDotGlowR = (horizontalStripDiagram ? 2.58 : 2.1) * flowDotBoost;
+    const flowDotCoreR = (horizontalStripDiagram ? 1.48 : 1.12) * flowDotBoost;
+    const flowDotCoreStroke = horizontalStripDiagram ? 0.33 : 0.26;
     const surfaceLayoutExtras = (() => {
       let add = 0;
       if (layoutPreset !== "simple") {
@@ -47519,7 +47519,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           opacity: 0.08;
           stroke-linecap: round;
           stroke-linejoin: round;
-          stroke-width: ${flowWidth * 1.5}px;
+          stroke-width: ${flowWidth * 1.35}px;
         }
 
         .power-flow-card__dot-glow {
@@ -47769,38 +47769,38 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__simple-line {
           background: linear-gradient(180deg, color-mix(in srgb, var(--line-background) 100%, transparent) 0%, color-mix(in srgb, var(--line-background) 78%, transparent) 100%);
           border-radius: 999px;
-          height: ${Math.max(flowWidth, 4)}px;
+          height: ${Math.max(flowWidth, 3)}px;
           opacity: var(--line-opacity);
           position: relative;
           width: 100%;
         }
 
         .power-flow-card__simple-line.is-active {
-          box-shadow: 0 0 14px color-mix(in srgb, var(--line-color) 18%, transparent);
+          box-shadow: 0 0 12px color-mix(in srgb, var(--line-color) 16%, transparent);
         }
 
         .power-flow-card__simple-dot {
           background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.98) 0 35%, color-mix(in srgb, var(--line-color) 44%, rgba(255,255,255,0.92)) 36% 100%);
           border-radius: 999px;
           box-shadow:
-            0 0 0 4px color-mix(in srgb, var(--line-color) 14%, transparent),
-            0 0 12px color-mix(in srgb, var(--line-color) 22%, transparent);
-          height: 9px;
+            0 0 0 3px color-mix(in srgb, var(--line-color) 14%, transparent),
+            0 0 10px color-mix(in srgb, var(--line-color) 20%, transparent);
+          height: 8px;
           left: 0;
           position: absolute;
           top: 50%;
           transform: translateY(-50%);
-          width: 9px;
+          width: 8px;
           will-change: left, opacity;
           animation: power-flow-card-simple-dot linear infinite;
         }
 
         .power-flow-card--strip .power-flow-card__simple-dot {
           box-shadow:
-            0 0 0 5px color-mix(in srgb, var(--line-color) 16%, transparent),
-            0 0 16px color-mix(in srgb, var(--line-color) 26%, transparent);
-          height: 14px;
-          width: 14px;
+            0 0 0 4px color-mix(in srgb, var(--line-color) 15%, transparent),
+            0 0 13px color-mix(in srgb, var(--line-color) 22%, transparent);
+          height: 12px;
+          width: 12px;
           animation-name: power-flow-card-simple-dot-strip;
         }
 
@@ -47816,7 +47816,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
             opacity: 1;
           }
           100% {
-            left: calc(100% - 9px);
+            left: calc(100% - 8px);
             opacity: 0;
           }
         }
@@ -47833,7 +47833,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
             opacity: 1;
           }
           100% {
-            left: calc(100% - 14px);
+            left: calc(100% - 12px);
             opacity: 0;
           }
         }
@@ -83121,4 +83121,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.3.0-beta.24","contentSha256_12":"3eaf769f16aa"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.3.0-beta.25","contentSha256_12":"02af6ffa4f8c"};}

@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.25] - 2026-05-04
+
+### Changed
+
+- **Power flow card**: **Línea** un poco más fina (`flow_width` por defecto **2.5px**, mínimo **2.5px**, fallback de parseo **3.2px**; halo **×1.35** en lugar de ×1.5). **Marcador de flujo** (elipses viewBox y punto rail **simple** / **strip**) y sombras del rail algo **más pequeños**. **`nodalia-power-flow-card.js`**: `CARD_VERSION` **0.16.11**.
+
 ## [0.3.0-beta.24] - 2026-05-04
 
 ### Fixed
