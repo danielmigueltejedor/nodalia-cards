@@ -367,7 +367,10 @@
         school: "Colegio",
         unavailable: "No disponible",
         unknown: "Desconocido",
-        locationUnknown: "Ubicacion desconocida",
+        locationUnknown: "Ubicación desconocida",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Configura `entity` para mostrar la tarjeta.",
+        defaultName: "Persona",
       },
       entityCard: {
         binarySensor: {
@@ -796,6 +799,9 @@
         unavailable: "Unavailable",
         unknown: "Unknown",
         locationUnknown: "Unknown location",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Set `entity` to show this card.",
+        defaultName: "Person",
       },
       entityCard: {
         binarySensor: {
@@ -1224,6 +1230,9 @@
         unavailable: "Nicht verfügbar",
         unknown: "Unbekannt",
         locationUnknown: "Unbekannter Ort",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Lege `entity` fest, um diese Karte anzuzeigen.",
+        defaultName: "Person",
       },
       entityCard: {
         binarySensor: {
@@ -1652,6 +1661,9 @@
         unavailable: "Indisponible",
         unknown: "Inconnu",
         locationUnknown: "Lieu inconnu",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Configurez `entity` pour afficher cette carte.",
+        defaultName: "Personne",
       },
       entityCard: {
         binarySensor: {
@@ -2080,6 +2092,9 @@
         unavailable: "Non disponibile",
         unknown: "Sconosciuto",
         locationUnknown: "Posizione sconosciuta",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Imposta `entity` per mostrare questa scheda.",
+        defaultName: "Persona",
       },
       entityCard: {
         binarySensor: {
@@ -2508,6 +2523,9 @@
         unavailable: "Niet beschikbaar",
         unknown: "Onbekend",
         locationUnknown: "Locatie onbekend",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Stel `entity` in om deze kaart te tonen.",
+        defaultName: "Persoon",
       },
       entityCard: {
         binarySensor: {
@@ -3051,7 +3069,10 @@
         school: "Escola",
         unavailable: "Indisponível",
         unknown: "Desconhecido",
-        locationUnknown: "Localização desconhecida"
+        locationUnknown: "Localização desconhecida",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Defina `entity` para mostrar este cartão.",
+        defaultName: "Pessoa",
       },
       entityCard: {
         binarySensor: {
@@ -3488,7 +3509,10 @@
         school: "Школа",
         unavailable: "Недоступно",
         unknown: "Неизвестно",
-        locationUnknown: "Местоположение неизвестно"
+        locationUnknown: "Местоположение неизвестно",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Укажите `entity`, чтобы показать эту карточку.",
+        defaultName: "Человек",
       },
       entityCard: {
         binarySensor: {
@@ -3925,7 +3949,10 @@
         school: "Σχολείο",
         unavailable: "Μη διαθέσιμο",
         unknown: "Άγνωστο",
-        locationUnknown: "Άγνωστη τοποθεσία"
+        locationUnknown: "Άγνωστη τοποθεσία",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Ορίστε `entity` για να εμφανιστεί αυτή η κάρτα.",
+        defaultName: "Άτομο",
       },
       entityCard: {
         binarySensor: {
@@ -4362,7 +4389,10 @@
         school: "学校",
         unavailable: "不可用",
         unknown: "未知",
-        locationUnknown: "位置未知"
+        locationUnknown: "位置未知",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "设置 `entity` 以显示此卡片。",
+        defaultName: "人员",
       },
       entityCard: {
         binarySensor: {
@@ -4799,7 +4829,10 @@
         school: "Școală",
         unavailable: "Indisponibil",
         unknown: "Necunoscut",
-        locationUnknown: "Locație necunoscută"
+        locationUnknown: "Locație necunoscută",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Setați `entity` pentru a afișa acest card.",
+        defaultName: "Persoană",
       },
       entityCard: {
         binarySensor: {
@@ -45330,7 +45363,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "0.14.0";
+const CARD_VERSION = "0.15.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -45815,7 +45848,19 @@ function normalizeConfig(rawConfig) {
 }
 
 function getNodePosition(kind, index = 0, total = 0, hasBottomUtilities = false) {
-  return getNodePositionForLayout(kind, index, total, hasBottomUtilities, "full");
+  return getNodePositionForLayout(kind, index, total, hasBottomUtilities, "full", {});
+}
+
+/** Active grid / solar / battery branches so %-layout can spread vertically when several sources exist. */
+function getFlowLayoutFlagsFromConfig(config) {
+  const c = config || {};
+  const hasGrid = Boolean(resolveNodeConfig("grid", c)?.entity);
+  const hasSolar = Boolean(resolveNodeConfig("solar", c)?.entity);
+  const hasBattery = Boolean(resolveNodeConfig("battery", c)?.entity);
+  const topCount = [hasGrid, hasSolar, hasBattery].filter(Boolean).length;
+  const bottomUtilities = [resolveNodeConfig("water", c), resolveNodeConfig("gas", c)].filter(item => item.entity).length;
+  const individualCount = resolveIndividualConfigs(c).length;
+  return { hasGrid, hasSolar, hasBattery, topCount, bottomUtilities, individualCount };
 }
 
 function getLayoutPreset(nodeCounts = {}) {
@@ -45835,7 +45880,16 @@ function getLayoutPreset(nodeCounts = {}) {
   return "full";
 }
 
-function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities = false, layoutPreset = "full") {
+function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities = false, layoutPreset = "full", flowFlags = {}) {
+  const flags = flowFlags && typeof flowFlags === "object" ? flowFlags : {};
+  const topN = Number(flags.topCount) || 0;
+  const crowdedTop = topN >= 2;
+  const packedTop = topN >= 3;
+  const bottomN = Number(flags.bottomUtilities) || 0;
+  const bottomSpread = bottomN >= 2 ? 6 : 0;
+  const topSpread = crowdedTop ? 10 : 0;
+  const packSpread = packedTop ? 6 : 0;
+
   if (layoutPreset === "simple") {
     if (kind === "home") {
       return { x: 58, y: 42 };
@@ -45862,67 +45916,136 @@ function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities
 
   if (layoutPreset === "compact") {
     if (kind === "home") {
-      return { x: 53, y: 54 };
+      let y = 54;
+      if (crowdedTop) {
+        y += 6;
+      }
+      if (packedTop) {
+        y += 4;
+      }
+      return { x: 53, y: Math.min(y, 66) };
     }
     if (kind === "solar") {
-      return { x: 50, y: 20 };
+      let y = 20;
+      if (topN >= 2) {
+        y = 12;
+      }
+      if (packedTop) {
+        y = 9;
+      }
+      return { x: 50, y };
     }
     if (kind === "grid") {
-      return { x: 20, y: 54 };
+      let y = 54;
+      if (crowdedTop) {
+        y -= 8;
+      }
+      if (packedTop) {
+        y -= 4;
+      }
+      return { x: 20, y: Math.max(y, 38) };
     }
     if (kind === "battery") {
-      return { x: 80, y: 54 };
+      let y = 54;
+      if (crowdedTop) {
+        y -= 8;
+      }
+      if (packedTop) {
+        y -= 4;
+      }
+      return { x: 80, y: Math.max(y, 38) };
     }
     if (kind === "water") {
-      return total > 1 ? { x: 33, y: 80 } : { x: 41, y: 80 };
+      const y = (total > 1 ? 80 : 80) + topSpread + bottomSpread;
+      return total > 1 ? { x: 33, y } : { x: 41, y };
     }
     if (kind === "gas") {
-      return total > 1 ? { x: 67, y: 80 } : { x: 59, y: 80 };
+      const y = (total > 1 ? 80 : 80) + topSpread + bottomSpread;
+      return total > 1 ? { x: 67, y } : { x: 59, y };
     }
     if (kind === "individual") {
-      const y = hasBottomUtilities ? 88 : 80;
+      let y = hasBottomUtilities ? 88 : 80;
+      y += topSpread + bottomSpread + packSpread;
       if (total <= 1) {
-        return { x: 79, y: 54 };
+        let yHome = 54;
+        if (crowdedTop) {
+          yHome += 6;
+        }
+        if (packedTop) {
+          yHome += 4;
+        }
+        return { x: 79, y: Math.min(yHome, 66) };
       }
       const start = 28;
       const end = 72;
       const step = (end - start) / Math.max(total - 1, 1);
       return {
         x: start + (step * index),
-        y,
+        y: Math.min(y, 96),
       };
     }
   }
 
   if (kind === "home") {
-    return { x: 50, y: hasBottomUtilities ? 46 : 54 };
+    let y = hasBottomUtilities ? 48 : 54;
+    if (crowdedTop) {
+      y += 8;
+    }
+    if (packedTop) {
+      y += 6;
+    }
+    return { x: 50, y: Math.min(y, 68) };
   }
   if (kind === "solar") {
-    return { x: 50, y: 20 };
+    let y = 20;
+    if (topN >= 2) {
+      y = 11;
+    }
+    if (packedTop) {
+      y = 8;
+    }
+    return { x: 50, y };
   }
   if (kind === "grid") {
-    return { x: 21, y: hasBottomUtilities ? 48 : 54 };
+    let y = hasBottomUtilities ? 46 : 52;
+    if (crowdedTop) {
+      y -= 8;
+    }
+    if (packedTop) {
+      y -= 4;
+    }
+    return { x: 19, y: Math.max(y, 34) };
   }
   if (kind === "battery") {
-    return { x: 79, y: hasBottomUtilities ? 48 : 54 };
+    let y = hasBottomUtilities ? 46 : 52;
+    if (crowdedTop) {
+      y -= 8;
+    }
+    if (packedTop) {
+      y -= 4;
+    }
+    return { x: 81, y: Math.max(y, 34) };
   }
   if (kind === "water") {
-    return total > 1 ? { x: 32, y: 81 } : { x: 40, y: 81 };
+    const y = (total > 1 ? 81 : 81) + topSpread + bottomSpread + packSpread;
+    return total > 1 ? { x: 32, y: Math.min(y, 94) } : { x: 40, y: Math.min(y, 94) };
   }
   if (kind === "gas") {
-    return total > 1 ? { x: 68, y: 81 } : { x: 60, y: 81 };
+    const y = (total > 1 ? 81 : 81) + topSpread + bottomSpread + packSpread;
+    return total > 1 ? { x: 68, y: Math.min(y, 94) } : { x: 60, y: Math.min(y, 94) };
   }
   if (kind === "individual") {
-    const y = hasBottomUtilities ? 90 : 81;
+    let y = hasBottomUtilities ? 90 : 81;
+    y += topSpread + bottomSpread + packSpread;
     if (total <= 1) {
-      return { x: 50, y };
+      return { x: 50, y: Math.min(y, 96) };
     }
     const start = 26;
     const end = 74;
     const step = (end - start) / Math.max(total - 1, 1);
     return {
       x: start + (step * index),
-      y,
+      y: Math.min(y, 96),
     };
   }
   return { x: 50, y: 50 };
@@ -46250,7 +46373,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return `${formatRawValue(rawValue, decimals)}${unit ? ` ${unit}` : ""}`;
   }
 
-  _resolveNodeDescriptor(kind, configOverride = null, index = 0, total = 0, hasBottomUtilities = false) {
+  _resolveNodeDescriptor(kind, configOverride = null, index = 0, total = 0, hasBottomUtilities = false, flowFlags = {}) {
     const nodeConfig = configOverride || resolveNodeConfig(kind, this._config);
     const sourceResult = this._resolveSourceValue(nodeConfig.entity);
     const state = sourceResult.state;
@@ -46276,7 +46399,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       state,
       secondary,
       unavailable,
-      position: getNodePositionForLayout(nodeKind, index, total, hasBottomUtilities, this._layoutPreset || "full"),
+      position: getNodePositionForLayout(nodeKind, index, total, hasBottomUtilities, this._layoutPreset || "full", flowFlags),
       sourceConfig: nodeConfig,
     };
   }
@@ -46343,30 +46466,26 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   _getNodes() {
-    const bottomUtilities = [
-      resolveNodeConfig("water", this._config),
-      resolveNodeConfig("gas", this._config),
-    ].filter(item => item.entity).length;
+    const flowFlags = getFlowLayoutFlagsFromConfig(this._config);
+    const bottomUtilities = flowFlags.bottomUtilities;
     const individualConfigs = resolveIndividualConfigs(this._config);
-    const topCount = [
-      resolveNodeConfig("grid", this._config),
-      resolveNodeConfig("solar", this._config),
-      resolveNodeConfig("battery", this._config),
-    ].filter(item => item.entity).length;
     this._layoutPreset = getLayoutPreset({
-      top: topCount,
+      top: flowFlags.topCount,
       bottom: bottomUtilities,
       individual: individualConfigs.length,
     });
 
+    const hasBottom = bottomUtilities > 0;
     const nodes = {
-      home: this._resolveNodeDescriptor("home"),
-      grid: this._resolveNodeDescriptor("grid"),
-      solar: this._resolveNodeDescriptor("solar"),
-      battery: this._resolveNodeDescriptor("battery"),
-      water: this._resolveNodeDescriptor("water", null, 0, bottomUtilities, bottomUtilities > 0),
-      gas: this._resolveNodeDescriptor("gas", null, 1, bottomUtilities, bottomUtilities > 0),
-      individual: individualConfigs.map((config, index) => this._resolveNodeDescriptor("individual", config, index, individualConfigs.length, bottomUtilities > 0)),
+      home: this._resolveNodeDescriptor("home", null, 0, 0, hasBottom, flowFlags),
+      grid: this._resolveNodeDescriptor("grid", null, 0, 0, hasBottom, flowFlags),
+      solar: this._resolveNodeDescriptor("solar", null, 0, 0, hasBottom, flowFlags),
+      battery: this._resolveNodeDescriptor("battery", null, 0, 0, hasBottom, flowFlags),
+      water: this._resolveNodeDescriptor("water", null, 0, bottomUtilities, hasBottom, flowFlags),
+      gas: this._resolveNodeDescriptor("gas", null, 1, bottomUtilities, hasBottom, flowFlags),
+      individual: individualConfigs.map((config, index) =>
+        this._resolveNodeDescriptor("individual", config, index, individualConfigs.length, hasBottom, flowFlags),
+      ),
     };
 
     if (!nodes.home.entityId) {
@@ -46374,6 +46493,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
 
     nodes._layoutPreset = this._layoutPreset;
+    nodes._flowFlags = flowFlags;
 
     return nodes;
   }
@@ -46846,16 +46966,46 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const flowWidth = Math.max(3, parseSizeToPixels(styles.flow_width, 4));
     const hasLowerNodes = Boolean(nodes.water.entityId || nodes.gas.entityId || nodes.individual.length);
     const layoutPreset = nodes._layoutPreset || "full";
+    const flowFlags = nodes._flowFlags || getFlowLayoutFlagsFromConfig(this._config);
+    const surfaceLayoutExtras = (() => {
+      let add = 0;
+      if (layoutPreset !== "simple") {
+        if (flowFlags.topCount >= 2) {
+          add += 52;
+        }
+        if (flowFlags.topCount >= 3) {
+          add += 40;
+        }
+        if (flowFlags.bottomUtilities >= 2 && flowFlags.topCount >= 2) {
+          add += 28;
+        }
+        add += Math.min(Math.max(0, flowFlags.individualCount - 1), 5) * 22;
+      }
+      return add;
+    })();
+    const surfaceMinHeight = Math.min(
+      Math.max(
+        (layoutPreset === "simple"
+          ? 162
+          : layoutPreset === "compact"
+            ? (hasLowerNodes ? 296 : 228)
+            : (hasLowerNodes ? 328 : 248)) + surfaceLayoutExtras,
+        layoutPreset === "simple" ? 148 : 220,
+      ),
+      540,
+    );
+    const surfaceMinHeightMobile = Math.min(
+      Math.max(
+        (layoutPreset === "simple" ? 144 : hasLowerNodes ? 304 : 230) + surfaceLayoutExtras,
+        layoutPreset === "simple" ? 132 : 208,
+      ),
+      520,
+    );
     const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
     const titleText = this._config?.title || this._config?.name || (layoutPreset === "simple" ? "" : "Flujo");
     const hasHeader = this._config?.show_header !== false && (Boolean(titleText) || (showDashboardButton && layoutPreset !== "simple"));
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
-    const surfaceMinHeight = layoutPreset === "simple"
-      ? 162
-      : layoutPreset === "compact"
-        ? (hasLowerNodes ? 296 : 228)
-        : (hasLowerNodes ? 328 : 248);
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -46863,7 +47013,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           --power-flow-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
           --power-flow-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           display: block;
-          height: 100%;
+          height: auto;
           min-height: 0;
         }
 
@@ -46874,7 +47024,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         ha-card {
           background-color: var(--ha-card-background, var(--card-background-color, #fff));
           border-radius: ${styles.card.border_radius};
-          height: 100%;
+          height: auto;
           isolation: isolate;
           min-height: 0;
           overflow: hidden;
@@ -46903,7 +47053,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           display: flex;
           flex-direction: column;
           gap: ${styles.card.gap};
-          height: 100%;
+          height: auto;
           isolation: isolate;
           min-height: 0;
           overflow: hidden;
@@ -46956,7 +47106,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__content {
-          flex: 1;
+          flex: 0 1 auto;
           min-height: 0;
           position: relative;
           transform-origin: center;
@@ -46977,11 +47127,18 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__surface {
           background: linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 18%, transparent) 0%, transparent 100%);
           border-radius: calc(${styles.card.border_radius} - 6px);
+          height: auto;
           min-height: ${surfaceMinHeight}px;
           position: relative;
           transform-origin: center;
           will-change: opacity, transform;
           width: 100%;
+        }
+
+        .power-flow-card--compact .power-flow-card__surface,
+        .power-flow-card--full .power-flow-card__surface {
+          aspect-ratio: 1 / 1.02;
+          max-height: none;
         }
 
         .power-flow-card__surface--entering {
@@ -47624,13 +47781,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         @media (max-width: 640px) {
           .power-flow-card__surface {
-            min-height: ${
-              layoutPreset === "simple"
-                ? 144
-                : hasLowerNodes
-                  ? 304
-                  : 230
-            }px;
+            min-height: ${surfaceMinHeightMobile}px;
           }
 
           .power-flow-card__dashboard-button {
@@ -72506,7 +72657,8 @@ class NodaliaPersonCard extends HTMLElement {
   }
 
   _getTitle(state) {
-    return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Persona";
+    const fallback = this._personUiCopy().defaultName;
+    return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || fallback;
   }
 
   _getPersonPicture(state) {
@@ -72893,11 +73045,30 @@ class NodaliaPersonCard extends HTMLElement {
     this._performTapAction();
   }
 
+  _personUiCopy() {
+    const NI = window.NodaliaI18n;
+    if (!NI?.strings || !NI.resolveLanguage) {
+      return {
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Configura `entity` para mostrar la tarjeta.",
+        defaultName: "Persona",
+      };
+    }
+    const lang = NI.resolveLanguage(this._hass, this._config?.language);
+    const person = NI.strings(lang).person || {};
+    return {
+      emptyTitle: person.emptyTitle || "Nodalia Person Card",
+      emptyBody: person.emptyBody || "Configura `entity` para mostrar la tarjeta.",
+      defaultName: person.defaultName || "Persona",
+    };
+  }
+
   _renderEmptyState() {
+    const ui = this._personUiCopy();
     return `
       <ha-card class="person-card person-card--empty">
-        <div class="person-card__empty-title">Nodalia Person Card</div>
-        <div class="person-card__empty-text">Configura \`entity\` para mostrar la tarjeta.</div>
+        <div class="person-card__empty-title">${escapeHtml(ui.emptyTitle)}</div>
+        <div class="person-card__empty-text">${escapeHtml(ui.emptyBody)}</div>
       </ha-card>
     `;
   }
@@ -72995,22 +73166,30 @@ class NodaliaPersonCard extends HTMLElement {
 
         .person-card__content {
           align-items: center;
-          align-content: center;
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
-          display: grid;
+          display: flex;
+          flex-direction: row;
           gap: ${effectiveGap};
-          grid-template-columns: ${avatarTrackSize} minmax(0, 1fr);
-          grid-template-rows: 1fr;
           height: ${singleRowLayout ? "auto" : "100%"};
           min-height: ${effectiveContentMinHeight};
           min-width: 0;
           padding: ${effectivePadding};
           position: relative;
-          place-items: center start;
           transform-origin: center;
           transition: transform 160ms ease;
           will-change: transform;
           z-index: 1;
+        }
+
+        .person-card__avatar-track {
+          align-items: center;
+          align-self: stretch;
+          display: flex;
+          flex: 0 0 ${avatarTrackSize};
+          justify-content: center;
+          min-height: 0;
+          min-width: 0;
+          width: ${avatarTrackSize};
         }
 
         .person-card__content--entering {
@@ -73027,8 +73206,8 @@ class NodaliaPersonCard extends HTMLElement {
         }
 
         .person-card__avatar {
-          align-self: center;
           align-items: center;
+          flex-shrink: 0;
           background: ${styles.avatar.background};
           border: 1px solid color-mix(in srgb, ${accentColor} 16%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
           border-radius: 999px;
@@ -73102,11 +73281,10 @@ class NodaliaPersonCard extends HTMLElement {
 
         .person-card__copy {
           align-content: center;
-          align-self: center;
           display: grid;
+          flex: 1 1 auto;
           gap: ${singleRowLayout ? "4px" : "6px"};
           min-width: 0;
-          width: 100%;
         }
 
         .person-card__copy--entering {
@@ -73244,7 +73422,8 @@ class NodaliaPersonCard extends HTMLElement {
       </style>
       <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""}">
         <div class="person-card__content ${animateWithPicture ? "person-card__content--entering" : ""}" ${canRunPrimaryAction ? 'data-person-action="primary"' : ""}>
-          <div class="person-card__avatar ${animateWithPicture ? "person-card__avatar--entering" : ""}">
+          <div class="person-card__avatar-track">
+            <div class="person-card__avatar ${animateWithPicture ? "person-card__avatar--entering" : ""}">
             ${
               picture
                 ? `<img src="${escapeHtml(picture)}" alt="${escapeHtml(title)}" />`
@@ -73255,6 +73434,7 @@ class NodaliaPersonCard extends HTMLElement {
                 ? `<span class="person-card__badge" style="--badge-color:${escapeHtml(badge.color)};"><ha-icon icon="${escapeHtml(badge.icon)}"></ha-icon></span>`
                 : ""
             }
+            </div>
           </div>
           <div class="person-card__copy ${animateWithPicture ? "person-card__copy--entering" : ""}">
             <div class="person-card__title">${escapeHtml(title)}</div>
@@ -82547,4 +82727,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.3.0-beta.08","contentSha256_12":"3e56e5e21305"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.3.0-beta.09","contentSha256_12":"eff4ebbc177d"};}

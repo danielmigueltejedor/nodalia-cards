@@ -366,7 +366,10 @@
         school: "Colegio",
         unavailable: "No disponible",
         unknown: "Desconocido",
-        locationUnknown: "Ubicacion desconocida",
+        locationUnknown: "Ubicación desconocida",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Configura `entity` para mostrar la tarjeta.",
+        defaultName: "Persona",
       },
       entityCard: {
         binarySensor: {
@@ -795,6 +798,9 @@
         unavailable: "Unavailable",
         unknown: "Unknown",
         locationUnknown: "Unknown location",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Set `entity` to show this card.",
+        defaultName: "Person",
       },
       entityCard: {
         binarySensor: {
@@ -1223,6 +1229,9 @@
         unavailable: "Nicht verfügbar",
         unknown: "Unbekannt",
         locationUnknown: "Unbekannter Ort",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Lege `entity` fest, um diese Karte anzuzeigen.",
+        defaultName: "Person",
       },
       entityCard: {
         binarySensor: {
@@ -1651,6 +1660,9 @@
         unavailable: "Indisponible",
         unknown: "Inconnu",
         locationUnknown: "Lieu inconnu",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Configurez `entity` pour afficher cette carte.",
+        defaultName: "Personne",
       },
       entityCard: {
         binarySensor: {
@@ -2079,6 +2091,9 @@
         unavailable: "Non disponibile",
         unknown: "Sconosciuto",
         locationUnknown: "Posizione sconosciuta",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Imposta `entity` per mostrare questa scheda.",
+        defaultName: "Persona",
       },
       entityCard: {
         binarySensor: {
@@ -2507,6 +2522,9 @@
         unavailable: "Niet beschikbaar",
         unknown: "Onbekend",
         locationUnknown: "Locatie onbekend",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Stel `entity` in om deze kaart te tonen.",
+        defaultName: "Persoon",
       },
       entityCard: {
         binarySensor: {
@@ -3050,7 +3068,10 @@
         school: "Escola",
         unavailable: "Indisponível",
         unknown: "Desconhecido",
-        locationUnknown: "Localização desconhecida"
+        locationUnknown: "Localização desconhecida",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Defina `entity` para mostrar este cartão.",
+        defaultName: "Pessoa",
       },
       entityCard: {
         binarySensor: {
@@ -3487,7 +3508,10 @@
         school: "Школа",
         unavailable: "Недоступно",
         unknown: "Неизвестно",
-        locationUnknown: "Местоположение неизвестно"
+        locationUnknown: "Местоположение неизвестно",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Укажите `entity`, чтобы показать эту карточку.",
+        defaultName: "Человек",
       },
       entityCard: {
         binarySensor: {
@@ -3924,7 +3948,10 @@
         school: "Σχολείο",
         unavailable: "Μη διαθέσιμο",
         unknown: "Άγνωστο",
-        locationUnknown: "Άγνωστη τοποθεσία"
+        locationUnknown: "Άγνωστη τοποθεσία",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Ορίστε `entity` για να εμφανιστεί αυτή η κάρτα.",
+        defaultName: "Άτομο",
       },
       entityCard: {
         binarySensor: {
@@ -4361,7 +4388,10 @@
         school: "学校",
         unavailable: "不可用",
         unknown: "未知",
-        locationUnknown: "位置未知"
+        locationUnknown: "位置未知",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "设置 `entity` 以显示此卡片。",
+        defaultName: "人员",
       },
       entityCard: {
         binarySensor: {
@@ -4798,7 +4828,10 @@
         school: "Școală",
         unavailable: "Indisponibil",
         unknown: "Necunoscut",
-        locationUnknown: "Locație necunoscută"
+        locationUnknown: "Locație necunoscută",
+        emptyTitle: "Nodalia Person Card",
+        emptyBody: "Setați `entity` pentru a afișa acest card.",
+        defaultName: "Persoană",
       },
       entityCard: {
         binarySensor: {

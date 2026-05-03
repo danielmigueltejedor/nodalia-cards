@@ -4,11 +4,22 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.09] - 2026-05-04
+
+### Fixed
+
+- **Power flow card**: With several active branches (red + solar + batería, agua/gas, individuales, etc.) the nodes no longer collapse on top of each other: **dynamic %-positions** from `getFlowLayoutFlagsFromConfig`, extra **vertical spacing** when `topCount ≥ 2` / `≥ 3`, and a taller **adaptive `min-height`** (plus mobile). The diagram surface uses **`aspect-ratio`** on **compact/full** and the card uses **`height: auto`** so the tile grows with the flow instead of crushing the SVG into a short band.
+- **Person card**: The avatar track uses **`align-self: stretch`** so the photo stays vertically centred when the text column is taller than the bubble.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`**: `CARD_VERSION` **0.15.0** (layout behaviour above).
+
 ## [0.3.0-beta.08] - 2026-05-04
 
 ### Fixed
 
-- **Person card**: Avatar / entity photo is vertically centred with the card in compact single-row layout (removed asymmetric vertical padding that shifted content upward).
+- **Person card**: Avatar / entity photo is vertically centred with the pill card: main row uses **flex** with a dedicated **`person-card__avatar-track`** (centred track) instead of a CSS grid that left the bubble visually high relative to the title row.
 - **Visual editors (all Nodalia card editors using the shared grid)**: `ha-icon-picker` and mounted icon-picker hosts span the full editor row (`grid-column: 1 / -1`), matching entity pickers so long icon paths do not clip.
 
 ### Changed
@@ -16,6 +27,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Editor i18n (`scripts/gen-editor-ui.mjs` → `nodalia-editor-ui.js`)**: `translateEsToEn` applies **`Usar … entidad` / `Usar … zona` / vibration phrases before** the blanket **`Entidad → Entity`** replacement, fixing broken English seeds and duplicate wrong rows (for example **Use entity icon** and locale columns no longer stuck on mixed Spanish/English).
 - **`FULL_LOCALE_BY_EN`**: Proper **`de`/`fr`/…** strings for **Use entity icon**, **Use zone icon**, **Use entity photo**, **Tap action**, **Use vibration fallback**, and **Use vibration if haptics unavailable**.
 - **Person, graph, weather card editors**: Section label key **`Acción al tocar`** (accented) so `editorStr` resolves **`Tap action`** and translations consistently.
+- **`nodalia-i18n.js` → `person`**: **`emptyTitle`**, **`emptyBody`**, **`defaultName`** for the empty configuration state and title fallback; **`locationUnknown`** accent fixed in Spanish (`Ubicación`).
 
 ## [0.3.0-beta.07] - 2026-05-03
 

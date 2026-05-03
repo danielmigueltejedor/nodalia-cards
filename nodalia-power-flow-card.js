@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "0.14.0";
+const CARD_VERSION = "0.15.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -485,7 +485,19 @@ function normalizeConfig(rawConfig) {
 }
 
 function getNodePosition(kind, index = 0, total = 0, hasBottomUtilities = false) {
-  return getNodePositionForLayout(kind, index, total, hasBottomUtilities, "full");
+  return getNodePositionForLayout(kind, index, total, hasBottomUtilities, "full", {});
+}
+
+/** Active grid / solar / battery branches so %-layout can spread vertically when several sources exist. */
+function getFlowLayoutFlagsFromConfig(config) {
+  const c = config || {};
+  const hasGrid = Boolean(resolveNodeConfig("grid", c)?.entity);
+  const hasSolar = Boolean(resolveNodeConfig("solar", c)?.entity);
+  const hasBattery = Boolean(resolveNodeConfig("battery", c)?.entity);
+  const topCount = [hasGrid, hasSolar, hasBattery].filter(Boolean).length;
+  const bottomUtilities = [resolveNodeConfig("water", c), resolveNodeConfig("gas", c)].filter(item => item.entity).length;
+  const individualCount = resolveIndividualConfigs(c).length;
+  return { hasGrid, hasSolar, hasBattery, topCount, bottomUtilities, individualCount };
 }
 
 function getLayoutPreset(nodeCounts = {}) {
@@ -505,7 +517,16 @@ function getLayoutPreset(nodeCounts = {}) {
   return "full";
 }
 
-function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities = false, layoutPreset = "full") {
+function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities = false, layoutPreset = "full", flowFlags = {}) {
+  const flags = flowFlags && typeof flowFlags === "object" ? flowFlags : {};
+  const topN = Number(flags.topCount) || 0;
+  const crowdedTop = topN >= 2;
+  const packedTop = topN >= 3;
+  const bottomN = Number(flags.bottomUtilities) || 0;
+  const bottomSpread = bottomN >= 2 ? 6 : 0;
+  const topSpread = crowdedTop ? 10 : 0;
+  const packSpread = packedTop ? 6 : 0;
+
   if (layoutPreset === "simple") {
     if (kind === "home") {
       return { x: 58, y: 42 };
@@ -532,67 +553,136 @@ function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities
 
   if (layoutPreset === "compact") {
     if (kind === "home") {
-      return { x: 53, y: 54 };
+      let y = 54;
+      if (crowdedTop) {
+        y += 6;
+      }
+      if (packedTop) {
+        y += 4;
+      }
+      return { x: 53, y: Math.min(y, 66) };
     }
     if (kind === "solar") {
-      return { x: 50, y: 20 };
+      let y = 20;
+      if (topN >= 2) {
+        y = 12;
+      }
+      if (packedTop) {
+        y = 9;
+      }
+      return { x: 50, y };
     }
     if (kind === "grid") {
-      return { x: 20, y: 54 };
+      let y = 54;
+      if (crowdedTop) {
+        y -= 8;
+      }
+      if (packedTop) {
+        y -= 4;
+      }
+      return { x: 20, y: Math.max(y, 38) };
     }
     if (kind === "battery") {
-      return { x: 80, y: 54 };
+      let y = 54;
+      if (crowdedTop) {
+        y -= 8;
+      }
+      if (packedTop) {
+        y -= 4;
+      }
+      return { x: 80, y: Math.max(y, 38) };
     }
     if (kind === "water") {
-      return total > 1 ? { x: 33, y: 80 } : { x: 41, y: 80 };
+      const y = (total > 1 ? 80 : 80) + topSpread + bottomSpread;
+      return total > 1 ? { x: 33, y } : { x: 41, y };
     }
     if (kind === "gas") {
-      return total > 1 ? { x: 67, y: 80 } : { x: 59, y: 80 };
+      const y = (total > 1 ? 80 : 80) + topSpread + bottomSpread;
+      return total > 1 ? { x: 67, y } : { x: 59, y };
     }
     if (kind === "individual") {
-      const y = hasBottomUtilities ? 88 : 80;
+      let y = hasBottomUtilities ? 88 : 80;
+      y += topSpread + bottomSpread + packSpread;
       if (total <= 1) {
-        return { x: 79, y: 54 };
+        let yHome = 54;
+        if (crowdedTop) {
+          yHome += 6;
+        }
+        if (packedTop) {
+          yHome += 4;
+        }
+        return { x: 79, y: Math.min(yHome, 66) };
       }
       const start = 28;
       const end = 72;
       const step = (end - start) / Math.max(total - 1, 1);
       return {
         x: start + (step * index),
-        y,
+        y: Math.min(y, 96),
       };
     }
   }
 
   if (kind === "home") {
-    return { x: 50, y: hasBottomUtilities ? 46 : 54 };
+    let y = hasBottomUtilities ? 48 : 54;
+    if (crowdedTop) {
+      y += 8;
+    }
+    if (packedTop) {
+      y += 6;
+    }
+    return { x: 50, y: Math.min(y, 68) };
   }
   if (kind === "solar") {
-    return { x: 50, y: 20 };
+    let y = 20;
+    if (topN >= 2) {
+      y = 11;
+    }
+    if (packedTop) {
+      y = 8;
+    }
+    return { x: 50, y };
   }
   if (kind === "grid") {
-    return { x: 21, y: hasBottomUtilities ? 48 : 54 };
+    let y = hasBottomUtilities ? 46 : 52;
+    if (crowdedTop) {
+      y -= 8;
+    }
+    if (packedTop) {
+      y -= 4;
+    }
+    return { x: 19, y: Math.max(y, 34) };
   }
   if (kind === "battery") {
-    return { x: 79, y: hasBottomUtilities ? 48 : 54 };
+    let y = hasBottomUtilities ? 46 : 52;
+    if (crowdedTop) {
+      y -= 8;
+    }
+    if (packedTop) {
+      y -= 4;
+    }
+    return { x: 81, y: Math.max(y, 34) };
   }
   if (kind === "water") {
-    return total > 1 ? { x: 32, y: 81 } : { x: 40, y: 81 };
+    const y = (total > 1 ? 81 : 81) + topSpread + bottomSpread + packSpread;
+    return total > 1 ? { x: 32, y: Math.min(y, 94) } : { x: 40, y: Math.min(y, 94) };
   }
   if (kind === "gas") {
-    return total > 1 ? { x: 68, y: 81 } : { x: 60, y: 81 };
+    const y = (total > 1 ? 81 : 81) + topSpread + bottomSpread + packSpread;
+    return total > 1 ? { x: 68, y: Math.min(y, 94) } : { x: 60, y: Math.min(y, 94) };
   }
   if (kind === "individual") {
-    const y = hasBottomUtilities ? 90 : 81;
+    let y = hasBottomUtilities ? 90 : 81;
+    y += topSpread + bottomSpread + packSpread;
     if (total <= 1) {
-      return { x: 50, y };
+      return { x: 50, y: Math.min(y, 96) };
     }
     const start = 26;
     const end = 74;
     const step = (end - start) / Math.max(total - 1, 1);
     return {
       x: start + (step * index),
-      y,
+      y: Math.min(y, 96),
     };
   }
   return { x: 50, y: 50 };
@@ -920,7 +1010,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return `${formatRawValue(rawValue, decimals)}${unit ? ` ${unit}` : ""}`;
   }
 
-  _resolveNodeDescriptor(kind, configOverride = null, index = 0, total = 0, hasBottomUtilities = false) {
+  _resolveNodeDescriptor(kind, configOverride = null, index = 0, total = 0, hasBottomUtilities = false, flowFlags = {}) {
     const nodeConfig = configOverride || resolveNodeConfig(kind, this._config);
     const sourceResult = this._resolveSourceValue(nodeConfig.entity);
     const state = sourceResult.state;
@@ -946,7 +1036,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       state,
       secondary,
       unavailable,
-      position: getNodePositionForLayout(nodeKind, index, total, hasBottomUtilities, this._layoutPreset || "full"),
+      position: getNodePositionForLayout(nodeKind, index, total, hasBottomUtilities, this._layoutPreset || "full", flowFlags),
       sourceConfig: nodeConfig,
     };
   }
@@ -1013,30 +1103,26 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   _getNodes() {
-    const bottomUtilities = [
-      resolveNodeConfig("water", this._config),
-      resolveNodeConfig("gas", this._config),
-    ].filter(item => item.entity).length;
+    const flowFlags = getFlowLayoutFlagsFromConfig(this._config);
+    const bottomUtilities = flowFlags.bottomUtilities;
     const individualConfigs = resolveIndividualConfigs(this._config);
-    const topCount = [
-      resolveNodeConfig("grid", this._config),
-      resolveNodeConfig("solar", this._config),
-      resolveNodeConfig("battery", this._config),
-    ].filter(item => item.entity).length;
     this._layoutPreset = getLayoutPreset({
-      top: topCount,
+      top: flowFlags.topCount,
       bottom: bottomUtilities,
       individual: individualConfigs.length,
     });
 
+    const hasBottom = bottomUtilities > 0;
     const nodes = {
-      home: this._resolveNodeDescriptor("home"),
-      grid: this._resolveNodeDescriptor("grid"),
-      solar: this._resolveNodeDescriptor("solar"),
-      battery: this._resolveNodeDescriptor("battery"),
-      water: this._resolveNodeDescriptor("water", null, 0, bottomUtilities, bottomUtilities > 0),
-      gas: this._resolveNodeDescriptor("gas", null, 1, bottomUtilities, bottomUtilities > 0),
-      individual: individualConfigs.map((config, index) => this._resolveNodeDescriptor("individual", config, index, individualConfigs.length, bottomUtilities > 0)),
+      home: this._resolveNodeDescriptor("home", null, 0, 0, hasBottom, flowFlags),
+      grid: this._resolveNodeDescriptor("grid", null, 0, 0, hasBottom, flowFlags),
+      solar: this._resolveNodeDescriptor("solar", null, 0, 0, hasBottom, flowFlags),
+      battery: this._resolveNodeDescriptor("battery", null, 0, 0, hasBottom, flowFlags),
+      water: this._resolveNodeDescriptor("water", null, 0, bottomUtilities, hasBottom, flowFlags),
+      gas: this._resolveNodeDescriptor("gas", null, 1, bottomUtilities, hasBottom, flowFlags),
+      individual: individualConfigs.map((config, index) =>
+        this._resolveNodeDescriptor("individual", config, index, individualConfigs.length, hasBottom, flowFlags),
+      ),
     };
 
     if (!nodes.home.entityId) {
@@ -1044,6 +1130,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
 
     nodes._layoutPreset = this._layoutPreset;
+    nodes._flowFlags = flowFlags;
 
     return nodes;
   }
@@ -1516,16 +1603,46 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const flowWidth = Math.max(3, parseSizeToPixels(styles.flow_width, 4));
     const hasLowerNodes = Boolean(nodes.water.entityId || nodes.gas.entityId || nodes.individual.length);
     const layoutPreset = nodes._layoutPreset || "full";
+    const flowFlags = nodes._flowFlags || getFlowLayoutFlagsFromConfig(this._config);
+    const surfaceLayoutExtras = (() => {
+      let add = 0;
+      if (layoutPreset !== "simple") {
+        if (flowFlags.topCount >= 2) {
+          add += 52;
+        }
+        if (flowFlags.topCount >= 3) {
+          add += 40;
+        }
+        if (flowFlags.bottomUtilities >= 2 && flowFlags.topCount >= 2) {
+          add += 28;
+        }
+        add += Math.min(Math.max(0, flowFlags.individualCount - 1), 5) * 22;
+      }
+      return add;
+    })();
+    const surfaceMinHeight = Math.min(
+      Math.max(
+        (layoutPreset === "simple"
+          ? 162
+          : layoutPreset === "compact"
+            ? (hasLowerNodes ? 296 : 228)
+            : (hasLowerNodes ? 328 : 248)) + surfaceLayoutExtras,
+        layoutPreset === "simple" ? 148 : 220,
+      ),
+      540,
+    );
+    const surfaceMinHeightMobile = Math.min(
+      Math.max(
+        (layoutPreset === "simple" ? 144 : hasLowerNodes ? 304 : 230) + surfaceLayoutExtras,
+        layoutPreset === "simple" ? 132 : 208,
+      ),
+      520,
+    );
     const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
     const titleText = this._config?.title || this._config?.name || (layoutPreset === "simple" ? "" : "Flujo");
     const hasHeader = this._config?.show_header !== false && (Boolean(titleText) || (showDashboardButton && layoutPreset !== "simple"));
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
-    const surfaceMinHeight = layoutPreset === "simple"
-      ? 162
-      : layoutPreset === "compact"
-        ? (hasLowerNodes ? 296 : 228)
-        : (hasLowerNodes ? 328 : 248);
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1533,7 +1650,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           --power-flow-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
           --power-flow-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           display: block;
-          height: 100%;
+          height: auto;
           min-height: 0;
         }
 
@@ -1544,7 +1661,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         ha-card {
           background-color: var(--ha-card-background, var(--card-background-color, #fff));
           border-radius: ${styles.card.border_radius};
-          height: 100%;
+          height: auto;
           isolation: isolate;
           min-height: 0;
           overflow: hidden;
@@ -1573,7 +1690,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           display: flex;
           flex-direction: column;
           gap: ${styles.card.gap};
-          height: 100%;
+          height: auto;
           isolation: isolate;
           min-height: 0;
           overflow: hidden;
@@ -1626,7 +1743,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__content {
-          flex: 1;
+          flex: 0 1 auto;
           min-height: 0;
           position: relative;
           transform-origin: center;
@@ -1647,11 +1764,18 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__surface {
           background: linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 18%, transparent) 0%, transparent 100%);
           border-radius: calc(${styles.card.border_radius} - 6px);
+          height: auto;
           min-height: ${surfaceMinHeight}px;
           position: relative;
           transform-origin: center;
           will-change: opacity, transform;
           width: 100%;
+        }
+
+        .power-flow-card--compact .power-flow-card__surface,
+        .power-flow-card--full .power-flow-card__surface {
+          aspect-ratio: 1 / 1.02;
+          max-height: none;
         }
 
         .power-flow-card__surface--entering {
@@ -2294,13 +2418,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         @media (max-width: 640px) {
           .power-flow-card__surface {
-            min-height: ${
-              layoutPreset === "simple"
-                ? 144
-                : hasLowerNodes
-                  ? 304
-                  : 230
-            }px;
+            min-height: ${surfaceMinHeightMobile}px;
           }
 
           .power-flow-card__dashboard-button {
