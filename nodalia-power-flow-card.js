@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "0.16.0";
+const CARD_VERSION = "0.16.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -543,12 +543,11 @@ function getLayoutPreset(nodeCounts = {}) {
   const topCount = Number(nodeCounts.top || 0);
   const bottomCount = Number(nodeCounts.bottom || 0);
   const individualCount = Number(nodeCounts.individual || 0);
-  const total = topCount + bottomCount + individualCount;
 
-  if (total <= 1 && bottomCount === 0) {
-    return "simple";
-  }
-
+  /**
+   * Always use the same SVG bubble diagram as multi-source layouts.
+   * (The old "simple" horizontal rail made a single branch look like a different card.)
+   */
   if (bottomCount === 0 && individualCount <= 1 && topCount <= 3) {
     return "compact";
   }
@@ -599,7 +598,7 @@ function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities
       if (packedTop) {
         y += 4;
       }
-      return { x: 53, y: Math.min(y, 66) };
+      return { x: 50, y: Math.min(y, 66) };
     }
     if (kind === "solar") {
       let y = 20;

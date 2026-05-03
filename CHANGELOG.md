@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.13] - 2026-05-04
+
+### Changed
+
+- **Power flow card**: Con **una sola** fuente (red, solar o batería) ya no se usa el layout horizontal **«simple»**; se muestra el **mismo diagrama de burbujas y SVG** que en modo compacto (varias fuentes). La casa en **compact** queda centrada en **x: 50** como en **full** para alinear el dibujo. **`nodalia-power-flow-card.js`**: `CARD_VERSION` **0.16.1**.
+
 ## [0.3.0-beta.12] - 2026-05-04
 
 ### Added
