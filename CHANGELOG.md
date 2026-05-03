@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.21] - 2026-05-04
+
+### Changed
+
+- **Power flow card**: **Punto de flujo** más grande en diagrama **1–2 fuentes** (coords viewBox y `flow_width`), clase **`power-flow-card--strip`** y punto del rail **simple** a **14px** con animación acorde. **Botón Energía** (cabecera / pie): borde y fondo con **`color-mix` sobre `var(--primary-text-color)`** e **`inset`**, como otras tarjetas Nodalia, para que el borde se lea en **modo claro**; hover suave. **`nodalia-power-flow-card.js`**: `CARD_VERSION` **0.16.7**.
+
+## [0.3.0-beta.20] - 2026-05-04
+
+### Fixed
+
+- **Power flow card**: Con **1–2 fuentes** el trazo quedaba **corto** respecto a las burbujas porque cada extremo se limitaba a **~5,5% de la cuerda** (`min(radioBase, …)`), mucho menor que el radio útil del nodo en tramos largos. Los extremos vuelven a usar el **radio base** hacia el otro nodo y solo se **escalan a la vez** si `fromRadius + toRadius` supera **~88% de la cuerda** (layouts muy compactos). **`nodalia-power-flow-card.js`**: `CARD_VERSION` **0.16.6**.
+
 ## [0.3.0-beta.19] - 2026-05-04
 
 ### Changed

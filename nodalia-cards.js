@@ -45396,7 +45396,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "0.16.5";
+const CARD_VERSION = "0.16.7";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -46773,10 +46773,21 @@ class NodaliaPowerFlowCard extends HTMLElement {
         toNode.position.x - fromNode.position.x,
         toNode.position.y - fromNode.position.y,
       ) || 0.001;
-      /** Cap trim so endpoints stay near node centres (large fixed radii left a visible gap on long chords). */
-      const maxTrim = Math.max(0.3, chord * 0.055);
-      const fromRadius = Math.min(baseFromR, maxTrim);
-      const toRadius = Math.min(baseToR, maxTrim);
+      /**
+       * Endpoints sit on the chord at `baseFromR` / `baseToR` from each centre (toward the other node).
+       * Capping each side with a small fraction of the chord (old behaviour) made long spans (1–2 sources)
+       * use tiny trims so the stroke never reached the bubble outline. Only scale down when the sum would
+       * exceed most of the chord (short diagonal / cramped layouts).
+       */
+      const maxSum = Math.max(chord * 0.88, 0.55);
+      let fromRadius = baseFromR;
+      let toRadius = baseToR;
+      const sum = fromRadius + toRadius;
+      if (sum > maxSum) {
+        const scale = maxSum / sum;
+        fromRadius *= scale;
+        toRadius *= scale;
+      }
 
       lineCandidates.push({
         id,
@@ -46854,18 +46865,21 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return active[0]?.color || "#f6b73c";
   }
 
-  _renderFlowDots(line) {
+  _renderFlowDots(line, dotMetrics = {}) {
     if (!line.active) {
       return "";
     }
 
     const bubbleDuration = 5.6;
+    const glowR = Number(dotMetrics.glowR) || 2.35;
+    const coreR = Number(dotMetrics.coreR) || 1.22;
+    const coreStroke = Number(dotMetrics.coreStroke) || 0.3;
     return `
       <g class="power-flow-card__dot-group" style="--dot-color:${escapeHtml(line.color)};">
-        <circle class="power-flow-card__dot-glow" r="1.65">
+        <circle class="power-flow-card__dot-glow" r="${glowR.toFixed(2)}">
           <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"></animateMotion>
         </circle>
-        <circle class="power-flow-card__dot-core" r="0.95">
+        <circle class="power-flow-card__dot-core" r="${coreR.toFixed(2)}" stroke-width="${coreStroke.toFixed(2)}">
           <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"></animateMotion>
         </circle>
       </g>
@@ -47211,6 +47225,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const layoutPreset = nodes._layoutPreset || "full";
     const flowFlags = nodes._flowFlags || getFlowLayoutFlagsFromConfig(this._config);
     const horizontalStripDiagram = flowFlags.topCount >= 1 && flowFlags.topCount <= 2 && !(flowFlags.individualCount > 0);
+    const flowDotBoost = 1 + Math.max(0, flowWidth - 3) * 0.065;
+    const flowDotGlowR = (horizontalStripDiagram ? 2.92 : 2.38) * flowDotBoost;
+    const flowDotCoreR = (horizontalStripDiagram ? 1.68 : 1.26) * flowDotBoost;
+    const flowDotCoreStroke = horizontalStripDiagram ? 0.38 : 0.3;
+    const flowDotOpts = { glowR: flowDotGlowR, coreR: flowDotCoreR, coreStroke: flowDotCoreStroke };
     const surfaceLayoutExtras = (() => {
       let add = 0;
       if (layoutPreset !== "simple") {
@@ -47348,9 +47367,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__dashboard-button {
           align-items: center;
-          background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%);
-          border: 1px solid rgba(255,255,255,0.08);
+          background: linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--primary-text-color) 7%, transparent) 0%,
+            color-mix(in srgb, var(--primary-text-color) 3%, transparent) 100%
+          );
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
           border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent);
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
@@ -47360,6 +47384,18 @@ class NodaliaPowerFlowCard extends HTMLElement {
           transform-origin: center;
           transition: transform 160ms ease, border-color 160ms ease, box-shadow 180ms ease, background 180ms ease;
           will-change: transform;
+        }
+
+        .power-flow-card__dashboard-button:hover {
+          background: linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--primary-text-color) 11%, transparent) 0%,
+            color-mix(in srgb, var(--primary-text-color) 5%, transparent) 100%
+          );
+          border-color: color-mix(in srgb, var(--primary-text-color) 20%, transparent);
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 12%, transparent),
+            0 6px 16px rgba(0, 0, 0, 0.08);
         }
 
         .power-flow-card__dashboard-button ha-icon {
@@ -47459,7 +47495,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__dot-core {
           fill: rgba(255, 255, 255, 0.98);
           stroke: color-mix(in srgb, var(--dot-color) 36%, rgba(255,255,255,0.5));
-          stroke-width: 0.24;
         }
 
         .power-flow-card__node {
@@ -47725,6 +47760,15 @@ class NodaliaPowerFlowCard extends HTMLElement {
           animation: power-flow-card-simple-dot linear infinite;
         }
 
+        .power-flow-card--strip .power-flow-card__simple-dot {
+          box-shadow:
+            0 0 0 5px color-mix(in srgb, var(--line-color) 16%, transparent),
+            0 0 16px color-mix(in srgb, var(--line-color) 26%, transparent);
+          height: 14px;
+          width: 14px;
+          animation-name: power-flow-card-simple-dot-strip;
+        }
+
         @keyframes power-flow-card-simple-dot {
           0% {
             left: 0;
@@ -47738,6 +47782,23 @@ class NodaliaPowerFlowCard extends HTMLElement {
           }
           100% {
             left: calc(100% - 9px);
+            opacity: 0;
+          }
+        }
+
+        @keyframes power-flow-card-simple-dot-strip {
+          0% {
+            left: 0;
+            opacity: 0;
+          }
+          8% {
+            opacity: 1;
+          }
+          92% {
+            opacity: 1;
+          }
+          100% {
+            left: calc(100% - 14px);
             opacity: 0;
           }
         }
@@ -48060,7 +48121,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
         `}
       </style>
-      <ha-card class="power-flow-card power-flow-card--${layoutPreset}">
+      <ha-card class="power-flow-card power-flow-card--${layoutPreset}${horizontalStripDiagram ? " power-flow-card--strip" : ""}">
         ${
           hasHeader
             ? `
@@ -48138,7 +48199,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
                     enterDelay: this._getNodeAnimationDelay(node, index),
                   })).join("")}
                   <svg class="power-flow-card__svg power-flow-card__svg--dots" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" shape-rendering="geometricPrecision">
-                    ${lines.map(line => this._renderFlowDots(line)).join("")}
+                    ${lines.map(line => this._renderFlowDots(line, flowDotOpts)).join("")}
                   </svg>
                 </div>
               `
@@ -83014,4 +83075,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.3.0-beta.19","contentSha256_12":"9c5e809c7b7b"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.3.0-beta.21","contentSha256_12":"607c18fe0c86"};}
