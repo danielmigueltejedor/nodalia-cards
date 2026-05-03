@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "0.16.2";
+const CARD_VERSION = "0.16.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -797,7 +797,8 @@ function buildFlowPath(from, to, fromRadius = 0, toRadius = 0) {
     cp1 = { x: start.x + (side * pull), y: start.y + (dy * 0.4) };
     cp2 = { x: end.x + (side * pull), y: end.y - (dy * 0.4) };
   } else if (nearlyHorizontal) {
-    const pull = Math.min(20, Math.max(9, adx * 0.24));
+    /** Long mostly-horizontal spans: keep pull small so the curve hugs the chord and meets the nodes cleanly. */
+    const pull = Math.min(5, Math.max(0.9, adx * 0.028));
     const side = ady < 0.35 ? 1 : Math.sign(dy || 1);
     cp1 = { x: start.x + (dx * 0.4), y: start.y + (side * pull) };
     cp2 = { x: end.x - (dx * 0.4), y: end.y - (side * pull) };
@@ -1348,9 +1349,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const layoutPreset = nodes._layoutPreset || "full";
     const zeroLineVisible = this._shouldShowZeroLines();
     const neutralStyle = this._getLineNeutralStyle();
-    const homeRadius = layoutPreset === "simple" ? 11.8 : layoutPreset === "compact" ? 13 : 14.5;
-    const nodeRadius = layoutPreset === "simple" ? 5.1 : layoutPreset === "compact" ? 5.8 : 6.5;
-    const individualRadius = layoutPreset === "simple" ? 4.6 : layoutPreset === "compact" ? 5.1 : 5.5;
+    /** In viewBox units; smaller than bubble outline so strokes visually reach the nodes (large values left a gap). */
+    const homeRadius = layoutPreset === "simple" ? 7.2 : layoutPreset === "compact" ? 8.2 : 9;
+    const nodeRadius = layoutPreset === "simple" ? 3.2 : layoutPreset === "compact" ? 3.7 : 4.1;
+    const individualRadius = layoutPreset === "simple" ? 2.9 : layoutPreset === "compact" ? 3.2 : 3.5;
     const lineCandidates = [];
 
     const pushLine = (id, sourceNode, targetNode, value, unit, color, bidirectional = true) => {
@@ -2027,7 +2029,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__line {
           fill: none;
-          filter: url(#power-flow-soften);
           stroke-linecap: round;
           stroke-linejoin: round;
           stroke-width: ${flowWidth}px;

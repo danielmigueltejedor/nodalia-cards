@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.16] - 2026-05-04
+
+### Fixed
+
+- **Power flow card**: Los radios en coords del SVG que acortaban el trazo eran **demasiado grandes** respecto al dibujo real de las burbujas (quedaba un **hueco** entre línea y nodos); se han **reducido** `homeRadius` / `nodeRadius` / `individualRadius`. Curvas casi **horizontales** (p. ej. una sola fuente) usan menos **tir vertical** para un trazo más limpio. El trazo principal ya **no** aplica el filtro blur (`power-flow-soften`) para bordes más nítidos (el halo suave sigue en `__line-glow`).
+- **Climate card**: La **temperatura actual** bajo el objetivo en el dial heredaba `color` de **`.climate-card__dial-meta`** (`--secondary-text-color`); pasa a **`--primary-text-color`** como el objetivo. **`nodalia-climate-card.js`**: `CARD_VERSION` **0.10.3**. **`nodalia-power-flow-card.js`**: `CARD_VERSION` **0.16.3**.
+
 ## [0.3.0-beta.15] - 2026-05-04
 
 ### Fixed

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "0.10.2";
+const CARD_VERSION = "0.10.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2253,7 +2253,7 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__dial-meta {
           align-items: center;
-          color: var(--secondary-text-color);
+          color: var(--primary-text-color);
           display: flex;
           flex-wrap: wrap;
           font-size: ${effectiveCurrentSize};
