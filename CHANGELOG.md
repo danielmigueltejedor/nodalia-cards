@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.10] - 2026-05-04
+
+### Fixed
+
+- **Power flow card**: Tramos casi **verticales** (solar encima de casa) usan curva con **tir horizontal** para que el trazo no quede en un “pelo” bajo el nodo central; la **solar** se pinta **al final** del SVG. **`grid_options`** por defecto en la config normalizada (`rows: "auto"`, etc.) y **`getGridOptions`** los fusiona con lo que pongas en YAML. Menos **blur** en filtros SVG, **`shape-rendering: geometricPrecision`** y **`vector-effect: non-scaling-stroke`** en los trazos para bordes más limpios al escalar.
+- **Person card**: **`ha-card`** en columna flex con **`justify-content: center`** y la fila principal **`flex: 0 0 auto`** en modo pastilla para centrar el bloque cuando la celda del dashboard es más alta que el contenido; **`:host`** pasa a flex columna **`height: 100%`**.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`**: `CARD_VERSION` **0.15.1**. **`nodalia-person-card.js`**: `CARD_VERSION` **0.9.1**.
+
 ## [0.3.0-beta.09] - 2026-05-04
 
 ### Fixed

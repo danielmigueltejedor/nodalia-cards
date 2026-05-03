@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "0.15.0";
+const CARD_VERSION = "0.15.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -94,6 +94,12 @@ const DEFAULT_CONFIG = {
     enabled: true,
     content_duration: 460,
     button_bounce_duration: 320,
+  },
+  grid_options: {
+    rows: "auto",
+    columns: "full",
+    min_rows: 1,
+    min_columns: 6,
   },
   styles: {
     card: {
@@ -703,13 +709,32 @@ function buildFlowPath(from, to, fromRadius = 0, toRadius = 0) {
   const end = offsetPoint(to, from, toRadius);
   const dx = end.x - start.x;
   const dy = end.y - start.y;
-  const horizontalBias = Math.abs(dx) >= Math.abs(dy);
-  const cp1 = horizontalBias
-    ? { x: start.x + (dx * 0.42), y: start.y }
-    : { x: start.x, y: start.y + (dy * 0.42) };
-  const cp2 = horizontalBias
-    ? { x: end.x - (dx * 0.42), y: end.y }
-    : { x: end.x, y: end.y - (dy * 0.42) };
+  const adx = Math.abs(dx);
+  const ady = Math.abs(dy);
+  /** Pure vertical/horizontal cubics collapse to a hairline and sit under wide nodes; pull control points sideways. */
+  const nearlyVertical = adx < 5.5 && ady > adx * 1.35;
+  const nearlyHorizontal = ady < 5.5 && adx > ady * 1.35;
+  let cp1;
+  let cp2;
+  if (nearlyVertical) {
+    const pull = Math.min(20, Math.max(9, ady * 0.24));
+    const side = adx < 0.35 ? 1 : Math.sign(dx || 1);
+    cp1 = { x: start.x + (side * pull), y: start.y + (dy * 0.4) };
+    cp2 = { x: end.x + (side * pull), y: end.y - (dy * 0.4) };
+  } else if (nearlyHorizontal) {
+    const pull = Math.min(20, Math.max(9, adx * 0.24));
+    const side = ady < 0.35 ? 1 : Math.sign(dy || 1);
+    cp1 = { x: start.x + (dx * 0.4), y: start.y + (side * pull) };
+    cp2 = { x: end.x - (dx * 0.4), y: end.y - (side * pull) };
+  } else {
+    const horizontalBias = adx >= ady;
+    cp1 = horizontalBias
+      ? { x: start.x + (dx * 0.42), y: start.y }
+      : { x: start.x, y: start.y + (dy * 0.42) };
+    cp2 = horizontalBias
+      ? { x: end.x - (dx * 0.42), y: end.y }
+      : { x: end.x, y: end.y - (dy * 0.42) };
+  }
 
   return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} C ${cp1.x.toFixed(2)} ${cp1.y.toFixed(2)}, ${cp2.x.toFixed(2)} ${cp2.y.toFixed(2)}, ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
 }
@@ -815,11 +840,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
       individual: individualCount,
     });
 
+    const base = mergeConfig(DEFAULT_CONFIG.grid_options || {}, this._config?.grid_options || {});
+    const minRows = Math.max(1, Number(base.min_rows) || 1);
     return {
-      rows: "auto",
-      columns: "full",
-      min_rows: layoutPreset === "simple" ? 3 : 3,
-      min_columns: 6,
+      rows: base.rows === undefined || base.rows === "" ? "auto" : base.rows,
+      columns: base.columns === undefined || base.columns === "" ? "full" : base.columns,
+      min_rows: layoutPreset === "simple" ? Math.max(minRows, 3) : minRows,
+      min_columns: Math.max(1, Number(base.min_columns) || 6),
     };
   }
 
@@ -1227,6 +1254,27 @@ class NodaliaPowerFlowCard extends HTMLElement {
     nodes.individual.forEach(node => {
       pushLine(node.id, home, node, node.value, node.unit, node.color, true);
     });
+
+    /** Solar often shares the vertical with home; paint it last so it is not covered by other strokes at the hub. */
+    const lineStackOrder = (id) => {
+      if (id === "solar") {
+        return 50;
+      }
+      if (id === "gas") {
+        return 40;
+      }
+      if (id === "water") {
+        return 35;
+      }
+      if (id === "battery") {
+        return 25;
+      }
+      if (id === "grid") {
+        return 15;
+      }
+      return 5;
+    };
+    lineCandidates.sort((left, right) => lineStackOrder(left.id) - lineStackOrder(right.id));
 
     const maxMagnitude = Math.max(
       ...lineCandidates.filter(item => item.active).map(item => item.magnitude),
@@ -1789,6 +1837,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           position: absolute;
           width: 100%;
           pointer-events: none;
+          shape-rendering: geometricPrecision;
         }
 
         .power-flow-card__svg--lines {
@@ -1817,6 +1866,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           stroke-linecap: round;
           stroke-linejoin: round;
           stroke-width: ${flowWidth}px;
+          vector-effect: non-scaling-stroke;
         }
 
         .power-flow-card__line-glow {
@@ -1826,6 +1876,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           stroke-linecap: round;
           stroke-linejoin: round;
           stroke-width: ${flowWidth * 1.5}px;
+          vector-effect: non-scaling-stroke;
         }
 
         .power-flow-card__dot-glow {
@@ -2465,13 +2516,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
               })
               : `
                 <div class="power-flow-card__surface ${shouldAnimateEntrance ? "power-flow-card__surface--entering" : ""}">
-                  <svg class="power-flow-card__svg power-flow-card__svg--lines" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                  <svg class="power-flow-card__svg power-flow-card__svg--lines" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" shape-rendering="geometricPrecision">
                     <defs>
                       <filter id="power-flow-glow" x="-30%" y="-30%" width="160%" height="160%">
-                        <feGaussianBlur stdDeviation="1.2"></feGaussianBlur>
+                        <feGaussianBlur stdDeviation="0.85"></feGaussianBlur>
                       </filter>
                       <filter id="power-flow-soften" x="-20%" y="-20%" width="140%" height="140%">
-                        <feGaussianBlur stdDeviation="0.18"></feGaussianBlur>
+                        <feGaussianBlur stdDeviation="0.06"></feGaussianBlur>
                       </filter>
                     </defs>
                     ${lines.map(line => `
@@ -2514,7 +2565,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
                     animateEntrance: shouldAnimateEntrance,
                     enterDelay: this._getNodeAnimationDelay(node, index),
                   })).join("")}
-                  <svg class="power-flow-card__svg power-flow-card__svg--dots" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                  <svg class="power-flow-card__svg power-flow-card__svg--dots" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" shape-rendering="geometricPrecision">
                     ${lines.map(line => this._renderFlowDots(line)).join("")}
                   </svg>
                 </div>

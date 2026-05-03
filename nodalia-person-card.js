@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-person-card";
 const EDITOR_TAG = "nodalia-person-card-editor";
-const CARD_VERSION = "0.9.0";
+const CARD_VERSION = "0.9.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -887,8 +887,9 @@ class NodaliaPersonCard extends HTMLElement {
         :host {
           --person-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --person-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
-          display: block;
-          height: ${singleRowLayout ? "auto" : "100%"};
+          display: flex;
+          flex-direction: column;
+          height: 100%;
           min-height: 0;
         }
 
@@ -902,7 +903,10 @@ class NodaliaPersonCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
-          height: ${singleRowLayout ? "auto" : "100%"};
+          display: flex;
+          flex-direction: column;
+          flex: 1 1 auto;
+          justify-content: center;
           min-height: 0;
           overflow: hidden;
           position: relative;
@@ -924,10 +928,11 @@ class NodaliaPersonCard extends HTMLElement {
           align-items: center;
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           display: flex;
+          flex: ${singleRowLayout ? "0 0 auto" : "1 1 auto"};
           flex-direction: row;
           gap: ${effectiveGap};
           height: ${singleRowLayout ? "auto" : "100%"};
-          min-height: ${effectiveContentMinHeight};
+          min-height: ${singleRowLayout ? "0" : effectiveContentMinHeight};
           min-width: 0;
           padding: ${effectivePadding};
           position: relative;
@@ -957,7 +962,6 @@ class NodaliaPersonCard extends HTMLElement {
         }
 
         .person-card--single-row {
-          height: auto;
           min-height: ${effectiveCardHeightPx}px;
         }
 
