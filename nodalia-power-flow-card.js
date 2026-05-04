@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "0.16.11";
+const CARD_VERSION = "0.16.13";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -124,7 +124,7 @@ const DEFAULT_CONFIG = {
     home_unit_size: "14px",
     node_value_size: "11px",
     secondary_size: "10px",
-    flow_width: "2.5px",
+    flow_width: "1px",
   },
 };
 
@@ -234,6 +234,72 @@ function compactConfig(value) {
   }
 
   return value;
+}
+
+function deepEqual(a, b) {
+  if (Object.is(a, b)) {
+    return true;
+  }
+  if (a == null || b == null) {
+    return a === b;
+  }
+  if (typeof a !== typeof b) {
+    return false;
+  }
+  if (typeof a !== "object") {
+    return false;
+  }
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b) || a.length !== b.length) {
+      return false;
+    }
+    return a.every((value, index) => deepEqual(value, b[index]));
+  }
+  if (Array.isArray(b)) {
+    return false;
+  }
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) {
+    return false;
+  }
+  return keysA.every(key => deepEqual(a[key], b[key]));
+}
+
+function stripEqualToDefaults(config, defaults) {
+  if (defaults === undefined || defaults === null) {
+    return deepClone(config);
+  }
+  if (config === undefined || config === null) {
+    return undefined;
+  }
+  if (Array.isArray(config)) {
+    return deepEqual(config, defaults) ? undefined : deepClone(config);
+  }
+  if (isObject(config) && isObject(defaults)) {
+    const out = {};
+    for (const key of Object.keys(config)) {
+      const cv = config[key];
+      const dv = defaults[key];
+      if (!(key in defaults)) {
+        out[key] = deepClone(cv);
+        continue;
+      }
+      if (deepEqual(cv, dv)) {
+        continue;
+      }
+      if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
+        const stripped = stripEqualToDefaults(cv, dv);
+        if (stripped !== undefined) {
+          out[key] = stripped;
+        }
+      } else {
+        out[key] = deepClone(cv);
+      }
+    }
+    return Object.keys(out).length ? out : undefined;
+  }
+  return deepEqual(config, defaults) ? undefined : config;
 }
 
 function setByPath(target, path, value) {
@@ -1842,15 +1908,21 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const nodes = this._getNodes();
     const lines = this._buildLines(nodes);
     const dominantColor = this._getDominantColor(lines);
-    const flowWidth = Math.max(2.5, parseSizeToPixels(styles.flow_width, 3.2));
+    const flowWidth = Math.max(1, parseSizeToPixels(styles.flow_width, 1.2));
     const hasLowerNodes = Boolean(nodes.water.entityId || nodes.gas.entityId || nodes.individual.length);
     const layoutPreset = nodes._layoutPreset || "full";
     const flowFlags = nodes._flowFlags || getFlowLayoutFlagsFromConfig(this._config);
     const horizontalStripDiagram = flowFlags.topCount >= 1 && flowFlags.topCount <= 2 && !(flowFlags.individualCount > 0);
-    const flowDotBoost = 1 + Math.max(0, flowWidth - 2.5) * 0.065;
-    const flowDotGlowR = (horizontalStripDiagram ? 2.58 : 2.1) * flowDotBoost;
-    const flowDotCoreR = (horizontalStripDiagram ? 1.48 : 1.12) * flowDotBoost;
-    const flowDotCoreStroke = horizontalStripDiagram ? 0.33 : 0.26;
+    const flowDotBoost = 1 + Math.max(0, flowWidth - 1) * 0.065;
+    // In 1–2 source strip layouts, oversized dots can feel too dominant.
+    // Keep them slightly emphasized, but scale down as source count decreases.
+    const stripTopCount = horizontalStripDiagram ? clamp(Number(flowFlags.topCount) || 0, 1, 2) : 0;
+    const stripDotScale = horizontalStripDiagram
+      ? (stripTopCount === 1 ? 0.82 : 0.9)
+      : 1;
+    const flowDotGlowR = (horizontalStripDiagram ? 2.58 : 2.1) * flowDotBoost * stripDotScale;
+    const flowDotCoreR = (horizontalStripDiagram ? 1.48 : 1.12) * flowDotBoost * stripDotScale;
+    const flowDotCoreStroke = (horizontalStripDiagram ? 0.33 : 0.26) * stripDotScale;
     const surfaceLayoutExtras = (() => {
       let add = 0;
       if (layoutPreset !== "simple") {
@@ -2123,7 +2195,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           opacity: 0.08;
           stroke-linecap: round;
           stroke-linejoin: round;
-          stroke-width: ${flowWidth * 1.35}px;
+          stroke-width: ${flowWidth * 1.28}px;
         }
 
         .power-flow-card__dot-glow {
@@ -2373,7 +2445,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__simple-line {
           background: linear-gradient(180deg, color-mix(in srgb, var(--line-background) 100%, transparent) 0%, color-mix(in srgb, var(--line-background) 78%, transparent) 100%);
           border-radius: 999px;
-          height: ${Math.max(flowWidth, 3)}px;
+          height: ${Math.max(flowWidth, 2)}px;
           opacity: var(--line-opacity);
           position: relative;
           width: 100%;
@@ -2983,7 +3055,7 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(nextConfig),
+      config: compactConfig(stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -3700,7 +3772,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(nextConfig),
+      config: compactConfig(stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 

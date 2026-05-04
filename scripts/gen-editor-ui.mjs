@@ -53,7 +53,9 @@ Altura minima
 Ancho maximo barra
 Ancho maximo popup
 Ancho minimo popup
+Barra a ancho completo
 Barra y hover (ms)
+Entrada barra (ms)
 Breakpoint movil
 Color etiqueta activa
 Etiqueta opcional
@@ -205,6 +207,8 @@ function translateEsToEn(s) {
     [/Radio del borde/gi, "Border radius"],
     [/Radio del navegador/gi, "Browser radius"],
     [/\bBorde\b/gi, "Border"],
+    [/Barra a ancho completo/gi, "Full-width bar"],
+    [/Entrada barra \(ms\)/gi, "Dock entrance (ms)"],
     [/Boton localizar/gi, "Locate button"],
     [/Boton parar/gi, "Stop button"],
     [/Boton volver a base/gi, "Return to dock button"],
@@ -1242,6 +1246,193 @@ const FULL_LOCALE_BY_EN = {
     zh: "收藏卡片的基本视觉设置。",
     ro: "Setări vizuale de bază pentru cardul favorite.",
   },
+  "Line thickness": {
+    de: "Linienstärke",
+    fr: "Épaisseur des lignes",
+    it: "Spessore linee",
+    nl: "Lijndikte",
+    pt: "Espessura das linhas",
+    ru: "Толщина линий",
+    el: "Πάχος γραμμών",
+    zh: "线条粗细",
+    ro: "Grosime linii",
+  },
+  "Slider thickness": {
+    de: "Schieberegler-Stärke",
+    fr: "Épaisseur du curseur",
+    it: "Spessore slider",
+    nl: "Schuifregelaardikte",
+    pt: "Espessura do controlo deslizante",
+    ru: "Толщина ползунка",
+    el: "Πάχος ρυθμιστή",
+    zh: "滑块粗细",
+    ro: "Grosime cursor",
+  },
+  "Dial thickness": {
+    de: "Drehregler-Stärke",
+    fr: "Épaisseur du cadran",
+    it: "Spessore del dial",
+    nl: "Draaiknopdikte",
+    pt: "Espessura do mostrador",
+    ru: "Толщина диска",
+    el: "Πάχος δίσκου",
+    zh: "旋钮粗细",
+    ro: "Grosime disc",
+  },
+  "Node size": {
+    de: "Knotengröße",
+    fr: "Taille du nœud",
+    it: "Dimensione nodo",
+    nl: "Knooppuntgrootte",
+    pt: "Tamanho do nó",
+    ru: "Размер узла",
+    el: "Μέγεθος κόμβου",
+    zh: "节点大小",
+    ro: "Dimensiune nod",
+  },
+  "Home size": {
+    de: "Hausgröße",
+    fr: "Taille du foyer",
+    it: "Dimensione casa",
+    nl: "Thuisgrootte",
+    pt: "Tamanho da casa",
+    ru: "Размер дома",
+    el: "Μέγεθος σπιτιού",
+    zh: "用电主体大小",
+    ro: "Dimensiune casă",
+  },
+  "Individual size": {
+    de: "Einzelgröße",
+    fr: "Taille individuelle",
+    it: "Dimensione individuale",
+    nl: "Individuele grootte",
+    pt: "Tamanho individual",
+    ru: "Размер индивидуального узла",
+    el: "Μέγεθος ατομικής παροχής",
+    zh: "单独回路大小",
+    ro: "Dimensiune individuală",
+  },
+  "Zero-line transparency": {
+    de: "Transparenz bei Null-Linien",
+    fr: "Transparence des lignes à zéro",
+    it: "Trasparenza linee a zero",
+    nl: "Transparantie nul-lijnen",
+    pt: "Transparência das linhas a zero",
+    ru: "Прозрачность нулевых линий",
+    el: "Διαφάνεια μηδενικών γραμμών",
+    zh: "零流量线透明度",
+    ro: "Transparență linii la zero",
+  },
+  "Secondary text": {
+    de: "Sekundärtext",
+    fr: "Texte secondaire",
+    it: "Testo secondario",
+    nl: "Secundaire tekst",
+    pt: "Texto secundário",
+    ru: "Дополнительный текст",
+    el: "Δευτερεύον κείμενο",
+    zh: "次要文字",
+    ro: "Text secundar",
+  },
+  "Chip padding": {
+    de: "Chip-Innenabstand",
+    fr: "Remplissage de la puce",
+    it: "Padding chip",
+    nl: "Chip-opvulling",
+    pt: "Margem interna do chip",
+    ru: "Отступ чипа",
+    el: "Εσωτερικό chip",
+    zh: "芯片内边距",
+    ro: "Padding chip",
+  },
+  "Icon color": {
+    de: "Symbolfarbe",
+    fr: "Couleur de l’icône",
+    it: "Colore icona",
+    nl: "Pictogramkleur",
+    pt: "Cor dos ícones",
+    ru: "Цвет значков",
+    el: "Χρώμα εικονιδίων",
+    zh: "图标颜色",
+    ro: "Culoare pictograme",
+  },
+  "Gray RGB color": {
+    de: "Grau (RGB)",
+    fr: "Gris RVB",
+    it: "Grigio RGB",
+    nl: "Grijs RGB",
+    pt: "Cinza RGB",
+    ru: "Серый RGB",
+    el: "Γκρι RGB",
+    zh: "灰色 RGB",
+    ro: "Gri RGB",
+  },
+  "Minimum flow (s)": {
+    de: "Minimaler Fluss (s)",
+    fr: "Flux minimum (s)",
+    it: "Flusso minimo (s)",
+    nl: "Minimale stroom (s)",
+    pt: "Fluxo mínimo (s)",
+    ru: "Минимальный поток (с)",
+    el: "Ελάχιστη ροή (δ)",
+    zh: "最小流量（秒）",
+    ro: "Flux minim (s)",
+  },
+  "Maximum flow (s)": {
+    de: "Maximaler Fluss (s)",
+    fr: "Flux maximum (s)",
+    it: "Flusso massimo (s)",
+    nl: "Maximale stroom (s)",
+    pt: "Fluxo máximo (s)",
+    ru: "Максимальный поток (с)",
+    el: "Μέγιστη ροή (δ)",
+    zh: "最大流量（秒）",
+    ro: "Flux maxim (s)",
+  },
+  "Chip size": {
+    de: "Chip-Größe",
+    fr: "Taille de la puce",
+    it: "Dimensione chip",
+    nl: "Chipgrootte",
+    pt: "Tamanho do chip",
+    ru: "Размер чипа",
+    el: "Μέγεθος chip",
+    zh: "芯片尺寸",
+    ro: "Dimensiune chip",
+  },
+  "Home value": {
+    de: "Hauswert",
+    fr: "Valeur foyer",
+    it: "Valore casa",
+    nl: "Thuiswaarde",
+    pt: "Valor da casa",
+    ru: "Значение дома",
+    el: "Τιμή σπιτιού",
+    zh: "用电数值大小",
+    ro: "Valoare casă",
+  },
+  "Node value": {
+    de: "Knotenwert",
+    fr: "Valeur du nœud",
+    it: "Valore nodo",
+    nl: "Knooppuntwaarde",
+    pt: "Valor do nó",
+    ru: "Значение узла",
+    el: "Τιμή κόμβου",
+    zh: "节点数值大小",
+    ro: "Valoare nod",
+  },
+  "Home unit": {
+    de: "Hauseinheit",
+    fr: "Unité foyer",
+    it: "Unità casa",
+    nl: "Thuis eenheid",
+    pt: "Unidade da casa",
+    ru: "Единица дома",
+    el: "Μονάδα σπιτιού",
+    zh: "用电单位大小",
+    ro: "Unitate casă",
+  },
 };
 
 function pickNewLang(rowEn, mergedVal, compactFn) {
@@ -1347,6 +1538,89 @@ const out = `/* eslint-disable max-len */
 
   window.NodaliaI18n.editorUiMaps = MAP;
 
+  function normalizeSpanishEditorLabel(text) {
+    let out = String(text || "");
+    if (!out) {
+      return out;
+    }
+
+    const withMatchCase = (match, replacement) => {
+      if (match === match.toUpperCase()) {
+        return replacement.toUpperCase();
+      }
+      if (match[0] === match[0].toUpperCase()) {
+        return replacement[0].toUpperCase() + replacement.slice(1);
+      }
+      return replacement;
+    };
+
+    const substitutions = [
+      [/\\banimaciones\\b/gi, "animaciones"],
+      [/\\banimacion\\b/gi, "animación"],
+      [/\\bconfiguraciones\\b/gi, "configuraciones"],
+      [/\\bconfiguracion\\b/gi, "configuración"],
+      [/\\bgraficas\\b/gi, "gráficas"],
+      [/\\bgrafica\\b/gi, "gráfica"],
+      [/\\blogica\\b/gi, "lógica"],
+      [/\\bmaximo(s)?\\b/gi, "máximo$1"],
+      [/\\bminimo(s)?\\b/gi, "mínimo$1"],
+      [/\\bmusica\\b/gi, "música"],
+      [/\\bnavegacion\\b/gi, "navegación"],
+      [/\\bnumero(s)?\\b/gi, "número$1"],
+      [/\\bpanel(es)?\\b/gi, "panel$1"],
+      [/\\bpequeno\\b/gi, "pequeño"],
+      [/\\bpulsacion\\b/gi, "pulsación"],
+      [/\\bsecciones\\b/gi, "secciones"],
+      [/\\bseccion\\b/gi, "sección"],
+      [/\\btamano(s)?\\b/gi, "tamaño$1"],
+      [/\\btecnica\\b/gi, "técnica"],
+      [/\\btecnicas\\b/gi, "técnicas"],
+      [/\\bversiones\\b/gi, "versiones"],
+      [/\\bversion\\b/gi, "versión"],
+      [/\\banadir\\b/gi, "añadir"],
+      [/\\banade\\b/gi, "añade"],
+      [/\\bano(s)?\\b/gi, "año$1"],
+      [/\\btitulos\\b/gi, "títulos"],
+      [/\\btitulo\\b/gi, "título"],
+      [/\\benergias\\b/gi, "energías"],
+      [/\\benergia\\b/gi, "energía"],
+      [/\\bcodigos\\b/gi, "códigos"],
+      [/\\bcodigo\\b/gi, "código"],
+      [/\\btactil\\b/gi, "táctil"],
+      [/\\bhaptica\\b/gi, "háptica"],
+      [/\\binformacion\\b/gi, "información"],
+      [/\\btransicion\\b/gi, "transición"],
+      [/\\bubicacion\\b/gi, "ubicación"],
+      [/\\bfuncion\\b/gi, "función"],
+      [/\\bopcion\\b/gi, "opción"],
+      [/\\bseleccion\\b/gi, "selección"],
+      [/\\breaccion\\b/gi, "reacción"],
+      [/\\baccion\\b/gi, "acción"],
+      [/\\bmetodos\\b/gi, "métodos"],
+      [/\\bmetodo\\b/gi, "método"],
+      [/\\bautomaticos\\b/gi, "automáticos"],
+      [/\\bautomatico\\b/gi, "automático"],
+      [/\\bautomaticas\\b/gi, "automáticas"],
+      [/\\bautomatica\\b/gi, "automática"],
+      [/\\bduracion\\b/gi, "duración"],
+      [/\\bposicion\\b/gi, "posición"],
+      [/\\bbasicos\\b/gi, "básicos"],
+      [/\\bbasico\\b/gi, "básico"],
+      [/\\bbasicas\\b/gi, "básicas"],
+      [/\\bbasica\\b/gi, "básica"],
+      [/\\bgenericos\\b/gi, "genéricos"],
+      [/\\bgenerico\\b/gi, "genérico"],
+      [/\\bgenericas\\b/gi, "genéricas"],
+      [/\\bgenerica\\b/gi, "genérica"],
+    ];
+
+    substitutions.forEach(([pattern, replacement]) => {
+      out = out.replace(pattern, match => withMatchCase(match, replacement));
+    });
+
+    return out;
+  }
+
   window.NodaliaI18n.editorStr = function editorStr(hass, configLang, spanishText) {
     if (spanishText == null || spanishText === "") {
       return "";
@@ -1354,11 +1628,11 @@ const out = `/* eslint-disable max-len */
     const lang = window.NodaliaI18n.resolveLanguage(hass, configLang);
     const maps = window.NodaliaI18n.editorUiMaps;
     if (maps.es[spanishText] === undefined && maps.en[spanishText] === undefined) {
-      return spanishText;
+      return lang === "es" ? normalizeSpanishEditorLabel(spanishText) : spanishText;
     }
     const primary = maps[lang]?.[spanishText];
     if (primary !== undefined && primary !== "") {
-      return primary;
+      return lang === "es" ? normalizeSpanishEditorLabel(primary) : primary;
     }
     if (lang !== "es") {
       const enVal = maps.en?.[spanishText];
@@ -1368,9 +1642,9 @@ const out = `/* eslint-disable max-len */
     }
     const esVal = maps.es?.[spanishText];
     if (esVal !== undefined && esVal !== "") {
-      return esVal;
+      return normalizeSpanishEditorLabel(esVal);
     }
-    return spanishText;
+    return lang === "es" ? normalizeSpanishEditorLabel(spanishText) : spanishText;
   };
 })();
 `;

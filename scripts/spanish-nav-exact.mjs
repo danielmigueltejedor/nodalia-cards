@@ -82,6 +82,8 @@ export const SPANISH_TO_ENGLISH_EXACT = {
   "Imagen fija": "Fixed image",
   Justificacion: "Justification",
   "Margen lateral": "Side margin",
+  "Barra a ancho completo": "Full-width bar",
+  "Entrada barra (ms)": "Dock entrance (ms)",
   "Mostrar siempre": "Always show",
   "Overlay portada": "Cover overlay",
   "Padding media player": "Media player padding",

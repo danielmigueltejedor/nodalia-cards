@@ -1357,28 +1357,28 @@
   {
     "es": "Flujo maximo (s)",
     "en": "Maximum flow (s)",
-    "de": "Maximum flow (s)",
-    "fr": "Maximum flow (s)",
-    "it": "Maximum flow (s)",
-    "nl": "Maximum flow (s)",
-    "pt": "Maximum flow (s)",
-    "ru": "Maximum flow (s)",
-    "el": "Maximum flow (s)",
-    "zh": "Maximum flow (s)",
-    "ro": "Maximum flow (s)"
+    "de": "Maximaler Fluss (s)",
+    "fr": "Flux maximum (s)",
+    "it": "Flusso massimo (s)",
+    "nl": "Maximale stroom (s)",
+    "pt": "Fluxo máximo (s)",
+    "ru": "Максимальный поток (с)",
+    "el": "Μέγιστη ροή (δ)",
+    "zh": "最大流量（秒）",
+    "ro": "Flux maxim (s)"
   },
   {
     "es": "Flujo minimo (s)",
     "en": "Minimum flow (s)",
-    "de": "Minimum flow (s)",
-    "fr": "Minimum flow (s)",
-    "it": "Minimum flow (s)",
-    "nl": "Minimum flow (s)",
-    "pt": "Minimum flow (s)",
-    "ru": "Minimum flow (s)",
-    "el": "Minimum flow (s)",
-    "zh": "Minimum flow (s)",
-    "ro": "Minimum flow (s)"
+    "de": "Minimaler Fluss (s)",
+    "fr": "Flux minimum (s)",
+    "it": "Flusso minimo (s)",
+    "nl": "Minimale stroom (s)",
+    "pt": "Fluxo mínimo (s)",
+    "ru": "Минимальный поток (с)",
+    "el": "Ελάχιστη ροή (δ)",
+    "zh": "最小流量（秒）",
+    "ro": "Flux minim (s)"
   },
   {
     "es": "Fondo burbuja icono",
@@ -1422,67 +1422,67 @@
   {
     "es": "Grosor del slider",
     "en": "Slider thickness",
-    "de": "Slider thickness",
-    "fr": "Slider thickness",
-    "it": "Slider thickness",
-    "nl": "Slider thickness",
-    "pt": "Slider thickness",
-    "ru": "Slider thickness",
-    "el": "Slider thickness",
-    "zh": "Slider thickness",
-    "ro": "Slider thickness"
+    "de": "Schieberegler-Stärke",
+    "fr": "Épaisseur du curseur",
+    "it": "Spessore slider",
+    "nl": "Schuifregelaardikte",
+    "pt": "Espessura do controlo deslizante",
+    "ru": "Толщина ползунка",
+    "el": "Πάχος ρυθμιστή",
+    "zh": "滑块粗细",
+    "ro": "Grosime cursor"
   },
   {
     "es": "Grosor dial",
     "en": "Dial thickness",
-    "de": "Dial thickness",
-    "fr": "Dial thickness",
-    "it": "Dial thickness",
-    "nl": "Dial thickness",
-    "pt": "Dial thickness",
-    "ru": "Dial thickness",
-    "el": "Dial thickness",
-    "zh": "Dial thickness",
-    "ro": "Dial thickness"
+    "de": "Drehregler-Stärke",
+    "fr": "Épaisseur du cadran",
+    "it": "Spessore del dial",
+    "nl": "Draaiknopdikte",
+    "pt": "Espessura do mostrador",
+    "ru": "Толщина диска",
+    "el": "Πάχος δίσκου",
+    "zh": "旋钮粗细",
+    "ro": "Grosime disc"
   },
   {
     "es": "Grosor linea",
     "en": "Line thickness",
-    "de": "Line thickness",
-    "fr": "Line thickness",
-    "it": "Line thickness",
-    "nl": "Line thickness",
-    "pt": "Line thickness",
-    "ru": "Line thickness",
-    "el": "Line thickness",
-    "zh": "Line thickness",
-    "ro": "Line thickness"
+    "de": "Linienstärke",
+    "fr": "Épaisseur des lignes",
+    "it": "Spessore linee",
+    "nl": "Lijndikte",
+    "pt": "Espessura das linhas",
+    "ru": "Толщина линий",
+    "el": "Πάχος γραμμών",
+    "zh": "线条粗细",
+    "ro": "Grosime linii"
   },
   {
     "es": "Grosor lineas",
     "en": "Line thickness",
-    "de": "Line thickness",
-    "fr": "Line thickness",
-    "it": "Line thickness",
-    "nl": "Line thickness",
-    "pt": "Line thickness",
-    "ru": "Line thickness",
-    "el": "Line thickness",
-    "zh": "Line thickness",
-    "ro": "Line thickness"
+    "de": "Linienstärke",
+    "fr": "Épaisseur des lignes",
+    "it": "Spessore linee",
+    "nl": "Lijndikte",
+    "pt": "Espessura das linhas",
+    "ru": "Толщина линий",
+    "el": "Πάχος γραμμών",
+    "zh": "线条粗细",
+    "ro": "Grosime linii"
   },
   {
     "es": "Grosor slider",
     "en": "Slider thickness",
-    "de": "Slider thickness",
-    "fr": "Slider thickness",
-    "it": "Slider thickness",
-    "nl": "Slider thickness",
-    "pt": "Slider thickness",
-    "ru": "Slider thickness",
-    "el": "Slider thickness",
-    "zh": "Slider thickness",
-    "ro": "Slider thickness"
+    "de": "Schieberegler-Stärke",
+    "fr": "Épaisseur du curseur",
+    "it": "Spessore slider",
+    "nl": "Schuifregelaardikte",
+    "pt": "Espessura do controlo deslizante",
+    "ru": "Толщина ползунка",
+    "el": "Πάχος ρυθμιστή",
+    "zh": "滑块粗细",
+    "ro": "Grosime cursor"
   },
   {
     "es": "Helper codigo",
@@ -2982,15 +2982,15 @@
   {
     "es": "Relleno chips",
     "en": "Chip padding",
-    "de": "Chip padding",
-    "fr": "Chip padding",
-    "it": "Chip padding",
-    "nl": "Chip padding",
-    "pt": "Chip padding",
-    "ru": "Chip padding",
-    "el": "Chip padding",
-    "zh": "Chip padding",
-    "ro": "Chip padding"
+    "de": "Chip-Innenabstand",
+    "fr": "Remplissage de la puce",
+    "it": "Padding chip",
+    "nl": "Chip-opvulling",
+    "pt": "Margem interna do chip",
+    "ru": "Отступ чипа",
+    "el": "Εσωτερικό chip",
+    "zh": "芯片内边距",
+    "ro": "Padding chip"
   },
   {
     "es": "Relleno interior",
@@ -3398,28 +3398,28 @@
   {
     "es": "Tamano casa",
     "en": "Home size",
-    "de": "Home size",
-    "fr": "Home size",
-    "it": "Home size",
-    "nl": "Home size",
-    "pt": "Home size",
-    "ru": "Home size",
-    "el": "Home size",
-    "zh": "Home size",
-    "ro": "Home size"
+    "de": "Hausgröße",
+    "fr": "Taille du foyer",
+    "it": "Dimensione casa",
+    "nl": "Thuisgrootte",
+    "pt": "Tamanho da casa",
+    "ru": "Размер дома",
+    "el": "Μέγεθος σπιτιού",
+    "zh": "用电主体大小",
+    "ro": "Dimensiune casă"
   },
   {
     "es": "Tamano chip",
     "en": "Chip size",
-    "de": "Chip size",
-    "fr": "Chip size",
-    "it": "Chip size",
-    "nl": "Chip size",
-    "pt": "Chip size",
-    "ru": "Chip size",
-    "el": "Chip size",
-    "zh": "Chip size",
-    "ro": "Chip size"
+    "de": "Chip-Größe",
+    "fr": "Taille de la puce",
+    "it": "Dimensione chip",
+    "nl": "Chipgrootte",
+    "pt": "Tamanho do chip",
+    "ru": "Размер чипа",
+    "el": "Μέγεθος chip",
+    "zh": "芯片尺寸",
+    "ro": "Dimensiune chip"
   },
   {
     "es": "Tamano chips",
@@ -3476,15 +3476,15 @@
   {
     "es": "Tamano individual",
     "en": "Individual size",
-    "de": "Individual size",
-    "fr": "Individual size",
-    "it": "Individual size",
-    "nl": "Individual size",
-    "pt": "Individual size",
-    "ru": "Individual size",
-    "el": "Individual size",
-    "zh": "Individual size",
-    "ro": "Individual size"
+    "de": "Einzelgröße",
+    "fr": "Taille individuelle",
+    "it": "Dimensione individuale",
+    "nl": "Individuele grootte",
+    "pt": "Tamanho individual",
+    "ru": "Размер индивидуального узла",
+    "el": "Μέγεθος ατομικής παροχής",
+    "zh": "单独回路大小",
+    "ro": "Dimensiune individuală"
   },
   {
     "es": "Tamano leyenda",
@@ -3515,15 +3515,15 @@
   {
     "es": "Tamano nodo",
     "en": "Node size",
-    "de": "Node size",
-    "fr": "Node size",
-    "it": "Node size",
-    "nl": "Node size",
-    "pt": "Node size",
-    "ru": "Node size",
-    "el": "Node size",
-    "zh": "Node size",
-    "ro": "Node size"
+    "de": "Knotengröße",
+    "fr": "Taille du nœud",
+    "it": "Dimensione nodo",
+    "nl": "Knooppuntgrootte",
+    "pt": "Tamanho do nó",
+    "ru": "Размер узла",
+    "el": "Μέγεθος κόμβου",
+    "zh": "节点大小",
+    "ro": "Dimensiune nod"
   },
   {
     "es": "Tamano nombre",
@@ -3762,15 +3762,15 @@
   {
     "es": "Tamaño chip",
     "en": "Chip size",
-    "de": "Chip size",
-    "fr": "Chip size",
-    "it": "Chip size",
-    "nl": "Chip size",
-    "pt": "Chip size",
-    "ru": "Chip size",
-    "el": "Chip size",
-    "zh": "Chip size",
-    "ro": "Chip size"
+    "de": "Chip-Größe",
+    "fr": "Taille de la puce",
+    "it": "Dimensione chip",
+    "nl": "Chipgrootte",
+    "pt": "Tamanho do chip",
+    "ru": "Размер чипа",
+    "el": "Μέγεθος chip",
+    "zh": "芯片尺寸",
+    "ro": "Dimensiune chip"
   },
   {
     "es": "Tamaño de botones",
@@ -4087,15 +4087,15 @@
   {
     "es": "Texto secundario",
     "en": "Secondary text",
-    "de": "Secondary text",
-    "fr": "Secondary text",
-    "it": "Secondary text",
-    "nl": "Secondary text",
-    "pt": "Secondary text",
-    "ru": "Secondary text",
-    "el": "Secondary text",
-    "zh": "Secondary text",
-    "ro": "Secondary text"
+    "de": "Sekundärtext",
+    "fr": "Texte secondaire",
+    "it": "Testo secondario",
+    "nl": "Secundaire tekst",
+    "pt": "Texto secundário",
+    "ru": "Дополнительный текст",
+    "el": "Δευτερεύον κείμενο",
+    "zh": "次要文字",
+    "ro": "Text secundar"
   },
   {
     "es": "Tinte",
@@ -4152,15 +4152,15 @@
   {
     "es": "Transparencia lineas cero",
     "en": "Zero-line transparency",
-    "de": "Zero-line transparency",
-    "fr": "Zero-line transparency",
-    "it": "Zero-line transparency",
-    "nl": "Zero-line transparency",
-    "pt": "Zero-line transparency",
-    "ru": "Zero-line transparency",
-    "el": "Zero-line transparency",
-    "zh": "Zero-line transparency",
-    "ro": "Zero-line transparency"
+    "de": "Transparenz bei Null-Linien",
+    "fr": "Transparence des lignes à zéro",
+    "it": "Trasparenza linee a zero",
+    "nl": "Transparantie nul-lijnen",
+    "pt": "Transparência das linhas a zero",
+    "ru": "Прозрачность нулевых линий",
+    "el": "Διαφάνεια μηδενικών γραμμών",
+    "zh": "零流量线透明度",
+    "ro": "Transparență linii la zero"
   },
   {
     "es": "Título fijo",
@@ -4217,15 +4217,15 @@
   {
     "es": "Unidad casa",
     "en": "Home unit",
-    "de": "Home unit",
-    "fr": "Home unit",
-    "it": "Home unit",
-    "nl": "Home unit",
-    "pt": "Home unit",
-    "ru": "Home unit",
-    "el": "Home unit",
-    "zh": "Home unit",
-    "ro": "Home unit"
+    "de": "Hauseinheit",
+    "fr": "Unité foyer",
+    "it": "Unità casa",
+    "nl": "Thuis eenheid",
+    "pt": "Unidade da casa",
+    "ru": "Единица дома",
+    "el": "Μονάδα σπιτιού",
+    "zh": "用电单位大小",
+    "ro": "Unitate casă"
   },
   {
     "es": "Unidad secundaria",
@@ -4347,28 +4347,28 @@
   {
     "es": "Valor casa",
     "en": "Home value",
-    "de": "Home value",
-    "fr": "Home value",
-    "it": "Home value",
-    "nl": "Home value",
-    "pt": "Home value",
-    "ru": "Home value",
-    "el": "Home value",
-    "zh": "Home value",
-    "ro": "Home value"
+    "de": "Hauswert",
+    "fr": "Valeur foyer",
+    "it": "Valore casa",
+    "nl": "Thuiswaarde",
+    "pt": "Valor da casa",
+    "ru": "Значение дома",
+    "el": "Τιμή σπιτιού",
+    "zh": "用电数值大小",
+    "ro": "Valoare casă"
   },
   {
     "es": "Valor nodo",
     "en": "Node value",
-    "de": "Node value",
-    "fr": "Node value",
-    "it": "Node value",
-    "nl": "Node value",
-    "pt": "Node value",
-    "ru": "Node value",
-    "el": "Node value",
-    "zh": "Node value",
-    "ro": "Node value"
+    "de": "Knotenwert",
+    "fr": "Valeur du nœud",
+    "it": "Valore nodo",
+    "nl": "Knooppuntwaarde",
+    "pt": "Valor do nó",
+    "ru": "Значение узла",
+    "el": "Τιμή κόμβου",
+    "zh": "节点数值大小",
+    "ro": "Valoare nod"
   },
   {
     "es": "Valores",
@@ -6659,6 +6659,19 @@
     "ro": "Popup minimum width"
   },
   {
+    "es": "Barra a ancho completo",
+    "en": "Full-width bar",
+    "de": "Full-width bar",
+    "fr": "Full-width bar",
+    "it": "Full-width bar",
+    "nl": "Full-width bar",
+    "pt": "Full-width bar",
+    "ru": "Full-width bar",
+    "el": "Full-width bar",
+    "zh": "Full-width bar",
+    "ro": "Full-width bar"
+  },
+  {
     "es": "Barra y hover (ms)",
     "en": "Bar and hover (ms)",
     "de": "Bar and hover (ms)",
@@ -6670,6 +6683,19 @@
     "el": "Bar and hover (ms)",
     "zh": "Bar and hover (ms)",
     "ro": "Bar and hover (ms)"
+  },
+  {
+    "es": "Entrada barra (ms)",
+    "en": "Dock entrance (ms)",
+    "de": "Dock entrance (ms)",
+    "fr": "Dock entrance (ms)",
+    "it": "Dock entrance (ms)",
+    "nl": "Dock entrance (ms)",
+    "pt": "Dock entrance (ms)",
+    "ru": "Dock entrance (ms)",
+    "el": "Dock entrance (ms)",
+    "zh": "Dock entrance (ms)",
+    "ro": "Dock entrance (ms)"
   },
   {
     "es": "Breakpoint movil",
@@ -9032,6 +9058,89 @@
 
   window.NodaliaI18n.editorUiMaps = MAP;
 
+  function normalizeSpanishEditorLabel(text) {
+    let out = String(text || "");
+    if (!out) {
+      return out;
+    }
+
+    const withMatchCase = (match, replacement) => {
+      if (match === match.toUpperCase()) {
+        return replacement.toUpperCase();
+      }
+      if (match[0] === match[0].toUpperCase()) {
+        return replacement[0].toUpperCase() + replacement.slice(1);
+      }
+      return replacement;
+    };
+
+    const substitutions = [
+      [/\banimaciones\b/gi, "animaciones"],
+      [/\banimacion\b/gi, "animación"],
+      [/\bconfiguraciones\b/gi, "configuraciones"],
+      [/\bconfiguracion\b/gi, "configuración"],
+      [/\bgraficas\b/gi, "gráficas"],
+      [/\bgrafica\b/gi, "gráfica"],
+      [/\blogica\b/gi, "lógica"],
+      [/\bmaximo(s)?\b/gi, "máximo$1"],
+      [/\bminimo(s)?\b/gi, "mínimo$1"],
+      [/\bmusica\b/gi, "música"],
+      [/\bnavegacion\b/gi, "navegación"],
+      [/\bnumero(s)?\b/gi, "número$1"],
+      [/\bpanel(es)?\b/gi, "panel$1"],
+      [/\bpequeno\b/gi, "pequeño"],
+      [/\bpulsacion\b/gi, "pulsación"],
+      [/\bsecciones\b/gi, "secciones"],
+      [/\bseccion\b/gi, "sección"],
+      [/\btamano(s)?\b/gi, "tamaño$1"],
+      [/\btecnica\b/gi, "técnica"],
+      [/\btecnicas\b/gi, "técnicas"],
+      [/\bversiones\b/gi, "versiones"],
+      [/\bversion\b/gi, "versión"],
+      [/\banadir\b/gi, "añadir"],
+      [/\banade\b/gi, "añade"],
+      [/\bano(s)?\b/gi, "año$1"],
+      [/\btitulos\b/gi, "títulos"],
+      [/\btitulo\b/gi, "título"],
+      [/\benergias\b/gi, "energías"],
+      [/\benergia\b/gi, "energía"],
+      [/\bcodigos\b/gi, "códigos"],
+      [/\bcodigo\b/gi, "código"],
+      [/\btactil\b/gi, "táctil"],
+      [/\bhaptica\b/gi, "háptica"],
+      [/\binformacion\b/gi, "información"],
+      [/\btransicion\b/gi, "transición"],
+      [/\bubicacion\b/gi, "ubicación"],
+      [/\bfuncion\b/gi, "función"],
+      [/\bopcion\b/gi, "opción"],
+      [/\bseleccion\b/gi, "selección"],
+      [/\breaccion\b/gi, "reacción"],
+      [/\baccion\b/gi, "acción"],
+      [/\bmetodos\b/gi, "métodos"],
+      [/\bmetodo\b/gi, "método"],
+      [/\bautomaticos\b/gi, "automáticos"],
+      [/\bautomatico\b/gi, "automático"],
+      [/\bautomaticas\b/gi, "automáticas"],
+      [/\bautomatica\b/gi, "automática"],
+      [/\bduracion\b/gi, "duración"],
+      [/\bposicion\b/gi, "posición"],
+      [/\bbasicos\b/gi, "básicos"],
+      [/\bbasico\b/gi, "básico"],
+      [/\bbasicas\b/gi, "básicas"],
+      [/\bbasica\b/gi, "básica"],
+      [/\bgenericos\b/gi, "genéricos"],
+      [/\bgenerico\b/gi, "genérico"],
+      [/\bgenericas\b/gi, "genéricas"],
+      [/\bgenerica\b/gi, "genérica"],
+    ];
+
+    substitutions.forEach(([pattern, replacement]) => {
+      out = out.replace(pattern, match => withMatchCase(match, replacement));
+    });
+
+    return out;
+  }
+
   window.NodaliaI18n.editorStr = function editorStr(hass, configLang, spanishText) {
     if (spanishText == null || spanishText === "") {
       return "";
@@ -9039,11 +9148,11 @@
     const lang = window.NodaliaI18n.resolveLanguage(hass, configLang);
     const maps = window.NodaliaI18n.editorUiMaps;
     if (maps.es[spanishText] === undefined && maps.en[spanishText] === undefined) {
-      return spanishText;
+      return lang === "es" ? normalizeSpanishEditorLabel(spanishText) : spanishText;
     }
     const primary = maps[lang]?.[spanishText];
     if (primary !== undefined && primary !== "") {
-      return primary;
+      return lang === "es" ? normalizeSpanishEditorLabel(primary) : primary;
     }
     if (lang !== "es") {
       const enVal = maps.en?.[spanishText];
@@ -9053,8 +9162,8 @@
     }
     const esVal = maps.es?.[spanishText];
     if (esVal !== undefined && esVal !== "") {
-      return esVal;
+      return normalizeSpanishEditorLabel(esVal);
     }
-    return spanishText;
+    return lang === "es" ? normalizeSpanishEditorLabel(spanishText) : spanishText;
   };
 })();

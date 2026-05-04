@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "0.1.0";
+const CARD_VERSION = "0.2.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -46,10 +46,13 @@ const DEFAULT_CONFIG = {
       off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
       icon_only_offset_y: "2px",
     },
+    tint: {
+      color: "var(--info-color, #71c0ff)",
+    },
     title_size: "12px",
     value_size: "12px",
   },
-  tint_preset: "auto",
+  tint_auto: true,
 };
 
 const STUB_CONFIG = {
@@ -154,6 +157,72 @@ function compactConfig(value) {
   return value;
 }
 
+function deepEqual(a, b) {
+  if (Object.is(a, b)) {
+    return true;
+  }
+  if (a == null || b == null) {
+    return a === b;
+  }
+  if (typeof a !== typeof b) {
+    return false;
+  }
+  if (typeof a !== "object") {
+    return false;
+  }
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b) || a.length !== b.length) {
+      return false;
+    }
+    return a.every((value, index) => deepEqual(value, b[index]));
+  }
+  if (Array.isArray(b)) {
+    return false;
+  }
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) {
+    return false;
+  }
+  return keysA.every(key => deepEqual(a[key], b[key]));
+}
+
+function stripEqualToDefaults(config, defaults) {
+  if (defaults === undefined || defaults === null) {
+    return deepClone(config);
+  }
+  if (config === undefined || config === null) {
+    return undefined;
+  }
+  if (Array.isArray(config)) {
+    return deepEqual(config, defaults) ? undefined : deepClone(config);
+  }
+  if (isObject(config) && isObject(defaults)) {
+    const out = {};
+    for (const key of Object.keys(config)) {
+      const cv = config[key];
+      const dv = defaults[key];
+      if (!(key in defaults)) {
+        out[key] = deepClone(cv);
+        continue;
+      }
+      if (deepEqual(cv, dv)) {
+        continue;
+      }
+      if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
+        const stripped = stripEqualToDefaults(cv, dv);
+        if (stripped !== undefined) {
+          out[key] = stripped;
+        }
+      } else {
+        out[key] = deepClone(cv);
+      }
+    }
+    return Object.keys(out).length ? out : undefined;
+  }
+  return deepEqual(config, defaults) ? undefined : config;
+}
+
 function setByPath(target, path, value) {
   const parts = path.split(".");
   let cursor = target;
@@ -217,6 +286,21 @@ function normalizeTintPreset(value) {
   };
 
   return map[key] || key;
+}
+
+function getTintPresetColor(preset) {
+  const presets = {
+    red: "#ff6b6b",
+    orange: "#f6b04d",
+    yellow: "#f2c94c",
+    green: "#83d39c",
+    blue: "#4da3ff",
+    purple: "#b59dff",
+    pink: "#ff8fd1",
+    teal: "#7fd0c8",
+    gray: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
+  };
+  return presets[preset] || presets.blue;
 }
 
 function isUnavailableState(state) {
@@ -313,6 +397,80 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function escapeSelectorValue(value) {
+  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
+function clampNumber(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function formatEditorHexChannel(value) {
+  return clampNumber(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+}
+
+function resolveEditorColorValue(value) {
+  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  if (typeof resolver === "function") {
+    return resolver(value);
+  }
+  return String(value ?? "").trim();
+}
+
+function formatEditorColorFromHex(hex, alpha = 1) {
+  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+    return String(hex ?? "");
+  }
+
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+  const safeAlpha = clampNumber(Number(alpha), 0, 1);
+  if (safeAlpha >= 0.999) {
+    return `#${normalizedHex}`;
+  }
+
+  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+}
+
+function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const channels = resolvedValue.match(/[\d.]+/g) || [];
+  const red = clampNumber(Math.round(Number(channels[0] ?? 113)), 0, 255);
+  const green = clampNumber(Math.round(Number(channels[1] ?? 192)), 0, 255);
+  const blue = clampNumber(Math.round(Number(channels[2] ?? 255)), 0, 255);
+  const alpha = channels.length > 3 ? clampNumber(Number(channels[3]), 0, 1) : 1;
+  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+
+  return {
+    alpha,
+    hex,
+    resolved: resolvedValue,
+    source: sourceValue,
+    value: formatEditorColorFromHex(hex, alpha),
+  };
+}
+
+function getEditorColorFallbackValue(field) {
+  const normalizedField = String(field ?? "");
+
+  if (normalizedField.endsWith("tint.color")) {
+    return "var(--info-color, #71c0ff)";
+  }
+
+  if (normalizedField.endsWith("off_color")) {
+    return "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))";
+  }
+
+  if (normalizedField.endsWith("background")) {
+    return "color-mix(in srgb, var(--primary-text-color) 6%, transparent)";
+  }
+
+  return "var(--info-color, #71c0ff)";
+}
+
 function fireEvent(node, type, detail, options) {
   const event = new CustomEvent(type, {
     bubbles: options?.bubbles ?? true,
@@ -326,9 +484,14 @@ function fireEvent(node, type, detail, options) {
 
 function normalizeConfig(rawConfig) {
   const merged = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-  const legacyColor = normalizeTintPreset(rawConfig?.color);
-  if (legacyColor && legacyColor !== "auto" && (!merged.tint_preset || merged.tint_preset === "auto")) {
-    merged.tint_preset = legacyColor;
+  const legacyPreset = normalizeTintPreset(rawConfig?.tint_preset || rawConfig?.color);
+  if (legacyPreset === "auto") {
+    merged.tint_auto = true;
+  } else if (legacyPreset) {
+    merged.tint_auto = false;
+    if (!rawConfig?.styles?.tint?.color) {
+      merged.styles.tint.color = getTintPresetColor(legacyPreset);
+    }
   }
   return merged;
 }
@@ -507,6 +670,24 @@ class NodaliaInsigniaCard extends HTMLElement {
     return ["on", "home", "playing", "heat", "cool", "dry", "fan_only", "open", "unlocked"].includes(stateKey);
   }
 
+  /**
+   * Match Entity card–level tint strength: numeric sensors (temperature, etc.) are never "active"
+   * but should still read a clear semantic tint; manual tint mode always wins visibility.
+   */
+  _shouldApplyStrongCardTint(state) {
+    if (!state) {
+      return false;
+    }
+    if (this._config?.tint_auto === false) {
+      return true;
+    }
+    if (this._isActive(state)) {
+      return true;
+    }
+    const domain = getEntityDomain(state);
+    return domain === "sensor" || domain === "weather";
+  }
+
   _shouldDimIcon(state) {
     if (!state) {
       return false;
@@ -535,20 +716,8 @@ class NodaliaInsigniaCard extends HTMLElement {
   }
 
   _getTintColor(state) {
-    const preset = normalizeTintPreset(this._config?.tint_preset || this._config?.color || "auto");
-    if (preset && preset !== "auto") {
-      const presets = {
-        red: "#ff6b6b",
-        orange: "#f6b04d",
-        yellow: "#f2c94c",
-        green: "#83d39c",
-        blue: "#4da3ff",
-        purple: "#b59dff",
-        pink: "#ff8fd1",
-        teal: "#7fd0c8",
-        gray: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
-      };
-      return presets[preset] || presets.blue;
+    if (this._config?.tint_auto === false) {
+      return this._config?.styles?.tint?.color || DEFAULT_CONFIG.styles.tint.color;
     }
 
     const domain = getEntityDomain(state);
@@ -721,6 +890,18 @@ class NodaliaInsigniaCard extends HTMLElement {
     const active = this._isActive(state);
     const dimIcon = this._shouldDimIcon(state);
     const tint = this._getTintColor(state);
+    const strongTint = this._shouldApplyStrongCardTint(state);
+    const cardBackground = strongTint
+      ? `linear-gradient(135deg, color-mix(in srgb, ${tint} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${tint} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`
+      : styles.card.background;
+    const cardBorder = strongTint
+      ? `1px solid color-mix(in srgb, ${tint} 32%, var(--divider-color))`
+      : styles.card.border;
+    // Match Entity card elevation on full ha-cards; a second large drop shadow on compact
+    // pill insignias reads as a flat gray “shelf” under the rounded bottom in toolbars.
+    const cardShadow = strongTint
+      ? `${styles.card.box_shadow}, inset 0 1px 0 color-mix(in srgb, ${tint} 28%, rgba(255, 255, 255, 0.35))`
+      : styles.card.box_shadow;
     const unavailable = config.entity && isUnavailableState(state);
     const showName = config.show_name !== false;
     const showValue = config.show_value !== false && Boolean(value);
@@ -738,12 +919,12 @@ class NodaliaInsigniaCard extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
-          display: inline-block;
-          line-height: 1;
+          display: inline-flex;
+          line-height: 0;
+          vertical-align: middle;
         }
 
         :host([data-icon-only]) {
-          display: inline-flex;
           justify-content: center;
           width: auto;
         }
@@ -753,11 +934,10 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         .insignia-card {
-          background: ${styles.card.background};
-          border: ${styles.card.border};
+          background: ${cardBackground};
+          border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
-          background-clip: padding-box;
-          box-shadow: ${styles.card.box_shadow};
+          box-shadow: ${cardShadow};
           color: var(--primary-text-color);
           display: inline-flex;
           height: auto;
@@ -765,7 +945,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           isolation: isolate;
           position: relative;
           overflow: hidden;
-          contain: paint;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
 
         .insignia-card--icon-only {
@@ -780,15 +960,29 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         .insignia-card::before {
-          background:
-            radial-gradient(circle at 8% 10%, color-mix(in srgb, ${tint} 22%, transparent) 0%, transparent 55%),
-            linear-gradient(90deg, color-mix(in srgb, ${tint} 18%, transparent), transparent 70%);
+          background: ${strongTint
+      ? `linear-gradient(180deg, color-mix(in srgb, ${tint} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`
+      : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"};
           border-radius: inherit;
           content: "";
           inset: 0;
-          opacity: ${active ? "0.5" : "0.28"};
           pointer-events: none;
           position: absolute;
+          z-index: 0;
+        }
+
+        .insignia-card::after {
+          background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${tint} 26%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${tint} 16%, transparent) 0%, transparent 66%);
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          opacity: ${strongTint ? "1" : "0"};
+          pointer-events: none;
+          position: absolute;
+          transition: opacity 180ms ease;
+          z-index: 0;
         }
 
         .insignia-card__content {
@@ -956,92 +1150,259 @@ class NodaliaInsigniaCard extends HTMLElement {
 }
 
 class NodaliaInsigniaCardEditor extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._config = normalizeConfig({});
+    this._hass = null;
+    this._entityOptionsSignature = "";
+    this._showStyleSection = false;
+    this._pendingEditorControlTags = new Set();
+    this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+    this._onShadowClick = this._onShadowClick.bind(this);
+    this.shadowRoot.addEventListener("input", this._onShadowInput);
+    this.shadowRoot.addEventListener("change", this._onShadowInput);
+    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.addEventListener("click", this._onShadowClick);
+  }
+
   setConfig(config) {
+    const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
     this._render();
+    this._restoreFocusState(focusState);
   }
 
   set hass(hass) {
+    const nextSignature = this._getEntityOptionsSignature(hass);
+    const shouldRender =
+      !this._hass ||
+      nextSignature !== this._entityOptionsSignature ||
+      !this.shadowRoot?.innerHTML;
+
     this._hass = hass;
-    if (this._hasActiveInput()) {
+    this._entityOptionsSignature = nextSignature;
+
+    if (!shouldRender) {
       return;
     }
+
+    const focusState = this._captureFocusState();
     this._render();
+    this._restoreFocusState(focusState);
   }
 
-  _emitConfig(config) {
-    fireEvent(this, "config-changed", { config });
+  _getEntityOptionsSignature(hass = this._hass) {
+    const tag = window.NodaliaI18n.localeTag(
+      window.NodaliaI18n.resolveLanguage(hass, this._config?.language ?? "auto"),
+    );
+    return `${tag}|${Object.entries(hass?.states || {})
+      .map(([entityId, state]) => `${entityId}:${String(state?.attributes?.friendly_name || "")}`)
+      .sort((left, right) => left.localeCompare(right, tag, { sensitivity: "base" }))
+      .join("|")}`;
   }
 
-  _hasActiveInput() {
-    const active = this.shadowRoot?.activeElement;
-    if (!active) {
-      return false;
+  _watchEditorControlTag(tagName) {
+    if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+      return;
     }
-    return active instanceof HTMLInputElement
-      || active instanceof HTMLTextAreaElement
-      || active instanceof HTMLSelectElement;
+
+    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+      return;
+    }
+
+    this._pendingEditorControlTags.add(tagName);
+    customElements
+      .whenDefined(tagName)
+      .then(() => {
+        this._pendingEditorControlTags.delete(tagName);
+
+        if (!this._hass || !this.shadowRoot) {
+          return;
+        }
+
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+      })
+      .catch(() => {
+        this._pendingEditorControlTags.delete(tagName);
+      });
   }
 
-  _updateValue(path, value, options = {}) {
-    const nextConfig = deepClone(this._config || {});
-    if (options.removeIfEmpty && (value === "" || value === null || value === undefined)) {
-      deleteByPath(nextConfig, path);
-    } else {
-      setByPath(nextConfig, path, value);
+  _ensureEditorControlsReady() {
+    this._watchEditorControlTag("ha-entity-picker");
+    this._watchEditorControlTag("ha-selector");
+    this._watchEditorControlTag("ha-icon-picker");
+  }
+
+  _captureFocusState() {
+    const activeElement = this.shadowRoot?.activeElement;
+
+    if (
+      !(
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement instanceof HTMLSelectElement
+      )
+    ) {
+      return null;
     }
-    this._config = normalizeConfig(nextConfig);
-    if (options.emit !== false) {
-      this._emitConfig(compactConfig(this._config));
+
+    const dataset = activeElement.dataset || {};
+    const selector = dataset.field ? `[data-field="${escapeSelectorValue(dataset.field)}"]` : null;
+
+    if (!selector) {
+      return null;
     }
-    if (options.rerender !== false) {
+
+    const supportsSelection =
+      typeof activeElement.selectionStart === "number" &&
+      typeof activeElement.selectionEnd === "number";
+
+    return {
+      selector,
+      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
+      selectionStart: supportsSelection ? activeElement.selectionStart : null,
+      type: activeElement.type,
+    };
+  }
+
+  _restoreFocusState(focusState) {
+    if (!focusState?.selector || !this.shadowRoot) {
+      return;
+    }
+
+    const target = this.shadowRoot.querySelector(focusState.selector);
+    if (
+      !(
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      )
+    ) {
+      return;
+    }
+
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_error) {
+      target.focus();
+    }
+
+    const canRestoreSelection =
+      focusState.type !== "checkbox" &&
+      typeof focusState.selectionStart === "number" &&
+      typeof focusState.selectionEnd === "number" &&
+      typeof target.setSelectionRange === "function";
+
+    if (!canRestoreSelection) {
+      return;
+    }
+
+    try {
+      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+    } catch (_error) {
+      // Ignore unsupported inputs.
+    }
+  }
+
+  _emitConfig() {
+    const focusState = this._captureFocusState();
+    const nextConfig = deepClone(this._config);
+    this._config = normalizeConfig(compactConfig(nextConfig));
+    this._render();
+    this._restoreFocusState(focusState);
+    fireEvent(this, "config-changed", {
+      config: compactConfig(stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+    });
+  }
+
+  _setEditorConfig() {
+    this._config = normalizeConfig(compactConfig(this._config));
+  }
+
+  _setFieldValue(path, value) {
+    if (value === undefined || value === null || value === "") {
+      deleteByPath(this._config, path);
+      return;
+    }
+
+    setByPath(this._config, path, value);
+  }
+
+  _readFieldValue(input) {
+    const valueType = input.dataset.valueType || "string";
+
+    switch (valueType) {
+      case "boolean":
+        return Boolean(input.checked);
+      case "color":
+        return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+      default:
+        return input.value;
+    }
+  }
+
+  _onShadowInput(event) {
+    const input = event
+      .composedPath()
+      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+
+    if (!input?.dataset?.field) {
+      return;
+    }
+
+    event.stopPropagation();
+
+    const nextValue = this._readFieldValue(input);
+    this._setFieldValue(input.dataset.field, nextValue);
+    this._setEditorConfig();
+
+    if (event.type === "change") {
+      this._emitConfig();
+    }
+  }
+
+  _onShadowValueChanged(event) {
+    const control = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.field);
+
+    if (!control?.dataset?.field) {
+      return;
+    }
+
+    event.stopPropagation();
+
+    const nextValue =
+      typeof event.detail?.value === "string" ? event.detail.value : control.value;
+    if (typeof control.dataset?.value === "string") {
+      control.dataset.value = String(nextValue || "");
+    }
+
+    this._setFieldValue(control.dataset.field, nextValue);
+    this._setEditorConfig();
+    this._emitConfig();
+  }
+
+  _onShadowClick(event) {
+    const toggleButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+
+    if (!toggleButton) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (toggleButton.dataset.editorToggle === "insignia-styles") {
+      this._showStyleSection = !this._showStyleSection;
       this._render();
     }
-  }
-
-  _handleInput(event) {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) {
-      return;
-    }
-
-    const path = target.dataset?.path;
-    if (!path) {
-      return;
-    }
-
-    if (target instanceof HTMLSelectElement && event.type === "input") {
-      return;
-    }
-
-    if (target instanceof HTMLInputElement && target.type === "checkbox") {
-      this._updateValue(path, target.checked, { rerender: true });
-      return;
-    }
-
-    if (target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement) {
-      const isTextInput = (target instanceof HTMLInputElement && target.type === "text")
-        || target instanceof HTMLTextAreaElement;
-      const isLiveInput = isTextInput && event.type === "input";
-      const rerender = !isLiveInput;
-
-      this._updateValue(path, target.value, {
-        removeIfEmpty: target.dataset?.removeIfEmpty === "true",
-        rerender,
-        emit: !isLiveInput,
-      });
-    }
-  }
-
-  _getEntityOptions() {
-    if (!this._hass) {
-      return [];
-    }
-
-    return Object.keys(this._hass.states || {})
-      .sort((left, right) => left.localeCompare(right, "es"))
-      .map(entityId => `<option value="${escapeHtml(entityId)}">${escapeHtml(entityId)}</option>`)
-      .join("");
   }
 
   _editorLabel(s) {
@@ -1052,94 +1413,347 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
     return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
   }
 
-  _renderTextField(label, path, value = "", options = {}) {
+  _renderTextField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
+    const inputType = options.type || "text";
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const valueType = options.valueType || "string";
+    const inputValue = value === undefined || value === null ? "" : String(value);
+
     return `
-      <label class="editor-field">
+      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <input
-          type="text"
-          data-path="${escapeHtml(path)}"
-          data-remove-if-empty="${options.removeIfEmpty ? "true" : "false"}"
-          value="${escapeHtml(value ?? "")}"
+          type="${escapeHtml(inputType)}"
+          data-field="${escapeHtml(field)}"
+          data-value-type="${escapeHtml(valueType)}"
+          value="${escapeHtml(inputValue)}"
+          ${placeholder}
         />
       </label>
     `;
   }
 
-  _renderCheckboxField(label, path, checked) {
+  _renderTextareaField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const inputValue = value === undefined || value === null ? "" : String(value);
+
+    return `
+      <label class="editor-field editor-field--full">
+        <span>${escapeHtml(tLabel)}</span>
+        <textarea data-field="${escapeHtml(field)}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
+      </label>
+    `;
+  }
+
+  _renderCheckboxField(label, field, checked) {
     const tLabel = this._editorLabel(label);
     return `
-      <label class="editor-checkbox">
-        <input type="checkbox" data-path="${escapeHtml(path)}" ${checked ? "checked" : ""} />
+      <label class="editor-toggle">
+        <input
+          type="checkbox"
+          data-field="${escapeHtml(field)}"
+          data-value-type="boolean"
+          ${checked ? "checked" : ""}
+        />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
         <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
-  _renderSelectField(label, path, value, options) {
+  _renderSelectField(label, field, value, options, renderOptions = {}) {
     const tLabel = this._editorLabel(label);
+    const strValue = String(value ?? "");
     return `
-      <label class="editor-field">
+      <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
-        <select data-path="${escapeHtml(path)}">
-          ${options.map(option => `<option value="${escapeHtml(option.value)}" ${option.value === value ? "selected" : ""}>${escapeHtml(this._editorLabel(option.label))}</option>`).join("")}
+        <select data-field="${escapeHtml(field)}">
+          ${options
+            .map(
+              option => `
+            <option value="${escapeHtml(option.value)}" ${String(option.value) === strValue ? "selected" : ""}>
+              ${escapeHtml(this._editorLabel(option.label))}
+            </option>
+          `,
+            )
+            .join("")}
         </select>
       </label>
     `;
   }
 
+  _renderEntityPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(tLabel)}</span>
+        <div
+          class="editor-control-host"
+          data-mounted-control="entity"
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+        ></div>
+      </div>
+    `;
+  }
+
+  _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const placeholderAttr = options.placeholder
+      ? `data-placeholder="${escapeHtml(options.placeholder)}"`
+      : "";
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(tLabel)}</span>
+        <div
+          class="editor-control-host"
+          data-mounted-control="icon-picker"
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+          ${placeholderAttr}
+        ></div>
+      </div>
+    `;
+  }
+
+  _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
+    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+    const currentValue = value === undefined || value === null || value === ""
+      ? fallbackValue
+      : String(value);
+    const colorModel = getEditorColorModel(currentValue, fallbackValue);
+
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(tLabel)}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
+            <input
+              type="color"
+              data-field="${escapeHtml(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml(String(colorModel.alpha))}"
+              value="${escapeHtml(colorModel.hex)}"
+              aria-label="${escapeHtml(tLabel)}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
+          </label>
+        </div>
+      </div>
+    `;
+  }
+
+  _mountEntityPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const field = host.dataset.field || "entity";
+    const nextValue = host.dataset.value || "";
+    let control = null;
+
+    if (customElements.get("ha-entity-picker")) {
+      control = document.createElement("ha-entity-picker");
+      control.allowCustomEntity = true;
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = {
+        entity: {},
+      };
+    } else {
+      control = document.createElement("input");
+      control.type = "text";
+      control.dataset.field = field;
+      control.value = nextValue;
+      control.addEventListener("change", this._onShadowInput);
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+
+    if (control.tagName !== "INPUT") {
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    }
+
+    host.replaceChildren(control);
+  }
+
+  _copyDatasetToControl(host, control) {
+    Object.entries(host.dataset || {}).forEach(([key, value]) => {
+      if (key === "mountedControl" || key === "value" || key === "placeholder") {
+        return;
+      }
+      control.dataset[key] = value;
+    });
+  }
+
+  _mountIconPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || "";
+    let control = null;
+
+    if (customElements.get("ha-icon-picker")) {
+      control = document.createElement("ha-icon-picker");
+    } else {
+      control = document.createElement("input");
+      control.type = "text";
+    }
+
+    this._copyDatasetToControl(host, control);
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+    if (placeholder && "placeholder" in control) {
+      control.placeholder = placeholder;
+    }
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+    if (control.tagName !== "INPUT") {
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    } else {
+      control.addEventListener("change", this._onShadowInput);
+    }
+
+    host.replaceChildren(control);
+  }
+
   _render() {
     if (!this.shadowRoot) {
-      this.attachShadow({ mode: "open" });
+      return;
     }
 
     const config = this._config || normalizeConfig({});
+    const rawTap = config.tap_action;
+    const tapAction = typeof rawTap === "string" ? rawTap : isObject(rawTap) ? String(rawTap.action || "auto") : "auto";
+    const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
         }
+
         * {
           box-sizing: border-box;
         }
+
         .editor {
+          color: var(--primary-text-color);
           display: grid;
-          gap: 14px;
+          gap: 16px;
         }
+
         .editor-section {
-          background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
+          background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 18px;
           display: grid;
-          gap: 12px;
-          padding: 14px;
+          gap: 14px;
+          padding: 16px;
         }
-        .editor-section h3 {
-          color: var(--primary-text-color);
-          font-size: 13px;
+
+        .editor-section__header {
+          display: grid;
+          gap: 4px;
+        }
+
+        .editor-section__title {
+          font-size: 15px;
           font-weight: 700;
-          margin: 0;
         }
+
+        .editor-section__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .editor-section__actions {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 2px;
+        }
+
+        .editor-section__toggle-button {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        .editor-section__toggle-button ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
         .editor-grid {
           display: grid;
           gap: 12px;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
-        .editor-field {
+
+        .editor-grid--stacked {
+          grid-template-columns: 1fr;
+        }
+
+        .editor-field,
+        .editor-toggle {
           display: grid;
           gap: 6px;
+          min-width: 0;
         }
-        .editor-field span {
+
+        .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]) {
+          grid-column: 1 / -1;
+        }
+
+        .editor-field > span,
+        .editor-toggle > span {
           color: var(--secondary-text-color);
           font-size: 12px;
           font-weight: 600;
         }
+
         .editor-field input,
         .editor-field select,
         .editor-field textarea {
+          appearance: none;
           background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 12px;
@@ -1147,31 +1761,75 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
           font: inherit;
           min-height: 40px;
           padding: 10px 12px;
+          width: 100%;
         }
-        .editor-checkbox {
+
+        .editor-field textarea {
+          min-height: 86px;
+          resize: vertical;
+        }
+
+        .editor-color-field {
           align-items: center;
           display: flex;
           gap: 10px;
+          min-height: 46px;
         }
-        .editor-checkbox span {
-          color: var(--primary-text-color);
-          font-size: 13px;
-          font-weight: 600;
+
+        .editor-color-picker {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 40px;
+          justify-content: center;
+          position: relative;
+          width: 40px;
         }
-      
-        :is(.editor-toggle, .editor-checkbox) {
+
+        .editor-color-picker input {
+          cursor: pointer;
+          inset: 0;
+          opacity: 0;
+          position: absolute;
+        }
+
+        .editor-color-picker:hover,
+        .editor-color-picker:focus-within {
+          border-color: color-mix(in srgb, var(--primary-text-color) 22%, transparent);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+        }
+
+        .editor-color-swatch {
+          --editor-swatch: #71c0ff;
+          background:
+            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+            conic-gradient(from 90deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 25%, rgba(0, 0, 0, 0.12) 0 50%, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 0 75%, rgba(0, 0, 0, 0.12) 0);
+          background-position: center;
+          background-size: cover, 10px 10px;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+          border-radius: 999px;
+          display: block;
+          height: 22px;
+          width: 22px;
+        }
+
+        .editor-toggle {
           align-items: center;
           column-gap: 10px;
           cursor: pointer;
-          grid-auto-flow: row;
+          grid-auto-flow: column;
           grid-template-columns: auto minmax(0, 1fr);
-          justify-content: stretch;
           min-height: 40px;
-          padding-top: 0;
+          padding-top: 4px;
           position: relative;
         }
 
-        :is(.editor-toggle, .editor-checkbox) input {
+        .editor-toggle input {
           block-size: 1px;
           inline-size: 1px;
           margin: 0;
@@ -1186,6 +1844,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
           border-radius: 999px;
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           display: inline-flex;
+          flex-shrink: 0;
           font-size: 0;
           height: 22px;
           line-height: 0;
@@ -1211,92 +1870,186 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
           min-width: 0;
         }
 
-        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch {
+        .editor-toggle input:checked + .editor-toggle__switch {
           background: var(--primary-color);
           border-color: var(--primary-color);
         }
 
-        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch::before {
+        .editor-toggle input:checked + .editor-toggle__switch::before {
           transform: translateX(18px);
         }
 
-        :is(.editor-toggle, .editor-checkbox) input:focus-visible + .editor-toggle__switch {
+        .editor-toggle input:focus-visible + .editor-toggle__switch {
           box-shadow:
             0 0 0 3px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
-</style>
+
+        .editor-control-host,
+        .editor-control-host > * {
+          display: block;
+          width: 100%;
+        }
+      </style>
       <div class="editor">
-        <div class="editor-section">
-          <h3>${escapeHtml(this._editorLabel("Contenido"))}</h3>
-          <div class="editor-grid">
-            <label class="editor-field">
-              <span>${escapeHtml(this._editorLabel("Entidad"))}</span>
-              <input list="insignia-entities" data-path="entity" value="${escapeHtml(config.entity || "")}" />
-              <datalist id="insignia-entities">${this._getEntityOptions()}</datalist>
-            </label>
-            ${this._renderTextField("Nombre", "name", config.name, { removeIfEmpty: true })}
-            ${this._renderTextField("Icono", "icon", config.icon, { removeIfEmpty: true })}
-            ${this._renderTextField("Atributo de estado", "state_attribute", config.state_attribute, { removeIfEmpty: true })}
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Insignia"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Chip compacto para la barra de insignias: entidad, icono y texto opcionales."))}</div>
           </div>
-          <div class="editor-grid">
-            ${this._renderCheckboxField("Usar icono de la entidad", "use_entity_icon", config.use_entity_icon === true)}
-            ${this._renderCheckboxField("Usar foto de la entidad", "use_entity_picture", config.use_entity_picture === true)}
-            ${this._renderCheckboxField("Mostrar nombre", "show_name", config.show_name !== false)}
-            ${this._renderCheckboxField("Mostrar valor", "show_value", config.show_value !== false)}
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderEntityPickerField("Entidad", "entity", config.entity, {
+              fullWidth: true,
+            })}
+            ${this._renderIconPickerField("Icono", "icon", config.icon, {
+              placeholder: "mdi:star-four-points-circle",
+              fullWidth: true,
+            })}
+            ${this._renderTextField("Nombre visible", "name", config.name, {
+              placeholder: this._editorLabel("Temperatura"),
+              fullWidth: true,
+            })}
+            ${this._renderTextField("Atributo para el valor", "state_attribute", config.state_attribute, {
+              placeholder: "battery_level",
+              fullWidth: true,
+            })}
+            <div class="editor-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+              ${this._renderCheckboxField("Usar icono de la entidad", "use_entity_icon", config.use_entity_icon === true)}
+              ${this._renderCheckboxField("Usar foto de la entidad", "use_entity_picture", config.use_entity_picture === true)}
+              ${this._renderCheckboxField("Mostrar nombre", "show_name", config.show_name !== false)}
+              ${this._renderCheckboxField("Mostrar valor", "show_value", config.show_value !== false)}
+            </div>
           </div>
-        </div>
+        </section>
 
-        <div class="editor-section">
-          <h3>${escapeHtml(this._editorLabel("Accion"))}</h3>
-          <div class="editor-grid">
-            ${this._renderSelectField("Tap action", "tap_action", config.tap_action || "auto", [
-              { value: "auto", label: "Auto" },
-              { value: "more-info", label: "More info" },
-              { value: "toggle", label: "Toggle" },
-              { value: "service", label: "Servicio" },
-              { value: "navigate", label: "Navegar" },
-              { value: "url", label: "Abrir URL" },
-              { value: "none", label: "Sin accion" },
-            ])}
-            ${this._renderTextField("Servicio", "tap_service", config.tap_service, { removeIfEmpty: true })}
-            ${this._renderTextField("Service data JSON", "tap_service_data", config.tap_service_data, { removeIfEmpty: true })}
-            ${this._renderTextField("URL", "tap_url", config.tap_url, { removeIfEmpty: true })}
-            ${this._renderCheckboxField("Abrir URL en nueva pestana", "tap_new_tab", config.tap_new_tab === true)}
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta háptica"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Vibración al pulsar la insignia (si el dispositivo lo permite)."))}</div>
           </div>
-        </div>
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderCheckboxField("Activar respuesta háptica", "haptics.enabled", config.haptics?.enabled === true)}
+            ${this._renderCheckboxField("Usar vibración si no hay háptica", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
+            ${this._renderSelectField(
+              "Estilo",
+              "haptics.style",
+              hapticStyle,
+              [
+                { value: "selection", label: "Selección" },
+                { value: "light", label: "Ligero" },
+                { value: "medium", label: "Medio" },
+                { value: "heavy", label: "Intenso" },
+                { value: "success", label: "Éxito" },
+                { value: "warning", label: "Aviso" },
+                { value: "failure", label: "Fallo" },
+              ],
+              { fullWidth: true },
+            )}
+          </div>
+        </section>
 
-        <div class="editor-section">
-          <h3>${escapeHtml(this._editorLabel("Estilo"))}</h3>
-          <div class="editor-grid">
-            ${this._renderTextField("Tamano icono", "styles.icon.size", config.styles?.icon?.size || DEFAULT_CONFIG.styles.icon.size)}
-            ${this._renderTextField("Tamano nombre", "styles.title_size", config.styles?.title_size || DEFAULT_CONFIG.styles.title_size)}
-            ${this._renderTextField("Tamano valor", "styles.value_size", config.styles?.value_size || DEFAULT_CONFIG.styles.value_size)}
-            ${this._renderTextField("Padding tarjeta", "styles.card.padding", config.styles?.card?.padding || DEFAULT_CONFIG.styles.card.padding)}
-            ${this._renderTextField("Ajuste icono (solo icono)", "styles.icon.icon_only_offset_y", config.styles?.icon?.icon_only_offset_y || DEFAULT_CONFIG.styles.icon.icon_only_offset_y)}
-            ${this._renderSelectField("Tinte", "tint_preset", config.tint_preset || "auto", [
-              { value: "auto", label: "Auto" },
-              { value: "red", label: "Rojo" },
-              { value: "orange", label: "Naranja" },
-              { value: "yellow", label: "Amarillo" },
-              { value: "green", label: "Verde" },
-              { value: "blue", label: "Azul" },
-              { value: "purple", label: "Morado" },
-              { value: "pink", label: "Rosa" },
-              { value: "teal", label: "Turquesa" },
-              { value: "gray", label: "Gris" },
-            ])}
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Acción al pulsar"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Qué ocurre al tocar la insignia."))}</div>
           </div>
-        </div>
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderSelectField(
+              "Tipo de acción",
+              "tap_action",
+              tapAction,
+              [
+                { value: "auto", label: "Automática (info o alternar)" },
+                { value: "more-info", label: "Más información" },
+                { value: "toggle", label: "Alternar" },
+                { value: "service", label: "Llamar servicio" },
+                { value: "navigate", label: "Ir a una vista" },
+                { value: "url", label: "Abrir URL" },
+                { value: "none", label: "Sin acción" },
+              ],
+              { fullWidth: true },
+            )}
+            ${
+              tapAction === "service"
+                ? `
+                  ${this._renderTextField("Servicio", "tap_service", config.tap_service, {
+                    placeholder: "light.turn_on",
+                    fullWidth: true,
+                  })}
+                  ${this._renderTextareaField("Datos del servicio (JSON)", "tap_service_data", config.tap_service_data, {
+                    placeholder: '{"brightness_pct": 50}',
+                  })}
+                `
+                : ""
+            }
+            ${
+              tapAction === "navigate"
+                ? this._renderTextField("Ruta del panel", "tap_url", config.tap_url, {
+                    placeholder: "/lovelace/0",
+                    fullWidth: true,
+                  })
+                : ""
+            }
+            ${
+              tapAction === "url"
+                ? `
+                  ${this._renderTextField("URL", "tap_url", config.tap_url, {
+                    placeholder: "https://example.com",
+                    fullWidth: true,
+                  })}
+                  ${this._renderCheckboxField("Abrir en pestaña nueva", "tap_new_tab", config.tap_new_tab === true)}
+                `
+                : ""
+            }
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Apariencia"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Tamaños, colores del icono y tinte de la burbuja."))}</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="insignia-styles"
+                aria-expanded="${this._showStyleSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar detalles de estilo") : this._editorLabel("Mostrar detalles de estilo"))}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showStyleSection
+              ? `
+            <div class="editor-grid editor-grid--stacked">
+              ${this._renderCheckboxField("Tintado automático por tipo de entidad", "tint_auto", config.tint_auto !== false)}
+              ${this._renderColorField("Color tintado manual", "styles.tint.color", config.styles?.tint?.color || DEFAULT_CONFIG.styles.tint.color, { fullWidth: true })}
+              ${this._renderTextField("Tamaño del icono", "styles.icon.size", config.styles?.icon?.size || DEFAULT_CONFIG.styles.icon.size)}
+              ${this._renderTextField("Tamaño del nombre", "styles.title_size", config.styles?.title_size || DEFAULT_CONFIG.styles.title_size)}
+              ${this._renderTextField("Tamaño del valor", "styles.value_size", config.styles?.value_size || DEFAULT_CONFIG.styles.value_size)}
+              ${this._renderTextField("Padding de la insignia", "styles.card.padding", config.styles?.card?.padding || DEFAULT_CONFIG.styles.card.padding)}
+              ${this._renderTextField("Separación interna", "styles.card.gap", config.styles?.card?.gap || DEFAULT_CONFIG.styles.card.gap)}
+              ${this._renderTextField("Desplaz. icono (solo icono)", "styles.icon.icon_only_offset_y", config.styles?.icon?.icon_only_offset_y || DEFAULT_CONFIG.styles.icon.icon_only_offset_y)}
+              ${this._renderColorField("Fondo burbuja icono", "styles.icon.background", config.styles?.icon?.background || DEFAULT_CONFIG.styles.icon.background, { fullWidth: true })}
+              ${this._renderColorField("Color icono activo", "styles.icon.on_color", config.styles?.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color, { fullWidth: true })}
+              ${this._renderColorField("Color icono inactivo", "styles.icon.off_color", config.styles?.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color, { fullWidth: true })}
+            </div>
+          `
+              : ""
+          }
+        </section>
       </div>
     `;
 
-    this.shadowRoot.querySelectorAll("input, select, textarea").forEach(field => {
-      field.addEventListener("input", event => this._handleInput(event));
-      field.addEventListener("change", event => this._handleInput(event));
-    });
+    this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
+    this.shadowRoot.querySelectorAll('[data-mounted-control="icon-picker"]').forEach(host => this._mountIconPicker(host));
+
+    this._ensureEditorControlsReady();
   }
 }
+
 
 if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaInsigniaCard);

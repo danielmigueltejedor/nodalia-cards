@@ -6,20 +6,14 @@ Nodalia Cards is still evolving and feedback, ideas and improvements are very we
 
 ---
 
-## 📄 Documentation parity (`main` / `beta`)
+## 📄 Documentation parity (`main` / `beta` / `alpha`)
 
-These paths must stay **the same** on **`main`** and **`beta`** (copy or merge after each edit):
+**`README.md`**, **`CHANGELOG.md`**, **`CONTRIBUTING.md`**, **`ROADMAP.md`**, and **`.github/*.md`** should stay aligned between **`main`** and **`beta`** whenever you publish or merge (same guidance as before: branch-specific content lives mainly in **`package.json`** and tags).
 
-- **`README.md`**
-- **`CHANGELOG.md`**
-- **`CONTRIBUTING.md`**
-- **`ROADMAP.md`** (if present)
-- **`.github/ISSUE_TEMPLATE/**`** and other **`.github/*.md`** text (bug reports, PR templates, etc.)
+**`alpha`** moves faster and may carry temporary **`CHANGELOG`** bullets or **`package.json`** bumps ahead of **`beta`**—merge docs back when promoting work to **`beta`**, or accept a short drift until the next **`beta`** sync.
 
-Branch-specific content belongs in **`package.json`**, release tags, and code—not in diverging docs. After changing any of the files above on one branch, update the other branch **before** pushing (e.g. `git checkout main -- README.md CHANGELOG.md CONTRIBUTING.md` from the branch that has the edits, `git checkout main -- .github`, or merge **`main` ↔ `beta`** once code conflicts are resolved).
-
-Tip: after syncing docs, confirm with  
-`git diff main beta -- README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md .github` — it should be **empty**.
+Tip after syncing **`main` ↔ `beta`**:  
+`git diff main beta -- README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md .github` — ideally **empty** (except during active prerelease work).
 
 ---
 
@@ -127,32 +121,42 @@ Community help is especially useful for languages other than Spanish and English
 
 ---
 
-## 🏷️ Releases and beta versions
+## 🏷️ Releases: `main`, `beta`, and `alpha`
 
-Stable releases (**`0.2.x`**, **`0.3.x`**, **`0.4.x`**, …) ship from **`main`**. Prereleases are cut from the **`beta`** branch for translation polish and card work ahead of the next minor.
+Three channels keep risk and expectations clear:
 
-**Beta tags and versions:** use **`v0.4.0-beta.XX`** on GitHub with **`XX` as two digits** (`01`, `02`, … `09`, `10`, …) so release lists stay ordered. Example: third beta → **`v0.4.0-beta.03`**. Keep **`package.json`** `version` identical to that prerelease string (without the leading `v`) so HACS and `__NODALIA_BUNDLE__` match the tag.
+| Branch | Who it’s for | Version examples | Expectations |
+|--------|----------------|------------------|--------------|
+| **`main`** | Everyone | **`v0.4.0`**, **`v0.4.1`**, **`v0.5.0`** (semver **only** stable minors/patches) | **Recommended** for normal dashboards. Only merged when the maintainer is happy to endorse the build widely. |
+| **`beta`** | Testers, early adopters | **`0.5.0-beta.1`**, **`0.5.0-beta.2`**, … (tags **`v0.5.0-beta.1`**, …) | **Pretty usable**; features are exercised but not guaranteed frozen. Promoted from **`alpha`** when a slice of work is **polished enough** (merge or cherry-pick). |
+| **`alpha`** | Developers / brave testers | **`0.5.0-alpha.1`**, **`0.5.0-alpha.2`**, … (tags **`v0.5.0-alpha.1`**, … optional) | **High churn**. Frequent commits; **dashboards may break**. Breaking YAML or behaviour is allowed here. |
 
-For maintainers: each shipped beta—add a section to **`CHANGELOG.md`**, bump the **Current beta** (or **Next prerelease**) badge in **`README.md`** as appropriate, tag **`v0.4.0-beta.XX`**, and run **`npm run bundle`** when artefacts change.
+**Promotion flow (typical):** experimental work lands on **`alpha`** → when a feature (or batch) is stable enough, it moves to **`beta`** → when the whole minor is ready, **`beta`** merges to **`main`** as **`v0.5.0`** (example). Avoid merging **`alpha` → `main`** directly if you want **`beta`** to stay the gate for “probably OK for testers”.
 
-### Stable first, then the next beta line
+**Semver notes:** use **`package.json`** `version` identical to the Git tag (without **`v`**) so **`__NODALIA_BUNDLE__.pkgVersion`** and HACS match. Prerelease identifiers **`alpha.N`** and **`beta.N`** sort correctly on GitHub if **`N`** increments monotonically (**`1`**, **`2`**, … or zero-padded **`01`**, **`02`** if you prefer—pick one style per line and stick to it).
 
-Use this order so **`main`** and **`beta`** stay predictable for HACS and tags.
+### Creating the **`alpha`** branch
 
-1. **`main` (stable)**  
-   - Set **`package.json`** `version` to the stable release (e.g. **`0.3.0`**).  
-   - Ensure **`CHANGELOG.md`** includes the **`[0.3.0]`** (or matching) section.  
-   - Run **`npm run bundle`**, commit, push **`main`**.  
-   - Tag **`v0.3.0`** (or matching) and publish the GitHub **Release**.
+After **`v0.4.0`** is on **`main`** (and optionally after **`beta`** exists), create **`alpha`** from the branch where **`0.5.x`** work should start—for example:
 
-2. **`beta` (first prerelease of the next minor)**  
-   - Merge **`main`** into **`beta`**.  
-   - Bump **`package.json`** to **`0.4.0-beta.01`** (first **`0.4.x`** prerelease; use **`beta.01`**, **`beta.02`**, … with **two digits** in the tag: **`v0.4.0-beta.01`**, **`v0.4.0-beta.02`**, …).  
-   - Add **`## [0.4.0-beta.01] - YYYY-MM-DD`** at the top of **`CHANGELOG.md`** (you can remove or empty **`[Unreleased]`** on **`beta`** if it was only a planning stub).  
-   - Update **`README.md`** prerelease badge to the orange **current beta** style with **`0.4.0-beta.01`** when you want to advertise the live prerelease.  
-   - Run **`npm run bundle`**, commit, push **`beta`**, tag **`v0.4.0-beta.01`**.
+```bash
+git checkout main && git pull
+git checkout -b alpha
+# set package.json to e.g. 0.5.0-alpha.1, changelog section, npm run bundle
+git push -u origin alpha
+```
 
-Afterwards, keep **`CHANGELOG.md` / `README.md` / `CONTRIBUTING.md`** in sync across branches when possible (see *Documentation parity* above); **`package.json`** `version` is the usual intentional difference between **`main`** and **`beta`** until the next stable merge.
+Or branch **`alpha`** from **`beta`** if **`beta`** already tracks **`0.5.0-beta.*`** and you want **`alpha`** as an extra-experimental line—document which convention you follow in the first **`alpha`** tag message.
+
+### Stable **`main`**, then **`beta`**, then ongoing **`alpha` → beta`**
+
+1. **`main` (stable)** — **`package.json`** e.g. **`0.4.0`**, **`CHANGELOG`** **`[0.4.0]`**, **`npm run bundle`**, tag **`v0.4.0`**, GitHub **Release**.
+
+2. **`beta` (first prerelease of the next minor)** — merge **`main`** into **`beta`**, bump to **`0.5.0-beta.1`**, **`CHANGELOG`** **`## [0.5.0-beta.1]`**, **`npm run bundle`**, tag **`v0.5.0-beta.1`**.
+
+3. **`alpha` (experimental)** — work and tag **`0.5.0-alpha.1`**, **`0.5.0-alpha.2`**, … as often as you like; merge **`alpha` → `beta`** when a feature is **ready for testers**, then bump **`beta`** (**`0.5.0-beta.2`**, **`beta.3`**, …).
+
+4. **Stable minor** — when **`beta`** is release-ready, merge **`beta` → `main`**, set **`0.5.0`**, tag **`v0.5.0`**.
 
 ---
 

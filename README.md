@@ -1,9 +1,8 @@
 # 🎨 Nodalia Cards
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
-![Latest stable](https://img.shields.io/badge/latest%20stable-0.3.0-2ea043)
+![Latest stable](https://img.shields.io/badge/latest%20stable-0.4.0-2ea043)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
-![Next prerelease](https://img.shields.io/badge/next%20prerelease-0.4.0--beta.01-lightgrey)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![GitHub](https://img.shields.io/badge/hosted%20on-GitHub-black?logo=github)
@@ -11,6 +10,8 @@
 **Nodalia Cards** is a custom card bundle for Home Assistant focused on creating a cleaner, more polished and more app-like dashboard experience.
 
 The goal is not only to provide beautiful cards, but to build a consistent UI system for Home Assistant with smooth interactions, readable layouts and a mobile-first experience.
+
+**Release channels:** **`main`** (stable, recommended) · **`beta`** (test builds for early adopters) · **`alpha`** (experimental; may break). See **`CONTRIBUTING.md`** → **Releases: main, beta, and alpha**.
 
 ---
 
@@ -79,9 +80,9 @@ Copy `nodalia-cards.js` into `config/www/` (or a subfolder) and add a resource u
 
 ## 🌍 Translations
 
-**Stable (`main`) — 0.3.0** includes **es, en, de, fr, it, nl** plus **pt, ru, el, zh** (simplified), and **ro** for the bundled cards and Lovelace visual editors (partial trees merge from English; coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
+**Stable (`main`) — 0.4.0** includes **es, en, de, fr, it, nl** plus **pt, ru, el, zh** (simplified), and **ro** for the bundled cards and Lovelace visual editors (partial trees merge from English; coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
 
-**Prereleases (`beta`)**: after **`v0.3.0`** ships from **`main`**, the **`beta`** branch picks up **`0.4.0-beta.01`** (tag **`v0.4.0-beta.01`**, then **`v0.4.0-beta.02`**, … — see **CONTRIBUTING**). Work there targets **Power Flow**, **Graph Card** lines, **i18n**, and **default styles**. Install prereleases from HACS or GitHub Releases if you want builds ahead of the next stable minor.
+**Prereleases:** future **`beta`** / **`alpha`** builds target **`0.4.1`**, **`0.5.x`**, … ahead of **`main`**; stable **`0.4.0`** is **`package.json`** on **`main`** (tag **`v0.4.0`**). Branch workflow and tagging: **CONTRIBUTING**.
 
 ---
 
@@ -92,7 +93,7 @@ Copy `nodalia-cards.js` into `config/www/` (or a subfolder) and add a resource u
 - Redesign graph card  
 - Improve energy flow card  
 - Refine navigation bar  
-- Polish translations and UX (0.3.x)
+- Polish translations and UX (**0.4.x**)
 
 ---
 

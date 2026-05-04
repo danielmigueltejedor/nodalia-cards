@@ -6,7 +6,296 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Planned **0.4.x** line: first prerelease **`0.4.0-beta.01`** (tag **`v0.4.0-beta.01`**, then **`v0.4.0-beta.02`**, … two-digit **`XX`** per **CONTRIBUTING**). Focus: **Power Flow** follow-ups, **translations**, **Graph Card** line/axis rework, **curated default styles**. Bump **`package.json`** and this file on **`beta`** only **after** **`v0.3.0`** is on **`main`** (see **CONTRIBUTING → Stable first, then the next beta line**).
+Work toward **`0.4.1`** patches and the next minor (**`0.5.x`**): **Power Flow** polish, **translations**, **Graph Card** lines/axes, **curated default styles**. Prerelease workflow (**`beta`** / **`alpha`**) and tagging: **CONTRIBUTING**.
+
+---
+
+## [0.4.0] - 2026-05-06
+
+### Nodalia Cards v0.4.0
+
+This release is the new recommended **stable** line on **`main`**. It rolls up everything exercised across the **`0.4.0-beta.*`** and **`0.4.0-alpha.*`** prereleases into a single coherent minor: sharper history visuals, a more dependable navigation shell, shared tint/contrast logic across bubble cards, a full-featured **Insignia** editor and tint system, and broad editor / i18n polish. Installs should match **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0`** (Git tag **`v0.4.0`**).
+
+Per-prerelease entries below (**alpha.1** through **alpha.25**, **beta.1** through **beta.4**) remain for detailed archaeology.
+
+### 📈 Graph card
+
+- **Line & area**: Reworked stroke/fill, smarter **automatic min/max** by metric (for example humidity anchored around **20–80** when you do not set bounds), denser default history sampling (**`points`** **480**).
+- **Layout & chips**: Series chips **reordered and tightened** so they do not collide with the chart frame; **multi-series with the same unit** shows a **mean** in the primary readout until you pick a series; improved **hover/detail** presentation closer to **Weather card**; refined **typography** for the main value and spacing between chips and plot.
+- **Fit & polish**: Extra bottom margin in series/container so minima are not clipped; chart container **no longer uses negative side margin** (stays inside the card).
+
+### 🌤️ Weather card
+
+- **Forecast chart mode**: Detail popups / overlays **follow the active Home Assistant theme** more faithfully when switching themes (fixes overly dark panels on light themes).
+
+### 🧭 Navigation bar
+
+- **Look & layout**: “Shelf” geometry when docked (**`bottom`** / **`top`**), **full-width** bar option, **28px** radius and light top wash aligned with other Nodalia cards; **dock entrance** animation (slide/fade, staggered routes, configurable duration).
+- **Media**: **Album / entity artwork** resolution aligned with **`nodalia-media-player`** (URLs, cache busting, TV/Plex rules); **mini player ticker** updates progress/time **without** full card re-render (no flicker).
+- **Reliability**: Entrance animation reset deferred one **`requestAnimationFrame`** so **`set(hass)`** after **`setConfig`** does not cancel **`--entering`** states.
+- **Editor**: Native **`ha-entity-picker`** / **`ha-icon-picker`** (with **`input`** fallbacks) for routes, popup shortcuts, and media players.
+
+### 🎯 Entity, Fan, Humidifier, Climate & shared bubble visuals
+
+- **`nodalia-bubble-contrast.js`** (**`window.NodaliaBubbleContrast`**): one implementation for **named/CSS colors**, hue-aware **cool tint** detection, and **when to darken** the icon glyph on tinted bubbles—used by **Entity**, **Fan**, and **Humidifier** (and **Entity**-aligned behaviour elsewhere).
+- **Entity card**: Stronger **active-state** visual parity with Light/Fan (gradient, border, glow, circular bubble); **chip** surfaces and typography; visual editors for **`icon_active`** / **`icon_inactive`** (doors, windows, binary sensors). Card revision **0.6.6**.
+- **Active bubble icon colour**: **`ha-icon`** prefers readable **`styles.icon.color`** on coloured bubbles (not always **`on_color`**) across **entity**, **fan**, **humidifier**, **climate** where applicable.
+
+### 🏅 Insignia card
+
+- **Visual editor**: Parity with other Nodalia editors—**`ha-entity-picker`**, robust **icon** control (**`editor-control-host`** / **`_mountIconPicker`** + text fallback), structured sections (badge, haptics, tap action, appearance).
+- **Tinting**: **Automatic tint by entity type** with optional **manual tint colour** (**`styles.tint.color`**, **`tint_auto`**); when tint should read clearly (active entities, **sensor**/**weather**, manual mode), **card fill, border, and glow layers** align with **Entity card**; fixes for **weak tint on numeric sensors** and a **gray “shelf”** under pills in toolbars (baseline gap, shadow, containment).
+
+### 🔔 Alarm panel, YAML preview & editors
+
+- **Alarm panel editor**: More reliable **style/animation** toggles (deferred config emission, **`pointerdown`** section open, duplicate-click suppression).
+- **Visual editors** (“Show YAML”): **`stripEqualToDefaults`** so generated YAML stays minimal (also wired where added for **vacuum** and similar editors).
+
+### 🎛️ Circular gauge, Climate dial & Power Flow
+
+- **Circular gauge** / **Climate**: **`aspect-ratio: 1`** and **`width: min(…, 100%)`** so previews stay **round** in narrow layouts.
+- **Power Flow**: Thinner default connector (**`flow_width`** **1px** in this line), continuing diagram polish from earlier **0.4.x** alphas.
+
+### 🌍 i18n & editor UI map
+
+- **Spanish editor labels**: Wider pass on accents and **ñ** across the shared **`editorStr`** map; **`scripts/gen-editor-ui.mjs`** keeps **`normalizeSpanishEditorLabel`** when regenerating **`nodalia-editor-ui.js`**.
+- **Locales**: **`FULL_LOCALE_BY_EN`** coverage for flow/style labels so **pt / ru / el / zh / ro** do not fall back to English for Power Flow and similar strings.
+
+### 🎨 Defaults & misc
+
+- Curated **default `styles`** (icon sizes, chips, sliders, etc.) across several cards for a tighter out-of-the-box look.
+
+### Notes
+
+- If you installed **`0.4.0-beta.*`** or **`0.4.0-alpha.*`**, move **`main`** / GitHub **Release** **`v0.4.0`** or HACS **stable** when ready; **`__NODALIA_BUNDLE__.pkgVersion`** should read **`0.4.0`** after refresh/redownload.
+
+---
+
+## [0.4.0-alpha.25] - 2026-05-06
+
+Twenty-fifth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.25`** (tag **`v0.4.0-alpha.25`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Insignia card (layout / sombra)**: evita la **franja gris** bajo la pastilla en barras — **`inline-flex`** en **`:host`** con **`line-height: 0`** y **`vertical-align: middle`** (hueco típico de baseline en elementos inline); sin **`contain: paint`** ni **`background-clip: padding-box`** que podían marcar el borde; la sombra extra tipo **Entity** (`0 16px 32px`) se sustituye por un **brillo interior** para no proyectar un bloque oscuro bajo insignias compactas.
+
+---
+
+## [0.4.0-alpha.24] - 2026-05-05
+
+Twenty-fourth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.24`** (tag **`v0.4.0-alpha.24`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Insignia card (tinte)**: tintado alineado con **Entity card** cuando el tinte debe leerse fuerte — degradado en el fondo de la pastilla, borde/sombra con acento y capas **`::before` / `::after`** sin la opacidad global que antes dejaba el tinte casi invisible; sensores (**`sensor`**) y **weather** reciben tinte fuerte aunque el estado no sea «activo» (p. ej. temperatura numérica); **`tint_auto: false`** sigue forzando el tinte manual visible.
+
+---
+
+## [0.4.0-alpha.23] - 2026-05-06
+
+Twenty-third **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.23`** (tag **`v0.4.0-alpha.23`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Insignia card (editor visual)**: campos de color (`styles.icon.background`, `styles.icon.on_color`, `styles.icon.off_color`) con selector visual tipo color picker, alineado con el patrón del resto de editores; eliminado el selector por presets de tinte y sustituido por un toggle **«Tintado automático por tipo de entidad»** (si se desactiva, manda el color manual elegido).
+
+---
+
+## [0.4.0-beta.4] - 2026-05-06
+
+Fourth **`beta`** prerelease on the **0.4.x** line (**branch `beta`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-beta.4`** (tag **`v0.4.0-beta.4`**). Same expectations as other **`0.4.0-beta.*`** builds. Use this tag when installing from HACS or GitHub Releases so **`pkgVersion`** matches the release.
+
+---
+
+## [0.4.0-beta.3] - 2026-05-06
+
+Third **`beta`** prerelease on the **0.4.x** line (**branch `beta`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-beta.3`** (tag **`v0.4.0-beta.3`**). Same expectations as other **`0.4.0-beta.*`** builds. Use this tag when installing from HACS or GitHub Releases so **`pkgVersion`** matches the release. For the full list of user-facing changes since **`0.4.0-beta.1`**, see **`0.4.0-beta.2`** below (this line is a version bump for a clean prerelease after **`alpha` → `beta`** merge and release).
+
+---
+
+## [0.4.0-beta.2] - 2026-05-05
+
+Second **`beta`** prerelease on the **0.4.x** line (**branch `beta`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-beta.2`** (tag **`v0.4.0-beta.2`**). This build rolls up **everything since `0.4.0-beta.1`**, i.e. cumulative work from **`0.4.0-alpha.11`** through **`0.4.0-alpha.20`** (there was no **`alpha.19`** tag in this line) **plus** items below that landed in the bundle after the last alpha note. Breaking changes are still possible; recommended for testers and early adopters.
+
+Compared to **`0.4.0-beta.1`**, this release includes:
+
+- **Graph card**: rework visual de línea/área; **rangos automáticos** por tipo de métrica (p. ej. humedad con referencia **20–80** si no fijas `min`/`max`); chips de series **reordenados/compactados** para **no solaparse** con el recuadro de gráfica; en **multi-serie con la misma unidad**, el valor principal muestra la **media** hasta que eliges una serie; **popup de hover** con estilo más cercano a **Weather card**; **tipografía** del valor principal más compacta y legible; ajustes de **layout** entre chips y recuadro y **más margen inferior** en serie/contenedor para que los **mínimos** no queden recortados; el recuadro deja de usar **margen lateral negativo** para no salirse de la tarjeta.
+- **Weather card** (modo gráfico de previsión): **popups/overlays** de detalle respetan mejor el **tema activo** al cambiar de theme (evita el aspecto demasiado oscuro en tema claro).
+- **Fan card / Humidifier card**: mismo criterio de **contraste del icono** en burbuja tintada que **Entity card** (tonos como **`lightgreen`** / **`pink`** oscurecen el glifo cuando hace falta).
+- **Navigation bar editor**: selectores nativos de Home Assistant para **entidad** e **icono** en rutas, popup y reproductores, con fallback a **`ha-selector`** / `input`.
+- **Navigation bar**: el **ticker** del reproductor en curso actualiza solo **progreso y tiempo** sin **re-render** completo del media player (evita **parpadeo** continuo al reproducir).
+- **Alarm panel card (editor)**: toggles y **“Mostrar estilos / animaciones”** más fiables (emisión de config **diferida**, secciones abiertas en **`pointerdown`**, supresión del **`click`** duplicado para evitar **doble alternancia**, mejor comportamiento ante blur/`change`).
+- **Editor visual / español (`editorStr`)**: **primera** normalización de tildes y **ñ** en etiquetas del mapa común del editor; **segunda pasada** ampliada (título, gráfica, táctil/háptica, código, energía, información, acción, añade, etc.); **`scripts/gen-editor-ui.mjs`** vuelve a emitir **`normalizeSpanishEditorLabel`** junto a **`editorStr`** para que **`node scripts/gen-editor-ui.mjs`** no pierda la normalización al regenerar **`nodalia-editor-ui.js`**.
+- **Insignia (badge) card**: título de sección del editor corregido a **«Acción»**; **editor visual** alineado con el resto de tarjetas Nodalia (**`ha-entity-picker`**, selector de icono con **`editor-control-host`** / **`_mountIconPicker`** y **`input`** de respaldo si **`ha-icon-picker`** no está cargado, secciones para insignia, **hápticos**, acción al pulsar y apariencia con detalles de estilo plegables).
+- **Entity / Fan / Humidifier cards**: lógica compartida de **resolución de color** y **contraste del glifo** en burbuja tintada vía **`nodalia-bubble-contrast.js`** (**`window.NodaliaBubbleContrast`**), cargada en el bundle antes de esas tarjetas.
+- **Entity card**: en el editor visual, selectores **`icon_active`** / **`icon_inactive`** para **icono distinto** en estado **activo** vs **inactivo** (útil en **binary_sensor** de puertas, ventanas, etc.); la tarjeta pasa a **`0.6.6`**.
+
+---
+
+## [0.4.0-alpha.20] - 2026-05-04
+
+Twentieth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.20`** (tag **`v0.4.0-alpha.20`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Editor visual (español)**: segunda pasada de tildes y **ñ** en textos de ayuda y etiquetas (p. ej. título, gráfica, táctil/háptica, código, energía, información, acción, añade); **`scripts/gen-editor-ui.mjs`** vuelve a emitir **`normalizeSpanishEditorLabel`** junto a **`editorStr`** para que regenerar el mapa no pierda la normalización.
+- **Insignia card**: título de sección del editor corregido a **«Acción»**.
+
+---
+
+## [0.4.0-alpha.18] - 2026-05-05
+
+Eighteenth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.18`** (tag **`v0.4.0-alpha.18`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Graph card**: el recuadro de la gráfica ya no usa margen lateral negativo (evita que se salga de la tarjeta); más margen inferior en serie y contenedor para que valores cercanos al mínimo sigan visibles.
+- **Editor visual (`editorStr`)**: normalización de etiquetas en español (tildes y **ñ** en palabras habituales del editor) para todas las tarjetas que usan el mapa común.
+- **Navigation bar**: el ticker de reproducción actualiza solo progreso/tiempo sin re-render completo del media player (evita parpadeo continuo al reproducir).
+- **Alarm panel editor**: toggles y botones “Mostrar estilos/animaciones” más fiables ante blur/change (emisión de config diferida y apertura de secciones en `pointerdown`).
+
+---
+
+## [0.4.0-alpha.17] - 2026-05-05
+
+Seventeenth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.17`** (tag **`v0.4.0-alpha.17`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Graph card**: incremento del margen inferior real de la serie y del contenedor para que los mínimos no queden ocultos bajo el borde inferior del recuadro.
+
+---
+
+## [0.4.0-alpha.16] - 2026-05-05
+
+Sixteenth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.16`** (tag **`v0.4.0-alpha.16`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Graph card**: ajuste fino del espaciado entre chips y recuadro, y refuerzo visual de tipografía en el valor principal para mejorar legibilidad.
+
+---
+
+## [0.4.0-alpha.15] - 2026-05-05
+
+Fifteenth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.15`** (tag **`v0.4.0-alpha.15`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Graph card**: ajuste extra de layout para separar mejor chips y recuadro de gráfica, y evitar recorte visual en la parte inferior de la línea/área.
+- **Graph card**: tipografía del valor principal más compacta y con mayor peso visual para acercar el look a Weather card.
+
+---
+
+## [0.4.0-alpha.14] - 2026-05-05
+
+Fourteenth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.14`** (tag **`v0.4.0-alpha.14`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Graph card**: chips de series recolocados/compactados para evitar solape con el nuevo recuadro de gráfica; valor principal en modo multi-serie con misma unidad muestra media hasta seleccionar serie individual; popup hover con estilo visual más cercano al de Weather card.
+
+---
+
+## [0.4.0-alpha.13] - 2026-05-05
+
+Thirteenth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.13`** (tag **`v0.4.0-alpha.13`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Weather card (forecast chart mode)**: popups/overlays de detalle ajustados para respetar mejor el tema activo al cambiar entre themes (evita oscurecido en tema claro).
+- **Graph card**: rework visual de la línea/superficie y auto-rangos inteligentes por métrica (p. ej. humedad con referencia 20–80 cuando no se define `min`/`max` manualmente).
+
+---
+
+## [0.4.0-alpha.12] - 2026-05-05
+
+Twelfth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.12`** (tag **`v0.4.0-alpha.12`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Fan / Humidifier cards**: mismo ajuste de contraste del glifo que en **Entity card** para burbujas tintadas; se detectan tonos de bajo contraste (incluye **`lightgreen`** y **`pink`**) y se oscurece el icono cuando corresponde.
+
+---
+
+## [0.4.0-alpha.11] - 2026-05-05
+
+Eleventh **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.11`** (tag **`v0.4.0-alpha.11`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Navigation bar editor**: usa selectores nativos de Home Assistant para **entidad** e **icono** (pickers en rutas, popup y media players), con fallback a `ha-selector`/`input`.
+
+---
+
+## [0.4.0-beta.1] - 2026-05-05
+
+First **`beta`** prerelease on the **0.4.x** line (**branch `beta`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-beta.1`** (tag **`v0.4.0-beta.1`**). Breaking changes are still possible; recommended for testers and early adopters.
+
+- **Navigation bar**: entrada del dock / animaciones visibles de nuevo cuando Lovelace llama **`set(hass)`** justo después de **`setConfig`** — el reset de **`_animateDockEntranceNext`** se difiere un **`requestAnimationFrame`** para no quitar las clases **`--entering`** antes del pintado.
+- **Navigation bar**: **`_getMediaPlayerArtwork`** alineado con **`nodalia-media-player`** (devuelve **`_resolveMediaUrl`** tal cual, sin **`resolved || null`**).
+- **Entity card**: contraste del glifo en burbuja tintada con **colores CSS nombrados** (**`lightgreen`**, **`pink`**, …): **`parseCssColorHue`** resuelve el color vía estilo computado para obtener el matiz.
+
+---
+
+## [0.4.0-alpha.10] - 2026-05-05
+
+Tenth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.10`** (tag **`v0.4.0-alpha.10`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Navigation bar**: entrada del dock / animaciones visibles de nuevo cuando Lovelace llama **`set(hass)`** justo después de **`setConfig`** — el reset de **`_animateDockEntranceNext`** se difiere un **`requestAnimationFrame`** para no quitar las clases **`--entering`** antes del pintado.
+- **Navigation bar**: **`_getMediaPlayerArtwork`** alineado con **`nodalia-media-player`** (devuelve **`_resolveMediaUrl`** tal cual, sin **`resolved || null`**).
+- **Entity card**: contraste del glifo en burbuja tintada con **colores CSS nombrados** (**`lightgreen`**, …): **`parseCssColorHue`** resuelve el color vía estilo computado para obtener el matiz.
+
+---
+
+## [0.4.0-alpha.9] - 2026-05-04
+
+Ninth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.9`** (tag **`v0.4.0-alpha.9`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Navigation bar** (`0.6.5`): **animación de entrada del dock** — al cargar o al volver a mostrarse (p. ej. pasar de escritorio a móvil), **`ha-card`** entra con desliz según **`layout.position`** (abajo / arriba), **rutas** con **escalonado** (`--nav-enter-delay`), **título** y **mini reproductor** con **fade-in**; **`animations.dock_entrance_duration`** (por defecto **420** ms) y control en el **editor** (**Entrada barra (ms)**). Con **`animations.enabled: false`** se anulan también estas entradas.
+
+---
+
+## [0.4.0-alpha.8] - 2026-05-04
+
+Eighth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.8`** (tag **`v0.4.0-alpha.8`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Navigation bar** (`0.6.3`): portadas de álbum / **`entity_picture`** igual que **`nodalia-media-player`**: rutas relativas con **`hass.hassUrl()`**, **`entity_picture_local`**, **`nodalia_ts`** anti-caché, y misma lógica **TV / Plex** para no mostrar arte genérico en TVs cuando no aplica.
+- **Iconos en burbuja tintada**: **`ha-icon`** usa **`styles.icon.color`** (**`var(--primary-text-color)`** por defecto) cuando la burbuja está activa en **entity**, **fan**, **humidifier** y **climate**, en lugar de **`on_color`** (**info** / azul), para que el glifo contraste con fondos **accent** (p. ej. energía). Versiones de tarjeta: entity **`0.6.4`**, fan / humidifier **`0.6.3`**, climate **`0.10.5`**.
+
+---
+
+## [0.4.0-alpha.7] - 2026-05-02
+
+Seventh **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.7`** (tag **`v0.4.0-alpha.7`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Navigation bar** (`0.6.2`): modo **estantería** cuando **`layout.position`** es **`bottom`** (por defecto): **`border-radius`** solo en la parte superior (**`styles.bar.border_radius`** → **`R R 0 0`**), borde inferior recto al ras del viewport (evita la pastilla con solo las curvas visibles); con **`top`** se usa **`0 0 R R`**. **`layout.full_width: true`** sigue anulando todo el radio (**barra totalmente rectangular**).
+
+---
+
+## [0.4.0-alpha.6] - 2026-05-02
+
+Sixth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.6`** (tag **`v0.4.0-alpha.6`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Navigation bar** (`0.6.1`): estética alineada con el resto de tarjetas Nodalia (radio de barra **28px**, capa superior tipo light con **`color-mix` 5%**, burbujas de icono con borde **8%** y sombra **inset + drop** como iconos light; **`layout.full_width`**: barra **sin** **`border-radius`**, **dock** a borde del viewport e **`max-width`** sin tope; editor visual con interruptor **«Barra a ancho completo»**; si hay **media player** encima, también **sin** esquinas cuando **`full_width`** está activo.
+
+---
+
+## [0.4.0-alpha.5] - 2026-05-02
+
+Fifth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.5`** (tag **`v0.4.0-alpha.5`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Entity card**: visual parity with **Light / Fan** — active card gradient, border, shadow, **`ha-card::after`** accent glow, circular icon bubble (**`border-radius: 999px`**), icon **`color-mix`** / inset shadow matching light card; chips use **6%** **`color-mix`** surfaces, **`font-weight: 600`**, default **`chip_font_size`** **11px**; card **`0.6.3`**.
+
+---
+
+## [0.4.0-alpha.4] - 2026-05-07
+
+Fourth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.4`** (tag **`v0.4.0-alpha.4`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Lovelace YAML preview**: visual editors emit **`stripEqualToDefaults(..., DEFAULT_CONFIG)`** so “Mostrar código YAML” stays minimal when only non-default options are set.
+- **Circular gauge & climate**: **dial** uses **`aspect-ratio: 1`** and **`width: min(var(--*-dial-size), 100%)`** so card-picker previews stay **circular** in narrow layouts (**`0.12.1`** / **`0.10.4`**).
+- **Power Flow**: default **`flow_width`** **`1px`**; card **`0.16.13`**.
+
+---
+
+## [0.4.0-alpha.3] - 2026-05-06
+
+Third **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.3`** (tag **`v0.4.0-alpha.3`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Default sizes** (icons, titles, chips, sliders, media artwork/controls): tighter curated **`DEFAULT_CONFIG.styles`** on **light**, **fav**, **entity**, **media player**, **vacuum**, **fan**, and **humidifier** cards; theme-adaptive **`color-mix`** icon backgrounds and semantic colours unchanged from prior behaviour.
+- **Graph card**: default **`points`** **480** for denser history sampling (**`0.12.12`**).
+
+---
+
+## [0.4.0-alpha.2] - 2026-05-02
+
+Second **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.2`** (tag **`v0.4.0-alpha.2`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Power Flow**: thinner default connector stroke (**`flow_width`** **2px**), slightly tighter glow halo and rail floor; card **`0.16.12`**.
+- **Visual editor**: **`FULL_LOCALE_BY_EN`** entries for flow/style labels (line thickness, node/home sizes, zero-line transparency, chip padding, min/max flow, etc.) so **pt / ru / el / zh / ro** show proper strings instead of English fallbacks.
+
+---
+
+## [0.4.0-alpha.1] - 2026-05-05
+
+First **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.1`** (tag **`v0.4.0-alpha.1`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
 
 ---
 

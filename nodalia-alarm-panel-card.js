@@ -187,6 +187,72 @@ function compactConfig(value) {
   return value;
 }
 
+function deepEqual(a, b) {
+  if (Object.is(a, b)) {
+    return true;
+  }
+  if (a == null || b == null) {
+    return a === b;
+  }
+  if (typeof a !== typeof b) {
+    return false;
+  }
+  if (typeof a !== "object") {
+    return false;
+  }
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b) || a.length !== b.length) {
+      return false;
+    }
+    return a.every((value, index) => deepEqual(value, b[index]));
+  }
+  if (Array.isArray(b)) {
+    return false;
+  }
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) {
+    return false;
+  }
+  return keysA.every(key => deepEqual(a[key], b[key]));
+}
+
+function stripEqualToDefaults(config, defaults) {
+  if (defaults === undefined || defaults === null) {
+    return deepClone(config);
+  }
+  if (config === undefined || config === null) {
+    return undefined;
+  }
+  if (Array.isArray(config)) {
+    return deepEqual(config, defaults) ? undefined : deepClone(config);
+  }
+  if (isObject(config) && isObject(defaults)) {
+    const out = {};
+    for (const key of Object.keys(config)) {
+      const cv = config[key];
+      const dv = defaults[key];
+      if (!(key in defaults)) {
+        out[key] = deepClone(cv);
+        continue;
+      }
+      if (deepEqual(cv, dv)) {
+        continue;
+      }
+      if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
+        const stripped = stripEqualToDefaults(cv, dv);
+        if (stripped !== undefined) {
+          out[key] = stripped;
+        }
+      } else {
+        out[key] = deepClone(cv);
+      }
+    }
+    return Object.keys(out).length ? out : undefined;
+  }
+  return deepEqual(config, defaults) ? undefined : config;
+}
+
 function setByPath(target, path, value) {
   const parts = path.split(".");
   let cursor = target;
@@ -1598,12 +1664,17 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     this._showAnimationSection = false;
     this._showStyleSection = false;
     this._pendingEditorControlTags = new Set();
+    this._emitConfigTimer = 0;
+    /** `styles` | `animations` when pointerdown handled that toggle; following click for same id is ignored. */
+    this._suppressEditorToggleClickFor = null;
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
   }
 
@@ -1611,7 +1682,12 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     this.shadowRoot.removeEventListener("input", this._onShadowInput);
     this.shadowRoot.removeEventListener("change", this._onShadowInput);
     this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.removeEventListener("pointerdown", this._onShadowPointerDown);
     this.shadowRoot.removeEventListener("click", this._onShadowClick);
+    if (this._emitConfigTimer) {
+      window.clearTimeout(this._emitConfigTimer);
+      this._emitConfigTimer = 0;
+    }
   }
 
   set hass(hass) {
@@ -1795,8 +1871,20 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(nextConfig),
+      config: compactConfig(stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
+  }
+
+  _scheduleEmitConfig() {
+    if (this._emitConfigTimer) {
+      window.clearTimeout(this._emitConfigTimer);
+    }
+    // Defer config emission one tick so blur/change re-renders
+    // do not swallow nearby click interactions in the editor.
+    this._emitConfigTimer = window.setTimeout(() => {
+      this._emitConfigTimer = 0;
+      this._emitConfig();
+    }, 0);
   }
 
   _setEditorConfig() {
@@ -1841,7 +1929,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     this._setEditorConfig();
 
     if (event.type === "change") {
-      this._emitConfig();
+      this._scheduleEmitConfig();
     }
   }
 
@@ -1877,14 +1965,64 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
       return;
     }
 
+    const toggleId = toggleButton.dataset.editorToggle;
+    if (toggleId !== "styles" && toggleId !== "animations") {
+      return;
+    }
+
+    if (this._suppressEditorToggleClickFor) {
+      if (toggleId === this._suppressEditorToggleClickFor) {
+        this._suppressEditorToggleClickFor = null;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      this._suppressEditorToggleClickFor = null;
+    }
+
     event.preventDefault();
     event.stopPropagation();
 
     const focusState = this._captureFocusState();
 
-    if (toggleButton.dataset.editorToggle === "styles") {
+    if (toggleId === "styles") {
       this._showStyleSection = !this._showStyleSection;
-    } else if (toggleButton.dataset.editorToggle === "animations") {
+    } else {
+      this._showAnimationSection = !this._showAnimationSection;
+    }
+
+    this._render();
+    this._restoreFocusState(focusState);
+  }
+
+  _onShadowPointerDown(event) {
+    const toggleButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+
+    if (!toggleButton) {
+      return;
+    }
+
+    const toggleId = toggleButton.dataset.editorToggle;
+    if (toggleId !== "styles" && toggleId !== "animations") {
+      return;
+    }
+
+    // Handle known section toggles on pointerdown so an in-flight blur/change
+    // re-render from another field cannot swallow this interaction.
+    // Do not rely on click + defaultPrevented: click is a separate event.
+    // Suppress the following click so we do not double-toggle on pointer devices.
+    event.preventDefault();
+    event.stopPropagation();
+
+    this._suppressEditorToggleClickFor = toggleId;
+
+    const focusState = this._captureFocusState();
+
+    if (toggleId === "styles") {
+      this._showStyleSection = !this._showStyleSection;
+    } else {
       this._showAnimationSection = !this._showAnimationSection;
     }
 
