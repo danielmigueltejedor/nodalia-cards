@@ -10,9 +10,9 @@ Work toward the next **`0.4.x`** prerelease; **`package.json`** and tags follow 
 
 ---
 
-## [0.4.0-alpha.22] - 2026-05-06
+## [0.4.0-alpha.23] - 2026-05-06
 
-Twenty-second **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.22`** (tag **`v0.4.0-alpha.22`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+Twenty-third **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.23`** (tag **`v0.4.0-alpha.23`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
 
 - **Insignia card (editor visual)**: campos de color (`styles.icon.background`, `styles.icon.on_color`, `styles.icon.off_color`) con selector visual tipo color picker, alineado con el patrón del resto de editores; eliminado el selector por presets de tinte y sustituido por un toggle **«Tintado automático por tipo de entidad»** (si se desactiva, manda el color manual elegido).
 

@@ -85895,4 +85895,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.22","contentSha256_12":"9637fc5b98d3"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.23","contentSha256_12":"9637fc5b98d3"};}
