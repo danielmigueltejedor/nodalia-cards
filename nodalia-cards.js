@@ -93,9 +93,9 @@
       const inHomeAssistant =
         typeof document !== "undefined" && document.querySelector("home-assistant");
       if (!inHomeAssistant) {
-        const nav = baseLang(String(navigator.language));
-        if (nav) {
-          return nav;
+      const nav = baseLang(String(navigator.language));
+      if (nav) {
+        return nav;
         }
       }
     }
@@ -83121,4 +83121,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.3.0","contentSha256_12":"02af6ffa4f8c"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.1","contentSha256_12":"76dc310afa9b"};}

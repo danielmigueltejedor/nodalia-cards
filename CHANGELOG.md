@@ -6,7 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Planned **0.4.x** work (see **CONTRIBUTING — Releases: main, beta, and alpha**): **`alpha`** for risky / WIP (**`0.4.0-alpha.1`**, …), promoted to **`beta`** when ready for testers (**`0.4.0-beta.1`**, **`beta.2`**, …), then stable **`v0.4.0`** on **`main`**. Focus: **Power Flow**, **translations**, **Graph Card** lines/axes, **curated default styles**.
+Work-in-progress on **`alpha`** ahead of the next **`0.4.0-alpha.N`** tag or promotion to **`beta`**. Roadmap: **Power Flow**, **translations**, **Graph Card** lines/axes, **curated default styles** — see **CONTRIBUTING**.
+
+---
+
+## [0.4.0-alpha.1] - 2026-05-05
+
+First **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.1`** (tag **`v0.4.0-alpha.1`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
 
 ---
 
