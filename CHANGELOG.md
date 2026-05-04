@@ -10,6 +10,14 @@ Work toward the next **`0.4.x`** prerelease; **`package.json`** and tags follow 
 
 ---
 
+## [0.4.0-alpha.25] - 2026-05-06
+
+Twenty-fifth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.25`** (tag **`v0.4.0-alpha.25`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Insignia card (layout / sombra)**: evita la **franja gris** bajo la pastilla en barras — **`inline-flex`** en **`:host`** con **`line-height: 0`** y **`vertical-align: middle`** (hueco típico de baseline en elementos inline); sin **`contain: paint`** ni **`background-clip: padding-box`** que podían marcar el borde; la sombra extra tipo **Entity** (`0 16px 32px`) se sustituye por un **brillo interior** para no proyectar un bloque oscuro bajo insignias compactas.
+
+---
+
 ## [0.4.0-alpha.24] - 2026-05-05
 
 Twenty-fourth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.24`** (tag **`v0.4.0-alpha.24`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.

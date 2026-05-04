@@ -74066,8 +74066,10 @@ class NodaliaInsigniaCard extends HTMLElement {
     const cardBorder = strongTint
       ? `1px solid color-mix(in srgb, ${tint} 32%, var(--divider-color))`
       : styles.card.border;
+    // Match Entity card elevation on full ha-cards; a second large drop shadow on compact
+    // pill insignias reads as a flat gray “shelf” under the rounded bottom in toolbars.
     const cardShadow = strongTint
-      ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${tint} 18%, rgba(0, 0, 0, 0.18))`
+      ? `${styles.card.box_shadow}, inset 0 1px 0 color-mix(in srgb, ${tint} 28%, rgba(255, 255, 255, 0.35))`
       : styles.card.box_shadow;
     const unavailable = config.entity && isUnavailableState(state);
     const showName = config.show_name !== false;
@@ -74086,12 +74088,12 @@ class NodaliaInsigniaCard extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
-          display: inline-block;
-          line-height: 1;
+          display: inline-flex;
+          line-height: 0;
+          vertical-align: middle;
         }
 
         :host([data-icon-only]) {
-          display: inline-flex;
           justify-content: center;
           width: auto;
         }
@@ -74104,7 +74106,6 @@ class NodaliaInsigniaCard extends HTMLElement {
           background: ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
-          background-clip: padding-box;
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
           display: inline-flex;
@@ -74113,7 +74114,6 @@ class NodaliaInsigniaCard extends HTMLElement {
           isolation: isolate;
           position: relative;
           overflow: hidden;
-          contain: paint;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
 
@@ -85938,4 +85938,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.24","contentSha256_12":"1555354c3450"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.25","contentSha256_12":"035cef7c0f93"};}
