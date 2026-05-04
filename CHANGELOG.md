@@ -8,7 +8,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Work toward **`0.5.x`** on **`alpha`** / **`beta`** and eventual **`main`**: **Power Flow** polish, **translations**, **Graph Card** tuning, **Insignia** and editors. Prerelease workflow and tagging: **CONTRIBUTING**.
 
-- **Internals**: shared **`nodalia-utils.js`** (**`window.NodaliaUtils`**) — **`deepEqual` / `stripEqualToDefaults`**, cheap **`hass`** signatures for editors (**entity count** / **filtered counts** + locale tag instead of sorting full entity lists), **`mountEntityPickerHost` / `mountIconPickerHost`** to avoid recreating **`ha-entity-picker`** / **`ha-icon-picker`** every render; **`resolveEditorColorValue`** caches computed CSS colors in **`nodalia-bubble-contrast.js`**. **`npm run bundle`** includes **`nodalia-utils.js`** after i18n/editor-ui (see **CONTRIBUTING**). Recommended install remains single **`nodalia-cards.js`**.
+---
+
+## [0.5.0-alpha.2] - 2026-05-05
+
+Second **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.2`** (tag **`v0.5.0-alpha.2`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Graph card** (`0.12.14`): **chips** de leyenda en la **misma fila** que el **valor** (a la **derecha**), evitando solaparse con el recuadro del chart; en **vista estrecha** la leyenda pasa a **línea inferior** a ancho completo.
+- **Insignia card** (`0.2.2`): modo **solo icono** — **`overflow: visible`** en el host y en la píldora, **`icon_only_offset_y`** por defecto **`0`** para quitar el recorte mínimo **abajo** del círculo.
+- **Internals**: shared **`nodalia-utils.js`** (**`window.NodaliaUtils`**) — **`deepEqual` / `stripEqualToDefaults`**, firmas ligeras de **`hass`** en editores (**conteo** / **filtrados** + idioma), **`mountEntityPickerHost` / `mountIconPickerHost`** para no recrear **`ha-entity-picker`** / **`ha-icon-picker`** en cada render; **`resolveEditorColorValue`** cachea colores CSS en **`nodalia-bubble-contrast.js`**. El bundle incluye **`nodalia-utils.js`** tras i18n/editor-ui (véase **CONTRIBUTING**). Instalación recomendada: un solo **`nodalia-cards.js`**.
 
 ---
 

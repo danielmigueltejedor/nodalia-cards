@@ -42221,7 +42221,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.13";
+const CARD_VERSION = "0.12.14";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -44107,6 +44107,34 @@ class NodaliaGraphCard extends HTMLElement {
           animation-delay: 35ms;
         }
 
+        .graph-card__primary-row {
+          align-items: center;
+          display: flex;
+          flex-direction: row;
+          flex-wrap: nowrap;
+          gap: 10px 14px;
+          justify-content: space-between;
+          min-height: 0;
+          min-width: 0;
+        }
+
+        .graph-card__primary-row .graph-card__value {
+          flex: 0 1 auto;
+          min-width: 0;
+        }
+
+        .graph-card__primary-row .graph-card__legend {
+          flex: 1 1 0;
+          justify-content: flex-end;
+          margin-bottom: 0;
+          min-width: 0;
+        }
+
+        .graph-card__legend--solo {
+          margin-bottom: 4px;
+          width: 100%;
+        }
+
         .graph-card__title {
           color: var(--primary-text-color);
           font-size: ${titleSize};
@@ -44171,7 +44199,8 @@ class NodaliaGraphCard extends HTMLElement {
           min-width: 0;
         }
 
-        .graph-card__content--entering .graph-card__value {
+        .graph-card__content--entering > .graph-card__value,
+        .graph-card__content--entering .graph-card__primary-row .graph-card__value {
           animation: graph-card-section-in calc(var(--graph-card-hover-duration) * 2.2) cubic-bezier(0.18, 0.9, 0.22, 1) both;
           animation-delay: 75ms;
         }
@@ -44198,12 +44227,13 @@ class NodaliaGraphCard extends HTMLElement {
           flex-wrap: wrap;
           gap: 5px 6px;
           justify-content: flex-start;
-          margin-bottom: 4px;
+          margin-bottom: 0;
           min-height: 0;
           padding-top: 0;
         }
 
-        .graph-card__content--entering .graph-card__legend {
+        .graph-card__content--entering > .graph-card__legend,
+        .graph-card__content--entering .graph-card__primary-row .graph-card__legend {
           animation: graph-card-section-in calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.18, 0.9, 0.22, 1) both;
           animation-delay: 105ms;
         }
@@ -44613,6 +44643,7 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__hover-point,
         .graph-card__content,
         .graph-card__header,
+        .graph-card__primary-row,
         .graph-card__value,
         .graph-card__legend,
         .graph-card__chart-wrap,
@@ -44630,6 +44661,20 @@ class NodaliaGraphCard extends HTMLElement {
           }
 
           .graph-card__legend {
+            justify-content: flex-start;
+          }
+
+          .graph-card__primary-row {
+            flex-wrap: wrap;
+            row-gap: 6px;
+          }
+
+          .graph-card__primary-row .graph-card__value {
+            flex: 1 1 auto;
+          }
+
+          .graph-card__primary-row .graph-card__legend {
+            flex: 1 1 100%;
             justify-content: flex-start;
           }
         }
@@ -44657,7 +44702,31 @@ class NodaliaGraphCard extends HTMLElement {
           }
 
           ${
-            config.show_value !== false
+            config.show_value !== false && config.show_legend !== false
+              ? `
+                <div class="graph-card__primary-row">
+                  <div class="graph-card__value">
+                    <div class="graph-card__value-number">${escapeHtml(currentValue.value)}</div>
+                    ${currentValue.unit ? `<div class="graph-card__value-unit">${escapeHtml(currentValue.unit)}</div>` : ""}
+                  </div>
+                  <div class="graph-card__legend">
+                    ${legendEntries.map((entry, index) => `
+                      <div
+                        class="graph-card__legend-item ${entry.active ? "graph-card__legend-item--active" : ""} ${entry.muted ? "graph-card__legend-item--muted" : ""}"
+                        data-graph-series="${escapeHtml(entry.entity)}"
+                        style="--legend-color:${escapeHtml(entry.color)}; --legend-delay:${Math.min(index, 8) * 34}ms;"
+                      >
+                        <span class="graph-card__legend-dot" style="background:${escapeHtml(entry.color)};"></span>
+                        <span class="graph-card__legend-text">${escapeHtml(entry.name)}</span>
+                      </div>
+                    `).join("")}
+                  </div>
+                </div>
+              `
+              : ""
+          }
+          ${
+            config.show_value !== false && config.show_legend === false
               ? `
                 <div class="graph-card__value">
                   <div class="graph-card__value-number">${escapeHtml(currentValue.value)}</div>
@@ -44666,11 +44735,10 @@ class NodaliaGraphCard extends HTMLElement {
               `
               : ""
           }
-
           ${
-            config.show_legend !== false
+            config.show_value === false && config.show_legend !== false
               ? `
-                <div class="graph-card__legend">
+                <div class="graph-card__legend graph-card__legend--solo">
                   ${legendEntries.map((entry, index) => `
                     <div
                       class="graph-card__legend-item ${entry.active ? "graph-card__legend-item--active" : ""} ${entry.muted ? "graph-card__legend-item--muted" : ""}"
@@ -72550,7 +72618,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "0.2.1";
+const CARD_VERSION = "0.2.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -72596,7 +72664,7 @@ const DEFAULT_CONFIG = {
       background: "color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
       on_color: "var(--info-color, #71c0ff)",
       off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
-      icon_only_offset_y: "2px",
+      icon_only_offset_y: "0",
     },
     tint: {
       color: "var(--info-color, #71c0ff)",
@@ -73434,6 +73502,7 @@ class NodaliaInsigniaCard extends HTMLElement {
 
         :host([data-icon-only]) {
           justify-content: center;
+          overflow: visible;
           width: auto;
         }
 
@@ -73454,6 +73523,10 @@ class NodaliaInsigniaCard extends HTMLElement {
           position: relative;
           overflow: hidden;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        .insignia-card.insignia-card--icon-only {
+          overflow: visible;
         }
 
         .insignia-card--icon-only {
@@ -85024,4 +85097,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0-alpha.1","contentSha256_12":"9b248096f92c"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0-alpha.2","contentSha256_12":"6a995829c98d"};}
