@@ -1577,8 +1577,8 @@ class NodaliaGraphCard extends HTMLElement {
     const width = 100;
     const height = 56;
     const paddingX = -5.5;
-    const paddingTop = 3;
-    const paddingBottom = 2;
+    const paddingTop = 4;
+    const paddingBottom = 5;
     const bounds = this._getGraphBounds(series);
     const range = Math.max(bounds.max - bounds.min, 1);
 
@@ -2009,7 +2009,7 @@ class NodaliaGraphCard extends HTMLElement {
           flex-wrap: wrap;
           gap: 6px 8px;
           justify-content: flex-start;
-          margin-bottom: 8px;
+          margin-bottom: 2px;
           min-height: 0;
           padding-top: 0;
         }
@@ -2083,9 +2083,9 @@ class NodaliaGraphCard extends HTMLElement {
           flex: 1 1 auto;
           min-height: ${chartHeight};
           margin-inline: -${chartBleed}px;
-          margin-top: 0;
+          margin-top: 12px;
           overflow: hidden;
-          padding: 4px 0 0;
+          padding: 4px 0 6px;
           position: relative;
           touch-action: pan-y;
           user-select: none;
