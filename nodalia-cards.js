@@ -14501,6 +14501,41 @@
 
   window.NodaliaI18n.editorUiMaps = MAP;
 
+  function normalizeSpanishEditorLabel(text) {
+    let out = String(text || "");
+    if (!out) {
+      return out;
+    }
+
+    const substitutions = [
+      [/\banimacion(es)?\b/gi, "animación$1"],
+      [/\bconfiguracion(es)?\b/gi, "configuración$1"],
+      [/\bgrafica(s)?\b/gi, "gráfica$1"],
+      [/\blogica\b/gi, "lógica"],
+      [/\bmaximo(s)?\b/gi, "máximo$1"],
+      [/\bminimo(s)?\b/gi, "mínimo$1"],
+      [/\bmusica\b/gi, "música"],
+      [/\bnavegacion\b/gi, "navegación"],
+      [/\bnumero(s)?\b/gi, "número$1"],
+      [/\bpanel(es)?\b/gi, "panel$1"],
+      [/\bpequeno\b/gi, "pequeño"],
+      [/\bpulsacion\b/gi, "pulsación"],
+      [/\bseccion(es)?\b/gi, "sección$1"],
+      [/\btamano(s)?\b/gi, "tamaño$1"],
+      [/\btecnica\b/gi, "técnica"],
+      [/\btecnicas\b/gi, "técnicas"],
+      [/\bversion(es)?\b/gi, "versión$1"],
+      [/\banadir\b/gi, "añadir"],
+      [/\bano(s)?\b/gi, "año$1"],
+    ];
+
+    substitutions.forEach(([pattern, replacement]) => {
+      out = out.replace(pattern, replacement);
+    });
+
+    return out;
+  }
+
   window.NodaliaI18n.editorStr = function editorStr(hass, configLang, spanishText) {
     if (spanishText == null || spanishText === "") {
       return "";
@@ -14508,11 +14543,11 @@
     const lang = window.NodaliaI18n.resolveLanguage(hass, configLang);
     const maps = window.NodaliaI18n.editorUiMaps;
     if (maps.es[spanishText] === undefined && maps.en[spanishText] === undefined) {
-      return spanishText;
+      return lang === "es" ? normalizeSpanishEditorLabel(spanishText) : spanishText;
     }
     const primary = maps[lang]?.[spanishText];
     if (primary !== undefined && primary !== "") {
-      return primary;
+      return lang === "es" ? normalizeSpanishEditorLabel(primary) : primary;
     }
     if (lang !== "es") {
       const enVal = maps.en?.[spanishText];
@@ -14522,9 +14557,9 @@
     }
     const esVal = maps.es?.[spanishText];
     if (esVal !== undefined && esVal !== "") {
-      return esVal;
+      return normalizeSpanishEditorLabel(esVal);
     }
-    return spanishText;
+    return lang === "es" ? normalizeSpanishEditorLabel(spanishText) : spanishText;
   };
 })();
 
@@ -16700,7 +16735,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           return;
         }
 
-        this._render();
+        this._refreshMediaProgress();
       }, 1000);
       return;
     }
@@ -16708,6 +16743,40 @@ class NodaliaNavigationBarCard extends HTMLElement {
     if (!shouldTick && this._mediaTicker) {
       window.clearInterval(this._mediaTicker);
       this._mediaTicker = null;
+    }
+  }
+
+  _refreshMediaProgress() {
+    if (!this.shadowRoot || !this._mediaPlayerExpanded) {
+      return;
+    }
+
+    const visiblePlayers = this._getVisibleMediaPlayers();
+    if (!visiblePlayers.length) {
+      return;
+    }
+
+    this._activeMediaPlayerIndex = clamp(
+      this._activeMediaPlayerIndex,
+      0,
+      visiblePlayers.length - 1,
+    );
+
+    const player = visiblePlayers[this._activeMediaPlayerIndex];
+    const state = this._hass?.states?.[player.entity];
+    const progress = state ? this._getMediaPlayerProgress(state) : null;
+    if (!progress) {
+      return;
+    }
+
+    const progressFill = this.shadowRoot.querySelector(".media-player__progress-fill");
+    if (progressFill) {
+      progressFill.style.width = `${progress.percent}%`;
+    }
+
+    const timeChip = this.shadowRoot.querySelector('[data-media-chip="time"]');
+    if (timeChip) {
+      timeChip.textContent = `${formatDuration(progress.position)} / ${formatDuration(progress.duration)}`;
     }
   }
 
@@ -17128,7 +17197,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
           ${chips
             .map(
               chip => `
-                <span class="media-player__chip media-player__chip--${escapeHtml(chip.tone)}">
+                <span
+                  class="media-player__chip media-player__chip--${escapeHtml(chip.tone)}"
+                  ${chip.tone === "time" ? 'data-media-chip="time"' : ""}
+                >
                   ${escapeHtml(chip.label)}
                 </span>
               `,
@@ -43960,7 +44032,7 @@ class NodaliaGraphCard extends HTMLElement {
     const paddingTop = 4;
     // Reserve extra bottom headroom so min values and stroke/glow
     // never get clipped by the rounded chart container.
-    const paddingBottom = 10;
+    const paddingBottom = 14;
     const bounds = this._getGraphBounds(series);
     const range = Math.max(bounds.max - bounds.min, 1);
 
@@ -44464,15 +44536,15 @@ class NodaliaGraphCard extends HTMLElement {
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           flex: 1 1 auto;
           min-height: ${chartHeight};
-          margin-inline: -${chartBleed}px;
+          margin-inline: 0;
           margin-top: 14px;
           overflow: hidden;
-          padding: 4px 0 10px;
+          padding: 4px 0 14px;
           position: relative;
           touch-action: pan-y;
           user-select: none;
           -webkit-user-select: none;
-          width: calc(100% + ${chartBleed * 2}px);
+          width: 100%;
         }
 
         .graph-card__chart-wrap--entering {
@@ -57360,12 +57432,15 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     this._showAnimationSection = false;
     this._showStyleSection = false;
     this._pendingEditorControlTags = new Set();
+    this._emitConfigTimer = 0;
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
   }
 
@@ -57373,7 +57448,12 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     this.shadowRoot.removeEventListener("input", this._onShadowInput);
     this.shadowRoot.removeEventListener("change", this._onShadowInput);
     this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.removeEventListener("pointerdown", this._onShadowPointerDown);
     this.shadowRoot.removeEventListener("click", this._onShadowClick);
+    if (this._emitConfigTimer) {
+      window.clearTimeout(this._emitConfigTimer);
+      this._emitConfigTimer = 0;
+    }
   }
 
   set hass(hass) {
@@ -57561,6 +57641,18 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     });
   }
 
+  _scheduleEmitConfig() {
+    if (this._emitConfigTimer) {
+      window.clearTimeout(this._emitConfigTimer);
+    }
+    // Defer config emission one tick so blur/change re-renders
+    // do not swallow nearby click interactions in the editor.
+    this._emitConfigTimer = window.setTimeout(() => {
+      this._emitConfigTimer = 0;
+      this._emitConfig();
+    }, 0);
+  }
+
   _setEditorConfig() {
     this._config = normalizeConfig(compactConfig(this._config));
   }
@@ -57603,7 +57695,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     this._setEditorConfig();
 
     if (event.type === "change") {
-      this._emitConfig();
+      this._scheduleEmitConfig();
     }
   }
 
@@ -57631,6 +57723,10 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
   }
 
   _onShadowClick(event) {
+    if (event.defaultPrevented) {
+      return;
+    }
+
     const toggleButton = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
@@ -57648,6 +57744,34 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
       this._showStyleSection = !this._showStyleSection;
     } else if (toggleButton.dataset.editorToggle === "animations") {
       this._showAnimationSection = !this._showAnimationSection;
+    }
+
+    this._render();
+    this._restoreFocusState(focusState);
+  }
+
+  _onShadowPointerDown(event) {
+    const toggleButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+
+    if (!toggleButton) {
+      return;
+    }
+
+    // Handle section toggles on pointerdown so an in-flight blur/change
+    // re-render from another field cannot swallow this interaction.
+    event.preventDefault();
+    event.stopPropagation();
+
+    const focusState = this._captureFocusState();
+
+    if (toggleButton.dataset.editorToggle === "styles") {
+      this._showStyleSection = !this._showStyleSection;
+    } else if (toggleButton.dataset.editorToggle === "animations") {
+      this._showAnimationSection = !this._showAnimationSection;
+    } else {
+      return;
     }
 
     this._render();
@@ -85293,4 +85417,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.17","contentSha256_12":"7fa8b80165bf"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.17","contentSha256_12":"ded35e675c59"};}

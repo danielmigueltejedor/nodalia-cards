@@ -1664,12 +1664,15 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     this._showAnimationSection = false;
     this._showStyleSection = false;
     this._pendingEditorControlTags = new Set();
+    this._emitConfigTimer = 0;
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
   }
 
@@ -1677,7 +1680,12 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     this.shadowRoot.removeEventListener("input", this._onShadowInput);
     this.shadowRoot.removeEventListener("change", this._onShadowInput);
     this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.removeEventListener("pointerdown", this._onShadowPointerDown);
     this.shadowRoot.removeEventListener("click", this._onShadowClick);
+    if (this._emitConfigTimer) {
+      window.clearTimeout(this._emitConfigTimer);
+      this._emitConfigTimer = 0;
+    }
   }
 
   set hass(hass) {
@@ -1865,6 +1873,18 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     });
   }
 
+  _scheduleEmitConfig() {
+    if (this._emitConfigTimer) {
+      window.clearTimeout(this._emitConfigTimer);
+    }
+    // Defer config emission one tick so blur/change re-renders
+    // do not swallow nearby click interactions in the editor.
+    this._emitConfigTimer = window.setTimeout(() => {
+      this._emitConfigTimer = 0;
+      this._emitConfig();
+    }, 0);
+  }
+
   _setEditorConfig() {
     this._config = normalizeConfig(compactConfig(this._config));
   }
@@ -1907,7 +1927,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     this._setEditorConfig();
 
     if (event.type === "change") {
-      this._emitConfig();
+      this._scheduleEmitConfig();
     }
   }
 
@@ -1935,6 +1955,10 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
   }
 
   _onShadowClick(event) {
+    if (event.defaultPrevented) {
+      return;
+    }
+
     const toggleButton = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
@@ -1952,6 +1976,34 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
       this._showStyleSection = !this._showStyleSection;
     } else if (toggleButton.dataset.editorToggle === "animations") {
       this._showAnimationSection = !this._showAnimationSection;
+    }
+
+    this._render();
+    this._restoreFocusState(focusState);
+  }
+
+  _onShadowPointerDown(event) {
+    const toggleButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+
+    if (!toggleButton) {
+      return;
+    }
+
+    // Handle section toggles on pointerdown so an in-flight blur/change
+    // re-render from another field cannot swallow this interaction.
+    event.preventDefault();
+    event.stopPropagation();
+
+    const focusState = this._captureFocusState();
+
+    if (toggleButton.dataset.editorToggle === "styles") {
+      this._showStyleSection = !this._showStyleSection;
+    } else if (toggleButton.dataset.editorToggle === "animations") {
+      this._showAnimationSection = !this._showAnimationSection;
+    } else {
+      return;
     }
 
     this._render();

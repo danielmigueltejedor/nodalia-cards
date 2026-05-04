@@ -9058,6 +9058,41 @@
 
   window.NodaliaI18n.editorUiMaps = MAP;
 
+  function normalizeSpanishEditorLabel(text) {
+    let out = String(text || "");
+    if (!out) {
+      return out;
+    }
+
+    const substitutions = [
+      [/\banimacion(es)?\b/gi, "animación$1"],
+      [/\bconfiguracion(es)?\b/gi, "configuración$1"],
+      [/\bgrafica(s)?\b/gi, "gráfica$1"],
+      [/\blogica\b/gi, "lógica"],
+      [/\bmaximo(s)?\b/gi, "máximo$1"],
+      [/\bminimo(s)?\b/gi, "mínimo$1"],
+      [/\bmusica\b/gi, "música"],
+      [/\bnavegacion\b/gi, "navegación"],
+      [/\bnumero(s)?\b/gi, "número$1"],
+      [/\bpanel(es)?\b/gi, "panel$1"],
+      [/\bpequeno\b/gi, "pequeño"],
+      [/\bpulsacion\b/gi, "pulsación"],
+      [/\bseccion(es)?\b/gi, "sección$1"],
+      [/\btamano(s)?\b/gi, "tamaño$1"],
+      [/\btecnica\b/gi, "técnica"],
+      [/\btecnicas\b/gi, "técnicas"],
+      [/\bversion(es)?\b/gi, "versión$1"],
+      [/\banadir\b/gi, "añadir"],
+      [/\bano(s)?\b/gi, "año$1"],
+    ];
+
+    substitutions.forEach(([pattern, replacement]) => {
+      out = out.replace(pattern, replacement);
+    });
+
+    return out;
+  }
+
   window.NodaliaI18n.editorStr = function editorStr(hass, configLang, spanishText) {
     if (spanishText == null || spanishText === "") {
       return "";
@@ -9065,11 +9100,11 @@
     const lang = window.NodaliaI18n.resolveLanguage(hass, configLang);
     const maps = window.NodaliaI18n.editorUiMaps;
     if (maps.es[spanishText] === undefined && maps.en[spanishText] === undefined) {
-      return spanishText;
+      return lang === "es" ? normalizeSpanishEditorLabel(spanishText) : spanishText;
     }
     const primary = maps[lang]?.[spanishText];
     if (primary !== undefined && primary !== "") {
-      return primary;
+      return lang === "es" ? normalizeSpanishEditorLabel(primary) : primary;
     }
     if (lang !== "es") {
       const enVal = maps.en?.[spanishText];
@@ -9079,8 +9114,8 @@
     }
     const esVal = maps.es?.[spanishText];
     if (esVal !== undefined && esVal !== "") {
-      return esVal;
+      return normalizeSpanishEditorLabel(esVal);
     }
-    return spanishText;
+    return lang === "es" ? normalizeSpanishEditorLabel(spanishText) : spanishText;
   };
 })();

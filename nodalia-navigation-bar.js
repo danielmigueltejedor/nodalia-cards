@@ -2168,7 +2168,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           return;
         }
 
-        this._render();
+        this._refreshMediaProgress();
       }, 1000);
       return;
     }
@@ -2176,6 +2176,40 @@ class NodaliaNavigationBarCard extends HTMLElement {
     if (!shouldTick && this._mediaTicker) {
       window.clearInterval(this._mediaTicker);
       this._mediaTicker = null;
+    }
+  }
+
+  _refreshMediaProgress() {
+    if (!this.shadowRoot || !this._mediaPlayerExpanded) {
+      return;
+    }
+
+    const visiblePlayers = this._getVisibleMediaPlayers();
+    if (!visiblePlayers.length) {
+      return;
+    }
+
+    this._activeMediaPlayerIndex = clamp(
+      this._activeMediaPlayerIndex,
+      0,
+      visiblePlayers.length - 1,
+    );
+
+    const player = visiblePlayers[this._activeMediaPlayerIndex];
+    const state = this._hass?.states?.[player.entity];
+    const progress = state ? this._getMediaPlayerProgress(state) : null;
+    if (!progress) {
+      return;
+    }
+
+    const progressFill = this.shadowRoot.querySelector(".media-player__progress-fill");
+    if (progressFill) {
+      progressFill.style.width = `${progress.percent}%`;
+    }
+
+    const timeChip = this.shadowRoot.querySelector('[data-media-chip="time"]');
+    if (timeChip) {
+      timeChip.textContent = `${formatDuration(progress.position)} / ${formatDuration(progress.duration)}`;
     }
   }
 
@@ -2596,7 +2630,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
           ${chips
             .map(
               chip => `
-                <span class="media-player__chip media-player__chip--${escapeHtml(chip.tone)}">
+                <span
+                  class="media-player__chip media-player__chip--${escapeHtml(chip.tone)}"
+                  ${chip.tone === "time" ? 'data-media-chip="time"' : ""}
+                >
                   ${escapeHtml(chip.label)}
                 </span>
               `,

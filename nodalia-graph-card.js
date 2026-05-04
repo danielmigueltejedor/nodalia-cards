@@ -1580,7 +1580,7 @@ class NodaliaGraphCard extends HTMLElement {
     const paddingTop = 4;
     // Reserve extra bottom headroom so min values and stroke/glow
     // never get clipped by the rounded chart container.
-    const paddingBottom = 10;
+    const paddingBottom = 14;
     const bounds = this._getGraphBounds(series);
     const range = Math.max(bounds.max - bounds.min, 1);
 
@@ -2084,15 +2084,15 @@ class NodaliaGraphCard extends HTMLElement {
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           flex: 1 1 auto;
           min-height: ${chartHeight};
-          margin-inline: -${chartBleed}px;
+          margin-inline: 0;
           margin-top: 14px;
           overflow: hidden;
-          padding: 4px 0 10px;
+          padding: 4px 0 14px;
           position: relative;
           touch-action: pan-y;
           user-select: none;
           -webkit-user-select: none;
-          width: calc(100% + ${chartBleed * 2}px);
+          width: 100%;
         }
 
         .graph-card__chart-wrap--entering {
