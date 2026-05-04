@@ -43163,22 +43163,54 @@ class NodaliaGraphCard extends HTMLElement {
 
   _getCurrentValuesText() {
     const selectedEntityId = this._getSelectedEntityId();
-    const primaryEntry = this._getEntityEntries().find(entry => entry.entity === selectedEntityId) || this._getEntityEntries()[0];
-    const primaryState = primaryEntry ? this._hass?.states?.[primaryEntry.entity] : null;
-    const primaryValue = parseNumber(primaryState?.state);
+    const entries = this._getEntityEntries();
+    const selectedEntry = entries.find(entry => entry.entity === selectedEntityId) || null;
+    const resolvedEntries = selectedEntry ? [selectedEntry] : entries;
+    const currentSeries = resolvedEntries
+      .map(entry => {
+        const state = this._hass?.states?.[entry.entity];
+        const value = parseNumber(state?.state);
+        if (!Number.isFinite(value)) {
+          return null;
+        }
+        return {
+          decimals: inferDecimals(state?.state),
+          unit: String(
+            state?.attributes?.unit_of_measurement
+            || state?.attributes?.native_unit_of_measurement
+            || "",
+          ).trim(),
+          value,
+        };
+      })
+      .filter(Boolean);
 
-    if (!Number.isFinite(primaryValue)) {
+    if (!currentSeries.length) {
       return { value: "--", unit: this._getUnit() };
     }
 
-    const decimals = this._getDecimals();
+    // When multiple active series share the same unit, show the mean value.
+    if (!selectedEntry && currentSeries.length > 1) {
+      const unit = currentSeries[0].unit;
+      const sameUnit = currentSeries.every(item => item.unit === unit);
+      if (sameUnit) {
+        const avg = currentSeries.reduce((sum, item) => sum + item.value, 0) / currentSeries.length;
+        const decimals = clamp(
+          Math.max(...currentSeries.map(item => item.decimals), 1),
+          0,
+          3,
+        );
+        return {
+          value: formatNumberValue(avg, decimals),
+          unit,
+        };
+      }
+    }
+
+    const primary = currentSeries[0];
     return {
-      value: formatNumberValue(primaryValue, decimals),
-      unit: String(
-        primaryState?.attributes?.unit_of_measurement
-        || primaryState?.attributes?.native_unit_of_measurement
-        || this._getUnit(),
-      ).trim(),
+      value: formatNumberValue(primary.value, primary.decimals),
+      unit: primary.unit || this._getUnit(),
     };
   }
 
@@ -44355,10 +44387,11 @@ class NodaliaGraphCard extends HTMLElement {
           align-items: center;
           display: flex;
           flex-wrap: wrap;
-          gap: 8px 10px;
+          gap: 6px 8px;
           justify-content: flex-start;
+          margin-bottom: 8px;
           min-height: 0;
-          padding-top: 2px;
+          padding-top: 0;
         }
 
         .graph-card__content--entering .graph-card__legend {
@@ -44374,12 +44407,12 @@ class NodaliaGraphCard extends HTMLElement {
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
-          font-size: ${legendSize};
-          gap: 10px;
-          max-width: min(100%, 220px);
+          font-size: max(11px, calc(${legendSize} - 1px));
+          gap: 8px;
+          max-width: min(100%, 192px);
           min-width: 0;
           opacity: 0.9;
-          padding: 7px 12px;
+          padding: 5px 9px;
           transform: translateZ(0);
           transform-origin: center;
           transition: opacity 160ms ease, transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
@@ -44410,8 +44443,8 @@ class NodaliaGraphCard extends HTMLElement {
           border-radius: 999px;
           display: inline-flex;
           flex: 0 0 auto;
-          height: 10px;
-          width: 10px;
+          height: 8px;
+          width: 8px;
         }
 
         .graph-card__legend-text {
@@ -44430,7 +44463,7 @@ class NodaliaGraphCard extends HTMLElement {
           flex: 1 1 auto;
           min-height: ${chartHeight};
           margin-inline: -${chartBleed}px;
-          margin-top: 8px;
+          margin-top: 0;
           overflow: hidden;
           padding: 4px 0 0;
           position: relative;
@@ -44513,12 +44546,12 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__tooltip {
-          -webkit-backdrop-filter: blur(18px);
-          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(14px);
+          backdrop-filter: blur(14px);
           background:
-            linear-gradient(180deg, color-mix(in srgb, var(--tooltip-tint) 24%, rgba(255,255,255,0.10)), rgba(255,255,255,0.03)),
-            color-mix(in srgb, var(--ha-card-background, #1f1f24) 66%, transparent);
-          border: 1px solid color-mix(in srgb, var(--tooltip-tint) 36%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
+            linear-gradient(180deg, color-mix(in srgb, var(--tooltip-tint) 18%, rgba(255,255,255,0.09)), rgba(255,255,255,0.025)),
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 86%, transparent);
+          border: 1px solid color-mix(in srgb, var(--tooltip-tint) 34%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
           border-radius: 16px;
           box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
           color: var(--primary-text-color);
@@ -44561,8 +44594,8 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__tooltip-dot {
           border-radius: 999px;
           display: inline-flex;
-          height: 9px;
-          width: 9px;
+          height: 8px;
+          width: 8px;
         }
 
         .graph-card__tooltip-name {
@@ -85258,4 +85291,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.13","contentSha256_12":"1bb428ad775e"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.13","contentSha256_12":"0f054a150007"};}
