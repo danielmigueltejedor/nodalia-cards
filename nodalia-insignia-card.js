@@ -49,7 +49,7 @@ const DEFAULT_CONFIG = {
     title_size: "12px",
     value_size: "12px",
   },
-  tint_preset: "auto",
+  tint_auto: true,
 };
 
 const STUB_CONFIG = {
@@ -285,6 +285,21 @@ function normalizeTintPreset(value) {
   return map[key] || key;
 }
 
+function getTintPresetColor(preset) {
+  const presets = {
+    red: "#ff6b6b",
+    orange: "#f6b04d",
+    yellow: "#f2c94c",
+    green: "#83d39c",
+    blue: "#4da3ff",
+    purple: "#b59dff",
+    pink: "#ff8fd1",
+    teal: "#7fd0c8",
+    gray: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
+  };
+  return presets[preset] || presets.blue;
+}
+
 function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
@@ -462,9 +477,14 @@ function fireEvent(node, type, detail, options) {
 
 function normalizeConfig(rawConfig) {
   const merged = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-  const legacyColor = normalizeTintPreset(rawConfig?.color);
-  if (legacyColor && legacyColor !== "auto" && (!merged.tint_preset || merged.tint_preset === "auto")) {
-    merged.tint_preset = legacyColor;
+  const legacyPreset = normalizeTintPreset(rawConfig?.tint_preset || rawConfig?.color);
+  if (legacyPreset === "auto") {
+    merged.tint_auto = true;
+  } else if (legacyPreset) {
+    merged.tint_auto = false;
+    if (!rawConfig?.styles?.icon?.background) {
+      merged.styles.icon.background = getTintPresetColor(legacyPreset);
+    }
   }
   return merged;
 }
@@ -671,20 +691,8 @@ class NodaliaInsigniaCard extends HTMLElement {
   }
 
   _getTintColor(state) {
-    const preset = normalizeTintPreset(this._config?.tint_preset || this._config?.color || "auto");
-    if (preset && preset !== "auto") {
-      const presets = {
-        red: "#ff6b6b",
-        orange: "#f6b04d",
-        yellow: "#f2c94c",
-        green: "#83d39c",
-        blue: "#4da3ff",
-        purple: "#b59dff",
-        pink: "#ff8fd1",
-        teal: "#7fd0c8",
-        gray: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
-      };
-      return presets[preset] || presets.blue;
+    if (this._config?.tint_auto === false) {
+      return this._config?.styles?.icon?.background || DEFAULT_CONFIG.styles.icon.background;
     }
 
     const domain = getEntityDomain(state);
@@ -1966,18 +1974,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
             this._showStyleSection
               ? `
             <div class="editor-grid editor-grid--stacked">
-              ${this._renderSelectField("Tinte", "tint_preset", config.tint_preset || "auto", [
-                { value: "auto", label: "Automático" },
-                { value: "red", label: "Rojo" },
-                { value: "orange", label: "Naranja" },
-                { value: "yellow", label: "Amarillo" },
-                { value: "green", label: "Verde" },
-                { value: "blue", label: "Azul" },
-                { value: "purple", label: "Morado" },
-                { value: "pink", label: "Rosa" },
-                { value: "teal", label: "Turquesa" },
-                { value: "gray", label: "Gris" },
-              ])}
+              ${this._renderCheckboxField("Tintado automático por tipo de entidad", "tint_auto", config.tint_auto !== false)}
               ${this._renderTextField("Tamaño del icono", "styles.icon.size", config.styles?.icon?.size || DEFAULT_CONFIG.styles.icon.size)}
               ${this._renderTextField("Tamaño del nombre", "styles.title_size", config.styles?.title_size || DEFAULT_CONFIG.styles.title_size)}
               ${this._renderTextField("Tamaño del valor", "styles.value_size", config.styles?.value_size || DEFAULT_CONFIG.styles.value_size)}
