@@ -92,9 +92,9 @@
       const inHomeAssistant =
         typeof document !== "undefined" && document.querySelector("home-assistant");
       if (!inHomeAssistant) {
-        const nav = baseLang(String(navigator.language));
-        if (nav) {
-          return nav;
+      const nav = baseLang(String(navigator.language));
+      if (nav) {
+        return nav;
         }
       }
     }

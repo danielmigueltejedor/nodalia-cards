@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Planned **0.4.x** line: first prerelease **`0.4.0-beta.01`** (tag **`v0.4.0-beta.01`**, then **`v0.4.0-beta.02`**, … two-digit **`XX`** per **CONTRIBUTING**). Focus: **Power Flow** follow-ups, **translations**, **Graph Card** line/axis rework, **curated default styles**. Bump **`package.json`** and this file on **`beta`** only **after** **`v0.3.0`** is on **`main`** (see **CONTRIBUTING → Stable first, then the next beta line**).
+Planned **0.4.x** work (see **CONTRIBUTING — Releases: main, beta, and alpha**): **`alpha`** for risky / WIP (**`0.4.0-alpha.1`**, …), promoted to **`beta`** when ready for testers (**`0.4.0-beta.1`**, **`beta.2`**, …), then stable **`v0.4.0`** on **`main`**. Focus: **Power Flow**, **translations**, **Graph Card** lines/axes, **curated default styles**.
 
 ---
 
