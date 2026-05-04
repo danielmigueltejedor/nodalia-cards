@@ -1389,6 +1389,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
       return;
     }
 
+    // Avoid replaying dock entrance classes on the same frame the popup opens.
+    this._animateDockEntranceNext = false;
+    this._playDockEntrance = false;
+
     const anchorRect = anchorElement.getBoundingClientRect();
     const popupMetrics = this._getPopupMetrics(route, items);
     const popupWidth = popupMetrics.width;
@@ -2783,7 +2787,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
     this._lastShouldHide = false;
 
-    const playDockEntrance = animations.enabled && this._animateDockEntranceNext;
+    const hasActiveOverlay = Boolean(this._popupState || this._mediaBrowserState);
+    const playDockEntrance = animations.enabled && this._animateDockEntranceNext && !hasActiveOverlay;
     // Lovelace typically calls setConfig then set(hass) in the same turn; clearing the flag
     // synchronously made the second _render strip entrance classes before paint. Defer reset
     // one frame so follow-up renders still emit --entering until the browser composites.
