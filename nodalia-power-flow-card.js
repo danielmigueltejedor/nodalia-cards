@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "0.16.11";
+const CARD_VERSION = "0.16.12";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -124,7 +124,7 @@ const DEFAULT_CONFIG = {
     home_unit_size: "14px",
     node_value_size: "11px",
     secondary_size: "10px",
-    flow_width: "2.5px",
+    flow_width: "2px",
   },
 };
 
@@ -1842,12 +1842,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const nodes = this._getNodes();
     const lines = this._buildLines(nodes);
     const dominantColor = this._getDominantColor(lines);
-    const flowWidth = Math.max(2.5, parseSizeToPixels(styles.flow_width, 3.2));
+    const flowWidth = Math.max(2, parseSizeToPixels(styles.flow_width, 2.8));
     const hasLowerNodes = Boolean(nodes.water.entityId || nodes.gas.entityId || nodes.individual.length);
     const layoutPreset = nodes._layoutPreset || "full";
     const flowFlags = nodes._flowFlags || getFlowLayoutFlagsFromConfig(this._config);
     const horizontalStripDiagram = flowFlags.topCount >= 1 && flowFlags.topCount <= 2 && !(flowFlags.individualCount > 0);
-    const flowDotBoost = 1 + Math.max(0, flowWidth - 2.5) * 0.065;
+    const flowDotBoost = 1 + Math.max(0, flowWidth - 2) * 0.065;
     const flowDotGlowR = (horizontalStripDiagram ? 2.58 : 2.1) * flowDotBoost;
     const flowDotCoreR = (horizontalStripDiagram ? 1.48 : 1.12) * flowDotBoost;
     const flowDotCoreStroke = horizontalStripDiagram ? 0.33 : 0.26;
@@ -2123,7 +2123,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           opacity: 0.08;
           stroke-linecap: round;
           stroke-linejoin: round;
-          stroke-width: ${flowWidth * 1.35}px;
+          stroke-width: ${flowWidth * 1.28}px;
         }
 
         .power-flow-card__dot-glow {
@@ -2373,7 +2373,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__simple-line {
           background: linear-gradient(180deg, color-mix(in srgb, var(--line-background) 100%, transparent) 0%, color-mix(in srgb, var(--line-background) 78%, transparent) 100%);
           border-radius: 999px;
-          height: ${Math.max(flowWidth, 3)}px;
+          height: ${Math.max(flowWidth, 2.5)}px;
           opacity: var(--line-opacity);
           position: relative;
           width: 100%;

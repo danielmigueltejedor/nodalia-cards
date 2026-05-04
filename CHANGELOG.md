@@ -10,6 +10,15 @@ Work-in-progress on **`alpha`** ahead of the next **`0.4.0-alpha.N`** tag or pro
 
 ---
 
+## [0.4.0-alpha.2] - 2026-05-02
+
+Second **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.2`** (tag **`v0.4.0-alpha.2`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Power Flow**: thinner default connector stroke (**`flow_width`** **2px**), slightly tighter glow halo and rail floor; card **`0.16.12`**.
+- **Visual editor**: **`FULL_LOCALE_BY_EN`** entries for flow/style labels (line thickness, node/home sizes, zero-line transparency, chip padding, min/max flow, etc.) so **pt / ru / el / zh / ro** show proper strings instead of English fallbacks.
+
+---
+
 ## [0.4.0-alpha.1] - 2026-05-05
 
 First **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.1`** (tag **`v0.4.0-alpha.1`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
