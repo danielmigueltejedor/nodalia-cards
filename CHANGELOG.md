@@ -10,6 +10,15 @@ Work-in-progress on **`alpha`** ahead of the next **`0.4.0-alpha.N`** tag or pro
 
 ---
 
+## [0.4.0-alpha.3] - 2026-05-06
+
+Third **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.3`** (tag **`v0.4.0-alpha.3`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Default sizes** (icons, titles, chips, sliders, media artwork/controls): tighter curated **`DEFAULT_CONFIG.styles`** on **light**, **fav**, **entity**, **media player**, **vacuum**, **fan**, and **humidifier** cards; theme-adaptive **`color-mix`** icon backgrounds and semantic colours unchanged from prior behaviour.
+- **Graph card**: default **`points`** **480** for denser history sampling (**`0.12.12`**).
+
+---
+
 ## [0.4.0-alpha.2] - 2026-05-02
 
 Second **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.2`** (tag **`v0.4.0-alpha.2`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.

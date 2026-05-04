@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "0.7.0";
+const CARD_VERSION = "0.7.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -59,21 +59,21 @@ const DEFAULT_CONFIG = {
       gap: "12px",
     },
     icon: {
-      size: "58px",
+      size: "38px",
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       on_color: "var(--warning-color, #f6b73c)",
       off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
     },
     control: {
-      size: "40px",
+      size: "36px",
       accent_color: "var(--primary-text-color)",
       accent_background: "rgba(var(--rgb-primary-color), 0.18)",
     },
     chip_height: "24px",
     chip_font_size: "11px",
     chip_padding: "0 9px",
-    title_size: "14px",
+    title_size: "12px",
     slider_wrap_height: "56px",
     slider_height: "16px",
     slider_thumb_size: "28px",

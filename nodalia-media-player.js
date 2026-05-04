@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "0.6.0";
+const CARD_VERSION = "0.6.2";
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -192,18 +192,18 @@ const DEFAULT_CONFIG = {
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "14px",
       min_height: "160px",
-      artwork_size: "72px",
-      tv_artwork_size: "64px",
-      control_size: "34px",
-      title_size: "15px",
-      subtitle_size: "12px",
+      artwork_size: "62px",
+      tv_artwork_size: "68px",
+      control_size: "30px",
+      title_size: "12px",
+      subtitle_size: "10px",
       slider_wrap_height: "48px",
       slider_height: "14px",
       slider_thumb_size: "24px",
       progress_color: "var(--primary-color)",
       progress_background: "rgba(var(--rgb-primary-color), 0.14)",
       overlay_color: "rgba(0, 0, 0, 0.32)",
-      dot_size: "7px",
+      dot_size: "8px",
       active_tint_color: "var(--info-color, #71c0ff)",
       accent_color: "var(--primary-text-color)",
       accent_background: "rgba(var(--rgb-primary-color), 0.18)",

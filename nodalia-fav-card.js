@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "0.8.0";
+const CARD_VERSION = "0.8.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -57,7 +57,7 @@ const DEFAULT_CONFIG = {
       gap: "10px",
     },
     icon: {
-      size: "52px",
+      size: "42px",
       background: "color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
       on_color: "var(--info-color, #71c0ff)",
       off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",

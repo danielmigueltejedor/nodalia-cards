@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "0.6.0";
+const CARD_VERSION = "0.6.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -112,7 +112,7 @@ const DEFAULT_CONFIG = {
       gap: "12px",
     },
     icon: {
-      size: "58px",
+      size: "50px",
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       active_color: "#61c97a",
@@ -129,9 +129,9 @@ const DEFAULT_CONFIG = {
       accent_background: "rgba(var(--rgb-primary-color), 0.18)",
     },
     chip_height: "24px",
-    chip_font_size: "11px",
+    chip_font_size: "9px",
     chip_padding: "0 9px",
-    title_size: "15px",
+    title_size: "12px",
   },
 };
 

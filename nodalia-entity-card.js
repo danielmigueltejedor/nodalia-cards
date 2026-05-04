@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "0.6.0";
+const CARD_VERSION = "0.6.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -51,7 +51,7 @@ const DEFAULT_CONFIG = {
       gap: "12px",
     },
     icon: {
-      size: "48px",
+      size: "38px",
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       on_color: "var(--info-color, #71c0ff)",

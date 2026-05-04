@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.9";
+const CARD_VERSION = "0.12.12";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -30,7 +30,7 @@ const DEFAULT_CONFIG = {
   min: "",
   max: "",
   hours_to_show: 24,
-  points: 48,
+  points: 480,
   show_header: true,
   show_icon: true,
   show_value: true,
@@ -59,14 +59,14 @@ const DEFAULT_CONFIG = {
     },
     icon: {
       color: "var(--primary-text-color)",
-      size: "24px",
+      size: "28px",
     },
-    title_size: "14px",
-    value_size: "46px",
-    unit_size: "18px",
-    legend_size: "12px",
-    chart_height: "150px",
-    line_width: "3px",
+    title_size: "15px",
+    value_size: "52px",
+    unit_size: "20px",
+    legend_size: "13px",
+    chart_height: "170px",
+    line_width: "1px",
   },
 };
 

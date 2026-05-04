@@ -19709,7 +19709,7 @@ console.info(
 {
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "0.6.0";
+const CARD_VERSION = "0.6.2";
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -19901,18 +19901,18 @@ const DEFAULT_CONFIG = {
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "14px",
       min_height: "160px",
-      artwork_size: "72px",
-      tv_artwork_size: "64px",
-      control_size: "34px",
-      title_size: "15px",
-      subtitle_size: "12px",
+      artwork_size: "62px",
+      tv_artwork_size: "68px",
+      control_size: "30px",
+      title_size: "12px",
+      subtitle_size: "10px",
       slider_wrap_height: "48px",
       slider_height: "14px",
       slider_thumb_size: "24px",
       progress_color: "var(--primary-color)",
       progress_background: "rgba(var(--rgb-primary-color), 0.14)",
       overlay_color: "rgba(0, 0, 0, 0.32)",
-      dot_size: "7px",
+      dot_size: "8px",
       active_tint_color: "var(--info-color, #71c0ff)",
       accent_color: "var(--primary-text-color)",
       accent_background: "rgba(var(--rgb-primary-color), 0.18)",
@@ -26147,7 +26147,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "0.7.0";
+const CARD_VERSION = "0.7.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -26206,21 +26206,21 @@ const DEFAULT_CONFIG = {
       gap: "12px",
     },
     icon: {
-      size: "58px",
+      size: "38px",
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       on_color: "var(--warning-color, #f6b73c)",
       off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
     },
     control: {
-      size: "40px",
+      size: "36px",
       accent_color: "var(--primary-text-color)",
       accent_background: "rgba(var(--rgb-primary-color), 0.18)",
     },
     chip_height: "24px",
     chip_font_size: "11px",
     chip_padding: "0 9px",
-    title_size: "14px",
+    title_size: "12px",
     slider_wrap_height: "56px",
     slider_height: "16px",
     slider_thumb_size: "28px",
@@ -30838,7 +30838,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "0.6.0";
+const CARD_VERSION = "0.6.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -30884,24 +30884,24 @@ const DEFAULT_CONFIG = {
       gap: "12px",
     },
     icon: {
-      size: "58px",
+      size: "38px",
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       on_color: "var(--info-color, #71c0ff)",
       off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
     },
     control: {
-      size: "40px",
+      size: "36px",
       accent_color: "var(--primary-text-color)",
       accent_background: "rgba(113, 192, 255, 0.2)",
     },
     chip_height: "24px",
-    chip_font_size: "11px",
+    chip_font_size: "9px",
     chip_padding: "0 9px",
-    title_size: "14px",
-    slider_wrap_height: "56px",
-    slider_height: "16px",
-    slider_thumb_size: "28px",
+    title_size: "12px",
+    slider_wrap_height: "44px",
+    slider_height: "22px",
+    slider_thumb_size: "22px",
     slider_color: "var(--info-color, #71c0ff)",
   },
 };
@@ -34389,7 +34389,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "0.6.0";
+const CARD_VERSION = "0.6.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -34439,24 +34439,24 @@ const DEFAULT_CONFIG = {
       gap: "12px",
     },
     icon: {
-      size: "58px",
+      size: "38px",
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       on_color: "var(--info-color, #71c0ff)",
       off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
     },
     control: {
-      size: "40px",
+      size: "36px",
       accent_color: "var(--primary-text-color)",
       accent_background: "rgba(113, 192, 255, 0.18)",
     },
     chip_height: "24px",
-    chip_font_size: "11px",
+    chip_font_size: "9px",
     chip_padding: "0 9px",
-    title_size: "14px",
-    slider_wrap_height: "56px",
-    slider_height: "16px",
-    slider_thumb_size: "28px",
+    title_size: "12px",
+    slider_wrap_height: "44px",
+    slider_height: "22px",
+    slider_thumb_size: "22px",
     slider_color: "var(--info-color, #71c0ff)",
   },
 };
@@ -41253,7 +41253,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.9";
+const CARD_VERSION = "0.12.12";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -41283,7 +41283,7 @@ const DEFAULT_CONFIG = {
   min: "",
   max: "",
   hours_to_show: 24,
-  points: 48,
+  points: 480,
   show_header: true,
   show_icon: true,
   show_value: true,
@@ -41312,14 +41312,14 @@ const DEFAULT_CONFIG = {
     },
     icon: {
       color: "var(--primary-text-color)",
-      size: "24px",
+      size: "28px",
     },
-    title_size: "14px",
-    value_size: "46px",
-    unit_size: "18px",
-    legend_size: "12px",
-    chart_height: "150px",
-    line_width: "3px",
+    title_size: "15px",
+    value_size: "52px",
+    unit_size: "20px",
+    legend_size: "13px",
+    chart_height: "170px",
+    line_width: "1px",
   },
 };
 
@@ -65388,7 +65388,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "0.6.0";
+const CARD_VERSION = "0.6.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -65439,7 +65439,7 @@ const DEFAULT_CONFIG = {
       gap: "12px",
     },
     icon: {
-      size: "48px",
+      size: "38px",
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       on_color: "var(--info-color, #71c0ff)",
@@ -68239,7 +68239,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "0.8.0";
+const CARD_VERSION = "0.8.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -68296,7 +68296,7 @@ const DEFAULT_CONFIG = {
       gap: "10px",
     },
     icon: {
-      size: "52px",
+      size: "42px",
       background: "color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
       on_color: "var(--info-color, #71c0ff)",
       off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
@@ -78743,7 +78743,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "0.6.0";
+const CARD_VERSION = "0.6.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -78855,7 +78855,7 @@ const DEFAULT_CONFIG = {
       gap: "12px",
     },
     icon: {
-      size: "58px",
+      size: "50px",
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       active_color: "#61c97a",
@@ -78872,9 +78872,9 @@ const DEFAULT_CONFIG = {
       accent_background: "rgba(var(--rgb-primary-color), 0.18)",
     },
     chip_height: "24px",
-    chip_font_size: "11px",
+    chip_font_size: "9px",
     chip_padding: "0 9px",
-    title_size: "15px",
+    title_size: "12px",
   },
 };
 
@@ -83121,4 +83121,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.2","contentSha256_12":"ee1e7e3ad5f8"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.3","contentSha256_12":"290da637a0b1"};}

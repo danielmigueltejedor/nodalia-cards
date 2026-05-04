@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "0.6.0";
+const CARD_VERSION = "0.6.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -46,24 +46,24 @@ const DEFAULT_CONFIG = {
       gap: "12px",
     },
     icon: {
-      size: "58px",
+      size: "38px",
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       on_color: "var(--info-color, #71c0ff)",
       off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
     },
     control: {
-      size: "40px",
+      size: "36px",
       accent_color: "var(--primary-text-color)",
       accent_background: "rgba(113, 192, 255, 0.2)",
     },
     chip_height: "24px",
-    chip_font_size: "11px",
+    chip_font_size: "9px",
     chip_padding: "0 9px",
-    title_size: "14px",
-    slider_wrap_height: "56px",
-    slider_height: "16px",
-    slider_thumb_size: "28px",
+    title_size: "12px",
+    slider_wrap_height: "44px",
+    slider_height: "22px",
+    slider_thumb_size: "22px",
     slider_color: "var(--info-color, #71c0ff)",
   },
 };
