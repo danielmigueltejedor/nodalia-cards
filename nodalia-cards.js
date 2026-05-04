@@ -84689,4 +84689,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.10","contentSha256_12":"9aae9e9211e1"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-beta.1","contentSha256_12":"9aae9e9211e1"};}

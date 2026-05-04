@@ -6,7 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Work-in-progress on **`alpha`** ahead of the next **`0.4.0-alpha.N`** tag or promotion to **`beta`**. Roadmap: **Power Flow**, **translations**, **Graph Card** lines/axes, **curated default styles** — see **CONTRIBUTING**.
+Work-in-progress on **`beta`** ahead of the next **`0.4.0-beta.N`** tag or promotion to **`main`**. Roadmap: **Power Flow**, **translations**, **Graph Card** lines/axes, **curated default styles** — see **CONTRIBUTING**.
+
+---
+
+## [0.4.0-beta.1] - 2026-05-05
+
+First **`beta`** prerelease on the **0.4.x** line (**branch `beta`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-beta.1`** (tag **`v0.4.0-beta.1`**). Breaking changes are still possible; recommended for testers and early adopters.
+
+- **Navigation bar**: entrada del dock / animaciones visibles de nuevo cuando Lovelace llama **`set(hass)`** justo después de **`setConfig`** — el reset de **`_animateDockEntranceNext`** se difiere un **`requestAnimationFrame`** para no quitar las clases **`--entering`** antes del pintado.
+- **Navigation bar**: **`_getMediaPlayerArtwork`** alineado con **`nodalia-media-player`** (devuelve **`_resolveMediaUrl`** tal cual, sin **`resolved || null`**).
+- **Entity card**: contraste del glifo en burbuja tintada con **colores CSS nombrados** (**`lightgreen`**, **`pink`**, …): **`parseCssColorHue`** resuelve el color vía estilo computado para obtener el matiz.
 
 ---
 
