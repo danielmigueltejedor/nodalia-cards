@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "0.6.2";
+const CARD_VERSION = "0.6.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "0.6.2";
+const CARD_VERSION = "0.6.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -161,6 +161,7 @@ const DEFAULT_CONFIG = {
     popup_duration: 220,
     media_duration: 240,
     button_bounce_duration: 220,
+    dock_entrance_duration: 420,
   },
   haptics: {
     enabled: true,
@@ -475,6 +476,22 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function appendQueryParam(url, key, value) {
+  const rawUrl = String(url || "").trim();
+  if (!rawUrl || value === null || value === undefined || value === "") {
+    return rawUrl;
+  }
+
+  const encodedKey = encodeURIComponent(String(key));
+  const encodedValue = encodeURIComponent(String(value));
+  const existingPattern = new RegExp(`([?&])${encodedKey}=[^&]*`);
+  if (existingPattern.test(rawUrl)) {
+    return rawUrl.replace(existingPattern, `$1${encodedKey}=${encodedValue}`);
+  }
+
+  return `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}`;
+}
+
 function arrayFromCsv(value) {
   return String(value || "")
     .split(",")
@@ -614,6 +631,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._mediaPlayerExpanded = false;
     this._mediaTicker = null;
     this._lastRenderSignature = "";
+    this._animateDockEntranceNext = true;
+    this._lastShouldHide = false;
+    this._playDockEntrance = false;
     this._onResize = () => {
       this._closePopup(false);
       this._closeMediaBrowser(false);
@@ -1512,8 +1532,134 @@ class NodaliaNavigationBarCard extends HTMLElement {
     );
   }
 
+  _resolveMediaUrl(value, options = {}) {
+    const raw = String(value || "").trim();
+    if (!raw) {
+      return "";
+    }
+
+    const isAbsolute = /^(?:https?:)?\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:");
+    const baseUrl = isAbsolute
+      ? raw
+      : typeof this._hass?.hassUrl === "function"
+        ? this._hass.hassUrl(raw.startsWith("/") ? raw : `/${raw.replace(/^\.?\//, "")}`)
+        : raw;
+
+    return appendQueryParam(baseUrl, "nodalia_ts", options.cacheToken);
+  }
+
+  _getArtworkCacheToken(state) {
+    if (!state) {
+      return "";
+    }
+
+    return [
+      String(state.last_updated || state.last_changed || ""),
+      String(state.attributes?.entity_picture || state.attributes?.entity_picture_local || ""),
+      String(state.attributes?.media_title || ""),
+      String(state.attributes?.media_artist || ""),
+      String(state.attributes?.media_album_name || ""),
+      String(state.attributes?.app_name || ""),
+    ].filter(Boolean).join("|");
+  }
+
+  _isAppleTvPlayer(player, state) {
+    const candidates = [
+      player?.entity,
+      player?.label,
+      player?.name,
+      player?.title,
+      state?.attributes?.friendly_name,
+      state?.attributes?.app_name,
+      state?.attributes?.source,
+      state?.attributes?.device_class,
+    ];
+
+    return candidates.some(candidate => normalizeTextKey(candidate).includes("apple tv"));
+  }
+
+  _getPlayerDeviceType(player, state) {
+    if (player?.tv_mode === true) {
+      return "tv";
+    }
+
+    if (player?.tv_mode === false) {
+      return "music";
+    }
+
+    if (player?.device_type === "music" || player?.device_type === "tv") {
+      return player.device_type;
+    }
+
+    const deviceClass = normalizeTextKey(state?.attributes?.device_class);
+    if (["tv", "receiver", "set_top_box"].includes(deviceClass)) {
+      return "tv";
+    }
+
+    const haystack = normalizeTextKey([
+      player?.entity,
+      player?.label,
+      player?.name,
+      player?.title,
+      player?.icon,
+      state?.attributes?.friendly_name,
+      state?.attributes?.app_name,
+      state?.attributes?.source,
+      state?.attributes?.media_content_type,
+    ].filter(Boolean).join(" "));
+
+    if (
+      this._isAppleTvPlayer(player, state) ||
+      haystack.includes("google tv") ||
+      haystack.includes("android tv") ||
+      haystack.includes("chromecast") ||
+      haystack.includes("television") ||
+      haystack.includes("televisor") ||
+      /\btv\b/.test(haystack)
+    ) {
+      return "tv";
+    }
+
+    return "music";
+  }
+
+  _shouldShowTvArtwork(player, state) {
+    const deviceType = this._getPlayerDeviceType(player, state);
+    if (deviceType !== "tv") {
+      return true;
+    }
+
+    const plexSignals = [
+      state?.attributes?.source,
+      state?.attributes?.app_name,
+      state?.attributes?.media_channel,
+      state?.attributes?.media_content_type,
+    ]
+      .filter(Boolean)
+      .map(value => normalizeTextKey(value));
+
+    return plexSignals.some(value => value.includes("plex"));
+  }
+
   _getMediaPlayerArtwork(player, state) {
-    return player.image || state.attributes.entity_picture || null;
+    if (player.image) {
+      return this._resolveMediaUrl(player.image);
+    }
+
+    if (!this._shouldShowTvArtwork(player, state)) {
+      return null;
+    }
+
+    const artwork =
+      state.attributes.entity_picture_local ||
+      state.attributes.entity_picture ||
+      "";
+
+    return artwork
+      ? this._resolveMediaUrl(artwork, {
+          cacheToken: this._getArtworkCacheToken(state),
+        })
+      : null;
   }
 
   _getMediaPlayerStateLabel(stateValue) {
@@ -2575,7 +2721,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     const subtitle = this._getMediaPlayerStateLabel(state.state);
 
     return `
-      <div class="media-player-toggle-wrap">
+      <div class="media-player-toggle-wrap${this._playDockEntrance ? " media-player-toggle-wrap--entering" : ""}">
         <button
           type="button"
           class="media-player-toggle"
@@ -2616,6 +2762,11 @@ class NodaliaNavigationBarCard extends HTMLElement {
       popupDuration: clamp(Number(config.animations?.popup_duration) || DEFAULT_CONFIG.animations.popup_duration, 120, 2400),
       mediaDuration: clamp(Number(config.animations?.media_duration) || DEFAULT_CONFIG.animations.media_duration, 120, 2400),
       buttonBounceDuration: clamp(Number(config.animations?.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1600),
+      dockEntranceDuration: clamp(
+        Number(config.animations?.dock_entrance_duration) || DEFAULT_CONFIG.animations.dock_entrance_duration,
+        180,
+        1400,
+      ),
     };
     const inEditMode = this._isInEditMode();
     const shouldHide = this._shouldHideForScreen(config);
@@ -2623,8 +2774,20 @@ class NodaliaNavigationBarCard extends HTMLElement {
     if (shouldHide && !inEditMode) {
       this._renderedRoutes = [];
       this.shadowRoot.innerHTML = "";
+      this._lastShouldHide = true;
       return;
     }
+
+    if (this._lastShouldHide && !shouldHide) {
+      this._animateDockEntranceNext = true;
+    }
+    this._lastShouldHide = false;
+
+    const playDockEntrance = animations.enabled && this._animateDockEntranceNext;
+    if (this._animateDockEntranceNext) {
+      this._animateDockEntranceNext = false;
+    }
+    this._playDockEntrance = playDockEntrance;
 
     const visibleRoutes = this._getVisibleRoutes();
     const showRouteLabels = this._shouldShowRouteLabels(visibleRoutes);
@@ -2644,7 +2807,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       ? this._getReservedHeight(showMediaPlayerCard, showMediaPlayerToggle)
       : "0px";
     const titleMarkup = config.title
-      ? `<div class="navbar-title">${escapeHtml(config.title)}</div>`
+      ? `<div class="navbar-title${playDockEntrance ? " navbar-title--entering" : ""}">${escapeHtml(config.title)}</div>`
       : "";
 
     this._renderedRoutes = visibleRoutes;
@@ -2674,6 +2837,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
               const badge = this._getBadge(route);
               const label = this._getRouteLabel(route);
               const routeStyle = [
+                playDockEntrance ? `--nav-enter-delay:${Math.min(index * 38, 520)}ms;` : "",
                 route.background ? `--route-background:${route.background};` : "",
                 route.color ? `--route-color:${route.color};` : "",
                 route.active_color ? `--route-active-color:${route.active_color};` : "",
@@ -2685,7 +2849,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
               return `
                 <button
-                  class="nav-item ${isActive ? "active" : ""} ${hasPopup ? "has-popup" : ""}"
+                  class="nav-item ${isActive ? "active" : ""} ${hasPopup ? "has-popup" : ""}${playDockEntrance ? " nav-item--entering" : ""}"
                   data-route-index="${index}"
                   type="button"
                   style="${routeStyle}"
@@ -2727,6 +2891,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
+          --navbar-dock-entrance-ms: ${animations.dockEntranceDuration};
           display: block;
           width: 100%;
         }
@@ -2816,6 +2981,73 @@ class NodaliaNavigationBarCard extends HTMLElement {
         ha-card.navbar-card > * {
           position: relative;
           z-index: 1;
+        }
+
+        @keyframes nodalia-navbar-dock-in-from-bottom {
+          0% {
+            opacity: 0;
+            transform: translateY(22px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes nodalia-navbar-dock-in-from-top {
+          0% {
+            opacity: 0;
+            transform: translateY(-18px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes nodalia-navbar-chip-in {
+          0% {
+            opacity: 0;
+            transform: translateY(12px) scale(0.94);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes nodalia-navbar-soft-in {
+          0% {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        ha-card.navbar-card.navbar-card--entering-bottom {
+          animation: nodalia-navbar-dock-in-from-bottom ${animations.dockEntranceDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        ha-card.navbar-card.navbar-card--entering-top {
+          animation: nodalia-navbar-dock-in-from-top ${animations.dockEntranceDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        .nav-item.nav-item--entering {
+          animation: nodalia-navbar-chip-in ${Math.round(animations.dockEntranceDuration * 0.92)}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: var(--nav-enter-delay, 0ms);
+        }
+
+        .navbar-title.navbar-title--entering {
+          animation: nodalia-navbar-soft-in ${Math.round(animations.dockEntranceDuration * 0.78)}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: ${Math.round(animations.dockEntranceDuration * 0.1)}ms;
+        }
+
+        .media-player-toggle-wrap.media-player-toggle-wrap--entering {
+          animation: nodalia-navbar-soft-in ${Math.round(animations.dockEntranceDuration * 0.72)}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: ${Math.round(animations.dockEntranceDuration * 0.06)}ms;
         }
 
         .navbar-title {
@@ -3873,6 +4105,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
         ${animations.enabled ? "" : `
         .nav-item,
         .nav-icon-wrap,
+        .navbar-title,
+        .navbar-card,
+        .media-player-toggle-wrap,
         .popup-panel,
         .popup-item,
         .media-player-card,
@@ -3901,7 +4136,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           <div class="dock-stack${fullWidthBar ? " dock-stack--full-width" : ""}">
             ${mediaPlayerToggleMarkup}
             ${mediaPlayerMarkup}
-            <ha-card class="navbar-card">
+            <ha-card class="navbar-card${playDockEntrance ? ` navbar-card--entering navbar-card--entering-${config.layout.position === "top" ? "top" : "bottom"}` : ""}">
               ${titleMarkup}
               <nav class="navbar" aria-label="Navigation bar">
                 ${routesMarkup}
@@ -5106,6 +5341,10 @@ class NodaliaNavigationBarEditor extends HTMLElement {
                   <label>
                     <span>${this._L("Barra y hover (ms)")}</span>
                     <input type="number" data-field="animations.bar_duration" value="${escapeHtml(config.animations.bar_duration || DEFAULT_CONFIG.animations.bar_duration)}" />
+                  </label>
+                  <label>
+                    <span>${this._L("Entrada barra (ms)")}</span>
+                    <input type="number" data-field="animations.dock_entrance_duration" value="${escapeHtml(config.animations.dock_entrance_duration ?? DEFAULT_CONFIG.animations.dock_entrance_duration)}" />
                   </label>
                   <label>
                     <span>${this._L("Popup (ms)")}</span>

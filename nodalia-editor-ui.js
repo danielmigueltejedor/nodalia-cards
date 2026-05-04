@@ -6685,6 +6685,19 @@
     "ro": "Bar and hover (ms)"
   },
   {
+    "es": "Entrada barra (ms)",
+    "en": "Dock entrance (ms)",
+    "de": "Dock entrance (ms)",
+    "fr": "Dock entrance (ms)",
+    "it": "Dock entrance (ms)",
+    "nl": "Dock entrance (ms)",
+    "pt": "Dock entrance (ms)",
+    "ru": "Dock entrance (ms)",
+    "el": "Dock entrance (ms)",
+    "zh": "Dock entrance (ms)",
+    "ro": "Dock entrance (ms)"
+  },
+  {
     "es": "Breakpoint movil",
     "en": "Mobile breakpoint",
     "de": "Mobile breakpoint",

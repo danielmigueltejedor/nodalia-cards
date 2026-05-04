@@ -10,6 +10,23 @@ Work-in-progress on **`alpha`** ahead of the next **`0.4.0-alpha.N`** tag or pro
 
 ---
 
+## [0.4.0-alpha.9] - 2026-05-04
+
+Ninth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.9`** (tag **`v0.4.0-alpha.9`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Navigation bar** (`0.6.5`): **animación de entrada del dock** — al cargar o al volver a mostrarse (p. ej. pasar de escritorio a móvil), **`ha-card`** entra con desliz según **`layout.position`** (abajo / arriba), **rutas** con **escalonado** (`--nav-enter-delay`), **título** y **mini reproductor** con **fade-in**; **`animations.dock_entrance_duration`** (por defecto **420** ms) y control en el **editor** (**Entrada barra (ms)**). Con **`animations.enabled: false`** se anulan también estas entradas.
+
+---
+
+## [0.4.0-alpha.8] - 2026-05-04
+
+Eighth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.8`** (tag **`v0.4.0-alpha.8`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Navigation bar** (`0.6.3`): portadas de álbum / **`entity_picture`** igual que **`nodalia-media-player`**: rutas relativas con **`hass.hassUrl()`**, **`entity_picture_local`**, **`nodalia_ts`** anti-caché, y misma lógica **TV / Plex** para no mostrar arte genérico en TVs cuando no aplica.
+- **Iconos en burbuja tintada**: **`ha-icon`** usa **`styles.icon.color`** (**`var(--primary-text-color)`** por defecto) cuando la burbuja está activa en **entity**, **fan**, **humidifier** y **climate**, en lugar de **`on_color`** (**info** / azul), para que el glifo contraste con fondos **accent** (p. ej. energía). Versiones de tarjeta: entity **`0.6.4`**, fan / humidifier **`0.6.3`**, climate **`0.10.5`**.
+
+---
+
 ## [0.4.0-alpha.7] - 2026-05-02
 
 Seventh **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.7`** (tag **`v0.4.0-alpha.7`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
