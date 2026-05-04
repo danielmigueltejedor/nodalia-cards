@@ -17316,8 +17316,17 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._lastShouldHide = false;
 
     const playDockEntrance = animations.enabled && this._animateDockEntranceNext;
+    // Lovelace typically calls setConfig then set(hass) in the same turn; clearing the flag
+    // synchronously made the second _render strip entrance classes before paint. Defer reset
+    // one frame so follow-up renders still emit --entering until the browser composites.
     if (this._animateDockEntranceNext) {
-      this._animateDockEntranceNext = false;
+      if (animations.enabled) {
+        requestAnimationFrame(() => {
+          this._animateDockEntranceNext = false;
+        });
+      } else {
+        this._animateDockEntranceNext = false;
+      }
     }
     this._playDockEntrance = playDockEntrance;
 
@@ -66914,7 +66923,7 @@ function rgbToHueDegrees(r, g, b) {
   return h;
 }
 
-function parseCssColorHue(cssColor) {
+function parseCssColorHue(cssColor, resolveDepth = 0) {
   let raw = String(cssColor || "").trim();
   if (!raw) {
     return null;
@@ -66922,7 +66931,7 @@ function parseCssColorHue(cssColor) {
 
   const varFallback = /\bvar\([^,]+,\s*([^)]+)\)/i.exec(raw);
   if (varFallback) {
-    const nested = parseCssColorHue(varFallback[1].trim());
+    const nested = parseCssColorHue(varFallback[1].trim(), resolveDepth);
     if (nested !== null && !Number.isNaN(nested)) {
       return nested;
     }
@@ -66946,6 +66955,15 @@ function parseCssColorHue(cssColor) {
   const rgbFn = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i.exec(raw);
   if (rgbFn) {
     return rgbToHueDegrees(Number(rgbFn[1]), Number(rgbFn[2]), Number(rgbFn[3]));
+  }
+
+  // Named colors (`lightgreen`, …), bare `var(--primary-color)`, etc.: resolve via computed style once.
+  if (resolveDepth === 0 && typeof document !== "undefined") {
+    const resolved = resolveEditorColorValue(raw);
+    const resolvedTrim = String(resolved || "").trim();
+    if (resolvedTrim && resolvedTrim !== raw) {
+      return parseCssColorHue(resolvedTrim, 1);
+    }
   }
 
   return null;
@@ -84667,4 +84685,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.9","contentSha256_12":"881337c152f2"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.10","contentSha256_12":"85820d7fe714"};}

@@ -10,6 +10,16 @@ Work-in-progress on **`alpha`** ahead of the next **`0.4.0-alpha.N`** tag or pro
 
 ---
 
+## [0.4.0-alpha.10] - 2026-05-05
+
+Tenth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.10`** (tag **`v0.4.0-alpha.10`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Navigation bar**: entrada del dock / animaciones visibles de nuevo cuando Lovelace llama **`set(hass)`** justo después de **`setConfig`** — el reset de **`_animateDockEntranceNext`** se difiere un **`requestAnimationFrame`** para no quitar las clases **`--entering`** antes del pintado.
+- **Navigation bar**: **`_getMediaPlayerArtwork`** alineado con **`nodalia-media-player`** (devuelve **`_resolveMediaUrl`** tal cual, sin **`resolved || null`**).
+- **Entity card**: contraste del glifo en burbuja tintada con **colores CSS nombrados** (**`lightgreen`**, …): **`parseCssColorHue`** resuelve el color vía estilo computado para obtener el matiz.
+
+---
+
 ## [0.4.0-alpha.9] - 2026-05-04
 
 Ninth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.9`** (tag **`v0.4.0-alpha.9`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.

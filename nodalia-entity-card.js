@@ -503,7 +503,7 @@ function rgbToHueDegrees(r, g, b) {
   return h;
 }
 
-function parseCssColorHue(cssColor) {
+function parseCssColorHue(cssColor, resolveDepth = 0) {
   let raw = String(cssColor || "").trim();
   if (!raw) {
     return null;
@@ -511,7 +511,7 @@ function parseCssColorHue(cssColor) {
 
   const varFallback = /\bvar\([^,]+,\s*([^)]+)\)/i.exec(raw);
   if (varFallback) {
-    const nested = parseCssColorHue(varFallback[1].trim());
+    const nested = parseCssColorHue(varFallback[1].trim(), resolveDepth);
     if (nested !== null && !Number.isNaN(nested)) {
       return nested;
     }
@@ -535,6 +535,15 @@ function parseCssColorHue(cssColor) {
   const rgbFn = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i.exec(raw);
   if (rgbFn) {
     return rgbToHueDegrees(Number(rgbFn[1]), Number(rgbFn[2]), Number(rgbFn[3]));
+  }
+
+  // Named colors (`lightgreen`, …), bare `var(--primary-color)`, etc.: resolve via computed style once.
+  if (resolveDepth === 0 && typeof document !== "undefined") {
+    const resolved = resolveEditorColorValue(raw);
+    const resolvedTrim = String(resolved || "").trim();
+    if (resolvedTrim && resolvedTrim !== raw) {
+      return parseCssColorHue(resolvedTrim, 1);
+    }
   }
 
   return null;

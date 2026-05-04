@@ -2784,8 +2784,17 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._lastShouldHide = false;
 
     const playDockEntrance = animations.enabled && this._animateDockEntranceNext;
+    // Lovelace typically calls setConfig then set(hass) in the same turn; clearing the flag
+    // synchronously made the second _render strip entrance classes before paint. Defer reset
+    // one frame so follow-up renders still emit --entering until the browser composites.
     if (this._animateDockEntranceNext) {
-      this._animateDockEntranceNext = false;
+      if (animations.enabled) {
+        requestAnimationFrame(() => {
+          this._animateDockEntranceNext = false;
+        });
+      } else {
+        this._animateDockEntranceNext = false;
+      }
     }
     this._playDockEntrance = playDockEntrance;
 
