@@ -1665,10 +1665,12 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     this._showStyleSection = false;
     this._pendingEditorControlTags = new Set();
     this._emitConfigTimer = 0;
+    /** `styles` | `animations` when pointerdown handled that toggle; following click for same id is ignored. */
+    this._suppressEditorToggleClickFor = null;
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
-    this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onShadowClick = this._onShadowClick.bind(this);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
@@ -1955,10 +1957,6 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
   }
 
   _onShadowClick(event) {
-    if (event.defaultPrevented) {
-      return;
-    }
-
     const toggleButton = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
@@ -1967,14 +1965,29 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
       return;
     }
 
+    const toggleId = toggleButton.dataset.editorToggle;
+    if (toggleId !== "styles" && toggleId !== "animations") {
+      return;
+    }
+
+    if (this._suppressEditorToggleClickFor) {
+      if (toggleId === this._suppressEditorToggleClickFor) {
+        this._suppressEditorToggleClickFor = null;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      this._suppressEditorToggleClickFor = null;
+    }
+
     event.preventDefault();
     event.stopPropagation();
 
     const focusState = this._captureFocusState();
 
-    if (toggleButton.dataset.editorToggle === "styles") {
+    if (toggleId === "styles") {
       this._showStyleSection = !this._showStyleSection;
-    } else if (toggleButton.dataset.editorToggle === "animations") {
+    } else {
       this._showAnimationSection = !this._showAnimationSection;
     }
 
@@ -1991,19 +2004,26 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
       return;
     }
 
-    // Handle section toggles on pointerdown so an in-flight blur/change
+    const toggleId = toggleButton.dataset.editorToggle;
+    if (toggleId !== "styles" && toggleId !== "animations") {
+      return;
+    }
+
+    // Handle known section toggles on pointerdown so an in-flight blur/change
     // re-render from another field cannot swallow this interaction.
+    // Do not rely on click + defaultPrevented: click is a separate event.
+    // Suppress the following click so we do not double-toggle on pointer devices.
     event.preventDefault();
     event.stopPropagation();
 
+    this._suppressEditorToggleClickFor = toggleId;
+
     const focusState = this._captureFocusState();
 
-    if (toggleButton.dataset.editorToggle === "styles") {
+    if (toggleId === "styles") {
       this._showStyleSection = !this._showStyleSection;
-    } else if (toggleButton.dataset.editorToggle === "animations") {
-      this._showAnimationSection = !this._showAnimationSection;
     } else {
-      return;
+      this._showAnimationSection = !this._showAnimationSection;
     }
 
     this._render();

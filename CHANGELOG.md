@@ -10,6 +10,24 @@ Work-in-progress on **`alpha`** ahead of the next **`0.4.0-alpha.N`** tag or pro
 
 ---
 
+## [0.4.0-beta.2] - 2026-05-05
+
+Second **`beta`** prerelease on the **0.4.x** line (**branch `beta`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-beta.2`** (tag **`v0.4.0-beta.2`**). This build rolls up **everything since `0.4.0-beta.1`**, i.e. cumulative work from **`0.4.0-alpha.11`** through **`0.4.0-alpha.20`** (there was no **`alpha.19`** tag in this line) **plus** items below that landed in the bundle after the last alpha note. Breaking changes are still possible; recommended for testers and early adopters.
+
+Compared to **`0.4.0-beta.1`**, this release includes:
+
+- **Graph card**: rework visual de línea/área; **rangos automáticos** por tipo de métrica (p. ej. humedad con referencia **20–80** si no fijas `min`/`max`); chips de series **reordenados/compactados** para **no solaparse** con el recuadro de gráfica; en **multi-serie con la misma unidad**, el valor principal muestra la **media** hasta que eliges una serie; **popup de hover** con estilo más cercano a **Weather card**; **tipografía** del valor principal más compacta y legible; ajustes de **layout** entre chips y recuadro y **más margen inferior** en serie/contenedor para que los **mínimos** no queden recortados; el recuadro deja de usar **margen lateral negativo** para no salirse de la tarjeta.
+- **Weather card** (modo gráfico de previsión): **popups/overlays** de detalle respetan mejor el **tema activo** al cambiar de theme (evita el aspecto demasiado oscuro en tema claro).
+- **Fan card / Humidifier card**: mismo criterio de **contraste del icono** en burbuja tintada que **Entity card** (tonos como **`lightgreen`** / **`pink`** oscurecen el glifo cuando hace falta).
+- **Navigation bar editor**: selectores nativos de Home Assistant para **entidad** e **icono** en rutas, popup y reproductores, con fallback a **`ha-selector`** / `input`.
+- **Navigation bar**: el **ticker** del reproductor en curso actualiza solo **progreso y tiempo** sin **re-render** completo del media player (evita **parpadeo** continuo al reproducir).
+- **Alarm panel card (editor)**: toggles y **“Mostrar estilos / animaciones”** más fiables (emisión de config **diferida**, secciones abiertas en **`pointerdown`**, mejor comportamiento ante blur/`change`).
+- **Editor visual / español (`editorStr`)**: **primera** normalización de tildes y **ñ** en etiquetas del mapa común del editor; **segunda pasada** ampliada (título, gráfica, táctil/háptica, código, energía, información, acción, añade, etc.); **`scripts/gen-editor-ui.mjs`** vuelve a emitir **`normalizeSpanishEditorLabel`** junto a **`editorStr`** para que **`node scripts/gen-editor-ui.mjs`** no pierda la normalización al regenerar **`nodalia-editor-ui.js`**.
+- **Insignia (badge) card**: título de sección del editor corregido a **«Acción»**; **editor visual** alineado con el resto de tarjetas Nodalia (**`ha-entity-picker`**, **`ha-icon-picker`**, secciones para insignia, **hápticos**, acción al pulsar y apariencia con detalles de estilo plegables).
+- **Entity card**: en el editor visual, selectores **`icon_active`** / **`icon_inactive`** para **icono distinto** en estado **activo** vs **inactivo** (útil en **binary_sensor** de puertas, ventanas, etc.); la tarjeta pasa a **`0.6.6`**.
+
+---
+
 ## [0.4.0-alpha.20] - 2026-05-04
 
 Twentieth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.20`** (tag **`v0.4.0-alpha.20`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
