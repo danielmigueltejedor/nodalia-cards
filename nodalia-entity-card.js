@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "0.6.5";
+const CARD_VERSION = "0.6.6";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -16,6 +16,8 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  icon_active: "",
+  icon_inactive: "",
   use_entity_icon: false,
   number_decimals: 2,
   tap_action: "auto",
@@ -863,6 +865,9 @@ class NodaliaEntityCard extends HTMLElement {
       configuredSecondaryAttribute,
       configuredSecondaryValue: configuredSecondaryAttribute ? getValueSignature(attrs[configuredSecondaryAttribute]) : "",
       useEntityIcon: Boolean(this._config?.use_entity_icon),
+      cardIcon: String(this._config?.icon || ""),
+      iconActive: String(this._config?.icon_active || ""),
+      iconInactive: String(this._config?.icon_inactive || ""),
       compact: Boolean(this._isCompactLayout),
       quickActions: Array.isArray(this._config?.quick_actions) ? this._config.quick_actions.length : 0,
     });
@@ -1018,6 +1023,18 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _getIcon(state) {
+    const trimIcon = value => (typeof value === "string" ? value.trim() : "");
+    const iconActive = trimIcon(this._config?.icon_active);
+    const iconInactive = trimIcon(this._config?.icon_inactive);
+    const hasStateIcons = Boolean(iconActive || iconInactive);
+
+    if (hasStateIcons) {
+      const chosen = this._isActiveState(state) ? iconActive : iconInactive;
+      if (chosen) {
+        return chosen;
+      }
+    }
+
     if (this._config?.use_entity_icon === true) {
       const resolvedEntityIcon = state?.attributes?.icon || getDynamicEntityIcon(state);
       if (resolvedEntityIcon) {
@@ -1025,7 +1042,7 @@ class NodaliaEntityCard extends HTMLElement {
       }
     }
 
-    return this._config?.icon || state?.attributes?.icon || "mdi:tune";
+    return trimIcon(this._config?.icon) || state?.attributes?.icon || "mdi:tune";
   }
 
   _canRunTapAction(state) {
@@ -2824,6 +2841,21 @@ class NodaliaEntityCardEditor extends HTMLElement {
               fullWidth: true,
             })}
             ${this._renderCheckboxField("Usar el icono de la entidad", "use_entity_icon", config.use_entity_icon === true)}
+            ${this._renderIconPickerField("Icono (estado activo)", "icon_active", config.icon_active, {
+              placeholder: "mdi:door-open",
+              fullWidth: true,
+            })}
+            ${this._renderIconPickerField("Icono (estado inactivo)", "icon_inactive", config.icon_inactive, {
+              placeholder: "mdi:door-closed",
+              fullWidth: true,
+            })}
+            <div class="editor-section__hint editor-field--full" style="grid-column: 1 / -1; margin-top: -4px;">
+              ${escapeHtml(
+                this._editorLabel(
+                  "Opcional: icono distinto cuando la tarjeta está activa o inactiva (binary_sensor, interruptores, puertas, ventanas, etc.). Si uno queda vacío, se usa el icono general o el de la entidad.",
+                ),
+              )}
+            </div>
             ${this._renderSelectField(
               "Acción al tocar",
               "tap_action",

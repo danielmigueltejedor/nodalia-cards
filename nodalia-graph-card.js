@@ -783,22 +783,54 @@ class NodaliaGraphCard extends HTMLElement {
 
   _getCurrentValuesText() {
     const selectedEntityId = this._getSelectedEntityId();
-    const primaryEntry = this._getEntityEntries().find(entry => entry.entity === selectedEntityId) || this._getEntityEntries()[0];
-    const primaryState = primaryEntry ? this._hass?.states?.[primaryEntry.entity] : null;
-    const primaryValue = parseNumber(primaryState?.state);
+    const entries = this._getEntityEntries();
+    const selectedEntry = entries.find(entry => entry.entity === selectedEntityId) || null;
+    const resolvedEntries = selectedEntry ? [selectedEntry] : entries;
+    const currentSeries = resolvedEntries
+      .map(entry => {
+        const state = this._hass?.states?.[entry.entity];
+        const value = parseNumber(state?.state);
+        if (!Number.isFinite(value)) {
+          return null;
+        }
+        return {
+          decimals: inferDecimals(state?.state),
+          unit: String(
+            state?.attributes?.unit_of_measurement
+            || state?.attributes?.native_unit_of_measurement
+            || "",
+          ).trim(),
+          value,
+        };
+      })
+      .filter(Boolean);
 
-    if (!Number.isFinite(primaryValue)) {
+    if (!currentSeries.length) {
       return { value: "--", unit: this._getUnit() };
     }
 
-    const decimals = this._getDecimals();
+    // When multiple active series share the same unit, show the mean value.
+    if (!selectedEntry && currentSeries.length > 1) {
+      const unit = currentSeries[0].unit;
+      const sameUnit = currentSeries.every(item => item.unit === unit);
+      if (sameUnit) {
+        const avg = currentSeries.reduce((sum, item) => sum + item.value, 0) / currentSeries.length;
+        const decimals = clamp(
+          Math.max(...currentSeries.map(item => item.decimals), 1),
+          0,
+          3,
+        );
+        return {
+          value: formatNumberValue(avg, decimals),
+          unit,
+        };
+      }
+    }
+
+    const primary = currentSeries[0];
     return {
-      value: formatNumberValue(primaryValue, decimals),
-      unit: String(
-        primaryState?.attributes?.unit_of_measurement
-        || primaryState?.attributes?.native_unit_of_measurement
-        || this._getUnit(),
-      ).trim(),
+      value: formatNumberValue(primary.value, primary.decimals),
+      unit: primary.unit || this._getUnit(),
     };
   }
 
@@ -1388,25 +1420,148 @@ class NodaliaGraphCard extends HTMLElement {
     }
   }
 
+  _normalizeMetricUnit(unit) {
+    return normalizeTextKey(
+      String(unit || "")
+        .replace("°", "")
+        .replaceAll("/", "_")
+        .replaceAll("-", "_"),
+    );
+  }
+
+  _getPrimaryMetricProfile() {
+    const selectedEntityId = this._getSelectedEntityId();
+    const entry = this._getEntityEntries().find(item => item.entity === selectedEntityId) || this._getEntityEntries()[0];
+    const state = entry?.entity ? this._hass?.states?.[entry.entity] || null : null;
+    const unit = String(
+      state?.attributes?.unit_of_measurement
+      || state?.attributes?.native_unit_of_measurement
+      || "",
+    ).trim();
+    const deviceClass = normalizeTextKey(state?.attributes?.device_class || "");
+    const stateClass = normalizeTextKey(state?.attributes?.state_class || "");
+    const entityId = String(entry?.entity || "");
+    const domain = entityId.includes(".") ? entityId.split(".")[0] : "";
+    const entityKey = normalizeTextKey(entityId);
+
+    return {
+      deviceClass,
+      domain,
+      entityKey,
+      stateClass,
+      unit,
+      unitKey: this._normalizeMetricUnit(unit),
+    };
+  }
+
+  _getSmartRangeSuggestion(dataMin, dataMax) {
+    const profile = this._getPrimaryMetricProfile();
+    const unitKey = profile.unitKey;
+    const isPercent = profile.unit === "%" || unitKey === "percent";
+    const isHumidity = profile.deviceClass === "humidity"
+      || profile.deviceClass === "moisture"
+      || /humidity|humedad|moisture|humitat|umidade/.test(profile.entityKey);
+    if (isPercent && isHumidity) {
+      return { min: 20, max: 80 };
+    }
+
+    const isBattery = profile.deviceClass === "battery" || /battery|bateria/.test(profile.entityKey);
+    if (isPercent && isBattery) {
+      return { min: 0, max: 100 };
+    }
+
+    const isTemperature = profile.deviceClass === "temperature"
+      || unitKey === "c"
+      || unitKey === "f";
+    if (isTemperature) {
+      if (unitKey === "f") {
+        return { min: 60, max: 86 };
+      }
+      return { min: 16, max: 30 };
+    }
+
+    const isPower = /(kw|w|mw|kva|va)\b/.test(unitKey)
+      || /power|potencia|consumo/.test(profile.entityKey);
+    if (isPower) {
+      const upper = Number.isFinite(dataMax) ? Math.max(1, dataMax) : 1;
+      return { min: 0, max: upper * 1.12 };
+    }
+
+    const isEnergy = /(kwh|wh|mwh)\b/.test(unitKey)
+      || profile.deviceClass === "energy";
+    if (isEnergy) {
+      const upper = Number.isFinite(dataMax) ? Math.max(1, dataMax) : 1;
+      return { min: 0, max: upper * 1.08 };
+    }
+
+    const isCo2 = profile.deviceClass === "carbon_dioxide"
+      || unitKey === "ppm"
+      || /co2|carbon_dioxide/.test(profile.entityKey);
+    if (isCo2) {
+      return { min: 350, max: 2000 };
+    }
+
+    const isPressure = profile.deviceClass === "atmospheric_pressure"
+      || /(hpa|mbar|bar|kpa|pa)\b/.test(unitKey);
+    if (isPressure) {
+      if (/(hpa|mbar)\b/.test(unitKey)) {
+        return { min: 980, max: 1040 };
+      }
+      if (unitKey === "bar") {
+        return { min: 0.98, max: 1.04 };
+      }
+    }
+
+    return null;
+  }
+
   _getGraphBounds(series) {
     const configuredMin = Number(this._config?.min);
     const configuredMax = Number(this._config?.max);
     const values = series.flatMap(entry => entry.samples.map(sample => sample.value)).filter(Number.isFinite);
+    const dataMin = values.length ? Math.min(...values) : null;
+    const dataMax = values.length ? Math.max(...values) : null;
+    const suggestion = this._getSmartRangeSuggestion(dataMin, dataMax);
 
-    let min = Number.isFinite(configuredMin) ? configuredMin : Math.min(...values);
-    let max = Number.isFinite(configuredMax) ? configuredMax : Math.max(...values);
+    let min = Number.isFinite(configuredMin)
+      ? configuredMin
+      : Number.isFinite(dataMin)
+        ? dataMin
+        : null;
+    let max = Number.isFinite(configuredMax)
+      ? configuredMax
+      : Number.isFinite(dataMax)
+        ? dataMax
+        : null;
+
+    if (!Number.isFinite(configuredMin) && suggestion?.min !== undefined) {
+      min = Number(suggestion.min);
+    }
+    if (!Number.isFinite(configuredMax) && suggestion?.max !== undefined) {
+      max = Number(suggestion.max);
+    }
+
+    // Keep suggested ranges stable (e.g. humidity 20-80) but never crop real data.
+    if (suggestion && Number.isFinite(dataMin) && Number.isFinite(dataMax)) {
+      if (!Number.isFinite(configuredMin) && dataMin < min) {
+        min = dataMin;
+      }
+      if (!Number.isFinite(configuredMax) && dataMax > max) {
+        max = dataMax;
+      }
+    }
 
     if (!Number.isFinite(min) || !Number.isFinite(max)) {
       min = 0;
       max = 100;
     }
 
-    if (!Number.isFinite(configuredMin)) {
+    if (!Number.isFinite(configuredMin) && !suggestion) {
       const spread = Math.max(max - min, 1);
       min -= spread * 0.14;
     }
 
-    if (!Number.isFinite(configuredMax)) {
+    if (!Number.isFinite(configuredMax) && !suggestion) {
       const spread = Math.max(max - min, 1);
       max += spread * 0.08;
     }
@@ -1422,8 +1577,10 @@ class NodaliaGraphCard extends HTMLElement {
     const width = 100;
     const height = 56;
     const paddingX = -5.5;
-    const paddingTop = 3;
-    const paddingBottom = 2;
+    const paddingTop = 4;
+    // Reserve extra bottom headroom so min values and stroke/glow
+    // never get clipped by the rounded chart container.
+    const paddingBottom = 14;
     const bounds = this._getGraphBounds(series);
     const range = Math.max(bounds.max - bounds.min, 1);
 
@@ -1667,7 +1824,7 @@ class NodaliaGraphCard extends HTMLElement {
     const unitSize = `${Math.max(15, Math.min(parseSizeToPixels(styles.unit_size, 18), compactLayout ? 16 : 18))}px`;
     const titleSize = `${Math.max(13, Math.min(parseSizeToPixels(styles.title_size, 14), compactLayout ? 13 : 14))}px`;
     const legendSize = `${Math.max(11, Math.min(parseSizeToPixels(styles.legend_size, 12), compactLayout ? 11 : 12))}px`;
-    const lineWidth = `${Math.max(2, Math.min(parseSizeToPixels(styles.line_width, 3), compactLayout ? 2.4 : 3))}`;
+    const lineWidth = `${Math.max(1.6, Math.min(parseSizeToPixels(styles.line_width, 2.2), compactLayout ? 1.9 : 2.2))}`;
     const cardPaddingPx = Math.max(12, parseSizeToPixels(styles.card.padding, 16));
     const chartBleed = Math.round(cardPaddingPx * 0.95);
     const cardBackground = `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, color-mix(in srgb, var(--primary-text-color) 2%, transparent)) 0%, ${styles.card.background} 100%)`;
@@ -1822,8 +1979,8 @@ class NodaliaGraphCard extends HTMLElement {
           align-items: baseline;
           display: flex;
           flex-wrap: nowrap;
-          gap: 6px;
-          line-height: 0.94;
+          gap: 4px;
+          line-height: 0.9;
           min-width: 0;
         }
 
@@ -1834,28 +1991,29 @@ class NodaliaGraphCard extends HTMLElement {
 
         .graph-card__value-number {
           font-size: ${valueSize};
-          font-weight: 400;
-          letter-spacing: -0.06em;
-          line-height: 0.9;
+          font-weight: 520;
+          letter-spacing: -0.042em;
+          line-height: 0.86;
           min-width: 0;
         }
 
         .graph-card__value-unit {
           font-size: ${unitSize};
-          font-weight: 500;
-          line-height: 1;
-          opacity: 0.84;
-          padding-top: 0;
+          font-weight: 560;
+          line-height: 0.92;
+          opacity: 0.9;
+          padding-top: 1px;
         }
 
         .graph-card__legend {
           align-items: center;
           display: flex;
           flex-wrap: wrap;
-          gap: 8px 10px;
+          gap: 6px 8px;
           justify-content: flex-start;
+          margin-bottom: 8px;
           min-height: 0;
-          padding-top: 2px;
+          padding-top: 0;
         }
 
         .graph-card__content--entering .graph-card__legend {
@@ -1871,12 +2029,12 @@ class NodaliaGraphCard extends HTMLElement {
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
-          font-size: ${legendSize};
-          gap: 10px;
-          max-width: min(100%, 220px);
+          font-size: max(11px, calc(${legendSize} - 1px));
+          gap: 8px;
+          max-width: min(100%, 192px);
           min-width: 0;
           opacity: 0.9;
-          padding: 7px 12px;
+          padding: 5px 9px;
           transform: translateZ(0);
           transform-origin: center;
           transition: opacity 160ms ease, transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
@@ -1907,8 +2065,8 @@ class NodaliaGraphCard extends HTMLElement {
           border-radius: 999px;
           display: inline-flex;
           flex: 0 0 auto;
-          height: 10px;
-          width: 10px;
+          height: 8px;
+          width: 8px;
         }
 
         .graph-card__legend-text {
@@ -1918,17 +2076,23 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__chart-wrap {
+          background:
+            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, transparent) 0%, transparent 62%),
+            color-mix(in srgb, var(--primary-text-color) 2%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          border-radius: 20px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           flex: 1 1 auto;
           min-height: ${chartHeight};
-          margin-inline: -${chartBleed}px;
-          margin-top: 8px;
+          margin-inline: 0;
+          margin-top: 14px;
           overflow: hidden;
-          padding: 2px 0 0;
+          padding: 4px 0 14px;
           position: relative;
           touch-action: pan-y;
           user-select: none;
           -webkit-user-select: none;
-          width: calc(100% + ${chartBleed * 2}px);
+          width: 100%;
         }
 
         .graph-card__chart-wrap--entering {
@@ -2004,12 +2168,12 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__tooltip {
-          -webkit-backdrop-filter: blur(18px);
-          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(14px);
+          backdrop-filter: blur(14px);
           background:
-            linear-gradient(180deg, color-mix(in srgb, var(--tooltip-tint) 24%, rgba(255,255,255,0.10)), rgba(255,255,255,0.03)),
-            color-mix(in srgb, var(--ha-card-background, #1f1f24) 66%, transparent);
-          border: 1px solid color-mix(in srgb, var(--tooltip-tint) 36%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
+            linear-gradient(180deg, color-mix(in srgb, var(--tooltip-tint) 18%, rgba(255,255,255,0.09)), rgba(255,255,255,0.025)),
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 86%, transparent);
+          border: 1px solid color-mix(in srgb, var(--tooltip-tint) 34%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
           border-radius: 16px;
           box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
           color: var(--primary-text-color);
@@ -2052,8 +2216,8 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__tooltip-dot {
           border-radius: 999px;
           display: inline-flex;
-          height: 9px;
-          width: 9px;
+          height: 8px;
+          width: 8px;
         }
 
         .graph-card__tooltip-name {
@@ -2092,10 +2256,10 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__chart-series-glow {
-          display: none;
+          display: block;
           fill: none;
           filter: url(#graph-glow);
-          opacity: 0;
+          opacity: 0.12;
           stroke-linecap: round;
           stroke-linejoin: round;
           stroke-width: calc(${lineWidth} * 1.8);
@@ -2105,8 +2269,15 @@ class NodaliaGraphCard extends HTMLElement {
           fill: none;
           stroke-linecap: round;
           stroke-linejoin: round;
-          stroke-opacity: 0.9;
+          stroke-opacity: 0.96;
           stroke-width: ${lineWidth};
+        }
+
+        .graph-card__chart-series-glow--entering {
+          animation: graph-card-glow-draw var(--graph-card-line-draw-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: calc(70ms + var(--series-delay, 0ms));
+          stroke-dasharray: 1;
+          stroke-dashoffset: 1;
         }
 
         .graph-card__chart-series-line--entering {
@@ -2335,8 +2506,8 @@ class NodaliaGraphCard extends HTMLElement {
                 </filter>
                 ${chart.entries.map((entry, index) => `
                   <linearGradient id="graph-fill-${index}" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stop-color="${escapeHtml(entry.color)}" stop-opacity="0.28"></stop>
-                    <stop offset="54%" stop-color="${escapeHtml(entry.color)}" stop-opacity="0.09"></stop>
+                    <stop offset="0%" stop-color="${escapeHtml(entry.color)}" stop-opacity="0.22"></stop>
+                    <stop offset="54%" stop-color="${escapeHtml(entry.color)}" stop-opacity="0.07"></stop>
                     <stop offset="100%" stop-color="${escapeHtml(entry.color)}" stop-opacity="0"></stop>
                   </linearGradient>
                 `).join("")}
@@ -2352,7 +2523,7 @@ class NodaliaGraphCard extends HTMLElement {
                     ? `<path class="graph-card__chart-series-fill" style="--series-delay:${Math.min(index, 8) * 42}ms;" d="${entry.fillPath}" fill="url(#graph-fill-${index})"></path>`
                     : ""
                 }
-                <path class="graph-card__chart-series-glow" style="--series-delay:${Math.min(index, 8) * 42}ms;" pathLength="1" d="${entry.linePath}" stroke="${escapeHtml(entry.color)}"></path>
+                <path class="graph-card__chart-series-glow ${shouldAnimateChart ? "graph-card__chart-series-glow--entering" : ""}" style="--series-delay:${Math.min(index, 8) * 42}ms;" pathLength="1" d="${entry.linePath}" stroke="${escapeHtml(entry.color)}"></path>
                 <path class="graph-card__chart-series-line ${shouldAnimateChart ? "graph-card__chart-series-line--entering" : ""}" style="--series-delay:${Math.min(index, 8) * 42}ms;" pathLength="1" d="${entry.linePath}" stroke="${escapeHtml(entry.color)}"></path>
               `).join("")}
             </svg>

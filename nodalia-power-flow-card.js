@@ -1914,9 +1914,15 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const flowFlags = nodes._flowFlags || getFlowLayoutFlagsFromConfig(this._config);
     const horizontalStripDiagram = flowFlags.topCount >= 1 && flowFlags.topCount <= 2 && !(flowFlags.individualCount > 0);
     const flowDotBoost = 1 + Math.max(0, flowWidth - 1) * 0.065;
-    const flowDotGlowR = (horizontalStripDiagram ? 2.58 : 2.1) * flowDotBoost;
-    const flowDotCoreR = (horizontalStripDiagram ? 1.48 : 1.12) * flowDotBoost;
-    const flowDotCoreStroke = horizontalStripDiagram ? 0.33 : 0.26;
+    // In 1–2 source strip layouts, oversized dots can feel too dominant.
+    // Keep them slightly emphasized, but scale down as source count decreases.
+    const stripTopCount = horizontalStripDiagram ? clamp(Number(flowFlags.topCount) || 0, 1, 2) : 0;
+    const stripDotScale = horizontalStripDiagram
+      ? (stripTopCount === 1 ? 0.82 : 0.9)
+      : 1;
+    const flowDotGlowR = (horizontalStripDiagram ? 2.58 : 2.1) * flowDotBoost * stripDotScale;
+    const flowDotCoreR = (horizontalStripDiagram ? 1.48 : 1.12) * flowDotBoost * stripDotScale;
+    const flowDotCoreStroke = (horizontalStripDiagram ? 0.33 : 0.26) * stripDotScale;
     const surfaceLayoutExtras = (() => {
       let add = 0;
       if (layoutPreset !== "simple") {

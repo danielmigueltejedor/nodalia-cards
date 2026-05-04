@@ -2143,7 +2143,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-alert-backdrop {
           align-items: center;
-          background: rgba(0, 0, 0, 0.46);
+          background: color-mix(in srgb, var(--primary-text-color) 28%, transparent);
           display: flex;
           inset: 0;
           justify-content: center;
@@ -2154,7 +2154,9 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-alert-panel {
           animation: weather-card-alert-panel calc(var(--weather-card-content-duration) * 0.68) cubic-bezier(0.16, 0.84, 0.22, 1) both;
-          background: color-mix(in srgb, var(--alert-accent) 10%, var(--ha-card-background, #1f1f24));
+          background:
+            linear-gradient(180deg, color-mix(in srgb, var(--alert-accent) 10%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0)),
+            var(--ha-card-background, var(--card-background-color, #fff));
           border: 1px solid color-mix(in srgb, var(--alert-accent) 35%, var(--divider-color));
           border-radius: 24px;
           box-shadow: 0 24px 56px rgba(0, 0, 0, 0.34);
@@ -2588,7 +2590,7 @@ class NodaliaWeatherCard extends HTMLElement {
           animation: weather-card-popup-in calc(var(--weather-card-content-duration) * 0.58) cubic-bezier(0.16, 0.84, 0.22, 1) both;
           background:
             linear-gradient(180deg, color-mix(in srgb, var(--forecast-accent) 18%, rgba(255,255,255,0.08)), rgba(255,255,255,0.02)),
-            color-mix(in srgb, var(--ha-card-background, #1f1f24) 90%, rgba(0,0,0,0.12));
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, rgba(255,255,255,0.02));
           border: 1px solid color-mix(in srgb, var(--forecast-accent) 36%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
           border-radius: 16px;
           box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
@@ -2619,7 +2621,7 @@ class NodaliaWeatherCard extends HTMLElement {
           backdrop-filter: blur(14px);
           background:
             linear-gradient(180deg, color-mix(in srgb, var(--forecast-accent) 18%, rgba(255,255,255,0.09)), rgba(255,255,255,0.025)),
-            color-mix(in srgb, var(--ha-card-background, #1f1f24) 72%, transparent);
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 86%, transparent);
           border: 1px solid color-mix(in srgb, var(--forecast-accent) 34%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
           border-radius: 999px;
           box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);

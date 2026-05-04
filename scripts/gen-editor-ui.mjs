@@ -1538,6 +1538,89 @@ const out = `/* eslint-disable max-len */
 
   window.NodaliaI18n.editorUiMaps = MAP;
 
+  function normalizeSpanishEditorLabel(text) {
+    let out = String(text || "");
+    if (!out) {
+      return out;
+    }
+
+    const withMatchCase = (match, replacement) => {
+      if (match === match.toUpperCase()) {
+        return replacement.toUpperCase();
+      }
+      if (match[0] === match[0].toUpperCase()) {
+        return replacement[0].toUpperCase() + replacement.slice(1);
+      }
+      return replacement;
+    };
+
+    const substitutions = [
+      [/\\banimaciones\\b/gi, "animaciones"],
+      [/\\banimacion\\b/gi, "animación"],
+      [/\\bconfiguraciones\\b/gi, "configuraciones"],
+      [/\\bconfiguracion\\b/gi, "configuración"],
+      [/\\bgraficas\\b/gi, "gráficas"],
+      [/\\bgrafica\\b/gi, "gráfica"],
+      [/\\blogica\\b/gi, "lógica"],
+      [/\\bmaximo(s)?\\b/gi, "máximo$1"],
+      [/\\bminimo(s)?\\b/gi, "mínimo$1"],
+      [/\\bmusica\\b/gi, "música"],
+      [/\\bnavegacion\\b/gi, "navegación"],
+      [/\\bnumero(s)?\\b/gi, "número$1"],
+      [/\\bpanel(es)?\\b/gi, "panel$1"],
+      [/\\bpequeno\\b/gi, "pequeño"],
+      [/\\bpulsacion\\b/gi, "pulsación"],
+      [/\\bsecciones\\b/gi, "secciones"],
+      [/\\bseccion\\b/gi, "sección"],
+      [/\\btamano(s)?\\b/gi, "tamaño$1"],
+      [/\\btecnica\\b/gi, "técnica"],
+      [/\\btecnicas\\b/gi, "técnicas"],
+      [/\\bversiones\\b/gi, "versiones"],
+      [/\\bversion\\b/gi, "versión"],
+      [/\\banadir\\b/gi, "añadir"],
+      [/\\banade\\b/gi, "añade"],
+      [/\\bano(s)?\\b/gi, "año$1"],
+      [/\\btitulos\\b/gi, "títulos"],
+      [/\\btitulo\\b/gi, "título"],
+      [/\\benergias\\b/gi, "energías"],
+      [/\\benergia\\b/gi, "energía"],
+      [/\\bcodigos\\b/gi, "códigos"],
+      [/\\bcodigo\\b/gi, "código"],
+      [/\\btactil\\b/gi, "táctil"],
+      [/\\bhaptica\\b/gi, "háptica"],
+      [/\\binformacion\\b/gi, "información"],
+      [/\\btransicion\\b/gi, "transición"],
+      [/\\bubicacion\\b/gi, "ubicación"],
+      [/\\bfuncion\\b/gi, "función"],
+      [/\\bopcion\\b/gi, "opción"],
+      [/\\bseleccion\\b/gi, "selección"],
+      [/\\breaccion\\b/gi, "reacción"],
+      [/\\baccion\\b/gi, "acción"],
+      [/\\bmetodos\\b/gi, "métodos"],
+      [/\\bmetodo\\b/gi, "método"],
+      [/\\bautomaticos\\b/gi, "automáticos"],
+      [/\\bautomatico\\b/gi, "automático"],
+      [/\\bautomaticas\\b/gi, "automáticas"],
+      [/\\bautomatica\\b/gi, "automática"],
+      [/\\bduracion\\b/gi, "duración"],
+      [/\\bposicion\\b/gi, "posición"],
+      [/\\bbasicos\\b/gi, "básicos"],
+      [/\\bbasico\\b/gi, "básico"],
+      [/\\bbasicas\\b/gi, "básicas"],
+      [/\\bbasica\\b/gi, "básica"],
+      [/\\bgenericos\\b/gi, "genéricos"],
+      [/\\bgenerico\\b/gi, "genérico"],
+      [/\\bgenericas\\b/gi, "genéricas"],
+      [/\\bgenerica\\b/gi, "genérica"],
+    ];
+
+    substitutions.forEach(([pattern, replacement]) => {
+      out = out.replace(pattern, match => withMatchCase(match, replacement));
+    });
+
+    return out;
+  }
+
   window.NodaliaI18n.editorStr = function editorStr(hass, configLang, spanishText) {
     if (spanishText == null || spanishText === "") {
       return "";
@@ -1545,11 +1628,11 @@ const out = `/* eslint-disable max-len */
     const lang = window.NodaliaI18n.resolveLanguage(hass, configLang);
     const maps = window.NodaliaI18n.editorUiMaps;
     if (maps.es[spanishText] === undefined && maps.en[spanishText] === undefined) {
-      return spanishText;
+      return lang === "es" ? normalizeSpanishEditorLabel(spanishText) : spanishText;
     }
     const primary = maps[lang]?.[spanishText];
     if (primary !== undefined && primary !== "") {
-      return primary;
+      return lang === "es" ? normalizeSpanishEditorLabel(primary) : primary;
     }
     if (lang !== "es") {
       const enVal = maps.en?.[spanishText];
@@ -1559,9 +1642,9 @@ const out = `/* eslint-disable max-len */
     }
     const esVal = maps.es?.[spanishText];
     if (esVal !== undefined && esVal !== "") {
-      return esVal;
+      return normalizeSpanishEditorLabel(esVal);
     }
-    return spanishText;
+    return lang === "es" ? normalizeSpanishEditorLabel(spanishText) : spanishText;
   };
 })();
 `;
