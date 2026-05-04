@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "0.10.3";
+const CARD_VERSION = "0.10.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -189,6 +189,72 @@ function compactConfig(value) {
   }
 
   return value;
+}
+
+function deepEqual(a, b) {
+  if (Object.is(a, b)) {
+    return true;
+  }
+  if (a == null || b == null) {
+    return a === b;
+  }
+  if (typeof a !== typeof b) {
+    return false;
+  }
+  if (typeof a !== "object") {
+    return false;
+  }
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b) || a.length !== b.length) {
+      return false;
+    }
+    return a.every((value, index) => deepEqual(value, b[index]));
+  }
+  if (Array.isArray(b)) {
+    return false;
+  }
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) {
+    return false;
+  }
+  return keysA.every(key => deepEqual(a[key], b[key]));
+}
+
+function stripEqualToDefaults(config, defaults) {
+  if (defaults === undefined || defaults === null) {
+    return deepClone(config);
+  }
+  if (config === undefined || config === null) {
+    return undefined;
+  }
+  if (Array.isArray(config)) {
+    return deepEqual(config, defaults) ? undefined : deepClone(config);
+  }
+  if (isObject(config) && isObject(defaults)) {
+    const out = {};
+    for (const key of Object.keys(config)) {
+      const cv = config[key];
+      const dv = defaults[key];
+      if (!(key in defaults)) {
+        out[key] = deepClone(cv);
+        continue;
+      }
+      if (deepEqual(cv, dv)) {
+        continue;
+      }
+      if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
+        const stripped = stripEqualToDefaults(cv, dv);
+        if (stripped !== undefined) {
+          out[key] = stripped;
+        }
+      } else {
+        out[key] = deepClone(cv);
+      }
+    }
+    return Object.keys(out).length ? out : undefined;
+  }
+  return deepEqual(config, defaults) ? undefined : config;
 }
 
 function setByPath(target, path, value) {
@@ -2000,6 +2066,8 @@ class NodaliaClimateCard extends HTMLElement {
           --climate-progress-length: ${progressLength};
           --climate-dial-size: ${dialSizePx}px;
           --climate-thumb-size: ${thumbSizePx}px;
+          align-self: center;
+          aspect-ratio: 1;
           -webkit-backdrop-filter: blur(18px);
           backdrop-filter: blur(18px);
           background: ${dialSurfaceBackground};
@@ -2008,8 +2076,11 @@ class NodaliaClimateCard extends HTMLElement {
           box-shadow:
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent),
             0 18px 38px rgba(0, 0, 0, 0.16);
+          box-sizing: border-box;
           cursor: ${supportsTargetTemperature ? "grab" : "default"};
-          height: var(--climate-dial-size);
+          flex-shrink: 0;
+          height: auto;
+          max-width: 100%;
           position: relative;
           touch-action: none;
           transform: translateZ(0) scale(1);
@@ -2022,7 +2093,7 @@ class NodaliaClimateCard extends HTMLElement {
           user-select: none;
           -webkit-user-select: none;
           will-change: transform, box-shadow;
-          width: var(--climate-dial-size);
+          width: min(var(--climate-dial-size), 100%);
         }
 
         .climate-card__dial:active {
@@ -2501,11 +2572,6 @@ class NodaliaClimateCard extends HTMLElement {
           .climate-card__chips {
             justify-content: flex-start;
           }
-
-          .climate-card__dial {
-            --climate-dial-size: min(${dialSizePx}px, 100%);
-            --climate-thumb-size: min(${thumbSizePx}px, calc(var(--climate-dial-size) * 0.082));
-          }
         }
       </style>
       <ha-card class="climate-card climate-card--${escapeHtml(compactLevel)}" style="--accent-color:${escapeHtml(accentColor)};">
@@ -2770,7 +2836,7 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(nextConfig),
+      config: compactConfig(stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -3379,7 +3445,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(nextConfig),
+      config: compactConfig(stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 

@@ -10,6 +10,16 @@ Work-in-progress on **`alpha`** ahead of the next **`0.4.0-alpha.N`** tag or pro
 
 ---
 
+## [0.4.0-alpha.4] - 2026-05-07
+
+Fourth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.4`** (tag **`v0.4.0-alpha.4`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Lovelace YAML preview**: visual editors emit **`stripEqualToDefaults(..., DEFAULT_CONFIG)`** so “Mostrar código YAML” stays minimal when only non-default options are set.
+- **Circular gauge & climate**: **dial** uses **`aspect-ratio: 1`** and **`width: min(var(--*-dial-size), 100%)`** so card-picker previews stay **circular** in narrow layouts (**`0.12.1`** / **`0.10.4`**).
+- **Power Flow**: default **`flow_width`** **`1px`**; card **`0.16.13`**.
+
+---
+
 ## [0.4.0-alpha.3] - 2026-05-06
 
 Third **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.3`** (tag **`v0.4.0-alpha.3`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
