@@ -1977,8 +1977,8 @@ class NodaliaGraphCard extends HTMLElement {
           align-items: baseline;
           display: flex;
           flex-wrap: nowrap;
-          gap: 6px;
-          line-height: 0.94;
+          gap: 4px;
+          line-height: 0.9;
           min-width: 0;
         }
 
@@ -1989,18 +1989,18 @@ class NodaliaGraphCard extends HTMLElement {
 
         .graph-card__value-number {
           font-size: ${valueSize};
-          font-weight: 400;
-          letter-spacing: -0.06em;
-          line-height: 0.9;
+          font-weight: 520;
+          letter-spacing: -0.042em;
+          line-height: 0.86;
           min-width: 0;
         }
 
         .graph-card__value-unit {
           font-size: ${unitSize};
-          font-weight: 500;
-          line-height: 1;
-          opacity: 0.84;
-          padding-top: 0;
+          font-weight: 560;
+          line-height: 0.92;
+          opacity: 0.9;
+          padding-top: 1px;
         }
 
         .graph-card__legend {
@@ -2009,7 +2009,7 @@ class NodaliaGraphCard extends HTMLElement {
           flex-wrap: wrap;
           gap: 6px 8px;
           justify-content: flex-start;
-          margin-bottom: 2px;
+          margin-bottom: 8px;
           min-height: 0;
           padding-top: 0;
         }
@@ -2083,7 +2083,7 @@ class NodaliaGraphCard extends HTMLElement {
           flex: 1 1 auto;
           min-height: ${chartHeight};
           margin-inline: -${chartBleed}px;
-          margin-top: 12px;
+          margin-top: 14px;
           overflow: hidden;
           padding: 4px 0 6px;
           position: relative;
