@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "0.6.0";
+const CARD_VERSION = "0.6.2";
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -192,18 +192,18 @@ const DEFAULT_CONFIG = {
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "14px",
       min_height: "160px",
-      artwork_size: "72px",
-      tv_artwork_size: "64px",
-      control_size: "34px",
-      title_size: "15px",
-      subtitle_size: "12px",
+      artwork_size: "62px",
+      tv_artwork_size: "68px",
+      control_size: "30px",
+      title_size: "12px",
+      subtitle_size: "10px",
       slider_wrap_height: "48px",
       slider_height: "14px",
       slider_thumb_size: "24px",
       progress_color: "var(--primary-color)",
       progress_background: "rgba(var(--rgb-primary-color), 0.14)",
       overlay_color: "rgba(0, 0, 0, 0.32)",
-      dot_size: "7px",
+      dot_size: "8px",
       active_tint_color: "var(--info-color, #71c0ff)",
       accent_color: "var(--primary-text-color)",
       accent_background: "rgba(var(--rgb-primary-color), 0.18)",
@@ -306,6 +306,72 @@ function compactConfig(value) {
   }
 
   return value;
+}
+
+function deepEqual(a, b) {
+  if (Object.is(a, b)) {
+    return true;
+  }
+  if (a == null || b == null) {
+    return a === b;
+  }
+  if (typeof a !== typeof b) {
+    return false;
+  }
+  if (typeof a !== "object") {
+    return false;
+  }
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b) || a.length !== b.length) {
+      return false;
+    }
+    return a.every((value, index) => deepEqual(value, b[index]));
+  }
+  if (Array.isArray(b)) {
+    return false;
+  }
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) {
+    return false;
+  }
+  return keysA.every(key => deepEqual(a[key], b[key]));
+}
+
+function stripEqualToDefaults(config, defaults) {
+  if (defaults === undefined || defaults === null) {
+    return deepClone(config);
+  }
+  if (config === undefined || config === null) {
+    return undefined;
+  }
+  if (Array.isArray(config)) {
+    return deepEqual(config, defaults) ? undefined : deepClone(config);
+  }
+  if (isObject(config) && isObject(defaults)) {
+    const out = {};
+    for (const key of Object.keys(config)) {
+      const cv = config[key];
+      const dv = defaults[key];
+      if (!(key in defaults)) {
+        out[key] = deepClone(cv);
+        continue;
+      }
+      if (deepEqual(cv, dv)) {
+        continue;
+      }
+      if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
+        const stripped = stripEqualToDefaults(cv, dv);
+        if (stripped !== undefined) {
+          out[key] = stripped;
+        }
+      } else {
+        out[key] = deepClone(cv);
+      }
+    }
+    return Object.keys(out).length ? out : undefined;
+  }
+  return deepEqual(config, defaults) ? undefined : config;
 }
 
 function normalizePowerActionConfig(action) {
@@ -5277,7 +5343,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(nextConfig),
+      config: compactConfig(stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 

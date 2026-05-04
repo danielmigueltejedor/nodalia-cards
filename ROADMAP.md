@@ -6,7 +6,7 @@ This roadmap is flexible and may change depending on feedback, testing and real 
 
 ## Current status
 
-**Stable `0.3.0`** ships from **`main`** (tag **`v0.3.0`**). The next prerelease line starts on **`beta`** with **`0.4.0-beta.01`** / **`v0.4.0-beta.01`** after **`main`** is updated—see **CONTRIBUTING** (*Stable first, then the next beta line*). Focus: Power Flow polish, translations, Graph Card line work, stronger default styles.
+**Stable `0.3.0`** ships from **`main`**. Upcoming **`0.4.x`** uses three branches: **`alpha`** (experimental, may break), **`beta`** (testers), **`main`** (stable only)—see **CONTRIBUTING** (*Releases: main, beta, and alpha*). Focus: Power Flow polish, translations, Graph Card line work, stronger default styles.
 
 The project is still being refined before a real **`1.0.0`** release.
 

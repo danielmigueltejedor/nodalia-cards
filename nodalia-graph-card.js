@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.9";
+const CARD_VERSION = "0.12.12";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -30,7 +30,7 @@ const DEFAULT_CONFIG = {
   min: "",
   max: "",
   hours_to_show: 24,
-  points: 48,
+  points: 480,
   show_header: true,
   show_icon: true,
   show_value: true,
@@ -59,14 +59,14 @@ const DEFAULT_CONFIG = {
     },
     icon: {
       color: "var(--primary-text-color)",
-      size: "24px",
+      size: "28px",
     },
-    title_size: "14px",
-    value_size: "46px",
-    unit_size: "18px",
-    legend_size: "12px",
-    chart_height: "150px",
-    line_width: "3px",
+    title_size: "15px",
+    value_size: "52px",
+    unit_size: "20px",
+    legend_size: "13px",
+    chart_height: "170px",
+    line_width: "1px",
   },
 };
 
@@ -173,6 +173,72 @@ function compactConfig(value) {
   }
 
   return value;
+}
+
+function deepEqual(a, b) {
+  if (Object.is(a, b)) {
+    return true;
+  }
+  if (a == null || b == null) {
+    return a === b;
+  }
+  if (typeof a !== typeof b) {
+    return false;
+  }
+  if (typeof a !== "object") {
+    return false;
+  }
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b) || a.length !== b.length) {
+      return false;
+    }
+    return a.every((value, index) => deepEqual(value, b[index]));
+  }
+  if (Array.isArray(b)) {
+    return false;
+  }
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) {
+    return false;
+  }
+  return keysA.every(key => deepEqual(a[key], b[key]));
+}
+
+function stripEqualToDefaults(config, defaults) {
+  if (defaults === undefined || defaults === null) {
+    return deepClone(config);
+  }
+  if (config === undefined || config === null) {
+    return undefined;
+  }
+  if (Array.isArray(config)) {
+    return deepEqual(config, defaults) ? undefined : deepClone(config);
+  }
+  if (isObject(config) && isObject(defaults)) {
+    const out = {};
+    for (const key of Object.keys(config)) {
+      const cv = config[key];
+      const dv = defaults[key];
+      if (!(key in defaults)) {
+        out[key] = deepClone(cv);
+        continue;
+      }
+      if (deepEqual(cv, dv)) {
+        continue;
+      }
+      if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
+        const stripped = stripEqualToDefaults(cv, dv);
+        if (stripped !== undefined) {
+          out[key] = stripped;
+        }
+      } else {
+        out[key] = deepClone(cv);
+      }
+    }
+    return Object.keys(out).length ? out : undefined;
+  }
+  return deepEqual(config, defaults) ? undefined : config;
 }
 
 function setByPath(target, path, value) {
@@ -2448,7 +2514,7 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(nextConfig),
+      config: compactConfig(stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -3115,7 +3181,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(nextConfig),
+      config: compactConfig(stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 

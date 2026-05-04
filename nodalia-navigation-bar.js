@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "0.6.0";
+const CARD_VERSION = "0.6.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -161,6 +161,7 @@ const DEFAULT_CONFIG = {
     popup_duration: 220,
     media_duration: 240,
     button_bounce_duration: 220,
+    dock_entrance_duration: 420,
   },
   haptics: {
     enabled: true,
@@ -178,12 +179,13 @@ const DEFAULT_CONFIG = {
     z_index: 2,
     side_margin: "0px",
     offset: "0px",
+    full_width: false,
   },
   styles: {
     bar: {
       background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
-      border_radius: "32px",
+      border_radius: "28px",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) 16px",
       min_height: "90px",
@@ -195,7 +197,7 @@ const DEFAULT_CONFIG = {
     button: {
       size: "54px",
       border_radius: "999px",
-      background: "color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
+      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       active_color: "var(--primary-text-color)",
       active_background: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
@@ -358,6 +360,72 @@ function compactConfig(value) {
   return value;
 }
 
+function deepEqual(a, b) {
+  if (Object.is(a, b)) {
+    return true;
+  }
+  if (a == null || b == null) {
+    return a === b;
+  }
+  if (typeof a !== typeof b) {
+    return false;
+  }
+  if (typeof a !== "object") {
+    return false;
+  }
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b) || a.length !== b.length) {
+      return false;
+    }
+    return a.every((value, index) => deepEqual(value, b[index]));
+  }
+  if (Array.isArray(b)) {
+    return false;
+  }
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) {
+    return false;
+  }
+  return keysA.every(key => deepEqual(a[key], b[key]));
+}
+
+function stripEqualToDefaults(config, defaults) {
+  if (defaults === undefined || defaults === null) {
+    return deepClone(config);
+  }
+  if (config === undefined || config === null) {
+    return undefined;
+  }
+  if (Array.isArray(config)) {
+    return deepEqual(config, defaults) ? undefined : deepClone(config);
+  }
+  if (isObject(config) && isObject(defaults)) {
+    const out = {};
+    for (const key of Object.keys(config)) {
+      const cv = config[key];
+      const dv = defaults[key];
+      if (!(key in defaults)) {
+        out[key] = deepClone(cv);
+        continue;
+      }
+      if (deepEqual(cv, dv)) {
+        continue;
+      }
+      if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
+        const stripped = stripEqualToDefaults(cv, dv);
+        if (stripped !== undefined) {
+          out[key] = stripped;
+        }
+      } else {
+        out[key] = deepClone(cv);
+      }
+    }
+    return Object.keys(out).length ? out : undefined;
+  }
+  return deepEqual(config, defaults) ? undefined : config;
+}
+
 function setByPath(target, path, value) {
   const parts = path.split(".");
   let cursor = target;
@@ -406,6 +474,22 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function appendQueryParam(url, key, value) {
+  const rawUrl = String(url || "").trim();
+  if (!rawUrl || value === null || value === undefined || value === "") {
+    return rawUrl;
+  }
+
+  const encodedKey = encodeURIComponent(String(key));
+  const encodedValue = encodeURIComponent(String(value));
+  const existingPattern = new RegExp(`([?&])${encodedKey}=[^&]*`);
+  if (existingPattern.test(rawUrl)) {
+    return rawUrl.replace(existingPattern, `$1${encodedKey}=${encodedValue}`);
+  }
+
+  return `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}`;
 }
 
 function arrayFromCsv(value) {
@@ -547,6 +631,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._mediaPlayerExpanded = false;
     this._mediaTicker = null;
     this._lastRenderSignature = "";
+    this._animateDockEntranceNext = true;
+    this._lastShouldHide = false;
+    this._playDockEntrance = false;
     this._onResize = () => {
       this._closePopup(false);
       this._closeMediaBrowser(false);
@@ -1445,8 +1532,134 @@ class NodaliaNavigationBarCard extends HTMLElement {
     );
   }
 
+  _resolveMediaUrl(value, options = {}) {
+    const raw = String(value || "").trim();
+    if (!raw) {
+      return "";
+    }
+
+    const isAbsolute = /^(?:https?:)?\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:");
+    const baseUrl = isAbsolute
+      ? raw
+      : typeof this._hass?.hassUrl === "function"
+        ? this._hass.hassUrl(raw.startsWith("/") ? raw : `/${raw.replace(/^\.?\//, "")}`)
+        : raw;
+
+    return appendQueryParam(baseUrl, "nodalia_ts", options.cacheToken);
+  }
+
+  _getArtworkCacheToken(state) {
+    if (!state) {
+      return "";
+    }
+
+    return [
+      String(state.last_updated || state.last_changed || ""),
+      String(state.attributes?.entity_picture || state.attributes?.entity_picture_local || ""),
+      String(state.attributes?.media_title || ""),
+      String(state.attributes?.media_artist || ""),
+      String(state.attributes?.media_album_name || ""),
+      String(state.attributes?.app_name || ""),
+    ].filter(Boolean).join("|");
+  }
+
+  _isAppleTvPlayer(player, state) {
+    const candidates = [
+      player?.entity,
+      player?.label,
+      player?.name,
+      player?.title,
+      state?.attributes?.friendly_name,
+      state?.attributes?.app_name,
+      state?.attributes?.source,
+      state?.attributes?.device_class,
+    ];
+
+    return candidates.some(candidate => normalizeTextKey(candidate).includes("apple tv"));
+  }
+
+  _getPlayerDeviceType(player, state) {
+    if (player?.tv_mode === true) {
+      return "tv";
+    }
+
+    if (player?.tv_mode === false) {
+      return "music";
+    }
+
+    if (player?.device_type === "music" || player?.device_type === "tv") {
+      return player.device_type;
+    }
+
+    const deviceClass = normalizeTextKey(state?.attributes?.device_class);
+    if (["tv", "receiver", "set_top_box"].includes(deviceClass)) {
+      return "tv";
+    }
+
+    const haystack = normalizeTextKey([
+      player?.entity,
+      player?.label,
+      player?.name,
+      player?.title,
+      player?.icon,
+      state?.attributes?.friendly_name,
+      state?.attributes?.app_name,
+      state?.attributes?.source,
+      state?.attributes?.media_content_type,
+    ].filter(Boolean).join(" "));
+
+    if (
+      this._isAppleTvPlayer(player, state) ||
+      haystack.includes("google tv") ||
+      haystack.includes("android tv") ||
+      haystack.includes("chromecast") ||
+      haystack.includes("television") ||
+      haystack.includes("televisor") ||
+      /\btv\b/.test(haystack)
+    ) {
+      return "tv";
+    }
+
+    return "music";
+  }
+
+  _shouldShowTvArtwork(player, state) {
+    const deviceType = this._getPlayerDeviceType(player, state);
+    if (deviceType !== "tv") {
+      return true;
+    }
+
+    const plexSignals = [
+      state?.attributes?.source,
+      state?.attributes?.app_name,
+      state?.attributes?.media_channel,
+      state?.attributes?.media_content_type,
+    ]
+      .filter(Boolean)
+      .map(value => normalizeTextKey(value));
+
+    return plexSignals.some(value => value.includes("plex"));
+  }
+
   _getMediaPlayerArtwork(player, state) {
-    return player.image || state.attributes.entity_picture || null;
+    if (player.image) {
+      return this._resolveMediaUrl(player.image);
+    }
+
+    if (!this._shouldShowTvArtwork(player, state)) {
+      return null;
+    }
+
+    const artwork =
+      state.attributes.entity_picture_local ||
+      state.attributes.entity_picture ||
+      "";
+
+    return artwork
+      ? this._resolveMediaUrl(artwork, {
+          cacheToken: this._getArtworkCacheToken(state),
+        })
+      : null;
   }
 
   _getMediaPlayerStateLabel(stateValue) {
@@ -2508,7 +2721,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     const subtitle = this._getMediaPlayerStateLabel(state.state);
 
     return `
-      <div class="media-player-toggle-wrap">
+      <div class="media-player-toggle-wrap${this._playDockEntrance ? " media-player-toggle-wrap--entering" : ""}">
         <button
           type="button"
           class="media-player-toggle"
@@ -2549,6 +2762,11 @@ class NodaliaNavigationBarCard extends HTMLElement {
       popupDuration: clamp(Number(config.animations?.popup_duration) || DEFAULT_CONFIG.animations.popup_duration, 120, 2400),
       mediaDuration: clamp(Number(config.animations?.media_duration) || DEFAULT_CONFIG.animations.media_duration, 120, 2400),
       buttonBounceDuration: clamp(Number(config.animations?.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1600),
+      dockEntranceDuration: clamp(
+        Number(config.animations?.dock_entrance_duration) || DEFAULT_CONFIG.animations.dock_entrance_duration,
+        180,
+        1400,
+      ),
     };
     const inEditMode = this._isInEditMode();
     const shouldHide = this._shouldHideForScreen(config);
@@ -2556,8 +2774,29 @@ class NodaliaNavigationBarCard extends HTMLElement {
     if (shouldHide && !inEditMode) {
       this._renderedRoutes = [];
       this.shadowRoot.innerHTML = "";
+      this._lastShouldHide = true;
       return;
     }
+
+    if (this._lastShouldHide && !shouldHide) {
+      this._animateDockEntranceNext = true;
+    }
+    this._lastShouldHide = false;
+
+    const playDockEntrance = animations.enabled && this._animateDockEntranceNext;
+    // Lovelace typically calls setConfig then set(hass) in the same turn; clearing the flag
+    // synchronously made the second _render strip entrance classes before paint. Defer reset
+    // one frame so follow-up renders still emit --entering until the browser composites.
+    if (this._animateDockEntranceNext) {
+      if (animations.enabled) {
+        requestAnimationFrame(() => {
+          this._animateDockEntranceNext = false;
+        });
+      } else {
+        this._animateDockEntranceNext = false;
+      }
+    }
+    this._playDockEntrance = playDockEntrance;
 
     const visibleRoutes = this._getVisibleRoutes();
     const showRouteLabels = this._shouldShowRouteLabels(visibleRoutes);
@@ -2577,7 +2816,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       ? this._getReservedHeight(showMediaPlayerCard, showMediaPlayerToggle)
       : "0px";
     const titleMarkup = config.title
-      ? `<div class="navbar-title">${escapeHtml(config.title)}</div>`
+      ? `<div class="navbar-title${playDockEntrance ? " navbar-title--entering" : ""}">${escapeHtml(config.title)}</div>`
       : "";
 
     this._renderedRoutes = visibleRoutes;
@@ -2585,6 +2824,17 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const mediaPlayerMarkup = showMediaPlayerCard ? this._renderMediaPlayer(visiblePlayers) : "";
     const mediaPlayerToggleMarkup = showMediaPlayerToggle ? this._renderMediaPlayerToggle(visiblePlayers) : "";
+    const fullWidthBar = config.layout.full_width === true;
+    const barRadiusToken = String(config.styles.bar.border_radius || "28px")
+      .trim()
+      .split(/\s+/)[0] || "28px";
+    const navbarCardBorderRadius = fullWidthBar
+      ? "0"
+      : config.layout.position === "bottom"
+        ? `${barRadiusToken} ${barRadiusToken} 0 0`
+        : config.layout.position === "top"
+          ? `0 0 ${barRadiusToken} ${barRadiusToken}`
+          : config.styles.bar.border_radius;
     const popupMarkup = this._renderPopup(currentPath);
     const mediaBrowserMarkup = this._renderMediaBrowser();
 
@@ -2596,6 +2846,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
               const badge = this._getBadge(route);
               const label = this._getRouteLabel(route);
               const routeStyle = [
+                playDockEntrance ? `--nav-enter-delay:${Math.min(index * 38, 520)}ms;` : "",
                 route.background ? `--route-background:${route.background};` : "",
                 route.color ? `--route-color:${route.color};` : "",
                 route.active_color ? `--route-active-color:${route.active_color};` : "",
@@ -2607,7 +2858,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
               return `
                 <button
-                  class="nav-item ${isActive ? "active" : ""} ${hasPopup ? "has-popup" : ""}"
+                  class="nav-item ${isActive ? "active" : ""} ${hasPopup ? "has-popup" : ""}${playDockEntrance ? " nav-item--entering" : ""}"
                   data-route-index="${index}"
                   type="button"
                   style="${routeStyle}"
@@ -2649,6 +2900,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
+          --navbar-dock-entrance-ms: ${animations.dockEntranceDuration};
           display: block;
           width: 100%;
         }
@@ -2664,8 +2916,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .dock {
           position: ${isFixed ? "fixed" : "relative"};
-          left: ${config.layout.side_margin};
-          right: ${config.layout.side_margin};
+          left: ${fullWidthBar ? "0" : config.layout.side_margin};
+          right: ${fullWidthBar ? "0" : config.layout.side_margin};
           ${config.layout.position === "top" ? `top: ${config.layout.offset};` : `bottom: ${config.layout.offset};`}
           z-index: ${config.layout.z_index};
           pointer-events: none;
@@ -2673,9 +2925,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .dock-inner {
           width: 100%;
-          max-width: ${config.styles.bar.max_width};
+          max-width: ${fullWidthBar ? "none" : config.styles.bar.max_width};
           margin: 0 auto;
           pointer-events: none;
+        }
+
+        .dock-stack--full-width > .media-player-card {
+          border-radius: 0;
         }
 
         .dock-stack {
@@ -2705,23 +2961,24 @@ class NodaliaNavigationBarCard extends HTMLElement {
           justify-content: flex-end;
         }
 
-        ha-card {
+        ha-card.navbar-card {
           background: ${config.styles.bar.background};
-          background-color: var(--ha-card-background, var(--card-background-color, #fff));
           border: ${config.styles.bar.border};
-          border-radius: ${config.styles.bar.border_radius};
+          border-radius: ${navbarCardBorderRadius};
           box-shadow: ${config.styles.bar.box_shadow};
           backdrop-filter: ${config.styles.bar.backdrop_filter};
+          display: block;
           isolation: isolate;
           padding: ${config.styles.bar.padding};
           min-height: ${config.styles.bar.min_height};
           overflow: hidden;
           pointer-events: none;
           position: relative;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, border-radius 180ms ease;
         }
 
-        ha-card::before {
-          background: color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, transparent);
+        ha-card.navbar-card::before {
+          background: linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0));
           border-radius: inherit;
           content: "";
           inset: 0;
@@ -2730,9 +2987,76 @@ class NodaliaNavigationBarCard extends HTMLElement {
           z-index: 0;
         }
 
-        ha-card > * {
+        ha-card.navbar-card > * {
           position: relative;
           z-index: 1;
+        }
+
+        @keyframes nodalia-navbar-dock-in-from-bottom {
+          0% {
+            opacity: 0;
+            transform: translateY(22px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes nodalia-navbar-dock-in-from-top {
+          0% {
+            opacity: 0;
+            transform: translateY(-18px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes nodalia-navbar-chip-in {
+          0% {
+            opacity: 0;
+            transform: translateY(12px) scale(0.94);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes nodalia-navbar-soft-in {
+          0% {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        ha-card.navbar-card.navbar-card--entering-bottom {
+          animation: nodalia-navbar-dock-in-from-bottom ${animations.dockEntranceDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        ha-card.navbar-card.navbar-card--entering-top {
+          animation: nodalia-navbar-dock-in-from-top ${animations.dockEntranceDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        .nav-item.nav-item--entering {
+          animation: nodalia-navbar-chip-in ${Math.round(animations.dockEntranceDuration * 0.92)}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: var(--nav-enter-delay, 0ms);
+        }
+
+        .navbar-title.navbar-title--entering {
+          animation: nodalia-navbar-soft-in ${Math.round(animations.dockEntranceDuration * 0.78)}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: ${Math.round(animations.dockEntranceDuration * 0.1)}ms;
+        }
+
+        .media-player-toggle-wrap.media-player-toggle-wrap--entering {
+          animation: nodalia-navbar-soft-in ${Math.round(animations.dockEntranceDuration * 0.72)}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: ${Math.round(animations.dockEntranceDuration * 0.06)}ms;
         }
 
         .navbar-title {
@@ -2798,10 +3122,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .nav-icon-wrap {
           background: var(--route-background);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           width: ${config.styles.button.size};
           height: ${config.styles.button.size};
           border-radius: ${config.styles.button.border_radius};
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 3%, transparent);
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.16);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -3787,6 +4114,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
         ${animations.enabled ? "" : `
         .nav-item,
         .nav-icon-wrap,
+        .navbar-title,
+        .navbar-card,
+        .media-player-toggle-wrap,
         .popup-panel,
         .popup-item,
         .media-player-card,
@@ -3812,10 +4142,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
       <div class="spacer" aria-hidden="true"></div>
       <div class="dock">
         <div class="dock-inner">
-          <div class="dock-stack">
+          <div class="dock-stack${fullWidthBar ? " dock-stack--full-width" : ""}">
             ${mediaPlayerToggleMarkup}
             ${mediaPlayerMarkup}
-            <ha-card>
+            <ha-card class="navbar-card${playDockEntrance ? ` navbar-card--entering navbar-card--entering-${config.layout.position === "top" ? "top" : "bottom"}` : ""}">
               ${titleMarkup}
               <nav class="navbar" aria-label="Navigation bar">
                 ${routesMarkup}
@@ -3868,6 +4198,10 @@ class NodaliaNavigationBarEditor extends HTMLElement {
   _prepareEditorConfig(config) {
     if (!Array.isArray(config.routes)) {
       config.routes = [];
+    }
+
+    if (!isObject(config.layout)) {
+      config.layout = {};
     }
 
     if (!isObject(config.haptics)) {
@@ -3993,11 +4327,13 @@ class NodaliaNavigationBarEditor extends HTMLElement {
 
   _emitConfig(nextConfig) {
     const focusState = this._captureFocusState();
-    this._config = compactConfig(this._prepareEditorConfig(nextConfig));
+    const prepared = this._prepareEditorConfig(deepClone(nextConfig));
+    this._config = compactConfig(prepared);
     this._render();
     this._restoreFocusState(focusState);
+    const merged = mergeConfig(DEFAULT_CONFIG, prepared);
     fireEvent(this, "config-changed", {
-      config: this._config,
+      config: compactConfig(stripEqualToDefaults(merged, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -4943,6 +5279,11 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               <span>${this._L("Margen lateral")}</span>
               <input type="text" data-field="layout.side_margin" value="${escapeHtml(config.layout.side_margin || "")}" />
             </label>
+            <label class="checkbox">
+              <input type="checkbox" data-field="layout.full_width" ${config.layout.full_width ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
+              <span>${this._L("Barra a ancho completo")}</span>
+            </label>
             <label>
               <span>${this._L("Separacion stack")}</span>
               <input type="text" data-field="layout.stack_gap" value="${escapeHtml(config.layout.stack_gap || "")}" />
@@ -5009,6 +5350,10 @@ class NodaliaNavigationBarEditor extends HTMLElement {
                   <label>
                     <span>${this._L("Barra y hover (ms)")}</span>
                     <input type="number" data-field="animations.bar_duration" value="${escapeHtml(config.animations.bar_duration || DEFAULT_CONFIG.animations.bar_duration)}" />
+                  </label>
+                  <label>
+                    <span>${this._L("Entrada barra (ms)")}</span>
+                    <input type="number" data-field="animations.dock_entrance_duration" value="${escapeHtml(config.animations.dock_entrance_duration ?? DEFAULT_CONFIG.animations.dock_entrance_duration)}" />
                   </label>
                   <label>
                     <span>${this._L("Popup (ms)")}</span>
