@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "0.6.0";
+const CARD_VERSION = "0.6.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -178,12 +178,13 @@ const DEFAULT_CONFIG = {
     z_index: 2,
     side_margin: "0px",
     offset: "0px",
+    full_width: false,
   },
   styles: {
     bar: {
       background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
-      border_radius: "32px",
+      border_radius: "28px",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) 16px",
       min_height: "90px",
@@ -195,7 +196,7 @@ const DEFAULT_CONFIG = {
     button: {
       size: "54px",
       border_radius: "999px",
-      background: "color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
+      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       active_color: "var(--primary-text-color)",
       active_background: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
@@ -2651,6 +2652,17 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const mediaPlayerMarkup = showMediaPlayerCard ? this._renderMediaPlayer(visiblePlayers) : "";
     const mediaPlayerToggleMarkup = showMediaPlayerToggle ? this._renderMediaPlayerToggle(visiblePlayers) : "";
+    const fullWidthBar = config.layout.full_width === true;
+    const barRadiusToken = String(config.styles.bar.border_radius || "28px")
+      .trim()
+      .split(/\s+/)[0] || "28px";
+    const navbarCardBorderRadius = fullWidthBar
+      ? "0"
+      : config.layout.position === "bottom"
+        ? `${barRadiusToken} ${barRadiusToken} 0 0`
+        : config.layout.position === "top"
+          ? `0 0 ${barRadiusToken} ${barRadiusToken}`
+          : config.styles.bar.border_radius;
     const popupMarkup = this._renderPopup(currentPath);
     const mediaBrowserMarkup = this._renderMediaBrowser();
 
@@ -2730,8 +2742,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .dock {
           position: ${isFixed ? "fixed" : "relative"};
-          left: ${config.layout.side_margin};
-          right: ${config.layout.side_margin};
+          left: ${fullWidthBar ? "0" : config.layout.side_margin};
+          right: ${fullWidthBar ? "0" : config.layout.side_margin};
           ${config.layout.position === "top" ? `top: ${config.layout.offset};` : `bottom: ${config.layout.offset};`}
           z-index: ${config.layout.z_index};
           pointer-events: none;
@@ -2739,9 +2751,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .dock-inner {
           width: 100%;
-          max-width: ${config.styles.bar.max_width};
+          max-width: ${fullWidthBar ? "none" : config.styles.bar.max_width};
           margin: 0 auto;
           pointer-events: none;
+        }
+
+        .dock-stack--full-width > .media-player-card {
+          border-radius: 0;
         }
 
         .dock-stack {
@@ -2771,23 +2787,24 @@ class NodaliaNavigationBarCard extends HTMLElement {
           justify-content: flex-end;
         }
 
-        ha-card {
+        ha-card.navbar-card {
           background: ${config.styles.bar.background};
-          background-color: var(--ha-card-background, var(--card-background-color, #fff));
           border: ${config.styles.bar.border};
-          border-radius: ${config.styles.bar.border_radius};
+          border-radius: ${navbarCardBorderRadius};
           box-shadow: ${config.styles.bar.box_shadow};
           backdrop-filter: ${config.styles.bar.backdrop_filter};
+          display: block;
           isolation: isolate;
           padding: ${config.styles.bar.padding};
           min-height: ${config.styles.bar.min_height};
           overflow: hidden;
           pointer-events: none;
           position: relative;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, border-radius 180ms ease;
         }
 
-        ha-card::before {
-          background: color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, transparent);
+        ha-card.navbar-card::before {
+          background: linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0));
           border-radius: inherit;
           content: "";
           inset: 0;
@@ -2796,7 +2813,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           z-index: 0;
         }
 
-        ha-card > * {
+        ha-card.navbar-card > * {
           position: relative;
           z-index: 1;
         }
@@ -2864,10 +2881,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .nav-icon-wrap {
           background: var(--route-background);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           width: ${config.styles.button.size};
           height: ${config.styles.button.size};
           border-radius: ${config.styles.button.border_radius};
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 3%, transparent);
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.16);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -3878,10 +3898,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
       <div class="spacer" aria-hidden="true"></div>
       <div class="dock">
         <div class="dock-inner">
-          <div class="dock-stack">
+          <div class="dock-stack${fullWidthBar ? " dock-stack--full-width" : ""}">
             ${mediaPlayerToggleMarkup}
             ${mediaPlayerMarkup}
-            <ha-card>
+            <ha-card class="navbar-card">
               ${titleMarkup}
               <nav class="navbar" aria-label="Navigation bar">
                 ${routesMarkup}
@@ -3934,6 +3954,10 @@ class NodaliaNavigationBarEditor extends HTMLElement {
   _prepareEditorConfig(config) {
     if (!Array.isArray(config.routes)) {
       config.routes = [];
+    }
+
+    if (!isObject(config.layout)) {
+      config.layout = {};
     }
 
     if (!isObject(config.haptics)) {
@@ -5010,6 +5034,11 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             <label>
               <span>${this._L("Margen lateral")}</span>
               <input type="text" data-field="layout.side_margin" value="${escapeHtml(config.layout.side_margin || "")}" />
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" data-field="layout.full_width" ${config.layout.full_width ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
+              <span>${this._L("Barra a ancho completo")}</span>
             </label>
             <label>
               <span>${this._L("Separacion stack")}</span>

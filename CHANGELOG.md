@@ -10,6 +10,30 @@ Work-in-progress on **`alpha`** ahead of the next **`0.4.0-alpha.N`** tag or pro
 
 ---
 
+## [0.4.0-alpha.7] - 2026-05-02
+
+Seventh **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.7`** (tag **`v0.4.0-alpha.7`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Navigation bar** (`0.6.2`): modo **estantería** cuando **`layout.position`** es **`bottom`** (por defecto): **`border-radius`** solo en la parte superior (**`styles.bar.border_radius`** → **`R R 0 0`**), borde inferior recto al ras del viewport (evita la pastilla con solo las curvas visibles); con **`top`** se usa **`0 0 R R`**. **`layout.full_width: true`** sigue anulando todo el radio (**barra totalmente rectangular**).
+
+---
+
+## [0.4.0-alpha.6] - 2026-05-02
+
+Sixth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.6`** (tag **`v0.4.0-alpha.6`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Navigation bar** (`0.6.1`): estética alineada con el resto de tarjetas Nodalia (radio de barra **28px**, capa superior tipo light con **`color-mix` 5%**, burbujas de icono con borde **8%** y sombra **inset + drop** como iconos light; **`layout.full_width`**: barra **sin** **`border-radius`**, **dock** a borde del viewport e **`max-width`** sin tope; editor visual con interruptor **«Barra a ancho completo»**; si hay **media player** encima, también **sin** esquinas cuando **`full_width`** está activo.
+
+---
+
+## [0.4.0-alpha.5] - 2026-05-02
+
+Fifth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.5`** (tag **`v0.4.0-alpha.5`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Entity card**: visual parity with **Light / Fan** — active card gradient, border, shadow, **`ha-card::after`** accent glow, circular icon bubble (**`border-radius: 999px`**), icon **`color-mix`** / inset shadow matching light card; chips use **6%** **`color-mix`** surfaces, **`font-weight: 600`**, default **`chip_font_size`** **11px**; card **`0.6.3`**.
+
+---
+
 ## [0.4.0-alpha.4] - 2026-05-07
 
 Fourth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.4`** (tag **`v0.4.0-alpha.4`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.

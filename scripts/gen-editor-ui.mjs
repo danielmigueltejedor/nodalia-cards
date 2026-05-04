@@ -53,6 +53,7 @@ Altura minima
 Ancho maximo barra
 Ancho maximo popup
 Ancho minimo popup
+Barra a ancho completo
 Barra y hover (ms)
 Breakpoint movil
 Color etiqueta activa
@@ -205,6 +206,7 @@ function translateEsToEn(s) {
     [/Radio del borde/gi, "Border radius"],
     [/Radio del navegador/gi, "Browser radius"],
     [/\bBorde\b/gi, "Border"],
+    [/Barra a ancho completo/gi, "Full-width bar"],
     [/Boton localizar/gi, "Locate button"],
     [/Boton parar/gi, "Stop button"],
     [/Boton volver a base/gi, "Return to dock button"],

@@ -6659,6 +6659,19 @@
     "ro": "Popup minimum width"
   },
   {
+    "es": "Barra a ancho completo",
+    "en": "Full-width bar",
+    "de": "Full-width bar",
+    "fr": "Full-width bar",
+    "it": "Full-width bar",
+    "nl": "Full-width bar",
+    "pt": "Full-width bar",
+    "ru": "Full-width bar",
+    "el": "Full-width bar",
+    "zh": "Full-width bar",
+    "ro": "Full-width bar"
+  },
+  {
     "es": "Barra y hover (ms)",
     "en": "Bar and hover (ms)",
     "de": "Bar and hover (ms)",

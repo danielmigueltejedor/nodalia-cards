@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "0.6.2";
+const CARD_VERSION = "0.6.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -63,7 +63,7 @@ const DEFAULT_CONFIG = {
       accent_background: "rgba(113, 192, 255, 0.18)",
     },
     chip_height: "24px",
-    chip_font_size: "9px",
+    chip_font_size: "11px",
     chip_padding: "0 9px",
     title_size: "12px",
   },
@@ -1235,22 +1235,12 @@ class NodaliaEntityCard extends HTMLElement {
     const showCopyBlock = showCopyHeader || chips.length > 0;
     const canRunPrimaryAction = this._canRunTapAction(state);
     const isActive = this._isActiveState(state);
-    const cardBackground = isActive
-      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`
-      : styles.card.background;
-    const cardBorder = isActive
-      ? `1px solid color-mix(in srgb, ${accentColor} 24%, var(--divider-color))`
-      : "1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent)";
-    const cardShadow = isActive
-      ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`
-      : styles.card.box_shadow;
-    const activeIconBackground = `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 16%, ${styles.icon.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.icon.background}) 100%)`;
-    const activeIconBorder = `color-mix(in srgb, ${accentColor} 34%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`;
-    const activeIconShadow = `
-      inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
-      0 12px 30px rgba(0, 0, 0, 0.18),
-      0 0 0 1px color-mix(in srgb, ${accentColor} 12%, transparent)
-    `.trim();
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
+    const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
+    const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
+    const cardBackground = isActive ? onCardBackground : styles.card.background;
+    const cardBorder = isActive ? `1px solid ${onCardBorder}` : styles.card.border;
+    const cardShadow = isActive ? `${styles.card.box_shadow}, ${onCardShadow}` : styles.card.box_shadow;
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
 
@@ -1272,6 +1262,8 @@ class NodaliaEntityCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
+          display: block;
+          isolation: isolate;
           overflow: hidden;
           position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
@@ -1283,10 +1275,22 @@ class NodaliaEntityCard extends HTMLElement {
 
         ha-card::before {
           background: ${isActive
-            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0))`
-            : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 4%, transparent), rgba(255, 255, 255, 0))"};
+            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`
+            : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"};
           content: "";
           inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        ha-card::after {
+          background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
+          content: "";
+          inset: 0;
+          opacity: ${isActive ? "1" : "0"};
           pointer-events: none;
           position: absolute;
           z-index: 0;
@@ -1338,15 +1342,14 @@ class NodaliaEntityCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: ${isActive ? activeIconBackground : styles.icon.background};
-          border: 1px solid ${isActive ? activeIconBorder : "color-mix(in srgb, var(--primary-text-color) 8%, transparent)"};
-          border-radius: ${singleRowLayout ? "18px" : "24px"};
-          box-shadow: ${isActive
-            ? activeIconShadow
-            : `
-              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
-              0 12px 30px rgba(0, 0, 0, 0.18)
-            `.trim()};
+          background: ${isActive
+            ? `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`
+            : styles.icon.background};
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.16);
           color: ${isActive ? styles.icon.on_color : styles.icon.off_color};
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           display: inline-flex;
@@ -1486,17 +1489,16 @@ class NodaliaEntityCard extends HTMLElement {
 
         .entity-card__chip {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           color: var(--secondary-text-color);
           display: inline-flex;
           flex: 0 0 auto;
           font-size: ${effectiveChipFontSize};
-          font-weight: 700;
-          height: ${effectiveChipHeight};
+          font-weight: 600;
           line-height: 1;
+          min-height: ${effectiveChipHeight};
           max-width: 100%;
           min-width: 0;
           overflow: hidden;
