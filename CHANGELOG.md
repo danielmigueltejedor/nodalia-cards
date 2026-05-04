@@ -10,11 +10,20 @@ Work-in-progress on **`alpha`** ahead of the next **`0.4.0-alpha.N`** tag or pro
 
 ---
 
+## [0.4.0-alpha.16] - 2026-05-05
+
+Sixteenth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.16`** (tag **`v0.4.0-alpha.16`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Graph card**: ajuste fino del espaciado entre chips y recuadro, y refuerzo visual de tipografía en el valor principal para mejorar legibilidad.
+
+---
+
 ## [0.4.0-alpha.15] - 2026-05-05
 
 Fifteenth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.15`** (tag **`v0.4.0-alpha.15`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
 
 - **Graph card**: ajuste extra de layout para separar mejor chips y recuadro de gráfica, y evitar recorte visual en la parte inferior de la línea/área.
+- **Graph card**: tipografía del valor principal más compacta y con mayor peso visual para acercar el look a Weather card.
 
 ---
 
