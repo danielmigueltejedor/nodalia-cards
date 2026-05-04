@@ -10,6 +10,14 @@ Work-in-progress on **`alpha`** ahead of the next **`0.4.0-alpha.N`** tag or pro
 
 ---
 
+## [0.4.0-alpha.14] - 2026-05-05
+
+Fourteenth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.14`** (tag **`v0.4.0-alpha.14`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Graph card**: chips de series recolocados/compactados para evitar solape con el nuevo recuadro de gráfica; valor principal en modo multi-serie con misma unidad muestra media hasta seleccionar serie individual; popup hover con estilo visual más cercano al de Weather card.
+
+---
+
 ## [0.4.0-alpha.13] - 2026-05-05
 
 Thirteenth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.13`** (tag **`v0.4.0-alpha.13`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
