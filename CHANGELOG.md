@@ -10,6 +10,14 @@ Work toward the next **`0.4.x`** prerelease; **`package.json`** and tags follow 
 
 ---
 
+## [0.4.0-alpha.24] - 2026-05-05
+
+Twenty-fourth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.24`** (tag **`v0.4.0-alpha.24`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Insignia card (tinte)**: tintado alineado con **Entity card** cuando el tinte debe leerse fuerte — degradado en el fondo de la pastilla, borde/sombra con acento y capas **`::before` / `::after`** sin la opacidad global que antes dejaba el tinte casi invisible; sensores (**`sensor`**) y **weather** reciben tinte fuerte aunque el estado no sea «activo» (p. ej. temperatura numérica); **`tint_auto: false`** sigue forzando el tinte manual visible.
+
+---
+
 ## [0.4.0-alpha.23] - 2026-05-06
 
 Twenty-third **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.23`** (tag **`v0.4.0-alpha.23`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.

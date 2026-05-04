@@ -73839,6 +73839,24 @@ class NodaliaInsigniaCard extends HTMLElement {
     return ["on", "home", "playing", "heat", "cool", "dry", "fan_only", "open", "unlocked"].includes(stateKey);
   }
 
+  /**
+   * Match Entity card–level tint strength: numeric sensors (temperature, etc.) are never "active"
+   * but should still read a clear semantic tint; manual tint mode always wins visibility.
+   */
+  _shouldApplyStrongCardTint(state) {
+    if (!state) {
+      return false;
+    }
+    if (this._config?.tint_auto === false) {
+      return true;
+    }
+    if (this._isActive(state)) {
+      return true;
+    }
+    const domain = getEntityDomain(state);
+    return domain === "sensor" || domain === "weather";
+  }
+
   _shouldDimIcon(state) {
     if (!state) {
       return false;
@@ -74041,6 +74059,16 @@ class NodaliaInsigniaCard extends HTMLElement {
     const active = this._isActive(state);
     const dimIcon = this._shouldDimIcon(state);
     const tint = this._getTintColor(state);
+    const strongTint = this._shouldApplyStrongCardTint(state);
+    const cardBackground = strongTint
+      ? `linear-gradient(135deg, color-mix(in srgb, ${tint} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${tint} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`
+      : styles.card.background;
+    const cardBorder = strongTint
+      ? `1px solid color-mix(in srgb, ${tint} 32%, var(--divider-color))`
+      : styles.card.border;
+    const cardShadow = strongTint
+      ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${tint} 18%, rgba(0, 0, 0, 0.18))`
+      : styles.card.box_shadow;
     const unavailable = config.entity && isUnavailableState(state);
     const showName = config.show_name !== false;
     const showValue = config.show_value !== false && Boolean(value);
@@ -74073,11 +74101,11 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         .insignia-card {
-          background: ${styles.card.background};
-          border: ${styles.card.border};
+          background: ${cardBackground};
+          border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
           background-clip: padding-box;
-          box-shadow: ${styles.card.box_shadow};
+          box-shadow: ${cardShadow};
           color: var(--primary-text-color);
           display: inline-flex;
           height: auto;
@@ -74086,6 +74114,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           position: relative;
           overflow: hidden;
           contain: paint;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
 
         .insignia-card--icon-only {
@@ -74100,15 +74129,29 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         .insignia-card::before {
-          background:
-            radial-gradient(circle at 8% 10%, color-mix(in srgb, ${tint} 22%, transparent) 0%, transparent 55%),
-            linear-gradient(90deg, color-mix(in srgb, ${tint} 18%, transparent), transparent 70%);
+          background: ${strongTint
+      ? `linear-gradient(180deg, color-mix(in srgb, ${tint} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`
+      : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"};
           border-radius: inherit;
           content: "";
           inset: 0;
-          opacity: ${active ? "0.5" : "0.28"};
           pointer-events: none;
           position: absolute;
+          z-index: 0;
+        }
+
+        .insignia-card::after {
+          background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${tint} 26%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${tint} 16%, transparent) 0%, transparent 66%);
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          opacity: ${strongTint ? "1" : "0"};
+          pointer-events: none;
+          position: absolute;
+          transition: opacity 180ms ease;
+          z-index: 0;
         }
 
         .insignia-card__content {
@@ -85895,4 +85938,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.23","contentSha256_12":"9637fc5b98d3"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.24","contentSha256_12":"1555354c3450"};}
