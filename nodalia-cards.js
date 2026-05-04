@@ -66973,11 +66973,15 @@ function isHueCoolTintPoorContrast(hue) {
   if (hue === null || Number.isNaN(hue)) {
     return false;
   }
-  // Greens ~65–155°, blues / cyans ~165–275° — poor contrast vs typical tinted bubbles.
+  // Greens ~65–155°, blues/cyans ~165–275°, pink/magenta/red ~300–20°
+  // tend to yield low icon contrast on tinted bubbles.
   if (hue >= 65 && hue <= 155) {
     return true;
   }
   if (hue >= 165 && hue <= 275) {
+    return true;
+  }
+  if (hue >= 300 || hue <= 20) {
     return true;
   }
   return false;
@@ -84685,4 +84689,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.10","contentSha256_12":"85820d7fe714"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.10","contentSha256_12":"9aae9e9211e1"};}
