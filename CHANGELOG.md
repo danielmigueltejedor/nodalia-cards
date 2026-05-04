@@ -10,6 +10,14 @@ Work-in-progress on **`alpha`** ahead of the next **`0.4.0-alpha.N`** tag or pro
 
 ---
 
+## [0.4.0-alpha.17] - 2026-05-05
+
+Seventeenth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.17`** (tag **`v0.4.0-alpha.17`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Graph card**: incremento del margen inferior real de la serie y del contenedor para que los mínimos no queden ocultos bajo el borde inferior del recuadro.
+
+---
+
 ## [0.4.0-alpha.16] - 2026-05-05
 
 Sixteenth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.16`** (tag **`v0.4.0-alpha.16`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.

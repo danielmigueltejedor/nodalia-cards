@@ -43958,7 +43958,9 @@ class NodaliaGraphCard extends HTMLElement {
     const height = 56;
     const paddingX = -5.5;
     const paddingTop = 4;
-    const paddingBottom = 5;
+    // Reserve extra bottom headroom so min values and stroke/glow
+    // never get clipped by the rounded chart container.
+    const paddingBottom = 10;
     const bounds = this._getGraphBounds(series);
     const range = Math.max(bounds.max - bounds.min, 1);
 
@@ -44465,7 +44467,7 @@ class NodaliaGraphCard extends HTMLElement {
           margin-inline: -${chartBleed}px;
           margin-top: 14px;
           overflow: hidden;
-          padding: 4px 0 6px;
+          padding: 4px 0 10px;
           position: relative;
           touch-action: pan-y;
           user-select: none;
@@ -85291,4 +85293,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.16","contentSha256_12":"3edbfff759e6"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.17","contentSha256_12":"7fa8b80165bf"};}
