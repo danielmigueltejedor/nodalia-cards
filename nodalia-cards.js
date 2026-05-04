@@ -85744,4 +85744,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-beta.3","contentSha256_12":"4605bdb3fc7d"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-beta.4","contentSha256_12":"4605bdb3fc7d"};}

@@ -10,6 +10,12 @@ Work toward the next **`0.4.x`** prerelease; **`package.json`** and tags follow 
 
 ---
 
+## [0.4.0-beta.4] - 2026-05-06
+
+Fourth **`beta`** prerelease on the **0.4.x** line (**branch `beta`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-beta.4`** (tag **`v0.4.0-beta.4`**). Same expectations as other **`0.4.0-beta.*`** builds. Use this tag when installing from HACS or GitHub Releases so **`pkgVersion`** matches the release.
+
+---
+
 ## [0.4.0-beta.3] - 2026-05-06
 
 Third **`beta`** prerelease on the **0.4.x** line (**branch `beta`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-beta.3`** (tag **`v0.4.0-beta.3`**). Same expectations as other **`0.4.0-beta.*`** builds. Use this tag when installing from HACS or GitHub Releases so **`pkgVersion`** matches the release. For the full list of user-facing changes since **`0.4.0-beta.1`**, see **`0.4.0-beta.2`** below (this line is a version bump for a clean prerelease after **`alpha` → `beta`** merge and release).
