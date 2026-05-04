@@ -3,7 +3,7 @@
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
 ![Latest stable](https://img.shields.io/badge/latest%20stable-0.3.0-2ea043)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
-![Beta prerelease](https://img.shields.io/badge/beta%20prerelease-0.4.0--beta.2-orange)
+![Beta prerelease](https://img.shields.io/badge/beta%20prerelease-0.4.0--beta.3-orange)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![GitHub](https://img.shields.io/badge/hosted%20on-GitHub-black?logo=github)
@@ -83,7 +83,7 @@ Copy `nodalia-cards.js` into `config/www/` (or a subfolder) and add a resource u
 
 **Stable (`main`) — 0.3.0** includes **es, en, de, fr, it, nl** plus **pt, ru, el, zh** (simplified), and **ro** for the bundled cards and Lovelace visual editors (partial trees merge from English; coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
 
-**Prereleases:** **`beta`** (`0.4.0-beta.1`, `beta.2`, …) — likely usable; for testers. **`alpha`** (`0.4.0-alpha.4`, `alpha.5`, …) — frequent changes; **may break** dashboards. Experimental work lands on **`alpha`**, then moves to **`beta`** when a feature is polished enough; stable minors ship from **`main`** only. Details and tagging: **CONTRIBUTING**.
+**Prereleases:** **`beta`** (`0.4.0-beta.1`, `beta.2`, `beta.3`, …) — likely usable; for testers. **`alpha`** (`0.4.0-alpha.4`, `alpha.5`, …) — frequent changes; **may break** dashboards. Experimental work lands on **`alpha`**, then moves to **`beta`** when a feature is polished enough; stable minors ship from **`main`** only. Details and tagging: **CONTRIBUTING**.
 
 ---
 
