@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Work-in-progress on **`alpha`** ahead of the next **`0.4.0-alpha.N`** tag or promotion to **`beta`**. Roadmap: **Power Flow**, **translations**, **Graph Card** lines/axes, **curated default styles** — see **CONTRIBUTING**.
+Work toward the next **`0.4.x`** prerelease; **`package.json`** and tags follow **`beta`** / **`alpha`** as described in **CONTRIBUTING**. Roadmap: **Power Flow**, **translations**, **Graph Card** lines/axes, **curated default styles**.
 
 ---
 
@@ -21,9 +21,10 @@ Compared to **`0.4.0-beta.1`**, this release includes:
 - **Fan card / Humidifier card**: mismo criterio de **contraste del icono** en burbuja tintada que **Entity card** (tonos como **`lightgreen`** / **`pink`** oscurecen el glifo cuando hace falta).
 - **Navigation bar editor**: selectores nativos de Home Assistant para **entidad** e **icono** en rutas, popup y reproductores, con fallback a **`ha-selector`** / `input`.
 - **Navigation bar**: el **ticker** del reproductor en curso actualiza solo **progreso y tiempo** sin **re-render** completo del media player (evita **parpadeo** continuo al reproducir).
-- **Alarm panel card (editor)**: toggles y **“Mostrar estilos / animaciones”** más fiables (emisión de config **diferida**, secciones abiertas en **`pointerdown`**, mejor comportamiento ante blur/`change`).
+- **Alarm panel card (editor)**: toggles y **“Mostrar estilos / animaciones”** más fiables (emisión de config **diferida**, secciones abiertas en **`pointerdown`**, supresión del **`click`** duplicado para evitar **doble alternancia**, mejor comportamiento ante blur/`change`).
 - **Editor visual / español (`editorStr`)**: **primera** normalización de tildes y **ñ** en etiquetas del mapa común del editor; **segunda pasada** ampliada (título, gráfica, táctil/háptica, código, energía, información, acción, añade, etc.); **`scripts/gen-editor-ui.mjs`** vuelve a emitir **`normalizeSpanishEditorLabel`** junto a **`editorStr`** para que **`node scripts/gen-editor-ui.mjs`** no pierda la normalización al regenerar **`nodalia-editor-ui.js`**.
-- **Insignia (badge) card**: título de sección del editor corregido a **«Acción»**; **editor visual** alineado con el resto de tarjetas Nodalia (**`ha-entity-picker`**, **`ha-icon-picker`**, secciones para insignia, **hápticos**, acción al pulsar y apariencia con detalles de estilo plegables).
+- **Insignia (badge) card**: título de sección del editor corregido a **«Acción»**; **editor visual** alineado con el resto de tarjetas Nodalia (**`ha-entity-picker`**, selector de icono con **`editor-control-host`** / **`_mountIconPicker`** y **`input`** de respaldo si **`ha-icon-picker`** no está cargado, secciones para insignia, **hápticos**, acción al pulsar y apariencia con detalles de estilo plegables).
+- **Entity / Fan / Humidifier cards**: lógica compartida de **resolución de color** y **contraste del glifo** en burbuja tintada vía **`nodalia-bubble-contrast.js`** (**`window.NodaliaBubbleContrast`**), cargada en el bundle antes de esas tarjetas.
 - **Entity card**: en el editor visual, selectores **`icon_active`** / **`icon_inactive`** para **icono distinto** en estado **activo** vs **inactivo** (útil en **binary_sensor** de puertas, ventanas, etc.); la tarjeta pasa a **`0.6.6`**.
 
 ---

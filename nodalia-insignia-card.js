@@ -1376,17 +1376,20 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
 
   _renderIconPickerField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const placeholderAttr = options.placeholder
+      ? `data-placeholder="${escapeHtml(options.placeholder)}"`
+      : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
-        <ha-icon-picker
+        <div
+          class="editor-control-host"
+          data-mounted-control="icon-picker"
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
-          value="${escapeHtml(inputValue)}"
-          ${placeholder}
-        ></ha-icon-picker>
+          ${placeholderAttr}
+        ></div>
       </div>
     `;
   }
@@ -1429,6 +1432,51 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
 
     if (control.tagName !== "INPUT") {
       control.addEventListener("value-changed", this._onShadowValueChanged);
+    }
+
+    host.replaceChildren(control);
+  }
+
+  _copyDatasetToControl(host, control) {
+    Object.entries(host.dataset || {}).forEach(([key, value]) => {
+      if (key === "mountedControl" || key === "value" || key === "placeholder") {
+        return;
+      }
+      control.dataset[key] = value;
+    });
+  }
+
+  _mountIconPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || "";
+    let control = null;
+
+    if (customElements.get("ha-icon-picker")) {
+      control = document.createElement("ha-icon-picker");
+    } else {
+      control = document.createElement("input");
+      control.type = "text";
+    }
+
+    this._copyDatasetToControl(host, control);
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+    if (placeholder && "placeholder" in control) {
+      control.placeholder = placeholder;
+    }
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+    if (control.tagName !== "INPUT") {
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    } else {
+      control.addEventListener("change", this._onShadowInput);
     }
 
     host.replaceChildren(control);
@@ -1536,7 +1584,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
         }
 
         .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
-        .editor-field:has(> ha-icon-picker) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]) {
           grid-column: 1 / -1;
         }
 
@@ -1633,7 +1681,6 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 
-        .editor-field ha-icon-picker,
         .editor-control-host,
         .editor-control-host > * {
           display: block;
@@ -1803,12 +1850,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
     `;
 
     this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
-
-    this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach(control => {
-      control.hass = this._hass;
-      control.value = control.dataset.value || "";
-      control.addEventListener("value-changed", this._onShadowValueChanged);
-    });
+    this.shadowRoot.querySelectorAll('[data-mounted-control="icon-picker"]').forEach(host => this._mountIconPicker(host));
 
     this._ensureEditorControlsReady();
   }

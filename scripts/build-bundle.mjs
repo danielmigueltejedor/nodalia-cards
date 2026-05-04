@@ -10,6 +10,7 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"))
 const parts = [
   "nodalia-i18n.js",
   "nodalia-editor-ui.js",
+  "nodalia-bubble-contrast.js",
   "nodalia-navigation-bar.js",
   "nodalia-media-player.js",
   "nodalia-light-card.js",
