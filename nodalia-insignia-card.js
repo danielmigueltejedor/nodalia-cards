@@ -1314,7 +1314,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
         </div>
 
         <div class="editor-section">
-          <h3>${escapeHtml(this._editorLabel("Accion"))}</h3>
+          <h3>${escapeHtml(this._editorLabel("Acción"))}</h3>
           <div class="editor-grid">
             ${this._renderSelectField("Tap action", "tap_action", config.tap_action || "auto", [
               { value: "auto", label: "Auto" },

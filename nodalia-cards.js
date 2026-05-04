@@ -14507,10 +14507,23 @@
       return out;
     }
 
+    const withMatchCase = (match, replacement) => {
+      if (match === match.toUpperCase()) {
+        return replacement.toUpperCase();
+      }
+      if (match[0] === match[0].toUpperCase()) {
+        return replacement[0].toUpperCase() + replacement.slice(1);
+      }
+      return replacement;
+    };
+
     const substitutions = [
-      [/\banimacion(es)?\b/gi, "animación$1"],
-      [/\bconfiguracion(es)?\b/gi, "configuración$1"],
-      [/\bgrafica(s)?\b/gi, "gráfica$1"],
+      [/\banimaciones\b/gi, "animaciones"],
+      [/\banimacion\b/gi, "animación"],
+      [/\bconfiguraciones\b/gi, "configuraciones"],
+      [/\bconfiguracion\b/gi, "configuración"],
+      [/\bgraficas\b/gi, "gráficas"],
+      [/\bgrafica\b/gi, "gráfica"],
       [/\blogica\b/gi, "lógica"],
       [/\bmaximo(s)?\b/gi, "máximo$1"],
       [/\bminimo(s)?\b/gi, "mínimo$1"],
@@ -14520,17 +14533,52 @@
       [/\bpanel(es)?\b/gi, "panel$1"],
       [/\bpequeno\b/gi, "pequeño"],
       [/\bpulsacion\b/gi, "pulsación"],
-      [/\bseccion(es)?\b/gi, "sección$1"],
+      [/\bsecciones\b/gi, "secciones"],
+      [/\bseccion\b/gi, "sección"],
       [/\btamano(s)?\b/gi, "tamaño$1"],
       [/\btecnica\b/gi, "técnica"],
       [/\btecnicas\b/gi, "técnicas"],
-      [/\bversion(es)?\b/gi, "versión$1"],
+      [/\bversiones\b/gi, "versiones"],
+      [/\bversion\b/gi, "versión"],
       [/\banadir\b/gi, "añadir"],
+      [/\banade\b/gi, "añade"],
       [/\bano(s)?\b/gi, "año$1"],
+      [/\btitulos\b/gi, "títulos"],
+      [/\btitulo\b/gi, "título"],
+      [/\benergias\b/gi, "energías"],
+      [/\benergia\b/gi, "energía"],
+      [/\bcodigos\b/gi, "códigos"],
+      [/\bcodigo\b/gi, "código"],
+      [/\btactil\b/gi, "táctil"],
+      [/\bhaptica\b/gi, "háptica"],
+      [/\binformacion\b/gi, "información"],
+      [/\btransicion\b/gi, "transición"],
+      [/\bubicacion\b/gi, "ubicación"],
+      [/\bfuncion\b/gi, "función"],
+      [/\bopcion\b/gi, "opción"],
+      [/\bseleccion\b/gi, "selección"],
+      [/\breaccion\b/gi, "reacción"],
+      [/\baccion\b/gi, "acción"],
+      [/\bmetodos\b/gi, "métodos"],
+      [/\bmetodo\b/gi, "método"],
+      [/\bautomaticos\b/gi, "automáticos"],
+      [/\bautomatico\b/gi, "automático"],
+      [/\bautomaticas\b/gi, "automáticas"],
+      [/\bautomatica\b/gi, "automática"],
+      [/\bduracion\b/gi, "duración"],
+      [/\bposicion\b/gi, "posición"],
+      [/\bbasicos\b/gi, "básicos"],
+      [/\bbasico\b/gi, "básico"],
+      [/\bbasicas\b/gi, "básicas"],
+      [/\bbasica\b/gi, "básica"],
+      [/\bgenericos\b/gi, "genéricos"],
+      [/\bgenerico\b/gi, "genérico"],
+      [/\bgenericas\b/gi, "genéricas"],
+      [/\bgenerica\b/gi, "genérica"],
     ];
 
     substitutions.forEach(([pattern, replacement]) => {
-      out = out.replace(pattern, replacement);
+      out = out.replace(pattern, match => withMatchCase(match, replacement));
     });
 
     return out;
@@ -67146,7 +67194,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "0.6.5";
+const CARD_VERSION = "0.6.6";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -67162,6 +67210,8 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  icon_active: "",
+  icon_inactive: "",
   use_entity_icon: false,
   number_decimals: 2,
   tap_action: "auto",
@@ -68009,6 +68059,9 @@ class NodaliaEntityCard extends HTMLElement {
       configuredSecondaryAttribute,
       configuredSecondaryValue: configuredSecondaryAttribute ? getValueSignature(attrs[configuredSecondaryAttribute]) : "",
       useEntityIcon: Boolean(this._config?.use_entity_icon),
+      cardIcon: String(this._config?.icon || ""),
+      iconActive: String(this._config?.icon_active || ""),
+      iconInactive: String(this._config?.icon_inactive || ""),
       compact: Boolean(this._isCompactLayout),
       quickActions: Array.isArray(this._config?.quick_actions) ? this._config.quick_actions.length : 0,
     });
@@ -68164,6 +68217,18 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _getIcon(state) {
+    const trimIcon = value => (typeof value === "string" ? value.trim() : "");
+    const iconActive = trimIcon(this._config?.icon_active);
+    const iconInactive = trimIcon(this._config?.icon_inactive);
+    const hasStateIcons = Boolean(iconActive || iconInactive);
+
+    if (hasStateIcons) {
+      const chosen = this._isActiveState(state) ? iconActive : iconInactive;
+      if (chosen) {
+        return chosen;
+      }
+    }
+
     if (this._config?.use_entity_icon === true) {
       const resolvedEntityIcon = state?.attributes?.icon || getDynamicEntityIcon(state);
       if (resolvedEntityIcon) {
@@ -68171,7 +68236,7 @@ class NodaliaEntityCard extends HTMLElement {
       }
     }
 
-    return this._config?.icon || state?.attributes?.icon || "mdi:tune";
+    return trimIcon(this._config?.icon) || state?.attributes?.icon || "mdi:tune";
   }
 
   _canRunTapAction(state) {
@@ -69970,6 +70035,21 @@ class NodaliaEntityCardEditor extends HTMLElement {
               fullWidth: true,
             })}
             ${this._renderCheckboxField("Usar el icono de la entidad", "use_entity_icon", config.use_entity_icon === true)}
+            ${this._renderIconPickerField("Icono (estado activo)", "icon_active", config.icon_active, {
+              placeholder: "mdi:door-open",
+              fullWidth: true,
+            })}
+            ${this._renderIconPickerField("Icono (estado inactivo)", "icon_inactive", config.icon_inactive, {
+              placeholder: "mdi:door-closed",
+              fullWidth: true,
+            })}
+            <div class="editor-section__hint editor-field--full" style="grid-column: 1 / -1; margin-top: -4px;">
+              ${escapeHtml(
+                this._editorLabel(
+                  "Opcional: icono distinto cuando la tarjeta está activa o inactiva (binary_sensor, interruptores, puertas, ventanas, etc.). Si uno queda vacío, se usa el icono general o el de la entidad.",
+                ),
+              )}
+            </div>
             ${this._renderSelectField(
               "Acción al tocar",
               "tap_action",
@@ -74649,7 +74729,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
         </div>
 
         <div class="editor-section">
-          <h3>${escapeHtml(this._editorLabel("Accion"))}</h3>
+          <h3>${escapeHtml(this._editorLabel("Acción"))}</h3>
           <div class="editor-grid">
             ${this._renderSelectField("Tap action", "tap_action", config.tap_action || "auto", [
               { value: "auto", label: "Auto" },
@@ -85417,4 +85497,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.17","contentSha256_12":"ded35e675c59"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.20","contentSha256_12":"d33116714a49"};}

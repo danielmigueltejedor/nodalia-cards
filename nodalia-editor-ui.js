@@ -9064,10 +9064,23 @@
       return out;
     }
 
+    const withMatchCase = (match, replacement) => {
+      if (match === match.toUpperCase()) {
+        return replacement.toUpperCase();
+      }
+      if (match[0] === match[0].toUpperCase()) {
+        return replacement[0].toUpperCase() + replacement.slice(1);
+      }
+      return replacement;
+    };
+
     const substitutions = [
-      [/\banimacion(es)?\b/gi, "animación$1"],
-      [/\bconfiguracion(es)?\b/gi, "configuración$1"],
-      [/\bgrafica(s)?\b/gi, "gráfica$1"],
+      [/\banimaciones\b/gi, "animaciones"],
+      [/\banimacion\b/gi, "animación"],
+      [/\bconfiguraciones\b/gi, "configuraciones"],
+      [/\bconfiguracion\b/gi, "configuración"],
+      [/\bgraficas\b/gi, "gráficas"],
+      [/\bgrafica\b/gi, "gráfica"],
       [/\blogica\b/gi, "lógica"],
       [/\bmaximo(s)?\b/gi, "máximo$1"],
       [/\bminimo(s)?\b/gi, "mínimo$1"],
@@ -9077,17 +9090,52 @@
       [/\bpanel(es)?\b/gi, "panel$1"],
       [/\bpequeno\b/gi, "pequeño"],
       [/\bpulsacion\b/gi, "pulsación"],
-      [/\bseccion(es)?\b/gi, "sección$1"],
+      [/\bsecciones\b/gi, "secciones"],
+      [/\bseccion\b/gi, "sección"],
       [/\btamano(s)?\b/gi, "tamaño$1"],
       [/\btecnica\b/gi, "técnica"],
       [/\btecnicas\b/gi, "técnicas"],
-      [/\bversion(es)?\b/gi, "versión$1"],
+      [/\bversiones\b/gi, "versiones"],
+      [/\bversion\b/gi, "versión"],
       [/\banadir\b/gi, "añadir"],
+      [/\banade\b/gi, "añade"],
       [/\bano(s)?\b/gi, "año$1"],
+      [/\btitulos\b/gi, "títulos"],
+      [/\btitulo\b/gi, "título"],
+      [/\benergias\b/gi, "energías"],
+      [/\benergia\b/gi, "energía"],
+      [/\bcodigos\b/gi, "códigos"],
+      [/\bcodigo\b/gi, "código"],
+      [/\btactil\b/gi, "táctil"],
+      [/\bhaptica\b/gi, "háptica"],
+      [/\binformacion\b/gi, "información"],
+      [/\btransicion\b/gi, "transición"],
+      [/\bubicacion\b/gi, "ubicación"],
+      [/\bfuncion\b/gi, "función"],
+      [/\bopcion\b/gi, "opción"],
+      [/\bseleccion\b/gi, "selección"],
+      [/\breaccion\b/gi, "reacción"],
+      [/\baccion\b/gi, "acción"],
+      [/\bmetodos\b/gi, "métodos"],
+      [/\bmetodo\b/gi, "método"],
+      [/\bautomaticos\b/gi, "automáticos"],
+      [/\bautomatico\b/gi, "automático"],
+      [/\bautomaticas\b/gi, "automáticas"],
+      [/\bautomatica\b/gi, "automática"],
+      [/\bduracion\b/gi, "duración"],
+      [/\bposicion\b/gi, "posición"],
+      [/\bbasicos\b/gi, "básicos"],
+      [/\bbasico\b/gi, "básico"],
+      [/\bbasicas\b/gi, "básicas"],
+      [/\bbasica\b/gi, "básica"],
+      [/\bgenericos\b/gi, "genéricos"],
+      [/\bgenerico\b/gi, "genérico"],
+      [/\bgenericas\b/gi, "genéricas"],
+      [/\bgenerica\b/gi, "genérica"],
     ];
 
     substitutions.forEach(([pattern, replacement]) => {
-      out = out.replace(pattern, replacement);
+      out = out.replace(pattern, match => withMatchCase(match, replacement));
     });
 
     return out;

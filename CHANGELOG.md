@@ -10,6 +10,26 @@ Work-in-progress on **`alpha`** ahead of the next **`0.4.0-alpha.N`** tag or pro
 
 ---
 
+## [0.4.0-alpha.20] - 2026-05-04
+
+Twentieth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.20`** (tag **`v0.4.0-alpha.20`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Editor visual (español)**: segunda pasada de tildes y **ñ** en textos de ayuda y etiquetas (p. ej. título, gráfica, táctil/háptica, código, energía, información, acción, añade); **`scripts/gen-editor-ui.mjs`** vuelve a emitir **`normalizeSpanishEditorLabel`** junto a **`editorStr`** para que regenerar el mapa no pierda la normalización.
+- **Insignia card**: título de sección del editor corregido a **«Acción»**.
+
+---
+
+## [0.4.0-alpha.18] - 2026-05-05
+
+Eighteenth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.18`** (tag **`v0.4.0-alpha.18`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Graph card**: el recuadro de la gráfica ya no usa margen lateral negativo (evita que se salga de la tarjeta); más margen inferior en serie y contenedor para que valores cercanos al mínimo sigan visibles.
+- **Editor visual (`editorStr`)**: normalización de etiquetas en español (tildes y **ñ** en palabras habituales del editor) para todas las tarjetas que usan el mapa común.
+- **Navigation bar**: el ticker de reproducción actualiza solo progreso/tiempo sin re-render completo del media player (evita parpadeo continuo al reproducir).
+- **Alarm panel editor**: toggles y botones “Mostrar estilos/animaciones” más fiables ante blur/change (emisión de config diferida y apertura de secciones en `pointerdown`).
+
+---
+
 ## [0.4.0-alpha.17] - 2026-05-05
 
 Seventeenth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.17`** (tag **`v0.4.0-alpha.17`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
