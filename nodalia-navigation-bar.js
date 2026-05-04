@@ -4195,6 +4195,131 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     return escapeHtml(this._editorLabel(s));
   }
 
+  _renderControlDatasetAttributes(dataset = {}) {
+    return Object.entries(dataset)
+      .filter(([, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => {
+        const attr = String(key).replace(/[A-Z]/g, match => `-${match.toLowerCase()}`);
+        return `data-${attr}="${escapeHtml(String(value))}"`;
+      })
+      .join(" ");
+  }
+
+  _renderEntityPickerField(label, dataset = {}, value = "", options = {}) {
+    const datasetAttrs = this._renderControlDatasetAttributes(dataset);
+    const placeholderAttr = options.placeholder ? `data-placeholder="${escapeHtml(options.placeholder)}"` : "";
+    return `
+      <label>
+        <span>${this._L(label)}</span>
+        <div
+          class="editor-control-host"
+          data-mounted-control="entity-picker"
+          data-value="${escapeHtml(String(value ?? ""))}"
+          ${placeholderAttr}
+          ${datasetAttrs}
+        ></div>
+      </label>
+    `;
+  }
+
+  _renderIconPickerField(label, dataset = {}, value = "", options = {}) {
+    const datasetAttrs = this._renderControlDatasetAttributes(dataset);
+    const placeholderAttr = options.placeholder ? `data-placeholder="${escapeHtml(options.placeholder)}"` : "";
+    return `
+      <label>
+        <span>${this._L(label)}</span>
+        <div
+          class="editor-control-host"
+          data-mounted-control="icon-picker"
+          data-value="${escapeHtml(String(value ?? ""))}"
+          ${placeholderAttr}
+          ${datasetAttrs}
+        ></div>
+      </label>
+    `;
+  }
+
+  _copyDatasetToControl(host, control) {
+    Object.entries(host.dataset || {}).forEach(([key, value]) => {
+      if (key === "mountedControl" || key === "value" || key === "placeholder") {
+        return;
+      }
+      control.dataset[key] = value;
+    });
+  }
+
+  _mountEntityPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || "";
+    let control = null;
+
+    if (customElements.get("ha-entity-picker")) {
+      control = document.createElement("ha-entity-picker");
+      control.allowCustomEntity = true;
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = { entity: {} };
+    } else {
+      control = document.createElement("input");
+      control.type = "text";
+    }
+
+    this._copyDatasetToControl(host, control);
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+    if (placeholder && "placeholder" in control) {
+      control.placeholder = placeholder;
+    }
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+    if (control.tagName !== "INPUT") {
+      control.addEventListener("value-changed", this._onShadowInput);
+    }
+
+    host.replaceChildren(control);
+  }
+
+  _mountIconPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || "";
+    let control = null;
+
+    if (customElements.get("ha-icon-picker")) {
+      control = document.createElement("ha-icon-picker");
+    } else {
+      control = document.createElement("input");
+      control.type = "text";
+    }
+
+    this._copyDatasetToControl(host, control);
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+    if (placeholder && "placeholder" in control) {
+      control.placeholder = placeholder;
+    }
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+    if (control.tagName !== "INPUT") {
+      control.addEventListener("value-changed", this._onShadowInput);
+    }
+
+    host.replaceChildren(control);
+  }
+
   _prepareEditorConfig(config) {
     if (!Array.isArray(config.routes)) {
       config.routes = [];
@@ -4397,7 +4522,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
   }
 
   _onShadowInput(event) {
-    const shouldEmit = event.type === "change";
+    const shouldEmit = event.type === "change" || event.type === "value-changed";
     const field = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.field);
@@ -4693,16 +4818,15 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               placeholder="${escapeHtml(this._L("Dejalo vacio para solo icono"))}"
             />
           </label>
-          <label>
-            <span>${this._L("Icono")}</span>
-            <input
-              type="text"
-              data-route-index="${routeIndex}"
-              data-popup-index="${popupIndex}"
-              data-popup-field="icon"
-              value="${escapeHtml(popupItem.icon || "")}"
-            />
-          </label>
+          ${this._renderIconPickerField(
+            "Icono",
+            {
+              routeIndex,
+              popupIndex,
+              popupField: "icon",
+            },
+            popupItem.icon || "",
+          )}
           <label>
             <span>${this._L("Path")}</span>
             <input
@@ -4778,16 +4902,15 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           </button>
         </div>
         <div class="grid">
-          <label>
-            <span>${this._L("Entidad")}</span>
-            <input
-              type="text"
-              data-player-index="${index}"
-              data-player-field="entity"
-              value="${escapeHtml(player.entity || "")}"
-              placeholder="media_player.spotify"
-            />
-          </label>
+          ${this._renderEntityPickerField(
+            "Entidad",
+            {
+              playerIndex: index,
+              playerField: "entity",
+            },
+            player.entity || "",
+            { placeholder: "media_player.spotify" },
+          )}
           <label>
             <span>${this._L("Nombre reproductor")}</span>
             <input
@@ -4830,17 +4953,16 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               value="${escapeHtml(player.subtitle || "")}"
             />
           </label>
-          <label>
-            <span>${this._L("Icono fallback")}</span>
-            <input
-              type="text"
-              data-player-index="${index}"
-              data-player-field="icon"
-              data-optional="true"
-              value="${escapeHtml(player.icon || "")}"
-              placeholder="mdi:speaker"
-            />
-          </label>
+          ${this._renderIconPickerField(
+            "Icono fallback",
+            {
+              playerIndex: index,
+              playerField: "icon",
+              optional: "true",
+            },
+            player.icon || "",
+            { placeholder: "mdi:speaker" },
+          )}
           <label>
             <span>${this._L("Imagen fija")}</span>
             <input
@@ -4918,10 +5040,14 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             <span>${this._L("Etiqueta")}</span>
             <input type="text" data-route-index="${index}" data-route-field="label" value="${escapeHtml(route.label || "")}" />
           </label>
-          <label>
-            <span>${this._L("Icono")}</span>
-            <input type="text" data-route-index="${index}" data-route-field="icon" value="${escapeHtml(route.icon || "")}" />
-          </label>
+          ${this._renderIconPickerField(
+            "Icono",
+            {
+              routeIndex: index,
+              routeField: "icon",
+            },
+            route.icon || "",
+          )}
           <label>
             <span>${this._L("Path")}</span>
             <input type="text" data-route-index="${index}" data-route-field="path" value="${escapeHtml(route.path || "")}" />
@@ -5126,6 +5252,12 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           font: inherit;
           min-height: 40px;
           padding: 10px 12px;
+          width: 100%;
+        }
+
+        .editor-control-host,
+        .editor-control-host > * {
+          display: block;
           width: 100%;
         }
 
@@ -5519,6 +5651,14 @@ class NodaliaNavigationBarEditor extends HTMLElement {
         </section>
       </div>
     `;
+
+    this.shadowRoot
+      .querySelectorAll('[data-mounted-control="entity-picker"]')
+      .forEach(host => this._mountEntityPicker(host));
+
+    this.shadowRoot
+      .querySelectorAll('[data-mounted-control="icon-picker"]')
+      .forEach(host => this._mountIconPicker(host));
   }
 }
 

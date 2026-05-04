@@ -6,7 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Work-in-progress on **`beta`** ahead of the next **`0.4.0-beta.N`** tag or promotion to **`main`**. Roadmap: **Power Flow**, **translations**, **Graph Card** lines/axes, **curated default styles** — see **CONTRIBUTING**.
+Work-in-progress on **`alpha`** ahead of the next **`0.4.0-alpha.N`** tag or promotion to **`beta`**. Roadmap: **Power Flow**, **translations**, **Graph Card** lines/axes, **curated default styles** — see **CONTRIBUTING**.
+
+---
+
+## [0.4.0-alpha.11] - 2026-05-05
+
+Eleventh **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.11`** (tag **`v0.4.0-alpha.11`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Navigation bar editor**: usa selectores nativos de Home Assistant para **entidad** e **icono** (pickers en rutas, popup y media players), con fallback a `ha-selector`/`input`.
 
 ---
 
