@@ -6,7 +6,68 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Work toward the next **`0.4.x`** prerelease; **`package.json`** and tags follow **`beta`** / **`alpha`** as described in **CONTRIBUTING**. Roadmap: **Power Flow**, **translations**, **Graph Card** lines/axes, **curated default styles**.
+Work toward **`0.4.1`** patches and the next minor (**`0.5.x`**): **Power Flow** polish, **translations**, **Graph Card** lines/axes, **curated default styles**. Prerelease workflow (**`beta`** / **`alpha`**) and tagging: **CONTRIBUTING**.
+
+---
+
+## [0.4.0] - 2026-05-06
+
+### Nodalia Cards v0.4.0
+
+This release is the new recommended **stable** line on **`main`**. It rolls up everything exercised across the **`0.4.0-beta.*`** and **`0.4.0-alpha.*`** prereleases into a single coherent minor: sharper history visuals, a more dependable navigation shell, shared tint/contrast logic across bubble cards, a full-featured **Insignia** editor and tint system, and broad editor / i18n polish. Installs should match **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0`** (Git tag **`v0.4.0`**).
+
+Per-prerelease entries below (**alpha.1** through **alpha.25**, **beta.1** through **beta.4**) remain for detailed archaeology.
+
+### 📈 Graph card
+
+- **Line & area**: Reworked stroke/fill, smarter **automatic min/max** by metric (for example humidity anchored around **20–80** when you do not set bounds), denser default history sampling (**`points`** **480**).
+- **Layout & chips**: Series chips **reordered and tightened** so they do not collide with the chart frame; **multi-series with the same unit** shows a **mean** in the primary readout until you pick a series; improved **hover/detail** presentation closer to **Weather card**; refined **typography** for the main value and spacing between chips and plot.
+- **Fit & polish**: Extra bottom margin in series/container so minima are not clipped; chart container **no longer uses negative side margin** (stays inside the card).
+
+### 🌤️ Weather card
+
+- **Forecast chart mode**: Detail popups / overlays **follow the active Home Assistant theme** more faithfully when switching themes (fixes overly dark panels on light themes).
+
+### 🧭 Navigation bar
+
+- **Look & layout**: “Shelf” geometry when docked (**`bottom`** / **`top`**), **full-width** bar option, **28px** radius and light top wash aligned with other Nodalia cards; **dock entrance** animation (slide/fade, staggered routes, configurable duration).
+- **Media**: **Album / entity artwork** resolution aligned with **`nodalia-media-player`** (URLs, cache busting, TV/Plex rules); **mini player ticker** updates progress/time **without** full card re-render (no flicker).
+- **Reliability**: Entrance animation reset deferred one **`requestAnimationFrame`** so **`set(hass)`** after **`setConfig`** does not cancel **`--entering`** states.
+- **Editor**: Native **`ha-entity-picker`** / **`ha-icon-picker`** (with **`input`** fallbacks) for routes, popup shortcuts, and media players.
+
+### 🎯 Entity, Fan, Humidifier, Climate & shared bubble visuals
+
+- **`nodalia-bubble-contrast.js`** (**`window.NodaliaBubbleContrast`**): one implementation for **named/CSS colors**, hue-aware **cool tint** detection, and **when to darken** the icon glyph on tinted bubbles—used by **Entity**, **Fan**, and **Humidifier** (and **Entity**-aligned behaviour elsewhere).
+- **Entity card**: Stronger **active-state** visual parity with Light/Fan (gradient, border, glow, circular bubble); **chip** surfaces and typography; visual editors for **`icon_active`** / **`icon_inactive`** (doors, windows, binary sensors). Card revision **0.6.6**.
+- **Active bubble icon colour**: **`ha-icon`** prefers readable **`styles.icon.color`** on coloured bubbles (not always **`on_color`**) across **entity**, **fan**, **humidifier**, **climate** where applicable.
+
+### 🏅 Insignia card
+
+- **Visual editor**: Parity with other Nodalia editors—**`ha-entity-picker`**, robust **icon** control (**`editor-control-host`** / **`_mountIconPicker`** + text fallback), structured sections (badge, haptics, tap action, appearance).
+- **Tinting**: **Automatic tint by entity type** with optional **manual tint colour** (**`styles.tint.color`**, **`tint_auto`**); when tint should read clearly (active entities, **sensor**/**weather**, manual mode), **card fill, border, and glow layers** align with **Entity card**; fixes for **weak tint on numeric sensors** and a **gray “shelf”** under pills in toolbars (baseline gap, shadow, containment).
+
+### 🔔 Alarm panel, YAML preview & editors
+
+- **Alarm panel editor**: More reliable **style/animation** toggles (deferred config emission, **`pointerdown`** section open, duplicate-click suppression).
+- **Visual editors** (“Show YAML”): **`stripEqualToDefaults`** so generated YAML stays minimal (also wired where added for **vacuum** and similar editors).
+
+### 🎛️ Circular gauge, Climate dial & Power Flow
+
+- **Circular gauge** / **Climate**: **`aspect-ratio: 1`** and **`width: min(…, 100%)`** so previews stay **round** in narrow layouts.
+- **Power Flow**: Thinner default connector (**`flow_width`** **1px** in this line), continuing diagram polish from earlier **0.4.x** alphas.
+
+### 🌍 i18n & editor UI map
+
+- **Spanish editor labels**: Wider pass on accents and **ñ** across the shared **`editorStr`** map; **`scripts/gen-editor-ui.mjs`** keeps **`normalizeSpanishEditorLabel`** when regenerating **`nodalia-editor-ui.js`**.
+- **Locales**: **`FULL_LOCALE_BY_EN`** coverage for flow/style labels so **pt / ru / el / zh / ro** do not fall back to English for Power Flow and similar strings.
+
+### 🎨 Defaults & misc
+
+- Curated **default `styles`** (icon sizes, chips, sliders, etc.) across several cards for a tighter out-of-the-box look.
+
+### Notes
+
+- If you installed **`0.4.0-beta.*`** or **`0.4.0-alpha.*`**, move **`main`** / GitHub **Release** **`v0.4.0`** or HACS **stable** when ready; **`__NODALIA_BUNDLE__.pkgVersion`** should read **`0.4.0`** after refresh/redownload.
 
 ---
 

@@ -85938,4 +85938,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.25","contentSha256_12":"035cef7c0f93"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0","contentSha256_12":"035cef7c0f93"};}
