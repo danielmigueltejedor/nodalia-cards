@@ -119,6 +119,13 @@ Community help is especially useful for languages other than Spanish and English
 - **`nodalia-i18n.js`**: each locale object is **deep-merged** over **`PACK.en`**, so partially translated packs still expose **every card namespace** (fan, alarm, weather, …). Override strings inside **`PACK.<code>`** as translations are completed.
 - **Visual editors**: **`scripts/gen-editor-ui.mjs`** builds **`nodalia-editor-ui.js`**. Add **`pt` / `ru` / `el` / `zh` / `ro`** next to **`de`** / **`fr`** in **`FULL_LOCALE_BY_EN`** (and **`editor-extra-locale-by-en.json`** when used) for full phrases; compact UI strings use the **`enTo*`** helpers. Then run **`node scripts/gen-editor-ui.mjs`** and **`npm run bundle`**.
 
+### Bundle vs standalone scripts
+
+- **`npm run bundle`** runs **`scripts/build-bundle.mjs`** and writes **`nodalia-cards.js`**. Module order in **`parts`** matters: **`nodalia-i18n.js`** → **`nodalia-editor-ui.js`** → **`nodalia-utils.js`** → **`nodalia-bubble-contrast.js`** → card files. After changing **`parts`**, or any bundled source, run **`npm run bundle`** again.
+- **`nodalia-utils.js`** attaches **`window.NodaliaUtils`** (shared config stripping, lightweight editor **`hass` signatures**, entity/icon picker mount helpers). It expects **`NodaliaI18n`** from **`nodalia-i18n.js`** for locale-aware signatures.
+- **Normal setup:** one Lovelace resource pointing at **`nodalia-cards.js`** (documented in **`README.md`**).
+- **Advanced / debugging:** if you register separate **`nodalia-*.js`** resources, load **`nodalia-utils.js`** after **`nodalia-i18n.js`** and **`nodalia-editor-ui.js`**, and before any card that calls **`window.NodaliaUtils`**.
+
 ---
 
 ## 🏷️ Releases: `main`, `beta`, and `alpha`

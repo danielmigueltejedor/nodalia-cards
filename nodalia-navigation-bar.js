@@ -360,71 +360,6 @@ function compactConfig(value) {
   return value;
 }
 
-function deepEqual(a, b) {
-  if (Object.is(a, b)) {
-    return true;
-  }
-  if (a == null || b == null) {
-    return a === b;
-  }
-  if (typeof a !== typeof b) {
-    return false;
-  }
-  if (typeof a !== "object") {
-    return false;
-  }
-  if (Array.isArray(a)) {
-    if (!Array.isArray(b) || a.length !== b.length) {
-      return false;
-    }
-    return a.every((value, index) => deepEqual(value, b[index]));
-  }
-  if (Array.isArray(b)) {
-    return false;
-  }
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-  if (keysA.length !== keysB.length) {
-    return false;
-  }
-  return keysA.every(key => deepEqual(a[key], b[key]));
-}
-
-function stripEqualToDefaults(config, defaults) {
-  if (defaults === undefined || defaults === null) {
-    return deepClone(config);
-  }
-  if (config === undefined || config === null) {
-    return undefined;
-  }
-  if (Array.isArray(config)) {
-    return deepEqual(config, defaults) ? undefined : deepClone(config);
-  }
-  if (isObject(config) && isObject(defaults)) {
-    const out = {};
-    for (const key of Object.keys(config)) {
-      const cv = config[key];
-      const dv = defaults[key];
-      if (!(key in defaults)) {
-        out[key] = deepClone(cv);
-        continue;
-      }
-      if (deepEqual(cv, dv)) {
-        continue;
-      }
-      if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
-        const stripped = stripEqualToDefaults(cv, dv);
-        if (stripped !== undefined) {
-          out[key] = stripped;
-        }
-      } else {
-        out[key] = deepClone(cv);
-      }
-    }
-    return Object.keys(out).length ? out : undefined;
-  }
-  return deepEqual(config, defaults) ? undefined : config;
-}
 
 function setByPath(target, path, value) {
   const parts = path.split(".");
@@ -4281,85 +4216,27 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     `;
   }
 
-  _copyDatasetToControl(host, control) {
-    Object.entries(host.dataset || {}).forEach(([key, value]) => {
-      if (key === "mountedControl" || key === "value" || key === "placeholder") {
-        return;
-      }
-      control.dataset[key] = value;
+  _mountEntityPicker(host) {
+    window.NodaliaUtils.mountEntityPickerHost(host, {
+      hass: this._hass,
+      field: host.dataset.field || "entity",
+      value: host.dataset.value || "",
+      placeholder: host.dataset.placeholder || "",
+      onShadowInput: this._onShadowInput,
+      onShadowValueChanged: this._onShadowInput,
+      copyDatasetFromHost: true,
     });
   }
 
-  _mountEntityPicker(host) {
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-
-    const nextValue = host.dataset.value || "";
-    const placeholder = host.dataset.placeholder || "";
-    let control = null;
-
-    if (customElements.get("ha-entity-picker")) {
-      control = document.createElement("ha-entity-picker");
-      control.allowCustomEntity = true;
-    } else if (customElements.get("ha-selector")) {
-      control = document.createElement("ha-selector");
-      control.selector = { entity: {} };
-    } else {
-      control = document.createElement("input");
-      control.type = "text";
-    }
-
-    this._copyDatasetToControl(host, control);
-
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
-    if (placeholder && "placeholder" in control) {
-      control.placeholder = placeholder;
-    }
-    if ("value" in control) {
-      control.value = nextValue;
-    }
-    if (control.tagName !== "INPUT") {
-      control.addEventListener("value-changed", this._onShadowInput);
-    }
-
-    host.replaceChildren(control);
-  }
-
   _mountIconPicker(host) {
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-
-    const nextValue = host.dataset.value || "";
-    const placeholder = host.dataset.placeholder || "";
-    let control = null;
-
-    if (customElements.get("ha-icon-picker")) {
-      control = document.createElement("ha-icon-picker");
-    } else {
-      control = document.createElement("input");
-      control.type = "text";
-    }
-
-    this._copyDatasetToControl(host, control);
-
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
-    if (placeholder && "placeholder" in control) {
-      control.placeholder = placeholder;
-    }
-    if ("value" in control) {
-      control.value = nextValue;
-    }
-    if (control.tagName !== "INPUT") {
-      control.addEventListener("value-changed", this._onShadowInput);
-    }
-
-    host.replaceChildren(control);
+    window.NodaliaUtils.mountIconPickerHost(host, {
+      hass: this._hass,
+      value: host.dataset.value || "",
+      placeholder: host.dataset.placeholder || "",
+      onShadowInput: this._onShadowInput,
+      onShadowValueChanged: this._onShadowInput,
+      copyDatasetFromHost: true,
+    });
   }
 
   _prepareEditorConfig(config) {
@@ -4500,7 +4377,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     this._restoreFocusState(focusState);
     const merged = mergeConfig(DEFAULT_CONFIG, prepared);
     fireEvent(this, "config-changed", {
-      config: compactConfig(stripEqualToDefaults(merged, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(merged, DEFAULT_CONFIG) ?? {}),
     });
   }
 

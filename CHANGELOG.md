@@ -6,7 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Work toward **`0.4.1`** patches and the next minor (**`0.5.x`**): **Power Flow** polish, **translations**, **Graph Card** lines/axes, **curated default styles**. Prerelease workflow (**`beta`** / **`alpha`**) and tagging: **CONTRIBUTING**.
+Work toward **`0.5.x`** on **`alpha`** / **`beta`** and eventual **`main`**: **Power Flow** polish, **translations**, **Graph Card** tuning, **Insignia** and editors. Prerelease workflow and tagging: **CONTRIBUTING**.
+
+- **Internals**: shared **`nodalia-utils.js`** (**`window.NodaliaUtils`**) — **`deepEqual` / `stripEqualToDefaults`**, cheap **`hass`** signatures for editors (**entity count** / **filtered counts** + locale tag instead of sorting full entity lists), **`mountEntityPickerHost` / `mountIconPickerHost`** to avoid recreating **`ha-entity-picker`** / **`ha-icon-picker`** every render; **`resolveEditorColorValue`** caches computed CSS colors in **`nodalia-bubble-contrast.js`**. **`npm run bundle`** includes **`nodalia-utils.js`** after i18n/editor-ui (see **CONTRIBUTING**). Recommended install remains single **`nodalia-cards.js`**.
+
+---
+
+## [0.5.0-alpha.1] - 2026-05-06
+
+First **`alpha`** on the **0.5.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.1`** (tag **`v0.5.0-alpha.1`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Graph card** (`0.12.13`): el **recuadro de la gráfica** gana protagonismo — **ancho completo** respecto al contenido de la tarjeta con **márgenes negativos** como el mapa en **advance vacuum**, esquinas del panel alineadas al **`border_radius`** de la tarjeta; **valor principal**, **título** y **chips** de series algo más compactos; **`DEFAULT_CONFIG.styles`** por defecto más bajo en tipografía para dar más aire al área del chart; altura mínima del panel revisada.
+- **Insignia card** (`0.2.1`): editor visual con **`icon_active`** / **`icon_inactive`** y mismo criterio de **estado activo** que **Entity card**; hint de ayuda opcional como en Entity.
 
 ---
 

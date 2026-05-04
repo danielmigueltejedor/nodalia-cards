@@ -308,71 +308,6 @@ function compactConfig(value) {
   return value;
 }
 
-function deepEqual(a, b) {
-  if (Object.is(a, b)) {
-    return true;
-  }
-  if (a == null || b == null) {
-    return a === b;
-  }
-  if (typeof a !== typeof b) {
-    return false;
-  }
-  if (typeof a !== "object") {
-    return false;
-  }
-  if (Array.isArray(a)) {
-    if (!Array.isArray(b) || a.length !== b.length) {
-      return false;
-    }
-    return a.every((value, index) => deepEqual(value, b[index]));
-  }
-  if (Array.isArray(b)) {
-    return false;
-  }
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-  if (keysA.length !== keysB.length) {
-    return false;
-  }
-  return keysA.every(key => deepEqual(a[key], b[key]));
-}
-
-function stripEqualToDefaults(config, defaults) {
-  if (defaults === undefined || defaults === null) {
-    return deepClone(config);
-  }
-  if (config === undefined || config === null) {
-    return undefined;
-  }
-  if (Array.isArray(config)) {
-    return deepEqual(config, defaults) ? undefined : deepClone(config);
-  }
-  if (isObject(config) && isObject(defaults)) {
-    const out = {};
-    for (const key of Object.keys(config)) {
-      const cv = config[key];
-      const dv = defaults[key];
-      if (!(key in defaults)) {
-        out[key] = deepClone(cv);
-        continue;
-      }
-      if (deepEqual(cv, dv)) {
-        continue;
-      }
-      if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
-        const stripped = stripEqualToDefaults(cv, dv);
-        if (stripped !== undefined) {
-          out[key] = stripped;
-        }
-      } else {
-        out[key] = deepClone(cv);
-      }
-    }
-    return Object.keys(out).length ? out : undefined;
-  }
-  return deepEqual(config, defaults) ? undefined : config;
-}
 
 function normalizePowerActionConfig(action) {
   if (!isObject(action)) {
@@ -5248,11 +5183,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    return Object.entries(hass?.states || {})
-      .filter(([entityId]) => entityId.startsWith("media_player."))
-      .map(([entityId, state]) => `${entityId}:${String(state?.attributes?.friendly_name || "")}:${String(state?.attributes?.icon || "")}`)
-      .sort((left, right) => left.localeCompare(right, "es", { sensitivity: "base" }))
-      .join("|");
+    return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, id => id.startsWith("media_player."));
   }
 
   _getEntityOptions(field = "players.0.entity", domains = []) {
@@ -5343,7 +5274,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 

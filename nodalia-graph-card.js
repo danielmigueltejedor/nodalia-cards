@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.12";
+const CARD_VERSION = "0.12.13";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -55,17 +55,17 @@ const DEFAULT_CONFIG = {
       border_radius: "30px",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "16px",
-      gap: "12px",
+      gap: "10px",
     },
     icon: {
       color: "var(--primary-text-color)",
       size: "28px",
     },
-    title_size: "15px",
-    value_size: "52px",
-    unit_size: "20px",
-    legend_size: "13px",
-    chart_height: "170px",
+    title_size: "13px",
+    value_size: "40px",
+    unit_size: "17px",
+    legend_size: "11px",
+    chart_height: "178px",
     line_width: "1px",
   },
 };
@@ -175,71 +175,6 @@ function compactConfig(value) {
   return value;
 }
 
-function deepEqual(a, b) {
-  if (Object.is(a, b)) {
-    return true;
-  }
-  if (a == null || b == null) {
-    return a === b;
-  }
-  if (typeof a !== typeof b) {
-    return false;
-  }
-  if (typeof a !== "object") {
-    return false;
-  }
-  if (Array.isArray(a)) {
-    if (!Array.isArray(b) || a.length !== b.length) {
-      return false;
-    }
-    return a.every((value, index) => deepEqual(value, b[index]));
-  }
-  if (Array.isArray(b)) {
-    return false;
-  }
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-  if (keysA.length !== keysB.length) {
-    return false;
-  }
-  return keysA.every(key => deepEqual(a[key], b[key]));
-}
-
-function stripEqualToDefaults(config, defaults) {
-  if (defaults === undefined || defaults === null) {
-    return deepClone(config);
-  }
-  if (config === undefined || config === null) {
-    return undefined;
-  }
-  if (Array.isArray(config)) {
-    return deepEqual(config, defaults) ? undefined : deepClone(config);
-  }
-  if (isObject(config) && isObject(defaults)) {
-    const out = {};
-    for (const key of Object.keys(config)) {
-      const cv = config[key];
-      const dv = defaults[key];
-      if (!(key in defaults)) {
-        out[key] = deepClone(cv);
-        continue;
-      }
-      if (deepEqual(cv, dv)) {
-        continue;
-      }
-      if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
-        const stripped = stripEqualToDefaults(cv, dv);
-        if (stripped !== undefined) {
-          out[key] = stripped;
-        }
-      } else {
-        out[key] = deepClone(cv);
-      }
-    }
-    return Object.keys(out).length ? out : undefined;
-  }
-  return deepEqual(config, defaults) ? undefined : config;
-}
 
 function setByPath(target, path, value) {
   const parts = path.split(".");
@@ -347,6 +282,33 @@ function inferDecimals(rawValue) {
 function parseSizeToPixels(value, fallback = 0) {
   const numeric = Number.parseFloat(String(value ?? ""));
   return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+/** Parses CSS padding shorthand into edge pixel values (numbers only tokens). */
+function parsePaddingEdges(value, fallback = 16) {
+  const fb = Number.isFinite(fallback) ? fallback : 16;
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return { top: fb, right: fb, bottom: fb, left: fb };
+  }
+  const parts = raw.split(/\s+/).map(token => parseSizeToPixels(token, NaN)).filter(n => Number.isFinite(n));
+  if (!parts.length) {
+    return { top: fb, right: fb, bottom: fb, left: fb };
+  }
+  if (parts.length === 1) {
+    const v = parts[0];
+    return { top: v, right: v, bottom: v, left: v };
+  }
+  if (parts.length === 2) {
+    const [vertical, horizontal] = parts;
+    return { top: vertical, right: horizontal, bottom: vertical, left: horizontal };
+  }
+  if (parts.length === 3) {
+    const [top, horizontal, bottom] = parts;
+    return { top, right: horizontal, bottom, left: horizontal };
+  }
+  const [top, right, bottom, left] = parts;
+  return { top, right, bottom, left };
 }
 
 function clamp(value, min, max) {
@@ -1819,14 +1781,18 @@ class NodaliaGraphCard extends HTMLElement {
     const icon = this._getIcon();
     const title = this._getTitle();
     const accentColor = chart.entries[0]?.color || legendEntries[0]?.color || "var(--primary-color)";
-    const chartHeight = `${Math.max(120, Math.min(parseSizeToPixels(styles.chart_height, 150), compactLayout ? 132 : 150))}px`;
-    const valueSize = `${Math.max(38, Math.min(parseSizeToPixels(styles.value_size, 46), compactLayout ? 42 : 46))}px`;
-    const unitSize = `${Math.max(15, Math.min(parseSizeToPixels(styles.unit_size, 18), compactLayout ? 16 : 18))}px`;
-    const titleSize = `${Math.max(13, Math.min(parseSizeToPixels(styles.title_size, 14), compactLayout ? 13 : 14))}px`;
-    const legendSize = `${Math.max(11, Math.min(parseSizeToPixels(styles.legend_size, 12), compactLayout ? 11 : 12))}px`;
+    const chartHeight = `${Math.max(136, Math.min(parseSizeToPixels(styles.chart_height, 150), compactLayout ? 148 : 172))}px`;
+    const valueSize = `${Math.max(26, Math.min(parseSizeToPixels(styles.value_size, 52), compactLayout ? 32 : 38))}px`;
+    const unitSize = `${Math.max(12, Math.min(parseSizeToPixels(styles.unit_size, 18), compactLayout ? 14 : 16))}px`;
+    const titleSize = `${Math.max(11, Math.min(parseSizeToPixels(styles.title_size, 14), compactLayout ? 11.5 : 12.5))}px`;
+    const legendSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.legend_size, 12), compactLayout ? 10 : 11))}px`;
     const lineWidth = `${Math.max(1.6, Math.min(parseSizeToPixels(styles.line_width, 2.2), compactLayout ? 1.9 : 2.2))}`;
-    const cardPaddingPx = Math.max(12, parseSizeToPixels(styles.card.padding, 16));
-    const chartBleed = Math.round(cardPaddingPx * 0.95);
+    const padEdges = parsePaddingEdges(styles.card.padding, 16);
+    const cardPaddingPx = Math.max(12, Math.round((padEdges.left + padEdges.right) / 2));
+    const chartBleed = Math.round(Math.max(padEdges.left, padEdges.right, cardPaddingPx) * 0.98);
+    const chartBleedLeft = Math.round(padEdges.left);
+    const chartBleedRight = Math.round(padEdges.right);
+    const chartBleedBottom = Math.round(padEdges.bottom);
     const cardBackground = `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, color-mix(in srgb, var(--primary-text-color) 2%, transparent)) 0%, ${styles.card.background} 100%)`;
     const computedCardBorder = `1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color))`;
     const cardBorder = String(styles.card.border || "").trim() && styles.card.border !== DEFAULT_CONFIG.styles.card.border
@@ -1911,7 +1877,7 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__header {
           align-items: start;
           display: grid;
-          gap: 10px;
+          gap: 8px;
           grid-template-columns: minmax(0, 1fr) auto;
         }
 
@@ -1936,13 +1902,13 @@ class NodaliaGraphCard extends HTMLElement {
           align-items: center;
           background: linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 0%, color-mix(in srgb, var(--primary-text-color) 3%, transparent) 100%);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 20px;
+          border-radius: 18px;
           color: ${styles.icon.color};
           display: inline-flex;
-          height: 42px;
+          height: 38px;
           justify-content: center;
           opacity: 0.9;
-          padding: 0 12px;
+          padding: 0 10px;
           position: relative;
         }
 
@@ -2009,9 +1975,9 @@ class NodaliaGraphCard extends HTMLElement {
           align-items: center;
           display: flex;
           flex-wrap: wrap;
-          gap: 6px 8px;
+          gap: 5px 6px;
           justify-content: flex-start;
-          margin-bottom: 8px;
+          margin-bottom: 4px;
           min-height: 0;
           padding-top: 0;
         }
@@ -2029,12 +1995,12 @@ class NodaliaGraphCard extends HTMLElement {
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
-          font-size: max(11px, calc(${legendSize} - 1px));
-          gap: 8px;
-          max-width: min(100%, 192px);
+          font-size: max(10px, calc(${legendSize} - 1px));
+          gap: 6px;
+          max-width: min(100%, 184px);
           min-width: 0;
           opacity: 0.9;
-          padding: 5px 9px;
+          padding: 4px 8px;
           transform: translateZ(0);
           transform-origin: center;
           transition: opacity 160ms ease, transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
@@ -2080,19 +2046,20 @@ class NodaliaGraphCard extends HTMLElement {
             linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, transparent) 0%, transparent 62%),
             color-mix(in srgb, var(--primary-text-color) 2%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 7%, transparent);
-          border-radius: 20px;
+          border-radius: ${styles.card.border_radius};
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           flex: 1 1 auto;
+          margin: 6px -${chartBleedRight}px -${chartBleedBottom}px -${chartBleedLeft}px;
+          max-width: none;
           min-height: ${chartHeight};
-          margin-inline: 0;
-          margin-top: 14px;
+          min-width: 0;
           overflow: hidden;
-          padding: 4px 0 14px;
+          padding: 4px 0 12px;
           position: relative;
           touch-action: pan-y;
           user-select: none;
           -webkit-user-select: none;
-          width: 100%;
+          width: calc(100% + ${chartBleedLeft + chartBleedRight}px);
         }
 
         .graph-card__chart-wrap--entering {
@@ -2601,14 +2568,9 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass) {
-    if (!hass?.states) {
-      return "";
-    }
-
-    return Object.keys(hass.states)
-      .filter(entityId => entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number."))
-      .sort((left, right) => left.localeCompare(right, "es"))
-      .join("|");
+    return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, id =>
+      id.startsWith("sensor.") || id.startsWith("number.") || id.startsWith("input_number."),
+    );
   }
 
   _captureFocusState() {
@@ -2685,7 +2647,7 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -3219,15 +3181,9 @@ class NodaliaGraphCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    return Object.entries(hass?.states || {})
-      .filter(([entityId]) => (
-        entityId.startsWith("sensor.")
-        || entityId.startsWith("number.")
-        || entityId.startsWith("input_number.")
-      ))
-      .map(([entityId, state]) => `${entityId}:${String(state?.attributes?.friendly_name || "")}:${String(state?.attributes?.icon || "")}`)
-      .sort((left, right) => left.localeCompare(right, "es", { sensitivity: "base" }))
-      .join("|");
+    return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, id =>
+      id.startsWith("sensor.") || id.startsWith("number.") || id.startsWith("input_number."),
+    );
   }
 
   _getEntityOptions(field = "entities.0.entity", domains = []) {
@@ -3352,7 +3308,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 

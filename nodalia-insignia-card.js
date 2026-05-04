@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "0.2.0";
+const CARD_VERSION = "0.2.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -15,6 +15,8 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  icon_active: "",
+  icon_inactive: "",
   use_entity_icon: false,
   use_entity_picture: false,
   state_attribute: "",
@@ -157,71 +159,6 @@ function compactConfig(value) {
   return value;
 }
 
-function deepEqual(a, b) {
-  if (Object.is(a, b)) {
-    return true;
-  }
-  if (a == null || b == null) {
-    return a === b;
-  }
-  if (typeof a !== typeof b) {
-    return false;
-  }
-  if (typeof a !== "object") {
-    return false;
-  }
-  if (Array.isArray(a)) {
-    if (!Array.isArray(b) || a.length !== b.length) {
-      return false;
-    }
-    return a.every((value, index) => deepEqual(value, b[index]));
-  }
-  if (Array.isArray(b)) {
-    return false;
-  }
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-  if (keysA.length !== keysB.length) {
-    return false;
-  }
-  return keysA.every(key => deepEqual(a[key], b[key]));
-}
-
-function stripEqualToDefaults(config, defaults) {
-  if (defaults === undefined || defaults === null) {
-    return deepClone(config);
-  }
-  if (config === undefined || config === null) {
-    return undefined;
-  }
-  if (Array.isArray(config)) {
-    return deepEqual(config, defaults) ? undefined : deepClone(config);
-  }
-  if (isObject(config) && isObject(defaults)) {
-    const out = {};
-    for (const key of Object.keys(config)) {
-      const cv = config[key];
-      const dv = defaults[key];
-      if (!(key in defaults)) {
-        out[key] = deepClone(cv);
-        continue;
-      }
-      if (deepEqual(cv, dv)) {
-        continue;
-      }
-      if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
-        const stripped = stripEqualToDefaults(cv, dv);
-        if (stripped !== undefined) {
-          out[key] = stripped;
-        }
-      } else {
-        out[key] = deepClone(cv);
-      }
-    }
-    return Object.keys(out).length ? out : undefined;
-  }
-  return deepEqual(config, defaults) ? undefined : config;
-}
 
 function setByPath(target, path, value) {
   const parts = path.split(".");
@@ -607,12 +544,33 @@ class NodaliaInsigniaCard extends HTMLElement {
     return unit ? `${formatted} ${unit}` : formatted;
   }
 
-  _getResolvedIcon(state) {
-    if (this._config.use_entity_icon) {
-      return getDynamicEntityIcon(state) || this._config.icon || "mdi:star-four-points-circle";
+  _isActiveState(state) {
+    const stateKey = normalizeTextKey(state?.state);
+
+    if (!stateKey || ["off", "closed", "locked", "unavailable", "unknown", "none", "idle", "standby"].includes(stateKey)) {
+      return false;
     }
 
-    return this._config.icon || state?.attributes?.icon || "mdi:star-four-points-circle";
+    return true;
+  }
+
+  _getResolvedIcon(state) {
+    const trimIcon = value => (typeof value === "string" ? value.trim() : "");
+    const iconActive = trimIcon(this._config?.icon_active);
+    const iconInactive = trimIcon(this._config?.icon_inactive);
+
+    if (iconActive || iconInactive) {
+      const chosen = this._isActiveState(state) ? iconActive : iconInactive;
+      if (chosen) {
+        return chosen;
+      }
+    }
+
+    if (this._config.use_entity_icon) {
+      return getDynamicEntityIcon(state) || trimIcon(this._config?.icon) || "mdi:star-four-points-circle";
+    }
+
+    return trimIcon(this._config?.icon) || state?.attributes?.icon || "mdi:star-four-points-circle";
   }
 
   _getResolvedPicture(state) {
@@ -1194,13 +1152,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    const tag = window.NodaliaI18n.localeTag(
-      window.NodaliaI18n.resolveLanguage(hass, this._config?.language ?? "auto"),
-    );
-    return `${tag}|${Object.entries(hass?.states || {})
-      .map(([entityId, state]) => `${entityId}:${String(state?.attributes?.friendly_name || "")}`)
-      .sort((left, right) => left.localeCompare(right, tag, { sensitivity: "base" }))
-      .join("|")}`;
+    return window.NodaliaUtils.editorStatesSignature(hass, this._config?.language ?? "auto");
   }
 
   _watchEditorControlTag(tagName) {
@@ -1315,7 +1267,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -1550,91 +1502,25 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
   }
 
   _mountEntityPicker(host) {
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-
-    const field = host.dataset.field || "entity";
-    const nextValue = host.dataset.value || "";
-    let control = null;
-
-    if (customElements.get("ha-entity-picker")) {
-      control = document.createElement("ha-entity-picker");
-      control.allowCustomEntity = true;
-    } else if (customElements.get("ha-selector")) {
-      control = document.createElement("ha-selector");
-      control.selector = {
-        entity: {},
-      };
-    } else {
-      control = document.createElement("input");
-      control.type = "text";
-      control.dataset.field = field;
-      control.value = nextValue;
-      control.addEventListener("change", this._onShadowInput);
-    }
-
-    control.dataset.field = field;
-    control.dataset.value = nextValue;
-
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
-
-    if ("value" in control) {
-      control.value = nextValue;
-    }
-
-    if (control.tagName !== "INPUT") {
-      control.addEventListener("value-changed", this._onShadowValueChanged);
-    }
-
-    host.replaceChildren(control);
-  }
-
-  _copyDatasetToControl(host, control) {
-    Object.entries(host.dataset || {}).forEach(([key, value]) => {
-      if (key === "mountedControl" || key === "value" || key === "placeholder") {
-        return;
-      }
-      control.dataset[key] = value;
+    window.NodaliaUtils.mountEntityPickerHost(host, {
+      hass: this._hass,
+      field: host.dataset.field || "entity",
+      value: host.dataset.value || "",
+      onShadowInput: this._onShadowInput,
+      onShadowValueChanged: this._onShadowValueChanged,
+      copyDatasetFromHost: true,
     });
   }
 
   _mountIconPicker(host) {
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-
-    const nextValue = host.dataset.value || "";
-    const placeholder = host.dataset.placeholder || "";
-    let control = null;
-
-    if (customElements.get("ha-icon-picker")) {
-      control = document.createElement("ha-icon-picker");
-    } else {
-      control = document.createElement("input");
-      control.type = "text";
-    }
-
-    this._copyDatasetToControl(host, control);
-
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
-    if (placeholder && "placeholder" in control) {
-      control.placeholder = placeholder;
-    }
-    if ("value" in control) {
-      control.value = nextValue;
-    }
-    if (control.tagName !== "INPUT") {
-      control.addEventListener("value-changed", this._onShadowValueChanged);
-    } else {
-      control.addEventListener("change", this._onShadowInput);
-    }
-
-    host.replaceChildren(control);
+    window.NodaliaUtils.mountIconPickerHost(host, {
+      hass: this._hass,
+      value: host.dataset.value || "",
+      placeholder: host.dataset.placeholder || "",
+      onShadowInput: this._onShadowInput,
+      onShadowValueChanged: this._onShadowValueChanged,
+      copyDatasetFromHost: true,
+    });
   }
 
   _render() {
@@ -1905,6 +1791,21 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
               placeholder: "mdi:star-four-points-circle",
               fullWidth: true,
             })}
+            ${this._renderIconPickerField("Icono (estado activo)", "icon_active", config.icon_active, {
+              placeholder: "mdi:door-open",
+              fullWidth: true,
+            })}
+            ${this._renderIconPickerField("Icono (estado inactivo)", "icon_inactive", config.icon_inactive, {
+              placeholder: "mdi:door-closed",
+              fullWidth: true,
+            })}
+            <div class="editor-section__hint editor-field--full" style="grid-column: 1 / -1; margin-top: -4px;">
+              ${escapeHtml(
+                this._editorLabel(
+                  "Opcional: icono distinto cuando la insignia está activa o inactiva (interruptores, puertas, ventanas, etc.). Si uno queda vacío, se usa el icono general o el de la entidad.",
+                ),
+              )}
+            </div>
             ${this._renderTextField("Nombre visible", "name", config.name, {
               placeholder: this._editorLabel("Temperatura"),
               fullWidth: true,
