@@ -10,6 +10,14 @@ Work toward the next **`0.4.x`** prerelease; **`package.json`** and tags follow 
 
 ---
 
+## [0.4.0-alpha.21] - 2026-05-06
+
+Twenty-first **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.21`** (tag **`v0.4.0-alpha.21`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Insignia card (editor visual)**: campos de color (`styles.icon.background`, `styles.icon.on_color`, `styles.icon.off_color`) con selector visual tipo color picker, alineado con el patrón del resto de editores.
+
+---
+
 ## [0.4.0-beta.4] - 2026-05-06
 
 Fourth **`beta`** prerelease on the **0.4.x** line (**branch `beta`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-beta.4`** (tag **`v0.4.0-beta.4`**). Same expectations as other **`0.4.0-beta.*`** builds. Use this tag when installing from HACS or GitHub Releases so **`pkgVersion`** matches the release.
