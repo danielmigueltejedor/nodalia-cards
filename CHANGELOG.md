@@ -10,6 +10,15 @@ Work-in-progress on **`alpha`** ahead of the next **`0.4.0-alpha.N`** tag or pro
 
 ---
 
+## [0.4.0-alpha.13] - 2026-05-05
+
+Thirteenth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.13`** (tag **`v0.4.0-alpha.13`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Weather card (forecast chart mode)**: popups/overlays de detalle ajustados para respetar mejor el tema activo al cambiar entre themes (evita oscurecido en tema claro).
+- **Graph card**: rework visual de la línea/superficie y auto-rangos inteligentes por métrica (p. ej. humedad con referencia 20–80 cuando no se define `min`/`max` manualmente).
+
+---
+
 ## [0.4.0-alpha.12] - 2026-05-05
 
 Twelfth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.12`** (tag **`v0.4.0-alpha.12`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
