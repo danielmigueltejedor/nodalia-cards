@@ -46,6 +46,9 @@ const DEFAULT_CONFIG = {
       off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
       icon_only_offset_y: "2px",
     },
+    tint: {
+      color: "var(--info-color, #71c0ff)",
+    },
     title_size: "12px",
     value_size: "12px",
   },
@@ -453,6 +456,10 @@ function getEditorColorModel(value, fallbackValue = "#71c0ff") {
 function getEditorColorFallbackValue(field) {
   const normalizedField = String(field ?? "");
 
+  if (normalizedField.endsWith("tint.color")) {
+    return "var(--info-color, #71c0ff)";
+  }
+
   if (normalizedField.endsWith("off_color")) {
     return "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))";
   }
@@ -482,8 +489,8 @@ function normalizeConfig(rawConfig) {
     merged.tint_auto = true;
   } else if (legacyPreset) {
     merged.tint_auto = false;
-    if (!rawConfig?.styles?.icon?.background) {
-      merged.styles.icon.background = getTintPresetColor(legacyPreset);
+    if (!rawConfig?.styles?.tint?.color) {
+      merged.styles.tint.color = getTintPresetColor(legacyPreset);
     }
   }
   return merged;
@@ -692,7 +699,7 @@ class NodaliaInsigniaCard extends HTMLElement {
 
   _getTintColor(state) {
     if (this._config?.tint_auto === false) {
-      return this._config?.styles?.icon?.background || DEFAULT_CONFIG.styles.icon.background;
+      return this._config?.styles?.tint?.color || DEFAULT_CONFIG.styles.tint.color;
     }
 
     const domain = getEntityDomain(state);
@@ -1975,6 +1982,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
               ? `
             <div class="editor-grid editor-grid--stacked">
               ${this._renderCheckboxField("Tintado automático por tipo de entidad", "tint_auto", config.tint_auto !== false)}
+              ${this._renderColorField("Color tintado manual", "styles.tint.color", config.styles?.tint?.color || DEFAULT_CONFIG.styles.tint.color, { fullWidth: true })}
               ${this._renderTextField("Tamaño del icono", "styles.icon.size", config.styles?.icon?.size || DEFAULT_CONFIG.styles.icon.size)}
               ${this._renderTextField("Tamaño del nombre", "styles.title_size", config.styles?.title_size || DEFAULT_CONFIG.styles.title_size)}
               ${this._renderTextField("Tamaño del valor", "styles.value_size", config.styles?.value_size || DEFAULT_CONFIG.styles.value_size)}
