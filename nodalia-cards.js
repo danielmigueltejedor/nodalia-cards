@@ -14613,6 +14613,184 @@
 
 }
 {
+(function initNodaliaBubbleContrast() {
+  const existing = typeof window !== "undefined" ? window.NodaliaBubbleContrast : null;
+  if (existing && typeof existing.shouldDarkenBubbleIconGlyph === "function") {
+    return;
+  }
+
+  function normalizeTextKey(value) {
+    return String(value ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+  }
+
+  function getEntityDomain(state) {
+    const entityId = String(state?.entity_id || "");
+    return entityId.includes(".") ? entityId.split(".")[0] : "";
+  }
+
+  function resolveEditorColorValue(value) {
+    const rawValue = String(value ?? "").trim();
+    if (!rawValue || typeof document === "undefined") {
+      return "";
+    }
+
+    const probe = document.createElement("span");
+    probe.style.position = "fixed";
+    probe.style.opacity = "0";
+    probe.style.pointerEvents = "none";
+    probe.style.color = "";
+    probe.style.color = rawValue;
+    if (!probe.style.color) {
+      return rawValue;
+    }
+
+    (document.body || document.documentElement).appendChild(probe);
+    const resolved = getComputedStyle(probe).color;
+    probe.remove();
+    return resolved || rawValue;
+  }
+
+  function rgbToHueDegrees(r, g, b) {
+    const rn = r / 255;
+    const gn = g / 255;
+    const bn = b / 255;
+    const max = Math.max(rn, gn, bn);
+    const min = Math.min(rn, gn, bn);
+    const d = max - min;
+    if (d < 1 / 255) {
+      return null;
+    }
+    let h;
+    if (max === rn) {
+      h = ((gn - bn) / d) % 6;
+    } else if (max === gn) {
+      h = (bn - rn) / d + 2;
+    } else {
+      h = (rn - gn) / d + 4;
+    }
+    h *= 60;
+    if (h < 0) {
+      h += 360;
+    }
+    return h;
+  }
+
+  function parseCssColorHue(cssColor, resolveDepth = 0) {
+    const raw = String(cssColor || "").trim();
+    if (!raw) {
+      return null;
+    }
+
+    const varFallback = /\bvar\([^,]+,\s*([^)]+)\)/i.exec(raw);
+    if (varFallback) {
+      const nested = parseCssColorHue(varFallback[1].trim(), resolveDepth);
+      if (nested !== null && !Number.isNaN(nested)) {
+        return nested;
+      }
+    }
+
+    const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(raw);
+    if (hex) {
+      let digits = hex[1];
+      if (digits.length === 3) {
+        digits = digits
+          .split("")
+          .map(ch => ch + ch)
+          .join("");
+      }
+      const r = parseInt(digits.slice(0, 2), 16);
+      const g = parseInt(digits.slice(2, 4), 16);
+      const b = parseInt(digits.slice(4, 6), 16);
+      return rgbToHueDegrees(r, g, b);
+    }
+
+    const rgbFn = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i.exec(raw);
+    if (rgbFn) {
+      return rgbToHueDegrees(Number(rgbFn[1]), Number(rgbFn[2]), Number(rgbFn[3]));
+    }
+
+    if (resolveDepth === 0 && typeof document !== "undefined") {
+      const resolved = resolveEditorColorValue(raw);
+      const resolvedTrim = String(resolved || "").trim();
+      if (resolvedTrim && resolvedTrim !== raw) {
+        return parseCssColorHue(resolvedTrim, 1);
+      }
+    }
+
+    return null;
+  }
+
+  function isHueCoolTintPoorContrast(hue) {
+    if (hue === null || Number.isNaN(hue)) {
+      return false;
+    }
+    if (hue >= 65 && hue <= 155) {
+      return true;
+    }
+    if (hue >= 165 && hue <= 275) {
+      return true;
+    }
+    if (hue >= 300 || hue <= 20) {
+      return true;
+    }
+    return false;
+  }
+
+  function inferCoolTintFromEntity(state) {
+    if (!state) {
+      return false;
+    }
+    const domain = getEntityDomain(state);
+    const dc = normalizeTextKey(state.attributes?.device_class || "");
+    const unit = normalizeTextKey(
+      String(state.attributes?.unit_of_measurement || state.attributes?.native_unit_of_measurement || ""),
+    );
+
+    if (domain === "sensor") {
+      if (
+        /(^|_)power($|_)|energy|current|voltage|battery|frequency|humidity|moisture|temperature|pressure/.test(dc)
+      ) {
+        return true;
+      }
+      if (/\b(kwh|mwh|wh|kw|mw|ma|mv|hz|a|v)\b|\bw\b/.test(unit)) {
+        return true;
+      }
+    }
+
+    if (domain === "binary_sensor" && /moisture|battery/.test(dc)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  function shouldDarkenBubbleIconGlyph(state, accentColor) {
+    if (!state) {
+      return false;
+    }
+    const hue = parseCssColorHue(accentColor);
+    if (hue !== null && !Number.isNaN(hue)) {
+      return isHueCoolTintPoorContrast(hue);
+    }
+    return inferCoolTintFromEntity(state);
+  }
+
+  if (typeof window !== "undefined") {
+    window.NodaliaBubbleContrast = {
+      resolveEditorColorValue,
+      parseCssColorHue,
+      shouldDarkenBubbleIconGlyph,
+    };
+  }
+})();
+
+}
+{
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
 const CARD_VERSION = "0.6.5";
@@ -31902,28 +32080,6 @@ function escapeSelectorValue(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
-function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
-  }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
-}
-
 function formatEditorHexChannel(value) {
   return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
 }
@@ -31947,7 +32103,9 @@ function formatEditorColorFromHex(hex, alpha = 1) {
 
 function getEditorColorModel(value, fallbackValue = "#71c0ff") {
   const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
-  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const resolve = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  const resolvedValue =
+    (resolve ? resolve(sourceValue) : "") || (resolve ? resolve(fallbackValue) : "") || "rgb(113, 192, 255)";
   const channels = resolvedValue.match(/[\d.]+/g) || [];
   const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
   const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
@@ -32008,136 +32166,6 @@ function normalizeTextKey(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
-}
-
-function rgbToHueDegrees(r, g, b) {
-  const rn = r / 255;
-  const gn = g / 255;
-  const bn = b / 255;
-  const max = Math.max(rn, gn, bn);
-  const min = Math.min(rn, gn, bn);
-  const d = max - min;
-  if (d < 1 / 255) {
-    return null;
-  }
-  let h;
-  if (max === rn) {
-    h = ((gn - bn) / d) % 6;
-  } else if (max === gn) {
-    h = ((bn - rn) / d) + 2;
-  } else {
-    h = ((rn - gn) / d) + 4;
-  }
-  h *= 60;
-  if (h < 0) {
-    h += 360;
-  }
-  return h;
-}
-
-function parseCssColorHue(cssColor, resolveDepth = 0) {
-  const raw = String(cssColor || "").trim();
-  if (!raw) {
-    return null;
-  }
-
-  const varFallback = /\bvar\([^,]+,\s*([^)]+)\)/i.exec(raw);
-  if (varFallback) {
-    const nested = parseCssColorHue(varFallback[1].trim(), resolveDepth);
-    if (nested !== null && !Number.isNaN(nested)) {
-      return nested;
-    }
-  }
-
-  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(raw);
-  if (hex) {
-    let digits = hex[1];
-    if (digits.length === 3) {
-      digits = digits
-        .split("")
-        .map(ch => ch + ch)
-        .join("");
-    }
-    const r = parseInt(digits.slice(0, 2), 16);
-    const g = parseInt(digits.slice(2, 4), 16);
-    const b = parseInt(digits.slice(4, 6), 16);
-    return rgbToHueDegrees(r, g, b);
-  }
-
-  const rgbFn = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i.exec(raw);
-  if (rgbFn) {
-    return rgbToHueDegrees(Number(rgbFn[1]), Number(rgbFn[2]), Number(rgbFn[3]));
-  }
-
-  if (resolveDepth === 0 && typeof document !== "undefined") {
-    const resolved = resolveEditorColorValue(raw);
-    const resolvedTrim = String(resolved || "").trim();
-    if (resolvedTrim && resolvedTrim !== raw) {
-      return parseCssColorHue(resolvedTrim, 1);
-    }
-  }
-
-  return null;
-}
-
-function isHueCoolTintPoorContrast(hue) {
-  if (hue === null || Number.isNaN(hue)) {
-    return false;
-  }
-  if (hue >= 65 && hue <= 155) {
-    return true;
-  }
-  if (hue >= 165 && hue <= 275) {
-    return true;
-  }
-  if (hue >= 300 || hue <= 20) {
-    return true;
-  }
-  return false;
-}
-
-function getEntityDomain(state) {
-  const entityId = String(state?.entity_id || "");
-  return entityId.includes(".") ? entityId.split(".")[0] : "";
-}
-
-function inferCoolTintFromEntity(state) {
-  if (!state) {
-    return false;
-  }
-  const domain = getEntityDomain(state);
-  const dc = normalizeTextKey(state.attributes?.device_class || "");
-  const unit = normalizeTextKey(
-    String(state.attributes?.unit_of_measurement || state.attributes?.native_unit_of_measurement || ""),
-  );
-
-  if (domain === "sensor") {
-    if (
-      /(^|_)power($|_)|energy|current|voltage|battery|frequency|humidity|moisture|temperature|pressure/.test(dc)
-    ) {
-      return true;
-    }
-    if (/\b(kwh|mwh|wh|kw|mw|ma|mv|hz|a|v)\b|\bw\b/.test(unit)) {
-      return true;
-    }
-  }
-
-  if (domain === "binary_sensor" && /moisture|battery/.test(dc)) {
-    return true;
-  }
-
-  return false;
-}
-
-function shouldDarkenBubbleIconGlyph(state, accentColor) {
-  if (!state) {
-    return false;
-  }
-  const hue = parseCssColorHue(accentColor);
-  if (hue !== null && !Number.isNaN(hue)) {
-    return isHueCoolTintPoorContrast(hue);
-  }
-  return inferCoolTintFromEntity(state);
 }
 
 function isUnavailableState(state) {
@@ -33198,7 +33226,8 @@ class NodaliaFanCard extends HTMLElement {
     const title = this._getFanName(state);
     const icon = this._getFanIcon(state);
     const accentColor = this._getAccentColor(state);
-    const darkenBubbleIconGlyph = isOn && shouldDarkenBubbleIconGlyph(state, accentColor);
+    const darkenBubbleIconGlyph =
+      isOn && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
     const showUnavailableBadge = isUnavailableState(state);
     const currentPercentage = this._getPercentage(state);
     const supportsPercentage = config.show_slider !== false && this._supportsPercentage(state);
@@ -35678,28 +35707,6 @@ function escapeSelectorValue(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
-function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
-  }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
-}
-
 function formatEditorHexChannel(value) {
   return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
 }
@@ -35723,7 +35730,9 @@ function formatEditorColorFromHex(hex, alpha = 1) {
 
 function getEditorColorModel(value, fallbackValue = "#71c0ff") {
   const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
-  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const resolve = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  const resolvedValue =
+    (resolve ? resolve(sourceValue) : "") || (resolve ? resolve(fallbackValue) : "") || "rgb(113, 192, 255)";
   const channels = resolvedValue.match(/[\d.]+/g) || [];
   const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
   const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
@@ -35803,136 +35812,6 @@ function normalizeTextKey(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
-}
-
-function rgbToHueDegrees(r, g, b) {
-  const rn = r / 255;
-  const gn = g / 255;
-  const bn = b / 255;
-  const max = Math.max(rn, gn, bn);
-  const min = Math.min(rn, gn, bn);
-  const d = max - min;
-  if (d < 1 / 255) {
-    return null;
-  }
-  let h;
-  if (max === rn) {
-    h = ((gn - bn) / d) % 6;
-  } else if (max === gn) {
-    h = ((bn - rn) / d) + 2;
-  } else {
-    h = ((rn - gn) / d) + 4;
-  }
-  h *= 60;
-  if (h < 0) {
-    h += 360;
-  }
-  return h;
-}
-
-function parseCssColorHue(cssColor, resolveDepth = 0) {
-  const raw = String(cssColor || "").trim();
-  if (!raw) {
-    return null;
-  }
-
-  const varFallback = /\bvar\([^,]+,\s*([^)]+)\)/i.exec(raw);
-  if (varFallback) {
-    const nested = parseCssColorHue(varFallback[1].trim(), resolveDepth);
-    if (nested !== null && !Number.isNaN(nested)) {
-      return nested;
-    }
-  }
-
-  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(raw);
-  if (hex) {
-    let digits = hex[1];
-    if (digits.length === 3) {
-      digits = digits
-        .split("")
-        .map(ch => ch + ch)
-        .join("");
-    }
-    const r = parseInt(digits.slice(0, 2), 16);
-    const g = parseInt(digits.slice(2, 4), 16);
-    const b = parseInt(digits.slice(4, 6), 16);
-    return rgbToHueDegrees(r, g, b);
-  }
-
-  const rgbFn = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i.exec(raw);
-  if (rgbFn) {
-    return rgbToHueDegrees(Number(rgbFn[1]), Number(rgbFn[2]), Number(rgbFn[3]));
-  }
-
-  if (resolveDepth === 0 && typeof document !== "undefined") {
-    const resolved = resolveEditorColorValue(raw);
-    const resolvedTrim = String(resolved || "").trim();
-    if (resolvedTrim && resolvedTrim !== raw) {
-      return parseCssColorHue(resolvedTrim, 1);
-    }
-  }
-
-  return null;
-}
-
-function isHueCoolTintPoorContrast(hue) {
-  if (hue === null || Number.isNaN(hue)) {
-    return false;
-  }
-  if (hue >= 65 && hue <= 155) {
-    return true;
-  }
-  if (hue >= 165 && hue <= 275) {
-    return true;
-  }
-  if (hue >= 300 || hue <= 20) {
-    return true;
-  }
-  return false;
-}
-
-function getEntityDomain(state) {
-  const entityId = String(state?.entity_id || "");
-  return entityId.includes(".") ? entityId.split(".")[0] : "";
-}
-
-function inferCoolTintFromEntity(state) {
-  if (!state) {
-    return false;
-  }
-  const domain = getEntityDomain(state);
-  const dc = normalizeTextKey(state.attributes?.device_class || "");
-  const unit = normalizeTextKey(
-    String(state.attributes?.unit_of_measurement || state.attributes?.native_unit_of_measurement || ""),
-  );
-
-  if (domain === "sensor") {
-    if (
-      /(^|_)power($|_)|energy|current|voltage|battery|frequency|humidity|moisture|temperature|pressure/.test(dc)
-    ) {
-      return true;
-    }
-    if (/\b(kwh|mwh|wh|kw|mw|ma|mv|hz|a|v)\b|\bw\b/.test(unit)) {
-      return true;
-    }
-  }
-
-  if (domain === "binary_sensor" && /moisture|battery/.test(dc)) {
-    return true;
-  }
-
-  return false;
-}
-
-function shouldDarkenBubbleIconGlyph(state, accentColor) {
-  if (!state) {
-    return false;
-  }
-  const hue = parseCssColorHue(accentColor);
-  if (hue !== null && !Number.isNaN(hue)) {
-    return isHueCoolTintPoorContrast(hue);
-  }
-  return inferCoolTintFromEntity(state);
 }
 
 function isUnavailableState(state) {
@@ -37176,7 +37055,8 @@ class NodaliaHumidifierCard extends HTMLElement {
     const title = this._getHumidifierName(state);
     const icon = this._getHumidifierIcon(state);
     const accentColor = this._getAccentColor(state);
-    const darkenBubbleIconGlyph = isOn && shouldDarkenBubbleIconGlyph(state, accentColor);
+    const darkenBubbleIconGlyph =
+      isOn && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
     const showUnavailableBadge = isUnavailableState(state);
     const supportsHumidity = config.show_slider !== false && this._supportsTargetHumidity(state);
     const humidityRange = this._getHumidityRange(state);
@@ -57481,10 +57361,12 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     this._showStyleSection = false;
     this._pendingEditorControlTags = new Set();
     this._emitConfigTimer = 0;
+    /** `styles` | `animations` when pointerdown handled that toggle; following click for same id is ignored. */
+    this._suppressEditorToggleClickFor = null;
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
-    this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onShadowClick = this._onShadowClick.bind(this);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
@@ -57771,10 +57653,6 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
   }
 
   _onShadowClick(event) {
-    if (event.defaultPrevented) {
-      return;
-    }
-
     const toggleButton = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
@@ -57783,14 +57661,29 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
       return;
     }
 
+    const toggleId = toggleButton.dataset.editorToggle;
+    if (toggleId !== "styles" && toggleId !== "animations") {
+      return;
+    }
+
+    if (this._suppressEditorToggleClickFor) {
+      if (toggleId === this._suppressEditorToggleClickFor) {
+        this._suppressEditorToggleClickFor = null;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      this._suppressEditorToggleClickFor = null;
+    }
+
     event.preventDefault();
     event.stopPropagation();
 
     const focusState = this._captureFocusState();
 
-    if (toggleButton.dataset.editorToggle === "styles") {
+    if (toggleId === "styles") {
       this._showStyleSection = !this._showStyleSection;
-    } else if (toggleButton.dataset.editorToggle === "animations") {
+    } else {
       this._showAnimationSection = !this._showAnimationSection;
     }
 
@@ -57807,19 +57700,26 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
       return;
     }
 
-    // Handle section toggles on pointerdown so an in-flight blur/change
+    const toggleId = toggleButton.dataset.editorToggle;
+    if (toggleId !== "styles" && toggleId !== "animations") {
+      return;
+    }
+
+    // Handle known section toggles on pointerdown so an in-flight blur/change
     // re-render from another field cannot swallow this interaction.
+    // Do not rely on click + defaultPrevented: click is a separate event.
+    // Suppress the following click so we do not double-toggle on pointer devices.
     event.preventDefault();
     event.stopPropagation();
 
+    this._suppressEditorToggleClickFor = toggleId;
+
     const focusState = this._captureFocusState();
 
-    if (toggleButton.dataset.editorToggle === "styles") {
+    if (toggleId === "styles") {
       this._showStyleSection = !this._showStyleSection;
-    } else if (toggleButton.dataset.editorToggle === "animations") {
-      this._showAnimationSection = !this._showAnimationSection;
     } else {
-      return;
+      this._showAnimationSection = !this._showAnimationSection;
     }
 
     this._render();
@@ -67574,28 +67474,6 @@ function escapeSelectorValue(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
-function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
-  }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
-}
-
 function formatEditorHexChannel(value) {
   return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
 }
@@ -67619,7 +67497,9 @@ function formatEditorColorFromHex(hex, alpha = 1) {
 
 function getEditorColorModel(value, fallbackValue = "#71c0ff") {
   const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
-  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const resolve = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  const resolvedValue =
+    (resolve ? resolve(sourceValue) : "") || (resolve ? resolve(fallbackValue) : "") || "rgb(113, 192, 255)";
   const channels = resolvedValue.match(/[\d.]+/g) || [];
   const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
   const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
@@ -67674,134 +67554,8 @@ function normalizeTextKey(value) {
     .replace(/^_+|_+$/g, "");
 }
 
-function rgbToHueDegrees(r, g, b) {
-  const rn = r / 255;
-  const gn = g / 255;
-  const bn = b / 255;
-  const max = Math.max(rn, gn, bn);
-  const min = Math.min(rn, gn, bn);
-  const d = max - min;
-  if (d < 1 / 255) {
-    return null;
-  }
-  let h;
-  if (max === rn) {
-    h = ((gn - bn) / d) % 6;
-  } else if (max === gn) {
-    h = (bn - rn) / d + 2;
-  } else {
-    h = (rn - gn) / d + 4;
-  }
-  h *= 60;
-  if (h < 0) {
-    h += 360;
-  }
-  return h;
-}
-
-function parseCssColorHue(cssColor, resolveDepth = 0) {
-  let raw = String(cssColor || "").trim();
-  if (!raw) {
-    return null;
-  }
-
-  const varFallback = /\bvar\([^,]+,\s*([^)]+)\)/i.exec(raw);
-  if (varFallback) {
-    const nested = parseCssColorHue(varFallback[1].trim(), resolveDepth);
-    if (nested !== null && !Number.isNaN(nested)) {
-      return nested;
-    }
-  }
-
-  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(raw);
-  if (hex) {
-    let digits = hex[1];
-    if (digits.length === 3) {
-      digits = digits
-        .split("")
-        .map(ch => ch + ch)
-        .join("");
-    }
-    const r = parseInt(digits.slice(0, 2), 16);
-    const g = parseInt(digits.slice(2, 4), 16);
-    const b = parseInt(digits.slice(4, 6), 16);
-    return rgbToHueDegrees(r, g, b);
-  }
-
-  const rgbFn = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i.exec(raw);
-  if (rgbFn) {
-    return rgbToHueDegrees(Number(rgbFn[1]), Number(rgbFn[2]), Number(rgbFn[3]));
-  }
-
-  // Named colors (`lightgreen`, …), bare `var(--primary-color)`, etc.: resolve via computed style once.
-  if (resolveDepth === 0 && typeof document !== "undefined") {
-    const resolved = resolveEditorColorValue(raw);
-    const resolvedTrim = String(resolved || "").trim();
-    if (resolvedTrim && resolvedTrim !== raw) {
-      return parseCssColorHue(resolvedTrim, 1);
-    }
-  }
-
-  return null;
-}
-
-function isHueCoolTintPoorContrast(hue) {
-  if (hue === null || Number.isNaN(hue)) {
-    return false;
-  }
-  // Greens ~65–155°, blues/cyans ~165–275°, pink/magenta/red ~300–20°
-  // tend to yield low icon contrast on tinted bubbles.
-  if (hue >= 65 && hue <= 155) {
-    return true;
-  }
-  if (hue >= 165 && hue <= 275) {
-    return true;
-  }
-  if (hue >= 300 || hue <= 20) {
-    return true;
-  }
-  return false;
-}
-
-function inferCoolTintFromEntity(state) {
-  if (!state) {
-    return false;
-  }
-  const domain = getEntityDomain(state);
-  const dc = normalizeTextKey(state.attributes?.device_class || "");
-  const unit = normalizeTextKey(
-    String(state.attributes?.unit_of_measurement || state.attributes?.native_unit_of_measurement || ""),
-  );
-
-  if (domain === "sensor") {
-    if (
-      /(^|_)power($|_)|energy|current|voltage|battery|frequency|humidity|moisture|temperature|pressure/.test(dc)
-    ) {
-      return true;
-    }
-    if (/\b(kwh|mwh|wh|kw|mw|ma|mv|hz|a|v)\b|\bw\b/.test(unit)) {
-      return true;
-    }
-  }
-
-  if (domain === "binary_sensor" && /moisture|battery/.test(dc)) {
-    return true;
-  }
-
-  return false;
-}
-
 function shouldDarkenEntityBubbleIconGlyph(state, accentColor) {
-  if (!state) {
-    return false;
-  }
-
-  const hue = parseCssColorHue(accentColor);
-  if (hue !== null && !Number.isNaN(hue)) {
-    return isHueCoolTintPoorContrast(hue);
-  }
-
-  return inferCoolTintFromEntity(state);
+  return Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
 }
 
 function isUnavailableState(state) {
@@ -74791,17 +74545,20 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
 
   _renderIconPickerField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const placeholderAttr = options.placeholder
+      ? `data-placeholder="${escapeHtml(options.placeholder)}"`
+      : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
-        <ha-icon-picker
+        <div
+          class="editor-control-host"
+          data-mounted-control="icon-picker"
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
-          value="${escapeHtml(inputValue)}"
-          ${placeholder}
-        ></ha-icon-picker>
+          ${placeholderAttr}
+        ></div>
       </div>
     `;
   }
@@ -74844,6 +74601,51 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
 
     if (control.tagName !== "INPUT") {
       control.addEventListener("value-changed", this._onShadowValueChanged);
+    }
+
+    host.replaceChildren(control);
+  }
+
+  _copyDatasetToControl(host, control) {
+    Object.entries(host.dataset || {}).forEach(([key, value]) => {
+      if (key === "mountedControl" || key === "value" || key === "placeholder") {
+        return;
+      }
+      control.dataset[key] = value;
+    });
+  }
+
+  _mountIconPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || "";
+    let control = null;
+
+    if (customElements.get("ha-icon-picker")) {
+      control = document.createElement("ha-icon-picker");
+    } else {
+      control = document.createElement("input");
+      control.type = "text";
+    }
+
+    this._copyDatasetToControl(host, control);
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+    if (placeholder && "placeholder" in control) {
+      control.placeholder = placeholder;
+    }
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+    if (control.tagName !== "INPUT") {
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    } else {
+      control.addEventListener("change", this._onShadowInput);
     }
 
     host.replaceChildren(control);
@@ -74951,7 +74753,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
         }
 
         .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
-        .editor-field:has(> ha-icon-picker) {
+        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]) {
           grid-column: 1 / -1;
         }
 
@@ -75048,7 +74850,6 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 
-        .editor-field ha-icon-picker,
         .editor-control-host,
         .editor-control-host > * {
           display: block;
@@ -75218,12 +75019,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
     `;
 
     this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
-
-    this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach(control => {
-      control.hass = this._hass;
-      control.value = control.dataset.value || "";
-      control.addEventListener("value-changed", this._onShadowValueChanged);
-    });
+    this.shadowRoot.querySelectorAll('[data-mounted-control="icon-picker"]').forEach(host => this._mountIconPicker(host));
 
     this._ensureEditorControlsReady();
   }
@@ -85948,4 +85744,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.20","contentSha256_12":"d138398eda36"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-beta.2","contentSha256_12":"4605bdb3fc7d"};}

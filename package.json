@@ -1,6 +1,6 @@
 {
   "name": "nodalia-cards",
-  "version": "0.4.0-alpha.20",
+  "version": "0.4.0-beta.2",
   "private": false,
   "type": "module",
   "description": "Suite de tarjetas personalizadas de Home Assistant para Nodalia.",
@@ -10,6 +10,7 @@
   "files": [
     "nodalia-i18n.js",
     "nodalia-editor-ui.js",
+    "nodalia-bubble-contrast.js",
     "nodalia-cards.js",
     "nodalia-navigation-bar.js",
     "nodalia-media-player.js",
