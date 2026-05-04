@@ -5242,6 +5242,14 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           font-weight: 600;
         }
 
+        label:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        label:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        label:has(> ha-entity-picker),
+        label:has(> ha-icon-picker),
+        label:has(> ha-selector) {
+          grid-column: 1 / -1;
+        }
+
         input,
         select {
           appearance: none;

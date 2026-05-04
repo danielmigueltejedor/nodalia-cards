@@ -19774,6 +19774,14 @@ class NodaliaNavigationBarEditor extends HTMLElement {
           font-weight: 600;
         }
 
+        label:has(> .editor-control-host[data-mounted-control="entity-picker"]),
+        label:has(> .editor-control-host[data-mounted-control="icon-picker"]),
+        label:has(> ha-entity-picker),
+        label:has(> ha-icon-picker),
+        label:has(> ha-selector) {
+          grid-column: 1 / -1;
+        }
+
         input,
         select {
           appearance: none;
@@ -84829,4 +84837,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.11","contentSha256_12":"36e8fd3ee7f8"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.4.0-alpha.11","contentSha256_12":"aee2d60ef61a"};}
