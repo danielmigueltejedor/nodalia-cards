@@ -393,7 +393,7 @@
 
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.13.3";
+const CARD_VERSION = "0.13.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2605,7 +2605,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     const mode = ["rooms", "zone"].includes(session.mode) ? session.mode : "";
-    const activeMode = ["all", "rooms", "zone", "goto"].includes(session.activeMode) ? session.activeMode : "";
+    const activeMode = ["all", "rooms", "zone", "goto", "routines"].includes(session.activeMode)
+      ? session.activeMode
+      : "";
     const activeRoomIds = arrayFromMaybe(session.activeRoomIds)
       .map(item => String(item || "").trim())
       .filter(Boolean);

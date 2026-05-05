@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.10";
+const CARD_VERSION = "1.0.0-alpha.11";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 
 const VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
@@ -15,6 +15,7 @@ const DEFAULT_CONFIG = {
   refresh_interval: 300,
   show_completed: false,
   allow_complete: true,
+  shared_completed_events_entity: "",
   tint_auto: true,
   animations: {
     enabled: true,
@@ -175,6 +176,7 @@ function normalizeConfig(config) {
   }
   normalized.time_range = timeRange;
   normalized.days_to_show = Math.min(62, Math.max(1, daysFromTimeRange(timeRange)));
+  normalized.shared_completed_events_entity = String(normalized.shared_completed_events_entity ?? "").trim();
   normalized.max_visible_events = Math.min(
     12,
     Math.max(1, Number(normalized.max_visible_events) || DEFAULT_CONFIG.max_visible_events),
@@ -416,6 +418,9 @@ class NodaliaCalendarCard extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowKeydown = this._onShadowKeydown.bind(this);
     this._onDocVisibility = this._onDocVisibility.bind(this);
+    this._lastSubmittedSharedCompletedValue = "";
+    this._lastSyncedSharedCompletedRaw = undefined;
+    this._completedMergedOnce = false;
   }
 
   _onDocVisibility() {
@@ -483,27 +488,128 @@ class NodaliaCalendarCard extends HTMLElement {
   }
 
   setConfig(config) {
+    const prevHelper = String(this._config?.shared_completed_events_entity || "").trim();
     this._config = normalizeConfig(config);
+    const nextHelper = String(this._config.shared_completed_events_entity || "").trim();
+    if (prevHelper !== nextHelper) {
+      this._completedMergedOnce = false;
+      this._lastSyncedSharedCompletedRaw = undefined;
+      this._lastSubmittedSharedCompletedValue = "";
+    }
     this._loadCompleted();
+    if (this._hass && this._getSharedCompletedEntityId()) {
+      this._syncCompletedPersistenceFromHass();
+    }
     this._refreshEvents();
+  }
+
+  _getSharedCompletedEntityId() {
+    const id = String(this._config?.shared_completed_events_entity || "").trim();
+    return id.startsWith("input_text.") ? id : "";
+  }
+
+  _getSharedCompletedPersistenceSignature() {
+    const id = this._getSharedCompletedEntityId();
+    if (!id || !this._hass?.states?.[id]) {
+      return "";
+    }
+    const st = this._hass.states[id];
+    const maxLen = Number(st.attributes?.max);
+    return `${id}\u001f${String(st.state ?? "")}\u001f${Number.isFinite(maxLen) ? maxLen : 0}`;
+  }
+
+  _getSharedCompletedMaxLength() {
+    const id = this._getSharedCompletedEntityId();
+    if (!id || !this._hass?.states?.[id]) {
+      return 255;
+    }
+    const max = Number(this._hass.states[id].attributes?.max);
+    return Number.isFinite(max) && max > 0 ? max : 255;
+  }
+
+  _readLocalCompletedKeysOnly() {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return [];
+    }
+    try {
+      const raw = window.localStorage.getItem(COMPLETION_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.map(k => String(k)) : [];
+    } catch (_error) {
+      return [];
+    }
+  }
+
+  _syncCompletedPersistenceFromHass() {
+    const id = this._getSharedCompletedEntityId();
+    if (!id || !this._hass?.states?.[id]) {
+      return;
+    }
+
+    const st = this._hass.states[id];
+    const raw = String(st?.state ?? "");
+    if (["unknown", "unavailable"].includes(raw)) {
+      return;
+    }
+
+    if (raw === this._lastSyncedSharedCompletedRaw) {
+      return;
+    }
+
+    let parsed = [];
+    try {
+      const v = JSON.parse(raw || "[]");
+      if (!Array.isArray(v)) {
+        return;
+      }
+      parsed = v.map(k => String(k));
+    } catch (_error) {
+      return;
+    }
+
+    this._lastSyncedSharedCompletedRaw = raw;
+
+    if (!this._completedMergedOnce) {
+      const local = this._readLocalCompletedKeysOnly();
+      this._completed = new Set([...local, ...parsed]);
+      this._completedMergedOnce = true;
+      this._saveCompleted();
+      return;
+    }
+
+    this._completed = new Set(parsed);
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem(COMPLETION_STORAGE_KEY, JSON.stringify(parsed));
+      }
+    } catch (_error) {
+      // Ignore storage errors.
+    }
   }
 
   set hass(hass) {
     const hadHass = this._hadHass;
     const prevLocale = this._hass?.locale?.language;
     const prevLabelSig = hadHass ? this._getCalendarEntityLabelsSignature() : "";
+    const prevSharedSig = hadHass ? this._getSharedCompletedPersistenceSignature() : "";
     this._hass = hass;
     if (!hass) {
       return;
     }
     if (!hadHass) {
       this._hadHass = true;
+      this._syncCompletedPersistenceFromHass();
       if (this._config.calendars.some(c => c && c.entity)) {
         this._refreshEvents();
       } else {
         this._renderIfChanged();
       }
       return;
+    }
+    const nextSharedSig = this._getSharedCompletedPersistenceSignature();
+    if (prevSharedSig !== nextSharedSig) {
+      this._syncCompletedPersistenceFromHass();
+      this._renderIfChanged(true);
     }
     const nextLabelSig = this._getCalendarEntityLabelsSignature();
     if (prevLocale !== hass.locale?.language || prevLabelSig !== nextLabelSig) {
@@ -659,31 +765,35 @@ class NodaliaCalendarCard extends HTMLElement {
       return `
         <div class="calendar-expanded__month">
           <div class="calendar-expanded__month-banner">${escapeHtml(title)}</div>
-          <div class="calendar-expanded__month-weekdays">
-            ${headers.map(h => `<div class="calendar-expanded__month-weekday">${escapeHtml(h)}</div>`).join("")}
-          </div>
-          <div class="calendar-expanded__month-grid">
-            ${cells
-              .map(cell => {
-                if (cell.kind === "pad") {
-                  return `<div class="calendar-expanded__month-cell calendar-expanded__month-cell--pad"></div>`;
-                }
-                const key = `${cell.date.getFullYear()}-${cell.date.getMonth()}-${cell.date.getDate()}`;
-                const group = map.get(key);
-                return `
-                  <div class="calendar-expanded__month-cell">
-                    <div class="calendar-expanded__month-daynum">${cell.day}</div>
-                    <div class="calendar-expanded__month-events">
-                      ${
-                        group
-                          ? group.events.map(ev => this._renderSingleEventHtml(ev, config, locale, { compact: true })).join("")
-                          : ""
-                      }
-                    </div>
-                  </div>
-                `;
-              })
-              .join("")}
+          <div class="calendar-expanded__month-matrix-wrap">
+            <div class="calendar-expanded__month-matrix">
+              <div class="calendar-expanded__month-weekdays">
+                ${headers.map(h => `<div class="calendar-expanded__month-weekday">${escapeHtml(h)}</div>`).join("")}
+              </div>
+              <div class="calendar-expanded__month-grid">
+                ${cells
+                  .map(cell => {
+                    if (cell.kind === "pad") {
+                      return `<div class="calendar-expanded__month-cell calendar-expanded__month-cell--pad"></div>`;
+                    }
+                    const key = `${cell.date.getFullYear()}-${cell.date.getMonth()}-${cell.date.getDate()}`;
+                    const group = map.get(key);
+                    return `
+                      <div class="calendar-expanded__month-cell">
+                        <div class="calendar-expanded__month-daynum">${cell.day}</div>
+                        <div class="calendar-expanded__month-events">
+                          ${
+                            group
+                              ? group.events.map(ev => this._renderSingleEventHtml(ev, config, locale, { compact: true })).join("")
+                              : ""
+                          }
+                        </div>
+                      </div>
+                    `;
+                  })
+                  .join("")}
+              </div>
+            </div>
           </div>
         </div>
       `;
@@ -708,28 +818,46 @@ class NodaliaCalendarCard extends HTMLElement {
   }
 
   _loadCompleted() {
-    if (typeof window === "undefined" || !window.localStorage) {
-      this._completed = new Set();
-      return;
-    }
-    try {
-      const raw = window.localStorage.getItem(COMPLETION_STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      this._completed = new Set(Array.isArray(parsed) ? parsed : []);
-    } catch (_error) {
-      this._completed = new Set();
-    }
+    this._completed = new Set(this._readLocalCompletedKeysOnly());
   }
 
   _saveCompleted() {
-    if (typeof window === "undefined" || !window.localStorage) {
+    const sortedKeys = [...this._completed].sort();
+    const payload = JSON.stringify(sortedKeys);
+
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        window.localStorage.setItem(COMPLETION_STORAGE_KEY, payload);
+      } catch (_error) {
+        // Ignore storage errors.
+      }
+    }
+
+    const entityId = this._getSharedCompletedEntityId();
+    if (!entityId || !this._hass?.callService) {
       return;
     }
-    try {
-      window.localStorage.setItem(COMPLETION_STORAGE_KEY, JSON.stringify([...this._completed]));
-    } catch (_error) {
-      // Ignore storage errors.
+
+    const maxLen = this._getSharedCompletedMaxLength();
+    if (payload.length > maxLen) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn(
+          "Nodalia Calendar Card: la lista de eventos completados no cabe en el input_text (aumenta max en el helper o marca menos eventos).",
+        );
+      }
+      return;
     }
+
+    const currentState = String(this._hass.states?.[entityId]?.state ?? "");
+    if (payload === currentState || payload === this._lastSubmittedSharedCompletedValue) {
+      return;
+    }
+
+    this._lastSubmittedSharedCompletedValue = payload;
+    this._hass.callService("input_text", "set_value", {
+      entity_id: entityId,
+      value: payload,
+    });
   }
 
   _scheduleRefresh() {
@@ -766,6 +894,7 @@ class NodaliaCalendarCard extends HTMLElement {
       config.max_visible_events,
       config.show_completed,
       config.allow_complete,
+      config.shared_completed_events_entity || "",
       config.tint_auto,
       config.animations?.enabled,
       config.animations?.content_duration,
@@ -1341,48 +1470,99 @@ class NodaliaCalendarCard extends HTMLElement {
           margin-bottom: 8px;
           text-transform: capitalize;
         }
+        .calendar-expanded__month {
+          --cal-month-cell-min: 88px;
+          --cal-month-gap: 6px;
+        }
+        .calendar-expanded__month-matrix-wrap {
+          margin-left: -2px;
+          margin-right: -2px;
+          overflow-x: auto;
+          overscroll-behavior-x: contain;
+          padding-bottom: 6px;
+          touch-action: pan-x pan-y;
+          -webkit-overflow-scrolling: touch;
+        }
+        .calendar-expanded__month-matrix {
+          display: flex;
+          flex-direction: column;
+          gap: var(--cal-month-gap);
+          min-width: max(100%, calc(7 * var(--cal-month-cell-min) + 6 * var(--cal-month-gap)));
+          width: 100%;
+        }
         .calendar-expanded__month-weekdays {
           color: var(--secondary-text-color);
           display: grid;
           font-size: 10px;
           font-weight: 700;
-          gap: 6px;
-          grid-template-columns: repeat(7, minmax(0, 1fr));
+          gap: var(--cal-month-gap);
+          grid-template-columns: repeat(7, minmax(var(--cal-month-cell-min), 1fr));
           letter-spacing: 0.06em;
-          margin-bottom: 6px;
+          margin-bottom: 0;
           text-align: center;
           text-transform: uppercase;
         }
         .calendar-expanded__month-grid {
           display: grid;
-          gap: 6px;
-          grid-template-columns: repeat(7, minmax(0, 1fr));
+          gap: var(--cal-month-gap);
+          grid-template-columns: repeat(7, minmax(var(--cal-month-cell-min), 1fr));
         }
         .calendar-expanded__month-cell {
           background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 14px;
           display: flex;
+          flex: 1 1 auto;
           flex-direction: column;
-          gap: 6px;
-          min-height: 104px;
+          gap: 4px;
+          max-height: 122px;
+          min-height: 96px;
+          min-width: 0;
+          overflow: hidden;
           padding: 6px;
         }
         .calendar-expanded__month-cell--pad {
           background: transparent;
           border-color: transparent;
+          max-height: none;
           min-height: 0;
           padding: 0;
         }
         .calendar-expanded__month-daynum {
           color: var(--secondary-text-color);
+          flex: 0 0 auto;
           font-size: 11px;
           font-weight: 800;
+          line-height: 1.2;
         }
         .calendar-expanded__month-events {
-          display: grid;
+          display: flex;
+          flex: 1 1 auto;
+          flex-direction: column;
           gap: 6px;
+          max-height: 4.75rem;
           min-height: 0;
+          overflow-x: hidden;
+          overflow-y: auto;
+          overscroll-behavior: contain;
+          touch-action: pan-y;
+          -webkit-overflow-scrolling: touch;
+        }
+        .calendar-expanded__month-events .calendar-event--compact .calendar-event__summary {
+          line-height: 1.25;
+          overflow-wrap: anywhere;
+          word-break: break-word;
+        }
+        .calendar-expanded__month-events .calendar-event--compact .calendar-event__summary small {
+          display: block;
+          line-height: 1.2;
+          margin-top: 2px;
+          opacity: 0.85;
+        }
+        @media (max-width: 520px) {
+          .calendar-expanded__month {
+            --cal-month-cell-min: 92px;
+          }
         }
       </style>
       <ha-card>
@@ -2237,6 +2417,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
 
         .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="calendar-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="input-text-entity"]),
         .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
@@ -2245,6 +2426,13 @@ class NodaliaCalendarCardEditor extends HTMLElement {
         .editor-toggle > span {
           font-size: 12px;
           font-weight: 600;
+        }
+
+        .editor-field__hint {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          font-weight: 500;
+          line-height: 1.45;
         }
 
         .editor-field input,
@@ -2516,6 +2704,22 @@ class NodaliaCalendarCardEditor extends HTMLElement {
             ${this._renderTintAutoToggle(config.tint_auto !== false)}
             ${this._renderCheckboxField("Permitir marcar eventos como completados", "allow_complete", config.allow_complete === true)}
             ${this._renderCheckboxField("Mostrar eventos completados", "show_completed", config.show_completed === true)}
+            <div class="editor-field editor-field--full">
+              <span>${escapeHtml(this._editorLabel("Helper input_text (completados compartidos)"))}</span>
+              <div
+                class="editor-control-host"
+                data-mounted-control="input-text-entity"
+                data-field="shared_completed_events_entity"
+                data-value="${escapeHtml(String(config.shared_completed_events_entity ?? ""))}"
+                data-domains="input_text"
+                data-placeholder="input_text.nodalia_calendar_hechos"
+              ></div>
+              <span class="editor-field__hint">${escapeHtml(
+                this._editorLabel(
+                  "Opcional: misma lista en movil y PC. Crea un input_text y elije aqui; la tarjeta guarda un JSON con las claves de eventos hechos.",
+                ),
+              )}</span>
+            </div>
           </div>
         </section>
 
@@ -2628,9 +2832,11 @@ class NodaliaCalendarCardEditor extends HTMLElement {
       </div>
     `;
 
-    this.shadowRoot.querySelectorAll('[data-mounted-control="calendar-entity"]').forEach(host => {
-      this._mountCalendarEntityHost(host);
-    });
+    this.shadowRoot
+      .querySelectorAll('[data-mounted-control="calendar-entity"], [data-mounted-control="input-text-entity"]')
+      .forEach(host => {
+        this._mountCalendarEntityHost(host);
+      });
   }
 }
 

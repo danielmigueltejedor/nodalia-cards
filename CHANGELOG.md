@@ -10,6 +10,16 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.11] - 2026-05-06
+
+Eleventh **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.11`** (tag **`v1.0.0-alpha.11`** optional).
+
+- **Advance Vacuum card:** **`shared_cleaning_session_entity`** vuelve a **persistir** cuando el modo activo es **`routines`**: `_normalizeCleaningSession` solo admitía `activeMode` en `all` / `rooms` / `zone` / `goto`, así que **`routines`** se perdía y el helper podía quedar vacío o sin `a=routines`. **`nodalia-advance-vacuum-card.js`**: `CARD_VERSION` **0.13.4**.
+- **Calendar card:** opción **`shared_completed_events_entity`** (`input_text`): los completados se sincronizan entre dispositivos vía HA (sin helper, solo `localStorage`).
+- **Calendar card:** vista mensual del popup con **scroll horizontal** en pantallas estrechas y columnas con **ancho mínimo** para legibilidad en móvil.
+
+---
+
 ## [1.0.0-alpha.10] - 2026-05-06
 
 Tenth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.10`** (tag **`v1.0.0-alpha.10`** optional).

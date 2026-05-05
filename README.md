@@ -3,7 +3,7 @@
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
 ![Latest stable](https://img.shields.io/badge/latest%20stable-0.6.1-2ea043)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
-![Alpha branch](https://img.shields.io/badge/alpha-1.0.0--alpha.10-orange)
+![Alpha branch](https://img.shields.io/badge/alpha-1.0.0--alpha.11-orange)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![GitHub](https://img.shields.io/badge/hosted%20on-GitHub-black?logo=github)
@@ -94,7 +94,7 @@ Use each card’s **visual editor** to discover fields; the YAML will stay minim
 
 ### Calendar card (`custom:nodalia-calendar-card`)
 
-Shows merged events from one or more `calendar.*` entities, optional per-calendar **label** and **tint**, **time range** presets, and a **mark done** flow (stored in the browser). Tap the card to open the **expanded** view (layout depends on the selected range).
+Shows merged events from one or more `calendar.*` entities, optional per-calendar **label** and **tint**, **time range** presets, and a **mark done** flow (browser `localStorage`, or shared via an **`input_text`** helper like Advance Vacuum’s cleaning session). Tap the card to open the **expanded** view (layout depends on the selected range).
 
 **Minimal YAML example**
 
@@ -117,6 +117,7 @@ calendars:
 | `refresh_interval` | number | `300` | Seconds between API refreshes |
 | `allow_complete` | bool | `true` | Show “Mark done” on events |
 | `show_completed` | bool | `false` | Keep completed events visible in the list |
+| `shared_completed_events_entity` | string | *(empty)* | Optional `input_text.*` entity: stores completed-event keys as JSON so **phones, tablets and browsers** stay in sync (raise **`max`** on the helper if you hit the character limit) |
 | `tint_auto` | bool | `true` | Tint the card with the theme primary; set `false` and use `styles.tint.color` for a **manual** accent |
 | `animations` | object | see below | Entrance / motion tuning |
 | `animations.enabled` | bool | `true` | Card animations |
@@ -160,7 +161,7 @@ Copy `nodalia-cards.js` into `config/www/` (or a subfolder) and add a resource u
 
 **Stable (`main`) — 0.6.1** includes **es, en, de, fr, it, nl** plus **pt, ru, el, zh** (simplified), and **ro** for the bundled cards and Lovelace visual editors (partial trees merge from English; coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
 
-**Prereleases:** active work-in-progress line is now **`1.0.0-alpha.10`** on **`alpha`** / **`beta`** (experimental and pre-stable builds). **`0.6.1`** stays as the recommended stable line on **`main`** while new cards and final polish (security, translations, fluency, animations, technical debt) continue toward `1.0.0`.
+**Prereleases:** active work-in-progress line is now **`1.0.0-alpha.11`** on **`alpha`** / **`beta`** (experimental and pre-stable builds). **`0.6.1`** stays as the recommended stable line on **`main`** while new cards and final polish (security, translations, fluency, animations, technical debt) continue toward `1.0.0`.
 
 ---
 
