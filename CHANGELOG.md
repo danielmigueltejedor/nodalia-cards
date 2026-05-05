@@ -10,6 +10,16 @@ Work toward **`0.6.x`** on **`alpha`** / **`beta`** and eventual **`main`**: add
 
 ---
 
+## [0.6.0-beta.2] - 2026-05-05
+
+Second **`beta`** on the **`0.6.x`** line (**branch `beta`**). This cut focuses on post-beta.1 regression polish and review feedback closure. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-beta.2`** (tag **`v0.6.0-beta.2`** optional).
+
+- **Graph card (mobile):** fixed legend chip/button clipping when pressing in narrow layouts by keeping vertical overflow visible and adding vertical padding in the horizontal chip scroller.
+- **Regression safety:** extended release-candidate smoke checks to guard sanitizer behavior and keep reviewer findings from reappearing.
+- **Validation pass:** memory-leak concern around graph document listeners was verified against lifecycle cleanup (`disconnectedCallback` + detach path).
+
+---
+
 ## [0.6.0-beta.1] - 2026-05-05
 
 First **`beta`** on the **`0.6.x`** line (**branch `beta`**). This release consolidates the full **`0.6.0-alpha.*`** cycle into a tester-facing candidate focused on stability, security hardening, render efficiency, and pre-stable auditability. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-beta.1`** (tag **`v0.6.0-beta.1`** optional).

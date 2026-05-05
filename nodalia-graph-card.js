@@ -3041,7 +3041,9 @@ class NodaliaGraphCard extends HTMLElement {
             margin-bottom: 0;
             min-width: 0;
             overflow-x: auto;
+            overflow-y: visible;
             overscroll-behavior-x: contain;
+            padding-block: 4px;
             scrollbar-width: thin;
             -webkit-overflow-scrolling: touch;
           }

@@ -41118,7 +41118,9 @@
             margin-bottom: 0;
             min-width: 0;
             overflow-x: auto;
+            overflow-y: visible;
             overscroll-behavior-x: contain;
+            padding-block: 4px;
             scrollbar-width: thin;
             -webkit-overflow-scrolling: touch;
           }
@@ -74411,4 +74413,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.6.0-beta.1","contentSha256_12":"41d7543d3102"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.6.0-beta.2","contentSha256_12":"ce1787b36009"};}
