@@ -355,7 +355,7 @@
 
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.19";
+const CARD_VERSION = "0.12.20";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2474,10 +2474,13 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__hover-points-layer {
-          inset: 0;
+          bottom: 12px;
+          left: 0;
           overflow: hidden;
           pointer-events: none;
           position: absolute;
+          right: 0;
+          top: 4px;
           z-index: 2;
         }
 
@@ -2532,11 +2535,13 @@ class NodaliaGraphCard extends HTMLElement {
           -webkit-backdrop-filter: blur(14px);
           backdrop-filter: blur(14px);
           background:
-            linear-gradient(180deg, color-mix(in srgb, var(--tooltip-tint) 18%, rgba(255,255,255,0.09)), rgba(255,255,255,0.025)),
-            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 86%, transparent);
-          border: 1px solid color-mix(in srgb, var(--tooltip-tint) 34%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
+            linear-gradient(180deg, color-mix(in srgb, var(--tooltip-tint) 20%, rgba(255,255,255,0.1)), rgba(255,255,255,0.02)),
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, rgba(255,255,255,0.02));
+          border: 1px solid color-mix(in srgb, var(--tooltip-tint) 22%, color-mix(in srgb, var(--primary-text-color) 10%, transparent));
           border-radius: 16px;
-          box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+          box-shadow:
+            0 10px 24px rgba(0, 0, 0, 0.24),
+            0 2px 6px color-mix(in srgb, var(--tooltip-tint) 14%, transparent);
           color: var(--primary-text-color);
           display: grid;
           gap: 8px;
@@ -2548,6 +2553,21 @@ class NodaliaGraphCard extends HTMLElement {
           transform: var(--graph-tooltip-transform, translate(-50%, -100%));
           will-change: left, top, transform;
           z-index: 2147483001;
+        }
+
+        .graph-card__tooltip::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          pointer-events: none;
+          background:
+            linear-gradient(180deg, color-mix(in srgb, var(--tooltip-tint) 18%, rgba(255,255,255,0.09)), rgba(255,255,255,0.025)),
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 90%, transparent);
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 16%, transparent),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.06);
+          z-index: -1;
         }
 
         .graph-card__tooltip--entering {

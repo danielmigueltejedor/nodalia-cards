@@ -10,6 +10,15 @@ Work toward **`0.5.x`** on **`alpha`** / **`beta`** and eventual **`main`**: **P
 
 ---
 
+## [0.5.0-alpha.12] - 2026-05-06
+
+Twelfth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.12`** (tag **`v0.5.0-alpha.12`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Graph card** (`0.12.20`): **hook/hover marker** alineado al recorrido de la línea (la capa de puntos usa el mismo viewport útil del SVG que el chart, sin desfase vertical por padding del panel).
+- **Graph card** (`0.12.20`): popup del hook con estilo más **semitransparente/glass** al estilo weather card (fondo refinado, borde más suave, doble sombra ligera e inner highlight).
+
+---
+
 ## [0.5.0-alpha.11] - 2026-05-06
 
 Eleventh **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.11`** (tag **`v0.5.0-alpha.11`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
