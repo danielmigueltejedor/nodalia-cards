@@ -9012,7 +9012,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
             ${
               config.security?.strict_service_actions !== false
                 ? this._renderTextField(
-                    "Allowed services (coma separada)",
+                    "Servicios permitidos (separados por comas)",
                     "security.allowed_services",
                     Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
                     {

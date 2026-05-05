@@ -10,6 +10,16 @@ Work toward **`0.6.x`** on **`alpha`** / **`beta`** and eventual **`main`**: add
 
 ---
 
+## [0.6.1-alpha.1] - 2026-05-05
+
+First **`alpha`** on the **`0.6.1`** patch line (**branch `alpha`**). This prerelease starts the fast fix stream toward `0.6.1` stable, focusing on review-driven hardening and editor consistency.
+
+- **Editor i18n consistency:** normalized newly added service-security labels to project-consistent translatable strings in visual editors (Insignia, Entity, Fav, Advance Vacuum).
+- **Navigation bar hardening:** `media_player.background` now goes through runtime CSS sanitization with safe fallback before use in `color-mix(...)`.
+- **Navigation bar customization compatibility:** restored support for user-configured `styles.media_player.border`, `styles.media_player.border_radius`, and `styles.media_player.box_shadow` (with sanitization and defaults), instead of hardcoded values.
+
+---
+
 ## [0.6.0] - 2026-05-05
 
 Second stable release on **`main`**.
