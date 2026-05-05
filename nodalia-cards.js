@@ -70816,9 +70816,8 @@
       },
       icon: {
         background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-        color: "var(--primary-text-color)",
-        on_color: "var(--info-color, #71c0ff)",
-        off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
+        on_color: "color-mix(in srgb, var(--primary-color) 52%, var(--primary-text-color))",
+        off_color: "color-mix(in srgb, var(--primary-text-color) 62%, var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 48%, transparent)))",
         size: "38px"
       },
       tint: {
@@ -70944,6 +70943,10 @@
       iconStyle.on_color = iconStyle.color;
     }
     return normalized;
+  }
+  function calendarExitDurationMs(contentDuration) {
+    const base = Math.min(1600, Math.max(120, Number(contentDuration) || DEFAULT_CONFIG17.animations.content_duration));
+    return Math.min(520, Math.max(280, Math.round(base * 0.52)));
   }
   function timeRangeChipLabel(tr) {
     const labels = {
@@ -71097,8 +71100,16 @@
       this._lastRenderSignature = "";
       this._calendarEntrancePlayed = false;
       this._expandedOpen = false;
+      this._completeExitKeys = /* @__PURE__ */ new Set();
+      this._completeExitTimers = /* @__PURE__ */ new Map();
       this._onShadowClick = this._onShadowClick.bind(this);
       this._onShadowKeydown = this._onShadowKeydown.bind(this);
+    }
+    _shouldShowEventInList(event) {
+      const config = this._config;
+      const key = completionKey(event);
+      const done = this._completed.has(key);
+      return config.show_completed || !done || this._completeExitKeys.has(key);
     }
     connectedCallback() {
       this.shadowRoot?.addEventListener("click", this._onShadowClick);
@@ -71115,6 +71126,9 @@
         window.clearTimeout(this._refreshTimer);
         this._refreshTimer = 0;
       }
+      this._completeExitTimers.forEach((tid) => window.clearTimeout(tid));
+      this._completeExitTimers.clear();
+      this._completeExitKeys.clear();
     }
     setConfig(config) {
       this._config = normalizeConfig17(config);
@@ -71229,8 +71243,10 @@
       const tintClass = tintRaw ? " calendar-event--tinted" : "";
       const tintStyle = tintRaw ? ` style="--cal-tint:${escapeHtml17(tintRaw)}"` : "";
       const compactClass = compact ? " calendar-event--compact" : "";
+      const exiting = this._completeExitKeys.has(doneKey);
+      const exitClass = exiting ? " calendar-event--exit" : "";
       return `
-      <div class="calendar-event ${done ? "is-completed" : ""}${tintClass}${compactClass}"${tintStyle}>
+      <div class="calendar-event ${done ? "is-completed" : ""}${tintClass}${compactClass}${exitClass}"${tintStyle}>
         <div class="calendar-event__time">${escapeHtml17(timeLabel)}</div>
         <div class="calendar-event__summary">
           ${escapeHtml17(summary)}
@@ -71341,10 +71357,7 @@
     _getRenderSignature() {
       const config = this._config;
       const styles = config.styles || DEFAULT_CONFIG17.styles;
-      const visibleEvents = this._events.filter((event) => {
-        const done = this._completed.has(completionKey(event));
-        return config.show_completed || !done;
-      });
+      const visibleEvents = this._events.filter((event) => this._shouldShowEventInList(event));
       const eventKeys = visibleEvents.map((event) => {
         const start = eventDate(event?.start)?.getTime() || 0;
         return `${completionKey(event)}@${start}`;
@@ -71385,7 +71398,8 @@
         this._error,
         eventKeys,
         completedSig,
-        this._expandedOpen ? "1" : "0"
+        this._expandedOpen ? "1" : "0",
+        [...this._completeExitKeys].sort().join("|")
       ].join("");
     }
     _renderIfChanged(force = false) {
@@ -71437,13 +71451,35 @@
       if (!key) {
         return;
       }
+      const config = this._config;
+      const exitMs = calendarExitDurationMs(config.animations?.content_duration);
       if (this._completed.has(key)) {
+        const pending = this._completeExitTimers.get(key);
+        if (pending) {
+          window.clearTimeout(pending);
+          this._completeExitTimers.delete(key);
+        }
+        this._completeExitKeys.delete(key);
         this._completed.delete(key);
-      } else {
-        this._completed.add(key);
+        this._saveCompleted();
+        this._renderIfChanged(true);
+        return;
       }
+      this._completed.add(key);
       this._saveCompleted();
+      const shouldExitAnimate = config.animations?.enabled !== false && !config.show_completed && !this._completeExitKeys.has(key);
+      if (!shouldExitAnimate) {
+        this._renderIfChanged(true);
+        return;
+      }
+      this._completeExitKeys.add(key);
       this._renderIfChanged(true);
+      const tid = window.setTimeout(() => {
+        this._completeExitTimers.delete(key);
+        this._completeExitKeys.delete(key);
+        this._renderIfChanged(true);
+      }, exitMs);
+      this._completeExitTimers.set(key, tid);
     }
     _groupEvents(events) {
       const locale = this._getLocale();
@@ -71471,17 +71507,17 @@
       const config = this._config;
       const styles = config.styles || DEFAULT_CONFIG17.styles;
       const locale = this._getLocale();
-      const cardTinted = config.tint_auto !== false;
-      const accentColor = cardTinted ? "var(--primary-color)" : String(styles.tint?.color || DEFAULT_CONFIG17.styles.tint.color);
+      const useAutoPrimaryTint = config.tint_auto !== false;
+      const accentColor = useAutoPrimaryTint ? "var(--primary-color)" : String(styles.tint?.color || DEFAULT_CONFIG17.styles.tint.color).trim() || "var(--primary-color)";
       const baseCardBg = styles.card.background;
       const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${baseCardBg}) 0%, color-mix(in srgb, ${accentColor} 10%, ${baseCardBg}) 52%, ${baseCardBg} 100%)`;
       const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
       const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
-      const cardBackground = cardTinted ? onCardBackground : baseCardBg;
-      const cardBorder = cardTinted ? `1px solid ${onCardBorder}` : styles.card.border;
-      const cardShadow = cardTinted ? `${styles.card.box_shadow}, ${onCardShadow}` : styles.card.box_shadow;
-      const iconBubbleBg = cardTinted ? `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))` : String(styles.icon?.background || DEFAULT_CONFIG17.styles.icon.background);
-      const iconBubbleGlyph = cardTinted ? String(styles.icon?.on_color || DEFAULT_CONFIG17.styles.icon.on_color) : String(styles.icon?.off_color || DEFAULT_CONFIG17.styles.icon.off_color);
+      const cardBackground = onCardBackground;
+      const cardBorder = `1px solid ${onCardBorder}`;
+      const cardShadow = `${styles.card.box_shadow}, ${onCardShadow}`;
+      const iconBubbleBg = `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`;
+      const iconBubbleGlyph = String(styles.icon?.on_color || DEFAULT_CONFIG17.styles.icon.on_color);
       const iconSize = styles.icon?.size || DEFAULT_CONFIG17.styles.icon.size;
       const chipHeight = styles.chip_height || DEFAULT_CONFIG17.styles.chip_height;
       const chipFontSize = styles.chip_font_size || styles.chip_size || DEFAULT_CONFIG17.styles.chip_font_size;
@@ -71490,20 +71526,21 @@
         1600,
         Math.max(120, Number(config.animations?.content_duration) || DEFAULT_CONFIG17.animations.content_duration)
       );
+      const exitDurationMs = calendarExitDurationMs(config.animations?.content_duration);
       const maxVisibleEvents = Math.max(1, Number(config.max_visible_events) || DEFAULT_CONFIG17.max_visible_events);
-      const visibleEvents = this._events.filter((event) => {
-        const done = this._completed.has(completionKey(event));
-        return config.show_completed || !done;
-      });
+      const visibleEvents = this._events.filter((event) => this._shouldShowEventInList(event));
       const groups = this._groupEvents(visibleEvents);
       const hasEvents = visibleEvents.length > 0;
-      const playEntrance = config.animations?.enabled !== false && !this._calendarEntrancePlayed;
+      const playEntrance = config.animations?.enabled !== false && !this._calendarEntrancePlayed && !this._loading;
       if (playEntrance) {
         this._calendarEntrancePlayed = true;
       }
       this.shadowRoot.innerHTML = `
       <style>
-        :host { display:block; }
+        :host {
+          display:block;
+          --calendar-exit-duration: ${exitDurationMs}ms;
+        }
         * { box-sizing:border-box; }
         ha-card {
           background: ${cardBackground};
@@ -71519,7 +71556,7 @@
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
         ha-card::before {
-          background: ${cardTinted ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))` : `linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))`};
+          background: linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0));
           content: "";
           inset: 0;
           pointer-events: none;
@@ -71532,7 +71569,7 @@
             linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
           content: "";
           inset: 0;
-          opacity: ${cardTinted ? "1" : "0"};
+          opacity: 1;
           pointer-events: none;
           position: absolute;
           z-index: 0;
@@ -71675,6 +71712,34 @@
         .calendar-event.is-completed {
           opacity:0.62;
         }
+        .calendar-event.is-completed.calendar-event--exit {
+          opacity: 1;
+        }
+        .calendar-event--exit {
+          animation: calendar-event-complete-out var(--calendar-exit-duration, 380ms) cubic-bezier(0.32, 0.72, 0.28, 1) forwards;
+          pointer-events: none;
+          transform-origin: center top;
+        }
+        .calendar-event--exit .calendar-event__done {
+          opacity: 0.35;
+        }
+        @keyframes calendar-event-complete-out {
+          0% {
+            filter: blur(0);
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+          55% {
+            filter: blur(0.5px);
+            opacity: 0.55;
+            transform: scale(0.97) translateY(-3px);
+          }
+          100% {
+            filter: blur(3px);
+            opacity: 0;
+            transform: scale(0.82) translateY(-10px);
+          }
+        }
         .calendar-event__time {
           color:var(--secondary-text-color);
           font-size:11px;
@@ -71719,11 +71784,12 @@
           }
         }
         .calendar-expanded {
+          --calendar-expanded-accent: var(--primary-color);
           inset: 0;
           opacity: 0;
           pointer-events: none;
           position: fixed;
-          transition: opacity 160ms ease;
+          transition: opacity 220ms cubic-bezier(0.16, 0.84, 0.22, 1);
           z-index: 120;
         }
         .calendar-expanded.is-open {
@@ -71731,61 +71797,98 @@
           pointer-events: auto;
         }
         .calendar-expanded__backdrop {
-          background: rgba(0, 0, 0, 0.42);
+          -webkit-backdrop-filter: blur(12px);
+          backdrop-filter: blur(12px);
+          background: rgba(0, 0, 0, 0.32);
           inset: 0;
           position: absolute;
         }
         .calendar-expanded__panel {
-          background: var(--ha-card-background, var(--card-background-color));
-          border: 1px solid var(--divider-color);
-          border-radius: ${styles.card.border_radius};
-          box-shadow: var(--ha-card-box-shadow, 0 24px 48px rgba(0, 0, 0, 0.28));
+          animation: calendar-expanded-panel-in calc(${animationDuration}ms * 0.55) cubic-bezier(0.16, 0.84, 0.22, 1) both;
+          background:
+            linear-gradient(180deg, color-mix(in srgb, var(--calendar-expanded-accent) 18%, rgba(255, 255, 255, 0.08)), rgba(255, 255, 255, 0.02)),
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, rgba(255, 255, 255, 0.02));
+          border: 1px solid color-mix(in srgb, var(--calendar-expanded-accent) 34%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
+          border-radius: 16px;
+          box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+          color: var(--primary-text-color);
           display: grid;
-          gap: 12px;
+          gap: 10px;
+          isolation: isolate;
           left: 50%;
           max-height: min(88vh, 920px);
           max-width: min(96vw, 1100px);
           overflow: hidden;
-          padding: 14px 14px 16px;
+          padding: 11px 12px 13px;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
           width: min(96vw, 1100px);
         }
         .calendar-expanded__toolbar {
-          align-items: center;
+          align-items: flex-start;
           display: flex;
           gap: 10px;
           justify-content: space-between;
+          min-height: 28px;
+          padding-right: 2px;
+          position: relative;
         }
         .calendar-expanded__toolbar-title {
+          flex: 1 1 auto;
           font-size: ${styles.title_size};
-          font-weight: 700;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          line-height: 1.2;
           min-width: 0;
+          padding-right: 28px;
         }
         .calendar-expanded__close {
           align-items: center;
           appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          background: color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
-          color: var(--primary-text-color);
+          color: var(--secondary-text-color);
           cursor: pointer;
           display: inline-flex;
-          font-size: 18px;
-          font-weight: 700;
-          height: 38px;
+          flex: 0 0 auto;
+          height: 24px;
           justify-content: center;
-          line-height: 1;
+          line-height: 0;
+          margin: 0;
           padding: 0;
-          width: 38px;
+          position: absolute;
+          right: 0;
+          top: 0;
+          width: 24px;
+        }
+        .calendar-expanded__close ha-icon {
+          --mdc-icon-size: 14px;
         }
         .calendar-expanded__body {
           max-height: min(76vh, 820px);
           overflow: auto;
           overscroll-behavior: contain;
-          padding-right: 4px;
+          padding-right: 2px;
           touch-action: pan-y;
+        }
+        @keyframes calendar-expanded-panel-in {
+          0% {
+            clip-path: inset(0 42% 58% 42% round 16px);
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.97);
+          }
+          68% {
+            clip-path: inset(0 4% 2% 4% round 16px);
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+          }
+          100% {
+            clip-path: inset(0 0 0 0 round 16px);
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+          }
         }
         .calendar-expanded__horizontal {
           display: flex;
@@ -71887,12 +71990,14 @@
                     </div>`}
         </div>
       </ha-card>
-      <div class="calendar-expanded ${this._expandedOpen ? "is-open" : ""}" aria-hidden="${this._expandedOpen ? "false" : "true"}">
+      <div class="calendar-expanded ${this._expandedOpen ? "is-open" : ""}" style="--calendar-expanded-accent:${accentColor};" aria-hidden="${this._expandedOpen ? "false" : "true"}">
         <div class="calendar-expanded__backdrop" data-action="expanded-backdrop"></div>
         <div class="calendar-expanded__panel" role="dialog" aria-modal="true" aria-label="${escapeHtml17(config.title)}">
           <div class="calendar-expanded__toolbar">
             <div class="calendar-expanded__toolbar-title">${escapeHtml17(config.title)}</div>
-            <button type="button" class="calendar-expanded__close" data-action="close-expanded" aria-label="Cerrar">×</button>
+            <button type="button" class="calendar-expanded__close" data-action="close-expanded" aria-label="Cerrar">
+              <ha-icon icon="mdi:close"></ha-icon>
+            </button>
           </div>
           <div class="calendar-expanded__body">
             ${this._loading ? `<div class="calendar-loading">Cargando eventos...</div>` : this._error ? `<div class="calendar-error">${escapeHtml17(this._error)}</div>` : !hasEvents ? `<div class="calendar-empty">No hay eventos en este rango.</div>` : this._renderExpandedBody(groups, config, locale)}
@@ -72814,7 +72919,7 @@
             ${this._renderTextField("Refresco (segundos)", "refresh_interval", config.refresh_interval, { type: "number" })}
             ${this._renderCheckboxField("Permitir marcar eventos como completados", "allow_complete", config.allow_complete === true)}
             ${this._renderCheckboxField("Mostrar eventos completados", "show_completed", config.show_completed === true)}
-            ${this._renderCheckboxField("Tintado automatico con color primario", "tint_auto", config.tint_auto !== false)}
+            ${this._renderCheckboxField("Tintado con color primario del tema", "tint_auto", config.tint_auto !== false)}
           </div>
         </section>
 
@@ -72905,7 +73010,7 @@
         fallbackValue: DEFAULT_CONFIG17.styles.icon.off_color
       })}
                   ${this._renderTextField("Icono burbuja tamano", "styles.icon.size", config.styles?.icon?.size)}
-                  ${this._renderColorField("Tintado manual", "styles.tint.color", config.styles?.tint?.color, {
+                  ${this._renderColorField("Color de acento (si el tintado automático está desactivado)", "styles.tint.color", config.styles?.tint?.color, {
         fullWidth: true,
         fallbackValue: DEFAULT_CONFIG17.styles.tint.color
       })}
@@ -76562,4 +76667,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.8","contentSha256_12":"d2f6212053ed"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.8 (d2f6212053ed) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.9","contentSha256_12":"d534d986d5b8"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.9 (d534d986d5b8) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}

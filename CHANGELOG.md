@@ -10,6 +10,15 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.9] - 2026-05-06
+
+Ninth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.9`** (tag **`v1.0.0-alpha.9`** optional).
+
+- **Calendar card:** panel ampliado con estilo acorde al **popup del gráfico** en Weather (vidrio, acento, animación de entrada); **tintado manual** aplica el mismo cromado que el primario cuando el automático está desactivado; icono por defecto con **mezcla tema** (`primary` + texto) para legibilidad en claro/oscuro.
+- **Calendar card:** animación de **entrada** solo tras terminar la carga (no se “gasta” en la vista de carga); al **marcar** un evento como hecho, **salida animada** (escala + desvanecimiento) antes de ocultar la fila.
+
+---
+
 ## [1.0.0-alpha.8] - 2026-05-05
 
 Eighth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.8`** (tag **`v1.0.0-alpha.8`** optional).
