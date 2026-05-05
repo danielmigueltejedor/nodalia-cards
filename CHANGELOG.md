@@ -10,6 +10,16 @@ Work toward **`0.6.x`** on **`alpha`** / **`beta`** and eventual **`main`**: add
 
 ---
 
+## [0.6.1] - 2026-05-05
+
+Patch stable release on **`main`**. This version promotes the `0.6.1-alpha.1` fixes to stable, focused on security/i18n consistency and preserving media player style flexibility in navigation.
+
+- **Editor i18n consistency:** new service-security labels are normalized for translation flow in visual editors (Insignia, Entity, Fav, Advance Vacuum).
+- **Navigation hardening:** `media_player.background` is sanitized with safe fallback before being used in `color-mix(...)`.
+- **Navigation customization restored:** user-configurable `styles.media_player.border`, `styles.media_player.border_radius`, and `styles.media_player.box_shadow` are honored again (with sanitization + defaults).
+
+---
+
 ## [0.6.1-alpha.1] - 2026-05-05
 
 First **`alpha`** on the **`0.6.1`** patch line (**branch `alpha`**). This prerelease starts the fast fix stream toward `0.6.1` stable, focusing on review-driven hardening and editor consistency.

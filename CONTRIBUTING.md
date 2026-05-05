@@ -135,9 +135,9 @@ Three channels keep risk and expectations clear:
 
 | Branch | Who it’s for | Version examples | Expectations |
 |--------|----------------|------------------|--------------|
-| **`main`** | Everyone | **`v0.4.0`**, **`v0.5.0`**, **`v0.6.0`** (semver **only** stable minors/patches) | **Recommended** for normal dashboards. Only merged when the maintainer is happy to endorse the build widely. |
+| **`main`** | Everyone | **`v0.4.0`**, **`v0.5.0`**, **`v0.6.0`**, **`v0.6.1`** (semver **only** stable minors/patches) | **Recommended** for normal dashboards. Only merged when the maintainer is happy to endorse the build widely. |
 | **`beta`** | Testers, early adopters | **`0.6.0-beta.1`**, **`0.6.0-beta.2`**, **`0.6.0-beta.3`**, … (tags **`v0.6.0-beta.1`**, …) | **Pretty usable**; features are exercised but not guaranteed frozen. Promoted from **`alpha`** when a slice of work is **polished enough** (merge or cherry-pick). |
-| **`alpha`** | Developers / brave testers | **`0.6.1-alpha.1`**, **`0.6.1-alpha.2`**, … (tags **`v0.6.1-alpha.1`**, … optional) | **High churn**. Frequent commits; **dashboards may break**. Breaking YAML or behaviour is allowed here. |
+| **`alpha`** | Developers / brave testers | **`1.0.0-alpha.1`**, **`1.0.0-alpha.2`**, … (tags **`v1.0.0-alpha.1`**, … optional) | **High churn**. Frequent commits; **dashboards may break**. Breaking YAML or behaviour is allowed here. |
 
 **Promotion flow (typical):** experimental work lands on **`alpha`** → when a feature (or batch) is stable enough, it moves to **`beta`** → when the whole minor is ready, **`beta`** merges to **`main`** as **`v0.5.0`** (example). Avoid merging **`alpha` → `main`** directly if you want **`beta`** to stay the gate for “probably OK for testers”.
 
@@ -150,7 +150,7 @@ After **`v0.4.0`** is on **`main`** (and optionally after **`beta`** exists), cr
 ```bash
 git checkout main && git pull
 git checkout -b alpha
-# set package.json to e.g. 0.6.1-alpha.1, changelog section, npm run bundle
+# set package.json to e.g. 1.0.0-alpha.1, changelog section, npm run bundle
 git push -u origin alpha
 ```
 
@@ -162,9 +162,9 @@ Or branch **`alpha`** from **`beta`** if **`beta`** already tracks **`0.5.0-beta
 
 2. **`beta` (first prerelease of the next minor)** — merge **`main`** into **`beta`**, bump to **`0.6.0-beta.1`**, **`CHANGELOG`** **`## [0.6.0-beta.1]`**, **`npm run bundle`**, tag **`v0.6.0-beta.1`**.
 
-3. **`alpha` (experimental)** — for patch hardening after **`0.6.0`**, use **`0.6.1-alpha.*`** until stable; after shipping **`0.6.1` stable, start the next major line at `1.0.0-alpha.1`**.
+3. **`alpha` (experimental)** — after shipping **`0.6.1` stable, start the next major line at `1.0.0-alpha.1`** and iterate as needed before promoting to beta.
 
-4. **Stable minor** — when **`beta`** is release-ready, merge **`beta` → `main`**, set the stable version (currently **`0.6.0`**), and tag accordingly.
+4. **Stable minor** — when **`beta`** is release-ready, merge **`beta` → `main`**, set the stable version (currently **`0.6.1`**), and tag accordingly.
 
 ---
 
