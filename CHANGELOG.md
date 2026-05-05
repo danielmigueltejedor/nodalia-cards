@@ -10,6 +10,15 @@ Work toward **`0.5.x`** on **`alpha`** / **`beta`** and eventual **`main`**: **P
 
 ---
 
+## [0.5.0-alpha.7] - 2026-05-06
+
+Seventh **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.7`** (tag **`v0.5.0-alpha.7`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Insignia card** (`0.2.8`): modo **solo icono** — **`align-self: center`** por defecto (variable **`--insignia-icon-only-align-self`**, p. ej. **`stretch`** en franjas con scroll); **`translateY`** fino con **`--insignia-icon-only-row-nudge`** (por defecto **`-2px`**).
+- **Internals** (**`nodalia-utils.js`**): **`initNodaliaUtils`** solo hace **early return** si existe la **API completa** en **`window.NodaliaUtils`**; **`editorFilteredStatesSignature`** vuelve a incluir **filas por entidad** (**`id`**, **`friendly_name`**, **`icon`**) para que los editores detecten cambios en etiquetas.
+
+---
+
 ## [0.5.0-alpha.6] - 2026-05-05
 
 Sixth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.6`** (tag **`v0.5.0-alpha.6`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.

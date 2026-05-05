@@ -72695,7 +72695,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "0.2.6";
+const CARD_VERSION = "0.2.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -73579,7 +73579,9 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         :host([data-icon-only]) {
-          align-self: stretch;
+          /* Same cross-axis behavior as non–icon-only pills (`align-items: center` on row).
+             `stretch` forced full line height and skewed vertical center vs text pills + menu. */
+          align-self: var(--insignia-icon-only-align-self, center);
           box-sizing: border-box;
           display: flex;
           align-items: center;
@@ -85191,4 +85193,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0-alpha.6","contentSha256_12":"70136d5d2f52"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0-alpha.7","contentSha256_12":"1a62cc42d7c6"};}
