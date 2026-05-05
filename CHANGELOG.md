@@ -10,6 +10,15 @@ Work toward **`0.5.x`** on **`alpha`** / **`beta`** and eventual **`main`**: **P
 
 ---
 
+## [0.5.0-alpha.4] - 2026-05-05
+
+Fourth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.4`** (tag **`v0.5.0-alpha.4`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Graph card** (`0.12.16`): **`DEFAULT_CONFIG`** y **`STUB`** orientados a **temperatura** — entidades de ejemplo, **`min`** / **`max`** **`15`**–**`25`**, **`points`** **`100`**, **`styles.card`** **`padding`** **`18px`**, **`gap`** **`20px`**, **`icon.size`** **`20px`**; placeholder del editor **Temperatura**. Ejemplo en **`examples/graph-card.yaml`**.
+- **Insignia card** (`0.2.4`): modo **solo icono** — **`margin-block`** en **`:host`** (por defecto **`8px`**, sobreescribible con **`--insignia-scroll-strip-margin-block`**) para que las **franjas con scroll horizontal** no recorten el círculo; estado vacío limpia **`data-icon-only`**.
+
+---
+
 ## [0.5.0-alpha.3] - 2026-05-05
 
 Third **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.3`** (tag **`v0.5.0-alpha.3`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.

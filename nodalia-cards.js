@@ -14740,6 +14740,30 @@
     });
   }
 
+  /** Latest callbacks for reused picker controls (listeners call into this). */
+  const pickerCallbackState = new WeakMap();
+  const pickerControlsWithListeners = new WeakSet();
+
+  function dispatchPickerChange(ev) {
+    const control = ev.currentTarget;
+    const s = pickerCallbackState.get(control);
+    if (s && typeof s.onShadowInput === "function") {
+      s.onShadowInput(ev);
+    }
+  }
+
+  function dispatchPickerValueChanged(ev) {
+    const control = ev.currentTarget;
+    const s = pickerCallbackState.get(control);
+    if (!s) {
+      return;
+    }
+    const fn = s.onShadowValueChanged || s.onShadowInput;
+    if (typeof fn === "function") {
+      fn(ev);
+    }
+  }
+
   /**
    * Mount or update ha-entity-picker / ha-selector / text input without recreating each render.
    */
@@ -14790,7 +14814,7 @@
 
       control.dataset.field = field;
       if (copyDatasetFromHost) {
-        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder"]);
+        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder", "field"]);
       }
 
       if ("hass" in control) {
@@ -14803,10 +14827,14 @@
         control.placeholder = placeholder;
       }
 
-      if (control.tagName === "INPUT") {
-        control.addEventListener("change", onShadowInput);
-      } else {
-        control.addEventListener("value-changed", onShadowValueChanged || onShadowInput);
+      pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+      if (!pickerControlsWithListeners.has(control)) {
+        pickerControlsWithListeners.add(control);
+        if (control.tagName === "INPUT") {
+          control.addEventListener("change", dispatchPickerChange);
+        } else {
+          control.addEventListener("value-changed", dispatchPickerValueChanged);
+        }
       }
 
       host.appendChild(control);
@@ -14815,6 +14843,7 @@
 
     control.dataset.field = field;
     control.dataset.value = nextValue;
+    pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
     if ("hass" in control) {
       control.hass = hass;
     }
@@ -14859,7 +14888,7 @@
       }
 
       if (copyDatasetFromHost) {
-        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder"]);
+        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder", "field"]);
       }
 
       if ("hass" in control) {
@@ -14872,16 +14901,21 @@
         control.value = nextValue;
       }
 
-      if (control.tagName === "INPUT") {
-        control.addEventListener("change", onShadowInput);
-      } else {
-        control.addEventListener("value-changed", onShadowValueChanged || onShadowInput);
+      pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+      if (!pickerControlsWithListeners.has(control)) {
+        pickerControlsWithListeners.add(control);
+        if (control.tagName === "INPUT") {
+          control.addEventListener("change", dispatchPickerChange);
+        } else {
+          control.addEventListener("value-changed", dispatchPickerValueChanged);
+        }
       }
 
       host.appendChild(control);
       return;
     }
 
+    pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
     if ("hass" in control) {
       control.hass = hass;
     }
@@ -42221,7 +42255,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.15";
+const CARD_VERSION = "0.12.16";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -42246,12 +42280,12 @@ const TOUCH_CLICK_SUPPRESSION_WINDOW = 350;
 const DEFAULT_CONFIG = {
   entity: "",
   entities: [],
-  name: "",
-  icon: "",
-  min: "",
-  max: "",
+  name: "Temperatura",
+  icon: "mdi:thermometer",
+  min: 15,
+  max: 25,
   hours_to_show: 24,
-  points: 480,
+  points: 100,
   show_header: true,
   show_icon: true,
   show_value: true,
@@ -42275,12 +42309,12 @@ const DEFAULT_CONFIG = {
       border: "1px solid var(--divider-color)",
       border_radius: "30px",
       box_shadow: "var(--ha-card-box-shadow)",
-      padding: "16px",
-      gap: "10px",
+      padding: "18px",
+      gap: "20px",
     },
     icon: {
       color: "var(--primary-text-color)",
-      size: "28px",
+      size: "20px",
     },
     title_size: "13px",
     value_size: "40px",
@@ -42292,17 +42326,20 @@ const DEFAULT_CONFIG = {
 };
 
 const STUB_CONFIG = {
-  name: "Humedad",
+  name: "Temperatura",
+  icon: "mdi:thermometer",
+  min: 15,
+  max: 25,
   entities: [
     {
-      entity: "sensor.termostato_dormitorios_humedad",
-      name: "Dormitorio de Rocio",
-      color: "#f29f05",
+      entity: "sensor.termostato_dormitorios_temperatura",
+      name: "Dormitorio de Rocío",
+      color: "#ffaa00",
     },
     {
-      entity: "sensor.termostato_habitaciones_comunes_humedad",
+      entity: "sensor.termostato_habitaciones_comunes_temperatura",
       name: "Pasillo",
-      color: "#42a5f5",
+      color: "#ffc677",
     },
   ],
 };
@@ -45287,7 +45324,7 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Humedad",
+              placeholder: "Temperatura",
             })}
             ${this._renderTextField("Icono", "icon", config.icon, {
               placeholder: "mdi:water-percent",
@@ -72618,7 +72655,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "0.2.3";
+const CARD_VERSION = "0.2.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -73428,6 +73465,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     const state = this._getState();
 
     if (!state && !config.name && !config.icon) {
+      this.removeAttribute("data-icon-only");
       this.shadowRoot.innerHTML = `
         <style>
           :host { display: block; }
@@ -73504,6 +73542,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           justify-content: center;
           overflow: visible;
           width: auto;
+          margin-block: var(--insignia-scroll-strip-margin-block, 8px);
         }
 
         * {
@@ -85099,4 +85138,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0-alpha.3","contentSha256_12":"78f0762fc1b1"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0-alpha.4","contentSha256_12":"47e42f5501e5"};}

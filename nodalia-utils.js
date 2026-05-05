@@ -125,6 +125,30 @@
     });
   }
 
+  /** Latest callbacks for reused picker controls (listeners call into this). */
+  const pickerCallbackState = new WeakMap();
+  const pickerControlsWithListeners = new WeakSet();
+
+  function dispatchPickerChange(ev) {
+    const control = ev.currentTarget;
+    const s = pickerCallbackState.get(control);
+    if (s && typeof s.onShadowInput === "function") {
+      s.onShadowInput(ev);
+    }
+  }
+
+  function dispatchPickerValueChanged(ev) {
+    const control = ev.currentTarget;
+    const s = pickerCallbackState.get(control);
+    if (!s) {
+      return;
+    }
+    const fn = s.onShadowValueChanged || s.onShadowInput;
+    if (typeof fn === "function") {
+      fn(ev);
+    }
+  }
+
   /**
    * Mount or update ha-entity-picker / ha-selector / text input without recreating each render.
    */
@@ -175,7 +199,7 @@
 
       control.dataset.field = field;
       if (copyDatasetFromHost) {
-        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder"]);
+        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder", "field"]);
       }
 
       if ("hass" in control) {
@@ -188,10 +212,14 @@
         control.placeholder = placeholder;
       }
 
-      if (control.tagName === "INPUT") {
-        control.addEventListener("change", onShadowInput);
-      } else {
-        control.addEventListener("value-changed", onShadowValueChanged || onShadowInput);
+      pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+      if (!pickerControlsWithListeners.has(control)) {
+        pickerControlsWithListeners.add(control);
+        if (control.tagName === "INPUT") {
+          control.addEventListener("change", dispatchPickerChange);
+        } else {
+          control.addEventListener("value-changed", dispatchPickerValueChanged);
+        }
       }
 
       host.appendChild(control);
@@ -200,6 +228,7 @@
 
     control.dataset.field = field;
     control.dataset.value = nextValue;
+    pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
     if ("hass" in control) {
       control.hass = hass;
     }
@@ -244,7 +273,7 @@
       }
 
       if (copyDatasetFromHost) {
-        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder"]);
+        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder", "field"]);
       }
 
       if ("hass" in control) {
@@ -257,16 +286,21 @@
         control.value = nextValue;
       }
 
-      if (control.tagName === "INPUT") {
-        control.addEventListener("change", onShadowInput);
-      } else {
-        control.addEventListener("value-changed", onShadowValueChanged || onShadowInput);
+      pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+      if (!pickerControlsWithListeners.has(control)) {
+        pickerControlsWithListeners.add(control);
+        if (control.tagName === "INPUT") {
+          control.addEventListener("change", dispatchPickerChange);
+        } else {
+          control.addEventListener("value-changed", dispatchPickerValueChanged);
+        }
       }
 
       host.appendChild(control);
       return;
     }
 
+    pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
     if ("hass" in control) {
       control.hass = hass;
     }

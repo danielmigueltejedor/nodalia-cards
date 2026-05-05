@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.15";
+const CARD_VERSION = "0.12.16";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -25,12 +25,12 @@ const TOUCH_CLICK_SUPPRESSION_WINDOW = 350;
 const DEFAULT_CONFIG = {
   entity: "",
   entities: [],
-  name: "",
-  icon: "",
-  min: "",
-  max: "",
+  name: "Temperatura",
+  icon: "mdi:thermometer",
+  min: 15,
+  max: 25,
   hours_to_show: 24,
-  points: 480,
+  points: 100,
   show_header: true,
   show_icon: true,
   show_value: true,
@@ -54,12 +54,12 @@ const DEFAULT_CONFIG = {
       border: "1px solid var(--divider-color)",
       border_radius: "30px",
       box_shadow: "var(--ha-card-box-shadow)",
-      padding: "16px",
-      gap: "10px",
+      padding: "18px",
+      gap: "20px",
     },
     icon: {
       color: "var(--primary-text-color)",
-      size: "28px",
+      size: "20px",
     },
     title_size: "13px",
     value_size: "40px",
@@ -71,17 +71,20 @@ const DEFAULT_CONFIG = {
 };
 
 const STUB_CONFIG = {
-  name: "Humedad",
+  name: "Temperatura",
+  icon: "mdi:thermometer",
+  min: 15,
+  max: 25,
   entities: [
     {
-      entity: "sensor.termostato_dormitorios_humedad",
-      name: "Dormitorio de Rocio",
-      color: "#f29f05",
+      entity: "sensor.termostato_dormitorios_temperatura",
+      name: "Dormitorio de Rocío",
+      color: "#ffaa00",
     },
     {
-      entity: "sensor.termostato_habitaciones_comunes_humedad",
+      entity: "sensor.termostato_habitaciones_comunes_temperatura",
       name: "Pasillo",
-      color: "#42a5f5",
+      color: "#ffc677",
     },
   ],
 };
@@ -3066,7 +3069,7 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Humedad",
+              placeholder: "Temperatura",
             })}
             ${this._renderTextField("Icono", "icon", config.icon, {
               placeholder: "mdi:water-percent",
