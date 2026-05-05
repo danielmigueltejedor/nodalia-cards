@@ -14752,10 +14752,10 @@
     if (existing && REQUIRED_API_KEYS.every((key) => typeof existing[key] === "function")) {
       return;
     }
-    function isObject18(value) {
+    function isObject19(value) {
       return value !== null && typeof value === "object" && !Array.isArray(value);
     }
-    function deepClone18(value) {
+    function deepClone19(value) {
       if (value === void 0) {
         return void 0;
       }
@@ -14792,33 +14792,33 @@
     }
     function stripEqualToDefaults(config, defaults) {
       if (defaults === void 0 || defaults === null) {
-        return deepClone18(config);
+        return deepClone19(config);
       }
       if (config === void 0 || config === null) {
         return void 0;
       }
       if (Array.isArray(config)) {
-        return deepEqual(config, defaults) ? void 0 : deepClone18(config);
+        return deepEqual(config, defaults) ? void 0 : deepClone19(config);
       }
-      if (isObject18(config) && isObject18(defaults)) {
+      if (isObject19(config) && isObject19(defaults)) {
         const out = {};
         for (const key of Object.keys(config)) {
           const cv = config[key];
           const dv = defaults[key];
           if (!(key in defaults)) {
-            out[key] = deepClone18(cv);
+            out[key] = deepClone19(cv);
             continue;
           }
           if (deepEqual(cv, dv)) {
             continue;
           }
-          if (isObject18(cv) && !Array.isArray(cv) && isObject18(dv) && !Array.isArray(dv)) {
+          if (isObject19(cv) && !Array.isArray(cv) && isObject19(dv) && !Array.isArray(dv)) {
             const stripped = stripEqualToDefaults(cv, dv);
             if (stripped !== void 0) {
               out[key] = stripped;
             }
           } else {
-            out[key] = deepClone18(cv);
+            out[key] = deepClone19(cv);
           }
         }
         return Object.keys(out).length ? out : void 0;
@@ -15036,8 +15036,8 @@
       }
     }
     const api = {
-      isObject: isObject18,
-      deepClone: deepClone18,
+      isObject: isObject19,
+      deepClone: deepClone19,
       deepEqual,
       stripEqualToDefaults,
       editorStatesSignature,
@@ -17583,10 +17583,10 @@
         return;
       }
       const config = this._config;
-      const mediaToggleBackgroundBase = sanitizeCssRuntimeValue(config.styles.media_player.background) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.background) || "var(--ha-card-background, var(--card-background-color))";
-      const mediaToggleBorder = sanitizeCssRuntimeValue(config.styles.media_player.border) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border) || "1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent)";
-      const mediaToggleBorderRadius = sanitizeCssRuntimeValue(config.styles.media_player.border_radius) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border_radius) || "18px";
-      const mediaToggleBoxShadow = sanitizeCssRuntimeValue(config.styles.media_player.box_shadow) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.box_shadow) || "inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16)";
+      const mediaToggleBackgroundBase = sanitizeCssRuntimeValue(config.styles.media_player.background) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.background);
+      const mediaToggleBorder = sanitizeCssRuntimeValue(config.styles.media_player.border) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border);
+      const mediaToggleBorderRadius = sanitizeCssRuntimeValue(config.styles.media_player.border_radius) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border_radius);
+      const mediaToggleBoxShadow = sanitizeCssRuntimeValue(config.styles.media_player.box_shadow) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.box_shadow);
       const animations = {
         enabled: config.animations?.enabled !== false,
         barDuration: clamp(Number(config.animations?.bar_duration) || DEFAULT_CONFIG.animations.bar_duration, 120, 1600),
@@ -70785,9 +70785,507 @@
     preview: true
   });
 
+  // nodalia-calendar-card.js
+  var CARD_TAG17 = "nodalia-calendar-card";
+  var EDITOR_TAG17 = "nodalia-calendar-card-editor";
+  var COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
+  var DEFAULT_CONFIG17 = {
+    title: "Calendario",
+    calendars: [],
+    days_to_show: 7,
+    refresh_interval: 300,
+    show_completed: false,
+    allow_complete: true,
+    styles: {
+      card: {
+        background: "linear-gradient(180deg, rgba(255,255,255,0.028) 0%, rgba(0,0,0,0.03) 100%), var(--ha-card-background, var(--card-background-color))",
+        border: "1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent)",
+        border_radius: "22px",
+        box_shadow: "0 18px 34px rgba(0,0,0,0.16), inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
+        padding: "16px",
+        gap: "12px"
+      },
+      title_size: "17px",
+      event_size: "13px",
+      chip_size: "11px"
+    }
+  };
+  function deepClone17(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+  function isObject17(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+  function mergeConfig17(base, override) {
+    if (Array.isArray(base)) {
+      return Array.isArray(override) ? deepClone17(override) : deepClone17(base);
+    }
+    if (!isObject17(base)) {
+      return override === void 0 ? base : override;
+    }
+    const out = {};
+    const keys = /* @__PURE__ */ new Set([...Object.keys(base), ...Object.keys(override || {})]);
+    keys.forEach((key) => {
+      const baseValue = base[key];
+      const overrideValue = override ? override[key] : void 0;
+      if (overrideValue === void 0) {
+        out[key] = deepClone17(baseValue);
+        return;
+      }
+      if (isObject17(baseValue) && isObject17(overrideValue)) {
+        out[key] = mergeConfig17(baseValue, overrideValue);
+        return;
+      }
+      out[key] = deepClone17(overrideValue);
+    });
+    return out;
+  }
+  function normalizeConfig17(config) {
+    const normalized = mergeConfig17(DEFAULT_CONFIG17, config || {});
+    normalized.calendars = Array.isArray(normalized.calendars) ? normalized.calendars.map((item) => String(item || "").trim()).filter(Boolean) : [];
+    normalized.days_to_show = Math.min(30, Math.max(1, Number(normalized.days_to_show) || DEFAULT_CONFIG17.days_to_show));
+    normalized.refresh_interval = Math.min(3600, Math.max(30, Number(normalized.refresh_interval) || DEFAULT_CONFIG17.refresh_interval));
+    return normalized;
+  }
+  function escapeHtml17(value) {
+    return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+  }
+  function formatDateLabel(date, locale) {
+    return new Intl.DateTimeFormat(locale, {
+      weekday: "short",
+      day: "2-digit",
+      month: "short"
+    }).format(date);
+  }
+  function formatTimeLabel(date, locale) {
+    return new Intl.DateTimeFormat(locale, {
+      hour: "2-digit",
+      minute: "2-digit"
+    }).format(date);
+  }
+  function eventDate(value) {
+    if (!value) {
+      return null;
+    }
+    if (typeof value === "string") {
+      const parsed = new Date(value);
+      return Number.isFinite(parsed.getTime()) ? parsed : null;
+    }
+    if (typeof value === "object") {
+      const raw = value.dateTime || value.date || "";
+      const parsed = new Date(raw);
+      return Number.isFinite(parsed.getTime()) ? parsed : null;
+    }
+    return null;
+  }
+  function eventIsAllDay(event) {
+    return Boolean(event?.start?.date && !event?.start?.dateTime);
+  }
+  function completionKey(event) {
+    const source = String(event?._entity || "");
+    const uid = String(event?.uid || event?.id || "");
+    const start = eventDate(event?.start)?.toISOString() || "";
+    const summary = String(event?.summary || "");
+    return `${source}|${uid}|${start}|${summary}`;
+  }
+  var NodaliaCalendarCard = class extends HTMLElement {
+    static getStubConfig() {
+      return deepClone17(DEFAULT_CONFIG17);
+    }
+    static getConfigElement() {
+      return document.createElement(EDITOR_TAG17);
+    }
+    constructor() {
+      super();
+      this.attachShadow({ mode: "open" });
+      this._config = normalizeConfig17(DEFAULT_CONFIG17);
+      this._hass = null;
+      this._events = [];
+      this._loading = false;
+      this._error = "";
+      this._refreshTimer = 0;
+      this._completed = /* @__PURE__ */ new Set();
+      this._onShadowClick = this._onShadowClick.bind(this);
+    }
+    connectedCallback() {
+      this.shadowRoot?.addEventListener("click", this._onShadowClick);
+      this._loadCompleted();
+      this._refreshEvents();
+    }
+    disconnectedCallback() {
+      this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+      if (this._refreshTimer) {
+        window.clearTimeout(this._refreshTimer);
+        this._refreshTimer = 0;
+      }
+    }
+    setConfig(config) {
+      this._config = normalizeConfig17(config);
+      this._loadCompleted();
+      this._refreshEvents();
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+    }
+    _getLocale() {
+      return this._hass?.locale?.language || "es-ES";
+    }
+    _loadCompleted() {
+      if (typeof window === "undefined" || !window.localStorage) {
+        this._completed = /* @__PURE__ */ new Set();
+        return;
+      }
+      try {
+        const raw = window.localStorage.getItem(COMPLETION_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        this._completed = new Set(Array.isArray(parsed) ? parsed : []);
+      } catch (_error) {
+        this._completed = /* @__PURE__ */ new Set();
+      }
+    }
+    _saveCompleted() {
+      if (typeof window === "undefined" || !window.localStorage) {
+        return;
+      }
+      try {
+        window.localStorage.setItem(COMPLETION_STORAGE_KEY, JSON.stringify([...this._completed]));
+      } catch (_error) {
+      }
+    }
+    _scheduleRefresh() {
+      if (this._refreshTimer) {
+        window.clearTimeout(this._refreshTimer);
+        this._refreshTimer = 0;
+      }
+      this._refreshTimer = window.setTimeout(() => {
+        this._refreshTimer = 0;
+        this._refreshEvents();
+      }, this._config.refresh_interval * 1e3);
+    }
+    async _refreshEvents() {
+      if (!this._hass || !this._config.calendars.length) {
+        this._events = [];
+        this._loading = false;
+        this._error = "";
+        this._render();
+        return;
+      }
+      this._loading = true;
+      this._error = "";
+      this._render();
+      try {
+        const start = /* @__PURE__ */ new Date();
+        const end = new Date(start.getTime() + this._config.days_to_show * 24 * 60 * 60 * 1e3);
+        const all = [];
+        for (const entityId of this._config.calendars) {
+          const path = `calendars/${encodeURIComponent(entityId)}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
+          const rows = await this._hass.callApi("GET", path);
+          if (Array.isArray(rows)) {
+            rows.forEach((item) => all.push({ ...item, _entity: entityId }));
+          }
+        }
+        all.sort((left, right) => {
+          const a = eventDate(left?.start)?.getTime() || 0;
+          const b = eventDate(right?.start)?.getTime() || 0;
+          return a - b;
+        });
+        this._events = all;
+      } catch (_error) {
+        this._error = "No se pudieron cargar eventos del calendario.";
+      } finally {
+        this._loading = false;
+        this._render();
+        this._scheduleRefresh();
+      }
+    }
+    _toggleCompleted(key) {
+      if (!key) {
+        return;
+      }
+      if (this._completed.has(key)) {
+        this._completed.delete(key);
+      } else {
+        this._completed.add(key);
+      }
+      this._saveCompleted();
+      this._render();
+    }
+    _groupEvents(events) {
+      const locale = this._getLocale();
+      const groups = /* @__PURE__ */ new Map();
+      events.forEach((event) => {
+        const date = eventDate(event.start);
+        if (!date) {
+          return;
+        }
+        const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+        if (!groups.has(key)) {
+          groups.set(key, {
+            label: formatDateLabel(date, locale),
+            events: []
+          });
+        }
+        groups.get(key).events.push(event);
+      });
+      return [...groups.values()];
+    }
+    _render() {
+      if (!this.shadowRoot) {
+        return;
+      }
+      const config = this._config;
+      const styles = config.styles || DEFAULT_CONFIG17.styles;
+      const locale = this._getLocale();
+      const visibleEvents = this._events.filter((event) => {
+        const done = this._completed.has(completionKey(event));
+        return config.show_completed || !done;
+      });
+      const groups = this._groupEvents(visibleEvents);
+      const hasEvents = visibleEvents.length > 0;
+      this.shadowRoot.innerHTML = `
+      <style>
+        :host { display:block; }
+        * { box-sizing:border-box; }
+        ha-card {
+          background: ${styles.card.background};
+          border: ${styles.card.border};
+          border-radius: ${styles.card.border_radius};
+          box-shadow: ${styles.card.box_shadow};
+          overflow: hidden;
+        }
+        .calendar-card {
+          display:grid;
+          gap:${styles.card.gap};
+          padding:${styles.card.padding};
+        }
+        .calendar-header {
+          align-items:center;
+          display:flex;
+          justify-content:space-between;
+          gap:10px;
+        }
+        .calendar-title {
+          font-size:${styles.title_size};
+          font-weight:700;
+          letter-spacing:0.01em;
+        }
+        .calendar-chip {
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+          border-radius:999px;
+          color:var(--secondary-text-color);
+          font-size:${styles.chip_size};
+          padding:4px 9px;
+          white-space:nowrap;
+        }
+        .calendar-empty,
+        .calendar-loading,
+        .calendar-error {
+          color:var(--secondary-text-color);
+          font-size:${styles.event_size};
+          line-height:1.45;
+          padding:8px 2px;
+        }
+        .calendar-error { color: var(--error-color); }
+        .calendar-day {
+          display:grid;
+          gap:8px;
+        }
+        .calendar-day__label {
+          color:var(--secondary-text-color);
+          font-size:11px;
+          font-weight:700;
+          letter-spacing:0.08em;
+          text-transform:uppercase;
+        }
+        .calendar-event {
+          align-items:center;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          border-radius: 14px;
+          display:grid;
+          gap:8px;
+          grid-template-columns:auto 1fr auto;
+          min-height:46px;
+          padding:8px 10px;
+        }
+        .calendar-event.is-completed {
+          opacity:0.62;
+        }
+        .calendar-event__time {
+          color:var(--secondary-text-color);
+          font-size:11px;
+          font-weight:700;
+          min-width:52px;
+        }
+        .calendar-event__summary {
+          font-size:${styles.event_size};
+          line-height:1.35;
+          overflow:hidden;
+          text-overflow:ellipsis;
+          white-space:nowrap;
+        }
+        .calendar-event__summary small {
+          color:var(--secondary-text-color);
+          display:block;
+          font-size:11px;
+          margin-top:2px;
+        }
+        .calendar-event__done {
+          align-items:center;
+          appearance:none;
+          background:transparent;
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+          border-radius:999px;
+          color:var(--secondary-text-color);
+          cursor:pointer;
+          display:inline-flex;
+          font-size:11px;
+          font-weight:700;
+          min-height:28px;
+          padding:0 9px;
+        }
+      </style>
+      <ha-card>
+        <div class="calendar-card">
+          <div class="calendar-header">
+            <div class="calendar-title">${escapeHtml17(config.title)}</div>
+            <div class="calendar-chip">${escapeHtml17(`${config.days_to_show} dias`)}</div>
+          </div>
+          ${this._loading ? `<div class="calendar-loading">Cargando eventos...</div>` : this._error ? `<div class="calendar-error">${escapeHtml17(this._error)}</div>` : !hasEvents ? `<div class="calendar-empty">No hay eventos en este rango.</div>` : groups.map((group) => `
+                      <div class="calendar-day">
+                        <div class="calendar-day__label">${escapeHtml17(group.label)}</div>
+                        ${group.events.map((event) => {
+        const doneKey = completionKey(event);
+        const done = this._completed.has(doneKey);
+        const start = eventDate(event.start);
+        const timeLabel = eventIsAllDay(event) ? "Todo el dia" : start ? formatTimeLabel(start, locale) : "--:--";
+        const summary = String(event.summary || event.message || "Evento sin titulo");
+        const source = String(event._entity || "");
+        return `
+                            <div class="calendar-event ${done ? "is-completed" : ""}">
+                              <div class="calendar-event__time">${escapeHtml17(timeLabel)}</div>
+                              <div class="calendar-event__summary">
+                                ${escapeHtml17(summary)}
+                                <small>${escapeHtml17(source)}</small>
+                              </div>
+                              ${config.allow_complete ? `<button type="button" class="calendar-event__done" data-action="toggle-complete" data-key="${escapeHtml17(doneKey)}">${done ? "Hecho" : "Marcar"}</button>` : ""}
+                            </div>
+                          `;
+      }).join("")}
+                      </div>
+                    `).join("")}
+        </div>
+      </ha-card>
+    `;
+    }
+    _onShadowClick(event) {
+      const button = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.action === "toggle-complete");
+      if (!button) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      this._toggleCompleted(button.dataset.key || "");
+    }
+  };
+  var NodaliaCalendarCardEditor = class extends HTMLElement {
+    setConfig(config) {
+      this._config = normalizeConfig17(config);
+      this._render();
+    }
+    set hass(hass) {
+      this._hass = hass;
+    }
+    _emitConfig(next) {
+      this.dispatchEvent(new CustomEvent("config-changed", {
+        bubbles: true,
+        composed: true,
+        detail: { config: next }
+      }));
+    }
+    _onInputChange(event) {
+      const input = event.currentTarget;
+      const field = input.dataset.field || "";
+      const next = deepClone17(this._config || DEFAULT_CONFIG17);
+      if (field === "calendars") {
+        next.calendars = String(input.value || "").split(",").map((item) => item.trim()).filter(Boolean);
+      } else if (input.type === "checkbox") {
+        next[field] = input.checked;
+      } else if (field === "days_to_show" || field === "refresh_interval") {
+        next[field] = Number(input.value || 0);
+      } else {
+        next[field] = input.value;
+      }
+      this._config = normalizeConfig17(next);
+      this._emitConfig(this._config);
+      this._render();
+    }
+    _render() {
+      if (!this.shadowRoot) {
+        this.attachShadow({ mode: "open" });
+      }
+      const config = normalizeConfig17(this._config || DEFAULT_CONFIG17);
+      this.shadowRoot.innerHTML = `
+      <style>
+        :host{display:block}
+        .wrap{display:grid;gap:10px}
+        label{display:grid;gap:4px;font-size:12px;font-weight:600}
+        input{min-height:38px;padding:8px 10px;border-radius:10px;border:1px solid color-mix(in srgb,var(--primary-text-color) 10%, transparent);background:color-mix(in srgb,var(--primary-text-color) 4%, transparent);color:var(--primary-text-color)}
+        .row{display:grid;gap:8px;grid-template-columns:1fr 1fr}
+      </style>
+      <div class="wrap">
+        <label>
+          <span>Titulo</span>
+          <input data-field="title" value="${escapeHtml17(config.title)}" />
+        </label>
+        <label>
+          <span>Calendarios (separados por comas)</span>
+          <input data-field="calendars" value="${escapeHtml17(config.calendars.join(", "))}" placeholder="calendar.personal, calendar.work"/>
+        </label>
+        <div class="row">
+          <label>
+            <span>Dias a mostrar</span>
+            <input type="number" data-field="days_to_show" value="${escapeHtml17(config.days_to_show)}" />
+          </label>
+          <label>
+            <span>Refresco (segundos)</span>
+            <input type="number" data-field="refresh_interval" value="${escapeHtml17(config.refresh_interval)}" />
+          </label>
+        </div>
+        <label>
+          <span><input type="checkbox" data-field="allow_complete" ${config.allow_complete ? "checked" : ""}/> Permitir marcar eventos como completados</span>
+        </label>
+        <label>
+          <span><input type="checkbox" data-field="show_completed" ${config.show_completed ? "checked" : ""}/> Mostrar eventos completados</span>
+        </label>
+      </div>
+    `;
+      this.shadowRoot.querySelectorAll("input").forEach((input) => {
+        input.addEventListener("change", this._onInputChange.bind(this));
+        if (input.type !== "checkbox") {
+          input.addEventListener("input", this._onInputChange.bind(this));
+        }
+      });
+    }
+  };
+  if (!customElements.get(CARD_TAG17)) {
+    customElements.define(CARD_TAG17, NodaliaCalendarCard);
+  }
+  if (!customElements.get(EDITOR_TAG17)) {
+    customElements.define(EDITOR_TAG17, NodaliaCalendarCardEditor);
+  }
+  window.customCards = window.customCards || [];
+  window.customCards.push({
+    type: CARD_TAG17,
+    name: "Nodalia Calendar Card",
+    description: "Tarjeta de calendario elegante estilo Nodalia con eventos y marcado de completados.",
+    preview: true
+  });
+
   // nodalia-vacuum-card.js
-  var CARD_TAG17 = "nodalia-vacuum-card";
-  var EDITOR_TAG17 = "nodalia-vacuum-card-editor";
+  var CARD_TAG18 = "nodalia-vacuum-card";
+  var EDITOR_TAG18 = "nodalia-vacuum-card-editor";
   var HAPTIC_PATTERNS17 = {
     selection: 8,
     light: 10,
@@ -70855,7 +71353,7 @@
     intense: "Intenso",
     deep: "Profundo"
   };
-  var DEFAULT_CONFIG17 = {
+  var DEFAULT_CONFIG18 = {
     entity: "",
     name: "",
     icon: "",
@@ -70924,10 +71422,10 @@
     entity: "vacuum.salon",
     name: "Robot salon"
   };
-  function isObject17(value) {
+  function isObject18(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
   }
-  function deepClone17(value) {
+  function deepClone18(value) {
     if (value === void 0) {
       return void 0;
     }
@@ -70947,11 +71445,11 @@
     config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
     return config;
   }
-  function mergeConfig17(base, override) {
+  function mergeConfig18(base, override) {
     if (Array.isArray(base)) {
-      return Array.isArray(override) ? override.map((item) => deepClone17(item)) : deepClone17(base);
+      return Array.isArray(override) ? override.map((item) => deepClone18(item)) : deepClone18(base);
     }
-    if (!isObject17(base)) {
+    if (!isObject18(base)) {
       return override === void 0 ? base : override;
     }
     const result = {};
@@ -70960,15 +71458,15 @@
       const baseValue = base[key];
       const overrideValue = override ? override[key] : void 0;
       if (overrideValue === void 0) {
-        result[key] = deepClone17(baseValue);
+        result[key] = deepClone18(baseValue);
         return;
       }
       if (Array.isArray(overrideValue)) {
-        result[key] = deepClone17(overrideValue);
+        result[key] = deepClone18(overrideValue);
         return;
       }
-      if (isObject17(baseValue) && isObject17(overrideValue)) {
-        result[key] = mergeConfig17(baseValue, overrideValue);
+      if (isObject18(baseValue) && isObject18(overrideValue)) {
+        result[key] = mergeConfig18(baseValue, overrideValue);
         return;
       }
       result[key] = overrideValue;
@@ -70979,11 +71477,11 @@
     if (Array.isArray(value)) {
       return value.map((item) => compactConfig17(item)).filter((item) => item !== void 0);
     }
-    if (isObject17(value)) {
+    if (isObject18(value)) {
       const compacted = {};
       Object.entries(value).forEach(([key, item]) => {
         const cleaned = compactConfig17(item);
-        const isEmptyObject = isObject17(cleaned) && Object.keys(cleaned).length === 0;
+        const isEmptyObject = isObject18(cleaned) && Object.keys(cleaned).length === 0;
         if (cleaned !== void 0 && !isEmptyObject) {
           compacted[key] = cleaned;
         }
@@ -71000,7 +71498,7 @@
     let cursor = target;
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
-      if (!isObject17(cursor[key]) && !Array.isArray(cursor[key])) {
+      if (!isObject18(cursor[key]) && !Array.isArray(cursor[key])) {
         cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
       }
       cursor = cursor[key];
@@ -71012,7 +71510,7 @@
     let cursor = target;
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
-      if (!isObject17(cursor[key]) && !Array.isArray(cursor[key])) {
+      if (!isObject18(cursor[key]) && !Array.isArray(cursor[key])) {
         return;
       }
       cursor = cursor[key];
@@ -71029,7 +71527,7 @@
   function arrayFromCsv4(value) {
     return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
   }
-  function escapeHtml17(value) {
+  function escapeHtml18(value) {
     return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
   }
   function escapeSelectorValue16(value) {
@@ -71046,11 +71544,11 @@
     }
     return raw;
   }
-  function getSafeStyles6(styles = DEFAULT_CONFIG17.styles) {
+  function getSafeStyles6(styles = DEFAULT_CONFIG18.styles) {
     const walk = (candidate, fallback) => {
-      if (isObject17(fallback)) {
+      if (isObject18(fallback)) {
         const out = {};
-        const source = isObject17(candidate) ? candidate : {};
+        const source = isObject18(candidate) ? candidate : {};
         Object.keys(fallback).forEach((key) => {
           out[key] = walk(source[key], fallback[key]);
         });
@@ -71061,7 +71559,7 @@
       }
       return candidate === void 0 ? fallback : candidate;
     };
-    return walk(styles, DEFAULT_CONFIG17.styles);
+    return walk(styles, DEFAULT_CONFIG18.styles);
   }
   function resolveEditorColorValue12(value) {
     const rawValue = String(value ?? "").trim();
@@ -71166,8 +71664,8 @@
     }
     return raw.replaceAll("_", " ").replace(/\b\w/g, (match) => match.toUpperCase());
   }
-  function normalizeConfig17(rawConfig) {
-    const config = mergeConfig17(DEFAULT_CONFIG17, rawConfig || {});
+  function normalizeConfig18(rawConfig) {
+    const config = mergeConfig18(DEFAULT_CONFIG18, rawConfig || {});
     const normalizeList = (value) => (Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : []).map((item) => String(item || "").trim()).filter(Boolean);
     if (!Array.isArray(config.fan_presets)) {
       config.fan_presets = [];
@@ -71179,10 +71677,10 @@
   }
   var NodaliaVacuumCard = class extends HTMLElement {
     static async getConfigElement() {
-      return document.createElement(EDITOR_TAG17);
+      return document.createElement(EDITOR_TAG18);
     }
     static getStubConfig(hass) {
-      return applyStubEntity13(deepClone17(STUB_CONFIG16), hass, ["vacuum"]);
+      return applyStubEntity13(deepClone18(STUB_CONFIG16), hass, ["vacuum"]);
     }
     constructor() {
       super();
@@ -71250,7 +71748,7 @@
       this._lastRenderSignature = "";
     }
     setConfig(config) {
-      this._config = normalizeConfig17(config || {});
+      this._config = normalizeConfig18(config || {});
       this._isCompactLayout = this._shouldUseCompactLayout(
         Math.round(this._cardWidth || this.clientWidth || 0)
       );
@@ -71391,16 +71889,16 @@
       navigator.vibrate(HAPTIC_PATTERNS17[hapticStyle] || HAPTIC_PATTERNS17.selection);
     }
     _getAnimationSettings() {
-      const configuredAnimations = this._config?.animations || DEFAULT_CONFIG17.animations;
+      const configuredAnimations = this._config?.animations || DEFAULT_CONFIG18.animations;
       return {
         enabled: configuredAnimations.enabled !== false,
         panelDuration: clamp16(
-          Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG17.animations.panel_duration,
+          Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG18.animations.panel_duration,
           120,
           2400
         ),
         buttonBounceDuration: clamp16(
-          Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG17.animations.button_bounce_duration,
+          Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG18.animations.button_bounce_duration,
           120,
           1200
         )
@@ -72056,11 +72554,11 @@
               class="vacuum-card__preset ${normalizeTextKey16(option) === normalizeTextKey16(activeModeDisplayValue) ? "vacuum-card__preset--active" : ""}"
               type="button"
               data-vacuum-action="${descriptor.service === "select" ? "select" : "fan"}"
-              ${descriptor.service === "select" ? `data-target-entity="${escapeHtml17(descriptor.target)}"` : ""}
-              data-mode-kind="${escapeHtml17(descriptor.kind)}"
-              data-value="${escapeHtml17(option)}"
+              ${descriptor.service === "select" ? `data-target-entity="${escapeHtml18(descriptor.target)}"` : ""}
+              data-mode-kind="${escapeHtml18(descriptor.kind)}"
+              data-value="${escapeHtml18(option)}"
             >
-              ${escapeHtml17(humanizeModeLabel2(option, descriptor.kind, this._hass, this._config?.language ?? "auto"))}
+              ${escapeHtml18(humanizeModeLabel2(option, descriptor.kind, this._hass, this._config?.language ?? "auto"))}
             </button>
           `).join("")}
       </div>
@@ -72078,9 +72576,9 @@
               class="vacuum-card__preset ${this._selectedCleaningAreas.includes(room.cleaningAreaId) ? "vacuum-card__preset--active" : ""}"
               type="button"
               data-vacuum-action="toggle-room"
-              data-cleaning-area-id="${escapeHtml17(room.cleaningAreaId)}"
+              data-cleaning-area-id="${escapeHtml18(room.cleaningAreaId)}"
             >
-              ${escapeHtml17(room.name)}
+              ${escapeHtml18(room.name)}
             </button>
           `).join("")}
       </div>
@@ -72778,7 +73276,7 @@
       const cardBorder = isTintedState ? `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))` : styles.card.border;
       const cardShadow = isTintedState ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))` : styles.card.box_shadow;
       if (config.show_state_chip !== false) {
-        chips.push(`<span class="vacuum-card__chip vacuum-card__chip--state">${escapeHtml17(stateLabel)}</span>`);
+        chips.push(`<span class="vacuum-card__chip vacuum-card__chip--state">${escapeHtml18(stateLabel)}</span>`);
       }
       if (this._activeModePanel && !availableModeDescriptors.some((mode) => mode.kind === this._activeModePanel)) {
         this._activeModePanel = null;
@@ -72792,7 +73290,7 @@
       const currentPanelKey = this._roomPanelOpen && roomMappings.length ? "room" : activeModeDescriptor?.kind || "";
       const currentPanelMarkup = currentPanelKey ? this._getPanelMarkup(currentPanelKey, state) : "";
       const panelShellMarkup = currentPanelMarkup ? `
-        <div class="vacuum-card__panel-shell" data-panel-key="${escapeHtml17(currentPanelKey)}">
+        <div class="vacuum-card__panel-shell" data-panel-key="${escapeHtml18(currentPanelKey)}">
           <div class="vacuum-card__panel-inner">
             ${currentPanelMarkup}
           </div>
@@ -73300,14 +73798,14 @@
               class="vacuum-card__icon-button"
               type="button"
               ${canRunCardTapAction ? 'data-vacuum-action="card_tap"' : ""}
-              aria-label="${escapeHtml17(iconButtonLabel)}"
+              aria-label="${escapeHtml18(iconButtonLabel)}"
             >
-              <ha-icon icon="${escapeHtml17(icon)}"></ha-icon>
+              <ha-icon icon="${escapeHtml18(icon)}"></ha-icon>
               ${showUnavailableBadge ? `<span class="vacuum-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${showCopyBlock ? `
                   <div class="vacuum-card__copy">
-                    <div class="vacuum-card__title">${escapeHtml17(title)}</div>
+                    <div class="vacuum-card__title">${escapeHtml18(title)}</div>
                     ${chips.length ? `<div class="vacuum-card__chips">${chips.join("")}</div>` : ""}
                   </div>
                 ` : ""}
@@ -73322,10 +73820,10 @@
                           <button
                               class="vacuum-card__control ${control.active ? "vacuum-card__control--active" : ""}"
                               type="button"
-                              data-vacuum-action="${escapeHtml17(control.action)}"
-                              aria-label="${escapeHtml17(control.label)}"
+                              data-vacuum-action="${escapeHtml18(control.action)}"
+                              aria-label="${escapeHtml18(control.label)}"
                             >
-                              <ha-icon icon="${escapeHtml17(control.icon)}"></ha-icon>
+                              <ha-icon icon="${escapeHtml18(control.icon)}"></ha-icon>
                             </button>
                           `).join("")}
                       ${availableModeDescriptors.map((mode) => `
@@ -73333,8 +73831,8 @@
                             class="vacuum-card__control vacuum-card__mode-toggle ${activeModeDescriptor?.kind === mode.kind ? "vacuum-card__mode-toggle--active vacuum-card__control--active" : ""}"
                             type="button"
                             data-vacuum-action="toggle-mode-panel"
-                            data-mode-kind="${escapeHtml17(mode.kind)}"
-                            aria-label="${escapeHtml17(mode.label)}"
+                            data-mode-kind="${escapeHtml18(mode.kind)}"
+                            aria-label="${escapeHtml18(mode.label)}"
                           >
                             <ha-icon icon="${mode.kind === "mop" ? "mdi:waves" : "mdi:fan"}"></ha-icon>
                           </button>
@@ -73356,14 +73854,14 @@
       }
     }
   };
-  if (!customElements.get(CARD_TAG17)) {
-    customElements.define(CARD_TAG17, NodaliaVacuumCard);
+  if (!customElements.get(CARD_TAG18)) {
+    customElements.define(CARD_TAG18, NodaliaVacuumCard);
   }
   var NodaliaVacuumCardEditor = class extends HTMLElement {
     constructor() {
       super();
       this.attachShadow({ mode: "open" });
-      this._config = normalizeConfig17(STUB_CONFIG16);
+      this._config = normalizeConfig18(STUB_CONFIG16);
       this._hass = null;
       this._entityOptionsSignature = "";
       this._showStyleSection = false;
@@ -73391,7 +73889,7 @@
     }
     setConfig(config) {
       const focusState = this._captureFocusState();
-      this._config = normalizeConfig17(config || {});
+      this._config = normalizeConfig18(config || {});
       this._render();
       this._restoreFocusState(focusState);
     }
@@ -73505,16 +74003,16 @@
     }
     _emitConfig() {
       const focusState = this._captureFocusState();
-      const nextConfig = deepClone17(this._config);
-      this._config = normalizeConfig17(compactConfig17(nextConfig));
+      const nextConfig = deepClone18(this._config);
+      this._config = normalizeConfig18(compactConfig17(nextConfig));
       this._render();
       this._restoreFocusState(focusState);
       fireEvent17(this, "config-changed", {
-        config: compactConfig17(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG17) ?? {})
+        config: compactConfig17(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG18) ?? {})
       });
     }
     _setEditorConfig() {
-      this._config = normalizeConfig17(compactConfig17(this._config));
+      this._config = normalizeConfig18(compactConfig17(this._config));
     }
     _setFieldValue(path, value) {
       if (value === void 0 || value === null || value === "") {
@@ -73598,17 +74096,17 @@
     _renderTextField(label, field, value, options = {}) {
       const tLabel = this._editorLabel(label);
       const inputType = options.type || "text";
-      const placeholder = options.placeholder ? `placeholder="${escapeHtml17(options.placeholder)}"` : "";
+      const placeholder = options.placeholder ? `placeholder="${escapeHtml18(options.placeholder)}"` : "";
       const valueType = options.valueType || "string";
       const inputValue = value === void 0 || value === null ? "" : String(value);
       return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml17(tLabel)}</span>
+        <span>${escapeHtml18(tLabel)}</span>
         <input
-          type="${escapeHtml17(inputType)}"
-          data-field="${escapeHtml17(field)}"
-          data-value-type="${escapeHtml17(valueType)}"
-          value="${escapeHtml17(inputValue)}"
+          type="${escapeHtml18(inputType)}"
+          data-field="${escapeHtml18(field)}"
+          data-value-type="${escapeHtml18(valueType)}"
+          value="${escapeHtml18(inputValue)}"
           ${placeholder}
         />
       </label>
@@ -73622,18 +74120,18 @@
       const colorModel = getEditorColorModel15(currentValue, fallbackValue);
       return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml17(tLabel)}</span>
+        <span>${escapeHtml18(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="${escapeHtml17(tColorCustom)}">
+          <label class="editor-color-picker" title="${escapeHtml18(tColorCustom)}">
             <input
               type="color"
-              data-field="${escapeHtml17(field)}"
+              data-field="${escapeHtml18(field)}"
               data-value-type="color"
-              data-alpha="${escapeHtml17(String(colorModel.alpha))}"
-              value="${escapeHtml17(colorModel.hex)}"
-              aria-label="${escapeHtml17(tLabel)}"
+              data-alpha="${escapeHtml18(String(colorModel.alpha))}"
+              value="${escapeHtml18(colorModel.hex)}"
+              aria-label="${escapeHtml18(tLabel)}"
             />
-            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml17(currentValue)};"></span>
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml18(currentValue)};"></span>
           </label>
         </div>
       </div>
@@ -73645,12 +74143,12 @@
       <label class="editor-toggle">
         <input
           type="checkbox"
-          data-field="${escapeHtml17(field)}"
+          data-field="${escapeHtml18(field)}"
           data-value-type="boolean"
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml17(tLabel)}</span>
+        <span class="editor-toggle__label">${escapeHtml18(tLabel)}</span>
       </label>
     `;
     }
@@ -73742,12 +74240,12 @@
       <label class="editor-toggle">
         <input
           type="checkbox"
-          data-mode-list-field="${escapeHtml17(field)}"
-          data-mode-value="${escapeHtml17(modeValue)}"
+          data-mode-list-field="${escapeHtml18(field)}"
+          data-mode-value="${escapeHtml18(modeValue)}"
           ${this._isModeVisible(field, modeValue) ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml17(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml18(label)}</span>
       </label>
     `;
     }
@@ -73755,11 +74253,11 @@
       const tLabel = this._editorLabel(label);
       return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml17(tLabel)}</span>
-        <select data-field="${escapeHtml17(field)}">
+        <span>${escapeHtml18(tLabel)}</span>
+        <select data-field="${escapeHtml18(field)}">
           ${options.map((option) => `
-              <option value="${escapeHtml17(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml17(this._editorLabel(option.label))}
+              <option value="${escapeHtml18(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
+                ${escapeHtml18(this._editorLabel(option.label))}
               </option>
             `).join("")}
         </select>
@@ -73771,27 +74269,27 @@
       const inputValue = value === void 0 || value === null ? "" : String(value);
       return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml17(tLabel)}</span>
+        <span>${escapeHtml18(tLabel)}</span>
         <div
           class="editor-control-host"
-          data-mounted-control="${escapeHtml17(options.controlType || "entity")}"
-          data-field="${escapeHtml17(field)}"
-          data-value="${escapeHtml17(inputValue)}"
+          data-mounted-control="${escapeHtml18(options.controlType || "entity")}"
+          data-field="${escapeHtml18(field)}"
+          data-value="${escapeHtml18(inputValue)}"
         ></div>
       </div>
     `;
     }
     _renderIconPickerField(label, field, value, options = {}) {
       const tLabel = this._editorLabel(label);
-      const placeholder = options.placeholder ? `placeholder="${escapeHtml17(options.placeholder)}"` : "";
+      const placeholder = options.placeholder ? `placeholder="${escapeHtml18(options.placeholder)}"` : "";
       const inputValue = value === void 0 || value === null ? "" : String(value);
       return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml17(tLabel)}</span>
+        <span>${escapeHtml18(tLabel)}</span>
         <ha-icon-picker
-          data-field="${escapeHtml17(field)}"
-          data-value="${escapeHtml17(inputValue)}"
-          value="${escapeHtml17(inputValue)}"
+          data-field="${escapeHtml18(field)}"
+          data-value="${escapeHtml18(inputValue)}"
+          value="${escapeHtml18(inputValue)}"
           ${placeholder}
         ></ha-icon-picker>
       </div>
@@ -73857,7 +74355,7 @@
       if (!this.shadowRoot) {
         return;
       }
-      const config = this._config || normalizeConfig17({});
+      const config = this._config || normalizeConfig18({});
       const hapticStyle = config.haptics?.style || "medium";
       const suctionModeVisibilityOptions = this._getModeVisibilityOptions("suction");
       const mopModeVisibilityOptions = this._getModeVisibilityOptions("mop");
@@ -74156,8 +74654,8 @@
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml17(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Entidad principal, nombre visible y comportamiento al tocar la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml18(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml18(this._editorLabel("Entidad principal, nombre visible y comportamiento al tocar la tarjeta."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityPickerField("Entidad del robot", "entity", config.entity, {
@@ -74203,8 +74701,8 @@
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml17(this._editorLabel("Entidades auxiliares"))}</div>
-            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Sensores y selectores opcionales para enriquecer el estado y los controles."))}</div>
+            <div class="editor-section__title">${escapeHtml18(this._editorLabel("Entidades auxiliares"))}</div>
+            <div class="editor-section__hint">${escapeHtml18(this._editorLabel("Sensores y selectores opcionales para enriquecer el estado y los controles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderEntityPickerField("Sensor de estado", "state_entity", config.state_entity, {
@@ -74227,8 +74725,8 @@
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml17(this._editorLabel("Visibilidad"))}</div>
-            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Qué elementos quieres mostrar dentro de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml18(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml18(this._editorLabel("Qué elementos quieres mostrar dentro de la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -74271,8 +74769,8 @@
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml17(this._editorLabel("Haptics"))}</div>
-            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Respuesta háptica opcional para los controles."))}</div>
+            <div class="editor-section__title">${escapeHtml18(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml18(this._editorLabel("Respuesta háptica opcional para los controles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -74296,8 +74794,8 @@
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml17(this._editorLabel("Animaciones"))}</div>
-            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Feedback visual para botones y paneles del robot."))}</div>
+            <div class="editor-section__title">${escapeHtml18(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml18(this._editorLabel("Feedback visual para botones y paneles del robot."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -74306,7 +74804,7 @@
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml17(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
+                <span>${escapeHtml18(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
               </button>
             </div>
           </div>
@@ -74325,8 +74823,8 @@
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml17(this._editorLabel("Estilos"))}</div>
-            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Ajustes visuales básicos del look Nodalia."))}</div>
+            <div class="editor-section__title">${escapeHtml18(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml18(this._editorLabel("Ajustes visuales básicos del look Nodalia."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -74335,7 +74833,7 @@
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml17(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
+                <span>${escapeHtml18(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
               </button>
             </div>
           </div>
@@ -74402,16 +74900,16 @@
       this._ensureEditorControlsReady();
     }
   };
-  if (!customElements.get(EDITOR_TAG17)) {
-    customElements.define(EDITOR_TAG17, NodaliaVacuumCardEditor);
+  if (!customElements.get(EDITOR_TAG18)) {
+    customElements.define(EDITOR_TAG18, NodaliaVacuumCardEditor);
   }
   window.customCards = window.customCards || [];
   window.customCards.push({
-    type: CARD_TAG17,
+    type: CARD_TAG18,
     name: "Nodalia Vacuum Card",
     description: "Tarjeta de aspirador con look Nodalia, acciones rápidas y editor visual.",
     preview: true
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.6.1","contentSha256_12":"582aeb0816ed"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v0.6.1 (582aeb0816ed) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.1","contentSha256_12":"195af2c4fab7"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.1 (195af2c4fab7) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}

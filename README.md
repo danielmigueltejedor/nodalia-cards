@@ -56,6 +56,7 @@ Animations and interactions in action:
 - custom:nodalia-insignia-card  
 - custom:nodalia-person-card  
 - custom:nodalia-weather-card  
+- custom:nodalia-calendar-card  
 - custom:nodalia-vacuum-card  
 
 ---
@@ -83,7 +84,7 @@ Copy `nodalia-cards.js` into `config/www/` (or a subfolder) and add a resource u
 
 **Stable (`main`) — 0.6.1** includes **es, en, de, fr, it, nl** plus **pt, ru, el, zh** (simplified), and **ro** for the bundled cards and Lovelace visual editors (partial trees merge from English; coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
 
-**Prereleases:** after `0.6.1` stable, next experimental line starts on **`alpha`** as **`1.0.0-alpha.1`**. Use prereleases for rapid validation; stable users should stay on **`main`**. Branch workflow and tagging: **CONTRIBUTING**.
+**Prereleases:** active work-in-progress line is now **`1.0.0-alpha.1`** on **`alpha`** / **`beta`** (experimental and pre-stable builds). **`0.6.1`** stays as the recommended stable line on **`main`** while new cards and final polish (security, translations, fluency, animations, technical debt) continue toward `1.0.0`.
 
 ---
 
@@ -94,7 +95,7 @@ Copy `nodalia-cards.js` into `config/www/` (or a subfolder) and add a resource u
 - Redesign graph card  
 - Improve energy flow card  
 - Refine navigation bar  
-- Polish translations and UX (**0.4.x**)
+- Prepare and polish the **1.0.0** line (new cards + quality hardening)
 
 ---
 

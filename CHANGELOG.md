@@ -6,7 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Work toward **`0.6.x`** on **`alpha`** / **`beta`** and eventual **`main`**: additional polish, performance and feature work after the **`0.5.0`** stable release. Prerelease workflow and tagging: **CONTRIBUTING**.
+Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains the stable baseline on **`main`**: additional polish, performance, security and feature work before the next major stable. Prerelease workflow and tagging: **CONTRIBUTING**.
+
+---
+
+## [1.0.0-alpha.1] - 2026-05-05
+
+First **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). This marks the start of the next major cycle while `0.6.1` remains the stable baseline on `main`.
+
+- **New card:** added **`nodalia-calendar-card`** with Nodalia visual style to show upcoming events by configurable day range.
+- **Calendar UX:** supports selecting calendar entities, elegant grouped event display, and in-card event completion toggles for already completed/personal tracking flows.
+- **Editor support:** added a visual editor for title, calendars list, day range, refresh interval, and completed-event visibility/marking behavior.
 
 ---
 
