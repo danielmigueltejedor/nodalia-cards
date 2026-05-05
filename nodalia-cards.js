@@ -42221,7 +42221,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.14";
+const CARD_VERSION = "0.12.15";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -44300,7 +44300,7 @@ class NodaliaGraphCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           flex: 1 1 auto;
-          margin: 6px -${chartBleedRight}px -${chartBleedBottom}px -${chartBleedLeft}px;
+          margin: 14px -${chartBleedRight}px -${chartBleedBottom}px -${chartBleedLeft}px;
           max-width: none;
           min-height: ${chartHeight};
           min-width: 0;
@@ -72618,7 +72618,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "0.2.2";
+const CARD_VERSION = "0.2.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -73484,7 +73484,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     const iconOnly = !showName && !showValue;
     const iconOnlySize = Math.max(36, Math.min(iconSizePx + 12, 46));
     const iconOnlyIconBase = parseSizeToPixels(styles.icon?.size, iconSizePx);
-    const iconOnlyIconSize = Math.max(18, Math.min(Math.round(iconOnlyIconBase), iconOnlySize - 8));
+    const iconOnlyIconSize = Math.max(18, Math.min(Math.round(iconOnlyIconBase), iconOnlySize - 12));
     const iconOnlyOffsetY = String(styles.icon?.icon_only_offset_y ?? DEFAULT_CONFIG.styles.icon.icon_only_offset_y);
     const pictureUrl = this._getResolvedPicture(state);
     const showPicture = Boolean(pictureUrl);
@@ -73579,10 +73579,11 @@ class NodaliaInsigniaCard extends HTMLElement {
 
         .insignia-card--icon-only .insignia-card__content {
           align-items: center;
+          box-sizing: border-box;
           display: grid;
           place-items: center;
           margin: 0;
-          padding: 0;
+          padding: 3px;
           grid-template-columns: 1fr;
           width: 100%;
           height: 100%;
@@ -73639,12 +73640,13 @@ class NodaliaInsigniaCard extends HTMLElement {
 
         .insignia-card--icon-only .insignia-card__icon ha-icon {
           --mdc-icon-size: var(--icon-only-icon-size);
-          height: var(--icon-only-icon-size);
-          width: var(--icon-only-icon-size);
-          line-height: var(--icon-only-icon-size);
           display: flex;
           align-items: center;
           justify-content: center;
+          height: var(--icon-only-icon-size);
+          width: var(--icon-only-icon-size);
+          line-height: 0;
+          overflow: visible;
           position: relative;
           top: var(--icon-only-offset-y);
           transform: translateY(0) !important;
@@ -85097,4 +85099,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0-alpha.2","contentSha256_12":"6a995829c98d"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0-alpha.3","contentSha256_12":"78f0762fc1b1"};}

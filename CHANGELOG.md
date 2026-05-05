@@ -10,6 +10,15 @@ Work toward **`0.5.x`** on **`alpha`** / **`beta`** and eventual **`main`**: **P
 
 ---
 
+## [0.5.0-alpha.3] - 2026-05-05
+
+Third **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.3`** (tag **`v0.5.0-alpha.3`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Graph card** (`0.12.15`): más **margen superior** del **recuadro del chart** respecto a la fila **valor / chips**.
+- **Insignia card** (`0.2.3`): modo **solo icono** — **padding** interior **`3px`**, glifo algo más **pequeño** respecto al círculo (**`-12px`** en lugar de `-8px`) y **`overflow: visible`** en **`ha-icon`** para reducir el recorte visual.
+
+---
+
 ## [0.5.0-alpha.2] - 2026-05-05
 
 Second **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.2`** (tag **`v0.5.0-alpha.2`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.

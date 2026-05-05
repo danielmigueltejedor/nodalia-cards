@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.14";
+const CARD_VERSION = "0.12.15";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2079,7 +2079,7 @@ class NodaliaGraphCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           flex: 1 1 auto;
-          margin: 6px -${chartBleedRight}px -${chartBleedBottom}px -${chartBleedLeft}px;
+          margin: 14px -${chartBleedRight}px -${chartBleedBottom}px -${chartBleedLeft}px;
           max-width: none;
           min-height: ${chartHeight};
           min-width: 0;
