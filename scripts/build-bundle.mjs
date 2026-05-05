@@ -92,7 +92,7 @@ const contentHash = crypto.createHash("sha256").update(body).digest("hex").slice
 const footer = `;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__=${JSON.stringify({
   pkgVersion: pkg.version,
   contentSha256_12: contentHash,
-})};}`;
+})};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v${pkg.version} (${contentHash}) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}`;
 const outPath = path.join(root, "nodalia-cards.js");
 fs.writeFileSync(outPath, `${body}\n${footer}\n`);
 console.log(`Wrote ${path.relative(root, outPath)} (${parts.length} modules + i18n, ${contentHash}).`);

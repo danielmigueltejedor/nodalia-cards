@@ -136,7 +136,7 @@ Three channels keep risk and expectations clear:
 | Branch | Who it’s for | Version examples | Expectations |
 |--------|----------------|------------------|--------------|
 | **`main`** | Everyone | **`v0.4.0`**, **`v0.4.1`**, **`v0.5.0`** (semver **only** stable minors/patches) | **Recommended** for normal dashboards. Only merged when the maintainer is happy to endorse the build widely. |
-| **`beta`** | Testers, early adopters | **`0.6.0-beta.1`**, **`0.6.0-beta.2`**, … (tags **`v0.6.0-beta.1`**, …) | **Pretty usable**; features are exercised but not guaranteed frozen. Promoted from **`alpha`** when a slice of work is **polished enough** (merge or cherry-pick). |
+| **`beta`** | Testers, early adopters | **`0.6.0-beta.1`**, **`0.6.0-beta.2`**, **`0.6.0-beta.3`**, … (tags **`v0.6.0-beta.1`**, …) | **Pretty usable**; features are exercised but not guaranteed frozen. Promoted from **`alpha`** when a slice of work is **polished enough** (merge or cherry-pick). |
 | **`alpha`** | Developers / brave testers | **`0.6.0-alpha.1`**, **`0.6.0-alpha.2`**, **`0.6.0-alpha.3`**, **`0.6.0-alpha.4`**, … (tags **`v0.6.0-alpha.1`**, … optional) | **High churn**. Frequent commits; **dashboards may break**. Breaking YAML or behaviour is allowed here. |
 
 **Promotion flow (typical):** experimental work lands on **`alpha`** → when a feature (or batch) is stable enough, it moves to **`beta`** → when the whole minor is ready, **`beta`** merges to **`main`** as **`v0.5.0`** (example). Avoid merging **`alpha` → `main`** directly if you want **`beta`** to stay the gate for “probably OK for testers”.

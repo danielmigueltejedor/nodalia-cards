@@ -10,6 +10,16 @@ Work toward **`0.6.x`** on **`alpha`** / **`beta`** and eventual **`main`**: add
 
 ---
 
+## [0.6.0-beta.3] - 2026-05-05
+
+Third **`beta`** on the **`0.6.x`** line (**branch `beta`**). This cut focuses on load/debug clarity so testers can verify they are running the intended build and avoid false “old version” diagnostics. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-beta.3`** (tag **`v0.6.0-beta.3`** optional).
+
+- **Bundle diagnostics:** added global startup console info from bundle footer with package version + content hash (`nodalia-cards vX.Y.Z (sha)`), aligned with `window.__NODALIA_BUNDLE__`.
+- **Graph card (mobile):** kept the chip-press clipping fix while removing ineffective `overflow-y: visible` from the horizontal legend scroller (padding-based fix retained).
+- **Regression tests:** refined sanitizer guard test naming for clearer intent and review auditability.
+
+---
+
 ## [0.6.0-beta.2] - 2026-05-05
 
 Second **`beta`** on the **`0.6.x`** line (**branch `beta`**). This cut focuses on post-beta.1 regression polish and review feedback closure. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-beta.2`** (tag **`v0.6.0-beta.2`** optional).
