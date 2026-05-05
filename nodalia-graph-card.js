@@ -673,16 +673,16 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
-/** Map SVG chart X (same space as viewBox width 100, incl. negative pad) to overlay %. */
+/** Map SVG viewBox X (0..chart.width) to overlay percentage. */
 function graphChartXToPercent(x, chart) {
-  if (!chart || typeof chart.xMin !== "number" || typeof chart.xMax !== "number") {
+  if (!chart || typeof chart.width !== "number") {
     return 50;
   }
-  const span = chart.xMax - chart.xMin;
-  if (!Number.isFinite(span) || span <= 0) {
+  const width = chart.width;
+  if (!Number.isFinite(width) || width <= 0) {
     return 50;
   }
-  return ((x - chart.xMin) / span) * 100;
+  return (x / width) * 100;
 }
 
 function escapeSelectorValue(value) {
@@ -2252,10 +2252,11 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__header {
-          align-items: start;
-          display: grid;
+          align-items: center;
+          display: flex;
           gap: 8px;
-          grid-template-columns: minmax(0, 1fr) auto;
+          justify-content: flex-start;
+          min-width: 0;
         }
 
         .graph-card__content--entering .graph-card__header {
@@ -2871,7 +2872,6 @@ class NodaliaGraphCard extends HTMLElement {
             config.show_header !== false
               ? `
                 <div class="graph-card__header">
-                  <div class="graph-card__title">${escapeHtml(title)}</div>
                   ${
                     config.show_icon !== false
                       ? `
@@ -2882,6 +2882,7 @@ class NodaliaGraphCard extends HTMLElement {
                       `
                       : ""
                   }
+                  <div class="graph-card__title">${escapeHtml(title)}</div>
                 </div>
               `
               : ""

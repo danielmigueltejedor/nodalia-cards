@@ -10,6 +10,16 @@ Work toward **`0.5.x`** on **`alpha`** / **`beta`** and eventual **`main`**: **P
 
 ---
 
+## [0.5.0-alpha.13] - 2026-05-06
+
+Thirteenth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.13`** (tag **`v0.5.0-alpha.13`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Graph card** (`0.12.20`): header reorganizado — burbuja de icono junto al título en la esquina superior izquierda (icono a la izquierda del nombre).
+- **Graph card** (`0.12.20`): hover sincronizado — línea discontinua, círculo y popup comparten mapeo X del **`viewBox`**, sin desfase lateral.
+- **Editor UI**: corrección de normalización en etiquetas en español — los reemplazos con grupos (por ejemplo **`mínimo`** / **`máximo`**) ya no muestran sufijos literales como **`$1`**.
+
+---
+
 ## [0.5.0-alpha.12] - 2026-05-06
 
 Twelfth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.12`** (tag **`v0.5.0-alpha.12`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.

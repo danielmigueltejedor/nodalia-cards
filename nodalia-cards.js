@@ -14578,7 +14578,14 @@
     ];
 
     substitutions.forEach(([pattern, replacement]) => {
-      out = out.replace(pattern, match => withMatchCase(match, replacement));
+      out = out.replace(pattern, (match, ...rest) => {
+        const groups = rest.slice(0, -2);
+        const expanded = String(replacement).replace(/$(d+)/g, (_, groupIndexRaw) => {
+          const groupIndex = Number(groupIndexRaw) - 1;
+          return groups[groupIndex] ?? "";
+        });
+        return withMatchCase(match, expanded);
+      });
     });
 
     return out;
@@ -42593,16 +42600,16 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
-/** Map SVG chart X (same space as viewBox width 100, incl. negative pad) to overlay %. */
+/** Map SVG viewBox X (0..chart.width) to overlay percentage. */
 function graphChartXToPercent(x, chart) {
-  if (!chart || typeof chart.xMin !== "number" || typeof chart.xMax !== "number") {
+  if (!chart || typeof chart.width !== "number") {
     return 50;
   }
-  const span = chart.xMax - chart.xMin;
-  if (!Number.isFinite(span) || span <= 0) {
+  const width = chart.width;
+  if (!Number.isFinite(width) || width <= 0) {
     return 50;
   }
-  return ((x - chart.xMin) / span) * 100;
+  return (x / width) * 100;
 }
 
 function escapeSelectorValue(value) {
@@ -44172,10 +44179,11 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__header {
-          align-items: start;
-          display: grid;
+          align-items: center;
+          display: flex;
           gap: 8px;
-          grid-template-columns: minmax(0, 1fr) auto;
+          justify-content: flex-start;
+          min-width: 0;
         }
 
         .graph-card__content--entering .graph-card__header {
@@ -44791,7 +44799,6 @@ class NodaliaGraphCard extends HTMLElement {
             config.show_header !== false
               ? `
                 <div class="graph-card__header">
-                  <div class="graph-card__title">${escapeHtml(title)}</div>
                   ${
                     config.show_icon !== false
                       ? `
@@ -44802,6 +44809,7 @@ class NodaliaGraphCard extends HTMLElement {
                       `
                       : ""
                   }
+                  <div class="graph-card__title">${escapeHtml(title)}</div>
                 </div>
               `
               : ""
@@ -85183,4 +85191,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0-alpha.12","contentSha256_12":"68e4cc452084"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0-alpha.13","contentSha256_12":"69f140fedf7f"};}
