@@ -10,6 +10,23 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.5] - 2026-05-05
+
+Fifth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**).
+
+- **Calendar visual editor:** aligned layout and styling with other Nodalia editors (section headers + hints, 18px rounded panels, graph-style series cards per calendar, primary-color toggles, collapsible Animaciones/Estilos with chevron buttons, `ha-icon-picker` for icon, `editorStatesSignature` + focus restore on hass updates).
+
+---
+
+## [1.0.0-alpha.4] - 2026-05-05
+
+Fourth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Calendar card stability fix.
+
+- **Calendar card:** stopped re-rendering the full shadow DOM on every Home Assistant `hass` update (the setter was rebuilding `innerHTML` continuously, which caused visible flicker and replayed the entrance animation). Renders are now driven by first `hass`, locale changes, config/refresh, completion toggles, and deduplicated when the visible model is unchanged.
+- **Calendar card:** entrance animation runs once per card instance instead of on every paint.
+
+---
+
 ## [1.0.0-alpha.3] - 2026-05-05
 
 Third **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). This release continues polishing the new calendar card and editor experience.

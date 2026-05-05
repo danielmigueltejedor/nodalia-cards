@@ -70869,6 +70869,9 @@
   function escapeHtml17(value) {
     return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
   }
+  function escapeSelectorValue16(value) {
+    return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+  }
   function formatDateLabel(date, locale) {
     return new Intl.DateTimeFormat(locale, {
       weekday: "short",
@@ -70924,12 +70927,17 @@
       this._error = "";
       this._refreshTimer = 0;
       this._completed = /* @__PURE__ */ new Set();
+      this._hadHass = false;
+      this._lastRenderSignature = "";
+      this._calendarEntrancePlayed = false;
       this._onShadowClick = this._onShadowClick.bind(this);
     }
     connectedCallback() {
       this.shadowRoot?.addEventListener("click", this._onShadowClick);
       this._loadCompleted();
-      this._refreshEvents();
+      if (!this._hadHass) {
+        this._refreshEvents();
+      }
     }
     disconnectedCallback() {
       this.shadowRoot?.removeEventListener("click", this._onShadowClick);
@@ -70944,8 +70952,24 @@
       this._refreshEvents();
     }
     set hass(hass) {
+      const hadHass = this._hadHass;
+      const prevLocale = this._hass?.locale?.language;
       this._hass = hass;
-      this._render();
+      if (!hass) {
+        return;
+      }
+      if (!hadHass) {
+        this._hadHass = true;
+        if (this._config.calendars.length) {
+          this._refreshEvents();
+        } else {
+          this._renderIfChanged();
+        }
+        return;
+      }
+      if (prevLocale !== hass.locale?.language) {
+        this._renderIfChanged(true);
+      }
     }
     _getLocale() {
       return this._hass?.locale?.language || "es-ES";
@@ -70982,17 +71006,68 @@
         this._refreshEvents();
       }, this._config.refresh_interval * 1e3);
     }
+    _getRenderSignature() {
+      const config = this._config;
+      const styles = config.styles || DEFAULT_CONFIG17.styles;
+      const visibleEvents = this._events.filter((event) => {
+        const done = this._completed.has(completionKey(event));
+        return config.show_completed || !done;
+      });
+      const eventKeys = visibleEvents.map((event) => {
+        const start = eventDate(event?.start)?.getTime() || 0;
+        return `${completionKey(event)}@${start}`;
+      }).join("|");
+      const completedSig = [...this._completed].sort().join("|");
+      return [
+        config.calendars.join(""),
+        config.title,
+        config.icon,
+        config.days_to_show,
+        config.max_visible_events,
+        config.show_completed,
+        config.allow_complete,
+        config.tint_auto,
+        config.animations?.enabled,
+        config.animations?.content_duration,
+        styles.card?.background,
+        styles.card?.border,
+        styles.card?.border_radius,
+        styles.card?.box_shadow,
+        styles.card?.padding,
+        styles.card?.gap,
+        styles.title_size,
+        styles.event_size,
+        styles.chip_size,
+        styles.icon?.background,
+        styles.icon?.color,
+        styles.icon?.size,
+        styles.tint?.color,
+        this._getLocale(),
+        this._loading ? "1" : "0",
+        this._error,
+        eventKeys,
+        completedSig
+      ].join("");
+    }
+    _renderIfChanged(force = false) {
+      const next = this._getRenderSignature();
+      if (!force && next === this._lastRenderSignature) {
+        return;
+      }
+      this._lastRenderSignature = next;
+      this._render();
+    }
     async _refreshEvents() {
       if (!this._hass || !this._config.calendars.length) {
         this._events = [];
         this._loading = false;
         this._error = "";
-        this._render();
+        this._renderIfChanged(true);
         return;
       }
       this._loading = true;
       this._error = "";
-      this._render();
+      this._renderIfChanged(true);
       try {
         const start = /* @__PURE__ */ new Date();
         const end = new Date(start.getTime() + this._config.days_to_show * 24 * 60 * 60 * 1e3);
@@ -71014,7 +71089,7 @@
         this._error = "No se pudieron cargar eventos del calendario.";
       } finally {
         this._loading = false;
-        this._render();
+        this._renderIfChanged(true);
         this._scheduleRefresh();
       }
     }
@@ -71028,7 +71103,7 @@
         this._completed.add(key);
       }
       this._saveCompleted();
-      this._render();
+      this._renderIfChanged(true);
     }
     _groupEvents(events) {
       const locale = this._getLocale();
@@ -71068,6 +71143,10 @@
       });
       const groups = this._groupEvents(visibleEvents);
       const hasEvents = visibleEvents.length > 0;
+      const playEntrance = config.animations?.enabled !== false && !this._calendarEntrancePlayed;
+      if (playEntrance) {
+        this._calendarEntrancePlayed = true;
+      }
       this.shadowRoot.innerHTML = `
       <style>
         :host { display:block; }
@@ -71086,7 +71165,7 @@
           display:grid;
           gap:${styles.card.gap};
           padding:${styles.card.padding};
-          ${config.animations?.enabled === false ? "" : `animation: calendar-card-in ${animationDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;`}
+          ${playEntrance ? `animation: calendar-card-in ${animationDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
         .calendar-header {
           align-items:center;
@@ -71265,34 +71344,55 @@
   var NodaliaCalendarCardEditor = class extends HTMLElement {
     constructor() {
       super();
+      this.attachShadow({ mode: "open" });
       this._config = normalizeConfig17(DEFAULT_CONFIG17);
       this._hass = null;
+      this._showAnimationSection = false;
+      this._showStyleSection = false;
+      this._entityOptionsSignature = "";
+      this._pendingEditorControlTags = /* @__PURE__ */ new Set();
       this._onShadowInput = this._onShadowInput.bind(this);
       this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
       this._onShadowClick = this._onShadowClick.bind(this);
-    }
-    connectedCallback() {
-      if (!this.shadowRoot) {
-        this.attachShadow({ mode: "open" });
-      }
       this.shadowRoot.addEventListener("input", this._onShadowInput);
       this.shadowRoot.addEventListener("change", this._onShadowInput);
       this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
       this.shadowRoot.addEventListener("click", this._onShadowClick);
-      this._render();
-    }
-    disconnectedCallback() {
-      this.shadowRoot?.removeEventListener("input", this._onShadowInput);
-      this.shadowRoot?.removeEventListener("change", this._onShadowInput);
-      this.shadowRoot?.removeEventListener("value-changed", this._onShadowValueChanged);
-      this.shadowRoot?.removeEventListener("click", this._onShadowClick);
-    }
-    setConfig(config) {
-      this._config = normalizeConfig17(config);
-      this._render();
     }
     set hass(hass) {
+      const nextSignature = this._getEntityOptionsSignature(hass);
+      const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
       this._hass = hass;
+      this._entityOptionsSignature = nextSignature;
+      if (shouldRender) {
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+        return;
+      }
+      this.shadowRoot?.querySelectorAll("ha-entity-picker, ha-selector, ha-icon-picker").forEach((el) => {
+        if ("hass" in el) {
+          el.hass = hass;
+        }
+      });
+    }
+    setConfig(config) {
+      const focusState = this._captureFocusState();
+      this._config = normalizeConfig17(config || {});
+      this._render();
+      this._restoreFocusState(focusState);
+    }
+    _getEntityOptionsSignature(hass = this._hass) {
+      if (window.NodaliaUtils?.editorStatesSignature) {
+        return window.NodaliaUtils.editorStatesSignature(hass, this._config?.language);
+      }
+      return String(Object.keys(hass?.states || {}).length);
+    }
+    _editorLabel(s) {
+      if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+        return s;
+      }
+      return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", s);
     }
     _emitConfig(next) {
       this.dispatchEvent(new CustomEvent("config-changed", {
@@ -71300,6 +71400,71 @@
         composed: true,
         detail: { config: next }
       }));
+    }
+    _captureFocusState() {
+      const activeElement = this.shadowRoot?.activeElement;
+      if (!(activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement || activeElement instanceof HTMLSelectElement)) {
+        return null;
+      }
+      const dataset = activeElement.dataset || {};
+      const selector = dataset.field ? `[data-field="${escapeSelectorValue16(dataset.field)}"]` : null;
+      if (!selector) {
+        return null;
+      }
+      const supportsSelection = typeof activeElement.selectionStart === "number" && typeof activeElement.selectionEnd === "number";
+      return {
+        selector,
+        selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
+        selectionStart: supportsSelection ? activeElement.selectionStart : null,
+        type: activeElement.type
+      };
+    }
+    _restoreFocusState(focusState) {
+      if (!focusState?.selector || !this.shadowRoot) {
+        return;
+      }
+      const target = this.shadowRoot.querySelector(focusState.selector);
+      if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement)) {
+        return;
+      }
+      try {
+        target.focus({ preventScroll: true });
+      } catch (_error) {
+        target.focus();
+      }
+      const canRestoreSelection = focusState.type !== "checkbox" && typeof focusState.selectionStart === "number" && typeof focusState.selectionEnd === "number" && typeof target.setSelectionRange === "function";
+      if (!canRestoreSelection) {
+        return;
+      }
+      try {
+        target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+      } catch (_error) {
+      }
+    }
+    _watchEditorControlTag(tagName) {
+      if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+        return;
+      }
+      if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+        return;
+      }
+      this._pendingEditorControlTags.add(tagName);
+      customElements.whenDefined(tagName).then(() => {
+        this._pendingEditorControlTags.delete(tagName);
+        if (!this._hass || !this.shadowRoot) {
+          return;
+        }
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+      }).catch(() => {
+        this._pendingEditorControlTags.delete(tagName);
+      });
+    }
+    _ensureEditorControlsReady() {
+      this._watchEditorControlTag("ha-entity-picker");
+      this._watchEditorControlTag("ha-selector");
+      this._watchEditorControlTag("ha-icon-picker");
     }
     _setFieldValue(targetConfig, field, value) {
       if (!field) {
@@ -71340,54 +71505,111 @@
       }
       targetConfig[field] = value;
     }
+    _readFieldValue(input) {
+      const valueType = input.dataset.valueType || "string";
+      if (valueType === "boolean") {
+        return Boolean(input.checked);
+      }
+      if (valueType === "number") {
+        return Number(input.value || 0);
+      }
+      return input.value;
+    }
     _onShadowInput(event) {
-      const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+      const input = event.composedPath().find(
+        (node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement
+      );
       if (!input?.dataset?.field) {
+        return;
+      }
+      event.stopPropagation();
+      if (event.type === "input" && input.type !== "checkbox") {
+        return;
+      }
+      if (input.type === "checkbox" && event.type === "input") {
         return;
       }
       const next = deepClone17(this._config || DEFAULT_CONFIG17);
       const field = input.dataset.field || "";
-      let value = input.value;
-      if (event.type === "input" && input.type !== "checkbox") {
-        return;
-      }
-      if (input.type === "checkbox") {
-        value = input.checked;
-      } else if (field === "days_to_show" || field === "refresh_interval" || field === "max_visible_events") {
-        value = Number(input.value || 0);
-      }
+      const value = this._readFieldValue(input);
       this._setFieldValue(next, field, value);
       this._config = normalizeConfig17(next);
-      this._emitConfig(this._config);
-      this._render();
+      if (event.type === "change") {
+        this._emitConfig(this._config);
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+      }
     }
     _onShadowValueChanged(event) {
       const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
       if (!control?.dataset?.field) {
         return;
       }
+      event.stopPropagation();
       const field = control.dataset.field;
       const next = deepClone17(this._config || DEFAULT_CONFIG17);
-      const value = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+      const raw = event.detail?.value;
+      const value = typeof raw === "string" ? raw : control.value;
       this._setFieldValue(next, field, value);
       this._config = normalizeConfig17(next);
       this._emitConfig(this._config);
+      const focusState = this._captureFocusState();
       this._render();
+      this._restoreFocusState(focusState);
+    }
+    _moveCalendar(index, delta) {
+      const next = deepClone17(this._config || DEFAULT_CONFIG17);
+      const list = Array.isArray(next.calendars) ? [...next.calendars] : [];
+      const j = index + delta;
+      if (!Number.isFinite(index) || index < 0 || !Number.isFinite(j) || j < 0 || j >= list.length) {
+        return;
+      }
+      [list[index], list[j]] = [list[j], list[index]];
+      next.calendars = list;
+      this._config = normalizeConfig17(next);
+      this._emitConfig(this._config);
+      const focusState = this._captureFocusState();
+      this._render();
+      this._restoreFocusState(focusState);
     }
     _onShadowClick(event) {
+      const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+      if (toggleButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (toggleButton.dataset.editorToggle === "styles") {
+          this._showStyleSection = !this._showStyleSection;
+        } else if (toggleButton.dataset.editorToggle === "animations") {
+          this._showAnimationSection = !this._showAnimationSection;
+        }
+        const focusState2 = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState2);
+        return;
+      }
       const button = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorAction);
       if (!button) {
         return;
       }
       event.preventDefault();
       event.stopPropagation();
+      const action = button.dataset.editorAction;
+      if (action === "move-calendar-up") {
+        this._moveCalendar(Number(button.dataset.index || -1), -1);
+        return;
+      }
+      if (action === "move-calendar-down") {
+        this._moveCalendar(Number(button.dataset.index || -1), 1);
+        return;
+      }
       const next = deepClone17(this._config || DEFAULT_CONFIG17);
       if (!Array.isArray(next.calendars)) {
         next.calendars = [];
       }
-      if (button.dataset.editorAction === "add-calendar") {
+      if (action === "add-calendar") {
         next.calendars.push("");
-      } else if (button.dataset.editorAction === "remove-calendar") {
+      } else if (action === "remove-calendar") {
         const index = Number(button.dataset.index || -1);
         if (Number.isFinite(index) && index >= 0 && index < next.calendars.length) {
           next.calendars.splice(index, 1);
@@ -71397,254 +71619,535 @@
       }
       this._config = normalizeConfig17(next);
       this._emitConfig(this._config);
+      const focusState = this._captureFocusState();
       this._render();
+      this._restoreFocusState(focusState);
     }
-    _mountEntityPickers() {
-      if (!this.shadowRoot) {
+    _mountCalendarEntityHost(host) {
+      if (!(host instanceof HTMLElement)) {
         return;
       }
-      this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach((host) => {
-        const field = host.dataset.field || "entity";
-        const value = host.dataset.value || "";
-        host.replaceChildren();
-        if (typeof customElements !== "undefined" && customElements.get("ha-selector")) {
-          const control = document.createElement("ha-selector");
-          control.selector = { entity: { domain: "calendar" } };
-          control.dataset.field = field;
-          control.value = value;
-          control.hass = this._hass;
-          host.appendChild(control);
-          return;
+      const field = host.dataset.field || "calendars.0";
+      const nextValue = host.dataset.value || "";
+      const placeholder = host.dataset.placeholder || "";
+      const allowedDomains = String(host.dataset.domains || "").split(",").map((domain) => domain.trim()).filter(Boolean);
+      let control = null;
+      if (customElements.get("ha-entity-picker")) {
+        control = document.createElement("ha-entity-picker");
+        if (allowedDomains.length) {
+          control.includeDomains = allowedDomains;
+          control.entityFilter = (stateObj) => allowedDomains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
         }
-        if (typeof customElements !== "undefined" && customElements.get("ha-entity-picker")) {
-          const control = document.createElement("ha-entity-picker");
-          control.dataset.field = field;
-          control.value = value;
-          control.hass = this._hass;
-          control.includeDomains = ["calendar"];
-          host.appendChild(control);
-          return;
+        if (placeholder) {
+          control.setAttribute("placeholder", placeholder);
         }
-        const fallback = document.createElement("input");
-        fallback.type = "text";
-        fallback.placeholder = "calendar.mi_calendario";
-        fallback.dataset.field = field;
-        fallback.value = value;
-        host.appendChild(fallback);
-      });
+        control.allowCustomEntity = true;
+      } else if (customElements.get("ha-selector")) {
+        control = document.createElement("ha-selector");
+        control.selector = {
+          entity: allowedDomains.length === 1 ? { domain: allowedDomains[0] } : {}
+        };
+      } else {
+        control = document.createElement("input");
+        control.type = "text";
+        control.placeholder = placeholder || "calendar.ejemplo";
+        control.addEventListener("change", this._onShadowInput);
+      }
+      control.dataset.field = field;
+      control.dataset.value = nextValue;
+      if ("hass" in control) {
+        control.hass = this._hass;
+      }
+      if ("value" in control) {
+        control.value = nextValue;
+      }
+      if (control.tagName !== "INPUT") {
+        control.addEventListener("value-changed", this._onShadowValueChanged);
+      }
+      host.replaceChildren(control);
     }
-    _renderToggle(label, field, checked) {
+    _renderCheckboxField(label, field, checked) {
+      const tLabel = this._editorLabel(label);
       return `
       <label class="editor-toggle">
-        <input type="checkbox" data-field="${escapeHtml17(field)}" ${checked ? "checked" : ""}/>
+        <input
+          type="checkbox"
+          data-field="${escapeHtml17(field)}"
+          data-value-type="boolean"
+          ${checked ? "checked" : ""}
+        />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml17(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml17(tLabel)}</span>
       </label>
     `;
     }
     _renderTextField(label, field, value, options = {}) {
+      const tLabel = this._editorLabel(label);
+      const inputType = options.type || "text";
+      const placeholder = options.placeholder ? `placeholder="${escapeHtml17(options.placeholder)}"` : "";
+      const valueType = options.valueType || (inputType === "number" ? "number" : "string");
+      const inputValue = value === void 0 || value === null ? "" : String(value);
       return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml17(label)}</span>
+        <span>${escapeHtml17(tLabel)}</span>
         <input
+          type="${escapeHtml17(inputType)}"
           data-field="${escapeHtml17(field)}"
-          type="${escapeHtml17(options.type || "text")}"
-          value="${escapeHtml17(value ?? "")}"
-          placeholder="${escapeHtml17(options.placeholder || "")}"
+          data-value-type="${escapeHtml17(valueType)}"
+          value="${escapeHtml17(inputValue)}"
+          ${placeholder}
         />
       </label>
     `;
     }
+    _renderIconPickerField(label, field, value, options = {}) {
+      const tLabel = this._editorLabel(label);
+      const inputValue = value === void 0 || value === null ? "" : String(value);
+      const placeholder = options.placeholder ? `placeholder="${escapeHtml17(options.placeholder)}"` : "";
+      return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml17(tLabel)}</span>
+        <ha-icon-picker
+          data-field="${escapeHtml17(field)}"
+          data-value="${escapeHtml17(inputValue)}"
+          value="${escapeHtml17(inputValue)}"
+          ${placeholder}
+        ></ha-icon-picker>
+      </div>
+    `;
+    }
+    _renderCalendarCard(entityId, index, total) {
+      return `
+      <div class="series-editor-card">
+        <div class="series-editor-card__header">
+          <div class="series-editor-card__title">${escapeHtml17(this._editorLabel("Calendario"))} ${index + 1}</div>
+          <div class="series-editor-card__actions">
+            <button type="button" data-editor-action="move-calendar-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>${escapeHtml17(this._editorLabel("Subir"))}</button>
+            <button type="button" data-editor-action="move-calendar-down" data-index="${index}" ${index === total - 1 ? "disabled" : ""}>${escapeHtml17(this._editorLabel("Bajar"))}</button>
+            <button type="button" data-editor-action="remove-calendar" data-index="${index}" class="danger">${escapeHtml17(this._editorLabel("Eliminar"))}</button>
+          </div>
+        </div>
+        <div class="series-editor-subgroup">
+          <div class="series-editor-subgroup__title">${escapeHtml17(this._editorLabel("Entidad"))}</div>
+          <div class="editor-grid editor-grid--stacked">
+            <div class="editor-field editor-field--full">
+              <span>${escapeHtml17(this._editorLabel("Calendario de Home Assistant"))}</span>
+              <div
+                class="editor-control-host"
+                data-mounted-control="calendar-entity"
+                data-field="calendars.${index}"
+                data-value="${escapeHtml17(entityId)}"
+                data-domains="calendar"
+                data-placeholder="calendar.cumpleanos"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    }
     _render() {
       if (!this.shadowRoot) {
-        this.attachShadow({ mode: "open" });
+        return;
       }
+      this._ensureEditorControlsReady();
       const config = normalizeConfig17(this._config || DEFAULT_CONFIG17);
       const calendars = Array.isArray(config.calendars) && config.calendars.length ? config.calendars : [""];
+      const animations = config.animations || DEFAULT_CONFIG17.animations;
       this.shadowRoot.innerHTML = `
       <style>
-        :host { display:block; }
-        .editor-wrap {
-          display:grid;
-          gap:14px;
+        :host {
+          display: block;
         }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        .editor {
+          color: var(--primary-text-color);
+          display: grid;
+          gap: 16px;
+        }
+
         .editor-section {
           background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 14px;
-          display:grid;
-          gap:10px;
-          padding:12px;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 18px;
+          display: grid;
+          gap: 14px;
+          padding: 16px;
         }
+
+        .editor-section__header {
+          display: grid;
+          gap: 4px;
+        }
+
         .editor-section__title {
-          font-size:12px;
-          font-weight:700;
-          letter-spacing:0.06em;
-          text-transform:uppercase;
+          font-size: 15px;
+          font-weight: 700;
         }
+
+        .editor-section__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .editor-section__actions {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 2px;
+        }
+
+        .editor-section__toggle-button {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        .editor-section__toggle-button ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
         .editor-grid {
-          display:grid;
-          gap:10px;
-          grid-template-columns:repeat(2,minmax(0,1fr));
+          display: grid;
+          gap: 12px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
-        .editor-field {
-          display:grid;
-          gap:5px;
-          min-width:0;
+
+        .editor-grid--stacked {
+          grid-template-columns: 1fr;
         }
+
+        .editor-field,
+        .editor-toggle {
+          display: grid;
+          gap: 6px;
+          min-width: 0;
+        }
+
         .editor-field--full {
           grid-column: 1 / -1;
         }
-        .editor-field > span {
-          font-size:12px;
-          font-weight:600;
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="calendar-entity"]),
+        .editor-field:has(> ha-icon-picker) {
+          grid-column: 1 / -1;
         }
-        .editor-field input {
-          min-height:38px;
-          padding:8px 10px;
-          border-radius:10px;
-          border:1px solid color-mix(in srgb,var(--primary-text-color) 10%, transparent);
-          background:color-mix(in srgb,var(--primary-text-color) 4%, transparent);
-          color:var(--primary-text-color);
-          width:100%;
+
+        .editor-field > span,
+        .editor-toggle > span {
+          font-size: 12px;
+          font-weight: 600;
         }
-        .editor-control-host {
-          display:block;
-          width:100%;
+
+        .editor-field input,
+        .editor-field select,
+        .editor-field textarea,
+        .editor-control-host input,
+        .editor-control-host select,
+        .editor-control-host textarea {
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 12px;
+          color: var(--primary-text-color);
+          font: inherit;
+          min-height: 40px;
+          padding: 10px 12px;
+          width: 100%;
         }
-        .calendar-row {
-          display:grid;
-          gap:8px;
-          grid-template-columns:1fr auto;
-          align-items:end;
+
+        .editor-field ha-icon-picker,
+        .editor-field ha-entity-picker,
+        .editor-field ha-selector,
+        .editor-control-host,
+        .editor-control-host > * {
+          display: block;
+          width: 100%;
         }
-        .calendar-row button,.calendar-add {
-          min-height:38px;
-          padding:0 10px;
-          border-radius:10px;
-          border:1px solid color-mix(in srgb,var(--primary-text-color) 12%, transparent);
-          background:color-mix(in srgb,var(--primary-text-color) 6%, transparent);
-          color:var(--primary-text-color);
-          cursor:pointer;
+
+        .editor-actions {
+          display: flex;
+          justify-content: flex-start;
         }
-        .editor-toggle {
-          align-items:center;
-          column-gap:10px;
-          display:grid;
-          grid-template-columns:auto 1fr;
-          min-height:36px;
-          position:relative;
+
+        button {
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          min-height: 34px;
+          padding: 0 12px;
         }
-        .editor-toggle input {
-          block-size:1px;
-          inline-size:1px;
-          margin:0;
-          opacity:0;
-          pointer-events:none;
-          position:absolute;
+
+        button.danger {
+          color: var(--error-color);
         }
+
+        button:disabled {
+          cursor: default;
+          opacity: 0.45;
+        }
+
+        .series-editor-list {
+          display: grid;
+          gap: 12px;
+        }
+
+        .series-editor-card {
+          background: rgba(255, 255, 255, 0.025);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 16px;
+          display: grid;
+          gap: 12px;
+          padding: 14px;
+        }
+
+        .series-editor-subgroup {
+          background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border-radius: 14px;
+          display: grid;
+          gap: 12px;
+          padding: 12px;
+        }
+
+        .series-editor-subgroup__title {
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .series-editor-card__header {
+          align-items: center;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+        }
+
+        .series-editor-card__title {
+          font-size: 13px;
+          font-weight: 700;
+        }
+
+        .series-editor-card__actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: flex-end;
+        }
+
+        .empty-note {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.5;
+        }
+
+        @media (max-width: 640px) {
+          .editor-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .series-editor-card__header {
+            align-items: start;
+            flex-direction: column;
+          }
+
+          .series-editor-card__actions {
+            justify-content: flex-start;
+          }
+        }
+
+        :is(.editor-toggle, .editor-checkbox) {
+          align-items: center;
+          column-gap: 10px;
+          cursor: pointer;
+          grid-auto-flow: row;
+          grid-template-columns: auto minmax(0, 1fr);
+          justify-content: stretch;
+          min-height: 40px;
+          padding-top: 0;
+          position: relative;
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input {
+          block-size: 1px;
+          inline-size: 1px;
+          margin: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: absolute;
+        }
+
         .editor-toggle__switch {
           background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border:1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
-          border-radius:999px;
-          display:inline-flex;
-          height:22px;
-          position:relative;
-          width:40px;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          display: inline-flex;
+          font-size: 0;
+          height: 22px;
+          line-height: 0;
+          position: relative;
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+          width: 40px;
         }
+
         .editor-toggle__switch::before {
-          background: rgba(255,255,255,0.92);
-          border-radius:999px;
-          content:"";
-          height:18px;
-          left:1px;
-          position:absolute;
-          top:1px;
-          transition: transform 150ms ease;
-          width:18px;
+          background: rgba(255, 255, 255, 0.92);
+          border-radius: 999px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+          content: "";
+          height: 18px;
+          left: 1px;
+          position: absolute;
+          top: 1px;
+          transition: transform 160ms ease;
+          width: 18px;
         }
-        .editor-toggle input:checked + .editor-toggle__switch {
-          background: color-mix(in srgb, var(--primary-color) 35%, transparent);
-          border-color: color-mix(in srgb, var(--primary-color) 54%, transparent);
+
+        .editor-toggle__label {
+          min-width: 0;
         }
-        .editor-toggle input:checked + .editor-toggle__switch::before {
+
+        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch {
+          background: var(--primary-color);
+          border-color: var(--primary-color);
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch::before {
           transform: translateX(18px);
         }
-        @media (max-width: 640px) {
-          .editor-grid { grid-template-columns:1fr; }
+
+        :is(.editor-toggle, .editor-checkbox) input:focus-visible + .editor-toggle__switch {
+          box-shadow:
+            0 0 0 3px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
       </style>
-      <div class="editor-wrap">
+      <div class="editor">
         <section class="editor-section">
-          <div class="editor-section__title">General</div>
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml17(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Titulo visible, icono, rango de dias, refresco de datos y opciones de eventos completados."))}</div>
+          </div>
           <div class="editor-grid">
-            ${this._renderTextField("Titulo", "title", config.title, { fullWidth: true })}
-            ${this._renderTextField("Icono", "icon", config.icon || DEFAULT_CONFIG17.icon, {
+            ${this._renderTextField("Titulo", "title", config.title, { fullWidth: true, placeholder: "Calendario" })}
+            ${this._renderIconPickerField("Icono", "icon", config.icon || DEFAULT_CONFIG17.icon, {
         fullWidth: true,
         placeholder: "mdi:calendar-month"
       })}
             ${this._renderTextField("Dias a mostrar", "days_to_show", config.days_to_show, { type: "number" })}
             ${this._renderTextField("Eventos visibles antes de scroll", "max_visible_events", config.max_visible_events, { type: "number" })}
             ${this._renderTextField("Refresco (segundos)", "refresh_interval", config.refresh_interval, { type: "number" })}
-            ${this._renderToggle("Permitir marcar eventos como completados", "allow_complete", config.allow_complete === true)}
-            ${this._renderToggle("Mostrar eventos completados", "show_completed", config.show_completed === true)}
-            ${this._renderToggle("Tintado automatico", "tint_auto", config.tint_auto !== false)}
+            ${this._renderCheckboxField("Permitir marcar eventos como completados", "allow_complete", config.allow_complete === true)}
+            ${this._renderCheckboxField("Mostrar eventos completados", "show_completed", config.show_completed === true)}
+            ${this._renderCheckboxField("Tintado automatico con color primario", "tint_auto", config.tint_auto !== false)}
           </div>
         </section>
 
         <section class="editor-section">
-          <div class="editor-section__title">Calendarios</div>
-          <div class="editor-grid">
-            <div class="editor-field editor-field--full">
-              <span>Entidades calendar</span>
-              <div class="editor-wrap">
-            ${calendars.map((entityId, index) => `
-              <div class="calendar-row">
-                <div
-                  class="editor-control-host"
-                  data-mounted-control="entity"
-                  data-field="calendars.${index}"
-                  data-value="${escapeHtml17(entityId)}"
-                  data-entity-filter-domain="calendar"
-                ></div>
-                <button type="button" data-editor-action="remove-calendar" data-index="${index}">Eliminar</button>
-              </div>
-            `).join("")}
-              </div>
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml17(this._editorLabel("Calendarios"))}</div>
+            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Anade una o varias entidades calendar y reordena el orden en que se combinan los eventos."))}</div>
+          </div>
+          <div class="series-editor-list">
+            ${calendars.length ? calendars.map((entityId, index) => this._renderCalendarCard(entityId, index, calendars.length)).join("") : `<div class="empty-note">${escapeHtml17(this._editorLabel("Todavia no hay calendarios configurados."))}</div>`}
+          </div>
+          <div class="editor-actions">
+            <button type="button" class="editor-section__toggle-button" data-editor-action="add-calendar">
+              <ha-icon icon="mdi:plus"></ha-icon>
+              <span>${escapeHtml17(this._editorLabel("Anadir calendario"))}</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml17(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Entrada suave del contenido de la tarjeta al cargar."))}</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="animations"
+                aria-expanded="${this._showAnimationSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${escapeHtml17(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animacion") : this._editorLabel("Mostrar ajustes de animacion"))}</span>
+              </button>
             </div>
-            <button type="button" class="calendar-add editor-field--full" data-editor-action="add-calendar">Agregar calendario</button>
           </div>
+          ${this._showAnimationSection ? `
+                <div class="editor-grid">
+                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", animations.content_duration, {
+        type: "number"
+      })}
+                </div>
+              ` : ""}
         </section>
 
         <section class="editor-section">
-          <div class="editor-section__title">Animaciones</div>
-          <div class="editor-grid">
-            ${this._renderToggle("Activar animaciones", "animations.enabled", config.animations?.enabled !== false)}
-            ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", config.animations?.content_duration || DEFAULT_CONFIG17.animations.content_duration, { type: "number" })}
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml17(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Ajustes visuales de la tarjeta, tipografia y burbuja de icono."))}</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="styles"
+                aria-expanded="${this._showStyleSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${escapeHtml17(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
+              </button>
+            </div>
           </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__title">Estilos</div>
-          <div class="editor-grid">
-            ${this._renderTextField("Fondo tarjeta", "styles.card.background", config.styles?.card?.background, { fullWidth: true })}
-            ${this._renderTextField("Borde tarjeta", "styles.card.border", config.styles?.card?.border)}
-            ${this._renderTextField("Radio tarjeta", "styles.card.border_radius", config.styles?.card?.border_radius)}
-            ${this._renderTextField("Sombra tarjeta", "styles.card.box_shadow", config.styles?.card?.box_shadow, { fullWidth: true })}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles?.card?.padding)}
-            ${this._renderTextField("Separacion", "styles.card.gap", config.styles?.card?.gap)}
-            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles?.title_size)}
-            ${this._renderTextField("Tamano evento", "styles.event_size", config.styles?.event_size)}
-            ${this._renderTextField("Tamano chip", "styles.chip_size", config.styles?.chip_size)}
-            ${this._renderTextField("Icono burbuja fondo", "styles.icon.background", config.styles?.icon?.background, { fullWidth: true })}
-            ${this._renderTextField("Icono burbuja color", "styles.icon.color", config.styles?.icon?.color, { fullWidth: true })}
-            ${this._renderTextField("Icono burbuja tamano", "styles.icon.size", config.styles?.icon?.size)}
-            ${this._renderTextField("Tintado manual", "styles.tint.color", config.styles?.tint?.color, { fullWidth: true })}
-          </div>
+          ${this._showStyleSection ? `
+                <div class="editor-grid">
+                  ${this._renderTextField("Fondo tarjeta", "styles.card.background", config.styles?.card?.background, { fullWidth: true })}
+                  ${this._renderTextField("Borde tarjeta", "styles.card.border", config.styles?.card?.border)}
+                  ${this._renderTextField("Radio tarjeta", "styles.card.border_radius", config.styles?.card?.border_radius)}
+                  ${this._renderTextField("Sombra tarjeta", "styles.card.box_shadow", config.styles?.card?.box_shadow, { fullWidth: true })}
+                  ${this._renderTextField("Padding", "styles.card.padding", config.styles?.card?.padding)}
+                  ${this._renderTextField("Separacion", "styles.card.gap", config.styles?.card?.gap)}
+                  ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles?.title_size)}
+                  ${this._renderTextField("Tamano evento", "styles.event_size", config.styles?.event_size)}
+                  ${this._renderTextField("Tamano chip", "styles.chip_size", config.styles?.chip_size)}
+                  ${this._renderTextField("Icono burbuja fondo", "styles.icon.background", config.styles?.icon?.background, { fullWidth: true })}
+                  ${this._renderTextField("Icono burbuja color", "styles.icon.color", config.styles?.icon?.color, { fullWidth: true })}
+                  ${this._renderTextField("Icono burbuja tamano", "styles.icon.size", config.styles?.icon?.size)}
+                  ${this._renderTextField("Tintado manual", "styles.tint.color", config.styles?.tint?.color, { fullWidth: true })}
+                </div>
+              ` : ""}
         </section>
       </div>
     `;
-      this._mountEntityPickers();
+      this.shadowRoot.querySelectorAll('[data-mounted-control="calendar-entity"]').forEach((host) => {
+        this._mountCalendarEntityHost(host);
+      });
     }
   };
   if (!customElements.get(CARD_TAG17)) {
@@ -71908,7 +72411,7 @@
   function escapeHtml18(value) {
     return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
   }
-  function escapeSelectorValue16(value) {
+  function escapeSelectorValue17(value) {
     return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
   }
   function sanitizeCssValue6(value, fallback) {
@@ -74345,7 +74848,7 @@
         return null;
       }
       const dataset = activeElement.dataset || {};
-      const selector = dataset.field ? `[data-field="${escapeSelectorValue16(dataset.field)}"]` : null;
+      const selector = dataset.field ? `[data-field="${escapeSelectorValue17(dataset.field)}"]` : null;
       if (!selector) {
         return null;
       }
@@ -75290,4 +75793,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.3","contentSha256_12":"9b2eae711b29"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.3 (9b2eae711b29) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.5","contentSha256_12":"286c997a9917"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.5 (286c997a9917) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
