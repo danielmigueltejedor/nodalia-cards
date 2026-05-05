@@ -17583,6 +17583,10 @@
         return;
       }
       const config = this._config;
+      const mediaToggleBackgroundBase = sanitizeCssRuntimeValue(config.styles.media_player.background) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.background) || "var(--ha-card-background, var(--card-background-color))";
+      const mediaToggleBorder = sanitizeCssRuntimeValue(config.styles.media_player.border) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border) || "1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent)";
+      const mediaToggleBorderRadius = sanitizeCssRuntimeValue(config.styles.media_player.border_radius) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border_radius) || "18px";
+      const mediaToggleBoxShadow = sanitizeCssRuntimeValue(config.styles.media_player.box_shadow) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.box_shadow) || "inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16)";
       const animations = {
         enabled: config.animations?.enabled !== false,
         barDuration: clamp(Number(config.animations?.bar_duration) || DEFAULT_CONFIG.animations.bar_duration, 120, 1600),
@@ -18809,12 +18813,10 @@
         .media-player-toggle {
           align-items: center;
           appearance: none;
-          background: color-mix(in srgb, ${config.styles.media_player.background} 78%, var(--card-background-color) 22%);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 18px;
-          box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent),
-            0 10px 24px rgba(0, 0, 0, 0.16);
+          background: color-mix(in srgb, ${mediaToggleBackgroundBase} 78%, var(--card-background-color) 22%);
+          border: ${mediaToggleBorder};
+          border-radius: ${mediaToggleBorderRadius};
+          box-shadow: ${mediaToggleBoxShadow};
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
@@ -58423,7 +58425,7 @@
         config.security?.strict_service_actions !== false
       )}
             ${config.security?.strict_service_actions !== false ? this._renderTextField(
-        "Allowed services (coma separada)",
+        "Servicios permitidos (separados por comas)",
         "security.allowed_services",
         Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
         {
@@ -60836,7 +60838,7 @@
         config.security?.strict_service_actions !== false
       )}
                   ${config.security?.strict_service_actions !== false ? this._renderTextField(
-        "Allowed services (coma separada)",
+        "Servicios permitidos (separados por comas)",
         "security.allowed_services",
         Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
         {
@@ -63544,7 +63546,7 @@
         config.security?.strict_service_actions !== false
       )}
             ${config.security?.strict_service_actions !== false ? this._renderTextField(
-        "Allowed services (coma separada)",
+        "Servicios permitidos (separados por comas)",
         "security.allowed_services",
         Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
         {
@@ -65352,7 +65354,7 @@
         config.security?.strict_service_actions !== false
       )}
                   ${config.security?.strict_service_actions !== false ? this._renderTextField(
-        "Allowed services (coma separada)",
+        "Servicios permitidos (separados por comas)",
         "security.allowed_services",
         Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
         {
@@ -74412,4 +74414,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.6.0","contentSha256_12":"0bd25d655307"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v0.6.0 (0bd25d655307) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.6.1","contentSha256_12":"582aeb0816ed"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v0.6.1 (582aeb0816ed) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
