@@ -1743,6 +1743,13 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
         return Boolean(input.checked);
       case "color":
         return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+      case "csv": {
+        const values = String(input.value || "")
+          .split(",")
+          .map(item => item.trim().toLowerCase())
+          .filter(Boolean);
+        return values.length ? values : "";
+      }
       default:
         return input.value;
     }
@@ -2331,6 +2338,25 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
                   ${this._renderTextareaField("Datos del servicio (JSON)", "tap_service_data", config.tap_service_data, {
                     placeholder: '{"brightness_pct": 50}',
                   })}
+                  ${this._renderCheckboxField(
+                    "Seguridad de servicios (modo estricto)",
+                    "security.strict_service_actions",
+                    config.security?.strict_service_actions !== false,
+                  )}
+                  ${
+                    config.security?.strict_service_actions !== false
+                      ? this._renderTextField(
+                          "Allowed services (coma separada)",
+                          "security.allowed_services",
+                          Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+                          {
+                            placeholder: "browser_mod.javascript, light.turn_on",
+                            valueType: "csv",
+                            fullWidth: true,
+                          },
+                        )
+                      : ""
+                  }
                 `
                 : ""
             }

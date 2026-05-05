@@ -15051,6 +15051,39 @@
     }
   })();
 
+  // nodalia-render-signature.js
+  (function initNodaliaRenderSignature() {
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (window.NodaliaRenderSignature) {
+      return;
+    }
+    function toKey(value) {
+      if (value === null || value === void 0) {
+        return "";
+      }
+      if (typeof value === "number") {
+        return Number.isFinite(value) ? String(value) : "";
+      }
+      return String(value);
+    }
+    function joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
+      return (Array.isArray(parts) ? parts : []).map((part) => {
+        if (!part || !Array.isArray(part.values)) {
+          return "";
+        }
+        const prefix = String(part.prefix || "");
+        const body = part.values.map((value) => toKey(value)).join(valueSeparator);
+        return `${prefix}${body}`;
+      }).filter(Boolean).join(sectionSeparator);
+    }
+    window.NodaliaRenderSignature = {
+      joinParts,
+      toKey
+    };
+  })();
+
   // nodalia-bubble-contrast.js
   (function initNodaliaBubbleContrast() {
     const existing = typeof window !== "undefined" ? window.NodaliaBubbleContrast : null;
@@ -15653,6 +15686,29 @@
     }
     return safe;
   }
+  function getRenderSignatureRuntime() {
+    return window.NodaliaRenderSignature || {
+      toKey(value) {
+        if (value === null || value === void 0) {
+          return "";
+        }
+        if (typeof value === "number") {
+          return Number.isFinite(value) ? String(value) : "";
+        }
+        return String(value);
+      },
+      joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
+        return (Array.isArray(parts) ? parts : []).map((part) => {
+          if (!part || !Array.isArray(part.values)) {
+            return "";
+          }
+          const prefix = String(part.prefix || "");
+          const body = part.values.map((value) => this.toKey(value)).join(valueSeparator);
+          return `${prefix}${body}`;
+        }).filter(Boolean).join(sectionSeparator);
+      }
+    };
+  }
   function parsePrimitiveValue(value) {
     if (value === "true") {
       return true;
@@ -15836,7 +15892,25 @@
       return [...entityIds].sort((left, right) => left.localeCompare(right, tag));
     }
     _getRenderSignature(hass = this._hass) {
-      const routeBadgeStates = (this._config?.routes || []).flatMap((route, routeIndex) => {
+      const runtime = getRenderSignatureRuntime();
+      const routeBadgeStates = this._getRouteBadgeSignatureRows(hass, runtime);
+      const mediaPlayerStates = this._getMediaPlayerSignatureRows(hass, runtime);
+      return runtime.joinParts([
+        {
+          prefix: "l:",
+          values: [window.NodaliaI18n.resolveLanguage(hass, this._config?.language)]
+        },
+        { prefix: "u:", values: [hass?.user?.id || ""] },
+        { prefix: "r:", values: [routeBadgeStates.join("|")] },
+        { prefix: "m:", values: [mediaPlayerStates.join("|")] },
+        { prefix: "mx:", values: [this._mediaPlayerExpanded ? 1 : 0] },
+        { prefix: "mi:", values: [Number(this._activeMediaPlayerIndex || 0)] },
+        { prefix: "po:", values: [this._popupState ? 1 : 0] },
+        { prefix: "mb:", values: [this._mediaBrowserState ? 1 : 0] }
+      ]);
+    }
+    _getRouteBadgeSignatureRows(hass, runtime) {
+      return (this._config?.routes || []).flatMap((route, routeIndex) => {
         const items = [{ badge: route?.badge, scope: `route:${routeIndex}` }];
         (route?.popup || []).forEach((item, popupIndex) => {
           items.push({ badge: item?.badge, scope: `popup:${routeIndex}:${popupIndex}` });
@@ -15844,46 +15918,46 @@
         return items.filter((item) => item?.badge?.entity).map((item) => {
           const state = hass?.states?.[item.badge.entity] || null;
           const attribute = String(item.badge.attribute || "");
-          return [
-            item.scope,
-            String(item.badge.entity || ""),
-            String(state?.state || ""),
-            attribute,
-            attribute ? String(state?.attributes?.[attribute] ?? "") : String(state?.state || "")
-          ].join("::");
+          return runtime.joinParts([
+            {
+              values: [
+                item.scope,
+                item.badge.entity || "",
+                state?.state || "",
+                attribute,
+                attribute ? state?.attributes?.[attribute] ?? "" : state?.state || ""
+              ]
+            }
+          ], "", "::");
         });
       });
-      const mediaPlayerStates = (this._config?.media_player?.players || []).filter((player) => player?.entity).map((player) => {
+    }
+    _getMediaPlayerSignatureRows(hass, runtime) {
+      return (this._config?.media_player?.players || []).filter((player) => player?.entity).map((player) => {
         const state = hass?.states?.[player.entity] || null;
         const attrs = state?.attributes || {};
-        return [
-          String(player.entity || ""),
-          String(state?.state || ""),
-          String(attrs.friendly_name || ""),
-          String(attrs.entity_picture || ""),
-          String(attrs.media_title || ""),
-          String(attrs.media_artist || ""),
-          String(attrs.media_series_title || ""),
-          String(attrs.media_album_name || ""),
-          String(attrs.app_name || ""),
-          String(attrs.source || ""),
-          String(attrs.media_channel || ""),
-          Number(attrs.volume_level ?? -1),
-          Number(attrs.media_duration ?? -1),
-          Number(attrs.supported_features ?? 0),
-          Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : ""
-        ].join("::");
+        return runtime.joinParts([
+          {
+            values: [
+              player.entity || "",
+              state?.state || "",
+              attrs.friendly_name || "",
+              attrs.entity_picture || "",
+              attrs.media_title || "",
+              attrs.media_artist || "",
+              attrs.media_series_title || "",
+              attrs.media_album_name || "",
+              attrs.app_name || "",
+              attrs.source || "",
+              attrs.media_channel || "",
+              Number(attrs.volume_level ?? -1),
+              Number(attrs.media_duration ?? -1),
+              Number(attrs.supported_features ?? 0),
+              Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : ""
+            ]
+          }
+        ], "", "::");
       });
-      return [
-        `l:${window.NodaliaI18n.resolveLanguage(hass, this._config?.language)}`,
-        `u:${String(hass?.user?.id || "")}`,
-        `r:${routeBadgeStates.join("|")}`,
-        `m:${mediaPlayerStates.join("|")}`,
-        `mx:${this._mediaPlayerExpanded ? 1 : 0}`,
-        `mi:${Number(this._activeMediaPlayerIndex || 0)}`,
-        `po:${this._popupState ? 1 : 0}`,
-        `mb:${this._mediaBrowserState ? 1 : 0}`
-      ].join("||");
     }
     _triggerHaptic(style = this._config?.haptics?.style) {
       if (!this._config?.haptics?.enabled) {
@@ -20719,6 +20793,29 @@
   function normalizeTextKey2(value) {
     return String(value || "").trim().toLowerCase();
   }
+  function getRenderSignatureRuntime2() {
+    return window.NodaliaRenderSignature || {
+      toKey(value) {
+        if (value === null || value === void 0) {
+          return "";
+        }
+        if (typeof value === "number") {
+          return Number.isFinite(value) ? String(value) : "";
+        }
+        return String(value);
+      },
+      joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
+        return (Array.isArray(parts) ? parts : []).map((part) => {
+          if (!part || !Array.isArray(part.values)) {
+            return "";
+          }
+          const prefix = String(part.prefix || "");
+          const body = part.values.map((value) => this.toKey(value)).join(valueSeparator);
+          return `${prefix}${body}`;
+        }).filter(Boolean).join(sectionSeparator);
+      }
+    };
+  }
   function sanitizeMediaArtworkUrl2(value, hass) {
     const raw = String(value || "").trim();
     if (!raw) {
@@ -20965,28 +21062,33 @@
     _getRenderSignature(hass = this._hass) {
       const states = hass?.states || {};
       const entities = this._getTrackedEntities();
+      const runtime = getRenderSignatureRuntime2();
       return entities.map((entityId) => {
         const state = states[entityId];
         if (!state) {
-          return `${entityId}::missing`;
+          return runtime.joinParts([{ values: [entityId, "missing"] }], "", "::");
         }
         const attrs = state.attributes || {};
-        return [
-          entityId,
-          state.state || "",
-          attrs.friendly_name || "",
-          attrs.entity_picture || "",
-          attrs.media_title || "",
-          attrs.media_artist || "",
-          attrs.media_series_title || "",
-          attrs.media_album_name || "",
-          attrs.app_name || "",
-          attrs.source || "",
-          attrs.media_channel || "",
-          attrs.media_duration ?? "",
-          attrs.supported_features ?? "",
-          Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : ""
-        ].join("::");
+        return runtime.joinParts([
+          {
+            values: [
+              entityId,
+              state.state || "",
+              attrs.friendly_name || "",
+              attrs.entity_picture || "",
+              attrs.media_title || "",
+              attrs.media_artist || "",
+              attrs.media_series_title || "",
+              attrs.media_album_name || "",
+              attrs.app_name || "",
+              attrs.source || "",
+              attrs.media_channel || "",
+              attrs.media_duration ?? "",
+              attrs.supported_features ?? "",
+              Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : ""
+            ]
+          }
+        ], "", "::");
       }).join("||");
     }
     _isInEditMode() {
@@ -39007,6 +39109,29 @@
   function clamp7(value, min, max) {
     return Math.min(Math.max(value, min), max);
   }
+  function getRenderSignatureRuntime3() {
+    return window.NodaliaRenderSignature || {
+      toKey(value) {
+        if (value === null || value === void 0) {
+          return "";
+        }
+        if (typeof value === "number") {
+          return Number.isFinite(value) ? String(value) : "";
+        }
+        return String(value);
+      },
+      joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
+        return (Array.isArray(parts) ? parts : []).map((part) => {
+          if (!part || !Array.isArray(part.values)) {
+            return "";
+          }
+          const prefix = String(part.prefix || "");
+          const body = part.values.map((value) => this.toKey(value)).join(valueSeparator);
+          return `${prefix}${body}`;
+        }).filter(Boolean).join(sectionSeparator);
+      }
+    };
+  }
   function graphChartXToPercent(x, chart) {
     if (!chart || typeof chart.width !== "number") {
       return 50;
@@ -39340,19 +39465,27 @@
       return resolveEntityEntries(this._config);
     }
     _getRenderSignature(hass = this._hass) {
-      const trackedStates = this._getEntityEntries().map((entry) => {
+      const runtime = getRenderSignatureRuntime3();
+      const trackedStates = this._getTrackedStateSignatureRows(hass, runtime);
+      return runtime.joinParts([
+        { prefix: "ts:", values: [trackedStates.join("|")] },
+        { prefix: "a:", values: [this._activeSeriesEntityId || ""] },
+        { prefix: "s:", values: [this._selectedSeriesEntityId || ""] }
+      ]);
+    }
+    _getTrackedStateSignatureRows(hass, runtime) {
+      return this._getEntityEntries().map((entry) => {
         const state = entry?.entity ? hass?.states?.[entry.entity] || null : null;
-        return {
-          entity: String(entry?.entity || ""),
-          state: String(state?.state || ""),
-          friendlyName: String(state?.attributes?.friendly_name || ""),
-          unit: String(state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || "")
-        };
-      });
-      return JSON.stringify({
-        trackedStates,
-        activeSeries: String(this._activeSeriesEntityId || ""),
-        selectedSeries: String(this._selectedSeriesEntityId || "")
+        return runtime.joinParts([
+          {
+            values: [
+              entry?.entity || "",
+              state?.state || "",
+              state?.attributes?.friendly_name || "",
+              state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || ""
+            ]
+          }
+        ], "", "::");
       });
     }
     _getPrimaryEntityId() {
@@ -57723,6 +57856,9 @@
         nextValue = checked;
       } else if (valueType === "number") {
         nextValue = target.value === "" ? "" : Number(target.value);
+      } else if (valueType === "csv") {
+        const values = String(target.value || "").split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
+        nextValue = values.length ? values : "";
       } else if (valueType === "json") {
         if (target.value.trim() === "") {
           nextValue = "";
@@ -58271,6 +58407,30 @@
         { value: "warning", label: "Warning" },
         { value: "failure", label: "Failure" }
       ])}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml11(this._editorLabel("Seguridad"))}</div>
+            <div class="editor-section__hint">${escapeHtml11(this._editorLabel("Controla si las acciones de servicio externas (routines/menu) usan allowlist estricta."))}</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderCheckboxField(
+        "Seguridad de servicios (modo estricto)",
+        "security.strict_service_actions",
+        config.security?.strict_service_actions !== false
+      )}
+            ${config.security?.strict_service_actions !== false ? this._renderTextField(
+        "Allowed services (coma separada)",
+        "security.allowed_services",
+        Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+        {
+          placeholder: "vacuum.send_command, script.run",
+          valueType: "csv",
+          fullWidth: true
+        }
+      ) : ""}
           </div>
         </section>
 
@@ -59965,6 +60125,10 @@
           return Boolean(input.checked);
         case "color":
           return formatEditorColorFromHex10(input.value, Number(input.dataset.alpha || 1));
+        case "csv": {
+          const values = String(input.value || "").split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
+          return values.length ? values : "";
+        }
         default:
           return input.value;
       }
@@ -60665,6 +60829,21 @@
                   ${this._renderTextareaField("Datos del servicio (JSON)", "tap_service_data", config.tap_service_data, {
         placeholder: '{"brightness_pct": 70}'
       })}
+                  ${this._renderCheckboxField(
+        "Seguridad de servicios (modo estricto)",
+        "security.strict_service_actions",
+        config.security?.strict_service_actions !== false
+      )}
+                  ${config.security?.strict_service_actions !== false ? this._renderTextField(
+        "Allowed services (coma separada)",
+        "security.allowed_services",
+        Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+        {
+          placeholder: "browser_mod.javascript, light.turn_on",
+          valueType: "csv",
+          fullWidth: true
+        }
+      ) : ""}
                 ` : ""}
             ${tapAction === "url" ? `
                   ${this._renderTextField("URL", "tap_url", config.tap_url, {
@@ -62728,6 +62907,10 @@
           return Boolean(input.checked);
         case "color":
           return formatEditorColorFromHex11(input.value, Number(input.dataset.alpha || 1));
+        case "csv": {
+          const values = String(input.value || "").split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
+          return values.length ? values : "";
+        }
         default:
           return input.value;
       }
@@ -63354,6 +63537,21 @@
             ${this._renderTextareaField("Datos del servicio (JSON)", "tap_service_data", config.tap_service_data, {
         placeholder: '{"brightness_pct": 70}'
       })}
+            ${this._renderCheckboxField(
+        "Seguridad de servicios (modo estricto)",
+        "security.strict_service_actions",
+        config.security?.strict_service_actions !== false
+      )}
+            ${config.security?.strict_service_actions !== false ? this._renderTextField(
+        "Allowed services (coma separada)",
+        "security.allowed_services",
+        Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+        {
+          placeholder: "browser_mod.javascript, light.turn_on",
+          valueType: "csv",
+          fullWidth: true
+        }
+      ) : ""}
           </div>
         </section>
 
@@ -64600,6 +64798,10 @@
           return Boolean(input.checked);
         case "color":
           return formatEditorColorFromHex12(input.value, Number(input.dataset.alpha || 1));
+        case "csv": {
+          const values = String(input.value || "").split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
+          return values.length ? values : "";
+        }
         default:
           return input.value;
       }
@@ -65143,6 +65345,21 @@
                   ${this._renderTextareaField("Datos del servicio (JSON)", "tap_service_data", config.tap_service_data, {
         placeholder: '{"brightness_pct": 50}'
       })}
+                  ${this._renderCheckboxField(
+        "Seguridad de servicios (modo estricto)",
+        "security.strict_service_actions",
+        config.security?.strict_service_actions !== false
+      )}
+                  ${config.security?.strict_service_actions !== false ? this._renderTextField(
+        "Allowed services (coma separada)",
+        "security.allowed_services",
+        Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+        {
+          placeholder: "browser_mod.javascript, light.turn_on",
+          valueType: "csv",
+          fullWidth: true
+        }
+      ) : ""}
                 ` : ""}
             ${tapAction === "navigate" ? this._renderTextField("Ruta del panel", "tap_url", config.tap_url, {
         placeholder: "/lovelace/0",
@@ -74194,4 +74411,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.6.0-alpha.4","contentSha256_12":"0e958e929d26"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.6.0-beta.1","contentSha256_12":"41d7543d3102"};}

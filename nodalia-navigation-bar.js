@@ -897,6 +897,33 @@ function sanitizeMediaArtworkUrl(value, hass) {
   return safe;
 }
 
+function getRenderSignatureRuntime() {
+  return window.NodaliaRenderSignature || {
+    toKey(value) {
+      if (value === null || value === undefined) {
+        return "";
+      }
+      if (typeof value === "number") {
+        return Number.isFinite(value) ? String(value) : "";
+      }
+      return String(value);
+    },
+    joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
+      return (Array.isArray(parts) ? parts : [])
+        .map(part => {
+          if (!part || !Array.isArray(part.values)) {
+            return "";
+          }
+          const prefix = String(part.prefix || "");
+          const body = part.values.map(value => this.toKey(value)).join(valueSeparator);
+          return `${prefix}${body}`;
+        })
+        .filter(Boolean)
+        .join(sectionSeparator);
+    },
+  };
+}
+
 function parsePrimitiveValue(value) {
   if (value === "true") {
     return true;
@@ -1111,7 +1138,27 @@ class NodaliaNavigationBarCard extends HTMLElement {
   }
 
   _getRenderSignature(hass = this._hass) {
-    const routeBadgeStates = (this._config?.routes || []).flatMap((route, routeIndex) => {
+    const runtime = getRenderSignatureRuntime();
+    const routeBadgeStates = this._getRouteBadgeSignatureRows(hass, runtime);
+    const mediaPlayerStates = this._getMediaPlayerSignatureRows(hass, runtime);
+
+    return runtime.joinParts([
+      {
+        prefix: "l:",
+        values: [window.NodaliaI18n.resolveLanguage(hass, this._config?.language)],
+      },
+      { prefix: "u:", values: [hass?.user?.id || ""] },
+      { prefix: "r:", values: [routeBadgeStates.join("|")] },
+      { prefix: "m:", values: [mediaPlayerStates.join("|")] },
+      { prefix: "mx:", values: [this._mediaPlayerExpanded ? 1 : 0] },
+      { prefix: "mi:", values: [Number(this._activeMediaPlayerIndex || 0)] },
+      { prefix: "po:", values: [this._popupState ? 1 : 0] },
+      { prefix: "mb:", values: [this._mediaBrowserState ? 1 : 0] },
+    ]);
+  }
+
+  _getRouteBadgeSignatureRows(hass, runtime) {
+    return (this._config?.routes || []).flatMap((route, routeIndex) => {
       const items = [{ badge: route?.badge, scope: `route:${routeIndex}` }];
       (route?.popup || []).forEach((item, popupIndex) => {
         items.push({ badge: item?.badge, scope: `popup:${routeIndex}:${popupIndex}` });
@@ -1122,50 +1169,49 @@ class NodaliaNavigationBarCard extends HTMLElement {
         .map(item => {
           const state = hass?.states?.[item.badge.entity] || null;
           const attribute = String(item.badge.attribute || "");
-          return [
-            item.scope,
-            String(item.badge.entity || ""),
-            String(state?.state || ""),
-            attribute,
-            attribute ? String(state?.attributes?.[attribute] ?? "") : String(state?.state || ""),
-          ].join("::");
+          return runtime.joinParts([
+            {
+              values: [
+                item.scope,
+                item.badge.entity || "",
+                state?.state || "",
+                attribute,
+                attribute ? state?.attributes?.[attribute] ?? "" : state?.state || "",
+              ],
+            },
+          ], "", "::");
         });
     });
+  }
 
-    const mediaPlayerStates = (this._config?.media_player?.players || [])
+  _getMediaPlayerSignatureRows(hass, runtime) {
+    return (this._config?.media_player?.players || [])
       .filter(player => player?.entity)
       .map(player => {
         const state = hass?.states?.[player.entity] || null;
         const attrs = state?.attributes || {};
-        return [
-          String(player.entity || ""),
-          String(state?.state || ""),
-          String(attrs.friendly_name || ""),
-          String(attrs.entity_picture || ""),
-          String(attrs.media_title || ""),
-          String(attrs.media_artist || ""),
-          String(attrs.media_series_title || ""),
-          String(attrs.media_album_name || ""),
-          String(attrs.app_name || ""),
-          String(attrs.source || ""),
-          String(attrs.media_channel || ""),
-          Number(attrs.volume_level ?? -1),
-          Number(attrs.media_duration ?? -1),
-          Number(attrs.supported_features ?? 0),
-          Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
-        ].join("::");
+        return runtime.joinParts([
+          {
+            values: [
+              player.entity || "",
+              state?.state || "",
+              attrs.friendly_name || "",
+              attrs.entity_picture || "",
+              attrs.media_title || "",
+              attrs.media_artist || "",
+              attrs.media_series_title || "",
+              attrs.media_album_name || "",
+              attrs.app_name || "",
+              attrs.source || "",
+              attrs.media_channel || "",
+              Number(attrs.volume_level ?? -1),
+              Number(attrs.media_duration ?? -1),
+              Number(attrs.supported_features ?? 0),
+              Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
+            ],
+          },
+        ], "", "::");
       });
-
-    return [
-      `l:${window.NodaliaI18n.resolveLanguage(hass, this._config?.language)}`,
-      `u:${String(hass?.user?.id || "")}`,
-      `r:${routeBadgeStates.join("|")}`,
-      `m:${mediaPlayerStates.join("|")}`,
-      `mx:${this._mediaPlayerExpanded ? 1 : 0}`,
-      `mi:${Number(this._activeMediaPlayerIndex || 0)}`,
-      `po:${this._popupState ? 1 : 0}`,
-      `mb:${this._mediaBrowserState ? 1 : 0}`,
-    ].join("||");
   }
 
   _triggerHaptic(style = this._config?.haptics?.style) {

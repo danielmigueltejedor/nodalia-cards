@@ -1057,6 +1057,33 @@ function normalizeTextKey(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function getRenderSignatureRuntime() {
+  return window.NodaliaRenderSignature || {
+    toKey(value) {
+      if (value === null || value === undefined) {
+        return "";
+      }
+      if (typeof value === "number") {
+        return Number.isFinite(value) ? String(value) : "";
+      }
+      return String(value);
+    },
+    joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
+      return (Array.isArray(parts) ? parts : [])
+        .map(part => {
+          if (!part || !Array.isArray(part.values)) {
+            return "";
+          }
+          const prefix = String(part.prefix || "");
+          const body = part.values.map(value => this.toKey(value)).join(valueSeparator);
+          return `${prefix}${body}`;
+        })
+        .filter(Boolean)
+        .join(sectionSeparator);
+    },
+  };
+}
+
 function sanitizeMediaArtworkUrl(value, hass) {
   const raw = String(value || "").trim();
   if (!raw) {
@@ -1335,31 +1362,36 @@ class NodaliaMediaPlayer extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const states = hass?.states || {};
     const entities = this._getTrackedEntities();
+    const runtime = getRenderSignatureRuntime();
 
     return entities
       .map(entityId => {
         const state = states[entityId];
         if (!state) {
-          return `${entityId}::missing`;
+          return runtime.joinParts([{ values: [entityId, "missing"] }], "", "::");
         }
 
         const attrs = state.attributes || {};
-        return [
-          entityId,
-          state.state || "",
-          attrs.friendly_name || "",
-          attrs.entity_picture || "",
-          attrs.media_title || "",
-          attrs.media_artist || "",
-          attrs.media_series_title || "",
-          attrs.media_album_name || "",
-          attrs.app_name || "",
-          attrs.source || "",
-          attrs.media_channel || "",
-          attrs.media_duration ?? "",
-          attrs.supported_features ?? "",
-          Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
-        ].join("::");
+        return runtime.joinParts([
+          {
+            values: [
+              entityId,
+              state.state || "",
+              attrs.friendly_name || "",
+              attrs.entity_picture || "",
+              attrs.media_title || "",
+              attrs.media_artist || "",
+              attrs.media_series_title || "",
+              attrs.media_album_name || "",
+              attrs.app_name || "",
+              attrs.source || "",
+              attrs.media_channel || "",
+              attrs.media_duration ?? "",
+              attrs.supported_features ?? "",
+              Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
+            ],
+          },
+        ], "", "::");
       })
       .join("||");
   }

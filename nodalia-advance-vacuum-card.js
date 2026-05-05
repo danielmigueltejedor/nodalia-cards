@@ -8403,6 +8403,12 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
       nextValue = checked;
     } else if (valueType === "number") {
       nextValue = target.value === "" ? "" : Number(target.value);
+    } else if (valueType === "csv") {
+      const values = String(target.value || "")
+        .split(",")
+        .map(item => item.trim().toLowerCase())
+        .filter(Boolean);
+      nextValue = values.length ? values : "";
     } else if (valueType === "json") {
       if (target.value.trim() === "") {
         nextValue = "";
@@ -8989,6 +8995,34 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
               { value: "warning", label: "Warning" },
               { value: "failure", label: "Failure" },
             ])}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Seguridad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla si las acciones de servicio externas (routines/menu) usan allowlist estricta."))}</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderCheckboxField(
+              "Seguridad de servicios (modo estricto)",
+              "security.strict_service_actions",
+              config.security?.strict_service_actions !== false,
+            )}
+            ${
+              config.security?.strict_service_actions !== false
+                ? this._renderTextField(
+                    "Allowed services (coma separada)",
+                    "security.allowed_services",
+                    Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+                    {
+                      placeholder: "vacuum.send_command, script.run",
+                      valueType: "csv",
+                      fullWidth: true,
+                    },
+                  )
+                : ""
+            }
           </div>
         </section>
 

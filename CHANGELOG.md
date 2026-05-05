@@ -10,6 +10,58 @@ Work toward **`0.6.x`** on **`alpha`** / **`beta`** and eventual **`main`**: add
 
 ---
 
+## [0.6.0-beta.1] - 2026-05-05
+
+First **`beta`** on the **`0.6.x`** line (**branch `beta`**). This release consolidates the full **`0.6.0-alpha.*`** cycle into a tester-facing candidate focused on stability, security hardening, render efficiency, and pre-stable auditability. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-beta.1`** (tag **`v0.6.0-beta.1`** optional).
+
+### Stability and UX fixes
+
+- **Graph card:** hover lifecycle hardened so tooltip tracks continuously while moving and closes when pointer leaves the card in any direction.
+- **Graph card:** improved marker/guide/popup sync to reduce visual drift and flicker during fast hover transitions.
+- **Navigation bar:** reduced mini-player and popup micro-bounce by gating entrance animations to real visibility transitions (`--entering`) instead of generic re-renders.
+- **Navigation media presentation:** mini media player restyled to better match the visual language of other Nodalia cards (surface, border, spacing, shadow).
+- **Media chips (nav + media player):** noisy source labels such as `AirMusic` are filtered out for normal HomePod scenarios.
+
+### Security hardening
+
+- **Strict service actions by default:** cards using configurable service calls keep deny-by-default behavior unless explicitly disabled.
+- **Visual editor security controls:** added editor fields to configure service hardening directly in UI:
+  - toggle for `security.strict_service_actions`,
+  - CSV input for `security.allowed_services`.
+  Implemented in **Insignia**, **Entity**, **Fav**, and **Advance Vacuum** editors.
+- **URL hardening:** media/artwork and action URL sinks pass through sanitization flow (`sanitizeActionUrl`) in critical paths.
+- **Runtime style hardening:** additional sanitization guards applied to configurable style values in navigation runtime styles and advance-vacuum style trees.
+- **New-tab safety:** URL actions remain standardized with `noopener,noreferrer`.
+
+### Performance and fluency
+
+- **Drag performance:** cached geometry + attach-on-drag listeners (move/up only while dragging) across frequent slider cards to reduce idle overhead and layout churn.
+- **Render signature efficiency:** reduced hot-path render signature overhead and unified strategy using shared helper runtime instead of ad hoc object serialization.
+- **Bundling infra:** maintained esbuild-based pipeline with deterministic standalone embed stripping and stable bundle output.
+
+### Architecture and maintainability
+
+- Added shared module **`nodalia-render-signature.js`** and integrated it into the bundle pipeline.
+- Pilot modularization expanded in high-frequency cards:
+  - **Navigation:** signature decomposition into focused helper rows.
+  - **Graph:** tracked-state signature extraction and non-JSON render signature path.
+  - **Media Player:** switched signature construction to shared runtime helper.
+- Added project-level CI workflow (`.github/workflows/ci.yml`) with:
+  - `npm ci`
+  - `npm test`
+  - `npm run bundle`
+
+### Regression safety and release readiness
+
+- Added minimal regression suites for:
+  - render signature architecture guards,
+  - interaction regressions (graph hover watch + nav animation transitions),
+  - security/editor exposure assertions,
+  - release-candidate smoke checks (URL hardening, drag listener strategy, shared signature runtime).
+- Added **`docs/STABILITY_CHECKLIST_0_6_0.md`** to formalize pre-stable validation gates.
+
+---
+
 ## [0.6.0-alpha.4] - 2026-05-05
 
 Fourth **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.4`** (tag **`v0.6.0-alpha.4`** optional). Breaking changes are allowed; prefer stable **`main`** for production dashboards.

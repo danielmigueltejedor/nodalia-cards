@@ -711,6 +711,33 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
+function getRenderSignatureRuntime() {
+  return window.NodaliaRenderSignature || {
+    toKey(value) {
+      if (value === null || value === undefined) {
+        return "";
+      }
+      if (typeof value === "number") {
+        return Number.isFinite(value) ? String(value) : "";
+      }
+      return String(value);
+    },
+    joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
+      return (Array.isArray(parts) ? parts : [])
+        .map(part => {
+          if (!part || !Array.isArray(part.values)) {
+            return "";
+          }
+          const prefix = String(part.prefix || "");
+          const body = part.values.map(value => this.toKey(value)).join(valueSeparator);
+          return `${prefix}${body}`;
+        })
+        .filter(Boolean)
+        .join(sectionSeparator);
+    },
+  };
+}
+
 /** Map SVG viewBox X (0..chart.width) to overlay percentage. */
 function graphChartXToPercent(x, chart) {
   if (!chart || typeof chart.width !== "number") {
@@ -1117,20 +1144,28 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   _getRenderSignature(hass = this._hass) {
-    const trackedStates = this._getEntityEntries().map(entry => {
-      const state = entry?.entity ? hass?.states?.[entry.entity] || null : null;
-      return {
-        entity: String(entry?.entity || ""),
-        state: String(state?.state || ""),
-        friendlyName: String(state?.attributes?.friendly_name || ""),
-        unit: String(state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || ""),
-      };
-    });
+    const runtime = getRenderSignatureRuntime();
+    const trackedStates = this._getTrackedStateSignatureRows(hass, runtime);
+    return runtime.joinParts([
+      { prefix: "ts:", values: [trackedStates.join("|")] },
+      { prefix: "a:", values: [this._activeSeriesEntityId || ""] },
+      { prefix: "s:", values: [this._selectedSeriesEntityId || ""] },
+    ]);
+  }
 
-    return JSON.stringify({
-      trackedStates,
-      activeSeries: String(this._activeSeriesEntityId || ""),
-      selectedSeries: String(this._selectedSeriesEntityId || ""),
+  _getTrackedStateSignatureRows(hass, runtime) {
+    return this._getEntityEntries().map(entry => {
+      const state = entry?.entity ? hass?.states?.[entry.entity] || null : null;
+      return runtime.joinParts([
+        {
+          values: [
+            entry?.entity || "",
+            state?.state || "",
+            state?.attributes?.friendly_name || "",
+            state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || "",
+          ],
+        },
+      ], "", "::");
     });
   }
 
