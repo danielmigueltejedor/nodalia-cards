@@ -10,6 +10,14 @@ Work toward **`0.5.x`** on **`alpha`** / **`beta`** and eventual **`main`**: **P
 
 ---
 
+## [0.5.0-alpha.11] - 2026-05-06
+
+Eleventh **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.11`** (tag **`v0.5.0-alpha.11`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Insignia card** (`0.2.12`): modo **solo icono** — misma **`.insignia-card__content`** que la píldora (**`styles.card.padding`** / **`gap`** / disco **`iconSizePx`**); **sin** segunda columna vacía ni cuadrado fijo; disco del icono como en modo con texto; **`padding-block`** del **`:host`** otra vez **`4px`** por defecto en franjas con scroll (**`--insignia-scroll-strip-*`**).
+
+---
+
 ## [0.5.0-alpha.10] - 2026-05-06
 
 Tenth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.10`** (tag **`v0.5.0-alpha.10`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.

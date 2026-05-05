@@ -355,7 +355,7 @@
 
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "0.2.11";
+const CARD_VERSION = "0.2.12";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -544,29 +544,6 @@ function deleteByPath(target, path) {
 function parseSizeToPixels(value, fallback = 0) {
   const numeric = Number.parseFloat(String(value ?? ""));
   return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-/** Sum of top + bottom padding from CSS shorthand (px numbers). */
-function parsePaddingVertical(padding, fallback = 8) {
-  const raw = String(padding ?? "").trim();
-  if (!raw) {
-    return fallback;
-  }
-  const tokens = raw.split(/\s+/).filter(Boolean);
-  const px = tokens.map(token => parseSizeToPixels(token, Number.NaN)).filter(n => Number.isFinite(n));
-  if (!px.length) {
-    return fallback;
-  }
-  if (px.length === 1) {
-    return px[0] * 2;
-  }
-  if (px.length === 2) {
-    return px[0] * 2;
-  }
-  if (px.length === 3) {
-    return px[0] + px[2];
-  }
-  return px[0] + px[2];
 }
 
 function normalizeTextKey(value) {
@@ -1243,16 +1220,6 @@ class NodaliaInsigniaCard extends HTMLElement {
     const showName = config.show_name !== false;
     const showValue = config.show_value !== false && Boolean(value);
     const iconOnly = !showName && !showValue;
-    const cardPaddingVertical = parsePaddingVertical(
-      styles.card?.padding ?? DEFAULT_CONFIG.styles.card.padding,
-      8,
-    );
-    // Outer square matches pill height: vertical padding + icon disc (same as non–icon-only row).
-    const iconOnlySize = cardPaddingVertical + iconSizePx;
-    const iconOnlyContentInset = 6;
-    const iconOnlyInner = Math.max(0, iconOnlySize - iconOnlyContentInset);
-    const iconGlyphDefault = Math.round(iconSizePx * 0.5);
-    const iconOnlyIconSize = Math.max(16, Math.min(iconGlyphDefault, iconOnlyInner));
     const iconOnlyOffsetY = String(styles.icon?.icon_only_offset_y ?? DEFAULT_CONFIG.styles.icon.icon_only_offset_y);
     const pictureUrl = this._getResolvedPicture(state);
     const showPicture = Boolean(pictureUrl);
@@ -1280,10 +1247,9 @@ class NodaliaInsigniaCard extends HTMLElement {
           width: auto;
           min-height: min-content;
           transform: translateY(var(--insignia-icon-only-row-nudge, -2px));
-          /* Default 0 so icon-only height matches the text pill; use vars in horizontal scroll strips. */
           padding-block: var(
             --insignia-scroll-strip-padding-block,
-            var(--insignia-scroll-strip-margin-block, 0px)
+            var(--insignia-scroll-strip-margin-block, 4px)
           );
         }
 
@@ -1312,13 +1278,9 @@ class NodaliaInsigniaCard extends HTMLElement {
 
         .insignia-card--icon-only {
           border-radius: ${styles.card.border_radius};
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: var(--icon-only-size);
-          min-height: var(--icon-only-size);
-          min-width: var(--icon-only-size);
-          width: var(--icon-only-size);
+          height: auto;
+          width: fit-content;
+          max-width: 100%;
         }
 
         .insignia-card::before {
@@ -1358,17 +1320,11 @@ class NodaliaInsigniaCard extends HTMLElement {
           z-index: 1;
         }
 
+        /* Solo icono: misma fila / padding / gap que la píldora con texto; sin segunda columna (no forzar cuadrado). */
         .insignia-card--icon-only .insignia-card__content {
-          align-items: center;
-          border-radius: inherit;
-          box-sizing: border-box;
-          display: grid;
-          place-items: center;
-          margin: 0;
-          padding: 3px;
-          grid-template-columns: 1fr;
-          width: 100%;
-          height: 100%;
+          grid-template-columns: min(${iconSizePx}px, 100%);
+          width: fit-content;
+          max-width: 100%;
         }
 
         .insignia-card__icon {
@@ -1389,25 +1345,6 @@ class NodaliaInsigniaCard extends HTMLElement {
           width: ${iconSizePx}px;
         }
 
-        .insignia-card--icon-only .insignia-card__icon {
-          align-self: center;
-          border-radius: inherit;
-          justify-self: center;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          line-height: 0;
-          height: 100%;
-          margin: 0;
-          width: 100%;
-        }
-
-        .insignia-card--icon-only .insignia-card__icon {
-          background: transparent;
-          border: none;
-          box-shadow: none;
-        }
-
         .insignia-card__icon img {
           border-radius: inherit;
           height: 100%;
@@ -1422,21 +1359,10 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         .insignia-card--icon-only .insignia-card__icon ha-icon {
-          --mdc-icon-size: var(--icon-only-icon-size);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: var(--icon-only-icon-size);
-          width: var(--icon-only-icon-size);
-          line-height: 0;
           overflow: visible;
           position: relative;
           top: var(--icon-only-offset-y);
-          transform: translateY(var(--insignia-icon-optical-y, -1px)) !important;
-        }
-
-        .insignia-card--icon-only .insignia-card__icon ha-icon svg {
-          display: block;
+          transform: translateY(var(--insignia-icon-optical-y, -1px));
         }
 
         .insignia-card__copy {
@@ -1499,7 +1425,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           width: 10px;
         }
       </style>
-      <div class="insignia-card ${iconOnly ? "insignia-card--icon-only" : ""}" style="--icon-only-size: ${iconOnlySize}px; --icon-only-icon-size: ${iconOnlyIconSize}px; --icon-only-offset-y: ${iconOnlyOffsetY}; ${isVisible ? "" : "display:none;"}">
+      <div class="insignia-card ${iconOnly ? "insignia-card--icon-only" : ""}" style="--icon-only-offset-y: ${iconOnlyOffsetY}; ${isVisible ? "" : "display:none;"}">
         <div class="insignia-card__content" data-insignia-action="primary">
           <div class="insignia-card__icon">
             ${showPicture
@@ -1508,11 +1434,15 @@ class NodaliaInsigniaCard extends HTMLElement {
             }
             ${unavailable ? '<span class="insignia-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>' : ""}
           </div>
+          ${iconOnly
+            ? ""
+            : `
           <div class="insignia-card__copy">
             ${showName ? `<div class="insignia-card__title">${escapeHtml(title)}</div>` : ""}
             ${showName && showValue ? '<span class="insignia-card__dot"></span>' : ""}
             ${showValue ? `<div class="insignia-card__value">${escapeHtml(value)}</div>` : ""}
           </div>
+          `}
         </div>
       </div>
     `;
