@@ -83,7 +83,7 @@ Copy `nodalia-cards.js` into `config/www/` (or a subfolder) and add a resource u
 
 **Stable (`main`) — 0.5.0** includes **es, en, de, fr, it, nl** plus **pt, ru, el, zh** (simplified), and **ro** for the bundled cards and Lovelace visual editors (partial trees merge from English; coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
 
-**Prereleases:** current testing line is **`beta`** **`0.6.0-beta.3`** (candidate for stable after bug triage). **`alpha`** continues for faster experimental fixes between beta cuts. Current stable on **`main`** is **`0.5.0`**. Branch workflow and tagging: **CONTRIBUTING**.
+**Prereleases:** current testing line is **`alpha`** **`0.6.0-alpha.5`** (experimental fast channel; useful for validating cache/resource propagation issues). **`beta`** remains available as candidate-to-stable line. Current stable on **`main`** is **`0.5.0`**. Branch workflow and tagging: **CONTRIBUTING**.
 
 ---
 

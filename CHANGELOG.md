@@ -10,6 +10,16 @@ Work toward **`0.6.x`** on **`alpha`** / **`beta`** and eventual **`main`**: add
 
 ---
 
+## [0.6.0-alpha.5] - 2026-05-05
+
+Fifth **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). This release mirrors the latest beta-level fixes under the alpha distribution channel to help validate real-world loading/resource-cache behavior where alpha delivery is preferred. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.5`** (tag **`v0.6.0-alpha.5`** optional).
+
+- **Bundle diagnostics:** startup console line now surfaces package version + content hash to quickly confirm which build Home Assistant actually loaded.
+- **Graph card (mobile):** chip press clipping fix retained using padding-based scroll-container guard (without ineffective cross-axis overflow override).
+- **Review/QA polish:** clarified sanitizer guard test naming and kept regression suite aligned with latest PR feedback loop.
+
+---
+
 ## [0.6.0-beta.3] - 2026-05-05
 
 Third **`beta`** on the **`0.6.x`** line (**branch `beta`**). This cut focuses on load/debug clarity so testers can verify they are running the intended build and avoid false “old version” diagnostics. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-beta.3`** (tag **`v0.6.0-beta.3`** optional).
