@@ -1,6 +1,399 @@
+// <nodalia-standalone-utils>
+// Inlined for standalone Lovelace resources (single JS file). Stripped when building nodalia-cards.js.
+// Source of truth: nodalia-utils.js — regenerate: node scripts/sync-standalone-embed.mjs
+/**
+ * Shared helpers for Nodalia cards (deep equality, config stripping, editor mounts).
+ * Loaded early in nodalia-cards.js bundle; exposed as window.NodaliaUtils.
+ */
+(function initNodaliaUtils() {
+  const REQUIRED_API_KEYS = [
+    "isObject",
+    "deepClone",
+    "deepEqual",
+    "stripEqualToDefaults",
+    "editorStatesSignature",
+    "editorFilteredStatesSignature",
+    "sanitizeActionUrl",
+    "mountEntityPickerHost",
+    "mountIconPickerHost",
+  ];
+  const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
+  if (
+    existing &&
+    REQUIRED_API_KEYS.every(key => typeof existing[key] === "function")
+  ) {
+    return;
+  }
+
+  function isObject(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function deepClone(value) {
+    if (value === undefined) {
+      return undefined;
+    }
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function deepEqual(a, b) {
+    if (Object.is(a, b)) {
+      return true;
+    }
+    if (a == null || b == null) {
+      return a === b;
+    }
+    if (typeof a !== typeof b) {
+      return false;
+    }
+    if (typeof a !== "object") {
+      return false;
+    }
+    if (Array.isArray(a)) {
+      if (!Array.isArray(b) || a.length !== b.length) {
+        return false;
+      }
+      return a.every((value, index) => deepEqual(value, b[index]));
+    }
+    if (Array.isArray(b)) {
+      return false;
+    }
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) {
+      return false;
+    }
+    return keysA.every(key => deepEqual(a[key], b[key]));
+  }
+
+  function stripEqualToDefaults(config, defaults) {
+    if (defaults === undefined || defaults === null) {
+      return deepClone(config);
+    }
+    if (config === undefined || config === null) {
+      return undefined;
+    }
+    if (Array.isArray(config)) {
+      return deepEqual(config, defaults) ? undefined : deepClone(config);
+    }
+    if (isObject(config) && isObject(defaults)) {
+      const out = {};
+      for (const key of Object.keys(config)) {
+        const cv = config[key];
+        const dv = defaults[key];
+        if (!(key in defaults)) {
+          out[key] = deepClone(cv);
+          continue;
+        }
+        if (deepEqual(cv, dv)) {
+          continue;
+        }
+        if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
+          const stripped = stripEqualToDefaults(cv, dv);
+          if (stripped !== undefined) {
+            out[key] = stripped;
+          }
+        } else {
+          out[key] = deepClone(cv);
+        }
+      }
+      return Object.keys(out).length ? out : undefined;
+    }
+    return deepEqual(config, defaults) ? undefined : config;
+  }
+
+  /**
+   * Signature for entities matching predicate(entityId): id + friendly_name + icon per row,
+   * so picker labels update when attributes change. Same locale prefix as editorStatesSignature.
+   */
+  function editorFilteredStatesSignature(hass, language, predicate) {
+    const states = hass?.states || {};
+    const rows = [];
+    for (const id of Object.keys(states)) {
+      if (!predicate(id)) {
+        continue;
+      }
+      const state = states[id];
+      rows.push(
+        `${id}:${String(state?.attributes?.friendly_name ?? "")}:${String(state?.attributes?.icon ?? "")}`,
+      );
+    }
+    rows.sort((left, right) => {
+      const idLeft = left.split(":")[0];
+      const idRight = right.split(":")[0];
+      return idLeft.localeCompare(idRight, "es", { sensitivity: "base" });
+    });
+    const tag =
+      typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
+        ? window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language))
+        : "";
+    return `${tag}|${rows.join("|")}`;
+  }
+
+  /**
+   * Full hass.states signature: every entity as id + friendly_name + icon (sorted by id),
+   * plus locale tag — same shape as editorFilteredStatesSignature. Editors that list entities
+   * re-render when labels or icons change, not only when the entity count changes.
+   */
+  function editorStatesSignature(hass, language) {
+    return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Normalize and validate user-provided action URLs.
+   * Allows http/https and same-origin relative paths by default.
+   */
+  function sanitizeActionUrl(value, options = {}) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    const allowRelative = options.allowRelative !== false;
+    const allowHash = options.allowHash === true;
+    if (allowHash && raw.startsWith("#")) {
+      return raw;
+    }
+    if (allowRelative && (/^\/(?!\/)/.test(raw) || raw.startsWith("./") || raw.startsWith("../"))) {
+      return raw;
+    }
+    try {
+      const base =
+        typeof window !== "undefined" && window.location
+          ? window.location.origin
+          : "https://example.invalid";
+      const parsed = new URL(raw, base);
+      const protocol = String(parsed.protocol || "").toLowerCase();
+      if (protocol !== "http:" && protocol !== "https:") {
+        return "";
+      }
+      if (allowRelative && typeof window !== "undefined" && window.location && parsed.origin === window.location.origin) {
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+      return parsed.toString();
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  function copyDatasetExcept(control, host, skipKeys) {
+    const skip = new Set(skipKeys || []);
+    Object.entries(host.dataset || {}).forEach(([key, value]) => {
+      if (skip.has(key)) {
+        return;
+      }
+      control.dataset[key] = value;
+    });
+  }
+
+  /** Latest callbacks for reused picker controls (listeners call into this). */
+  const pickerCallbackState = new WeakMap();
+  const pickerControlsWithListeners = new WeakSet();
+
+  function dispatchPickerChange(ev) {
+    const control = ev.currentTarget;
+    const s = pickerCallbackState.get(control);
+    if (s && typeof s.onShadowInput === "function") {
+      s.onShadowInput(ev);
+    }
+  }
+
+  function dispatchPickerValueChanged(ev) {
+    const control = ev.currentTarget;
+    const s = pickerCallbackState.get(control);
+    if (!s) {
+      return;
+    }
+    const fn = s.onShadowValueChanged || s.onShadowInput;
+    if (typeof fn === "function") {
+      fn(ev);
+    }
+  }
+
+  /**
+   * Mount or update ha-entity-picker / ha-selector / text input without recreating each render.
+   */
+  function mountEntityPickerHost(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const hass = options.hass;
+    const field = options.field || host.dataset.field || "entity";
+    const nextValue = options.value !== undefined ? String(options.value) : String(host.dataset.value || "");
+    const placeholder =
+      options.placeholder !== undefined ? String(options.placeholder) : String(host.dataset.placeholder || "");
+    const onShadowInput = options.onShadowInput;
+    const onShadowValueChanged = options.onShadowValueChanged;
+    const copyDatasetFromHost = options.copyDatasetFromHost !== false;
+
+    const usePicker = typeof customElements !== "undefined" && customElements.get("ha-entity-picker");
+    const useSelector = typeof customElements !== "undefined" && customElements.get("ha-selector");
+
+    let desired = "input";
+    if (usePicker) {
+      desired = "picker";
+    } else if (useSelector) {
+      desired = "selector";
+    }
+
+    let control = host.firstElementChild;
+    const tag = control?.tagName || "";
+    const matches =
+      control &&
+      ((desired === "picker" && tag === "HA-ENTITY-PICKER")
+        || (desired === "selector" && tag === "HA-SELECTOR")
+        || (desired === "input" && tag === "INPUT"));
+
+    if (!matches) {
+      host.replaceChildren();
+      if (usePicker) {
+        control = document.createElement("ha-entity-picker");
+        control.allowCustomEntity = true;
+      } else if (useSelector) {
+        control = document.createElement("ha-selector");
+        control.selector = { entity: {} };
+      } else {
+        control = document.createElement("input");
+        control.type = "text";
+      }
+
+      control.dataset.field = field;
+      if (copyDatasetFromHost) {
+        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder", "field"]);
+      }
+
+      if ("hass" in control) {
+        control.hass = hass;
+      }
+      if ("value" in control) {
+        control.value = nextValue;
+      }
+      if (placeholder && "placeholder" in control) {
+        control.placeholder = placeholder;
+      }
+
+      pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+      if (!pickerControlsWithListeners.has(control)) {
+        pickerControlsWithListeners.add(control);
+        if (control.tagName === "INPUT") {
+          control.addEventListener("change", dispatchPickerChange);
+        } else {
+          control.addEventListener("value-changed", dispatchPickerValueChanged);
+        }
+      }
+
+      host.appendChild(control);
+      return;
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+    pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+    if ("hass" in control) {
+      control.hass = hass;
+    }
+    if (placeholder && "placeholder" in control) {
+      control.placeholder = placeholder;
+    }
+    if ("value" in control && control.value !== nextValue) {
+      control.value = nextValue;
+    }
+  }
+
+  /**
+   * Mount or update ha-icon-picker / text input without recreating each render.
+   */
+  function mountIconPickerHost(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const hass = options.hass;
+    const nextValue = options.value !== undefined ? String(options.value) : String(host.dataset.value || "");
+    const placeholder = options.placeholder !== undefined ? options.placeholder : host.dataset.placeholder || "";
+    const onShadowInput = options.onShadowInput;
+    const onShadowValueChanged = options.onShadowValueChanged;
+    const copyDatasetFromHost = options.copyDatasetFromHost !== false;
+
+    const useIconPicker = typeof customElements !== "undefined" && customElements.get("ha-icon-picker");
+
+    let desired = useIconPicker ? "icon" : "input";
+    let control = host.firstElementChild;
+    const tag = control?.tagName || "";
+    const matches =
+      control && ((desired === "icon" && tag === "HA-ICON-PICKER") || (desired === "input" && tag === "INPUT"));
+
+    if (!matches) {
+      host.replaceChildren();
+      if (useIconPicker) {
+        control = document.createElement("ha-icon-picker");
+      } else {
+        control = document.createElement("input");
+        control.type = "text";
+      }
+
+      if (copyDatasetFromHost) {
+        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder", "field"]);
+      }
+
+      if ("hass" in control) {
+        control.hass = hass;
+      }
+      if (placeholder && "placeholder" in control) {
+        control.placeholder = placeholder;
+      }
+      if ("value" in control) {
+        control.value = nextValue;
+      }
+
+      pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+      if (!pickerControlsWithListeners.has(control)) {
+        pickerControlsWithListeners.add(control);
+        if (control.tagName === "INPUT") {
+          control.addEventListener("change", dispatchPickerChange);
+        } else {
+          control.addEventListener("value-changed", dispatchPickerValueChanged);
+        }
+      }
+
+      host.appendChild(control);
+      return;
+    }
+
+    pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+    if ("hass" in control) {
+      control.hass = hass;
+    }
+    if (placeholder && "placeholder" in control) {
+      control.placeholder = placeholder;
+    }
+    if ("value" in control && control.value !== nextValue) {
+      control.value = nextValue;
+    }
+  }
+
+  const api = {
+    isObject,
+    deepClone,
+    deepEqual,
+    stripEqualToDefaults,
+    editorStatesSignature,
+    editorFilteredStatesSignature,
+    sanitizeActionUrl,
+    mountEntityPickerHost,
+    mountIconPickerHost,
+  };
+
+  if (typeof window !== "undefined") {
+    window.NodaliaUtils = api;
+  }
+})();
+
+// </nodalia-standalone-utils>
+
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "0.2.0";
+const CARD_VERSION = "0.2.12";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -15,6 +408,8 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  icon_active: "",
+  icon_inactive: "",
   use_entity_icon: false,
   use_entity_picture: false,
   state_attribute: "",
@@ -44,7 +439,7 @@ const DEFAULT_CONFIG = {
       background: "color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
       on_color: "var(--info-color, #71c0ff)",
       off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
-      icon_only_offset_y: "2px",
+      icon_only_offset_y: "0",
     },
     tint: {
       color: "var(--info-color, #71c0ff)",
@@ -157,71 +552,6 @@ function compactConfig(value) {
   return value;
 }
 
-function deepEqual(a, b) {
-  if (Object.is(a, b)) {
-    return true;
-  }
-  if (a == null || b == null) {
-    return a === b;
-  }
-  if (typeof a !== typeof b) {
-    return false;
-  }
-  if (typeof a !== "object") {
-    return false;
-  }
-  if (Array.isArray(a)) {
-    if (!Array.isArray(b) || a.length !== b.length) {
-      return false;
-    }
-    return a.every((value, index) => deepEqual(value, b[index]));
-  }
-  if (Array.isArray(b)) {
-    return false;
-  }
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-  if (keysA.length !== keysB.length) {
-    return false;
-  }
-  return keysA.every(key => deepEqual(a[key], b[key]));
-}
-
-function stripEqualToDefaults(config, defaults) {
-  if (defaults === undefined || defaults === null) {
-    return deepClone(config);
-  }
-  if (config === undefined || config === null) {
-    return undefined;
-  }
-  if (Array.isArray(config)) {
-    return deepEqual(config, defaults) ? undefined : deepClone(config);
-  }
-  if (isObject(config) && isObject(defaults)) {
-    const out = {};
-    for (const key of Object.keys(config)) {
-      const cv = config[key];
-      const dv = defaults[key];
-      if (!(key in defaults)) {
-        out[key] = deepClone(cv);
-        continue;
-      }
-      if (deepEqual(cv, dv)) {
-        continue;
-      }
-      if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
-        const stripped = stripEqualToDefaults(cv, dv);
-        if (stripped !== undefined) {
-          out[key] = stripped;
-        }
-      } else {
-        out[key] = deepClone(cv);
-      }
-    }
-    return Object.keys(out).length ? out : undefined;
-  }
-  return deepEqual(config, defaults) ? undefined : config;
-}
 
 function setByPath(target, path, value) {
   const parts = path.split(".");
@@ -399,6 +729,48 @@ function escapeHtml(value) {
 
 function escapeSelectorValue(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
+function sanitizeCssValue(value, fallback) {
+  const raw = String(value ?? "").trim();
+  const safeFallback = String(fallback ?? "").trim();
+  if (!raw) {
+    return safeFallback;
+  }
+  if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+    return safeFallback;
+  }
+  return raw;
+}
+
+function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
+  const defaults = DEFAULT_CONFIG.styles;
+  const card = styles?.card || {};
+  const icon = styles?.icon || {};
+  const tint = styles?.tint || {};
+
+  return {
+    card: {
+      background: sanitizeCssValue(card.background, defaults.card.background),
+      border: sanitizeCssValue(card.border, defaults.card.border),
+      border_radius: sanitizeCssValue(card.border_radius, defaults.card.border_radius),
+      box_shadow: sanitizeCssValue(card.box_shadow, defaults.card.box_shadow),
+      gap: sanitizeCssValue(card.gap, defaults.card.gap),
+      padding: sanitizeCssValue(card.padding, defaults.card.padding),
+    },
+    icon: {
+      background: sanitizeCssValue(icon.background, defaults.icon.background),
+      icon_only_offset_y: sanitizeCssValue(icon.icon_only_offset_y, defaults.icon.icon_only_offset_y),
+      off_color: sanitizeCssValue(icon.off_color, defaults.icon.off_color),
+      on_color: sanitizeCssValue(icon.on_color, defaults.icon.on_color),
+      size: sanitizeCssValue(icon.size, defaults.icon.size),
+    },
+    tint: {
+      color: sanitizeCssValue(tint.color, defaults.tint.color),
+    },
+    title_size: sanitizeCssValue(styles?.title_size, defaults.title_size),
+    value_size: sanitizeCssValue(styles?.value_size, defaults.value_size),
+  };
 }
 
 function clampNumber(value, min, max) {
@@ -607,12 +979,33 @@ class NodaliaInsigniaCard extends HTMLElement {
     return unit ? `${formatted} ${unit}` : formatted;
   }
 
-  _getResolvedIcon(state) {
-    if (this._config.use_entity_icon) {
-      return getDynamicEntityIcon(state) || this._config.icon || "mdi:star-four-points-circle";
+  _isActiveState(state) {
+    const stateKey = normalizeTextKey(state?.state);
+
+    if (!stateKey || ["off", "closed", "locked", "unavailable", "unknown", "none", "idle", "standby"].includes(stateKey)) {
+      return false;
     }
 
-    return this._config.icon || state?.attributes?.icon || "mdi:star-four-points-circle";
+    return true;
+  }
+
+  _getResolvedIcon(state) {
+    const trimIcon = value => (typeof value === "string" ? value.trim() : "");
+    const iconActive = trimIcon(this._config?.icon_active);
+    const iconInactive = trimIcon(this._config?.icon_inactive);
+
+    if (iconActive || iconInactive) {
+      const chosen = this._isActiveState(state) ? iconActive : iconInactive;
+      if (chosen) {
+        return chosen;
+      }
+    }
+
+    if (this._config.use_entity_icon) {
+      return getDynamicEntityIcon(state) || trimIcon(this._config?.icon) || "mdi:star-four-points-circle";
+    }
+
+    return trimIcon(this._config?.icon) || state?.attributes?.icon || "mdi:star-four-points-circle";
   }
 
   _getResolvedPicture(state) {
@@ -717,7 +1110,7 @@ class NodaliaInsigniaCard extends HTMLElement {
 
   _getTintColor(state) {
     if (this._config?.tint_auto === false) {
-      return this._config?.styles?.tint?.color || DEFAULT_CONFIG.styles.tint.color;
+      return sanitizeCssValue(this._config?.styles?.tint?.color, DEFAULT_CONFIG.styles.tint.color);
     }
 
     const domain = getEntityDomain(state);
@@ -754,6 +1147,28 @@ class NodaliaInsigniaCard extends HTMLElement {
     }
 
     return "var(--info-color, #71c0ff)";
+  }
+
+  _isServiceAllowed(serviceValue) {
+    const security = this._config?.security || {};
+    if (security.strict_service_actions !== true) {
+      return true;
+    }
+    const normalizedService = String(serviceValue || "").trim().toLowerCase();
+    if (!normalizedService || !normalizedService.includes(".")) {
+      return false;
+    }
+    const [domain] = normalizedService.split(".");
+    const domains = Array.isArray(security.allowed_service_domains)
+      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const services = Array.isArray(security.allowed_services)
+      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    if (!domains.length && !services.length) {
+      return false;
+    }
+    return services.includes(normalizedService) || domains.includes(domain);
   }
 
   _onClick(event) {
@@ -794,6 +1209,9 @@ class NodaliaInsigniaCard extends HTMLElement {
     }
 
     if (action === "service" && this._config.tap_service) {
+      if (!this._isServiceAllowed(this._config.tap_service)) {
+        return;
+      }
       const [domain, service] = this._config.tap_service.split(".");
       if (domain && service) {
         let serviceData = {};
@@ -825,10 +1243,14 @@ class NodaliaInsigniaCard extends HTMLElement {
     }
 
     if (action === "url" && this._config.tap_url) {
+      const safeUrl = window.NodaliaUtils?.sanitizeActionUrl(this._config.tap_url, { allowRelative: true });
+      if (!safeUrl) {
+        return;
+      }
       if (this._config.tap_new_tab) {
-        window.open(this._config.tap_url, "_blank", "noopener");
+        window.open(safeUrl, "_blank", "noopener,noreferrer");
       } else {
-        window.location.href = this._config.tap_url;
+        window.location.href = safeUrl;
       }
     }
   }
@@ -848,10 +1270,11 @@ class NodaliaInsigniaCard extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const styles = config.styles || DEFAULT_CONFIG.styles;
+    const styles = getSafeStyles(config.styles);
     const state = this._getState();
 
     if (!state && !config.name && !config.icon) {
+      this.removeAttribute("data-icon-only");
       this.shadowRoot.innerHTML = `
         <style>
           :host { display: block; }
@@ -889,7 +1312,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     const icon = this._getResolvedIcon(state);
     const active = this._isActive(state);
     const dimIcon = this._shouldDimIcon(state);
-    const tint = this._getTintColor(state);
+    const tint = sanitizeCssValue(this._getTintColor(state), DEFAULT_CONFIG.styles.tint.color);
     const strongTint = this._shouldApplyStrongCardTint(state);
     const cardBackground = strongTint
       ? `linear-gradient(135deg, color-mix(in srgb, ${tint} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${tint} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`
@@ -906,9 +1329,6 @@ class NodaliaInsigniaCard extends HTMLElement {
     const showName = config.show_name !== false;
     const showValue = config.show_value !== false && Boolean(value);
     const iconOnly = !showName && !showValue;
-    const iconOnlySize = Math.max(36, Math.min(iconSizePx + 12, 46));
-    const iconOnlyIconBase = parseSizeToPixels(styles.icon?.size, iconSizePx);
-    const iconOnlyIconSize = Math.max(18, Math.min(Math.round(iconOnlyIconBase), iconOnlySize - 8));
     const iconOnlyOffsetY = String(styles.icon?.icon_only_offset_y ?? DEFAULT_CONFIG.styles.icon.icon_only_offset_y);
     const pictureUrl = this._getResolvedPicture(state);
     const showPicture = Boolean(pictureUrl);
@@ -925,8 +1345,21 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         :host([data-icon-only]) {
+          /* Same cross-axis behavior as non–icon-only pills (align-items: center on row).
+             stretch forced full line height and skewed vertical center vs text pills + menu. */
+          align-self: var(--insignia-icon-only-align-self, center);
+          box-sizing: border-box;
+          display: flex;
+          align-items: center;
           justify-content: center;
+          overflow: visible;
           width: auto;
+          min-height: min-content;
+          transform: translateY(var(--insignia-icon-only-row-nudge, -2px));
+          padding-block: var(
+            --insignia-scroll-strip-padding-block,
+            var(--insignia-scroll-strip-margin-block, 4px)
+          );
         }
 
         * {
@@ -948,15 +1381,15 @@ class NodaliaInsigniaCard extends HTMLElement {
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
 
+        .insignia-card.insignia-card--icon-only {
+          overflow: visible;
+        }
+
         .insignia-card--icon-only {
-          border-radius: 999px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: var(--icon-only-size);
-          min-height: var(--icon-only-size);
-          min-width: var(--icon-only-size);
-          width: var(--icon-only-size);
+          border-radius: ${styles.card.border_radius};
+          height: auto;
+          width: fit-content;
+          max-width: 100%;
         }
 
         .insignia-card::before {
@@ -996,15 +1429,11 @@ class NodaliaInsigniaCard extends HTMLElement {
           z-index: 1;
         }
 
+        /* Solo icono: misma fila / padding / gap que la píldora con texto; sin segunda columna (no forzar cuadrado). */
         .insignia-card--icon-only .insignia-card__content {
-          align-items: center;
-          display: grid;
-          place-items: center;
-          margin: 0;
-          padding: 0;
-          grid-template-columns: 1fr;
-          width: 100%;
-          height: 100%;
+          grid-template-columns: min(${iconSizePx}px, 100%);
+          width: fit-content;
+          max-width: 100%;
         }
 
         .insignia-card__icon {
@@ -1025,26 +1454,8 @@ class NodaliaInsigniaCard extends HTMLElement {
           width: ${iconSizePx}px;
         }
 
-        .insignia-card--icon-only .insignia-card__icon {
-          align-self: center;
-          justify-self: center;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          line-height: 0;
-          height: 100%;
-          margin: 0;
-          width: 100%;
-        }
-
-        .insignia-card--icon-only .insignia-card__icon {
-          background: transparent;
-          border: none;
-          box-shadow: none;
-        }
-
         .insignia-card__icon img {
-          border-radius: 999px;
+          border-radius: inherit;
           height: 100%;
           object-fit: cover;
           width: 100%;
@@ -1057,16 +1468,10 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         .insignia-card--icon-only .insignia-card__icon ha-icon {
-          --mdc-icon-size: var(--icon-only-icon-size);
-          height: var(--icon-only-icon-size);
-          width: var(--icon-only-icon-size);
-          line-height: var(--icon-only-icon-size);
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          overflow: visible;
           position: relative;
           top: var(--icon-only-offset-y);
-          transform: translateY(0) !important;
+          transform: translateY(var(--insignia-icon-optical-y, -1px));
         }
 
         .insignia-card__copy {
@@ -1129,7 +1534,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           width: 10px;
         }
       </style>
-      <div class="insignia-card ${iconOnly ? "insignia-card--icon-only" : ""}" style="--icon-only-size: ${iconOnlySize}px; --icon-only-icon-size: ${iconOnlyIconSize}px; --icon-only-offset-y: ${iconOnlyOffsetY}; ${isVisible ? "" : "display:none;"}">
+      <div class="insignia-card ${iconOnly ? "insignia-card--icon-only" : ""}" style="--icon-only-offset-y: ${iconOnlyOffsetY}; ${isVisible ? "" : "display:none;"}">
         <div class="insignia-card__content" data-insignia-action="primary">
           <div class="insignia-card__icon">
             ${showPicture
@@ -1138,11 +1543,15 @@ class NodaliaInsigniaCard extends HTMLElement {
             }
             ${unavailable ? '<span class="insignia-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>' : ""}
           </div>
+          ${iconOnly
+            ? ""
+            : `
           <div class="insignia-card__copy">
             ${showName ? `<div class="insignia-card__title">${escapeHtml(title)}</div>` : ""}
             ${showName && showValue ? '<span class="insignia-card__dot"></span>' : ""}
             ${showValue ? `<div class="insignia-card__value">${escapeHtml(value)}</div>` : ""}
           </div>
+          `}
         </div>
       </div>
     `;
@@ -1194,13 +1603,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    const tag = window.NodaliaI18n.localeTag(
-      window.NodaliaI18n.resolveLanguage(hass, this._config?.language ?? "auto"),
-    );
-    return `${tag}|${Object.entries(hass?.states || {})
-      .map(([entityId, state]) => `${entityId}:${String(state?.attributes?.friendly_name || "")}`)
-      .sort((left, right) => left.localeCompare(right, tag, { sensitivity: "base" }))
-      .join("|")}`;
+    return window.NodaliaUtils.editorStatesSignature(hass, this._config?.language ?? "auto");
   }
 
   _watchEditorControlTag(tagName) {
@@ -1315,7 +1718,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -1550,91 +1953,25 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
   }
 
   _mountEntityPicker(host) {
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-
-    const field = host.dataset.field || "entity";
-    const nextValue = host.dataset.value || "";
-    let control = null;
-
-    if (customElements.get("ha-entity-picker")) {
-      control = document.createElement("ha-entity-picker");
-      control.allowCustomEntity = true;
-    } else if (customElements.get("ha-selector")) {
-      control = document.createElement("ha-selector");
-      control.selector = {
-        entity: {},
-      };
-    } else {
-      control = document.createElement("input");
-      control.type = "text";
-      control.dataset.field = field;
-      control.value = nextValue;
-      control.addEventListener("change", this._onShadowInput);
-    }
-
-    control.dataset.field = field;
-    control.dataset.value = nextValue;
-
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
-
-    if ("value" in control) {
-      control.value = nextValue;
-    }
-
-    if (control.tagName !== "INPUT") {
-      control.addEventListener("value-changed", this._onShadowValueChanged);
-    }
-
-    host.replaceChildren(control);
-  }
-
-  _copyDatasetToControl(host, control) {
-    Object.entries(host.dataset || {}).forEach(([key, value]) => {
-      if (key === "mountedControl" || key === "value" || key === "placeholder") {
-        return;
-      }
-      control.dataset[key] = value;
+    window.NodaliaUtils.mountEntityPickerHost(host, {
+      hass: this._hass,
+      field: host.dataset.field || "entity",
+      value: host.dataset.value || "",
+      onShadowInput: this._onShadowInput,
+      onShadowValueChanged: this._onShadowValueChanged,
+      copyDatasetFromHost: true,
     });
   }
 
   _mountIconPicker(host) {
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-
-    const nextValue = host.dataset.value || "";
-    const placeholder = host.dataset.placeholder || "";
-    let control = null;
-
-    if (customElements.get("ha-icon-picker")) {
-      control = document.createElement("ha-icon-picker");
-    } else {
-      control = document.createElement("input");
-      control.type = "text";
-    }
-
-    this._copyDatasetToControl(host, control);
-
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
-    if (placeholder && "placeholder" in control) {
-      control.placeholder = placeholder;
-    }
-    if ("value" in control) {
-      control.value = nextValue;
-    }
-    if (control.tagName !== "INPUT") {
-      control.addEventListener("value-changed", this._onShadowValueChanged);
-    } else {
-      control.addEventListener("change", this._onShadowInput);
-    }
-
-    host.replaceChildren(control);
+    window.NodaliaUtils.mountIconPickerHost(host, {
+      hass: this._hass,
+      value: host.dataset.value || "",
+      placeholder: host.dataset.placeholder || "",
+      onShadowInput: this._onShadowInput,
+      onShadowValueChanged: this._onShadowValueChanged,
+      copyDatasetFromHost: true,
+    });
   }
 
   _render() {
@@ -1905,6 +2242,21 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
               placeholder: "mdi:star-four-points-circle",
               fullWidth: true,
             })}
+            ${this._renderIconPickerField("Icono (estado activo)", "icon_active", config.icon_active, {
+              placeholder: "mdi:door-open",
+              fullWidth: true,
+            })}
+            ${this._renderIconPickerField("Icono (estado inactivo)", "icon_inactive", config.icon_inactive, {
+              placeholder: "mdi:door-closed",
+              fullWidth: true,
+            })}
+            <div class="editor-section__hint editor-field--full" style="grid-column: 1 / -1; margin-top: -4px;">
+              ${escapeHtml(
+                this._editorLabel(
+                  "Opcional: icono distinto cuando la insignia está activa o inactiva (interruptores, puertas, ventanas, etc.). Si uno queda vacío, se usa el icono general o el de la entidad.",
+                ),
+              )}
+            </div>
             ${this._renderTextField("Nombre visible", "name", config.name, {
               placeholder: this._editorLabel("Temperatura"),
               fullWidth: true,

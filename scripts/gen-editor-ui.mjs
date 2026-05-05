@@ -1615,8 +1615,18 @@ const out = `/* eslint-disable max-len */
     ];
 
     substitutions.forEach(([pattern, replacement]) => {
-      out = out.replace(pattern, match => withMatchCase(match, replacement));
+      out = out.replace(pattern, (match, ...rest) => {
+        const groups = rest.slice(0, -2);
+        const expanded = String(replacement).replace(/\\$(\\d+)/g, (_, groupIndexRaw) => {
+          const groupIndex = Number(groupIndexRaw) - 1;
+          return groups[groupIndex] ?? "";
+        });
+        return withMatchCase(match, expanded);
+      });
     });
+
+    // Clean up legacy literal replacement artifacts left by earlier generator versions.
+    out = out.replace(/\\$(\\d+)/g, "");
 
     return out;
   }

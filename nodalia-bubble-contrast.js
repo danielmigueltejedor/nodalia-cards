@@ -18,10 +18,15 @@
     return entityId.includes(".") ? entityId.split(".")[0] : "";
   }
 
+  const resolveEditorColorValueCache = new Map();
+
   function resolveEditorColorValue(value) {
     const rawValue = String(value ?? "").trim();
     if (!rawValue || typeof document === "undefined") {
       return "";
+    }
+    if (resolveEditorColorValueCache.has(rawValue)) {
+      return resolveEditorColorValueCache.get(rawValue);
     }
 
     const probe = document.createElement("span");
@@ -31,13 +36,16 @@
     probe.style.color = "";
     probe.style.color = rawValue;
     if (!probe.style.color) {
+      resolveEditorColorValueCache.set(rawValue, rawValue);
       return rawValue;
     }
 
     (document.body || document.documentElement).appendChild(probe);
     const resolved = getComputedStyle(probe).color;
     probe.remove();
-    return resolved || rawValue;
+    const result = resolved || rawValue;
+    resolveEditorColorValueCache.set(rawValue, result);
+    return result;
   }
 
   function rgbToHueDegrees(r, g, b) {

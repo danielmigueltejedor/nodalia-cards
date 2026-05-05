@@ -1,16 +1,25 @@
 type: custom:nodalia-graph-card
-name: Humedad
+name: Temperatura
+icon: mdi:thermometer
 entities:
-  - entity: sensor.termostato_dormitorios_humedad
-    name: Dormitorio de Rocio
-    color: "#f29f05"
-  - entity: sensor.termostato_habitaciones_comunes_humedad
+  - entity: sensor.termostato_dormitorios_temperatura
+    name: Dormitorio de Rocío
+    color: "#ffaa00"
+  - entity: sensor.termostato_habitaciones_comunes_temperatura
     name: Pasillo
-    color: "#42a5f5"
+    color: "#ffc677"
+min: 15
+max: 25
+points: 100
 hours_to_show: 24
-points: 48
 show_fill: true
 show_legend: true
+styles:
+  card:
+    padding: 18px
+    gap: 20px
+  icon:
+    size: 20px
 grid_options:
   columns: 12
   rows: 4

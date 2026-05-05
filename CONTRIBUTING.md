@@ -119,6 +119,14 @@ Community help is especially useful for languages other than Spanish and English
 - **`nodalia-i18n.js`**: each locale object is **deep-merged** over **`PACK.en`**, so partially translated packs still expose **every card namespace** (fan, alarm, weather, …). Override strings inside **`PACK.<code>`** as translations are completed.
 - **Visual editors**: **`scripts/gen-editor-ui.mjs`** builds **`nodalia-editor-ui.js`**. Add **`pt` / `ru` / `el` / `zh` / `ro`** next to **`de`** / **`fr`** in **`FULL_LOCALE_BY_EN`** (and **`editor-extra-locale-by-en.json`** when used) for full phrases; compact UI strings use the **`enTo*`** helpers. Then run **`node scripts/gen-editor-ui.mjs`** and **`npm run bundle`**.
 
+### Bundle vs standalone scripts
+
+- **`npm run bundle`** runs **`scripts/sync-standalone-embed.mjs`** then **`scripts/build-bundle.mjs`** and writes **`nodalia-cards.js`**. Module order in **`parts`** matters: **`nodalia-i18n.js`** → **`nodalia-editor-ui.js`** → **`nodalia-utils.js`** → **`nodalia-bubble-contrast.js`** → card files. After changing **`parts`**, or any bundled source, run **`npm run bundle`** again.
+- **`nodalia-utils.js`** attaches **`window.NodaliaUtils`** (shared config stripping, lightweight editor **`hass` signatures**, entity/icon picker mount helpers). It expects **`NodaliaI18n`** from **`nodalia-i18n.js`** for locale-aware signatures.
+- **Normal setup:** one Lovelace resource pointing at **`nodalia-cards.js`** (documented in **`README.md`**).
+- **Standalone single-card JS:** each shipped **`nodalia-*-card.js`** / **`nodalia-navigation-bar.js`** / **`nodalia-media-player.js`** begins with an **inlined copy** of **`nodalia-utils.js`** between **`// <nodalia-standalone-utils>`** and **`// </nodalia-standalone-utils>`**, so **`window.NodaliaUtils`** exists when only that script is loaded. **`build-bundle.mjs`** **strips** that block so **`nodalia-cards.js`** does not duplicate utilities (they come from the **`nodalia-utils.js`** module in **`parts`**). After editing **`nodalia-utils.js`**, run **`npm run bundle`** (or **`node scripts/sync-standalone-embed.mjs`**) so standalone files stay in sync.
+- **Advanced / debugging:** you may still load **`nodalia-utils.js`** once before cards (after **`nodalia-i18n.js`** / **`nodalia-editor-ui.js`**); the utils **`init`** guard skips re-installing when the API is already complete.
+
 ---
 
 ## 🏷️ Releases: `main`, `beta`, and `alpha`
@@ -129,7 +137,7 @@ Three channels keep risk and expectations clear:
 |--------|----------------|------------------|--------------|
 | **`main`** | Everyone | **`v0.4.0`**, **`v0.4.1`**, **`v0.5.0`** (semver **only** stable minors/patches) | **Recommended** for normal dashboards. Only merged when the maintainer is happy to endorse the build widely. |
 | **`beta`** | Testers, early adopters | **`0.5.0-beta.1`**, **`0.5.0-beta.2`**, … (tags **`v0.5.0-beta.1`**, …) | **Pretty usable**; features are exercised but not guaranteed frozen. Promoted from **`alpha`** when a slice of work is **polished enough** (merge or cherry-pick). |
-| **`alpha`** | Developers / brave testers | **`0.5.0-alpha.1`**, **`0.5.0-alpha.2`**, … (tags **`v0.5.0-alpha.1`**, … optional) | **High churn**. Frequent commits; **dashboards may break**. Breaking YAML or behaviour is allowed here. |
+| **`alpha`** | Developers / brave testers | **`0.5.0-alpha.1`**, …, **`0.5.0-alpha.16`**, … (tags **`v0.5.0-alpha.1`**, … optional) | **High churn**. Frequent commits; **dashboards may break**. Breaking YAML or behaviour is allowed here. |
 
 **Promotion flow (typical):** experimental work lands on **`alpha`** → when a feature (or batch) is stable enough, it moves to **`beta`** → when the whole minor is ready, **`beta`** merges to **`main`** as **`v0.5.0`** (example). Avoid merging **`alpha` → `main`** directly if you want **`beta`** to stay the gate for “probably OK for testers”.
 
@@ -150,11 +158,11 @@ Or branch **`alpha`** from **`beta`** if **`beta`** already tracks **`0.5.0-beta
 
 ### Stable **`main`**, then **`beta`**, then ongoing **`alpha` → beta`**
 
-1. **`main` (stable)** — **`package.json`** e.g. **`0.4.0`**, **`CHANGELOG`** **`[0.4.0]`**, **`npm run bundle`**, tag **`v0.4.0`**, GitHub **Release**.
+1. **`main` (stable)** — **`package.json`** e.g. **`0.5.0`**, **`CHANGELOG`** **`[0.5.0]`**, **`npm run bundle`**, tag **`v0.5.0`**, GitHub **Release**.
 
 2. **`beta` (first prerelease of the next minor)** — merge **`main`** into **`beta`**, bump to **`0.5.0-beta.1`**, **`CHANGELOG`** **`## [0.5.0-beta.1]`**, **`npm run bundle`**, tag **`v0.5.0-beta.1`**.
 
-3. **`alpha` (experimental)** — work and tag **`0.5.0-alpha.1`**, **`0.5.0-alpha.2`**, … as often as you like; merge **`alpha` → `beta`** when a feature is **ready for testers**, then bump **`beta`** (**`0.5.0-beta.2`**, **`beta.3`**, …).
+3. **`alpha` (experimental)** — work and tag **`0.5.0-alpha.1`**, **`0.5.0-alpha.2`**, …, **`0.5.0-alpha.16`**, … as often as you like; merge **`alpha` → `beta`** when a feature is **ready for testers**, then bump **`beta`** (**`0.5.0-beta.2`**, **`beta.3`**, …).
 
 4. **Stable minor** — when **`beta`** is release-ready, merge **`beta` → `main`**, set **`0.5.0`**, tag **`v0.5.0`**.
 

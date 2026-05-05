@@ -490,5 +490,22 @@
   "__T__:Respuesta háptica",
   "__T__:Rutas",
   "__T__:Series",
-  "__T__:Visibilidad"
+  "__T__:Visibilidad",
+  "Insignia",
+  "Chip compacto para la barra de insignias: entidad, icono y texto opcionales.",
+  "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+  "Acción al pulsar",
+  "Qué ocurre al tocar la insignia.",
+  "Apariencia",
+  "Tamaños, colores del icono y tinte de la burbuja.",
+  "Mostrar detalles de estilo",
+  "Ocultar detalles de estilo",
+  "Subtitulo",
+  "Subtítulo",
+  "Posicion",
+  "Posición",
+  "Reproductor",
+  "Principal",
+  "Mostrar ajustes de animacion",
+  "Ocultar ajustes de animacion"
 ]

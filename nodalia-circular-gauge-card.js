@@ -1,3 +1,396 @@
+// <nodalia-standalone-utils>
+// Inlined for standalone Lovelace resources (single JS file). Stripped when building nodalia-cards.js.
+// Source of truth: nodalia-utils.js — regenerate: node scripts/sync-standalone-embed.mjs
+/**
+ * Shared helpers for Nodalia cards (deep equality, config stripping, editor mounts).
+ * Loaded early in nodalia-cards.js bundle; exposed as window.NodaliaUtils.
+ */
+(function initNodaliaUtils() {
+  const REQUIRED_API_KEYS = [
+    "isObject",
+    "deepClone",
+    "deepEqual",
+    "stripEqualToDefaults",
+    "editorStatesSignature",
+    "editorFilteredStatesSignature",
+    "sanitizeActionUrl",
+    "mountEntityPickerHost",
+    "mountIconPickerHost",
+  ];
+  const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
+  if (
+    existing &&
+    REQUIRED_API_KEYS.every(key => typeof existing[key] === "function")
+  ) {
+    return;
+  }
+
+  function isObject(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function deepClone(value) {
+    if (value === undefined) {
+      return undefined;
+    }
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function deepEqual(a, b) {
+    if (Object.is(a, b)) {
+      return true;
+    }
+    if (a == null || b == null) {
+      return a === b;
+    }
+    if (typeof a !== typeof b) {
+      return false;
+    }
+    if (typeof a !== "object") {
+      return false;
+    }
+    if (Array.isArray(a)) {
+      if (!Array.isArray(b) || a.length !== b.length) {
+        return false;
+      }
+      return a.every((value, index) => deepEqual(value, b[index]));
+    }
+    if (Array.isArray(b)) {
+      return false;
+    }
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) {
+      return false;
+    }
+    return keysA.every(key => deepEqual(a[key], b[key]));
+  }
+
+  function stripEqualToDefaults(config, defaults) {
+    if (defaults === undefined || defaults === null) {
+      return deepClone(config);
+    }
+    if (config === undefined || config === null) {
+      return undefined;
+    }
+    if (Array.isArray(config)) {
+      return deepEqual(config, defaults) ? undefined : deepClone(config);
+    }
+    if (isObject(config) && isObject(defaults)) {
+      const out = {};
+      for (const key of Object.keys(config)) {
+        const cv = config[key];
+        const dv = defaults[key];
+        if (!(key in defaults)) {
+          out[key] = deepClone(cv);
+          continue;
+        }
+        if (deepEqual(cv, dv)) {
+          continue;
+        }
+        if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
+          const stripped = stripEqualToDefaults(cv, dv);
+          if (stripped !== undefined) {
+            out[key] = stripped;
+          }
+        } else {
+          out[key] = deepClone(cv);
+        }
+      }
+      return Object.keys(out).length ? out : undefined;
+    }
+    return deepEqual(config, defaults) ? undefined : config;
+  }
+
+  /**
+   * Signature for entities matching predicate(entityId): id + friendly_name + icon per row,
+   * so picker labels update when attributes change. Same locale prefix as editorStatesSignature.
+   */
+  function editorFilteredStatesSignature(hass, language, predicate) {
+    const states = hass?.states || {};
+    const rows = [];
+    for (const id of Object.keys(states)) {
+      if (!predicate(id)) {
+        continue;
+      }
+      const state = states[id];
+      rows.push(
+        `${id}:${String(state?.attributes?.friendly_name ?? "")}:${String(state?.attributes?.icon ?? "")}`,
+      );
+    }
+    rows.sort((left, right) => {
+      const idLeft = left.split(":")[0];
+      const idRight = right.split(":")[0];
+      return idLeft.localeCompare(idRight, "es", { sensitivity: "base" });
+    });
+    const tag =
+      typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
+        ? window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language))
+        : "";
+    return `${tag}|${rows.join("|")}`;
+  }
+
+  /**
+   * Full hass.states signature: every entity as id + friendly_name + icon (sorted by id),
+   * plus locale tag — same shape as editorFilteredStatesSignature. Editors that list entities
+   * re-render when labels or icons change, not only when the entity count changes.
+   */
+  function editorStatesSignature(hass, language) {
+    return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Normalize and validate user-provided action URLs.
+   * Allows http/https and same-origin relative paths by default.
+   */
+  function sanitizeActionUrl(value, options = {}) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    const allowRelative = options.allowRelative !== false;
+    const allowHash = options.allowHash === true;
+    if (allowHash && raw.startsWith("#")) {
+      return raw;
+    }
+    if (allowRelative && (/^\/(?!\/)/.test(raw) || raw.startsWith("./") || raw.startsWith("../"))) {
+      return raw;
+    }
+    try {
+      const base =
+        typeof window !== "undefined" && window.location
+          ? window.location.origin
+          : "https://example.invalid";
+      const parsed = new URL(raw, base);
+      const protocol = String(parsed.protocol || "").toLowerCase();
+      if (protocol !== "http:" && protocol !== "https:") {
+        return "";
+      }
+      if (allowRelative && typeof window !== "undefined" && window.location && parsed.origin === window.location.origin) {
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+      return parsed.toString();
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  function copyDatasetExcept(control, host, skipKeys) {
+    const skip = new Set(skipKeys || []);
+    Object.entries(host.dataset || {}).forEach(([key, value]) => {
+      if (skip.has(key)) {
+        return;
+      }
+      control.dataset[key] = value;
+    });
+  }
+
+  /** Latest callbacks for reused picker controls (listeners call into this). */
+  const pickerCallbackState = new WeakMap();
+  const pickerControlsWithListeners = new WeakSet();
+
+  function dispatchPickerChange(ev) {
+    const control = ev.currentTarget;
+    const s = pickerCallbackState.get(control);
+    if (s && typeof s.onShadowInput === "function") {
+      s.onShadowInput(ev);
+    }
+  }
+
+  function dispatchPickerValueChanged(ev) {
+    const control = ev.currentTarget;
+    const s = pickerCallbackState.get(control);
+    if (!s) {
+      return;
+    }
+    const fn = s.onShadowValueChanged || s.onShadowInput;
+    if (typeof fn === "function") {
+      fn(ev);
+    }
+  }
+
+  /**
+   * Mount or update ha-entity-picker / ha-selector / text input without recreating each render.
+   */
+  function mountEntityPickerHost(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const hass = options.hass;
+    const field = options.field || host.dataset.field || "entity";
+    const nextValue = options.value !== undefined ? String(options.value) : String(host.dataset.value || "");
+    const placeholder =
+      options.placeholder !== undefined ? String(options.placeholder) : String(host.dataset.placeholder || "");
+    const onShadowInput = options.onShadowInput;
+    const onShadowValueChanged = options.onShadowValueChanged;
+    const copyDatasetFromHost = options.copyDatasetFromHost !== false;
+
+    const usePicker = typeof customElements !== "undefined" && customElements.get("ha-entity-picker");
+    const useSelector = typeof customElements !== "undefined" && customElements.get("ha-selector");
+
+    let desired = "input";
+    if (usePicker) {
+      desired = "picker";
+    } else if (useSelector) {
+      desired = "selector";
+    }
+
+    let control = host.firstElementChild;
+    const tag = control?.tagName || "";
+    const matches =
+      control &&
+      ((desired === "picker" && tag === "HA-ENTITY-PICKER")
+        || (desired === "selector" && tag === "HA-SELECTOR")
+        || (desired === "input" && tag === "INPUT"));
+
+    if (!matches) {
+      host.replaceChildren();
+      if (usePicker) {
+        control = document.createElement("ha-entity-picker");
+        control.allowCustomEntity = true;
+      } else if (useSelector) {
+        control = document.createElement("ha-selector");
+        control.selector = { entity: {} };
+      } else {
+        control = document.createElement("input");
+        control.type = "text";
+      }
+
+      control.dataset.field = field;
+      if (copyDatasetFromHost) {
+        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder", "field"]);
+      }
+
+      if ("hass" in control) {
+        control.hass = hass;
+      }
+      if ("value" in control) {
+        control.value = nextValue;
+      }
+      if (placeholder && "placeholder" in control) {
+        control.placeholder = placeholder;
+      }
+
+      pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+      if (!pickerControlsWithListeners.has(control)) {
+        pickerControlsWithListeners.add(control);
+        if (control.tagName === "INPUT") {
+          control.addEventListener("change", dispatchPickerChange);
+        } else {
+          control.addEventListener("value-changed", dispatchPickerValueChanged);
+        }
+      }
+
+      host.appendChild(control);
+      return;
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+    pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+    if ("hass" in control) {
+      control.hass = hass;
+    }
+    if (placeholder && "placeholder" in control) {
+      control.placeholder = placeholder;
+    }
+    if ("value" in control && control.value !== nextValue) {
+      control.value = nextValue;
+    }
+  }
+
+  /**
+   * Mount or update ha-icon-picker / text input without recreating each render.
+   */
+  function mountIconPickerHost(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const hass = options.hass;
+    const nextValue = options.value !== undefined ? String(options.value) : String(host.dataset.value || "");
+    const placeholder = options.placeholder !== undefined ? options.placeholder : host.dataset.placeholder || "";
+    const onShadowInput = options.onShadowInput;
+    const onShadowValueChanged = options.onShadowValueChanged;
+    const copyDatasetFromHost = options.copyDatasetFromHost !== false;
+
+    const useIconPicker = typeof customElements !== "undefined" && customElements.get("ha-icon-picker");
+
+    let desired = useIconPicker ? "icon" : "input";
+    let control = host.firstElementChild;
+    const tag = control?.tagName || "";
+    const matches =
+      control && ((desired === "icon" && tag === "HA-ICON-PICKER") || (desired === "input" && tag === "INPUT"));
+
+    if (!matches) {
+      host.replaceChildren();
+      if (useIconPicker) {
+        control = document.createElement("ha-icon-picker");
+      } else {
+        control = document.createElement("input");
+        control.type = "text";
+      }
+
+      if (copyDatasetFromHost) {
+        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder", "field"]);
+      }
+
+      if ("hass" in control) {
+        control.hass = hass;
+      }
+      if (placeholder && "placeholder" in control) {
+        control.placeholder = placeholder;
+      }
+      if ("value" in control) {
+        control.value = nextValue;
+      }
+
+      pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+      if (!pickerControlsWithListeners.has(control)) {
+        pickerControlsWithListeners.add(control);
+        if (control.tagName === "INPUT") {
+          control.addEventListener("change", dispatchPickerChange);
+        } else {
+          control.addEventListener("value-changed", dispatchPickerValueChanged);
+        }
+      }
+
+      host.appendChild(control);
+      return;
+    }
+
+    pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+    if ("hass" in control) {
+      control.hass = hass;
+    }
+    if (placeholder && "placeholder" in control) {
+      control.placeholder = placeholder;
+    }
+    if ("value" in control && control.value !== nextValue) {
+      control.value = nextValue;
+    }
+  }
+
+  const api = {
+    isObject,
+    deepClone,
+    deepEqual,
+    stripEqualToDefaults,
+    editorStatesSignature,
+    editorFilteredStatesSignature,
+    sanitizeActionUrl,
+    mountEntityPickerHost,
+    mountIconPickerHost,
+  };
+
+  if (typeof window !== "undefined") {
+    window.NodaliaUtils = api;
+  }
+})();
+
+// </nodalia-standalone-utils>
+
 const CARD_TAG = "nodalia-circular-gauge-card";
 const EDITOR_TAG = "nodalia-circular-gauge-card-editor";
 const CARD_VERSION = "0.12.1";
@@ -203,71 +596,6 @@ function compactConfig(value) {
   return value;
 }
 
-function deepEqual(a, b) {
-  if (Object.is(a, b)) {
-    return true;
-  }
-  if (a == null || b == null) {
-    return a === b;
-  }
-  if (typeof a !== typeof b) {
-    return false;
-  }
-  if (typeof a !== "object") {
-    return false;
-  }
-  if (Array.isArray(a)) {
-    if (!Array.isArray(b) || a.length !== b.length) {
-      return false;
-    }
-    return a.every((value, index) => deepEqual(value, b[index]));
-  }
-  if (Array.isArray(b)) {
-    return false;
-  }
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-  if (keysA.length !== keysB.length) {
-    return false;
-  }
-  return keysA.every(key => deepEqual(a[key], b[key]));
-}
-
-function stripEqualToDefaults(config, defaults) {
-  if (defaults === undefined || defaults === null) {
-    return deepClone(config);
-  }
-  if (config === undefined || config === null) {
-    return undefined;
-  }
-  if (Array.isArray(config)) {
-    return deepEqual(config, defaults) ? undefined : deepClone(config);
-  }
-  if (isObject(config) && isObject(defaults)) {
-    const out = {};
-    for (const key of Object.keys(config)) {
-      const cv = config[key];
-      const dv = defaults[key];
-      if (!(key in defaults)) {
-        out[key] = deepClone(cv);
-        continue;
-      }
-      if (deepEqual(cv, dv)) {
-        continue;
-      }
-      if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
-        const stripped = stripEqualToDefaults(cv, dv);
-        if (stripped !== undefined) {
-          out[key] = stripped;
-        }
-      } else {
-        out[key] = deepClone(cv);
-      }
-    }
-    return Object.keys(out).length ? out : undefined;
-  }
-  return deepEqual(config, defaults) ? undefined : config;
-}
 
 function setByPath(target, path, value) {
   const parts = path.split(".");
@@ -323,6 +651,57 @@ function escapeSelectorValue(value) {
   }
 
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
+function sanitizeCssValue(value, fallback) {
+  const raw = String(value ?? "").trim();
+  const safeFallback = String(fallback ?? "").trim();
+  if (!raw) {
+    return safeFallback;
+  }
+  if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+    return safeFallback;
+  }
+  return raw;
+}
+
+function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
+  const defaults = DEFAULT_CONFIG.styles;
+  const card = styles?.card || {};
+  const icon = styles?.icon || {};
+  const gauge = styles?.gauge || {};
+  return {
+    card: {
+      background: sanitizeCssValue(card.background, defaults.card.background),
+      border: sanitizeCssValue(card.border, defaults.card.border),
+      border_radius: sanitizeCssValue(card.border_radius, defaults.card.border_radius),
+      box_shadow: sanitizeCssValue(card.box_shadow, defaults.card.box_shadow),
+      padding: sanitizeCssValue(card.padding, defaults.card.padding),
+      gap: sanitizeCssValue(card.gap, defaults.card.gap),
+    },
+    icon: {
+      size: sanitizeCssValue(icon.size, defaults.icon.size),
+      background: sanitizeCssValue(icon.background, defaults.icon.background),
+      color: sanitizeCssValue(icon.color, defaults.icon.color),
+    },
+    chip_height: sanitizeCssValue(styles?.chip_height, defaults.chip_height),
+    chip_font_size: sanitizeCssValue(styles?.chip_font_size, defaults.chip_font_size),
+    chip_padding: sanitizeCssValue(styles?.chip_padding, defaults.chip_padding),
+    title_size: sanitizeCssValue(styles?.title_size, defaults.title_size),
+    value_size: sanitizeCssValue(styles?.value_size, defaults.value_size),
+    range_size: sanitizeCssValue(styles?.range_size, defaults.range_size),
+    name_chip_max_width: sanitizeCssValue(styles?.name_chip_max_width, defaults.name_chip_max_width),
+    gauge: {
+      size: sanitizeCssValue(gauge.size, defaults.gauge.size),
+      stroke: sanitizeCssValue(gauge.stroke, defaults.gauge.stroke),
+      thumb_size: sanitizeCssValue(gauge.thumb_size, defaults.gauge.thumb_size),
+      track_color: sanitizeCssValue(gauge.track_color, defaults.gauge.track_color),
+      background: sanitizeCssValue(gauge.background, defaults.gauge.background),
+      min_tint_color: sanitizeCssValue(gauge.min_tint_color, defaults.gauge.min_tint_color),
+      max_tint_color: sanitizeCssValue(gauge.max_tint_color, defaults.gauge.max_tint_color),
+      foreground_color: sanitizeCssValue(gauge.foreground_color, defaults.gauge.foreground_color),
+    },
+  };
 }
 
 function resolveEditorColorValue(value) {
@@ -1111,7 +1490,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const styles = config.styles || DEFAULT_CONFIG.styles;
+    const styles = getSafeStyles(config.styles);
     const state = this._getState();
 
     if (!state) {
@@ -1132,7 +1511,8 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const dialAngle = DIAL_START_ANGLE + (ratio * DIAL_SWEEP);
     const thumbPosition = getDialMarkerPosition(dialAngle);
     const dialStartCoordinates = getDialMarkerCoordinates(DIAL_START_ANGLE);
-    const dialStartCapColor = String(styles.gauge.foreground_color || "").trim() || resolveGaugeTintColor(tintScale, 0.02);
+    const dialStartCapColor =
+      sanitizeCssValue(styles.gauge.foreground_color, "") || resolveGaugeTintColor(tintScale, 0.02);
     const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
     const showHeader = config.show_header !== false;
     const showName = config.show_name !== false;
@@ -1778,7 +2158,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
                       cx="${DIAL_VIEWBOX_SIZE / 2}"
                       cy="${DIAL_VIEWBOX_SIZE / 2}"
                       r="${DIAL_CIRCLE_RADIUS}"
-                      style="stroke:${segment.color};stroke-dasharray:${segment.dasharray};stroke-dashoffset:${segment.dashoffset};opacity:${segment.opacity};"
+                      style="stroke:${sanitizeCssValue(segment.color, styles.gauge.max_tint_color)};stroke-dasharray:${segment.dasharray};stroke-dashoffset:${segment.dashoffset};opacity:${segment.opacity};"
                     ></circle>
                   `)
                   .join("")}
@@ -1788,7 +2168,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
                   cx="${dialStartCoordinates.x}"
                   cy="${dialStartCoordinates.y}"
                   r="${Number((dialStrokePx / 2).toFixed(3))}"
-                  style="fill:${dialStartCapColor};"
+                  style="fill:${sanitizeCssValue(dialStartCapColor, styles.gauge.max_tint_color)};"
                 ></circle>
               </svg>
               <span class="gauge-card__dial-thumb" aria-hidden="true"></span>
@@ -1956,15 +2336,9 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    return Object.entries(hass?.states || {})
-      .filter(([entityId]) => (
-        entityId.startsWith("sensor.")
-        || entityId.startsWith("number.")
-        || entityId.startsWith("input_number.")
-      ))
-      .map(([entityId, state]) => `${entityId}:${String(state?.attributes?.friendly_name || "")}:${String(state?.attributes?.icon || "")}`)
-      .sort((left, right) => left.localeCompare(right, "es", { sensitivity: "base" }))
-      .join("|");
+    return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, id =>
+      id.startsWith("sensor.") || id.startsWith("number.") || id.startsWith("input_number."),
+    );
   }
 
   _getNumericEntityOptions() {
@@ -2080,7 +2454,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 
