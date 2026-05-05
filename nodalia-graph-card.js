@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.17";
+const CARD_VERSION = "0.12.18";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1825,7 +1825,7 @@ class NodaliaGraphCard extends HTMLElement {
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const shouldAnimateChart = animations.enabled && (shouldAnimateEntrance || this._animateChartOnNextRender);
-    const anchorXPct = graphChartXToPercent(hover.x, chart);
+    const anchorXPct = hover ? graphChartXToPercent(hover.x, chart) : 0;
     const tooltipMarkup = hover
       ? `
         <div

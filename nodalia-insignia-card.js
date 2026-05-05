@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "0.2.5";
+const CARD_VERSION = "0.2.6";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -892,6 +892,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           overflow: visible;
           width: auto;
           min-height: min-content;
+          transform: translateY(var(--insignia-icon-only-row-nudge, -2px));
           padding-block: var(
             --insignia-scroll-strip-padding-block,
             var(--insignia-scroll-strip-margin-block, 4px)

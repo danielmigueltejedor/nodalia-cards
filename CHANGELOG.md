@@ -10,6 +10,15 @@ Work toward **`0.5.x`** on **`alpha`** / **`beta`** and eventual **`main`**: **P
 
 ---
 
+## [0.5.0-alpha.6] - 2026-05-05
+
+Sixth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.6`** (tag **`v0.5.0-alpha.6`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Graph card** (`0.12.18`): **Tooltip** — no evaluar **`hover.x`** cuando no hay hover (**`null`**), evitando **`null is not an object (evaluating 'hover.x')`** en la tarjeta.
+- **Insignia card** (`0.2.6`): modo **solo icono** — corrección fina en fila con otras insignias: **`transform: translateY`** en **`:host([data-icon-only])`** con variable **`--insignia-icon-only-row-nudge`** (por defecto **`-2px`**).
+
+---
+
 ## [0.5.0-alpha.5] - 2026-05-05
 
 Fifth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.5`** (tag **`v0.5.0-alpha.5`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.

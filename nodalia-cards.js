@@ -14618,7 +14618,21 @@
  * Loaded early in nodalia-cards.js bundle; exposed as window.NodaliaUtils.
  */
 (function initNodaliaUtils() {
-  if (typeof window !== "undefined" && window.NodaliaUtils?.stripEqualToDefaults && window.NodaliaUtils?.deepEqual) {
+  const REQUIRED_API_KEYS = [
+    "isObject",
+    "deepClone",
+    "deepEqual",
+    "stripEqualToDefaults",
+    "editorStatesSignature",
+    "editorFilteredStatesSignature",
+    "mountEntityPickerHost",
+    "mountIconPickerHost",
+  ];
+  const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
+  if (
+    existing &&
+    REQUIRED_API_KEYS.every(key => typeof existing[key] === "function")
+  ) {
     return;
   }
 
@@ -14713,21 +14727,31 @@
   }
 
   /**
-   * Count entities matching predicate(entityId); same locale prefix as editorStatesSignature.
+   * Signature for entities matching predicate(entityId): id + friendly_name + icon per row,
+   * so picker labels update when attributes change. Same locale prefix as editorStatesSignature.
    */
   function editorFilteredStatesSignature(hass, language, predicate) {
     const states = hass?.states || {};
-    let n = 0;
+    const rows = [];
     for (const id of Object.keys(states)) {
-      if (predicate(id)) {
-        n += 1;
+      if (!predicate(id)) {
+        continue;
       }
+      const state = states[id];
+      rows.push(
+        `${id}:${String(state?.attributes?.friendly_name ?? "")}:${String(state?.attributes?.icon ?? "")}`,
+      );
     }
+    rows.sort((left, right) => {
+      const idLeft = left.split(":")[0];
+      const idRight = right.split(":")[0];
+      return idLeft.localeCompare(idRight, "es", { sensitivity: "base" });
+    });
     const tag =
       typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
         ? window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language))
         : "";
-    return `${tag}|${n}`;
+    return `${tag}|${rows.join("|")}`;
   }
 
   function copyDatasetExcept(control, host, skipKeys) {
@@ -42255,7 +42279,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.17";
+const CARD_VERSION = "0.12.18";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -44080,7 +44104,7 @@ class NodaliaGraphCard extends HTMLElement {
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const shouldAnimateChart = animations.enabled && (shouldAnimateEntrance || this._animateChartOnNextRender);
-    const anchorXPct = graphChartXToPercent(hover.x, chart);
+    const anchorXPct = hover ? graphChartXToPercent(hover.x, chart) : 0;
     const tooltipMarkup = hover
       ? `
         <div
@@ -72671,7 +72695,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "0.2.5";
+const CARD_VERSION = "0.2.6";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -73563,6 +73587,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           overflow: visible;
           width: auto;
           min-height: min-content;
+          transform: translateY(var(--insignia-icon-only-row-nudge, -2px));
           padding-block: var(
             --insignia-scroll-strip-padding-block,
             var(--insignia-scroll-strip-margin-block, 4px)
@@ -85166,4 +85191,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0-alpha.5","contentSha256_12":"8b6e4788a7ca"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0-alpha.6","contentSha256_12":"70136d5d2f52"};}

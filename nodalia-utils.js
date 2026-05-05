@@ -3,7 +3,21 @@
  * Loaded early in nodalia-cards.js bundle; exposed as window.NodaliaUtils.
  */
 (function initNodaliaUtils() {
-  if (typeof window !== "undefined" && window.NodaliaUtils?.stripEqualToDefaults && window.NodaliaUtils?.deepEqual) {
+  const REQUIRED_API_KEYS = [
+    "isObject",
+    "deepClone",
+    "deepEqual",
+    "stripEqualToDefaults",
+    "editorStatesSignature",
+    "editorFilteredStatesSignature",
+    "mountEntityPickerHost",
+    "mountIconPickerHost",
+  ];
+  const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
+  if (
+    existing &&
+    REQUIRED_API_KEYS.every(key => typeof existing[key] === "function")
+  ) {
     return;
   }
 
@@ -98,21 +112,31 @@
   }
 
   /**
-   * Count entities matching predicate(entityId); same locale prefix as editorStatesSignature.
+   * Signature for entities matching predicate(entityId): id + friendly_name + icon per row,
+   * so picker labels update when attributes change. Same locale prefix as editorStatesSignature.
    */
   function editorFilteredStatesSignature(hass, language, predicate) {
     const states = hass?.states || {};
-    let n = 0;
+    const rows = [];
     for (const id of Object.keys(states)) {
-      if (predicate(id)) {
-        n += 1;
+      if (!predicate(id)) {
+        continue;
       }
+      const state = states[id];
+      rows.push(
+        `${id}:${String(state?.attributes?.friendly_name ?? "")}:${String(state?.attributes?.icon ?? "")}`,
+      );
     }
+    rows.sort((left, right) => {
+      const idLeft = left.split(":")[0];
+      const idRight = right.split(":")[0];
+      return idLeft.localeCompare(idRight, "es", { sensitivity: "base" });
+    });
     const tag =
       typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
         ? window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language))
         : "";
-    return `${tag}|${n}`;
+    return `${tag}|${rows.join("|")}`;
   }
 
   function copyDatasetExcept(control, host, skipKeys) {
