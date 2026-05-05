@@ -10,6 +10,12 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.14] - 2026-05-06
+
+Fourteenth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.14`** (tag **`v1.0.0-alpha.14`** optional).
+
+---
+
 ## [1.0.0-alpha.13] - 2026-05-06
 
 Thirteenth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.13`** (tag **`v1.0.0-alpha.13`** optional).

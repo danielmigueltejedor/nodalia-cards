@@ -77256,4 +77256,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.13","contentSha256_12":"f40591b5abc0"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.13 (f40591b5abc0) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.14","contentSha256_12":"f40591b5abc0"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.14 (f40591b5abc0) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.13";
+const CARD_VERSION = "1.0.0-alpha.14";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 
 const VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
