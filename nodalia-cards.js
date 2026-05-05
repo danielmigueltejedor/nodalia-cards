@@ -71157,6 +71157,7 @@
       this._lastRenderSignature = "";
       this._calendarEntrancePlayed = false;
       this._expandedOpen = false;
+      this._expandedMonthDayKey = "";
       this._completeExitKeys = /* @__PURE__ */ new Set();
       this._completeExitTimers = /* @__PURE__ */ new Map();
       this._onShadowClick = this._onShadowClick.bind(this);
@@ -71387,6 +71388,71 @@
       }
       return this._getCalendarEntityLabel(entityId);
     }
+    _getCalendarTintDotCss(entityId) {
+      const tint = sanitizeCalendarTint(this._getCalendarEntry(entityId).tint);
+      return tint || "var(--primary-color)";
+    }
+    _capitalizeFirst(text) {
+      const s = String(text ?? "").trim();
+      if (!s) {
+        return "";
+      }
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+    _renderExpandedMonthDayDetail(events, focusDate, config, locale) {
+      const sorted = [...events].sort((left, right) => {
+        const a = eventDate(left?.start)?.getTime() || 0;
+        const b = eventDate(right?.start)?.getTime() || 0;
+        return a - b;
+      });
+      const longTitle = this._capitalizeFirst(
+        new Intl.DateTimeFormat(locale, {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric"
+        }).format(focusDate)
+      );
+      if (!sorted.length) {
+        return `
+        <div class="calendar-expanded__day-detail">
+          <div class="calendar-expanded__day-detail-toolbar">
+            <button type="button" class="calendar-expanded__day-back" data-action="month-day-back">
+              <ha-icon icon="mdi:chevron-left"></ha-icon>
+              <span>Mes</span>
+            </button>
+          </div>
+          <div class="calendar-expanded__day-detail-title">${escapeHtml17(longTitle)}</div>
+          <div class="calendar-expanded__day-empty">Sin eventos este día.</div>
+        </div>
+      `;
+      }
+      const first = sorted[0];
+      const rest = sorted.slice(1);
+      const dotsHtml = rest.map((ev) => {
+        const tint = this._getCalendarTintDotCss(ev._entity);
+        const summary = String(ev.summary || ev.message || "").trim();
+        const hint = summary || this._getEventSubtitleForDisplay(ev._entity);
+        return `<span class="calendar-expanded__day-dot" style="--cal-dot:${escapeHtml17(tint)}" title="${escapeHtml17(hint)}"></span>`;
+      }).join("");
+      const restHtml = rest.map((ev) => this._renderSingleEventHtml(ev, config, locale)).join("");
+      return `
+      <div class="calendar-expanded__day-detail">
+        <div class="calendar-expanded__day-detail-toolbar">
+          <button type="button" class="calendar-expanded__day-back" data-action="month-day-back">
+            <ha-icon icon="mdi:chevron-left"></ha-icon>
+            <span>Mes</span>
+          </button>
+        </div>
+        <div class="calendar-expanded__day-detail-title">${escapeHtml17(longTitle)}</div>
+        <div class="calendar-expanded__day-detail-hero">
+          ${this._renderSingleEventHtml(first, config, locale)}
+        </div>
+        ${rest.length ? `<div class="calendar-expanded__day-detail-dots" aria-label="Más eventos este día">${dotsHtml}</div>` : ""}
+        ${rest.length ? `<div class="calendar-expanded__day-detail-rest">${restHtml}</div>` : ""}
+      </div>
+    `;
+    }
     _expandedLayoutKind(timeRange) {
       const tr = timeRange || DEFAULT_CONFIG17.time_range;
       if (tr === "3d") {
@@ -71464,6 +71530,19 @@
         while (cells.length % 7 !== 0) {
           cells.push({ kind: "pad" });
         }
+        if (this._expandedMonthDayKey) {
+          const group = map.get(this._expandedMonthDayKey);
+          const rawParts = String(this._expandedMonthDayKey).split("-");
+          const py = Number(rawParts[0]);
+          const pm = Number(rawParts[1]);
+          const pd = Number(rawParts[2]);
+          if (Number.isFinite(py) && Number.isFinite(pm) && Number.isFinite(pd) && py === y && pm === m && rawParts.length === 3) {
+            const focusDate = new Date(py, pm, pd);
+            const dayEvents = Array.isArray(group?.events) ? group.events : [];
+            return this._renderExpandedMonthDayDetail(dayEvents, focusDate, config, locale);
+          }
+          this._expandedMonthDayKey = "";
+        }
         return `
         <div class="calendar-expanded__month">
           <div class="calendar-expanded__month-banner">${escapeHtml17(title)}</div>
@@ -71480,7 +71559,13 @@
           const key = `${cell.date.getFullYear()}-${cell.date.getMonth()}-${cell.date.getDate()}`;
           const group = map.get(key);
           return `
-                      <div class="calendar-expanded__month-cell">
+                      <div
+                        class="calendar-expanded__month-cell calendar-expanded__month-cell--day"
+                        data-action="open-month-day"
+                        data-day-key="${escapeHtml17(key)}"
+                        role="button"
+                        tabindex="0"
+                      >
                         <div class="calendar-expanded__month-daynum">${cell.day}</div>
                         <div class="calendar-expanded__month-events">
                           ${group ? group.events.map((ev) => this._renderSingleEventHtml(ev, config, locale, { compact: true })).join("") : ""}
@@ -71601,6 +71686,7 @@
         eventKeys,
         completedSig,
         this._expandedOpen ? "1" : "0",
+        this._expandedMonthDayKey || "",
         [...this._completeExitKeys].sort().join("|")
       ].join("");
     }
@@ -72142,6 +72228,7 @@
         }
         .calendar-expanded__month {
           --cal-month-cell-min: 88px;
+          --cal-month-cell-h: 122px;
           --cal-month-gap: 6px;
         }
         .calendar-expanded__month-matrix-wrap {
@@ -72175,18 +72262,20 @@
         .calendar-expanded__month-grid {
           display: grid;
           gap: var(--cal-month-gap);
+          grid-auto-rows: var(--cal-month-cell-h, 122px);
           grid-template-columns: repeat(7, minmax(var(--cal-month-cell-min), 1fr));
         }
         .calendar-expanded__month-cell {
           background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 14px;
+          box-sizing: border-box;
           display: flex;
-          flex: 1 1 auto;
           flex-direction: column;
           gap: 4px;
-          max-height: 122px;
-          min-height: 96px;
+          height: 100%;
+          max-height: var(--cal-month-cell-h, 122px);
+          min-height: 0;
           min-width: 0;
           overflow: hidden;
           padding: 6px;
@@ -72194,6 +72283,7 @@
         .calendar-expanded__month-cell--pad {
           background: transparent;
           border-color: transparent;
+          height: auto;
           max-height: none;
           min-height: 0;
           padding: 0;
@@ -72207,16 +72297,21 @@
         }
         .calendar-expanded__month-events {
           display: flex;
-          flex: 1 1 auto;
+          flex: 1 1 0;
           flex-direction: column;
           gap: 6px;
-          max-height: 4.75rem;
           min-height: 0;
           overflow-x: hidden;
           overflow-y: auto;
-          overscroll-behavior: contain;
+          overscroll-behavior-y: contain;
           touch-action: pan-y;
           -webkit-overflow-scrolling: touch;
+        }
+        .calendar-expanded__month-events > .calendar-event {
+          flex-shrink: 0;
+        }
+        .calendar-expanded__month-events .calendar-event--compact {
+          min-height: unset;
         }
         .calendar-expanded__month-events .calendar-event--compact .calendar-event__summary {
           line-height: 1.25;
@@ -72228,6 +72323,91 @@
           line-height: 1.2;
           margin-top: 2px;
           opacity: 0.85;
+        }
+        .calendar-expanded__month-cell--day {
+          -webkit-tap-highlight-color: transparent;
+          cursor: pointer;
+        }
+        .calendar-expanded__month-cell--day:focus-visible {
+          outline: 2px solid color-mix(in srgb, var(--primary-color) 55%, transparent);
+          outline-offset: 2px;
+        }
+        .calendar-expanded__day-detail {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          min-height: 0;
+        }
+        .calendar-expanded__day-detail-toolbar {
+          display: flex;
+          justify-content: flex-start;
+        }
+        .calendar-expanded__day-back {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          gap: 4px;
+          font: inherit;
+          font-size: 13px;
+          font-weight: 700;
+          min-height: 36px;
+          padding: 0 12px 0 8px;
+        }
+        .calendar-expanded__day-back ha-icon {
+          --mdc-icon-size: 20px;
+          margin-left: -2px;
+        }
+        .calendar-expanded__day-detail-title {
+          font-size: ${styles.title_size};
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          line-height: 1.2;
+          text-transform: capitalize;
+        }
+        .calendar-expanded__day-detail-hero .calendar-event {
+          grid-template-columns: auto 1fr auto;
+          min-height: 46px;
+        }
+        .calendar-expanded__day-detail-dots {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: center;
+          padding: 4px 0 2px;
+        }
+        .calendar-expanded__day-dot {
+          background: var(--cal-dot, var(--primary-color));
+          border-radius: 999px;
+          box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
+            0 2px 6px rgba(0, 0, 0, 0.12);
+          flex: 0 0 auto;
+          height: 10px;
+          width: 10px;
+        }
+        .calendar-expanded__day-detail-rest {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          max-height: min(46vh, 420px);
+          min-height: 0;
+          overflow-x: hidden;
+          overflow-y: auto;
+          overscroll-behavior-y: contain;
+          padding-right: 2px;
+          touch-action: pan-y;
+          -webkit-overflow-scrolling: touch;
+        }
+        .calendar-expanded__day-empty {
+          color: var(--secondary-text-color);
+          font-size: ${styles.event_size};
+          line-height: 1.45;
+          padding: 12px 4px;
         }
         @media (max-width: 520px) {
           .calendar-expanded__month {
@@ -72270,12 +72450,34 @@
     `;
     }
     _onShadowKeydown(event) {
-      if (event.key !== "Escape" || !this._expandedOpen) {
+      if (!this._expandedOpen) {
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        if (this._expandedMonthDayKey) {
+          this._expandedMonthDayKey = "";
+          this._renderIfChanged(true);
+          return;
+        }
+        this._expandedOpen = false;
+        this._renderIfChanged(true);
+        return;
+      }
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+      const path = event.composedPath();
+      const monthDayCell = path.find(
+        (node) => node instanceof HTMLElement && node.dataset?.action === "open-month-day" && node.classList?.contains("calendar-expanded__month-cell--day")
+      );
+      if (!(monthDayCell instanceof HTMLElement)) {
         return;
       }
       event.preventDefault();
       event.stopPropagation();
-      this._expandedOpen = false;
+      this._expandedMonthDayKey = monthDayCell.dataset.dayKey || "";
       this._renderIfChanged(true);
     }
     _onShadowClick(event) {
@@ -72295,7 +72497,28 @@
       if (closeAction) {
         event.preventDefault();
         event.stopPropagation();
+        this._expandedMonthDayKey = "";
         this._expandedOpen = false;
+        this._renderIfChanged(true);
+        return;
+      }
+      const monthDayBack = path.find(
+        (node) => node instanceof HTMLElement && node.dataset?.action === "month-day-back"
+      );
+      if (monthDayBack && this._expandedOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._expandedMonthDayKey = "";
+        this._renderIfChanged(true);
+        return;
+      }
+      const monthDayOpen = path.find(
+        (node) => node instanceof HTMLElement && node.dataset?.action === "open-month-day" && node.classList?.contains("calendar-expanded__month-cell--day")
+      );
+      if (monthDayOpen instanceof HTMLElement && this._expandedOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._expandedMonthDayKey = monthDayOpen.dataset.dayKey || "";
         this._renderIfChanged(true);
         return;
       }
@@ -72311,6 +72534,7 @@
       }
       event.preventDefault();
       event.stopPropagation();
+      this._expandedMonthDayKey = "";
       this._expandedOpen = true;
       this._renderIfChanged(true);
     }
@@ -77032,4 +77256,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.11","contentSha256_12":"893120824908"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.11 (893120824908) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.13","contentSha256_12":"f40591b5abc0"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.13 (f40591b5abc0) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}

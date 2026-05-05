@@ -10,6 +10,22 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.13] - 2026-05-06
+
+Thirteenth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.13`** (tag **`v1.0.0-alpha.13`** optional).
+
+- **Calendar card:** en el popup **mes**, **pulsa un día** para abrir la vista centrada en ese día: primer evento destacado, **puntos de color** (tint de cada calendario) para el resto, lista **con scroll** de los demás eventos; botón **«Mes»**, **Escape** vuelve al calendario mensual antes de cerrar el popup.
+
+---
+
+## [1.0.0-alpha.12] - 2026-05-06
+
+Twelfth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.12`** (tag **`v1.0.0-alpha.12`** optional).
+
+- **Calendar card:** en el popup **mes**, los días con **varios eventos** usan de nuevo **scroll vertical dentro del día**: los bloques eran ítems flex con **`flex-shrink: 1`** y **`min-height: 0`** (compact), así que se **aplastaban** unos sobre otros en lugar de desbordar con scroll; ahora cada evento tiene **`flex-shrink: 0`**, altura de fila **`grid-auto-rows`** fija y la zona de eventos ocupa el resto del día con **`overflow-y: auto`**.
+
+---
+
 ## [1.0.0-alpha.11] - 2026-05-06
 
 Eleventh **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.11`** (tag **`v1.0.0-alpha.11`** optional).
