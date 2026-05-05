@@ -62,3 +62,9 @@ test("drag listeners stay attach-on-drag only", () => {
     assert.match(source, /_detachWindowDragListeners\(/);
   });
 });
+
+test("navigation runtime css sanitizer still allows common css functions", () => {
+  const source = read("nodalia-navigation-bar.js");
+  assert.match(source, /function sanitizeCssRuntimeValue\(value\)/);
+  assert.match(source, /if \(\/\[<>\{\};"'\]\/\.test\(raw\) \|\| raw\.includes\("\/\*"\) \|\| raw\.includes\("\*\/"\)\)/);
+});
