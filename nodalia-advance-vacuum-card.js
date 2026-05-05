@@ -121,7 +121,7 @@
     rows.sort((left, right) => {
       const idLeft = left.split(":")[0];
       const idRight = right.split(":")[0];
-      return idLeft.localeCompare(idRight, "es", { sensitivity: "base" });
+      return idLeft.localeCompare(idRight, undefined, { sensitivity: "base" });
     });
     const tag =
       typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
@@ -916,6 +916,46 @@ function isUnavailableState(state) {
 function parseNumber(value) {
   const numeric = Number(String(value ?? "").replace(",", "."));
   return Number.isFinite(numeric) ? numeric : null;
+}
+
+function sanitizeCssValue(value, fallback) {
+  const raw = String(value ?? "").trim();
+  const safeFallback = String(fallback ?? "").trim();
+  if (!raw) {
+    return safeFallback;
+  }
+  if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+    return safeFallback;
+  }
+  return raw;
+}
+
+function sanitizeStyleTree(candidate, fallback) {
+  if (Array.isArray(fallback)) {
+    return deepClone(fallback);
+  }
+  if (isObject(fallback)) {
+    const out = {};
+    Object.keys(fallback).forEach(key => {
+      const nextCandidate = isObject(candidate) ? candidate[key] : undefined;
+      out[key] = sanitizeStyleTree(nextCandidate, fallback[key]);
+    });
+    return out;
+  }
+  if (typeof fallback === "string") {
+    return sanitizeCssValue(candidate, fallback);
+  }
+  if (typeof fallback === "number") {
+    return Number.isFinite(Number(candidate)) ? Number(candidate) : fallback;
+  }
+  if (typeof fallback === "boolean") {
+    return typeof candidate === "boolean" ? candidate : fallback;
+  }
+  return candidate === undefined ? deepClone(fallback) : candidate;
+}
+
+function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
+  return sanitizeStyleTree(styles, DEFAULT_CONFIG.styles);
 }
 
 function parseInteger(value, fallback = null) {
@@ -2262,7 +2302,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getAccentColor(state) {
-    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    const styles = getSafeStyles(this._config?.styles);
 
     if (this._getReportedStateKey(state) === "error") {
       return styles.icon.error_color || "#ff6b6b";
@@ -5202,7 +5242,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   _isServiceAllowed(serviceValue) {
     const security = this._config?.security || {};
-    if (security.strict_service_actions !== true) {
+    if (security.strict_service_actions === false) {
       return true;
     }
     const normalizedService = String(serviceValue || "").trim().toLowerCase();
@@ -5399,57 +5439,56 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
     this._mapActionInFlight = true;
     try {
-    const state = this._getVacuumState();
-    const selectedPredefinedZones = this._getPredefinedZones()
-      .filter(zone => this._selectedPredefinedZoneIds.includes(zone.id))
-      .flatMap(zone => zone.zones.map(item => [...item, this._repeats]));
-    const manualZones = this._manualZones.map(zone => [zone.x1, zone.y1, zone.x2, zone.y2, this._repeats]);
-    const selectedZones = [...selectedPredefinedZones, ...manualZones].slice(0, clamp(Number(this._config?.max_zone_selections || 5), 1, 10));
-    const canRunZoneAction = this._activeMode === "zone" && selectedZones.length > 0;
+      const state = this._getVacuumState();
+      const selectedPredefinedZones = this._getPredefinedZones()
+        .filter(zone => this._selectedPredefinedZoneIds.includes(zone.id))
+        .flatMap(zone => zone.zones.map(item => [...item, this._repeats]));
+      const manualZones = this._manualZones.map(zone => [zone.x1, zone.y1, zone.x2, zone.y2, this._repeats]);
+      const selectedZones = [...selectedPredefinedZones, ...manualZones].slice(0, clamp(Number(this._config?.max_zone_selections || 5), 1, 10));
+      const canRunZoneAction = this._activeMode === "zone" && selectedZones.length > 0;
 
-    if ((this._isCleaning(state) || this._isPaused(state)) && !canRunZoneAction) {
-      await this._callVacuumService(this._isCleaning(state) ? "pause" : "start");
-      this._triggerHaptic("selection");
-      return;
-    }
-
-    if (this._activeMode === "rooms" && this._selectedRoomIds.length) {
-      const segments = this._selectedRoomIds
-        .map(id => parseInteger(id))
-        .filter(Number.isFinite);
-
-      if (segments.length) {
-        this._freezeCurrentModePanelPreset(state);
-        this._clearPendingRoomCleaningResume();
-        this._activeCleaningRoomIds = segments.map(item => String(item));
-        this._activeCleaningZones = [];
-        this._activeCleaningSessionMode = "rooms";
-        this._markCleaningSessionPendingStart();
-        this._persistCurrentCleaningSessionState("rooms", {
-          markSelectionChange: true,
-        });
-        await this._callNamedService("vacuum.send_command", {
-          entity_id: this._config.entity,
-          command: "app_segment_clean",
-          params: [{
-            segments,
-            repeat: this._repeats,
-          }],
-        });
-        this._persistCurrentCleaningSessionState("rooms");
-        this._triggerHaptic("success");
-        this._render();
+      if ((this._isCleaning(state) || this._isPaused(state)) && !canRunZoneAction) {
+        await this._callVacuumService(this._isCleaning(state) ? "pause" : "start");
+        this._triggerHaptic("selection");
         return;
       }
-    }
 
-    if (this._activeMode === "zone") {
-      if (selectedZones.length) {
+      if (this._activeMode === "rooms" && this._selectedRoomIds.length) {
+        const segments = this._selectedRoomIds
+          .map(id => parseInteger(id))
+          .filter(Number.isFinite);
+
+        if (segments.length) {
+          this._freezeCurrentModePanelPreset(state);
+          this._clearPendingRoomCleaningResume();
+          this._activeCleaningRoomIds = segments.map(item => String(item));
+          this._activeCleaningZones = [];
+          this._activeCleaningSessionMode = "rooms";
+          this._markCleaningSessionPendingStart();
+          this._persistCurrentCleaningSessionState("rooms", {
+            markSelectionChange: true,
+          });
+          await this._callNamedService("vacuum.send_command", {
+            entity_id: this._config.entity,
+            command: "app_segment_clean",
+            params: [{
+              segments,
+              repeat: this._repeats,
+            }],
+          });
+          this._persistCurrentCleaningSessionState("rooms");
+          this._triggerHaptic("success");
+          this._render();
+          return;
+        }
+      }
+
+      if (this._activeMode === "zone" && selectedZones.length) {
         const isTransientZoneAddition = Boolean(this._transientZoneReturnMode) && (
-          this._isCleaning(state) ||
-          this._isPaused(state) ||
-          this._isReturning(state) ||
-          this._isRoomCleaningSessionActive(state)
+          this._isCleaning(state)
+          || this._isPaused(state)
+          || this._isReturning(state)
+          || this._isRoomCleaningSessionActive(state)
         );
         this._freezeCurrentModePanelPreset(state);
         if (isTransientZoneAddition && this._isRoomCleaningSessionActive(state)) {
@@ -5494,9 +5533,24 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._render();
         return;
       }
-    }
 
-    if (this._activeMode === "goto" && this._gotoPoint) {
+      if (this._activeMode === "goto" && this._gotoPoint) {
+        this._freezeCurrentModePanelPreset(state);
+        this._clearPendingRoomCleaningResume();
+        this._activeCleaningRoomIds = [];
+        this._activeCleaningZones = [];
+        this._activeCleaningSessionMode = "";
+        this._clearCleaningSessionPendingStart();
+        this._clearPersistedCleaningSession();
+        await this._callNamedService("roborock.set_vacuum_goto_position", {
+          entity_id: this._config.entity,
+          x: Math.round(this._gotoPoint.x),
+          y: Math.round(this._gotoPoint.y),
+        });
+        this._triggerHaptic("success");
+        return;
+      }
+
       this._freezeCurrentModePanelPreset(state);
       this._clearPendingRoomCleaningResume();
       this._activeCleaningRoomIds = [];
@@ -5504,24 +5558,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._activeCleaningSessionMode = "";
       this._clearCleaningSessionPendingStart();
       this._clearPersistedCleaningSession();
-      await this._callNamedService("roborock.set_vacuum_goto_position", {
-        entity_id: this._config.entity,
-        x: Math.round(this._gotoPoint.x),
-        y: Math.round(this._gotoPoint.y),
-      });
-      this._triggerHaptic("success");
-      return;
-    }
-
-    this._freezeCurrentModePanelPreset(state);
-    this._clearPendingRoomCleaningResume();
-    this._activeCleaningRoomIds = [];
-    this._activeCleaningZones = [];
-    this._activeCleaningSessionMode = "";
-    this._clearCleaningSessionPendingStart();
-    this._clearPersistedCleaningSession();
-    await this._callVacuumService("start");
-    this._triggerHaptic("selection");
+      await this._callVacuumService("start");
+      this._triggerHaptic("selection");
     } finally {
       this._mapActionInFlight = false;
     }
@@ -6459,8 +6497,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const isRoomSelectionLocked = this._isRoomSelectionLocked();
     const highlightedRoomIds = new Set(this._getHighlightedRoomIds());
-    const markerSize = Math.max(22, Math.round(parseSizeToPixels(this._config?.styles?.map?.marker_size, 34) * 0.76));
-    const labelSize = Math.max(9, Math.round(parseSizeToPixels(this._config?.styles?.map?.label_size, 12) * 0.84));
+    const safeStyles = getSafeStyles(this._config?.styles);
+    const markerSize = Math.max(22, Math.round(parseSizeToPixels(safeStyles?.map?.marker_size, 34) * 0.76));
+    const labelSize = Math.max(9, Math.round(parseSizeToPixels(safeStyles?.map?.label_size, 12) * 0.84));
     const iconSize = Math.max(12, Math.round(markerSize * 0.42));
     const placements = this._getRoomMarkerPlacements(rooms, markerSize, labelSize, iconSize);
 
@@ -6954,7 +6993,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const state = this._getVacuumState();
       const accentColor = this._getAccentColor(state);
       const advanceVacuumStrings = this._advanceVacuumStrings();
-      const styles = config.styles || DEFAULT_CONFIG.styles;
+      const styles = getSafeStyles(config.styles);
       const animations = this._getAnimationSettings();
       const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
       this._syncActiveCleaningSession(state);
@@ -8364,6 +8403,12 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
       nextValue = checked;
     } else if (valueType === "number") {
       nextValue = target.value === "" ? "" : Number(target.value);
+    } else if (valueType === "csv") {
+      const values = String(target.value || "")
+        .split(",")
+        .map(item => item.trim().toLowerCase())
+        .filter(Boolean);
+      nextValue = values.length ? values : "";
     } else if (valueType === "json") {
       if (target.value.trim() === "") {
         nextValue = "";
@@ -8950,6 +8995,34 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
               { value: "warning", label: "Warning" },
               { value: "failure", label: "Failure" },
             ])}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Seguridad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla si las acciones de servicio externas (routines/menu) usan allowlist estricta."))}</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderCheckboxField(
+              "Seguridad de servicios (modo estricto)",
+              "security.strict_service_actions",
+              config.security?.strict_service_actions !== false,
+            )}
+            ${
+              config.security?.strict_service_actions !== false
+                ? this._renderTextField(
+                    "Allowed services (coma separada)",
+                    "security.allowed_services",
+                    Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+                    {
+                      placeholder: "vacuum.send_command, script.run",
+                      valueType: "csv",
+                      fullWidth: true,
+                    },
+                  )
+                : ""
+            }
           </div>
         </section>
 

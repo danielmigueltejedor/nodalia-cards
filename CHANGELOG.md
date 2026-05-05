@@ -10,6 +10,224 @@ Work toward **`0.6.x`** on **`alpha`** / **`beta`** and eventual **`main`**: add
 
 ---
 
+## [0.6.0] - 2026-05-05
+
+Second stable release on **`main`**.
+
+This version focuses on **refinement, stability and consistency across the entire UI**, consolidating all validated work from the `0.6.0-alpha.*` and `0.6.0-beta.*` cycles into a smoother, more reliable and secure experience.
+
+---
+
+## ✨ Highlights
+
+- Noticeably smoother interactions across multiple cards
+- Improved visual consistency aligned with Nodalia design language
+- Strengthened security model for actions and user-defined configs
+- Better internal structure for long-term maintainability
+
+---
+
+## 🧠 Stability & UX
+
+- **Graph card**
+  - Fully stabilized tooltip and hook lifecycle for continuous tracking
+  - Reliable close behavior across desktop and mobile
+  - Fixed legend chip clipping on press (mobile)
+
+- **Navigation bar**
+  - Reduced micro-bounce in mini-player and popups
+  - Entrance animations now trigger only on real visibility changes
+
+- **Media presentation**
+  - Mini media player visually aligned with Nodalia design system
+  - Filtered noisy/irrelevant sources (e.g. `AirMusic` in HomePod scenarios)
+
+---
+
+## 🔒 Security
+
+- Service actions remain **strict by default**
+- Visual editors now expose:
+  - `strict_service_actions`
+  - `allowed_services`
+- URL handling fully hardened:
+  - Unsafe schemes blocked
+  - External links protected with `noopener,noreferrer`
+- Runtime style values are sanitized in critical rendering paths
+
+---
+
+## ⚡ Performance & Architecture
+
+- Drag interactions optimized:
+  - Geometry caching reused across components
+  - Reduced layout recalculations
+
+- Render system improvements:
+  - Unified render signature strategy via shared helper
+  - More predictable updates in high-frequency UI elements
+
+- Internal structure:
+  - Modularization groundwork completed (navigation, graph, media flows)
+  - Cleaner separation between runtime and rendering logic
+
+---
+
+## 🛠️ Tooling & Release Quality
+
+- CI pipeline introduced:
+  - `npm ci`
+  - `npm test`
+  - `npm run bundle`
+
+- Expanded test coverage:
+  - Interaction tests
+  - Smoke tests
+  - Security guards
+  - Render signature validation
+
+- Stability checklist formalized:
+  - `docs/STABILITY_CHECKLIST_0_6_0.md`
+
+- Bundle diagnostics:
+  - Version + content hash exposed at startup for quick validation
+
+---
+
+## 💬 Notes
+
+This release is focused on **making everything feel better**:
+less friction, fewer edge cases, and more predictable behavior across all cards.
+
+It sets a solid foundation for upcoming improvements in UI, new cards, and advanced features.
+
+---
+
+## [0.6.0-alpha.5] - 2026-05-05
+
+Fifth **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). This release mirrors the latest beta-level fixes under the alpha distribution channel to help validate real-world loading/resource-cache behavior where alpha delivery is preferred. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.5`** (tag **`v0.6.0-alpha.5`** optional).
+
+- **Bundle diagnostics:** startup console line now surfaces package version + content hash to quickly confirm which build Home Assistant actually loaded.
+- **Graph card (mobile):** chip press clipping fix retained using padding-based scroll-container guard (without ineffective cross-axis overflow override).
+- **Review/QA polish:** clarified sanitizer guard test naming and kept regression suite aligned with latest PR feedback loop.
+
+---
+
+## [0.6.0-beta.3] - 2026-05-05
+
+Third **`beta`** on the **`0.6.x`** line (**branch `beta`**). This cut focuses on load/debug clarity so testers can verify they are running the intended build and avoid false “old version” diagnostics. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-beta.3`** (tag **`v0.6.0-beta.3`** optional).
+
+- **Bundle diagnostics:** added global startup console info from bundle footer with package version + content hash (`nodalia-cards vX.Y.Z (sha)`), aligned with `window.__NODALIA_BUNDLE__`.
+- **Graph card (mobile):** kept the chip-press clipping fix while removing ineffective `overflow-y: visible` from the horizontal legend scroller (padding-based fix retained).
+- **Regression tests:** refined sanitizer guard test naming for clearer intent and review auditability.
+
+---
+
+## [0.6.0-beta.2] - 2026-05-05
+
+Second **`beta`** on the **`0.6.x`** line (**branch `beta`**). This cut focuses on post-beta.1 regression polish and review feedback closure. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-beta.2`** (tag **`v0.6.0-beta.2`** optional).
+
+- **Graph card (mobile):** fixed legend chip/button clipping when pressing in narrow layouts by keeping vertical overflow visible and adding vertical padding in the horizontal chip scroller.
+- **Regression safety:** extended release-candidate smoke checks to guard sanitizer behavior and keep reviewer findings from reappearing.
+- **Validation pass:** memory-leak concern around graph document listeners was verified against lifecycle cleanup (`disconnectedCallback` + detach path).
+
+---
+
+## [0.6.0-beta.1] - 2026-05-05
+
+First **`beta`** on the **`0.6.x`** line (**branch `beta`**). This release consolidates the full **`0.6.0-alpha.*`** cycle into a tester-facing candidate focused on stability, security hardening, render efficiency, and pre-stable auditability. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-beta.1`** (tag **`v0.6.0-beta.1`** optional).
+
+### Stability and UX fixes
+
+- **Graph card:** hover lifecycle hardened so tooltip tracks continuously while moving and closes when pointer leaves the card in any direction.
+- **Graph card:** improved marker/guide/popup sync to reduce visual drift and flicker during fast hover transitions.
+- **Navigation bar:** reduced mini-player and popup micro-bounce by gating entrance animations to real visibility transitions (`--entering`) instead of generic re-renders.
+- **Navigation media presentation:** mini media player restyled to better match the visual language of other Nodalia cards (surface, border, spacing, shadow).
+- **Media chips (nav + media player):** noisy source labels such as `AirMusic` are filtered out for normal HomePod scenarios.
+
+### Security hardening
+
+- **Strict service actions by default:** cards using configurable service calls keep deny-by-default behavior unless explicitly disabled.
+- **Visual editor security controls:** added editor fields to configure service hardening directly in UI:
+  - toggle for `security.strict_service_actions`,
+  - CSV input for `security.allowed_services`.
+  Implemented in **Insignia**, **Entity**, **Fav**, and **Advance Vacuum** editors.
+- **URL hardening:** media/artwork and action URL sinks pass through sanitization flow (`sanitizeActionUrl`) in critical paths.
+- **Runtime style hardening:** additional sanitization guards applied to configurable style values in navigation runtime styles and advance-vacuum style trees.
+- **New-tab safety:** URL actions remain standardized with `noopener,noreferrer`.
+
+### Performance and fluency
+
+- **Drag performance:** cached geometry + attach-on-drag listeners (move/up only while dragging) across frequent slider cards to reduce idle overhead and layout churn.
+- **Render signature efficiency:** reduced hot-path render signature overhead and unified strategy using shared helper runtime instead of ad hoc object serialization.
+- **Bundling infra:** maintained esbuild-based pipeline with deterministic standalone embed stripping and stable bundle output.
+
+### Architecture and maintainability
+
+- Added shared module **`nodalia-render-signature.js`** and integrated it into the bundle pipeline.
+- Pilot modularization expanded in high-frequency cards:
+  - **Navigation:** signature decomposition into focused helper rows.
+  - **Graph:** tracked-state signature extraction and non-JSON render signature path.
+  - **Media Player:** switched signature construction to shared runtime helper.
+- Added project-level CI workflow (`.github/workflows/ci.yml`) with:
+  - `npm ci`
+  - `npm test`
+  - `npm run bundle`
+
+### Regression safety and release readiness
+
+- Added minimal regression suites for:
+  - render signature architecture guards,
+  - interaction regressions (graph hover watch + nav animation transitions),
+  - security/editor exposure assertions,
+  - release-candidate smoke checks (URL hardening, drag listener strategy, shared signature runtime).
+- Added **`docs/STABILITY_CHECKLIST_0_6_0.md`** to formalize pre-stable validation gates.
+
+---
+
+## [0.6.0-alpha.4] - 2026-05-05
+
+Fourth **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.4`** (tag **`v0.6.0-alpha.4`** optional). Breaking changes are allowed; prefer stable **`main`** for production dashboards.
+
+- **Navigation bar (mini media player):** visual style aligned with the rest of Nodalia cards (surface, border, shadow, spacing) and reduced hover bounce in popup items for steadier perceived motion.
+- **Media player + nav media chips:** filtered noisy source chip values (notably `AirMusic`) so normal HomePods no longer show a redundant extra chip next to progress/duration.
+- **Security hardening (Fase A):** artwork/media URL resolution now passes through shared URL sanitization in media paths; runtime route/popup style vars in nav apply sanitized values only.
+- **Advance Vacuum hardening (Fase A):** added safe style tree sanitization for configurable CSS values before render-time interpolation (card/map/icon/control/chip style paths).
+
+---
+
+## [0.6.0-alpha.3] - 2026-05-05
+
+Third **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.3`** (tag **`v0.6.0-alpha.3`** optional). Breaking changes are allowed; prefer stable **`main`** for production dashboards.
+
+- **Navigation bar:** reducción de micro-rebote visual en mini media player y popups al evitar reactivar animaciones de entrada en renders normales.
+- **Navigation bar:** las animaciones de superficie para mini player y popup ahora se limitan a aperturas reales (`--entering`) y no a refrescos de estado de la tarjeta.
+- **Graph card:** cierre de tooltip de hover más robusto al salir de la tarjeta en cualquier dirección.
+
+---
+
+## [0.6.0-alpha.2] - 2026-05-05
+
+Second **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.2`** (tag **`v0.6.0-alpha.2`** optional). Breaking changes are allowed; prefer stable **`main`** for production dashboards.
+
+- **Fluidez (Fase 2):** cache de geometría + listeners globales `move/up` solo durante drag en sliders interactivos (**Light/Fan/Humidifier/Media Player**), reduciendo carga en idle y en arrastre continuo.
+- **Fluidez (Fase 2):** dial de **Climate** optimizado con geometría cacheada durante drag para evitar lecturas de layout por frame.
+- **Eficiencia render (Fase 3):** firmas de render en **Light / Entity / Navigation** migradas de `JSON.stringify` de objetos a firmas string compactas, con menos allocations y menor presión de GC.
+- **Infra (Fase 4):** bundling modernizado con **esbuild** en `scripts/build-bundle.mjs`, manteniendo orden de módulos y stripping de embeds standalone para no alterar comportamiento funcional del bundle.
+
+---
+
+## [0.6.0-alpha.1] - 2026-05-05
+
+First **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.1`** (tag **`v0.6.0-alpha.1`** optional). Breaking changes are allowed; prefer stable **`main`** for production dashboards.
+
+- **Graph card:** hover/tooltip behavior refined during pointer movement, with stronger leave/close handling so the popup does not remain stuck when leaving the card.
+- **Navigation bar / media player:** reduced visible flicker when toggling mini ↔ expanded media player and during unrelated dashboard interactions by limiting entrance animation to actual visibility transitions.
+- **Advance Vacuum:** map action flow cleanup and async guard polishing (`_mapActionInFlight`) for safer concurrent interaction handling.
+- **Shared utils / i18n infra:** neutralized entity-id collation in shared editor signature utilities to avoid locale-hardcoded sorting behavior.
+
+---
+
 ## [0.5.0] - 2026-05-06
 
 First stable release on the **`0.5.x`** line (**branch `main`**). This version consolidates all validated work from the **`0.5.0-alpha.*`** cycle into a production-ready bundle aimed at smoother interaction, stronger hardening, better editor UX and broader translation coverage.

@@ -121,7 +121,7 @@
     rows.sort((left, right) => {
       const idLeft = left.split(":")[0];
       const idRight = right.split(":")[0];
-      return idLeft.localeCompare(idRight, "es", { sensitivity: "base" });
+      return idLeft.localeCompare(idRight, undefined, { sensitivity: "base" });
     });
     const tag =
       typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
@@ -1057,6 +1057,51 @@ function normalizeTextKey(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function getRenderSignatureRuntime() {
+  return window.NodaliaRenderSignature || {
+    toKey(value) {
+      if (value === null || value === undefined) {
+        return "";
+      }
+      if (typeof value === "number") {
+        return Number.isFinite(value) ? String(value) : "";
+      }
+      return String(value);
+    },
+    joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
+      return (Array.isArray(parts) ? parts : [])
+        .map(part => {
+          if (!part || !Array.isArray(part.values)) {
+            return "";
+          }
+          const prefix = String(part.prefix || "");
+          const body = part.values.map(value => this.toKey(value)).join(valueSeparator);
+          return `${prefix}${body}`;
+        })
+        .filter(Boolean)
+        .join(sectionSeparator);
+    },
+  };
+}
+
+function sanitizeMediaArtworkUrl(value, hass) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+  const safe = window.NodaliaUtils?.sanitizeActionUrl?.(raw, { allowRelative: true }) || "";
+  if (!safe) {
+    return "";
+  }
+  if (/^(?:https?:)?\/\//i.test(safe)) {
+    return safe;
+  }
+  if (typeof hass?.hassUrl === "function" && safe.startsWith("/")) {
+    return hass.hassUrl(safe);
+  }
+  return safe;
+}
+
 function appendQueryParam(url, key, value) {
   const rawUrl = String(url || "").trim();
   if (!rawUrl || value === null || value === undefined || value === "") {
@@ -1177,6 +1222,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._skipNextSliderChange = null;
     this._dragFrame = 0;
     this._pendingDragUpdate = null;
+    this._dragWindowListenersAttached = false;
     this._volumeStepFallback = new Set();
     this._tvSourcePickerEntity = null;
     this._tvVolumePickerEntity = null;
@@ -1230,17 +1276,6 @@ class NodaliaMediaPlayer extends HTMLElement {
     window.addEventListener("resize", this._onResize);
     window.addEventListener("keydown", this._onWindowKeyDown);
     document.addEventListener("visibilitychange", this._onVisibilityChange);
-    window.addEventListener("pointermove", this._onWindowPointerMove);
-    window.addEventListener("pointerup", this._onWindowPointerUp);
-    window.addEventListener("pointercancel", this._onWindowPointerUp);
-    window.addEventListener("mousemove", this._onWindowMouseMove);
-    window.addEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
-      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
-    }
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
     this._render();
@@ -1250,17 +1285,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     window.removeEventListener("resize", this._onResize);
     window.removeEventListener("keydown", this._onWindowKeyDown);
     document.removeEventListener("visibilitychange", this._onVisibilityChange);
-    window.removeEventListener("pointermove", this._onWindowPointerMove);
-    window.removeEventListener("pointerup", this._onWindowPointerUp);
-    window.removeEventListener("pointercancel", this._onWindowPointerUp);
-    window.removeEventListener("mousemove", this._onWindowMouseMove);
-    window.removeEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
-      window.removeEventListener("touchmove", this._onWindowTouchMove);
-      window.removeEventListener("touchend", this._onWindowTouchEnd);
-      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
-    }
+    this._detachWindowDragListeners();
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
@@ -1337,31 +1362,36 @@ class NodaliaMediaPlayer extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const states = hass?.states || {};
     const entities = this._getTrackedEntities();
+    const runtime = getRenderSignatureRuntime();
 
     return entities
       .map(entityId => {
         const state = states[entityId];
         if (!state) {
-          return `${entityId}::missing`;
+          return runtime.joinParts([{ values: [entityId, "missing"] }], "", "::");
         }
 
         const attrs = state.attributes || {};
-        return [
-          entityId,
-          state.state || "",
-          attrs.friendly_name || "",
-          attrs.entity_picture || "",
-          attrs.media_title || "",
-          attrs.media_artist || "",
-          attrs.media_series_title || "",
-          attrs.media_album_name || "",
-          attrs.app_name || "",
-          attrs.source || "",
-          attrs.media_channel || "",
-          attrs.media_duration ?? "",
-          attrs.supported_features ?? "",
-          Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
-        ].join("::");
+        return runtime.joinParts([
+          {
+            values: [
+              entityId,
+              state.state || "",
+              attrs.friendly_name || "",
+              attrs.entity_picture || "",
+              attrs.media_title || "",
+              attrs.media_artist || "",
+              attrs.media_series_title || "",
+              attrs.media_album_name || "",
+              attrs.app_name || "",
+              attrs.source || "",
+              attrs.media_channel || "",
+              attrs.media_duration ?? "",
+              attrs.supported_features ?? "",
+              Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
+            ],
+          },
+        ], "", "::");
       })
       .join("||");
   }
@@ -1619,18 +1649,10 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _resolveMediaUrl(value, options = {}) {
-    const raw = String(value || "").trim();
-    if (!raw) {
+    const baseUrl = sanitizeMediaArtworkUrl(value, this._hass);
+    if (!baseUrl) {
       return "";
     }
-
-    const isAbsolute = /^(?:https?:)?\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:");
-    const baseUrl = isAbsolute
-      ? raw
-      : typeof this._hass?.hassUrl === "function"
-        ? this._hass.hassUrl(raw.startsWith("/") ? raw : `/${raw.replace(/^\.?\//, "")}`)
-        : raw;
-
     return appendQueryParam(baseUrl, "nodalia_ts", options.cacheToken);
   }
 
@@ -1923,7 +1945,12 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     const sourceKey = normalizeTextKey(sourceLabel);
 
-    if (!sourceKey || sourceKey.includes("music assistant")) {
+    if (
+      !sourceKey ||
+      sourceKey.includes("music assistant") ||
+      sourceKey === "airmusic" ||
+      sourceKey.startsWith("airmusic ")
+    ) {
       return null;
     }
 
@@ -2374,7 +2401,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
   _isServiceAllowed(serviceValue) {
     const security = this._config?.security || {};
-    if (security.strict_service_actions !== true) {
+    if (security.strict_service_actions === false) {
       return true;
     }
     const normalizedService = String(serviceValue || "").trim().toLowerCase();
@@ -2616,6 +2643,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       slider,
       geometry: getSliderDragGeometry(slider),
     };
+    this._attachWindowDragListeners();
 
     if (event) {
       event.preventDefault();
@@ -2675,6 +2703,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     this._activeSliderDrag = null;
+    this._detachWindowDragListeners();
 
     if (this._pendingRenderAfterDrag) {
       this._pendingRenderAfterDrag = false;
@@ -2771,6 +2800,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     this._activeSliderDrag = null;
+    this._detachWindowDragListeners();
     this._pendingDragUpdate = null;
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
@@ -2791,6 +2821,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     const clientX = event.changedTouches?.[0]?.clientX;
     if (!Number.isFinite(clientX)) {
       this._activeSliderDrag = null;
+      this._detachWindowDragListeners();
       if (this._pendingRenderAfterDrag) {
         this._pendingRenderAfterDrag = false;
         this._render();
@@ -2799,6 +2830,42 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     this._commitSliderDrag(clientX, event);
+  }
+
+  _attachWindowDragListeners() {
+    if (this._dragWindowListenersAttached) {
+      return;
+    }
+    this._dragWindowListenersAttached = true;
+    window.addEventListener("pointermove", this._onWindowPointerMove);
+    window.addEventListener("pointerup", this._onWindowPointerUp);
+    window.addEventListener("pointercancel", this._onWindowPointerUp);
+    window.addEventListener("mousemove", this._onWindowMouseMove);
+    window.addEventListener("mouseup", this._onWindowMouseUp);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
+      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    }
+  }
+
+  _detachWindowDragListeners() {
+    if (!this._dragWindowListenersAttached) {
+      return;
+    }
+    this._dragWindowListenersAttached = false;
+    window.removeEventListener("pointermove", this._onWindowPointerMove);
+    window.removeEventListener("pointerup", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    window.removeEventListener("mousemove", this._onWindowMouseMove);
+    window.removeEventListener("mouseup", this._onWindowMouseUp);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
+      window.removeEventListener("touchmove", this._onWindowTouchMove);
+      window.removeEventListener("touchend", this._onWindowTouchEnd);
+      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    }
   }
 
   _onShadowChange(event) {

@@ -121,7 +121,7 @@
     rows.sort((left, right) => {
       const idLeft = left.split(":")[0];
       const idRight = right.split(":")[0];
-      return idLeft.localeCompare(idRight, "es", { sensitivity: "base" });
+      return idLeft.localeCompare(idRight, undefined, { sensitivity: "base" });
     });
     const tag =
       typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
@@ -1032,27 +1032,27 @@ class NodaliaEntityCard extends HTMLElement {
     const configuredStateAttribute = String(this._config?.state_attribute || "").trim();
     const configuredPrimaryAttribute = String(this._config?.primary_attribute || "").trim();
     const configuredSecondaryAttribute = String(this._config?.secondary_attribute || "").trim();
-    return JSON.stringify({
-      locale: window.NodaliaI18n.resolveLanguage(hass, this._config?.language),
-      entityId,
-      state: String(state?.state || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      deviceClass: String(attrs.device_class || ""),
-      unit: String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || ""),
-      configuredStateAttribute,
-      configuredStateValue: configuredStateAttribute ? String(attrs[configuredStateAttribute] ?? "") : "",
-      configuredPrimaryAttribute,
-      configuredPrimaryValue: configuredPrimaryAttribute ? getValueSignature(attrs[configuredPrimaryAttribute]) : "",
-      configuredSecondaryAttribute,
-      configuredSecondaryValue: configuredSecondaryAttribute ? getValueSignature(attrs[configuredSecondaryAttribute]) : "",
-      useEntityIcon: Boolean(this._config?.use_entity_icon),
-      cardIcon: String(this._config?.icon || ""),
-      iconActive: String(this._config?.icon_active || ""),
-      iconInactive: String(this._config?.icon_inactive || ""),
-      compact: Boolean(this._isCompactLayout),
-      quickActions: Array.isArray(this._config?.quick_actions) ? this._config.quick_actions.length : 0,
-    });
+    return [
+      `l:${window.NodaliaI18n.resolveLanguage(hass, this._config?.language)}`,
+      `e:${entityId}`,
+      `s:${String(state?.state || "")}`,
+      `n:${String(attrs.friendly_name || "")}`,
+      `i:${String(attrs.icon || "")}`,
+      `dc:${String(attrs.device_class || "")}`,
+      `u:${String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || "")}`,
+      `sa:${configuredStateAttribute}`,
+      `sv:${configuredStateAttribute ? String(attrs[configuredStateAttribute] ?? "") : ""}`,
+      `pa:${configuredPrimaryAttribute}`,
+      `pv:${configuredPrimaryAttribute ? getValueSignature(attrs[configuredPrimaryAttribute]) : ""}`,
+      `xa:${configuredSecondaryAttribute}`,
+      `xv:${configuredSecondaryAttribute ? getValueSignature(attrs[configuredSecondaryAttribute]) : ""}`,
+      `uei:${this._config?.use_entity_icon ? 1 : 0}`,
+      `ci:${String(this._config?.icon || "")}`,
+      `ia:${String(this._config?.icon_active || "")}`,
+      `ii:${String(this._config?.icon_inactive || "")}`,
+      `c:${this._isCompactLayout ? 1 : 0}`,
+      `qa:${Array.isArray(this._config?.quick_actions) ? this._config.quick_actions.length : 0}`,
+    ].join("|");
   }
 
   _getConfiguredGridColumns() {
@@ -1293,7 +1293,7 @@ class NodaliaEntityCard extends HTMLElement {
 
   _isServiceAllowed(serviceValue) {
     const security = this._config?.security || {};
-    if (security.strict_service_actions !== true) {
+    if (security.strict_service_actions === false) {
       return true;
     }
     const normalizedService = String(serviceValue || "").trim().toLowerCase();
@@ -2309,6 +2309,13 @@ class NodaliaEntityCardEditor extends HTMLElement {
         return Boolean(input.checked);
       case "color":
         return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+      case "csv": {
+        const values = String(input.value || "")
+          .split(",")
+          .map(item => item.trim().toLowerCase())
+          .filter(Boolean);
+        return values.length ? values : "";
+      }
       default:
         return input.value;
     }
@@ -3080,6 +3087,25 @@ class NodaliaEntityCardEditor extends HTMLElement {
                   ${this._renderTextareaField("Datos del servicio (JSON)", "tap_service_data", config.tap_service_data, {
                     placeholder: '{"brightness_pct": 70}',
                   })}
+                  ${this._renderCheckboxField(
+                    "Seguridad de servicios (modo estricto)",
+                    "security.strict_service_actions",
+                    config.security?.strict_service_actions !== false,
+                  )}
+                  ${
+                    config.security?.strict_service_actions !== false
+                      ? this._renderTextField(
+                          "Allowed services (coma separada)",
+                          "security.allowed_services",
+                          Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+                          {
+                            placeholder: "browser_mod.javascript, light.turn_on",
+                            valueType: "csv",
+                            fullWidth: true,
+                          },
+                        )
+                      : ""
+                  }
                 `
                 : ""
             }
