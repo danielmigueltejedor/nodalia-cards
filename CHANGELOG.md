@@ -10,6 +10,22 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-beta.1] - 2026-05-06
+
+First **`beta`** on the **`1.0.0`** line (**branch `beta`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-beta.1`** (Git tag **`v1.0.0-beta.1`** recommended for HACS/GitHub Releases).
+
+- **Nodalia Vacuum Card (`nodalia-vacuum-card`) `0.6.3`:** editor visual alineado con Advance/calendario: **`ha-entity-picker`** primero, **`ha-selector`** como respaldo, **`select`** nativo al final; placeholders en campos de entidad auxiliar.
+
+---
+
+## [1.0.0-alpha.19] - 2026-05-06
+
+Nineteenth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.19`** (tag **`v1.0.0-alpha.19`** optional).
+
+- **Calendar / Advance Vacuum:** persistencia en **`input_text`**: se evitaba reenviar tras un **`set_value` fallido** porque la deduplicación guardaba el valor “optimista” antes de confirmar el servicio; ahora solo se compara con el estado en HA y **`_lastSubmitted`** solo se actualiza si la llamada termina bien (con **`trim`** en calendario). **Vacuum:** **`input_text.set_value`** hacia el helper configurado **ignora la allowlist** de **`security.allowed_*`** para que el modo estricto no bloquee la sincronización. **Vacuum card** **`0.13.6`**: editor visual con **`ha-entity-picker`** primero (como calendario), bloque ancho + texto de ayuda para **`shared_cleaning_session_entity`**.
+
+---
+
 ## [1.0.0-alpha.18] - 2026-05-06
 
 Eighteenth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.18`** (tag **`v1.0.0-alpha.18`** optional).

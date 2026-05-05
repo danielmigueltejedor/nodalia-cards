@@ -53057,15 +53057,26 @@
         }
         serialized = "";
       }
-      const currentValue = String(this._getSharedCleaningSessionState()?.state || "");
-      if (serialized === currentValue || serialized === this._lastSubmittedSharedCleaningSessionValue) {
+      const serializedTrim = serialized.trim();
+      const currentValue = String(this._getSharedCleaningSessionState()?.state ?? "").trim();
+      if (serializedTrim === currentValue) {
         return;
       }
-      this._lastSubmittedSharedCleaningSessionValue = serialized;
-      this._callNamedService("input_text.set_value", {
+      const pending = this._callNamedService("input_text.set_value", {
         entity_id: entityId,
-        value: serialized
+        value: serializedTrim
       });
+      if (pending && typeof pending.then === "function") {
+        pending.then(() => {
+          this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
+        }).catch((err) => {
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
+          }
+        });
+      } else {
+        this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
+      }
     }
     _clearSharedCleaningSession() {
       const entityId = this._getSharedCleaningSessionEntityId();
@@ -55175,7 +55186,13 @@
       return services.includes(normalizedService) || domains.includes(domain);
     }
     _callNamedService(service, data = {}, target = null) {
-      if (!this._hass || !service || !this._isServiceAllowed(service)) {
+      if (!this._hass || !service) {
+        return;
+      }
+      const svcLower = String(service).trim().toLowerCase();
+      const targetEntity = String(data?.entity_id || "").trim();
+      const persistenceBypass = svcLower === "input_text.set_value" && targetEntity && targetEntity === this._getSharedCleaningSessionEntityId();
+      if (!persistenceBypass && !this._isServiceAllowed(service)) {
         return;
       }
       const [domain, serviceName] = String(service).split(".");
@@ -57964,20 +57981,22 @@
       const placeholder = host.dataset.placeholder || "";
       const domains = String(host.dataset.domains || "").split(",").map((domain) => domain.trim()).filter(Boolean);
       let control = null;
-      if (customElements.get("ha-selector")) {
-        const entitySelector = domains.length ? { domain: domains.length === 1 ? domains[0] : domains } : {};
+      if (customElements.get("ha-entity-picker")) {
+        control = document.createElement("ha-entity-picker");
+        if (domains.length) {
+          control.includeDomains = domains;
+          control.entityFilter = (stateObj) => domains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+        }
+        control.allowCustomEntity = true;
+        if (placeholder) {
+          control.setAttribute("placeholder", placeholder);
+        }
+      } else if (customElements.get("ha-selector")) {
         control = document.createElement("ha-selector");
+        const entitySelector = domains.length === 1 ? { domain: domains[0] } : domains.length > 1 ? { domain: domains } : {};
         control.selector = { entity: entitySelector };
         if (placeholder) {
           control.setAttribute("label", placeholder);
-        }
-      } else if (customElements.get("ha-entity-picker")) {
-        control = document.createElement("ha-entity-picker");
-        control.includeDomains = domains;
-        control.allowCustomEntity = true;
-        control.entityFilter = (stateObj) => !domains.length || domains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
-        if (placeholder) {
-          control.setAttribute("placeholder", placeholder);
         }
       } else {
         control = document.createElement("select");
@@ -57994,7 +58013,9 @@
       }
       control.dataset.field = field;
       control.dataset.value = nextValue;
-      control.hass = this._hass;
+      if ("hass" in control) {
+        control.hass = this._hass;
+      }
       if ("value" in control) {
         control.value = nextValue;
       }
@@ -58182,6 +58203,13 @@
           font-weight: 600;
         }
 
+        .editor-field__hint {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          font-weight: 500;
+          line-height: 1.45;
+        }
+
         .editor-field input,
         .editor-field select,
         .editor-field textarea {
@@ -58325,7 +58353,22 @@
         { value: "send_command", label: "Send command" }
       ])}
             ${this._renderEntityPickerField("Entidad calibracion", "calibration_source.entity", config.calibration_source?.entity, { domains: ["camera", "image", "sensor"] })}
-            ${this._renderEntityPickerField("Helper sesion compartida", "shared_cleaning_session_entity", config.shared_cleaning_session_entity, { domains: ["input_text"] })}
+            <div class="editor-field editor-field--full">
+              <span>${escapeHtml11(this._editorLabel("Helper input_text (sesión compartida)"))}</span>
+              <div
+                class="editor-control-host"
+                data-mounted-control="entity"
+                data-field="shared_cleaning_session_entity"
+                data-domains="input_text"
+                data-value="${escapeHtml11(String(config.shared_cleaning_session_entity ?? ""))}"
+                data-placeholder="${escapeHtml11("input_text.roborock_session")}"
+              ></div>
+              <span class="editor-field__hint">${escapeHtml11(
+        this._editorLabel(
+          "Opcional: guarda selección de habitaciones, modo y repeticiones en este helper para recuperarlas entre dispositivos. Crea un input_text en YAML y elígelo aquí."
+        )
+      )}</span>
+            </div>
           </div>
         </section>
 
@@ -71628,22 +71671,25 @@
         }
         return;
       }
-      const currentState = String(this._hass.states?.[entityId]?.state ?? "");
-      if (payload === currentState || payload === this._lastSubmittedSharedCompletedValue) {
+      const currentState = String(this._hass.states?.[entityId]?.state ?? "").trim();
+      if (payload === currentState) {
         return;
       }
-      this._lastSubmittedSharedCompletedValue = payload;
       try {
         const result = this._hass.callService("input_text", "set_value", {
           entity_id: entityId,
           value: payload
         });
         if (result && typeof result.then === "function") {
-          result.catch((err) => {
+          result.then(() => {
+            this._lastSubmittedSharedCompletedValue = payload;
+          }).catch((err) => {
             if (typeof console !== "undefined" && typeof console.warn === "function") {
               console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
             }
           });
+        } else {
+          this._lastSubmittedSharedCompletedValue = payload;
         }
       } catch (err) {
         if (typeof console !== "undefined" && typeof console.warn === "function") {
@@ -76640,6 +76686,7 @@
     _renderEntityPickerField(label, field, value, options = {}) {
       const tLabel = this._editorLabel(label);
       const inputValue = value === void 0 || value === null ? "" : String(value);
+      const placeholderAttr = options.placeholder ? `data-placeholder="${escapeHtml18(options.placeholder)}"` : "";
       return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml18(tLabel)}</span>
@@ -76648,6 +76695,7 @@
           data-mounted-control="${escapeHtml18(options.controlType || "entity")}"
           data-field="${escapeHtml18(field)}"
           data-value="${escapeHtml18(inputValue)}"
+          ${placeholderAttr}
         ></div>
       </div>
     `;
@@ -76674,14 +76722,32 @@
       }
       const field = host.dataset.field || pickerOptions.field || "entity";
       const nextValue = host.dataset.value || "";
+      const placeholder = host.dataset.placeholder || pickerOptions.placeholder || "";
+      const domains = pickerOptions.includeDomains || [];
       let control = null;
       if (customElements.get("ha-entity-picker")) {
         control = document.createElement("ha-entity-picker");
-        control.includeDomains = pickerOptions.includeDomains || [];
+        if (domains.length) {
+          control.includeDomains = domains;
+          control.entityFilter = pickerOptions.entityFilter || ((stateObj) => domains.some((d) => String(stateObj?.entity_id || "").startsWith(`${d}.`)));
+        }
         control.allowCustomEntity = true;
-        control.entityFilter = pickerOptions.entityFilter;
+        if (placeholder) {
+          control.setAttribute("placeholder", placeholder);
+        }
+      } else if (customElements.get("ha-selector")) {
+        control = document.createElement("ha-selector");
+        const entitySelector = domains.length === 1 ? { domain: domains[0] } : domains.length > 1 ? { domain: domains } : {};
+        control.selector = { entity: entitySelector };
+        if (placeholder) {
+          control.setAttribute("label", placeholder);
+        }
       } else {
         control = document.createElement("select");
+        const emptyOption = document.createElement("option");
+        emptyOption.value = "";
+        emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
+        control.appendChild(emptyOption);
         pickerOptions.getOptions(field).forEach((option) => {
           const optionElement = document.createElement("option");
           optionElement.value = option.value;
@@ -77033,7 +77099,8 @@
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityPickerField("Entidad del robot", "entity", config.entity, {
         controlType: "vacuum-entity",
-        fullWidth: true
+        fullWidth: true,
+        placeholder: "vacuum.robot"
       })}
             ${this._renderIconPickerField("Icono", "icon", config.icon, {
         placeholder: "mdi:robot-vacuum",
@@ -77079,19 +77146,24 @@
           </div>
           <div class="editor-grid">
             ${this._renderEntityPickerField("Sensor de estado", "state_entity", config.state_entity, {
-        controlType: "sensor-entity"
+        controlType: "sensor-entity",
+        placeholder: "sensor.robot_estado"
       })}
             ${this._renderEntityPickerField("Sensor de batería", "battery_entity", config.battery_entity, {
-        controlType: "sensor-entity"
+        controlType: "sensor-entity",
+        placeholder: "sensor.robot_bateria"
       })}
             ${this._renderEntityPickerField("Sensor de habitaciones", "room_mapping_entity", config.room_mapping_entity, {
-        controlType: "sensor-entity"
+        controlType: "sensor-entity",
+        placeholder: "sensor.room_mapping"
       })}
             ${this._renderEntityPickerField("Selector de aspirado", "suction_select_entity", config.suction_select_entity, {
-        controlType: "select-entity"
+        controlType: "select-entity",
+        placeholder: "select.robot_fan_speed"
       })}
             ${this._renderEntityPickerField("Selector de fregado", "mop_select_entity", config.mop_select_entity, {
-        controlType: "select-entity"
+        controlType: "select-entity",
+        placeholder: "select.robot_mop_mode"
       })}
           </div>
         </section>
@@ -77285,4 +77357,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.18","contentSha256_12":"b9dc239e424a"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.18 (b9dc239e424a) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-beta.1","contentSha256_12":"28f1c5288c32"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-beta.1 (28f1c5288c32) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}

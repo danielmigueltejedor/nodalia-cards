@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.18";
+const CARD_VERSION = "1.0.0-beta.1";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 
 const VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
@@ -956,23 +956,28 @@ class NodaliaCalendarCard extends HTMLElement {
       return;
     }
 
-    const currentState = String(this._hass.states?.[entityId]?.state ?? "");
-    if (payload === currentState || payload === this._lastSubmittedSharedCompletedValue) {
+    const currentState = String(this._hass.states?.[entityId]?.state ?? "").trim();
+    if (payload === currentState) {
       return;
     }
 
-    this._lastSubmittedSharedCompletedValue = payload;
     try {
       const result = this._hass.callService("input_text", "set_value", {
         entity_id: entityId,
         value: payload,
       });
       if (result && typeof result.then === "function") {
-        result.catch(err => {
-          if (typeof console !== "undefined" && typeof console.warn === "function") {
-            console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
-          }
-        });
+        result
+          .then(() => {
+            this._lastSubmittedSharedCompletedValue = payload;
+          })
+          .catch(err => {
+            if (typeof console !== "undefined" && typeof console.warn === "function") {
+              console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
+            }
+          });
+      } else {
+        this._lastSubmittedSharedCompletedValue = payload;
       }
     } catch (err) {
       if (typeof console !== "undefined" && typeof console.warn === "function") {
