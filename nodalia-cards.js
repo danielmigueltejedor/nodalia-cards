@@ -15626,6 +15626,33 @@
   function normalizeTextKey(value) {
     return String(value || "").trim().toLowerCase();
   }
+  function sanitizeCssRuntimeValue(value) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/[<>{};"']/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+      return "";
+    }
+    return raw;
+  }
+  function sanitizeMediaArtworkUrl(value, hass) {
+    const raw = String(value || "").trim();
+    if (!raw) {
+      return "";
+    }
+    const safe = window.NodaliaUtils?.sanitizeActionUrl?.(raw, { allowRelative: true }) || "";
+    if (!safe) {
+      return "";
+    }
+    if (/^(?:https?:)?\/\//i.test(safe)) {
+      return safe;
+    }
+    if (typeof hass?.hassUrl === "function" && safe.startsWith("/")) {
+      return hass.hassUrl(safe);
+    }
+    return safe;
+  }
   function parsePrimitiveValue(value) {
     if (value === "true") {
       return true;
@@ -16256,15 +16283,21 @@
         if (playDockEntrance) {
           node.style.setProperty("--nav-enter-delay", `${Math.min(index * 38, 520)}ms`);
         }
-        if (route.background) node.style.setProperty("--route-background", route.background);
-        if (route.color) node.style.setProperty("--route-color", route.color);
-        if (route.active_color) node.style.setProperty("--route-active-color", route.active_color);
-        if (route.active_background) node.style.setProperty("--route-active-background", route.active_background);
+        const routeBackground = sanitizeCssRuntimeValue(route.background);
+        const routeColor = sanitizeCssRuntimeValue(route.color);
+        const routeActiveColor = sanitizeCssRuntimeValue(route.active_color);
+        const routeActiveBackground = sanitizeCssRuntimeValue(route.active_background);
+        if (routeBackground) node.style.setProperty("--route-background", routeBackground);
+        if (routeColor) node.style.setProperty("--route-color", routeColor);
+        if (routeActiveColor) node.style.setProperty("--route-active-color", routeActiveColor);
+        if (routeActiveBackground) node.style.setProperty("--route-active-background", routeActiveBackground);
         const badge = this._getBadge(route);
         const badgeNode = node.querySelector(".nav-badge");
         if (badgeNode instanceof HTMLElement) {
-          if (badge.background) badgeNode.style.setProperty("--badge-background", badge.background);
-          if (badge.color) badgeNode.style.setProperty("--badge-color", badge.color);
+          const badgeBackground = sanitizeCssRuntimeValue(badge.background);
+          const badgeColor = sanitizeCssRuntimeValue(badge.color);
+          if (badgeBackground) badgeNode.style.setProperty("--badge-background", badgeBackground);
+          if (badgeColor) badgeNode.style.setProperty("--badge-color", badgeColor);
         }
       });
     }
@@ -16292,15 +16325,21 @@
         if (!(node instanceof HTMLElement)) {
           return;
         }
-        if (item.background) node.style.setProperty("--popup-route-background", item.background);
-        if (item.color) node.style.setProperty("--popup-route-color", item.color);
-        if (item.active_color) node.style.setProperty("--popup-route-active-color", item.active_color);
-        if (item.active_background) node.style.setProperty("--popup-route-active-background", item.active_background);
+        const itemBackground = sanitizeCssRuntimeValue(item.background);
+        const itemColor = sanitizeCssRuntimeValue(item.color);
+        const itemActiveColor = sanitizeCssRuntimeValue(item.active_color);
+        const itemActiveBackground = sanitizeCssRuntimeValue(item.active_background);
+        if (itemBackground) node.style.setProperty("--popup-route-background", itemBackground);
+        if (itemColor) node.style.setProperty("--popup-route-color", itemColor);
+        if (itemActiveColor) node.style.setProperty("--popup-route-active-color", itemActiveColor);
+        if (itemActiveBackground) node.style.setProperty("--popup-route-active-background", itemActiveBackground);
         const badge = this._getBadge(item);
         const badgeNode = node.querySelector(".nav-badge");
         if (badgeNode instanceof HTMLElement) {
-          if (badge.background) badgeNode.style.setProperty("--badge-background", badge.background);
-          if (badge.color) badgeNode.style.setProperty("--badge-color", badge.color);
+          const badgeBackground = sanitizeCssRuntimeValue(badge.background);
+          const badgeColor = sanitizeCssRuntimeValue(badge.color);
+          if (badgeBackground) badgeNode.style.setProperty("--badge-background", badgeBackground);
+          if (badgeColor) badgeNode.style.setProperty("--badge-color", badgeColor);
         }
       });
     }
@@ -16479,12 +16518,10 @@
       return state.attributes.media_artist || state.attributes.media_series_title || state.attributes.media_album_name || state.attributes.app_name || this._getMediaPlayerStateLabel(state.state);
     }
     _resolveMediaUrl(value, options = {}) {
-      const raw = String(value || "").trim();
-      if (!raw) {
+      const baseUrl = sanitizeMediaArtworkUrl(value, this._hass);
+      if (!baseUrl) {
         return "";
       }
-      const isAbsolute = /^(?:https?:)?\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:");
-      const baseUrl = isAbsolute ? raw : typeof this._hass?.hassUrl === "function" ? this._hass.hassUrl(raw.startsWith("/") ? raw : `/${raw.replace(/^\.?\//, "")}`) : raw;
       return appendQueryParam(baseUrl, "nodalia_ts", options.cacheToken);
     }
     _getArtworkCacheToken(state) {
@@ -16611,7 +16648,7 @@
     _getMediaPlayerSourceLabel(state) {
       const sourceLabel = state.attributes.source || state.attributes.app_name || state.attributes.media_album_name || state.attributes.media_channel;
       const sourceKey = normalizeTextKey(sourceLabel);
-      if (!sourceKey || sourceKey.includes("music assistant")) {
+      if (!sourceKey || sourceKey.includes("music assistant") || sourceKey === "airmusic" || sourceKey.startsWith("airmusic ")) {
         return null;
       }
       return sourceLabel;
@@ -18188,7 +18225,6 @@
 
         .popup-item:hover {
           background: rgba(var(--rgb-primary-color), 0.08);
-          transform: translateY(-1px);
         }
 
         .popup-item.active {
@@ -18699,21 +18735,22 @@
         .media-player-toggle {
           align-items: center;
           appearance: none;
-          background: ${config.styles.media_player.background};
-          border: ${config.styles.media_player.border};
-          border-radius: 999px;
-          box-shadow: ${config.styles.media_player.box_shadow};
+          background: color-mix(in srgb, ${config.styles.media_player.background} 78%, var(--card-background-color) 22%);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 18px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.16);
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
-          gap: 10px;
-          max-width: min(100%, 280px);
-          min-height: 44px;
-          padding: 6px 10px 6px 6px;
+          gap: 11px;
+          max-width: min(100%, 292px);
+          min-height: 48px;
+          padding: 8px 12px 8px 8px;
           transition:
             background ${animations.enabled ? animations.barDuration : 0}ms ease,
-            box-shadow ${animations.enabled ? animations.barDuration : 0}ms ease,
-            transform ${animations.enabled ? animations.buttonBounceDuration : 0}ms ease;
+            box-shadow ${animations.enabled ? animations.barDuration : 0}ms ease;
         }
 
         .media-player-toggle.media-player-toggle--entering {
@@ -18722,14 +18759,14 @@
 
         .media-player-toggle__artwork {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
+          background: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          border-radius: 14px;
           display: inline-flex;
           flex: 0 0 auto;
-          height: 32px;
+          height: 34px;
           justify-content: center;
           overflow: hidden;
-          width: 32px;
+          width: 34px;
         }
 
         .media-player-toggle__artwork img,
@@ -20682,6 +20719,23 @@
   function normalizeTextKey2(value) {
     return String(value || "").trim().toLowerCase();
   }
+  function sanitizeMediaArtworkUrl2(value, hass) {
+    const raw = String(value || "").trim();
+    if (!raw) {
+      return "";
+    }
+    const safe = window.NodaliaUtils?.sanitizeActionUrl?.(raw, { allowRelative: true }) || "";
+    if (!safe) {
+      return "";
+    }
+    if (/^(?:https?:)?\/\//i.test(safe)) {
+      return safe;
+    }
+    if (typeof hass?.hassUrl === "function" && safe.startsWith("/")) {
+      return hass.hassUrl(safe);
+    }
+    return safe;
+  }
   function appendQueryParam2(url, key, value) {
     const rawUrl = String(url || "").trim();
     if (!rawUrl || value === null || value === void 0 || value === "") {
@@ -21135,12 +21189,10 @@
       return this._displayArtworkByEntity.get(entityId) || "";
     }
     _resolveMediaUrl(value, options = {}) {
-      const raw = String(value || "").trim();
-      if (!raw) {
+      const baseUrl = sanitizeMediaArtworkUrl2(value, this._hass);
+      if (!baseUrl) {
         return "";
       }
-      const isAbsolute = /^(?:https?:)?\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:");
-      const baseUrl = isAbsolute ? raw : typeof this._hass?.hassUrl === "function" ? this._hass.hassUrl(raw.startsWith("/") ? raw : `/${raw.replace(/^\.?\//, "")}`) : raw;
       return appendQueryParam2(baseUrl, "nodalia_ts", options.cacheToken);
     }
     _getArtworkCacheToken(state) {
@@ -21345,7 +21397,7 @@
     _getPlayerSourceLabel(state) {
       const sourceLabel = state.attributes.source || state.attributes.app_name || state.attributes.media_album_name || state.attributes.media_channel;
       const sourceKey = normalizeTextKey2(sourceLabel);
-      if (!sourceKey || sourceKey.includes("music assistant")) {
+      if (!sourceKey || sourceKey.includes("music assistant") || sourceKey === "airmusic" || sourceKey.startsWith("airmusic ")) {
         return null;
       }
       return sourceLabel;
@@ -51551,6 +51603,43 @@
     const numeric = Number(String(value ?? "").replace(",", "."));
     return Number.isFinite(numeric) ? numeric : null;
   }
+  function sanitizeCssValue4(value, fallback) {
+    const raw = String(value ?? "").trim();
+    const safeFallback = String(fallback ?? "").trim();
+    if (!raw) {
+      return safeFallback;
+    }
+    if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+      return safeFallback;
+    }
+    return raw;
+  }
+  function sanitizeStyleTree(candidate, fallback) {
+    if (Array.isArray(fallback)) {
+      return deepClone11(fallback);
+    }
+    if (isObject11(fallback)) {
+      const out = {};
+      Object.keys(fallback).forEach((key) => {
+        const nextCandidate = isObject11(candidate) ? candidate[key] : void 0;
+        out[key] = sanitizeStyleTree(nextCandidate, fallback[key]);
+      });
+      return out;
+    }
+    if (typeof fallback === "string") {
+      return sanitizeCssValue4(candidate, fallback);
+    }
+    if (typeof fallback === "number") {
+      return Number.isFinite(Number(candidate)) ? Number(candidate) : fallback;
+    }
+    if (typeof fallback === "boolean") {
+      return typeof candidate === "boolean" ? candidate : fallback;
+    }
+    return candidate === void 0 ? deepClone11(fallback) : candidate;
+  }
+  function getSafeStyles4(styles = DEFAULT_CONFIG11.styles) {
+    return sanitizeStyleTree(styles, DEFAULT_CONFIG11.styles);
+  }
   function parseInteger(value, fallback = null) {
     const numeric = Number.parseInt(String(value ?? ""), 10);
     return Number.isFinite(numeric) ? numeric : fallback;
@@ -52609,7 +52698,7 @@
       return window.NodaliaI18n?.strings?.(lang)?.advanceVacuum || null;
     }
     _getAccentColor(state) {
-      const styles = this._config?.styles || DEFAULT_CONFIG11.styles;
+      const styles = getSafeStyles4(this._config?.styles);
       if (this._getReportedStateKey(state) === "error") {
         return styles.icon.error_color || "#ff6b6b";
       }
@@ -55950,8 +56039,9 @@
       }
       const isRoomSelectionLocked = this._isRoomSelectionLocked();
       const highlightedRoomIds = new Set(this._getHighlightedRoomIds());
-      const markerSize = Math.max(22, Math.round(parseSizeToPixels9(this._config?.styles?.map?.marker_size, 34) * 0.76));
-      const labelSize = Math.max(9, Math.round(parseSizeToPixels9(this._config?.styles?.map?.label_size, 12) * 0.84));
+      const safeStyles = getSafeStyles4(this._config?.styles);
+      const markerSize = Math.max(22, Math.round(parseSizeToPixels9(safeStyles?.map?.marker_size, 34) * 0.76));
+      const labelSize = Math.max(9, Math.round(parseSizeToPixels9(safeStyles?.map?.label_size, 12) * 0.84));
       const iconSize = Math.max(12, Math.round(markerSize * 0.42));
       const placements = this._getRoomMarkerPlacements(rooms, markerSize, labelSize, iconSize);
       return rooms.filter((room) => this._getPrimaryRoomOutline(room).length >= 3).map((room) => {
@@ -56368,7 +56458,7 @@
         const state = this._getVacuumState();
         const accentColor = this._getAccentColor(state);
         const advanceVacuumStrings = this._advanceVacuumStrings();
-        const styles = config.styles || DEFAULT_CONFIG11.styles;
+        const styles = getSafeStyles4(config.styles);
         const animations = this._getAnimationSettings();
         const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
         this._syncActiveCleaningSession(state);
@@ -63666,7 +63756,7 @@
   function escapeSelectorValue13(value) {
     return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
   }
-  function sanitizeCssValue4(value, fallback) {
+  function sanitizeCssValue5(value, fallback) {
     const raw = String(value ?? "").trim();
     const safeFallback = String(fallback ?? "").trim();
     if (!raw) {
@@ -63677,32 +63767,32 @@
     }
     return raw;
   }
-  function getSafeStyles4(styles = DEFAULT_CONFIG14.styles) {
+  function getSafeStyles5(styles = DEFAULT_CONFIG14.styles) {
     const defaults = DEFAULT_CONFIG14.styles;
     const card = styles?.card || {};
     const icon = styles?.icon || {};
     const tint = styles?.tint || {};
     return {
       card: {
-        background: sanitizeCssValue4(card.background, defaults.card.background),
-        border: sanitizeCssValue4(card.border, defaults.card.border),
-        border_radius: sanitizeCssValue4(card.border_radius, defaults.card.border_radius),
-        box_shadow: sanitizeCssValue4(card.box_shadow, defaults.card.box_shadow),
-        gap: sanitizeCssValue4(card.gap, defaults.card.gap),
-        padding: sanitizeCssValue4(card.padding, defaults.card.padding)
+        background: sanitizeCssValue5(card.background, defaults.card.background),
+        border: sanitizeCssValue5(card.border, defaults.card.border),
+        border_radius: sanitizeCssValue5(card.border_radius, defaults.card.border_radius),
+        box_shadow: sanitizeCssValue5(card.box_shadow, defaults.card.box_shadow),
+        gap: sanitizeCssValue5(card.gap, defaults.card.gap),
+        padding: sanitizeCssValue5(card.padding, defaults.card.padding)
       },
       icon: {
-        background: sanitizeCssValue4(icon.background, defaults.icon.background),
-        icon_only_offset_y: sanitizeCssValue4(icon.icon_only_offset_y, defaults.icon.icon_only_offset_y),
-        off_color: sanitizeCssValue4(icon.off_color, defaults.icon.off_color),
-        on_color: sanitizeCssValue4(icon.on_color, defaults.icon.on_color),
-        size: sanitizeCssValue4(icon.size, defaults.icon.size)
+        background: sanitizeCssValue5(icon.background, defaults.icon.background),
+        icon_only_offset_y: sanitizeCssValue5(icon.icon_only_offset_y, defaults.icon.icon_only_offset_y),
+        off_color: sanitizeCssValue5(icon.off_color, defaults.icon.off_color),
+        on_color: sanitizeCssValue5(icon.on_color, defaults.icon.on_color),
+        size: sanitizeCssValue5(icon.size, defaults.icon.size)
       },
       tint: {
-        color: sanitizeCssValue4(tint.color, defaults.tint.color)
+        color: sanitizeCssValue5(tint.color, defaults.tint.color)
       },
-      title_size: sanitizeCssValue4(styles?.title_size, defaults.title_size),
-      value_size: sanitizeCssValue4(styles?.value_size, defaults.value_size)
+      title_size: sanitizeCssValue5(styles?.title_size, defaults.title_size),
+      value_size: sanitizeCssValue5(styles?.value_size, defaults.value_size)
     };
   }
   function clampNumber(value, min, max) {
@@ -63976,7 +64066,7 @@
     }
     _getTintColor(state) {
       if (this._config?.tint_auto === false) {
-        return sanitizeCssValue4(this._config?.styles?.tint?.color, DEFAULT_CONFIG14.styles.tint.color);
+        return sanitizeCssValue5(this._config?.styles?.tint?.color, DEFAULT_CONFIG14.styles.tint.color);
       }
       const domain = getEntityDomain3(state);
       const stateKey = normalizeTextKey13(state?.state);
@@ -64112,7 +64202,7 @@
         return;
       }
       const config = this._config || normalizeConfig14({});
-      const styles = getSafeStyles4(config.styles);
+      const styles = getSafeStyles5(config.styles);
       const state = this._getState();
       if (!state && !config.name && !config.icon) {
         this.removeAttribute("data-icon-only");
@@ -64152,7 +64242,7 @@
       const icon = this._getResolvedIcon(state);
       const active = this._isActive(state);
       const dimIcon = this._shouldDimIcon(state);
-      const tint = sanitizeCssValue4(this._getTintColor(state), DEFAULT_CONFIG14.styles.tint.color);
+      const tint = sanitizeCssValue5(this._getTintColor(state), DEFAULT_CONFIG14.styles.tint.color);
       const strongTint = this._shouldApplyStrongCardTint(state);
       const cardBackground = strongTint ? `linear-gradient(135deg, color-mix(in srgb, ${tint} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${tint} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)` : styles.card.background;
       const cardBorder = strongTint ? `1px solid color-mix(in srgb, ${tint} 32%, var(--divider-color))` : styles.card.border;
@@ -70725,7 +70815,7 @@
   function escapeSelectorValue16(value) {
     return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
   }
-  function sanitizeCssValue5(value, fallback) {
+  function sanitizeCssValue6(value, fallback) {
     const raw = String(value ?? "").trim();
     const safeFallback = String(fallback ?? "").trim();
     if (!raw) {
@@ -70736,7 +70826,7 @@
     }
     return raw;
   }
-  function getSafeStyles5(styles = DEFAULT_CONFIG17.styles) {
+  function getSafeStyles6(styles = DEFAULT_CONFIG17.styles) {
     const walk = (candidate, fallback) => {
       if (isObject17(fallback)) {
         const out = {};
@@ -70747,7 +70837,7 @@
         return out;
       }
       if (typeof fallback === "string") {
-        return sanitizeCssValue5(candidate, fallback);
+        return sanitizeCssValue6(candidate, fallback);
       }
       return candidate === void 0 ? fallback : candidate;
     };
@@ -71043,7 +71133,7 @@
       return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
     }
     _getCompactLayoutThreshold() {
-      const styles = getSafeStyles5(this._config?.styles);
+      const styles = getSafeStyles6(this._config?.styles);
       const iconSize = parseSizeToPixels14(styles?.icon?.size, 58);
       const cardPadding = parseSizeToPixels14(styles?.card?.padding, 14);
       const cardGap = parseSizeToPixels14(styles?.card?.gap, 12);
@@ -72067,7 +72157,7 @@
       return true;
     }
     _getAccentColor(state) {
-      const styles = getSafeStyles5(this._config?.styles);
+      const styles = getSafeStyles6(this._config?.styles);
       if (state?.state === "error") {
         return styles.icon.error_color;
       }
@@ -74104,4 +74194,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.6.0-alpha.3","contentSha256_12":"86454cef6699"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.6.0-alpha.4","contentSha256_12":"0e958e929d26"};}

@@ -10,6 +10,17 @@ Work toward **`0.6.x`** on **`alpha`** / **`beta`** and eventual **`main`**: add
 
 ---
 
+## [0.6.0-alpha.4] - 2026-05-05
+
+Fourth **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.4`** (tag **`v0.6.0-alpha.4`** optional). Breaking changes are allowed; prefer stable **`main`** for production dashboards.
+
+- **Navigation bar (mini media player):** visual style aligned with the rest of Nodalia cards (surface, border, shadow, spacing) and reduced hover bounce in popup items for steadier perceived motion.
+- **Media player + nav media chips:** filtered noisy source chip values (notably `AirMusic`) so normal HomePods no longer show a redundant extra chip next to progress/duration.
+- **Security hardening (Fase A):** artwork/media URL resolution now passes through shared URL sanitization in media paths; runtime route/popup style vars in nav apply sanitized values only.
+- **Advance Vacuum hardening (Fase A):** added safe style tree sanitization for configurable CSS values before render-time interpolation (card/map/icon/control/chip style paths).
+
+---
+
 ## [0.6.0-alpha.3] - 2026-05-05
 
 Third **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.3`** (tag **`v0.6.0-alpha.3`** optional). Breaking changes are allowed; prefer stable **`main`** for production dashboards.

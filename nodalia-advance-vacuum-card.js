@@ -918,6 +918,46 @@ function parseNumber(value) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+function sanitizeCssValue(value, fallback) {
+  const raw = String(value ?? "").trim();
+  const safeFallback = String(fallback ?? "").trim();
+  if (!raw) {
+    return safeFallback;
+  }
+  if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+    return safeFallback;
+  }
+  return raw;
+}
+
+function sanitizeStyleTree(candidate, fallback) {
+  if (Array.isArray(fallback)) {
+    return deepClone(fallback);
+  }
+  if (isObject(fallback)) {
+    const out = {};
+    Object.keys(fallback).forEach(key => {
+      const nextCandidate = isObject(candidate) ? candidate[key] : undefined;
+      out[key] = sanitizeStyleTree(nextCandidate, fallback[key]);
+    });
+    return out;
+  }
+  if (typeof fallback === "string") {
+    return sanitizeCssValue(candidate, fallback);
+  }
+  if (typeof fallback === "number") {
+    return Number.isFinite(Number(candidate)) ? Number(candidate) : fallback;
+  }
+  if (typeof fallback === "boolean") {
+    return typeof candidate === "boolean" ? candidate : fallback;
+  }
+  return candidate === undefined ? deepClone(fallback) : candidate;
+}
+
+function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
+  return sanitizeStyleTree(styles, DEFAULT_CONFIG.styles);
+}
+
 function parseInteger(value, fallback = null) {
   const numeric = Number.parseInt(String(value ?? ""), 10);
   return Number.isFinite(numeric) ? numeric : fallback;
@@ -2262,7 +2302,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getAccentColor(state) {
-    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    const styles = getSafeStyles(this._config?.styles);
 
     if (this._getReportedStateKey(state) === "error") {
       return styles.icon.error_color || "#ff6b6b";
@@ -6457,8 +6497,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const isRoomSelectionLocked = this._isRoomSelectionLocked();
     const highlightedRoomIds = new Set(this._getHighlightedRoomIds());
-    const markerSize = Math.max(22, Math.round(parseSizeToPixels(this._config?.styles?.map?.marker_size, 34) * 0.76));
-    const labelSize = Math.max(9, Math.round(parseSizeToPixels(this._config?.styles?.map?.label_size, 12) * 0.84));
+    const safeStyles = getSafeStyles(this._config?.styles);
+    const markerSize = Math.max(22, Math.round(parseSizeToPixels(safeStyles?.map?.marker_size, 34) * 0.76));
+    const labelSize = Math.max(9, Math.round(parseSizeToPixels(safeStyles?.map?.label_size, 12) * 0.84));
     const iconSize = Math.max(12, Math.round(markerSize * 0.42));
     const placements = this._getRoomMarkerPlacements(rooms, markerSize, labelSize, iconSize);
 
@@ -6952,7 +6993,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const state = this._getVacuumState();
       const accentColor = this._getAccentColor(state);
       const advanceVacuumStrings = this._advanceVacuumStrings();
-      const styles = config.styles || DEFAULT_CONFIG.styles;
+      const styles = getSafeStyles(config.styles);
       const animations = this._getAnimationSettings();
       const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
       this._syncActiveCleaningSession(state);

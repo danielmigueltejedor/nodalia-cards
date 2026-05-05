@@ -1057,6 +1057,24 @@ function normalizeTextKey(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function sanitizeMediaArtworkUrl(value, hass) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+  const safe = window.NodaliaUtils?.sanitizeActionUrl?.(raw, { allowRelative: true }) || "";
+  if (!safe) {
+    return "";
+  }
+  if (/^(?:https?:)?\/\//i.test(safe)) {
+    return safe;
+  }
+  if (typeof hass?.hassUrl === "function" && safe.startsWith("/")) {
+    return hass.hassUrl(safe);
+  }
+  return safe;
+}
+
 function appendQueryParam(url, key, value) {
   const rawUrl = String(url || "").trim();
   if (!rawUrl || value === null || value === undefined || value === "") {
@@ -1599,18 +1617,10 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _resolveMediaUrl(value, options = {}) {
-    const raw = String(value || "").trim();
-    if (!raw) {
+    const baseUrl = sanitizeMediaArtworkUrl(value, this._hass);
+    if (!baseUrl) {
       return "";
     }
-
-    const isAbsolute = /^(?:https?:)?\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:");
-    const baseUrl = isAbsolute
-      ? raw
-      : typeof this._hass?.hassUrl === "function"
-        ? this._hass.hassUrl(raw.startsWith("/") ? raw : `/${raw.replace(/^\.?\//, "")}`)
-        : raw;
-
     return appendQueryParam(baseUrl, "nodalia_ts", options.cacheToken);
   }
 
@@ -1903,7 +1913,12 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     const sourceKey = normalizeTextKey(sourceLabel);
 
-    if (!sourceKey || sourceKey.includes("music assistant")) {
+    if (
+      !sourceKey ||
+      sourceKey.includes("music assistant") ||
+      sourceKey === "airmusic" ||
+      sourceKey.startsWith("airmusic ")
+    ) {
       return null;
     }
 

@@ -868,6 +868,35 @@ function normalizeTextKey(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function sanitizeCssRuntimeValue(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return "";
+  }
+  if (/[<>{};"']/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+    return "";
+  }
+  return raw;
+}
+
+function sanitizeMediaArtworkUrl(value, hass) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+  const safe = window.NodaliaUtils?.sanitizeActionUrl?.(raw, { allowRelative: true }) || "";
+  if (!safe) {
+    return "";
+  }
+  if (/^(?:https?:)?\/\//i.test(safe)) {
+    return safe;
+  }
+  if (typeof hass?.hassUrl === "function" && safe.startsWith("/")) {
+    return hass.hassUrl(safe);
+  }
+  return safe;
+}
+
 function parsePrimitiveValue(value) {
   if (value === "true") {
     return true;
@@ -1663,15 +1692,21 @@ class NodaliaNavigationBarCard extends HTMLElement {
       if (playDockEntrance) {
         node.style.setProperty("--nav-enter-delay", `${Math.min(index * 38, 520)}ms`);
       }
-      if (route.background) node.style.setProperty("--route-background", route.background);
-      if (route.color) node.style.setProperty("--route-color", route.color);
-      if (route.active_color) node.style.setProperty("--route-active-color", route.active_color);
-      if (route.active_background) node.style.setProperty("--route-active-background", route.active_background);
+      const routeBackground = sanitizeCssRuntimeValue(route.background);
+      const routeColor = sanitizeCssRuntimeValue(route.color);
+      const routeActiveColor = sanitizeCssRuntimeValue(route.active_color);
+      const routeActiveBackground = sanitizeCssRuntimeValue(route.active_background);
+      if (routeBackground) node.style.setProperty("--route-background", routeBackground);
+      if (routeColor) node.style.setProperty("--route-color", routeColor);
+      if (routeActiveColor) node.style.setProperty("--route-active-color", routeActiveColor);
+      if (routeActiveBackground) node.style.setProperty("--route-active-background", routeActiveBackground);
       const badge = this._getBadge(route);
       const badgeNode = node.querySelector(".nav-badge");
       if (badgeNode instanceof HTMLElement) {
-        if (badge.background) badgeNode.style.setProperty("--badge-background", badge.background);
-        if (badge.color) badgeNode.style.setProperty("--badge-color", badge.color);
+        const badgeBackground = sanitizeCssRuntimeValue(badge.background);
+        const badgeColor = sanitizeCssRuntimeValue(badge.color);
+        if (badgeBackground) badgeNode.style.setProperty("--badge-background", badgeBackground);
+        if (badgeColor) badgeNode.style.setProperty("--badge-color", badgeColor);
       }
     });
   }
@@ -1700,15 +1735,21 @@ class NodaliaNavigationBarCard extends HTMLElement {
       if (!(node instanceof HTMLElement)) {
         return;
       }
-      if (item.background) node.style.setProperty("--popup-route-background", item.background);
-      if (item.color) node.style.setProperty("--popup-route-color", item.color);
-      if (item.active_color) node.style.setProperty("--popup-route-active-color", item.active_color);
-      if (item.active_background) node.style.setProperty("--popup-route-active-background", item.active_background);
+      const itemBackground = sanitizeCssRuntimeValue(item.background);
+      const itemColor = sanitizeCssRuntimeValue(item.color);
+      const itemActiveColor = sanitizeCssRuntimeValue(item.active_color);
+      const itemActiveBackground = sanitizeCssRuntimeValue(item.active_background);
+      if (itemBackground) node.style.setProperty("--popup-route-background", itemBackground);
+      if (itemColor) node.style.setProperty("--popup-route-color", itemColor);
+      if (itemActiveColor) node.style.setProperty("--popup-route-active-color", itemActiveColor);
+      if (itemActiveBackground) node.style.setProperty("--popup-route-active-background", itemActiveBackground);
       const badge = this._getBadge(item);
       const badgeNode = node.querySelector(".nav-badge");
       if (badgeNode instanceof HTMLElement) {
-        if (badge.background) badgeNode.style.setProperty("--badge-background", badge.background);
-        if (badge.color) badgeNode.style.setProperty("--badge-color", badge.color);
+        const badgeBackground = sanitizeCssRuntimeValue(badge.background);
+        const badgeColor = sanitizeCssRuntimeValue(badge.color);
+        if (badgeBackground) badgeNode.style.setProperty("--badge-background", badgeBackground);
+        if (badgeColor) badgeNode.style.setProperty("--badge-color", badgeColor);
       }
     });
   }
@@ -1958,18 +1999,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
   }
 
   _resolveMediaUrl(value, options = {}) {
-    const raw = String(value || "").trim();
-    if (!raw) {
+    const baseUrl = sanitizeMediaArtworkUrl(value, this._hass);
+    if (!baseUrl) {
       return "";
     }
-
-    const isAbsolute = /^(?:https?:)?\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:");
-    const baseUrl = isAbsolute
-      ? raw
-      : typeof this._hass?.hassUrl === "function"
-        ? this._hass.hassUrl(raw.startsWith("/") ? raw : `/${raw.replace(/^\.?\//, "")}`)
-        : raw;
-
     return appendQueryParam(baseUrl, "nodalia_ts", options.cacheToken);
   }
 
@@ -2144,7 +2177,12 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const sourceKey = normalizeTextKey(sourceLabel);
 
-    if (!sourceKey || sourceKey.includes("music assistant")) {
+    if (
+      !sourceKey ||
+      sourceKey.includes("music assistant") ||
+      sourceKey === "airmusic" ||
+      sourceKey.startsWith("airmusic ")
+    ) {
       return null;
     }
 
@@ -3974,7 +4012,6 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .popup-item:hover {
           background: rgba(var(--rgb-primary-color), 0.08);
-          transform: translateY(-1px);
         }
 
         .popup-item.active {
@@ -4485,21 +4522,22 @@ class NodaliaNavigationBarCard extends HTMLElement {
         .media-player-toggle {
           align-items: center;
           appearance: none;
-          background: ${config.styles.media_player.background};
-          border: ${config.styles.media_player.border};
-          border-radius: 999px;
-          box-shadow: ${config.styles.media_player.box_shadow};
+          background: color-mix(in srgb, ${config.styles.media_player.background} 78%, var(--card-background-color) 22%);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 18px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.16);
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
-          gap: 10px;
-          max-width: min(100%, 280px);
-          min-height: 44px;
-          padding: 6px 10px 6px 6px;
+          gap: 11px;
+          max-width: min(100%, 292px);
+          min-height: 48px;
+          padding: 8px 12px 8px 8px;
           transition:
             background ${animations.enabled ? animations.barDuration : 0}ms ease,
-            box-shadow ${animations.enabled ? animations.barDuration : 0}ms ease,
-            transform ${animations.enabled ? animations.buttonBounceDuration : 0}ms ease;
+            box-shadow ${animations.enabled ? animations.barDuration : 0}ms ease;
         }
 
         .media-player-toggle.media-player-toggle--entering {
@@ -4508,14 +4546,14 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .media-player-toggle__artwork {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
+          background: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          border-radius: 14px;
           display: inline-flex;
           flex: 0 0 auto;
-          height: 32px;
+          height: 34px;
           justify-content: center;
           overflow: hidden;
-          width: 32px;
+          width: 34px;
         }
 
         .media-player-toggle__artwork img,
