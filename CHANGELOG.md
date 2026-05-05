@@ -10,6 +10,34 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.8] - 2026-05-05
+
+Eighth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.8`** (tag **`v1.0.0-alpha.8`** optional).
+
+- **Calendar card:** editor adds **etiqueta** y **color de tintado** por calendario (la etiqueta sustituye al subtítulo bajo el evento cuando está definida); el chip del encabezado usa **rangos predefinidos** (3 días, 1 semana, 2 semanas, 1 mes) en lugar de un número libre de días.
+- **Calendar card:** al pulsar la tarjeta se abre un **panel ampliado** con todo el rango: columna vertical para 3 días, columnas horizontales desplazables para 1–2 semanas, y **rejilla mensual** para el rango de un mes; **Escape** o el fondo cierran el panel.
+- **Calendar card:** con **tintado automático**, la tarjeta usa el mismo esquema visual que **Entity card** en estado activo (degradado 135° sobre `ha-card`, borde `color-mix` con `--divider-color`, sombra de elevación, overlays `::before` / `::after`), burbuja de icono con borde/sombra tipo pill y chips de cabecera alineados con los chips de Entity (`fondo/borde` al 6%, peso 600). Con tintado automático desactivado, la tarjeta pasa a fondo y borde neutros como Entity **inactiva**.
+
+---
+
+## [1.0.0-alpha.7] - 2026-05-05
+
+Seventh **`alpha`** on the **`1.0.0`** line (**branch `alpha`**).
+
+- **Calendar card:** debajo del título del evento se muestra el **nombre amistoso** de la entidad (`friendly_name`) en lugar del id crudo (`calendar.xxx`); si no hay nombre, se usa una forma legible del sufijo de entidad.
+
+---
+
+## [1.0.0-alpha.6] - 2026-05-05
+
+Sixth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**).
+
+- **Calendar editor:** color-related style fields use the same visual color picker + swatch pattern as other Nodalia cards.
+- **Calendar editor:** “Añadir calendario” works again (empty calendar slots are preserved instead of being stripped on normalize).
+- **Calendar:** default **`max_visible_events`** is now **2** (was 3).
+
+---
+
 ## [1.0.0-alpha.5] - 2026-05-05
 
 Fifth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**).
@@ -42,7 +70,7 @@ Third **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). This release con
 Second **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). This cut refines the initial calendar-card introduction with a stronger visual-editor workflow and event-list behavior.
 
 - **Calendar editor UX:** moved calendar selection to native entity picker rows with add/remove controls (multi-calendar friendly, consistent with other Nodalia editors).
-- **Calendar list behavior:** added configurable `max_visible_events` (default **3**) and vertical scroll beyond the visible-event threshold.
+- **Calendar list behavior:** added configurable `max_visible_events` (originally default **3**, now **2** from **1.0.0-alpha.6**) and vertical scroll beyond the visible-event threshold.
 - **Polish pass:** aligned interaction flow and config normalization for the new card while keeping `0.6.1` as stable baseline on `main`.
 
 ---

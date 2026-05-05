@@ -15098,7 +15098,7 @@
       return entityId.includes(".") ? entityId.split(".")[0] : "";
     }
     const resolveEditorColorValueCache = /* @__PURE__ */ new Map();
-    function resolveEditorColorValue13(value) {
+    function resolveEditorColorValue14(value) {
       const rawValue = String(value ?? "").trim();
       if (!rawValue || typeof document === "undefined") {
         return "";
@@ -15175,7 +15175,7 @@
         return rgbToHueDegrees(Number(rgbFn[1]), Number(rgbFn[2]), Number(rgbFn[3]));
       }
       if (resolveDepth === 0 && typeof document !== "undefined") {
-        const resolved = resolveEditorColorValue13(raw);
+        const resolved = resolveEditorColorValue14(raw);
         const resolvedTrim = String(resolved || "").trim();
         if (resolvedTrim && resolvedTrim !== raw) {
           return parseCssColorHue(resolvedTrim, 1);
@@ -15232,7 +15232,7 @@
     }
     if (typeof window !== "undefined") {
       window.NodaliaBubbleContrast = {
-        resolveEditorColorValue: resolveEditorColorValue13,
+        resolveEditorColorValue: resolveEditorColorValue14,
         parseCssColorHue,
         shouldDarkenBubbleIconGlyph
       };
@@ -70789,12 +70789,14 @@
   var CARD_TAG17 = "nodalia-calendar-card";
   var EDITOR_TAG17 = "nodalia-calendar-card-editor";
   var COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
+  var VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
   var DEFAULT_CONFIG17 = {
     title: "Calendario",
     icon: "mdi:calendar-month",
     calendars: [],
+    time_range: "1w",
     days_to_show: 7,
-    max_visible_events: 3,
+    max_visible_events: 2,
     refresh_interval: 300,
     show_completed: false,
     allow_complete: true,
@@ -70805,23 +70807,28 @@
     },
     styles: {
       card: {
-        background: "linear-gradient(180deg, rgba(255,255,255,0.028) 0%, rgba(0,0,0,0.03) 100%), var(--ha-card-background, var(--card-background-color))",
-        border: "1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent)",
-        border_radius: "22px",
-        box_shadow: "0 18px 34px rgba(0,0,0,0.16), inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
-        padding: "16px",
+        background: "var(--ha-card-background, var(--card-background-color))",
+        border: "1px solid var(--divider-color)",
+        border_radius: "28px",
+        box_shadow: "var(--ha-card-box-shadow)",
+        padding: "14px",
         gap: "12px"
       },
       icon: {
-        background: "color-mix(in srgb, var(--primary-color) 16%, transparent)",
+        background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
         color: "var(--primary-text-color)",
-        size: "19px"
+        on_color: "var(--info-color, #71c0ff)",
+        off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
+        size: "38px"
       },
       tint: {
         color: "var(--primary-color)"
       },
       title_size: "17px",
       event_size: "13px",
+      chip_height: "24px",
+      chip_font_size: "11px",
+      chip_padding: "0 9px",
       chip_size: "11px"
     }
   };
@@ -70855,22 +70862,181 @@
     });
     return out;
   }
+  function sanitizeCalendarTint(value) {
+    const s = String(value ?? "").trim();
+    if (!s) {
+      return "";
+    }
+    if (/^#[0-9a-f]{3,8}$/i.test(s)) {
+      return s;
+    }
+    if (/^rgba?\(/i.test(s) && s.length < 140) {
+      return s;
+    }
+    if (/^color-mix\(/i.test(s) && s.length < 240) {
+      return s;
+    }
+    if (/^var\(--[a-zA-Z0-9_-]+\)$/i.test(s)) {
+      return s;
+    }
+    return "";
+  }
+  function daysFromTimeRange(tr) {
+    const map = { "3d": 3, "1w": 7, "2w": 14, "1m": 31 };
+    return map[tr] || 7;
+  }
+  function normalizeCalendarEntries(calendars) {
+    if (!Array.isArray(calendars)) {
+      return [];
+    }
+    const out = [];
+    calendars.forEach((raw) => {
+      if (typeof raw === "string") {
+        out.push({
+          entity: String(raw ?? "").trim(),
+          label: "",
+          tint: ""
+        });
+        return;
+      }
+      if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+        out.push({
+          entity: String(raw.entity ?? "").trim(),
+          label: String(raw.label ?? "").trim(),
+          tint: sanitizeCalendarTint(raw.tint)
+        });
+      }
+    });
+    return out;
+  }
   function normalizeConfig17(config) {
     const normalized = mergeConfig17(DEFAULT_CONFIG17, config || {});
-    normalized.calendars = Array.isArray(normalized.calendars) ? normalized.calendars.map((item) => String(item || "").trim()).filter(Boolean) : [];
-    normalized.days_to_show = Math.min(30, Math.max(1, Number(normalized.days_to_show) || DEFAULT_CONFIG17.days_to_show));
+    normalized.calendars = normalizeCalendarEntries(normalized.calendars);
+    let timeRange = String(normalized.time_range || "").trim();
+    if (!VALID_TIME_RANGES.includes(timeRange)) {
+      const legacyDays = Number(normalized.days_to_show);
+      if (Number.isFinite(legacyDays)) {
+        if (legacyDays <= 3) {
+          timeRange = "3d";
+        } else if (legacyDays <= 7) {
+          timeRange = "1w";
+        } else if (legacyDays <= 14) {
+          timeRange = "2w";
+        } else {
+          timeRange = "1m";
+        }
+      } else {
+        timeRange = DEFAULT_CONFIG17.time_range;
+      }
+    }
+    normalized.time_range = timeRange;
+    normalized.days_to_show = Math.min(62, Math.max(1, daysFromTimeRange(timeRange)));
     normalized.max_visible_events = Math.min(
       12,
       Math.max(1, Number(normalized.max_visible_events) || DEFAULT_CONFIG17.max_visible_events)
     );
     normalized.refresh_interval = Math.min(3600, Math.max(30, Number(normalized.refresh_interval) || DEFAULT_CONFIG17.refresh_interval));
+    if (!normalized.styles.chip_font_size && normalized.styles.chip_size) {
+      normalized.styles.chip_font_size = normalized.styles.chip_size;
+    }
+    const iconStyle = normalized.styles?.icon;
+    if (iconStyle && iconStyle.color && !iconStyle.on_color) {
+      iconStyle.on_color = iconStyle.color;
+    }
     return normalized;
+  }
+  function timeRangeChipLabel(tr) {
+    const labels = {
+      "3d": "3 dias",
+      "1w": "1 semana",
+      "2w": "2 semanas",
+      "1m": "1 mes"
+    };
+    return labels[tr] || labels["1w"];
   }
   function escapeHtml17(value) {
     return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
   }
   function escapeSelectorValue16(value) {
     return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+  }
+  function clamp16(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+  function resolveEditorColorValue12(value) {
+    const rawValue = String(value ?? "").trim();
+    if (!rawValue || typeof document === "undefined") {
+      return "";
+    }
+    const probe = document.createElement("span");
+    probe.style.position = "fixed";
+    probe.style.opacity = "0";
+    probe.style.pointerEvents = "none";
+    probe.style.color = "";
+    probe.style.color = rawValue;
+    if (!probe.style.color) {
+      return rawValue;
+    }
+    (document.body || document.documentElement).appendChild(probe);
+    const resolved = getComputedStyle(probe).color;
+    probe.remove();
+    return resolved || rawValue;
+  }
+  function formatEditorHexChannel15(value) {
+    return clamp16(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+  }
+  function formatEditorColorFromHex15(hex, alpha = 1) {
+    const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+    if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+      return String(hex ?? "");
+    }
+    const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+    const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+    const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+    const safeAlpha = clamp16(Number(alpha), 0, 1);
+    if (safeAlpha >= 0.999) {
+      return `#${normalizedHex}`;
+    }
+    return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+  }
+  function getEditorColorModel15(value, fallbackValue = "#71c0ff") {
+    const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+    const resolvedValue = resolveEditorColorValue12(sourceValue) || resolveEditorColorValue12(fallbackValue) || "rgb(113, 192, 255)";
+    const channels = resolvedValue.match(/[\d.]+/g) || [];
+    const red = clamp16(Math.round(Number(channels[0] ?? 113)), 0, 255);
+    const green = clamp16(Math.round(Number(channels[1] ?? 192)), 0, 255);
+    const blue = clamp16(Math.round(Number(channels[2] ?? 255)), 0, 255);
+    const alpha = channels.length > 3 ? clamp16(Number(channels[3]), 0, 1) : 1;
+    const hex = `#${formatEditorHexChannel15(red)}${formatEditorHexChannel15(green)}${formatEditorHexChannel15(blue)}`;
+    return {
+      alpha,
+      hex,
+      resolved: resolvedValue,
+      source: sourceValue,
+      value: formatEditorColorFromHex15(hex, alpha)
+    };
+  }
+  function getEditorColorFallbackValue15(field) {
+    const normalizedField = String(field ?? "");
+    if (normalizedField.endsWith("styles.card.background")) {
+      return DEFAULT_CONFIG17.styles.card.background;
+    }
+    if (normalizedField.endsWith("styles.icon.background")) {
+      return DEFAULT_CONFIG17.styles.icon.background;
+    }
+    if (normalizedField.endsWith("styles.icon.on_color")) {
+      return DEFAULT_CONFIG17.styles.icon.on_color;
+    }
+    if (normalizedField.endsWith("styles.icon.off_color")) {
+      return DEFAULT_CONFIG17.styles.icon.off_color;
+    }
+    if (normalizedField.endsWith("styles.tint.color")) {
+      return DEFAULT_CONFIG17.styles.tint.color;
+    }
+    if (normalizedField.endsWith("background")) {
+      return "var(--ha-card-background)";
+    }
+    return "var(--info-color, #71c0ff)";
   }
   function formatDateLabel(date, locale) {
     return new Intl.DateTimeFormat(locale, {
@@ -70930,10 +71096,13 @@
       this._hadHass = false;
       this._lastRenderSignature = "";
       this._calendarEntrancePlayed = false;
+      this._expandedOpen = false;
       this._onShadowClick = this._onShadowClick.bind(this);
+      this._onShadowKeydown = this._onShadowKeydown.bind(this);
     }
     connectedCallback() {
       this.shadowRoot?.addEventListener("click", this._onShadowClick);
+      this.shadowRoot?.addEventListener("keydown", this._onShadowKeydown);
       this._loadCompleted();
       if (!this._hadHass) {
         this._refreshEvents();
@@ -70941,6 +71110,7 @@
     }
     disconnectedCallback() {
       this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+      this.shadowRoot?.removeEventListener("keydown", this._onShadowKeydown);
       if (this._refreshTimer) {
         window.clearTimeout(this._refreshTimer);
         this._refreshTimer = 0;
@@ -70954,25 +71124,187 @@
     set hass(hass) {
       const hadHass = this._hadHass;
       const prevLocale = this._hass?.locale?.language;
+      const prevLabelSig = hadHass ? this._getCalendarEntityLabelsSignature() : "";
       this._hass = hass;
       if (!hass) {
         return;
       }
       if (!hadHass) {
         this._hadHass = true;
-        if (this._config.calendars.length) {
+        if (this._config.calendars.some((c) => c && c.entity)) {
           this._refreshEvents();
         } else {
           this._renderIfChanged();
         }
         return;
       }
-      if (prevLocale !== hass.locale?.language) {
+      const nextLabelSig = this._getCalendarEntityLabelsSignature();
+      if (prevLocale !== hass.locale?.language || prevLabelSig !== nextLabelSig) {
         this._renderIfChanged(true);
       }
     }
     _getLocale() {
       return this._hass?.locale?.language || "es-ES";
+    }
+    _getCalendarEntityLabel(entityId) {
+      const id = String(entityId ?? "").trim();
+      if (!id) {
+        return "";
+      }
+      const friendly = String(this._hass?.states?.[id]?.attributes?.friendly_name ?? "").trim();
+      if (friendly) {
+        return friendly;
+      }
+      const short = id.includes(".") ? id.slice(id.indexOf(".") + 1) : id;
+      const humanized = short.replace(/_/g, " ").trim();
+      return humanized || id;
+    }
+    _getCalendarEntityLabelsSignature() {
+      const hass = this._hass;
+      if (!hass?.states) {
+        return "";
+      }
+      const ids = /* @__PURE__ */ new Set([
+        ...(this._config?.calendars || []).map((c) => c?.entity).filter(Boolean),
+        ...this._events.map((event) => event._entity).filter(Boolean)
+      ]);
+      const meta = (this._config?.calendars || []).map((c) => `${c?.entity || ""}${c?.label || ""}${c?.tint || ""}`).join("");
+      return [
+        [...ids].sort().map((id) => {
+          const friendly = String(hass.states[id]?.attributes?.friendly_name ?? "").trim();
+          return `${id}${friendly}`;
+        }).join(""),
+        meta
+      ].join("");
+    }
+    _getCalendarEntry(entityId) {
+      const id = String(entityId ?? "").trim();
+      const list = Array.isArray(this._config?.calendars) ? this._config.calendars : [];
+      return list.find((c) => c.entity === id) || { entity: id, label: "", tint: "" };
+    }
+    _getEventSubtitleForDisplay(entityId) {
+      const entry = this._getCalendarEntry(entityId);
+      if (entry.label) {
+        return entry.label;
+      }
+      return this._getCalendarEntityLabel(entityId);
+    }
+    _expandedLayoutKind(timeRange) {
+      const tr = timeRange || DEFAULT_CONFIG17.time_range;
+      if (tr === "3d") {
+        return "column";
+      }
+      if (tr === "1m") {
+        return "month";
+      }
+      return "horizontal";
+    }
+    _groupsByDayKey(groups) {
+      const map = /* @__PURE__ */ new Map();
+      groups.forEach((group) => {
+        const ev = group.events[0];
+        const d = ev ? eventDate(ev.start) : null;
+        if (d) {
+          map.set(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`, group);
+        }
+      });
+      return map;
+    }
+    _weekdayHeadersMondayFirst(locale) {
+      const refMonday = new Date(2024, 0, 1);
+      return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(refMonday.getTime() + i * 864e5);
+        return new Intl.DateTimeFormat(locale, { weekday: "short" }).format(d);
+      });
+    }
+    _renderSingleEventHtml(event, config, locale, options = {}) {
+      const compact = options.compact === true;
+      const doneKey = completionKey(event);
+      const done = this._completed.has(doneKey);
+      const start = eventDate(event.start);
+      const timeLabel = eventIsAllDay(event) ? "Todo el dia" : start ? formatTimeLabel(start, locale) : "--:--";
+      const summary = String(event.summary || event.message || "Evento sin titulo");
+      const subtitle = this._getEventSubtitleForDisplay(event._entity);
+      const tintRaw = sanitizeCalendarTint(this._getCalendarEntry(event._entity).tint);
+      const tintClass = tintRaw ? " calendar-event--tinted" : "";
+      const tintStyle = tintRaw ? ` style="--cal-tint:${escapeHtml17(tintRaw)}"` : "";
+      const compactClass = compact ? " calendar-event--compact" : "";
+      return `
+      <div class="calendar-event ${done ? "is-completed" : ""}${tintClass}${compactClass}"${tintStyle}>
+        <div class="calendar-event__time">${escapeHtml17(timeLabel)}</div>
+        <div class="calendar-event__summary">
+          ${escapeHtml17(summary)}
+          ${subtitle ? `<small>${escapeHtml17(subtitle)}</small>` : ""}
+        </div>
+        ${config.allow_complete ? `<button type="button" class="calendar-event__done" data-action="toggle-complete" data-key="${escapeHtml17(doneKey)}">${done ? "Hecho" : "Marcar"}</button>` : ""}
+      </div>
+    `;
+    }
+    _renderExpandedBody(groups, config, locale) {
+      const tr = config.time_range || DEFAULT_CONFIG17.time_range;
+      const mode = this._expandedLayoutKind(tr);
+      if (mode === "month") {
+        const now = /* @__PURE__ */ new Date();
+        const y = now.getFullYear();
+        const m = now.getMonth();
+        const first = new Date(y, m, 1);
+        const last = new Date(y, m + 1, 0);
+        const daysInMonth = last.getDate();
+        const leading = (first.getDay() + 6) % 7;
+        const map = this._groupsByDayKey(groups);
+        const title = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(first);
+        const headers = this._weekdayHeadersMondayFirst(locale);
+        const cells = [];
+        for (let i = 0; i < leading; i += 1) {
+          cells.push({ kind: "pad" });
+        }
+        for (let d = 1; d <= daysInMonth; d += 1) {
+          cells.push({ kind: "day", day: d, date: new Date(y, m, d) });
+        }
+        while (cells.length % 7 !== 0) {
+          cells.push({ kind: "pad" });
+        }
+        return `
+        <div class="calendar-expanded__month">
+          <div class="calendar-expanded__month-banner">${escapeHtml17(title)}</div>
+          <div class="calendar-expanded__month-weekdays">
+            ${headers.map((h) => `<div class="calendar-expanded__month-weekday">${escapeHtml17(h)}</div>`).join("")}
+          </div>
+          <div class="calendar-expanded__month-grid">
+            ${cells.map((cell) => {
+          if (cell.kind === "pad") {
+            return `<div class="calendar-expanded__month-cell calendar-expanded__month-cell--pad"></div>`;
+          }
+          const key = `${cell.date.getFullYear()}-${cell.date.getMonth()}-${cell.date.getDate()}`;
+          const group = map.get(key);
+          return `
+                  <div class="calendar-expanded__month-cell">
+                    <div class="calendar-expanded__month-daynum">${cell.day}</div>
+                    <div class="calendar-expanded__month-events">
+                      ${group ? group.events.map((ev) => this._renderSingleEventHtml(ev, config, locale, { compact: true })).join("") : ""}
+                    </div>
+                  </div>
+                `;
+        }).join("")}
+          </div>
+        </div>
+      `;
+      }
+      const rowClass = mode === "column" ? "calendar-expanded__column" : "calendar-expanded__horizontal";
+      return `
+      <div class="${rowClass}">
+        ${groups.map(
+        (group) => `
+          <div class="calendar-expanded__col">
+            <div class="calendar-expanded__col-label">${escapeHtml17(group.label)}</div>
+            <div class="calendar-expanded__col-events">
+              ${group.events.map((ev) => this._renderSingleEventHtml(ev, config, locale)).join("")}
+            </div>
+          </div>
+        `
+      ).join("")}
+      </div>
+    `;
     }
     _loadCompleted() {
       if (typeof window === "undefined" || !window.localStorage) {
@@ -71018,10 +71350,12 @@
         return `${completionKey(event)}@${start}`;
       }).join("|");
       const completedSig = [...this._completed].sort().join("|");
+      const calendarSig = (config.calendars || []).map((c) => `${c.entity}${c.label}${c.tint}`).join("|");
       return [
-        config.calendars.join(""),
+        calendarSig,
         config.title,
         config.icon,
+        config.time_range || DEFAULT_CONFIG17.time_range,
         config.days_to_show,
         config.max_visible_events,
         config.show_completed,
@@ -71037,16 +71371,21 @@
         styles.card?.gap,
         styles.title_size,
         styles.event_size,
+        styles.chip_height,
+        styles.chip_font_size,
+        styles.chip_padding,
         styles.chip_size,
         styles.icon?.background,
-        styles.icon?.color,
+        styles.icon?.on_color,
+        styles.icon?.off_color,
         styles.icon?.size,
         styles.tint?.color,
         this._getLocale(),
         this._loading ? "1" : "0",
         this._error,
         eventKeys,
-        completedSig
+        completedSig,
+        this._expandedOpen ? "1" : "0"
       ].join("");
     }
     _renderIfChanged(force = false) {
@@ -71058,7 +71397,8 @@
       this._render();
     }
     async _refreshEvents() {
-      if (!this._hass || !this._config.calendars.length) {
+      const calendarIds = (this._config.calendars || []).map((c) => c.entity).filter(Boolean);
+      if (!this._hass || !calendarIds.length) {
         this._events = [];
         this._loading = false;
         this._error = "";
@@ -71072,7 +71412,7 @@
         const start = /* @__PURE__ */ new Date();
         const end = new Date(start.getTime() + this._config.days_to_show * 24 * 60 * 60 * 1e3);
         const all = [];
-        for (const entityId of this._config.calendars) {
+        for (const entityId of calendarIds) {
           const path = `calendars/${encodeURIComponent(entityId)}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
           const rows = await this._hass.callApi("GET", path);
           if (Array.isArray(rows)) {
@@ -71131,7 +71471,21 @@
       const config = this._config;
       const styles = config.styles || DEFAULT_CONFIG17.styles;
       const locale = this._getLocale();
-      const tintColor = config.tint_auto !== false ? "var(--primary-color)" : String(config.styles?.tint?.color || DEFAULT_CONFIG17.styles.tint.color);
+      const cardTinted = config.tint_auto !== false;
+      const accentColor = cardTinted ? "var(--primary-color)" : String(styles.tint?.color || DEFAULT_CONFIG17.styles.tint.color);
+      const baseCardBg = styles.card.background;
+      const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${baseCardBg}) 0%, color-mix(in srgb, ${accentColor} 10%, ${baseCardBg}) 52%, ${baseCardBg} 100%)`;
+      const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
+      const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
+      const cardBackground = cardTinted ? onCardBackground : baseCardBg;
+      const cardBorder = cardTinted ? `1px solid ${onCardBorder}` : styles.card.border;
+      const cardShadow = cardTinted ? `${styles.card.box_shadow}, ${onCardShadow}` : styles.card.box_shadow;
+      const iconBubbleBg = cardTinted ? `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))` : String(styles.icon?.background || DEFAULT_CONFIG17.styles.icon.background);
+      const iconBubbleGlyph = cardTinted ? String(styles.icon?.on_color || DEFAULT_CONFIG17.styles.icon.on_color) : String(styles.icon?.off_color || DEFAULT_CONFIG17.styles.icon.off_color);
+      const iconSize = styles.icon?.size || DEFAULT_CONFIG17.styles.icon.size;
+      const chipHeight = styles.chip_height || DEFAULT_CONFIG17.styles.chip_height;
+      const chipFontSize = styles.chip_font_size || styles.chip_size || DEFAULT_CONFIG17.styles.chip_font_size;
+      const chipPadding = styles.chip_padding || DEFAULT_CONFIG17.styles.chip_padding;
       const animationDuration = Math.min(
         1600,
         Math.max(120, Number(config.animations?.content_duration) || DEFAULT_CONFIG17.animations.content_duration)
@@ -71152,19 +71506,44 @@
         :host { display:block; }
         * { box-sizing:border-box; }
         ha-card {
-          background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${tintColor} 14%, transparent) 0%, transparent 40%),
-            ${styles.card.background};
-          border: ${styles.card.border};
+          background: ${cardBackground};
+          border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
-          box-shadow: ${styles.card.box_shadow};
+          box-shadow: ${cardShadow};
+          color: var(--primary-text-color);
+          display: block;
+          isolation: isolate;
           overflow: hidden;
           overscroll-behavior-y: contain;
+          position: relative;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+        ha-card::before {
+          background: ${cardTinted ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))` : `linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))`};
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+        ha-card::after {
+          background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
+          content: "";
+          inset: 0;
+          opacity: ${cardTinted ? "1" : "0"};
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
         }
         .calendar-card {
+          cursor: pointer;
           display:grid;
           gap:${styles.card.gap};
           padding:${styles.card.padding};
+          position: relative;
+          z-index: 1;
           ${playEntrance ? `animation: calendar-card-in ${animationDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
         .calendar-header {
@@ -71174,33 +71553,58 @@
           gap:10px;
         }
         .calendar-icon-bubble {
+          -webkit-tap-highlight-color: transparent;
           align-items:center;
-          background:${styles.icon?.background || DEFAULT_CONFIG17.styles.icon.background};
-          border:1px solid color-mix(in srgb, ${tintColor} 24%, transparent);
+          background:${iconBubbleBg};
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius:999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          color:${styles.icon?.color || DEFAULT_CONFIG17.styles.icon.color};
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.16);
+          color:${iconBubbleGlyph};
           display:inline-flex;
           flex:0 0 auto;
-          height:38px;
+          height:${iconSize};
           justify-content:center;
-          width:38px;
+          line-height:0;
+          position:relative;
+          width:${iconSize};
         }
         .calendar-icon-bubble ha-icon {
-          font-size:${styles.icon?.size || DEFAULT_CONFIG17.styles.icon.size};
+          --mdc-icon-size: calc(0.44 * ${iconSize});
+          color:${iconBubbleGlyph};
+          display:inline-flex;
+          height:calc(0.44 * ${iconSize});
+          left:50%;
+          position:absolute;
+          top:50%;
+          transform:translate(-50%, -50%);
+          width:calc(0.44 * ${iconSize});
         }
         .calendar-title {
           font-size:${styles.title_size};
           font-weight:700;
-          letter-spacing:0.01em;
+          letter-spacing:-0.02em;
+          line-height:1.15;
           min-width:0;
         }
         .calendar-chip {
-          border:1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+          align-items:center;
+          background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius:999px;
           color:var(--secondary-text-color);
-          font-size:${styles.chip_size};
-          padding:4px 9px;
+          display:inline-flex;
+          flex:0 0 auto;
+          font-size:${chipFontSize};
+          font-weight:600;
+          line-height:1;
+          max-width:100%;
+          min-height:${chipHeight};
+          min-width:0;
+          overflow:hidden;
+          padding:${chipPadding};
+          text-overflow:ellipsis;
           white-space:nowrap;
         }
         .calendar-header__spacer {
@@ -71238,14 +71642,35 @@
         }
         .calendar-event {
           align-items:center;
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 14px;
           display:grid;
           gap:8px;
           grid-template-columns:auto 1fr auto;
           min-height:46px;
           padding:8px 10px;
+        }
+        .calendar-event--tinted {
+          background: color-mix(in srgb, var(--cal-tint) 10%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
+          border-color: color-mix(in srgb, var(--cal-tint) 32%, var(--divider-color));
+        }
+        .calendar-event--compact {
+          gap:4px;
+          grid-template-columns: 1fr;
+          min-height: 0;
+          padding:6px 8px;
+        }
+        .calendar-event--compact .calendar-event__time {
+          font-size:10px;
+          min-width: 0;
+        }
+        .calendar-event--compact .calendar-event__summary {
+          white-space: normal;
+          font-size:11px;
+        }
+        .calendar-event--compact .calendar-event__done {
+          display:none;
         }
         .calendar-event.is-completed {
           opacity:0.62;
@@ -71293,6 +71718,156 @@
             transform: translateY(0) scale(1);
           }
         }
+        .calendar-expanded {
+          inset: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: fixed;
+          transition: opacity 160ms ease;
+          z-index: 120;
+        }
+        .calendar-expanded.is-open {
+          opacity: 1;
+          pointer-events: auto;
+        }
+        .calendar-expanded__backdrop {
+          background: rgba(0, 0, 0, 0.42);
+          inset: 0;
+          position: absolute;
+        }
+        .calendar-expanded__panel {
+          background: var(--ha-card-background, var(--card-background-color));
+          border: 1px solid var(--divider-color);
+          border-radius: ${styles.card.border_radius};
+          box-shadow: var(--ha-card-box-shadow, 0 24px 48px rgba(0, 0, 0, 0.28));
+          display: grid;
+          gap: 12px;
+          left: 50%;
+          max-height: min(88vh, 920px);
+          max-width: min(96vw, 1100px);
+          overflow: hidden;
+          padding: 14px 14px 16px;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: min(96vw, 1100px);
+        }
+        .calendar-expanded__toolbar {
+          align-items: center;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+        }
+        .calendar-expanded__toolbar-title {
+          font-size: ${styles.title_size};
+          font-weight: 700;
+          min-width: 0;
+        }
+        .calendar-expanded__close {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font-size: 18px;
+          font-weight: 700;
+          height: 38px;
+          justify-content: center;
+          line-height: 1;
+          padding: 0;
+          width: 38px;
+        }
+        .calendar-expanded__body {
+          max-height: min(76vh, 820px);
+          overflow: auto;
+          overscroll-behavior: contain;
+          padding-right: 4px;
+          touch-action: pan-y;
+        }
+        .calendar-expanded__horizontal {
+          display: flex;
+          gap: 12px;
+          overflow-x: auto;
+          padding-bottom: 8px;
+          scroll-snap-type: x proximity;
+        }
+        .calendar-expanded__horizontal .calendar-expanded__col {
+          flex: 0 0 min(240px, 78vw);
+          max-width: min(260px, 85vw);
+          scroll-snap-align: start;
+        }
+        .calendar-expanded__column {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+        .calendar-expanded__column .calendar-expanded__col {
+          width: 100%;
+        }
+        .calendar-expanded__col-label {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          margin-bottom: 8px;
+          text-transform: uppercase;
+        }
+        .calendar-expanded__col-events {
+          display: grid;
+          gap: 10px;
+        }
+        .calendar-expanded__month-banner {
+          font-size: ${styles.title_size};
+          font-weight: 700;
+          margin-bottom: 8px;
+          text-transform: capitalize;
+        }
+        .calendar-expanded__month-weekdays {
+          color: var(--secondary-text-color);
+          display: grid;
+          font-size: 10px;
+          font-weight: 700;
+          gap: 6px;
+          grid-template-columns: repeat(7, minmax(0, 1fr));
+          letter-spacing: 0.06em;
+          margin-bottom: 6px;
+          text-align: center;
+          text-transform: uppercase;
+        }
+        .calendar-expanded__month-grid {
+          display: grid;
+          gap: 6px;
+          grid-template-columns: repeat(7, minmax(0, 1fr));
+        }
+        .calendar-expanded__month-cell {
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          min-height: 104px;
+          padding: 6px;
+        }
+        .calendar-expanded__month-cell--pad {
+          background: transparent;
+          border-color: transparent;
+          min-height: 0;
+          padding: 0;
+        }
+        .calendar-expanded__month-daynum {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          font-weight: 800;
+        }
+        .calendar-expanded__month-events {
+          display: grid;
+          gap: 6px;
+          min-height: 0;
+        }
       </style>
       <ha-card>
         <div class="calendar-card">
@@ -71300,45 +71875,76 @@
             <span class="calendar-icon-bubble"><ha-icon icon="${escapeHtml17(config.icon || DEFAULT_CONFIG17.icon)}"></ha-icon></span>
             <div class="calendar-title">${escapeHtml17(config.title)}</div>
             <span class="calendar-header__spacer"></span>
-            <div class="calendar-chip">${escapeHtml17(`${config.days_to_show} dias`)}</div>
+            <div class="calendar-chip">${escapeHtml17(timeRangeChipLabel(config.time_range || DEFAULT_CONFIG17.time_range))}</div>
           </div>
           ${this._loading ? `<div class="calendar-loading">Cargando eventos...</div>` : this._error ? `<div class="calendar-error">${escapeHtml17(this._error)}</div>` : !hasEvents ? `<div class="calendar-empty">No hay eventos en este rango.</div>` : `<div class="calendar-events-scroll">
                       ${groups.map((group) => `
                         <div class="calendar-day">
                           <div class="calendar-day__label">${escapeHtml17(group.label)}</div>
-                          ${group.events.map((event) => {
-        const doneKey = completionKey(event);
-        const done = this._completed.has(doneKey);
-        const start = eventDate(event.start);
-        const timeLabel = eventIsAllDay(event) ? "Todo el dia" : start ? formatTimeLabel(start, locale) : "--:--";
-        const summary = String(event.summary || event.message || "Evento sin titulo");
-        const source = String(event._entity || "");
-        return `
-                              <div class="calendar-event ${done ? "is-completed" : ""}">
-                                <div class="calendar-event__time">${escapeHtml17(timeLabel)}</div>
-                                <div class="calendar-event__summary">
-                                  ${escapeHtml17(summary)}
-                                  <small>${escapeHtml17(source)}</small>
-                                </div>
-                                ${config.allow_complete ? `<button type="button" class="calendar-event__done" data-action="toggle-complete" data-key="${escapeHtml17(doneKey)}">${done ? "Hecho" : "Marcar"}</button>` : ""}
-                              </div>
-                            `;
-      }).join("")}
+                          ${group.events.map((event) => this._renderSingleEventHtml(event, config, locale)).join("")}
                         </div>
                       `).join("")}
                     </div>`}
         </div>
       </ha-card>
+      <div class="calendar-expanded ${this._expandedOpen ? "is-open" : ""}" aria-hidden="${this._expandedOpen ? "false" : "true"}">
+        <div class="calendar-expanded__backdrop" data-action="expanded-backdrop"></div>
+        <div class="calendar-expanded__panel" role="dialog" aria-modal="true" aria-label="${escapeHtml17(config.title)}">
+          <div class="calendar-expanded__toolbar">
+            <div class="calendar-expanded__toolbar-title">${escapeHtml17(config.title)}</div>
+            <button type="button" class="calendar-expanded__close" data-action="close-expanded" aria-label="Cerrar">×</button>
+          </div>
+          <div class="calendar-expanded__body">
+            ${this._loading ? `<div class="calendar-loading">Cargando eventos...</div>` : this._error ? `<div class="calendar-error">${escapeHtml17(this._error)}</div>` : !hasEvents ? `<div class="calendar-empty">No hay eventos en este rango.</div>` : this._renderExpandedBody(groups, config, locale)}
+          </div>
+        </div>
+      </div>
     `;
     }
-    _onShadowClick(event) {
-      const button = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.action === "toggle-complete");
-      if (!button) {
+    _onShadowKeydown(event) {
+      if (event.key !== "Escape" || !this._expandedOpen) {
         return;
       }
       event.preventDefault();
       event.stopPropagation();
-      this._toggleCompleted(button.dataset.key || "");
+      this._expandedOpen = false;
+      this._renderIfChanged(true);
+    }
+    _onShadowClick(event) {
+      const path = event.composedPath();
+      const toggleBtn = path.find(
+        (node) => node instanceof HTMLElement && node.dataset?.action === "toggle-complete"
+      );
+      if (toggleBtn instanceof HTMLElement) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._toggleCompleted(toggleBtn.dataset.key || "");
+        return;
+      }
+      const closeAction = path.find(
+        (node) => node instanceof HTMLElement && (node.dataset?.action === "close-expanded" || node.dataset?.action === "expanded-backdrop")
+      );
+      if (closeAction) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._expandedOpen = false;
+        this._renderIfChanged(true);
+        return;
+      }
+      if (this._expandedOpen) {
+        return;
+      }
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest?.("button")) {
+        return;
+      }
+      if (!target?.closest?.(".calendar-card")) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      this._expandedOpen = true;
+      this._renderIfChanged(true);
     }
   };
   var NodaliaCalendarCardEditor = class extends HTMLElement {
@@ -71471,15 +72077,40 @@
         return;
       }
       if (field.startsWith("calendars.")) {
-        const index = Number(field.split(".")[1]);
+        const parts = field.split(".");
+        const index = Number(parts[1]);
         if (!Number.isFinite(index) || index < 0) {
           return;
         }
         if (!Array.isArray(targetConfig.calendars)) {
           targetConfig.calendars = [];
         }
-        targetConfig.calendars[index] = String(value || "").trim();
-        targetConfig.calendars = targetConfig.calendars.filter(Boolean);
+        while (targetConfig.calendars.length <= index) {
+          targetConfig.calendars.push({ entity: "", label: "", tint: "" });
+        }
+        if (parts.length >= 3) {
+          const key = parts[2];
+          let entry = targetConfig.calendars[index];
+          if (typeof entry === "string") {
+            entry = { entity: String(entry).trim(), label: "", tint: "" };
+          } else if (!entry || typeof entry !== "object") {
+            entry = { entity: "", label: "", tint: "" };
+          }
+          if (key === "entity") {
+            entry.entity = String(value ?? "").trim();
+          } else if (key === "label") {
+            entry.label = String(value ?? "").trim();
+          } else if (key === "tint") {
+            entry.tint = sanitizeCalendarTint(value);
+          }
+          targetConfig.calendars[index] = entry;
+          return;
+        }
+        targetConfig.calendars[index] = {
+          entity: String(value ?? "").trim(),
+          label: "",
+          tint: ""
+        };
         return;
       }
       if (field.startsWith("styles.")) {
@@ -71512,6 +72143,9 @@
       }
       if (valueType === "number") {
         return Number(input.value || 0);
+      }
+      if (valueType === "color") {
+        return formatEditorColorFromHex15(input.value, Number(input.dataset.alpha || 1));
       }
       return input.value;
     }
@@ -71574,7 +72208,8 @@
       this._restoreFocusState(focusState);
     }
     _onShadowClick(event) {
-      const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+      const rootTarget = event.target instanceof Element ? event.target : null;
+      const toggleButton = rootTarget?.closest?.("[data-editor-toggle]");
       if (toggleButton) {
         event.preventDefault();
         event.stopPropagation();
@@ -71588,7 +72223,7 @@
         this._restoreFocusState(focusState2);
         return;
       }
-      const button = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorAction);
+      const button = rootTarget?.closest?.("[data-editor-action]");
       if (!button) {
         return;
       }
@@ -71608,7 +72243,7 @@
         next.calendars = [];
       }
       if (action === "add-calendar") {
-        next.calendars.push("");
+        next.calendars.push({ entity: "", label: "", tint: "" });
       } else if (action === "remove-calendar") {
         const index = Number(button.dataset.index || -1);
         if (Number.isFinite(index) && index >= 0 && index < next.calendars.length) {
@@ -71681,6 +72316,23 @@
       </label>
     `;
     }
+    _renderSelectField(label, field, value, options = {}) {
+      const tLabel = this._editorLabel(label);
+      const opts = options.options || [];
+      const current = String(value ?? "");
+      return `
+      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml17(tLabel)}</span>
+        <select data-field="${escapeHtml17(field)}">
+          ${opts.map(
+        (o) => `<option value="${escapeHtml17(String(o.value))}" ${String(o.value) === current ? "selected" : ""}>${escapeHtml17(
+          String(o.label)
+        )}</option>`
+      ).join("")}
+        </select>
+      </label>
+    `;
+    }
     _renderTextField(label, field, value, options = {}) {
       const tLabel = this._editorLabel(label);
       const inputType = options.type || "text";
@@ -71716,7 +72368,36 @@
       </div>
     `;
     }
-    _renderCalendarCard(entityId, index, total) {
+    _renderColorField(label, field, value, options = {}) {
+      const tLabel = this._editorLabel(label);
+      const tColorCustom = this._editorLabel("Color personalizado");
+      const fallbackValue = options.fallbackValue || getEditorColorFallbackValue15(field);
+      const currentValue = value === void 0 || value === null || value === "" ? fallbackValue : String(value);
+      const colorModel = getEditorColorModel15(currentValue, fallbackValue);
+      return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml17(tLabel)}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="${escapeHtml17(tColorCustom)}">
+            <input
+              type="color"
+              data-field="${escapeHtml17(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml17(String(colorModel.alpha))}"
+              value="${escapeHtml17(colorModel.hex)}"
+              aria-label="${escapeHtml17(tLabel)}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml17(currentValue)};"></span>
+          </label>
+        </div>
+      </div>
+    `;
+    }
+    _renderCalendarCard(entry, index, total) {
+      const ent = entry && typeof entry === "object" && !Array.isArray(entry) ? entry : { entity: String(entry ?? "").trim(), label: "", tint: "" };
+      const entityId = String(ent.entity ?? "").trim();
+      const label = String(ent.label ?? "").trim();
+      const tint = String(ent.tint ?? "").trim();
       return `
       <div class="series-editor-card">
         <div class="series-editor-card__header">
@@ -71735,12 +72416,20 @@
               <div
                 class="editor-control-host"
                 data-mounted-control="calendar-entity"
-                data-field="calendars.${index}"
+                data-field="calendars.${index}.entity"
                 data-value="${escapeHtml17(entityId)}"
                 data-domains="calendar"
                 data-placeholder="calendar.cumpleanos"
               ></div>
             </div>
+            ${this._renderTextField("Etiqueta visible", `calendars.${index}.label`, label, {
+        fullWidth: true,
+        placeholder: this._editorLabel("Ej. Familia")
+      })}
+            ${this._renderColorField("Tintado en la tarjeta", `calendars.${index}.tint`, tint, {
+        fullWidth: true,
+        fallbackValue: "#71c0ff"
+      })}
           </div>
         </div>
       </div>
@@ -71752,7 +72441,7 @@
       }
       this._ensureEditorControlsReady();
       const config = normalizeConfig17(this._config || DEFAULT_CONFIG17);
-      const calendars = Array.isArray(config.calendars) && config.calendars.length ? config.calendars : [""];
+      const calendars = Array.isArray(config.calendars) && config.calendars.length ? config.calendars : [{ entity: "", label: "", tint: "" }];
       const animations = config.animations || DEFAULT_CONFIG17.animations;
       this.shadowRoot.innerHTML = `
       <style>
@@ -71881,6 +72570,60 @@
         .editor-control-host > * {
           display: block;
           width: 100%;
+        }
+
+        .editor-color-field {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          min-height: 40px;
+        }
+
+        .editor-color-picker {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 40px;
+          justify-content: center;
+          position: relative;
+          width: 40px;
+        }
+
+        .editor-color-picker input {
+          cursor: pointer;
+          inset: 0;
+          opacity: 0;
+          position: absolute;
+        }
+
+        .editor-color-picker:hover,
+        .editor-color-picker:focus-within {
+          border-color: color-mix(in srgb, var(--primary-text-color) 22%, transparent);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+        }
+
+        .editor-color-swatch {
+          --editor-swatch: #71c0ff;
+          background:
+            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+            conic-gradient(from 90deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 25%, rgba(0, 0, 0, 0.12) 0 50%, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 0 75%, rgba(0, 0, 0, 0.12) 0);
+          background-position: center;
+          background-size: cover, 10px 10px;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+          border-radius: 999px;
+          display: block;
+          height: 22px;
+          width: 22px;
+        }
+
+        .editor-color-picker .editor-color-swatch {
+          height: 22px;
+          width: 22px;
         }
 
         .editor-actions {
@@ -72050,7 +72793,7 @@
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml17(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Titulo visible, icono, rango de dias, refresco de datos y opciones de eventos completados."))}</div>
+            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Titulo visible, icono, rango temporal, refresco de datos y opciones de eventos completados."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Titulo", "title", config.title, { fullWidth: true, placeholder: "Calendario" })}
@@ -72058,7 +72801,15 @@
         fullWidth: true,
         placeholder: "mdi:calendar-month"
       })}
-            ${this._renderTextField("Dias a mostrar", "days_to_show", config.days_to_show, { type: "number" })}
+            ${this._renderSelectField("Rango visible", "time_range", config.time_range || DEFAULT_CONFIG17.time_range, {
+        fullWidth: true,
+        options: [
+          { value: "3d", label: this._editorLabel("3 dias") },
+          { value: "1w", label: this._editorLabel("1 semana") },
+          { value: "2w", label: this._editorLabel("2 semanas") },
+          { value: "1m", label: this._editorLabel("1 mes") }
+        ]
+      })}
             ${this._renderTextField("Eventos visibles antes de scroll", "max_visible_events", config.max_visible_events, { type: "number" })}
             ${this._renderTextField("Refresco (segundos)", "refresh_interval", config.refresh_interval, { type: "number" })}
             ${this._renderCheckboxField("Permitir marcar eventos como completados", "allow_complete", config.allow_complete === true)}
@@ -72127,7 +72878,10 @@
           </div>
           ${this._showStyleSection ? `
                 <div class="editor-grid">
-                  ${this._renderTextField("Fondo tarjeta", "styles.card.background", config.styles?.card?.background, { fullWidth: true })}
+                  ${this._renderColorField("Fondo tarjeta", "styles.card.background", config.styles?.card?.background, {
+        fullWidth: true,
+        fallbackValue: DEFAULT_CONFIG17.styles.card.background
+      })}
                   ${this._renderTextField("Borde tarjeta", "styles.card.border", config.styles?.card?.border)}
                   ${this._renderTextField("Radio tarjeta", "styles.card.border_radius", config.styles?.card?.border_radius)}
                   ${this._renderTextField("Sombra tarjeta", "styles.card.box_shadow", config.styles?.card?.box_shadow, { fullWidth: true })}
@@ -72135,11 +72889,26 @@
                   ${this._renderTextField("Separacion", "styles.card.gap", config.styles?.card?.gap)}
                   ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles?.title_size)}
                   ${this._renderTextField("Tamano evento", "styles.event_size", config.styles?.event_size)}
-                  ${this._renderTextField("Tamano chip", "styles.chip_size", config.styles?.chip_size)}
-                  ${this._renderTextField("Icono burbuja fondo", "styles.icon.background", config.styles?.icon?.background, { fullWidth: true })}
-                  ${this._renderTextField("Icono burbuja color", "styles.icon.color", config.styles?.icon?.color, { fullWidth: true })}
+                  ${this._renderTextField("Alto chips", "styles.chip_height", config.styles?.chip_height)}
+                  ${this._renderTextField("Texto chips", "styles.chip_font_size", config.styles?.chip_font_size)}
+                  ${this._renderTextField("Relleno chips", "styles.chip_padding", config.styles?.chip_padding)}
+                  ${this._renderColorField("Icono burbuja fondo", "styles.icon.background", config.styles?.icon?.background, {
+        fullWidth: true,
+        fallbackValue: DEFAULT_CONFIG17.styles.icon.background
+      })}
+                  ${this._renderColorField("Color icono activo", "styles.icon.on_color", config.styles?.icon?.on_color, {
+        fullWidth: true,
+        fallbackValue: DEFAULT_CONFIG17.styles.icon.on_color
+      })}
+                  ${this._renderColorField("Color icono inactivo", "styles.icon.off_color", config.styles?.icon?.off_color, {
+        fullWidth: true,
+        fallbackValue: DEFAULT_CONFIG17.styles.icon.off_color
+      })}
                   ${this._renderTextField("Icono burbuja tamano", "styles.icon.size", config.styles?.icon?.size)}
-                  ${this._renderTextField("Tintado manual", "styles.tint.color", config.styles?.tint?.color, { fullWidth: true })}
+                  ${this._renderColorField("Tintado manual", "styles.tint.color", config.styles?.tint?.color, {
+        fullWidth: true,
+        fallbackValue: DEFAULT_CONFIG17.styles.tint.color
+      })}
                 </div>
               ` : ""}
         </section>
@@ -72398,7 +73167,7 @@
     }
     delete cursor[parts[parts.length - 1]];
   }
-  function clamp16(value, min, max) {
+  function clamp17(value, min, max) {
     return Math.min(Math.max(value, min), max);
   }
   function parseSizeToPixels14(value, fallback = 0) {
@@ -72442,7 +73211,7 @@
     };
     return walk(styles, DEFAULT_CONFIG18.styles);
   }
-  function resolveEditorColorValue12(value) {
+  function resolveEditorColorValue13(value) {
     const rawValue = String(value ?? "").trim();
     if (!rawValue || typeof document === "undefined") {
       return "";
@@ -72461,10 +73230,10 @@
     probe.remove();
     return resolved || rawValue;
   }
-  function formatEditorHexChannel15(value) {
-    return clamp16(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+  function formatEditorHexChannel16(value) {
+    return clamp17(Math.round(value), 0, 255).toString(16).padStart(2, "0");
   }
-  function formatEditorColorFromHex15(hex, alpha = 1) {
+  function formatEditorColorFromHex16(hex, alpha = 1) {
     const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
     if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
       return String(hex ?? "");
@@ -72472,30 +73241,30 @@
     const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
     const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
     const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
-    const safeAlpha = clamp16(Number(alpha), 0, 1);
+    const safeAlpha = clamp17(Number(alpha), 0, 1);
     if (safeAlpha >= 0.999) {
       return `#${normalizedHex}`;
     }
     return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
   }
-  function getEditorColorModel15(value, fallbackValue = "#71c0ff") {
+  function getEditorColorModel16(value, fallbackValue = "#71c0ff") {
     const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
-    const resolvedValue = resolveEditorColorValue12(sourceValue) || resolveEditorColorValue12(fallbackValue) || "rgb(113, 192, 255)";
+    const resolvedValue = resolveEditorColorValue13(sourceValue) || resolveEditorColorValue13(fallbackValue) || "rgb(113, 192, 255)";
     const channels = resolvedValue.match(/[\d.]+/g) || [];
-    const red = clamp16(Math.round(Number(channels[0] ?? 113)), 0, 255);
-    const green = clamp16(Math.round(Number(channels[1] ?? 192)), 0, 255);
-    const blue = clamp16(Math.round(Number(channels[2] ?? 255)), 0, 255);
-    const alpha = channels.length > 3 ? clamp16(Number(channels[3]), 0, 1) : 1;
-    const hex = `#${formatEditorHexChannel15(red)}${formatEditorHexChannel15(green)}${formatEditorHexChannel15(blue)}`;
+    const red = clamp17(Math.round(Number(channels[0] ?? 113)), 0, 255);
+    const green = clamp17(Math.round(Number(channels[1] ?? 192)), 0, 255);
+    const blue = clamp17(Math.round(Number(channels[2] ?? 255)), 0, 255);
+    const alpha = channels.length > 3 ? clamp17(Number(channels[3]), 0, 1) : 1;
+    const hex = `#${formatEditorHexChannel16(red)}${formatEditorHexChannel16(green)}${formatEditorHexChannel16(blue)}`;
     return {
       alpha,
       hex,
       resolved: resolvedValue,
       source: sourceValue,
-      value: formatEditorColorFromHex15(hex, alpha)
+      value: formatEditorColorFromHex16(hex, alpha)
     };
   }
-  function getEditorColorFallbackValue15(field) {
+  function getEditorColorFallbackValue16(field) {
     const normalizedField = String(field ?? "");
     if (normalizedField.endsWith("off_color") || normalizedField.endsWith("docked_color")) {
       return "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))";
@@ -72679,7 +73448,7 @@
         window.clearTimeout(this._entranceAnimationResetTimer);
         this._entranceAnimationResetTimer = 0;
       }
-      const safeDelay = clamp16(Math.round(Number(delay) || 0), 0, 3e3);
+      const safeDelay = clamp17(Math.round(Number(delay) || 0), 0, 3e3);
       if (!safeDelay || typeof window === "undefined") {
         this._animateContentOnNextRender = false;
         return;
@@ -72706,7 +73475,7 @@
     }
     _getRoomPanelMaxHeight(roomMappings) {
       const roomCount = Array.isArray(roomMappings) ? roomMappings.length : 0;
-      return clamp16(84 + roomCount * 52, 220, 720);
+      return clamp17(84 + roomCount * 52, 220, 720);
     }
     _getRenderSignature(hass = this._hass) {
       const entityId = this._config?.entity || "";
@@ -72773,12 +73542,12 @@
       const configuredAnimations = this._config?.animations || DEFAULT_CONFIG18.animations;
       return {
         enabled: configuredAnimations.enabled !== false,
-        panelDuration: clamp16(
+        panelDuration: clamp17(
           Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG18.animations.panel_duration,
           120,
           2400
         ),
-        buttonBounceDuration: clamp16(
+        buttonBounceDuration: clamp17(
           Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG18.animations.button_bounce_duration,
           120,
           1200
@@ -73164,21 +73933,21 @@
     _getBatteryLevel(state) {
       const directValue = Number(state?.attributes?.battery_level);
       if (Number.isFinite(directValue)) {
-        return clamp16(Math.round(directValue), 0, 100);
+        return clamp17(Math.round(directValue), 0, 100);
       }
       const auxiliaryState = this._getAuxiliaryState();
       const auxiliaryBatteryLevel = Number(
         auxiliaryState?.attributes?.battery_level ?? auxiliaryState?.attributes?.battery ?? auxiliaryState?.attributes?.battery_remaining
       );
       if (Number.isFinite(auxiliaryBatteryLevel)) {
-        return clamp16(Math.round(auxiliaryBatteryLevel), 0, 100);
+        return clamp17(Math.round(auxiliaryBatteryLevel), 0, 100);
       }
       const batterySensorState = this._getAuxiliaryBatteryState();
       const batterySensorValue = Number(
         batterySensorState?.state ?? batterySensorState?.attributes?.battery_level ?? batterySensorState?.attributes?.battery ?? batterySensorState?.attributes?.battery_remaining
       );
       if (Number.isFinite(batterySensorValue)) {
-        return clamp16(Math.round(batterySensorValue), 0, 100);
+        return clamp17(Math.round(batterySensorValue), 0, 100);
       }
       return null;
     }
@@ -73416,7 +74185,7 @@
     }
     _getModePanelMaxHeight(descriptors) {
       const maxOptions = Array.isArray(descriptors) ? descriptors.reduce((maxValue, descriptor) => Math.max(maxValue, descriptor?.options?.length || 0), 0) : 0;
-      return clamp16(84 + maxOptions * 52, 220, 560);
+      return clamp17(84 + maxOptions * 52, 220, 560);
     }
     _getModePanelMarkup(panelKind, state = this._getState()) {
       const descriptor = this._getActiveModeDescriptor(state, panelKind);
@@ -74184,7 +74953,7 @@
       this.shadowRoot.innerHTML = `
         <style>
           :host {
-            --vacuum-card-content-duration: ${animations.enabled ? clamp16(Math.round(animations.panelDuration * 0.9), 180, 900) : 0}ms;
+            --vacuum-card-content-duration: ${animations.enabled ? clamp17(Math.round(animations.panelDuration * 0.9), 180, 900) : 0}ms;
             display: block;
           }
 
@@ -74731,7 +75500,7 @@
       </ha-card>
     `;
       if (shouldAnimateEntrance) {
-        this._scheduleEntranceAnimationReset(clamp16(Math.round(animations.panelDuration * 0.9), 180, 900) + 120);
+        this._scheduleEntranceAnimationReset(clamp17(Math.round(animations.panelDuration * 0.9), 180, 900) + 120);
       }
     }
   };
@@ -74908,7 +75677,7 @@
         case "boolean":
           return Boolean(input.checked);
         case "color":
-          return formatEditorColorFromHex15(input.value, Number(input.dataset.alpha || 1));
+          return formatEditorColorFromHex16(input.value, Number(input.dataset.alpha || 1));
         case "csv":
           return arrayFromCsv4(input.value);
         default:
@@ -74996,9 +75765,9 @@
     _renderColorField(label, field, value, options = {}) {
       const tLabel = this._editorLabel(label);
       const tColorCustom = this._editorLabel("Color personalizado");
-      const fallbackValue = options.fallbackValue || getEditorColorFallbackValue15(field);
+      const fallbackValue = options.fallbackValue || getEditorColorFallbackValue16(field);
       const currentValue = value === void 0 || value === null || value === "" ? fallbackValue : String(value);
-      const colorModel = getEditorColorModel15(currentValue, fallbackValue);
+      const colorModel = getEditorColorModel16(currentValue, fallbackValue);
       return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml18(tLabel)}</span>
@@ -75793,4 +76562,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.5","contentSha256_12":"286c997a9917"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.5 (286c997a9917) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.8","contentSha256_12":"d2f6212053ed"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.8 (d2f6212053ed) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
