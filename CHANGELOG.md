@@ -10,6 +10,16 @@ Work toward **`0.6.x`** on **`alpha`** / **`beta`** and eventual **`main`**: add
 
 ---
 
+## [0.6.0-alpha.3] - 2026-05-05
+
+Third **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.3`** (tag **`v0.6.0-alpha.3`** optional). Breaking changes are allowed; prefer stable **`main`** for production dashboards.
+
+- **Navigation bar:** reducción de micro-rebote visual en mini media player y popups al evitar reactivar animaciones de entrada en renders normales.
+- **Navigation bar:** las animaciones de superficie para mini player y popup ahora se limitan a aperturas reales (`--entering`) y no a refrescos de estado de la tarjeta.
+- **Graph card:** cierre de tooltip de hover más robusto al salir de la tarjeta en cualquier dirección.
+
+---
+
 ## [0.6.0-alpha.2] - 2026-05-05
 
 Second **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.2`** (tag **`v0.6.0-alpha.2`** optional). Breaking changes are allowed; prefer stable **`main`** for production dashboards.

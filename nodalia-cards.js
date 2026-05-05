@@ -15703,6 +15703,8 @@
       this._dockEntrancePlayed = false;
       this._lastShouldHide = false;
       this._playDockEntrance = false;
+      this._lastMediaToggleVisible = false;
+      this._playPopupEntrance = false;
       this._lastMediaPlayerCardVisible = false;
       this._onResize = () => {
         this._closePopup(false);
@@ -16411,6 +16413,7 @@
         routeIndex,
         width: `${popupWidth}px`
       };
+      this._playPopupEntrance = true;
       this._render();
     }
     _getReservedHeight(showMediaPlayer, showMediaPlayerToggle = false) {
@@ -17096,7 +17099,7 @@
         this._closePopup();
       }
     }
-    _renderPopup(currentPath) {
+    _renderPopup(currentPath, playPopupEntrance = false) {
       if (!this._popupState?.route) {
         return "";
       }
@@ -17145,7 +17148,7 @@
       return `
       <div class="popup-backdrop" data-popup-close="true"></div>
       <div
-        class="popup-panel popup-panel--${this._popupState.direction} popup-panel--layout-${this._popupState.layout || "auto"} ${popupHasText ? "popup-panel--with-text" : "popup-panel--icon-only"} ${isCompactPopup ? "popup-panel--compact" : ""}"
+        class="popup-panel popup-panel--${this._popupState.direction} popup-panel--layout-${this._popupState.layout || "auto"} ${popupHasText ? "popup-panel--with-text" : "popup-panel--icon-only"} ${isCompactPopup ? "popup-panel--compact" : ""}${playPopupEntrance ? " popup-panel--entering" : ""}"
       >
         <div class="popup-items">
           ${popupMarkup}
@@ -17423,7 +17426,7 @@
       </div>
     `;
     }
-    _renderMediaPlayerToggle(visiblePlayers) {
+    _renderMediaPlayerToggle(visiblePlayers, playToggleEntrance = false) {
       if (!visiblePlayers.length) {
         return "";
       }
@@ -17444,7 +17447,7 @@
       <div class="media-player-toggle-wrap${this._playDockEntrance ? " media-player-toggle-wrap--entering" : ""}">
         <button
           type="button"
-          class="media-player-toggle"
+          class="media-player-toggle${playToggleEntrance ? " media-player-toggle--entering" : ""}"
           data-media-toggle="expand"
           aria-label="Mostrar reproductor"
         >
@@ -17517,6 +17520,8 @@
       }
       const showMediaPlayerCard = hasVisiblePlayers && (inEditMode || this._mediaPlayerExpanded === true);
       const showMediaPlayerToggle = hasVisiblePlayers && !showMediaPlayerCard;
+      const playMediaToggleEntrance = animations.enabled && showMediaPlayerToggle && !this._lastMediaToggleVisible;
+      this._lastMediaToggleVisible = showMediaPlayerToggle;
       const playMediaCardEntrance = animations.enabled && showMediaPlayerCard && !this._lastMediaPlayerCardVisible;
       this._lastMediaPlayerCardVisible = showMediaPlayerCard;
       const mediaStackGap = hasVisiblePlayers ? config.media_player.gap || "0px" : "0px";
@@ -17527,11 +17532,11 @@
       this._renderedRoutes = visibleRoutes;
       this._syncMediaTicker(showMediaPlayerCard ? visiblePlayers : []);
       const mediaPlayerMarkup = showMediaPlayerCard ? this._renderMediaPlayer(visiblePlayers, playMediaCardEntrance) : "";
-      const mediaPlayerToggleMarkup = showMediaPlayerToggle ? this._renderMediaPlayerToggle(visiblePlayers) : "";
+      const mediaPlayerToggleMarkup = showMediaPlayerToggle ? this._renderMediaPlayerToggle(visiblePlayers, playMediaToggleEntrance) : "";
       const fullWidthBar = config.layout.full_width === true;
       const barRadiusToken = String(config.styles.bar.border_radius || "28px").trim().split(/\s+/)[0] || "28px";
       const navbarCardBorderRadius = fullWidthBar ? "0" : config.layout.position === "bottom" ? `${barRadiusToken} ${barRadiusToken} 0 0` : config.layout.position === "top" ? `0 0 ${barRadiusToken} ${barRadiusToken}` : config.styles.bar.border_radius;
-      const popupMarkup = this._renderPopup(currentPath);
+      const popupMarkup = this._renderPopup(currentPath, Boolean(this._popupState) && this._playPopupEntrance);
       const mediaBrowserMarkup = this._renderMediaBrowser();
       const routesMarkup = visibleRoutes.length > 0 ? visibleRoutes.map((route, index) => {
         const isActive = this._isRouteActive(route, currentPath);
@@ -17919,6 +17924,9 @@
           transform-origin: center bottom;
           width: min(${config.styles.popup.max_width}, calc(100vw - 24px));
           z-index: ${Number(config.layout.z_index) + 2};
+        }
+
+        .popup-panel.popup-panel--entering {
           ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.popupDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
 
@@ -18706,6 +18714,9 @@
             background ${animations.enabled ? animations.barDuration : 0}ms ease,
             box-shadow ${animations.enabled ? animations.barDuration : 0}ms ease,
             transform ${animations.enabled ? animations.buttonBounceDuration : 0}ms ease;
+        }
+
+        .media-player-toggle.media-player-toggle--entering {
           ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.mediaDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
 
@@ -18825,6 +18836,7 @@
     `;
       this._applyRouteRuntimeStyles(visibleRoutes, playDockEntrance);
       this._applyPopupRuntimeStyles();
+      this._playPopupEntrance = false;
       if (this._popupState) {
         this._schedulePopupPositionSync();
       }
@@ -39171,6 +39183,7 @@
       this._lastRenderSignature = "";
       this._tooltipSyncFrame = 0;
       this._lastTooltipViewportPosition = null;
+      this._documentHoverWatchAttached = false;
       this._touchPressTimer = 0;
       this._touchPressState = null;
       this._touchHoverActive = false;
@@ -39179,6 +39192,7 @@
       this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
       this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
       this._onHostPointerOut = this._onHostPointerOut.bind(this);
+      this._onDocumentPointerMove = this._onDocumentPointerMove.bind(this);
       this._onHoverMediaChange = this._onHoverMediaChange.bind(this);
       this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
       this._onShadowTouchMove = this._onShadowTouchMove.bind(this);
@@ -39206,6 +39220,7 @@
       this._historyAbortController = null;
       this.removeEventListener("pointerout", this._onHostPointerOut);
       this.removeEventListener("mouseout", this._onHostPointerOut);
+      this._detachDocumentHoverWatch();
       if (this._hoverFrame) {
         window.cancelAnimationFrame(this._hoverFrame);
         this._hoverFrame = 0;
@@ -39531,6 +39546,39 @@
       this._scheduleHoverRender(null);
       this._lastTooltipViewportPosition = null;
     }
+    _onDocumentPointerMove(event) {
+      if (this._touchHoverActive || this._hoverIndex === null) {
+        return;
+      }
+      const clientX = Number(event?.clientX);
+      const clientY = Number(event?.clientY);
+      if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) {
+        return;
+      }
+      const rect = this.getBoundingClientRect();
+      const isOutside = clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom;
+      if (!isOutside) {
+        return;
+      }
+      this._scheduleHoverRender(null);
+      this._lastTooltipViewportPosition = null;
+    }
+    _attachDocumentHoverWatch() {
+      if (this._documentHoverWatchAttached || typeof document === "undefined") {
+        return;
+      }
+      this._documentHoverWatchAttached = true;
+      document.addEventListener("pointermove", this._onDocumentPointerMove, true);
+      document.addEventListener("mousemove", this._onDocumentPointerMove, true);
+    }
+    _detachDocumentHoverWatch() {
+      if (!this._documentHoverWatchAttached || typeof document === "undefined") {
+        return;
+      }
+      this._documentHoverWatchAttached = false;
+      document.removeEventListener("pointermove", this._onDocumentPointerMove, true);
+      document.removeEventListener("mousemove", this._onDocumentPointerMove, true);
+    }
     _clearTouchPressTimer() {
       if (!this._touchPressTimer) {
         return;
@@ -39646,7 +39694,10 @@
         }
         this._hoverEntering = resolvedIndex !== null && this._hoverIndex === null;
         if (resolvedIndex === null) {
+          this._detachDocumentHoverWatch();
           this._lastTooltipViewportPosition = null;
+        } else {
+          this._attachDocumentHoverWatch();
         }
         this._hoverIndex = resolvedIndex;
         this._render();
@@ -74053,4 +74104,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.6.0-alpha.2","contentSha256_12":"0292f784e741"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.6.0-alpha.3","contentSha256_12":"86454cef6699"};}

@@ -999,6 +999,7 @@ class NodaliaGraphCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._tooltipSyncFrame = 0;
     this._lastTooltipViewportPosition = null;
+    this._documentHoverWatchAttached = false;
     this._touchPressTimer = 0;
     this._touchPressState = null;
     this._touchHoverActive = false;
@@ -1007,6 +1008,7 @@ class NodaliaGraphCard extends HTMLElement {
     this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
     this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
     this._onHostPointerOut = this._onHostPointerOut.bind(this);
+    this._onDocumentPointerMove = this._onDocumentPointerMove.bind(this);
     this._onHoverMediaChange = this._onHoverMediaChange.bind(this);
     this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
     this._onShadowTouchMove = this._onShadowTouchMove.bind(this);
@@ -1039,6 +1041,7 @@ class NodaliaGraphCard extends HTMLElement {
     this._historyAbortController = null;
     this.removeEventListener("pointerout", this._onHostPointerOut);
     this.removeEventListener("mouseout", this._onHostPointerOut);
+    this._detachDocumentHoverWatch();
     if (this._hoverFrame) {
       window.cancelAnimationFrame(this._hoverFrame);
       this._hoverFrame = 0;
@@ -1439,6 +1442,42 @@ class NodaliaGraphCard extends HTMLElement {
     this._lastTooltipViewportPosition = null;
   }
 
+  _onDocumentPointerMove(event) {
+    if (this._touchHoverActive || this._hoverIndex === null) {
+      return;
+    }
+    const clientX = Number(event?.clientX);
+    const clientY = Number(event?.clientY);
+    if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) {
+      return;
+    }
+    const rect = this.getBoundingClientRect();
+    const isOutside = clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom;
+    if (!isOutside) {
+      return;
+    }
+    this._scheduleHoverRender(null);
+    this._lastTooltipViewportPosition = null;
+  }
+
+  _attachDocumentHoverWatch() {
+    if (this._documentHoverWatchAttached || typeof document === "undefined") {
+      return;
+    }
+    this._documentHoverWatchAttached = true;
+    document.addEventListener("pointermove", this._onDocumentPointerMove, true);
+    document.addEventListener("mousemove", this._onDocumentPointerMove, true);
+  }
+
+  _detachDocumentHoverWatch() {
+    if (!this._documentHoverWatchAttached || typeof document === "undefined") {
+      return;
+    }
+    this._documentHoverWatchAttached = false;
+    document.removeEventListener("pointermove", this._onDocumentPointerMove, true);
+    document.removeEventListener("mousemove", this._onDocumentPointerMove, true);
+  }
+
   _clearTouchPressTimer() {
     if (!this._touchPressTimer) {
       return;
@@ -1580,7 +1619,10 @@ class NodaliaGraphCard extends HTMLElement {
       }
       this._hoverEntering = resolvedIndex !== null && this._hoverIndex === null;
       if (resolvedIndex === null) {
+        this._detachDocumentHoverWatch();
         this._lastTooltipViewportPosition = null;
+      } else {
+        this._attachDocumentHoverWatch();
       }
       this._hoverIndex = resolvedIndex;
       this._render();

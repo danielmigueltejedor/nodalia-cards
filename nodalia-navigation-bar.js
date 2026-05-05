@@ -963,6 +963,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._dockEntrancePlayed = false;
     this._lastShouldHide = false;
     this._playDockEntrance = false;
+    this._lastMediaToggleVisible = false;
+    this._playPopupEntrance = false;
     this._lastMediaPlayerCardVisible = false;
     this._onResize = () => {
       this._closePopup(false);
@@ -1853,6 +1855,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       routeIndex,
       width: `${popupWidth}px`,
     };
+    this._playPopupEntrance = true;
     this._render();
   }
 
@@ -2728,7 +2731,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
   }
 
-  _renderPopup(currentPath) {
+  _renderPopup(currentPath, playPopupEntrance = false) {
     if (!this._popupState?.route) {
       return "";
     }
@@ -2799,7 +2802,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return `
       <div class="popup-backdrop" data-popup-close="true"></div>
       <div
-        class="popup-panel popup-panel--${this._popupState.direction} popup-panel--layout-${this._popupState.layout || "auto"} ${popupHasText ? "popup-panel--with-text" : "popup-panel--icon-only"} ${isCompactPopup ? "popup-panel--compact" : ""}"
+        class="popup-panel popup-panel--${this._popupState.direction} popup-panel--layout-${this._popupState.layout || "auto"} ${popupHasText ? "popup-panel--with-text" : "popup-panel--icon-only"} ${isCompactPopup ? "popup-panel--compact" : ""}${playPopupEntrance ? " popup-panel--entering" : ""}"
       >
         <div class="popup-items">
           ${popupMarkup}
@@ -3145,7 +3148,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     `;
   }
 
-  _renderMediaPlayerToggle(visiblePlayers) {
+  _renderMediaPlayerToggle(visiblePlayers, playToggleEntrance = false) {
     if (!visiblePlayers.length) {
       return "";
     }
@@ -3171,7 +3174,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       <div class="media-player-toggle-wrap${this._playDockEntrance ? " media-player-toggle-wrap--entering" : ""}">
         <button
           type="button"
-          class="media-player-toggle"
+          class="media-player-toggle${playToggleEntrance ? " media-player-toggle--entering" : ""}"
           data-media-toggle="expand"
           aria-label="Mostrar reproductor"
         >
@@ -3263,6 +3266,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const showMediaPlayerCard = hasVisiblePlayers && (inEditMode || this._mediaPlayerExpanded === true);
     const showMediaPlayerToggle = hasVisiblePlayers && !showMediaPlayerCard;
+    const playMediaToggleEntrance = animations.enabled && showMediaPlayerToggle && !this._lastMediaToggleVisible;
+    this._lastMediaToggleVisible = showMediaPlayerToggle;
     const playMediaCardEntrance = animations.enabled && showMediaPlayerCard && !this._lastMediaPlayerCardVisible;
     this._lastMediaPlayerCardVisible = showMediaPlayerCard;
     const mediaStackGap = hasVisiblePlayers ? config.media_player.gap || "0px" : "0px";
@@ -3281,7 +3286,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
     const mediaPlayerMarkup = showMediaPlayerCard
       ? this._renderMediaPlayer(visiblePlayers, playMediaCardEntrance)
       : "";
-    const mediaPlayerToggleMarkup = showMediaPlayerToggle ? this._renderMediaPlayerToggle(visiblePlayers) : "";
+    const mediaPlayerToggleMarkup = showMediaPlayerToggle
+      ? this._renderMediaPlayerToggle(visiblePlayers, playMediaToggleEntrance)
+      : "";
     const fullWidthBar = config.layout.full_width === true;
     const barRadiusToken = String(config.styles.bar.border_radius || "28px")
       .trim()
@@ -3293,7 +3300,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
         : config.layout.position === "top"
           ? `0 0 ${barRadiusToken} ${barRadiusToken}`
           : config.styles.bar.border_radius;
-    const popupMarkup = this._renderPopup(currentPath);
+    const popupMarkup = this._renderPopup(currentPath, Boolean(this._popupState) && this._playPopupEntrance);
     const mediaBrowserMarkup = this._renderMediaBrowser();
 
     const routesMarkup =
@@ -3703,6 +3710,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
           transform-origin: center bottom;
           width: min(${config.styles.popup.max_width}, calc(100vw - 24px));
           z-index: ${Number(config.layout.z_index) + 2};
+        }
+
+        .popup-panel.popup-panel--entering {
           ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.popupDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
 
@@ -4490,6 +4500,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
             background ${animations.enabled ? animations.barDuration : 0}ms ease,
             box-shadow ${animations.enabled ? animations.barDuration : 0}ms ease,
             transform ${animations.enabled ? animations.buttonBounceDuration : 0}ms ease;
+        }
+
+        .media-player-toggle.media-player-toggle--entering {
           ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.mediaDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
 
@@ -4610,6 +4623,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     this._applyRouteRuntimeStyles(visibleRoutes, playDockEntrance);
     this._applyPopupRuntimeStyles();
+    this._playPopupEntrance = false;
 
     if (this._popupState) {
       this._schedulePopupPositionSync();
