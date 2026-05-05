@@ -6,7 +6,382 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Work toward the next **`0.4.x`** prerelease; **`package.json`** and tags follow **`beta`** / **`alpha`** as described in **CONTRIBUTING**. Roadmap: **Power Flow**, **translations**, **Graph Card** lines/axes, **curated default styles**.
+Work toward **`0.6.x`** on **`alpha`** / **`beta`** and eventual **`main`**: additional polish, performance and feature work after the **`0.5.0`** stable release. Prerelease workflow and tagging: **CONTRIBUTING**.
+
+---
+
+## [0.6.0-beta.1] - 2026-05-05
+
+First **`beta`** on the **`0.6.x`** line (**branch `beta`**). This release consolidates the full **`0.6.0-alpha.*`** cycle into a tester-facing candidate focused on stability, security hardening, render efficiency, and pre-stable auditability. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-beta.1`** (tag **`v0.6.0-beta.1`** optional).
+
+### Stability and UX fixes
+
+- **Graph card:** hover lifecycle hardened so tooltip tracks continuously while moving and closes when pointer leaves the card in any direction.
+- **Graph card:** improved marker/guide/popup sync to reduce visual drift and flicker during fast hover transitions.
+- **Navigation bar:** reduced mini-player and popup micro-bounce by gating entrance animations to real visibility transitions (`--entering`) instead of generic re-renders.
+- **Navigation media presentation:** mini media player restyled to better match the visual language of other Nodalia cards (surface, border, spacing, shadow).
+- **Media chips (nav + media player):** noisy source labels such as `AirMusic` are filtered out for normal HomePod scenarios.
+
+### Security hardening
+
+- **Strict service actions by default:** cards using configurable service calls keep deny-by-default behavior unless explicitly disabled.
+- **Visual editor security controls:** added editor fields to configure service hardening directly in UI:
+  - toggle for `security.strict_service_actions`,
+  - CSV input for `security.allowed_services`.
+  Implemented in **Insignia**, **Entity**, **Fav**, and **Advance Vacuum** editors.
+- **URL hardening:** media/artwork and action URL sinks pass through sanitization flow (`sanitizeActionUrl`) in critical paths.
+- **Runtime style hardening:** additional sanitization guards applied to configurable style values in navigation runtime styles and advance-vacuum style trees.
+- **New-tab safety:** URL actions remain standardized with `noopener,noreferrer`.
+
+### Performance and fluency
+
+- **Drag performance:** cached geometry + attach-on-drag listeners (move/up only while dragging) across frequent slider cards to reduce idle overhead and layout churn.
+- **Render signature efficiency:** reduced hot-path render signature overhead and unified strategy using shared helper runtime instead of ad hoc object serialization.
+- **Bundling infra:** maintained esbuild-based pipeline with deterministic standalone embed stripping and stable bundle output.
+
+### Architecture and maintainability
+
+- Added shared module **`nodalia-render-signature.js`** and integrated it into the bundle pipeline.
+- Pilot modularization expanded in high-frequency cards:
+  - **Navigation:** signature decomposition into focused helper rows.
+  - **Graph:** tracked-state signature extraction and non-JSON render signature path.
+  - **Media Player:** switched signature construction to shared runtime helper.
+- Added project-level CI workflow (`.github/workflows/ci.yml`) with:
+  - `npm ci`
+  - `npm test`
+  - `npm run bundle`
+
+### Regression safety and release readiness
+
+- Added minimal regression suites for:
+  - render signature architecture guards,
+  - interaction regressions (graph hover watch + nav animation transitions),
+  - security/editor exposure assertions,
+  - release-candidate smoke checks (URL hardening, drag listener strategy, shared signature runtime).
+- Added **`docs/STABILITY_CHECKLIST_0_6_0.md`** to formalize pre-stable validation gates.
+
+---
+
+## [0.6.0-alpha.4] - 2026-05-05
+
+Fourth **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.4`** (tag **`v0.6.0-alpha.4`** optional). Breaking changes are allowed; prefer stable **`main`** for production dashboards.
+
+- **Navigation bar (mini media player):** visual style aligned with the rest of Nodalia cards (surface, border, shadow, spacing) and reduced hover bounce in popup items for steadier perceived motion.
+- **Media player + nav media chips:** filtered noisy source chip values (notably `AirMusic`) so normal HomePods no longer show a redundant extra chip next to progress/duration.
+- **Security hardening (Fase A):** artwork/media URL resolution now passes through shared URL sanitization in media paths; runtime route/popup style vars in nav apply sanitized values only.
+- **Advance Vacuum hardening (Fase A):** added safe style tree sanitization for configurable CSS values before render-time interpolation (card/map/icon/control/chip style paths).
+
+---
+
+## [0.6.0-alpha.3] - 2026-05-05
+
+Third **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.3`** (tag **`v0.6.0-alpha.3`** optional). Breaking changes are allowed; prefer stable **`main`** for production dashboards.
+
+- **Navigation bar:** reducción de micro-rebote visual en mini media player y popups al evitar reactivar animaciones de entrada en renders normales.
+- **Navigation bar:** las animaciones de superficie para mini player y popup ahora se limitan a aperturas reales (`--entering`) y no a refrescos de estado de la tarjeta.
+- **Graph card:** cierre de tooltip de hover más robusto al salir de la tarjeta en cualquier dirección.
+
+---
+
+## [0.6.0-alpha.2] - 2026-05-05
+
+Second **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.2`** (tag **`v0.6.0-alpha.2`** optional). Breaking changes are allowed; prefer stable **`main`** for production dashboards.
+
+- **Fluidez (Fase 2):** cache de geometría + listeners globales `move/up` solo durante drag en sliders interactivos (**Light/Fan/Humidifier/Media Player**), reduciendo carga en idle y en arrastre continuo.
+- **Fluidez (Fase 2):** dial de **Climate** optimizado con geometría cacheada durante drag para evitar lecturas de layout por frame.
+- **Eficiencia render (Fase 3):** firmas de render en **Light / Entity / Navigation** migradas de `JSON.stringify` de objetos a firmas string compactas, con menos allocations y menor presión de GC.
+- **Infra (Fase 4):** bundling modernizado con **esbuild** en `scripts/build-bundle.mjs`, manteniendo orden de módulos y stripping de embeds standalone para no alterar comportamiento funcional del bundle.
+
+---
+
+## [0.6.0-alpha.1] - 2026-05-05
+
+First **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.1`** (tag **`v0.6.0-alpha.1`** optional). Breaking changes are allowed; prefer stable **`main`** for production dashboards.
+
+- **Graph card:** hover/tooltip behavior refined during pointer movement, with stronger leave/close handling so the popup does not remain stuck when leaving the card.
+- **Navigation bar / media player:** reduced visible flicker when toggling mini ↔ expanded media player and during unrelated dashboard interactions by limiting entrance animation to actual visibility transitions.
+- **Advance Vacuum:** map action flow cleanup and async guard polishing (`_mapActionInFlight`) for safer concurrent interaction handling.
+- **Shared utils / i18n infra:** neutralized entity-id collation in shared editor signature utilities to avoid locale-hardcoded sorting behavior.
+
+---
+
+## [0.5.0] - 2026-05-06
+
+First stable release on the **`0.5.x`** line (**branch `main`**). This version consolidates all validated work from the **`0.5.0-alpha.*`** cycle into a production-ready bundle aimed at smoother interaction, stronger hardening, better editor UX and broader translation coverage.
+
+### Security hardening
+
+- Added shared **`sanitizeActionUrl()`** and applied it across URL action sinks to block unsafe schemes and normalize relative/same-origin navigation.
+- Standardized new-tab actions to **`noopener,noreferrer`** to reduce tabnabbing/referrer leakage risks.
+- Hardened service actions with optional strict mode and allowlists (**domains/services**) to reduce accidental abuse in action configs.
+- Removed dynamic inline style string interpolation in critical runtime paths (notably Navigation Bar route/popup styles), applying safe runtime style properties instead.
+- Added render-boundary CSS sanitization for user-configurable styles in cards with dynamic style templates (including Insignia and Circular Gauge paths), with safe fallback behavior.
+
+### Performance and fluency
+
+- Improved Graph hover fluidity with **`requestAnimationFrame`** coalescing and reduced per-move work under heavy pointer movement.
+- Fixed Graph tooltip lifecycle for stable tracking while moving the pointer (without waiting for stationary hover), with robust leave/close behavior.
+- Reduced drag overhead in interactive controls by caching geometry during slider drags and minimizing repeated layout reads.
+- Smoothed Climate dial interaction by coalescing drag updates per frame.
+- Kept standalone embedding/bundle sync idempotent to avoid unnecessary rewrites and noisy rebuild diffs.
+
+### Stability and bug fixes
+
+- Fixed Graph hook alignment issues (marker/guide/popup sync over chart path and viewBox mapping).
+- Fixed Graph header layout so icon bubble and title align consistently in the top-left header row.
+- Added spacing and layout refinements in Graph value/chips area for better readability in compact and normal views.
+- Fixed tooltip edge cases where popups could remain visible after leaving the card.
+- Corrected Insignia icon-only sizing/height parity with normal mode and removed clipping/regression cases in strip/scroll layouts.
+- Improved async state consistency in Advance Vacuum map actions by preventing overlapping runs and reducing race conditions after awaited service calls.
+
+### Editor and i18n
+
+- Fixed Spanish editor normalization artifacts where labels like **`Mínimo$1`** / **`Máximo$1`** could appear.
+- Strengthened editor label normalization and replacement group handling in generated editor UI runtime.
+- Expanded editor/source strings and completed additional translation keys across supported locales.
+- Maintained bundled language set coverage for cards and visual editors (**es, en, de, fr, it, nl, pt, ru, el, zh, ro**), with graceful fallback behavior for partial trees.
+
+### Developer and tooling
+
+- Refined shared utility behavior for editor entity signatures so label/icon attribute changes trigger expected refreshes (not only entity count changes).
+- Kept standalone utility embedding centralized and automatically stripped during bundle build to avoid duplicated runtime code in `nodalia-cards.js`.
+
+---
+
+## [0.5.0-alpha.16] - 2026-05-06
+
+Sixteenth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.16`** (tag **`v0.5.0-alpha.16`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Security hardening** (**Circular Gauge**): sanitización de valores CSS configurables en el borde de render (`styles.card`, `styles.icon`, `styles.gauge`, tamaños/chips) con fallback seguro antes de interpolación en `<style>`/SVG.
+- **Stability** (**Advance Vacuum**): lock de concurrencia para acciones de mapa (`_mapActionInFlight`) y resolución de modo de sesión con estado refrescado tras `await` para evitar carreras en interacciones rápidas.
+- **Performance / fluidez**: cache de geometría en arrastre de sliders de **Media Player** (menos `getBoundingClientRect()` por `pointermove`) y coalescing por `requestAnimationFrame` en drag del dial de **Climate**.
+- **i18n / editor UI**: ampliadas claves base de traducción y ajuste del generador para preservar correctamente expansiones con grupos (`$1`) en la salida embebida.
+
+---
+
+## [0.5.0-alpha.15] - 2026-05-06
+
+Fifteenth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.15`** (tag **`v0.5.0-alpha.15`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Performance** (**Graph card**): hover más fluido y estable — actualizaciones coalescidas por **`requestAnimationFrame`**, menos trabajo por evento de puntero y cierre más robusto del popup/hook al salir de la tarjeta.
+- **Security hardening**: helper común **`sanitizeActionUrl`** en utilidades compartidas y aplicado a sinks de URL en tarjetas interactivas; aperturas en pestaña nueva unificadas a **`noopener,noreferrer`**.
+- **Security hardening** (**Navigation bar**): eliminación de interpolación de estilos inline dinámicos en HTML de runtime; estilos aplicados por **`style.setProperty(...)`** para reducir superficie de inyección.
+- **Security hardening**: modo estricto opcional para acciones de servicio configurable por tarjeta (**`strict_service_actions`** + allowlists de dominios/servicios).
+- **Editor UI**: corrección definitiva de sufijos literales como **`$1`** en etiquetas normalizadas (p. ej. **Mínimo/Máximo**).
+
+---
+
+## [0.5.0-alpha.14] - 2026-05-06
+
+Fourteenth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.14`** (tag **`v0.5.0-alpha.14`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Insignia card**: hardening de render en estilos configurables (sanitización de valores CSS antes de interpolarlos en `<style>`), con fallback seguro para patrones de inyección.
+- **Graph card** (`0.12.20`): más separación vertical entre cabecera (icono + nombre) y fila de valor/chips.
+
+---
+
+## [0.5.0-alpha.13] - 2026-05-06
+
+Thirteenth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.13`** (tag **`v0.5.0-alpha.13`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Graph card** (`0.12.20`): header reorganizado — burbuja de icono junto al título en la esquina superior izquierda (icono a la izquierda del nombre).
+- **Graph card** (`0.12.20`): hover sincronizado — línea discontinua, círculo y popup comparten mapeo X del **`viewBox`**, sin desfase lateral.
+- **Editor UI**: corrección de normalización en etiquetas en español — los reemplazos con grupos (por ejemplo **`mínimo`** / **`máximo`**) ya no muestran sufijos literales como **`$1`**.
+
+---
+
+## [0.5.0-alpha.12] - 2026-05-06
+
+Twelfth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.12`** (tag **`v0.5.0-alpha.12`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Graph card** (`0.12.20`): **hook/hover marker** alineado al recorrido de la línea (la capa de puntos usa el mismo viewport útil del SVG que el chart, sin desfase vertical por padding del panel).
+- **Graph card** (`0.12.20`): popup del hook con estilo más **semitransparente/glass** al estilo weather card (fondo refinado, borde más suave, doble sombra ligera e inner highlight).
+
+---
+
+## [0.5.0-alpha.11] - 2026-05-06
+
+Eleventh **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.11`** (tag **`v0.5.0-alpha.11`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Insignia card** (`0.2.12`): modo **solo icono** — misma **`.insignia-card__content`** que la píldora (**`styles.card.padding`** / **`gap`** / disco **`iconSizePx`**); **sin** segunda columna vacía ni cuadrado fijo; disco del icono como en modo con texto; **`padding-block`** del **`:host`** otra vez **`4px`** por defecto en franjas con scroll (**`--insignia-scroll-strip-*`**).
+
+---
+
+## [0.5.0-alpha.10] - 2026-05-06
+
+Tenth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.10`** (tag **`v0.5.0-alpha.10`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Internals** (**`nodalia-utils.js`**): **`editorStatesSignature`** vuelve a reflejar **todas** las entidades (**`id`**, **`friendly_name`**, **`icon`** por fila), delegando en **`editorFilteredStatesSignature`** — los editores que listan entidades se actualizan al cambiar etiquetas o iconos, no solo al variar el **conteo**.
+- **Insignia card** (`0.2.11`): modo **solo icono** — tamaño exterior alineado con la **píldora con nombre/valor** (**padding** vertical de **`styles.card`** + disco del icono); **`padding-block`** del host por defecto **`0`** (franjas con scroll: variables **`--insignia-scroll-strip-*`**).
+
+---
+
+## [0.5.0-alpha.9] - 2026-05-05
+
+Ninth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.9`** (tag **`v0.5.0-alpha.9`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Graph card** (`0.12.19`): vista **estrecha** (`max-width: 640px`) — **valor y chips de leyenda** en la **misma fila**; leyenda con **scroll horizontal** si hace falta (ya no se fuerza **`flex-wrap`** de la fila ni **`100%`** de ancho en la leyenda, evitando solaparse con el **chart**).
+- **Insignia card** (`0.2.10`): modo **solo icono** — **`border-radius`** del contenedor alineado con **`styles.card.border_radius`** (igual que la píldora con nombre/valor); **`inherit`** en contenido, icono e **imagen**.
+- **Standalone scripts:** **`nodalia-utils.js`** incrustado al inicio de cada tarjeta **`nodalia-*.js`** que usa **`window.NodaliaUtils`** (marcadores **`nodalia-standalone-utils`**); **`npm run bundle`** lo **elimina** del **`nodalia-cards.js`** para no duplicar. **`nodalia-bubble-contrast.js`** no lleva embed (no usa **`NodaliaUtils`**).
+- **Tooling** (**`scripts/sync-standalone-embed.mjs`**): sincronización **idempotente** — tras **`</nodalia-standalone-utils>`** se eliminan **todos** los saltos de línea iniciales (round-trip estable con **`wrapEmbed`**); comparación con **`CRLF`** normalizado a **`LF`**, de modo que **`npm run bundle`** no reescribe en masa los **`nodalia-*.js`** cuando **`nodalia-utils.js`** no cambia.
+
+---
+
+## [0.5.0-alpha.8] - 2026-05-06
+
+Eighth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.8`** (tag **`v0.5.0-alpha.8`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+Mismo contenido funcional que **`alpha.7`** con **Insignia** **`0.2.9`** y utilidades **`nodalia-utils`**: número de prerelease subido para etiquetar el bundle corregido (**`nodalia-cards.js`** parseable; ver **`alpha.7`**).
+
+---
+
+## [0.5.0-alpha.7] - 2026-05-06
+
+Seventh **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.7`** (tag **`v0.5.0-alpha.7`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Insignia card** (`0.2.9`): modo **solo icono** — **`align-self: center`** por defecto (variable **`--insignia-icon-only-align-self`**, p. ej. **`stretch`** en franjas con scroll); **`translateY`** fino con **`--insignia-icon-only-row-nudge`** (por defecto **`-2px`**). Corrección: comentario CSS sin **backticks** dentro del **`innerHTML`** en plantilla JS — en **`0.2.8`** rompían el parseo de **`nodalia-cards.js`** y las tarjetas **custom** no se registraban.
+- **Internals** (**`nodalia-utils.js`**): **`initNodaliaUtils`** solo hace **early return** si existe la **API completa** en **`window.NodaliaUtils`**; **`editorFilteredStatesSignature`** vuelve a incluir **filas por entidad** (**`id`**, **`friendly_name`**, **`icon`**) para que los editores detecten cambios en etiquetas.
+
+---
+
+## [0.5.0-alpha.6] - 2026-05-05
+
+Sixth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.6`** (tag **`v0.5.0-alpha.6`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Graph card** (`0.12.18`): **Tooltip** — no evaluar **`hover.x`** cuando no hay hover (**`null`**), evitando **`null is not an object (evaluating 'hover.x')`** en la tarjeta.
+- **Insignia card** (`0.2.6`): modo **solo icono** — corrección fina en fila con otras insignias: **`transform: translateY`** en **`:host([data-icon-only])`** con variable **`--insignia-icon-only-row-nudge`** (por defecto **`-2px`**).
+
+---
+
+## [0.5.0-alpha.5] - 2026-05-05
+
+Fifth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.5`** (tag **`v0.5.0-alpha.5`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Graph card** (`0.12.17`): **Hover** alineado con la **línea** — posición X en overlay y **tooltip** usando el mismo rango que el **viewBox** (padding horizontal negativo: ya no se usa **`x / 100`**). **Marcadores** al vuelo con estética **Power Flow** (gradiente + sombra, **pulse** suave) en lugar de anillos anteriores.
+- **Insignia card** (`0.2.5`): modo **solo icono** — alineación en **franjas horizontales** con otras insignias: **`:host`** con **`align-self: stretch`**, **`display: flex`** y **`align-items: center`**; **recorte** en scroll con **`padding-block`** (variables **`--insignia-scroll-strip-padding-block`** / compat **`--insignia-scroll-strip-margin-block`**, por defecto **`4px`**); ajuste óptico **`--insignia-icon-optical-y`** y **`svg { display: block }`**.
+- **Internals** (**`nodalia-utils.js`**): **`copyDatasetExcept`** ignora también **`field`**; **`pickerCallbackState`** + listeners estables para **callbacks** actualizados en pickers reutilizados.
+
+---
+
+## [0.5.0-alpha.4] - 2026-05-05
+
+Fourth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.4`** (tag **`v0.5.0-alpha.4`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Graph card** (`0.12.16`): **`DEFAULT_CONFIG`** y **`STUB`** orientados a **temperatura** — entidades de ejemplo, **`min`** / **`max`** **`15`**–**`25`**, **`points`** **`100`**, **`styles.card`** **`padding`** **`18px`**, **`gap`** **`20px`**, **`icon.size`** **`20px`**; placeholder del editor **Temperatura**. Ejemplo en **`examples/graph-card.yaml`**.
+- **Insignia card** (`0.2.4`): modo **solo icono** — **`margin-block`** en **`:host`** (por defecto **`8px`**, sobreescribible con **`--insignia-scroll-strip-margin-block`**) para que las **franjas con scroll horizontal** no recorten el círculo; estado vacío limpia **`data-icon-only`**.
+
+---
+
+## [0.5.0-alpha.3] - 2026-05-05
+
+Third **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.3`** (tag **`v0.5.0-alpha.3`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Graph card** (`0.12.15`): más **margen superior** del **recuadro del chart** respecto a la fila **valor / chips**.
+- **Insignia card** (`0.2.3`): modo **solo icono** — **padding** interior **`3px`**, glifo algo más **pequeño** respecto al círculo (**`-12px`** en lugar de `-8px`) y **`overflow: visible`** en **`ha-icon`** para reducir el recorte visual.
+
+---
+
+## [0.5.0-alpha.2] - 2026-05-05
+
+Second **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.2`** (tag **`v0.5.0-alpha.2`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Graph card** (`0.12.14`): **chips** de leyenda en la **misma fila** que el **valor** (a la **derecha**), evitando solaparse con el recuadro del chart; en **vista estrecha** la leyenda pasa a **línea inferior** a ancho completo.
+- **Insignia card** (`0.2.2`): modo **solo icono** — **`overflow: visible`** en el host y en la píldora, **`icon_only_offset_y`** por defecto **`0`** para quitar el recorte mínimo **abajo** del círculo.
+- **Internals**: shared **`nodalia-utils.js`** (**`window.NodaliaUtils`**) — **`deepEqual` / `stripEqualToDefaults`**, firmas ligeras de **`hass`** en editores (**conteo** / **filtrados** + idioma), **`mountEntityPickerHost` / `mountIconPickerHost`** para no recrear **`ha-entity-picker`** / **`ha-icon-picker`** en cada render; **`resolveEditorColorValue`** cachea colores CSS en **`nodalia-bubble-contrast.js`**. El bundle incluye **`nodalia-utils.js`** tras i18n/editor-ui (véase **CONTRIBUTING**). Instalación recomendada: un solo **`nodalia-cards.js`**.
+
+---
+
+## [0.5.0-alpha.1] - 2026-05-06
+
+First **`alpha`** on the **0.5.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.1`** (tag **`v0.5.0-alpha.1`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Graph card** (`0.12.13`): el **recuadro de la gráfica** gana protagonismo — **ancho completo** respecto al contenido de la tarjeta con **márgenes negativos** como el mapa en **advance vacuum**, esquinas del panel alineadas al **`border_radius`** de la tarjeta; **valor principal**, **título** y **chips** de series algo más compactos; **`DEFAULT_CONFIG.styles`** por defecto más bajo en tipografía para dar más aire al área del chart; altura mínima del panel revisada.
+- **Insignia card** (`0.2.1`): editor visual con **`icon_active`** / **`icon_inactive`** y mismo criterio de **estado activo** que **Entity card**; hint de ayuda opcional como en Entity.
+
+---
+
+## [0.4.0] - 2026-05-06
+
+### Nodalia Cards v0.4.0
+
+This release is the new recommended **stable** line on **`main`**. It rolls up everything exercised across the **`0.4.0-beta.*`** and **`0.4.0-alpha.*`** prereleases into a single coherent minor: sharper history visuals, a more dependable navigation shell, shared tint/contrast logic across bubble cards, a full-featured **Insignia** editor and tint system, and broad editor / i18n polish. Installs should match **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0`** (Git tag **`v0.4.0`**).
+
+Per-prerelease entries below (**alpha.1** through **alpha.25**, **beta.1** through **beta.4**) remain for detailed archaeology.
+
+### 📈 Graph card
+
+- **Line & area**: Reworked stroke/fill, smarter **automatic min/max** by metric (for example humidity anchored around **20–80** when you do not set bounds), denser default history sampling (**`points`** **480**).
+- **Layout & chips**: Series chips **reordered and tightened** so they do not collide with the chart frame; **multi-series with the same unit** shows a **mean** in the primary readout until you pick a series; improved **hover/detail** presentation closer to **Weather card**; refined **typography** for the main value and spacing between chips and plot.
+- **Fit & polish**: Extra bottom margin in series/container so minima are not clipped; chart container **no longer uses negative side margin** (stays inside the card).
+
+### 🌤️ Weather card
+
+- **Forecast chart mode**: Detail popups / overlays **follow the active Home Assistant theme** more faithfully when switching themes (fixes overly dark panels on light themes).
+
+### 🧭 Navigation bar
+
+- **Look & layout**: “Shelf” geometry when docked (**`bottom`** / **`top`**), **full-width** bar option, **28px** radius and light top wash aligned with other Nodalia cards; **dock entrance** animation (slide/fade, staggered routes, configurable duration).
+- **Media**: **Album / entity artwork** resolution aligned with **`nodalia-media-player`** (URLs, cache busting, TV/Plex rules); **mini player ticker** updates progress/time **without** full card re-render (no flicker).
+- **Reliability**: Entrance animation reset deferred one **`requestAnimationFrame`** so **`set(hass)`** after **`setConfig`** does not cancel **`--entering`** states.
+- **Editor**: Native **`ha-entity-picker`** / **`ha-icon-picker`** (with **`input`** fallbacks) for routes, popup shortcuts, and media players.
+
+### 🎯 Entity, Fan, Humidifier, Climate & shared bubble visuals
+
+- **`nodalia-bubble-contrast.js`** (**`window.NodaliaBubbleContrast`**): one implementation for **named/CSS colors**, hue-aware **cool tint** detection, and **when to darken** the icon glyph on tinted bubbles—used by **Entity**, **Fan**, and **Humidifier** (and **Entity**-aligned behaviour elsewhere).
+- **Entity card**: Stronger **active-state** visual parity with Light/Fan (gradient, border, glow, circular bubble); **chip** surfaces and typography; visual editors for **`icon_active`** / **`icon_inactive`** (doors, windows, binary sensors). Card revision **0.6.6**.
+- **Active bubble icon colour**: **`ha-icon`** prefers readable **`styles.icon.color`** on coloured bubbles (not always **`on_color`**) across **entity**, **fan**, **humidifier**, **climate** where applicable.
+
+### 🏅 Insignia card
+
+- **Visual editor**: Parity with other Nodalia editors—**`ha-entity-picker`**, robust **icon** control (**`editor-control-host`** / **`_mountIconPicker`** + text fallback), structured sections (badge, haptics, tap action, appearance).
+- **Tinting**: **Automatic tint by entity type** with optional **manual tint colour** (**`styles.tint.color`**, **`tint_auto`**); when tint should read clearly (active entities, **sensor**/**weather**, manual mode), **card fill, border, and glow layers** align with **Entity card**; fixes for **weak tint on numeric sensors** and a **gray “shelf”** under pills in toolbars (baseline gap, shadow, containment).
+
+### 🔔 Alarm panel, YAML preview & editors
+
+- **Alarm panel editor**: More reliable **style/animation** toggles (deferred config emission, **`pointerdown`** section open, duplicate-click suppression).
+- **Visual editors** (“Show YAML”): **`stripEqualToDefaults`** so generated YAML stays minimal (also wired where added for **vacuum** and similar editors).
+
+### 🎛️ Circular gauge, Climate dial & Power Flow
+
+- **Circular gauge** / **Climate**: **`aspect-ratio: 1`** and **`width: min(…, 100%)`** so previews stay **round** in narrow layouts.
+- **Power Flow**: Thinner default connector (**`flow_width`** **1px** in this line), continuing diagram polish from earlier **0.4.x** alphas.
+
+### 🌍 i18n & editor UI map
+
+- **Spanish editor labels**: Wider pass on accents and **ñ** across the shared **`editorStr`** map; **`scripts/gen-editor-ui.mjs`** keeps **`normalizeSpanishEditorLabel`** when regenerating **`nodalia-editor-ui.js`**.
+- **Locales**: **`FULL_LOCALE_BY_EN`** coverage for flow/style labels so **pt / ru / el / zh / ro** do not fall back to English for Power Flow and similar strings.
+
+### 🎨 Defaults & misc
+
+- Curated **default `styles`** (icon sizes, chips, sliders, etc.) across several cards for a tighter out-of-the-box look.
+
+### Notes
+
+- If you installed **`0.4.0-beta.*`** or **`0.4.0-alpha.*`**, move **`main`** / GitHub **Release** **`v0.4.0`** or HACS **stable** when ready; **`__NODALIA_BUNDLE__.pkgVersion`** should read **`0.4.0`** after refresh/redownload.
+
+---
+
+## [0.4.0-alpha.25] - 2026-05-06
+
+Twenty-fifth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.25`** (tag **`v0.4.0-alpha.25`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Insignia card (layout / sombra)**: evita la **franja gris** bajo la pastilla en barras — **`inline-flex`** en **`:host`** con **`line-height: 0`** y **`vertical-align: middle`** (hueco típico de baseline en elementos inline); sin **`contain: paint`** ni **`background-clip: padding-box`** que podían marcar el borde; la sombra extra tipo **Entity** (`0 16px 32px`) se sustituye por un **brillo interior** para no proyectar un bloque oscuro bajo insignias compactas.
+
+---
+
+## [0.4.0-alpha.24] - 2026-05-05
+
+Twenty-fourth **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.24`** (tag **`v0.4.0-alpha.24`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Insignia card (tinte)**: tintado alineado con **Entity card** cuando el tinte debe leerse fuerte — degradado en el fondo de la pastilla, borde/sombra con acento y capas **`::before` / `::after`** sin la opacidad global que antes dejaba el tinte casi invisible; sensores (**`sensor`**) y **weather** reciben tinte fuerte aunque el estado no sea «activo» (p. ej. temperatura numérica); **`tint_auto: false`** sigue forzando el tinte manual visible.
+
+---
+
+## [0.4.0-alpha.23] - 2026-05-06
+
+Twenty-third **`alpha`** prerelease on the **0.4.x** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.4.0-alpha.23`** (tag **`v0.4.0-alpha.23`**). Breaking changes are allowed; prefer **`beta`** or **`main`** for production dashboards.
+
+- **Insignia card (editor visual)**: campos de color (`styles.icon.background`, `styles.icon.on_color`, `styles.icon.off_color`) con selector visual tipo color picker, alineado con el patrón del resto de editores; eliminado el selector por presets de tinte y sustituido por un toggle **«Tintado automático por tipo de entidad»** (si se desactiva, manda el color manual elegido).
 
 ---
 

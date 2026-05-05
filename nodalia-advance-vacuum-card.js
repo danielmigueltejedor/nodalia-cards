@@ -1,3 +1,396 @@
+// <nodalia-standalone-utils>
+// Inlined for standalone Lovelace resources (single JS file). Stripped when building nodalia-cards.js.
+// Source of truth: nodalia-utils.js — regenerate: node scripts/sync-standalone-embed.mjs
+/**
+ * Shared helpers for Nodalia cards (deep equality, config stripping, editor mounts).
+ * Loaded early in nodalia-cards.js bundle; exposed as window.NodaliaUtils.
+ */
+(function initNodaliaUtils() {
+  const REQUIRED_API_KEYS = [
+    "isObject",
+    "deepClone",
+    "deepEqual",
+    "stripEqualToDefaults",
+    "editorStatesSignature",
+    "editorFilteredStatesSignature",
+    "sanitizeActionUrl",
+    "mountEntityPickerHost",
+    "mountIconPickerHost",
+  ];
+  const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
+  if (
+    existing &&
+    REQUIRED_API_KEYS.every(key => typeof existing[key] === "function")
+  ) {
+    return;
+  }
+
+  function isObject(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function deepClone(value) {
+    if (value === undefined) {
+      return undefined;
+    }
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function deepEqual(a, b) {
+    if (Object.is(a, b)) {
+      return true;
+    }
+    if (a == null || b == null) {
+      return a === b;
+    }
+    if (typeof a !== typeof b) {
+      return false;
+    }
+    if (typeof a !== "object") {
+      return false;
+    }
+    if (Array.isArray(a)) {
+      if (!Array.isArray(b) || a.length !== b.length) {
+        return false;
+      }
+      return a.every((value, index) => deepEqual(value, b[index]));
+    }
+    if (Array.isArray(b)) {
+      return false;
+    }
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) {
+      return false;
+    }
+    return keysA.every(key => deepEqual(a[key], b[key]));
+  }
+
+  function stripEqualToDefaults(config, defaults) {
+    if (defaults === undefined || defaults === null) {
+      return deepClone(config);
+    }
+    if (config === undefined || config === null) {
+      return undefined;
+    }
+    if (Array.isArray(config)) {
+      return deepEqual(config, defaults) ? undefined : deepClone(config);
+    }
+    if (isObject(config) && isObject(defaults)) {
+      const out = {};
+      for (const key of Object.keys(config)) {
+        const cv = config[key];
+        const dv = defaults[key];
+        if (!(key in defaults)) {
+          out[key] = deepClone(cv);
+          continue;
+        }
+        if (deepEqual(cv, dv)) {
+          continue;
+        }
+        if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
+          const stripped = stripEqualToDefaults(cv, dv);
+          if (stripped !== undefined) {
+            out[key] = stripped;
+          }
+        } else {
+          out[key] = deepClone(cv);
+        }
+      }
+      return Object.keys(out).length ? out : undefined;
+    }
+    return deepEqual(config, defaults) ? undefined : config;
+  }
+
+  /**
+   * Signature for entities matching predicate(entityId): id + friendly_name + icon per row,
+   * so picker labels update when attributes change. Same locale prefix as editorStatesSignature.
+   */
+  function editorFilteredStatesSignature(hass, language, predicate) {
+    const states = hass?.states || {};
+    const rows = [];
+    for (const id of Object.keys(states)) {
+      if (!predicate(id)) {
+        continue;
+      }
+      const state = states[id];
+      rows.push(
+        `${id}:${String(state?.attributes?.friendly_name ?? "")}:${String(state?.attributes?.icon ?? "")}`,
+      );
+    }
+    rows.sort((left, right) => {
+      const idLeft = left.split(":")[0];
+      const idRight = right.split(":")[0];
+      return idLeft.localeCompare(idRight, undefined, { sensitivity: "base" });
+    });
+    const tag =
+      typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
+        ? window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language))
+        : "";
+    return `${tag}|${rows.join("|")}`;
+  }
+
+  /**
+   * Full hass.states signature: every entity as id + friendly_name + icon (sorted by id),
+   * plus locale tag — same shape as editorFilteredStatesSignature. Editors that list entities
+   * re-render when labels or icons change, not only when the entity count changes.
+   */
+  function editorStatesSignature(hass, language) {
+    return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Normalize and validate user-provided action URLs.
+   * Allows http/https and same-origin relative paths by default.
+   */
+  function sanitizeActionUrl(value, options = {}) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    const allowRelative = options.allowRelative !== false;
+    const allowHash = options.allowHash === true;
+    if (allowHash && raw.startsWith("#")) {
+      return raw;
+    }
+    if (allowRelative && (/^\/(?!\/)/.test(raw) || raw.startsWith("./") || raw.startsWith("../"))) {
+      return raw;
+    }
+    try {
+      const base =
+        typeof window !== "undefined" && window.location
+          ? window.location.origin
+          : "https://example.invalid";
+      const parsed = new URL(raw, base);
+      const protocol = String(parsed.protocol || "").toLowerCase();
+      if (protocol !== "http:" && protocol !== "https:") {
+        return "";
+      }
+      if (allowRelative && typeof window !== "undefined" && window.location && parsed.origin === window.location.origin) {
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+      return parsed.toString();
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  function copyDatasetExcept(control, host, skipKeys) {
+    const skip = new Set(skipKeys || []);
+    Object.entries(host.dataset || {}).forEach(([key, value]) => {
+      if (skip.has(key)) {
+        return;
+      }
+      control.dataset[key] = value;
+    });
+  }
+
+  /** Latest callbacks for reused picker controls (listeners call into this). */
+  const pickerCallbackState = new WeakMap();
+  const pickerControlsWithListeners = new WeakSet();
+
+  function dispatchPickerChange(ev) {
+    const control = ev.currentTarget;
+    const s = pickerCallbackState.get(control);
+    if (s && typeof s.onShadowInput === "function") {
+      s.onShadowInput(ev);
+    }
+  }
+
+  function dispatchPickerValueChanged(ev) {
+    const control = ev.currentTarget;
+    const s = pickerCallbackState.get(control);
+    if (!s) {
+      return;
+    }
+    const fn = s.onShadowValueChanged || s.onShadowInput;
+    if (typeof fn === "function") {
+      fn(ev);
+    }
+  }
+
+  /**
+   * Mount or update ha-entity-picker / ha-selector / text input without recreating each render.
+   */
+  function mountEntityPickerHost(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const hass = options.hass;
+    const field = options.field || host.dataset.field || "entity";
+    const nextValue = options.value !== undefined ? String(options.value) : String(host.dataset.value || "");
+    const placeholder =
+      options.placeholder !== undefined ? String(options.placeholder) : String(host.dataset.placeholder || "");
+    const onShadowInput = options.onShadowInput;
+    const onShadowValueChanged = options.onShadowValueChanged;
+    const copyDatasetFromHost = options.copyDatasetFromHost !== false;
+
+    const usePicker = typeof customElements !== "undefined" && customElements.get("ha-entity-picker");
+    const useSelector = typeof customElements !== "undefined" && customElements.get("ha-selector");
+
+    let desired = "input";
+    if (usePicker) {
+      desired = "picker";
+    } else if (useSelector) {
+      desired = "selector";
+    }
+
+    let control = host.firstElementChild;
+    const tag = control?.tagName || "";
+    const matches =
+      control &&
+      ((desired === "picker" && tag === "HA-ENTITY-PICKER")
+        || (desired === "selector" && tag === "HA-SELECTOR")
+        || (desired === "input" && tag === "INPUT"));
+
+    if (!matches) {
+      host.replaceChildren();
+      if (usePicker) {
+        control = document.createElement("ha-entity-picker");
+        control.allowCustomEntity = true;
+      } else if (useSelector) {
+        control = document.createElement("ha-selector");
+        control.selector = { entity: {} };
+      } else {
+        control = document.createElement("input");
+        control.type = "text";
+      }
+
+      control.dataset.field = field;
+      if (copyDatasetFromHost) {
+        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder", "field"]);
+      }
+
+      if ("hass" in control) {
+        control.hass = hass;
+      }
+      if ("value" in control) {
+        control.value = nextValue;
+      }
+      if (placeholder && "placeholder" in control) {
+        control.placeholder = placeholder;
+      }
+
+      pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+      if (!pickerControlsWithListeners.has(control)) {
+        pickerControlsWithListeners.add(control);
+        if (control.tagName === "INPUT") {
+          control.addEventListener("change", dispatchPickerChange);
+        } else {
+          control.addEventListener("value-changed", dispatchPickerValueChanged);
+        }
+      }
+
+      host.appendChild(control);
+      return;
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+    pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+    if ("hass" in control) {
+      control.hass = hass;
+    }
+    if (placeholder && "placeholder" in control) {
+      control.placeholder = placeholder;
+    }
+    if ("value" in control && control.value !== nextValue) {
+      control.value = nextValue;
+    }
+  }
+
+  /**
+   * Mount or update ha-icon-picker / text input without recreating each render.
+   */
+  function mountIconPickerHost(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const hass = options.hass;
+    const nextValue = options.value !== undefined ? String(options.value) : String(host.dataset.value || "");
+    const placeholder = options.placeholder !== undefined ? options.placeholder : host.dataset.placeholder || "";
+    const onShadowInput = options.onShadowInput;
+    const onShadowValueChanged = options.onShadowValueChanged;
+    const copyDatasetFromHost = options.copyDatasetFromHost !== false;
+
+    const useIconPicker = typeof customElements !== "undefined" && customElements.get("ha-icon-picker");
+
+    let desired = useIconPicker ? "icon" : "input";
+    let control = host.firstElementChild;
+    const tag = control?.tagName || "";
+    const matches =
+      control && ((desired === "icon" && tag === "HA-ICON-PICKER") || (desired === "input" && tag === "INPUT"));
+
+    if (!matches) {
+      host.replaceChildren();
+      if (useIconPicker) {
+        control = document.createElement("ha-icon-picker");
+      } else {
+        control = document.createElement("input");
+        control.type = "text";
+      }
+
+      if (copyDatasetFromHost) {
+        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder", "field"]);
+      }
+
+      if ("hass" in control) {
+        control.hass = hass;
+      }
+      if (placeholder && "placeholder" in control) {
+        control.placeholder = placeholder;
+      }
+      if ("value" in control) {
+        control.value = nextValue;
+      }
+
+      pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+      if (!pickerControlsWithListeners.has(control)) {
+        pickerControlsWithListeners.add(control);
+        if (control.tagName === "INPUT") {
+          control.addEventListener("change", dispatchPickerChange);
+        } else {
+          control.addEventListener("value-changed", dispatchPickerValueChanged);
+        }
+      }
+
+      host.appendChild(control);
+      return;
+    }
+
+    pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+    if ("hass" in control) {
+      control.hass = hass;
+    }
+    if (placeholder && "placeholder" in control) {
+      control.placeholder = placeholder;
+    }
+    if ("value" in control && control.value !== nextValue) {
+      control.value = nextValue;
+    }
+  }
+
+  const api = {
+    isObject,
+    deepClone,
+    deepEqual,
+    stripEqualToDefaults,
+    editorStatesSignature,
+    editorFilteredStatesSignature,
+    sanitizeActionUrl,
+    mountEntityPickerHost,
+    mountIconPickerHost,
+  };
+
+  if (typeof window !== "undefined") {
+    window.NodaliaUtils = api;
+  }
+})();
+
+// </nodalia-standalone-utils>
+
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
 const CARD_VERSION = "0.13.3";
@@ -440,71 +833,6 @@ function compactConfig(value) {
   return value;
 }
 
-function deepEqual(a, b) {
-  if (Object.is(a, b)) {
-    return true;
-  }
-  if (a == null || b == null) {
-    return a === b;
-  }
-  if (typeof a !== typeof b) {
-    return false;
-  }
-  if (typeof a !== "object") {
-    return false;
-  }
-  if (Array.isArray(a)) {
-    if (!Array.isArray(b) || a.length !== b.length) {
-      return false;
-    }
-    return a.every((value, index) => deepEqual(value, b[index]));
-  }
-  if (Array.isArray(b)) {
-    return false;
-  }
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-  if (keysA.length !== keysB.length) {
-    return false;
-  }
-  return keysA.every(key => deepEqual(a[key], b[key]));
-}
-
-function stripEqualToDefaults(config, defaults) {
-  if (defaults === undefined || defaults === null) {
-    return deepClone(config);
-  }
-  if (config === undefined || config === null) {
-    return undefined;
-  }
-  if (Array.isArray(config)) {
-    return deepEqual(config, defaults) ? undefined : deepClone(config);
-  }
-  if (isObject(config) && isObject(defaults)) {
-    const out = {};
-    for (const key of Object.keys(config)) {
-      const cv = config[key];
-      const dv = defaults[key];
-      if (!(key in defaults)) {
-        out[key] = deepClone(cv);
-        continue;
-      }
-      if (deepEqual(cv, dv)) {
-        continue;
-      }
-      if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
-        const stripped = stripEqualToDefaults(cv, dv);
-        if (stripped !== undefined) {
-          out[key] = stripped;
-        }
-      } else {
-        out[key] = deepClone(cv);
-      }
-    }
-    return Object.keys(out).length ? out : undefined;
-  }
-  return deepEqual(config, defaults) ? undefined : config;
-}
 
 function setByPath(target, path, value) {
   const parts = path.split(".");
@@ -588,6 +916,46 @@ function isUnavailableState(state) {
 function parseNumber(value) {
   const numeric = Number(String(value ?? "").replace(",", "."));
   return Number.isFinite(numeric) ? numeric : null;
+}
+
+function sanitizeCssValue(value, fallback) {
+  const raw = String(value ?? "").trim();
+  const safeFallback = String(fallback ?? "").trim();
+  if (!raw) {
+    return safeFallback;
+  }
+  if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+    return safeFallback;
+  }
+  return raw;
+}
+
+function sanitizeStyleTree(candidate, fallback) {
+  if (Array.isArray(fallback)) {
+    return deepClone(fallback);
+  }
+  if (isObject(fallback)) {
+    const out = {};
+    Object.keys(fallback).forEach(key => {
+      const nextCandidate = isObject(candidate) ? candidate[key] : undefined;
+      out[key] = sanitizeStyleTree(nextCandidate, fallback[key]);
+    });
+    return out;
+  }
+  if (typeof fallback === "string") {
+    return sanitizeCssValue(candidate, fallback);
+  }
+  if (typeof fallback === "number") {
+    return Number.isFinite(Number(candidate)) ? Number(candidate) : fallback;
+  }
+  if (typeof fallback === "boolean") {
+    return typeof candidate === "boolean" ? candidate : fallback;
+  }
+  return candidate === undefined ? deepClone(fallback) : candidate;
+}
+
+function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
+  return sanitizeStyleTree(styles, DEFAULT_CONFIG.styles);
 }
 
 function parseInteger(value, fallback = null) {
@@ -1529,6 +1897,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
+    this._mapActionInFlight = false;
 
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
@@ -1933,7 +2302,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getAccentColor(state) {
-    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    const styles = getSafeStyles(this._config?.styles);
 
     if (this._getReportedStateKey(state) === "error") {
       return styles.icon.error_color || "#ff6b6b";
@@ -4828,7 +5197,15 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     if (action === "url") {
       const target = actionConfig.new_tab === true ? "_blank" : "_self";
-      window.open(actionConfig.url_path || actionConfig.url, target);
+      const safeUrl = window.NodaliaUtils?.sanitizeActionUrl(actionConfig.url_path || actionConfig.url, { allowRelative: true }) || "";
+      if (!safeUrl) {
+        return;
+      }
+      if (target === "_blank") {
+        window.open(safeUrl, "_blank", "noopener,noreferrer");
+      } else {
+        window.location.assign(safeUrl);
+      }
       return;
     }
 
@@ -4841,7 +5218,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     if (["call_service", "call-service", "perform_action", "perform-action"].includes(action)) {
       const service = actionConfig.service || actionConfig.perform_action;
-      if (!service || !this._hass) {
+      if (!service || !this._hass || !this._isServiceAllowed(service)) {
         return;
       }
       const [domain, serviceName] = String(service).split(".");
@@ -4863,8 +5240,30 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     });
   }
 
+  _isServiceAllowed(serviceValue) {
+    const security = this._config?.security || {};
+    if (security.strict_service_actions === false) {
+      return true;
+    }
+    const normalizedService = String(serviceValue || "").trim().toLowerCase();
+    if (!normalizedService || !normalizedService.includes(".")) {
+      return false;
+    }
+    const [domain] = normalizedService.split(".");
+    const domains = Array.isArray(security.allowed_service_domains)
+      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const services = Array.isArray(security.allowed_services)
+      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    if (!domains.length && !services.length) {
+      return false;
+    }
+    return services.includes(normalizedService) || domains.includes(domain);
+  }
+
   _callNamedService(service, data = {}, target = null) {
-    if (!this._hass || !service) {
+    if (!this._hass || !service || !this._isServiceAllowed(service)) {
       return;
     }
 
@@ -5035,57 +5434,61 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   async _runMapAction() {
-    const state = this._getVacuumState();
-    const selectedPredefinedZones = this._getPredefinedZones()
-      .filter(zone => this._selectedPredefinedZoneIds.includes(zone.id))
-      .flatMap(zone => zone.zones.map(item => [...item, this._repeats]));
-    const manualZones = this._manualZones.map(zone => [zone.x1, zone.y1, zone.x2, zone.y2, this._repeats]);
-    const selectedZones = [...selectedPredefinedZones, ...manualZones].slice(0, clamp(Number(this._config?.max_zone_selections || 5), 1, 10));
-    const canRunZoneAction = this._activeMode === "zone" && selectedZones.length > 0;
-
-    if ((this._isCleaning(state) || this._isPaused(state)) && !canRunZoneAction) {
-      await this._callVacuumService(this._isCleaning(state) ? "pause" : "start");
-      this._triggerHaptic("selection");
+    if (this._mapActionInFlight) {
       return;
     }
+    this._mapActionInFlight = true;
+    try {
+      const state = this._getVacuumState();
+      const selectedPredefinedZones = this._getPredefinedZones()
+        .filter(zone => this._selectedPredefinedZoneIds.includes(zone.id))
+        .flatMap(zone => zone.zones.map(item => [...item, this._repeats]));
+      const manualZones = this._manualZones.map(zone => [zone.x1, zone.y1, zone.x2, zone.y2, this._repeats]);
+      const selectedZones = [...selectedPredefinedZones, ...manualZones].slice(0, clamp(Number(this._config?.max_zone_selections || 5), 1, 10));
+      const canRunZoneAction = this._activeMode === "zone" && selectedZones.length > 0;
 
-    if (this._activeMode === "rooms" && this._selectedRoomIds.length) {
-      const segments = this._selectedRoomIds
-        .map(id => parseInteger(id))
-        .filter(Number.isFinite);
-
-      if (segments.length) {
-        this._freezeCurrentModePanelPreset(state);
-        this._clearPendingRoomCleaningResume();
-        this._activeCleaningRoomIds = segments.map(item => String(item));
-        this._activeCleaningZones = [];
-        this._activeCleaningSessionMode = "rooms";
-        this._markCleaningSessionPendingStart();
-        this._persistCurrentCleaningSessionState("rooms", {
-          markSelectionChange: true,
-        });
-        await this._callNamedService("vacuum.send_command", {
-          entity_id: this._config.entity,
-          command: "app_segment_clean",
-          params: [{
-            segments,
-            repeat: this._repeats,
-          }],
-        });
-        this._persistCurrentCleaningSessionState("rooms");
-        this._triggerHaptic("success");
-        this._render();
+      if ((this._isCleaning(state) || this._isPaused(state)) && !canRunZoneAction) {
+        await this._callVacuumService(this._isCleaning(state) ? "pause" : "start");
+        this._triggerHaptic("selection");
         return;
       }
-    }
 
-    if (this._activeMode === "zone") {
-      if (selectedZones.length) {
+      if (this._activeMode === "rooms" && this._selectedRoomIds.length) {
+        const segments = this._selectedRoomIds
+          .map(id => parseInteger(id))
+          .filter(Number.isFinite);
+
+        if (segments.length) {
+          this._freezeCurrentModePanelPreset(state);
+          this._clearPendingRoomCleaningResume();
+          this._activeCleaningRoomIds = segments.map(item => String(item));
+          this._activeCleaningZones = [];
+          this._activeCleaningSessionMode = "rooms";
+          this._markCleaningSessionPendingStart();
+          this._persistCurrentCleaningSessionState("rooms", {
+            markSelectionChange: true,
+          });
+          await this._callNamedService("vacuum.send_command", {
+            entity_id: this._config.entity,
+            command: "app_segment_clean",
+            params: [{
+              segments,
+              repeat: this._repeats,
+            }],
+          });
+          this._persistCurrentCleaningSessionState("rooms");
+          this._triggerHaptic("success");
+          this._render();
+          return;
+        }
+      }
+
+      if (this._activeMode === "zone" && selectedZones.length) {
         const isTransientZoneAddition = Boolean(this._transientZoneReturnMode) && (
-          this._isCleaning(state) ||
-          this._isPaused(state) ||
-          this._isReturning(state) ||
-          this._isRoomCleaningSessionActive(state)
+          this._isCleaning(state)
+          || this._isPaused(state)
+          || this._isReturning(state)
+          || this._isRoomCleaningSessionActive(state)
         );
         this._freezeCurrentModePanelPreset(state);
         if (isTransientZoneAddition && this._isRoomCleaningSessionActive(state)) {
@@ -5118,7 +5521,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           command: "app_zoned_clean",
           params: selectedZones,
         });
-        const activeCleaningSessionMode = this._isRoomCleaningSessionActive(state) ? "rooms" : "zone";
+        const latestState = this._getVacuumState();
+        const activeCleaningSessionMode = this._isRoomCleaningSessionActive(latestState) ? "rooms" : "zone";
         if (!this._restoreTransientZoneMode()) {
           this._selectedManualZoneIndex = -1;
           this._draftZone = null;
@@ -5129,9 +5533,24 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._render();
         return;
       }
-    }
 
-    if (this._activeMode === "goto" && this._gotoPoint) {
+      if (this._activeMode === "goto" && this._gotoPoint) {
+        this._freezeCurrentModePanelPreset(state);
+        this._clearPendingRoomCleaningResume();
+        this._activeCleaningRoomIds = [];
+        this._activeCleaningZones = [];
+        this._activeCleaningSessionMode = "";
+        this._clearCleaningSessionPendingStart();
+        this._clearPersistedCleaningSession();
+        await this._callNamedService("roborock.set_vacuum_goto_position", {
+          entity_id: this._config.entity,
+          x: Math.round(this._gotoPoint.x),
+          y: Math.round(this._gotoPoint.y),
+        });
+        this._triggerHaptic("success");
+        return;
+      }
+
       this._freezeCurrentModePanelPreset(state);
       this._clearPendingRoomCleaningResume();
       this._activeCleaningRoomIds = [];
@@ -5139,24 +5558,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._activeCleaningSessionMode = "";
       this._clearCleaningSessionPendingStart();
       this._clearPersistedCleaningSession();
-      await this._callNamedService("roborock.set_vacuum_goto_position", {
-        entity_id: this._config.entity,
-        x: Math.round(this._gotoPoint.x),
-        y: Math.round(this._gotoPoint.y),
-      });
-      this._triggerHaptic("success");
-      return;
+      await this._callVacuumService("start");
+      this._triggerHaptic("selection");
+    } finally {
+      this._mapActionInFlight = false;
     }
-
-    this._freezeCurrentModePanelPreset(state);
-    this._clearPendingRoomCleaningResume();
-    this._activeCleaningRoomIds = [];
-    this._activeCleaningZones = [];
-    this._activeCleaningSessionMode = "";
-    this._clearCleaningSessionPendingStart();
-    this._clearPersistedCleaningSession();
-    await this._callVacuumService("start");
-    this._triggerHaptic("selection");
   }
 
   _runCustomMenuItem(item) {
@@ -6091,8 +6497,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const isRoomSelectionLocked = this._isRoomSelectionLocked();
     const highlightedRoomIds = new Set(this._getHighlightedRoomIds());
-    const markerSize = Math.max(22, Math.round(parseSizeToPixels(this._config?.styles?.map?.marker_size, 34) * 0.76));
-    const labelSize = Math.max(9, Math.round(parseSizeToPixels(this._config?.styles?.map?.label_size, 12) * 0.84));
+    const safeStyles = getSafeStyles(this._config?.styles);
+    const markerSize = Math.max(22, Math.round(parseSizeToPixels(safeStyles?.map?.marker_size, 34) * 0.76));
+    const labelSize = Math.max(9, Math.round(parseSizeToPixels(safeStyles?.map?.label_size, 12) * 0.84));
     const iconSize = Math.max(12, Math.round(markerSize * 0.42));
     const placements = this._getRoomMarkerPlacements(rooms, markerSize, labelSize, iconSize);
 
@@ -6586,7 +6993,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const state = this._getVacuumState();
       const accentColor = this._getAccentColor(state);
       const advanceVacuumStrings = this._advanceVacuumStrings();
-      const styles = config.styles || DEFAULT_CONFIG.styles;
+      const styles = getSafeStyles(config.styles);
       const animations = this._getAnimationSettings();
       const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
       this._syncActiveCleaningSession(state);
@@ -7811,9 +8218,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    return Object.keys(hass?.states || {})
-      .sort((left, right) => left.localeCompare(right, "es"))
-      .join("|");
+    return window.NodaliaUtils.editorStatesSignature(hass, this._config?.language);
   }
 
   _captureFocusState() {
@@ -7895,7 +8300,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(stripEqualToDefaults(deepClone(this._config), DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(deepClone(this._config), DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -7998,6 +8403,12 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
       nextValue = checked;
     } else if (valueType === "number") {
       nextValue = target.value === "" ? "" : Number(target.value);
+    } else if (valueType === "csv") {
+      const values = String(target.value || "")
+        .split(",")
+        .map(item => item.trim().toLowerCase())
+        .filter(Boolean);
+      nextValue = values.length ? values : "";
     } else if (valueType === "json") {
       if (target.value.trim() === "") {
         nextValue = "";
@@ -8584,6 +8995,34 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
               { value: "warning", label: "Warning" },
               { value: "failure", label: "Failure" },
             ])}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Seguridad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla si las acciones de servicio externas (routines/menu) usan allowlist estricta."))}</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderCheckboxField(
+              "Seguridad de servicios (modo estricto)",
+              "security.strict_service_actions",
+              config.security?.strict_service_actions !== false,
+            )}
+            ${
+              config.security?.strict_service_actions !== false
+                ? this._renderTextField(
+                    "Allowed services (coma separada)",
+                    "security.allowed_services",
+                    Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+                    {
+                      placeholder: "vacuum.send_command, script.run",
+                      valueType: "csv",
+                      fullWidth: true,
+                    },
+                  )
+                : ""
+            }
           </div>
         </section>
 

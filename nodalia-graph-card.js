@@ -1,6 +1,399 @@
+// <nodalia-standalone-utils>
+// Inlined for standalone Lovelace resources (single JS file). Stripped when building nodalia-cards.js.
+// Source of truth: nodalia-utils.js — regenerate: node scripts/sync-standalone-embed.mjs
+/**
+ * Shared helpers for Nodalia cards (deep equality, config stripping, editor mounts).
+ * Loaded early in nodalia-cards.js bundle; exposed as window.NodaliaUtils.
+ */
+(function initNodaliaUtils() {
+  const REQUIRED_API_KEYS = [
+    "isObject",
+    "deepClone",
+    "deepEqual",
+    "stripEqualToDefaults",
+    "editorStatesSignature",
+    "editorFilteredStatesSignature",
+    "sanitizeActionUrl",
+    "mountEntityPickerHost",
+    "mountIconPickerHost",
+  ];
+  const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
+  if (
+    existing &&
+    REQUIRED_API_KEYS.every(key => typeof existing[key] === "function")
+  ) {
+    return;
+  }
+
+  function isObject(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function deepClone(value) {
+    if (value === undefined) {
+      return undefined;
+    }
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function deepEqual(a, b) {
+    if (Object.is(a, b)) {
+      return true;
+    }
+    if (a == null || b == null) {
+      return a === b;
+    }
+    if (typeof a !== typeof b) {
+      return false;
+    }
+    if (typeof a !== "object") {
+      return false;
+    }
+    if (Array.isArray(a)) {
+      if (!Array.isArray(b) || a.length !== b.length) {
+        return false;
+      }
+      return a.every((value, index) => deepEqual(value, b[index]));
+    }
+    if (Array.isArray(b)) {
+      return false;
+    }
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) {
+      return false;
+    }
+    return keysA.every(key => deepEqual(a[key], b[key]));
+  }
+
+  function stripEqualToDefaults(config, defaults) {
+    if (defaults === undefined || defaults === null) {
+      return deepClone(config);
+    }
+    if (config === undefined || config === null) {
+      return undefined;
+    }
+    if (Array.isArray(config)) {
+      return deepEqual(config, defaults) ? undefined : deepClone(config);
+    }
+    if (isObject(config) && isObject(defaults)) {
+      const out = {};
+      for (const key of Object.keys(config)) {
+        const cv = config[key];
+        const dv = defaults[key];
+        if (!(key in defaults)) {
+          out[key] = deepClone(cv);
+          continue;
+        }
+        if (deepEqual(cv, dv)) {
+          continue;
+        }
+        if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
+          const stripped = stripEqualToDefaults(cv, dv);
+          if (stripped !== undefined) {
+            out[key] = stripped;
+          }
+        } else {
+          out[key] = deepClone(cv);
+        }
+      }
+      return Object.keys(out).length ? out : undefined;
+    }
+    return deepEqual(config, defaults) ? undefined : config;
+  }
+
+  /**
+   * Signature for entities matching predicate(entityId): id + friendly_name + icon per row,
+   * so picker labels update when attributes change. Same locale prefix as editorStatesSignature.
+   */
+  function editorFilteredStatesSignature(hass, language, predicate) {
+    const states = hass?.states || {};
+    const rows = [];
+    for (const id of Object.keys(states)) {
+      if (!predicate(id)) {
+        continue;
+      }
+      const state = states[id];
+      rows.push(
+        `${id}:${String(state?.attributes?.friendly_name ?? "")}:${String(state?.attributes?.icon ?? "")}`,
+      );
+    }
+    rows.sort((left, right) => {
+      const idLeft = left.split(":")[0];
+      const idRight = right.split(":")[0];
+      return idLeft.localeCompare(idRight, undefined, { sensitivity: "base" });
+    });
+    const tag =
+      typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
+        ? window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language))
+        : "";
+    return `${tag}|${rows.join("|")}`;
+  }
+
+  /**
+   * Full hass.states signature: every entity as id + friendly_name + icon (sorted by id),
+   * plus locale tag — same shape as editorFilteredStatesSignature. Editors that list entities
+   * re-render when labels or icons change, not only when the entity count changes.
+   */
+  function editorStatesSignature(hass, language) {
+    return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Normalize and validate user-provided action URLs.
+   * Allows http/https and same-origin relative paths by default.
+   */
+  function sanitizeActionUrl(value, options = {}) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    const allowRelative = options.allowRelative !== false;
+    const allowHash = options.allowHash === true;
+    if (allowHash && raw.startsWith("#")) {
+      return raw;
+    }
+    if (allowRelative && (/^\/(?!\/)/.test(raw) || raw.startsWith("./") || raw.startsWith("../"))) {
+      return raw;
+    }
+    try {
+      const base =
+        typeof window !== "undefined" && window.location
+          ? window.location.origin
+          : "https://example.invalid";
+      const parsed = new URL(raw, base);
+      const protocol = String(parsed.protocol || "").toLowerCase();
+      if (protocol !== "http:" && protocol !== "https:") {
+        return "";
+      }
+      if (allowRelative && typeof window !== "undefined" && window.location && parsed.origin === window.location.origin) {
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+      return parsed.toString();
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  function copyDatasetExcept(control, host, skipKeys) {
+    const skip = new Set(skipKeys || []);
+    Object.entries(host.dataset || {}).forEach(([key, value]) => {
+      if (skip.has(key)) {
+        return;
+      }
+      control.dataset[key] = value;
+    });
+  }
+
+  /** Latest callbacks for reused picker controls (listeners call into this). */
+  const pickerCallbackState = new WeakMap();
+  const pickerControlsWithListeners = new WeakSet();
+
+  function dispatchPickerChange(ev) {
+    const control = ev.currentTarget;
+    const s = pickerCallbackState.get(control);
+    if (s && typeof s.onShadowInput === "function") {
+      s.onShadowInput(ev);
+    }
+  }
+
+  function dispatchPickerValueChanged(ev) {
+    const control = ev.currentTarget;
+    const s = pickerCallbackState.get(control);
+    if (!s) {
+      return;
+    }
+    const fn = s.onShadowValueChanged || s.onShadowInput;
+    if (typeof fn === "function") {
+      fn(ev);
+    }
+  }
+
+  /**
+   * Mount or update ha-entity-picker / ha-selector / text input without recreating each render.
+   */
+  function mountEntityPickerHost(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const hass = options.hass;
+    const field = options.field || host.dataset.field || "entity";
+    const nextValue = options.value !== undefined ? String(options.value) : String(host.dataset.value || "");
+    const placeholder =
+      options.placeholder !== undefined ? String(options.placeholder) : String(host.dataset.placeholder || "");
+    const onShadowInput = options.onShadowInput;
+    const onShadowValueChanged = options.onShadowValueChanged;
+    const copyDatasetFromHost = options.copyDatasetFromHost !== false;
+
+    const usePicker = typeof customElements !== "undefined" && customElements.get("ha-entity-picker");
+    const useSelector = typeof customElements !== "undefined" && customElements.get("ha-selector");
+
+    let desired = "input";
+    if (usePicker) {
+      desired = "picker";
+    } else if (useSelector) {
+      desired = "selector";
+    }
+
+    let control = host.firstElementChild;
+    const tag = control?.tagName || "";
+    const matches =
+      control &&
+      ((desired === "picker" && tag === "HA-ENTITY-PICKER")
+        || (desired === "selector" && tag === "HA-SELECTOR")
+        || (desired === "input" && tag === "INPUT"));
+
+    if (!matches) {
+      host.replaceChildren();
+      if (usePicker) {
+        control = document.createElement("ha-entity-picker");
+        control.allowCustomEntity = true;
+      } else if (useSelector) {
+        control = document.createElement("ha-selector");
+        control.selector = { entity: {} };
+      } else {
+        control = document.createElement("input");
+        control.type = "text";
+      }
+
+      control.dataset.field = field;
+      if (copyDatasetFromHost) {
+        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder", "field"]);
+      }
+
+      if ("hass" in control) {
+        control.hass = hass;
+      }
+      if ("value" in control) {
+        control.value = nextValue;
+      }
+      if (placeholder && "placeholder" in control) {
+        control.placeholder = placeholder;
+      }
+
+      pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+      if (!pickerControlsWithListeners.has(control)) {
+        pickerControlsWithListeners.add(control);
+        if (control.tagName === "INPUT") {
+          control.addEventListener("change", dispatchPickerChange);
+        } else {
+          control.addEventListener("value-changed", dispatchPickerValueChanged);
+        }
+      }
+
+      host.appendChild(control);
+      return;
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+    pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+    if ("hass" in control) {
+      control.hass = hass;
+    }
+    if (placeholder && "placeholder" in control) {
+      control.placeholder = placeholder;
+    }
+    if ("value" in control && control.value !== nextValue) {
+      control.value = nextValue;
+    }
+  }
+
+  /**
+   * Mount or update ha-icon-picker / text input without recreating each render.
+   */
+  function mountIconPickerHost(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const hass = options.hass;
+    const nextValue = options.value !== undefined ? String(options.value) : String(host.dataset.value || "");
+    const placeholder = options.placeholder !== undefined ? options.placeholder : host.dataset.placeholder || "";
+    const onShadowInput = options.onShadowInput;
+    const onShadowValueChanged = options.onShadowValueChanged;
+    const copyDatasetFromHost = options.copyDatasetFromHost !== false;
+
+    const useIconPicker = typeof customElements !== "undefined" && customElements.get("ha-icon-picker");
+
+    let desired = useIconPicker ? "icon" : "input";
+    let control = host.firstElementChild;
+    const tag = control?.tagName || "";
+    const matches =
+      control && ((desired === "icon" && tag === "HA-ICON-PICKER") || (desired === "input" && tag === "INPUT"));
+
+    if (!matches) {
+      host.replaceChildren();
+      if (useIconPicker) {
+        control = document.createElement("ha-icon-picker");
+      } else {
+        control = document.createElement("input");
+        control.type = "text";
+      }
+
+      if (copyDatasetFromHost) {
+        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder", "field"]);
+      }
+
+      if ("hass" in control) {
+        control.hass = hass;
+      }
+      if (placeholder && "placeholder" in control) {
+        control.placeholder = placeholder;
+      }
+      if ("value" in control) {
+        control.value = nextValue;
+      }
+
+      pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+      if (!pickerControlsWithListeners.has(control)) {
+        pickerControlsWithListeners.add(control);
+        if (control.tagName === "INPUT") {
+          control.addEventListener("change", dispatchPickerChange);
+        } else {
+          control.addEventListener("value-changed", dispatchPickerValueChanged);
+        }
+      }
+
+      host.appendChild(control);
+      return;
+    }
+
+    pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+    if ("hass" in control) {
+      control.hass = hass;
+    }
+    if (placeholder && "placeholder" in control) {
+      control.placeholder = placeholder;
+    }
+    if ("value" in control && control.value !== nextValue) {
+      control.value = nextValue;
+    }
+  }
+
+  const api = {
+    isObject,
+    deepClone,
+    deepEqual,
+    stripEqualToDefaults,
+    editorStatesSignature,
+    editorFilteredStatesSignature,
+    sanitizeActionUrl,
+    mountEntityPickerHost,
+    mountIconPickerHost,
+  };
+
+  if (typeof window !== "undefined") {
+    window.NodaliaUtils = api;
+  }
+})();
+
+// </nodalia-standalone-utils>
+
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.12";
+const CARD_VERSION = "0.12.20";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -25,12 +418,12 @@ const TOUCH_CLICK_SUPPRESSION_WINDOW = 350;
 const DEFAULT_CONFIG = {
   entity: "",
   entities: [],
-  name: "",
-  icon: "",
-  min: "",
-  max: "",
+  name: "Temperatura",
+  icon: "mdi:thermometer",
+  min: 15,
+  max: 25,
   hours_to_show: 24,
-  points: 480,
+  points: 100,
   show_header: true,
   show_icon: true,
   show_value: true,
@@ -54,34 +447,37 @@ const DEFAULT_CONFIG = {
       border: "1px solid var(--divider-color)",
       border_radius: "30px",
       box_shadow: "var(--ha-card-box-shadow)",
-      padding: "16px",
-      gap: "12px",
+      padding: "18px",
+      gap: "20px",
     },
     icon: {
       color: "var(--primary-text-color)",
-      size: "28px",
+      size: "20px",
     },
-    title_size: "15px",
-    value_size: "52px",
-    unit_size: "20px",
-    legend_size: "13px",
-    chart_height: "170px",
+    title_size: "13px",
+    value_size: "40px",
+    unit_size: "17px",
+    legend_size: "11px",
+    chart_height: "178px",
     line_width: "1px",
   },
 };
 
 const STUB_CONFIG = {
-  name: "Humedad",
+  name: "Temperatura",
+  icon: "mdi:thermometer",
+  min: 15,
+  max: 25,
   entities: [
     {
-      entity: "sensor.termostato_dormitorios_humedad",
-      name: "Dormitorio de Rocio",
-      color: "#f29f05",
+      entity: "sensor.termostato_dormitorios_temperatura",
+      name: "Dormitorio de Rocío",
+      color: "#ffaa00",
     },
     {
-      entity: "sensor.termostato_habitaciones_comunes_humedad",
+      entity: "sensor.termostato_habitaciones_comunes_temperatura",
       name: "Pasillo",
-      color: "#42a5f5",
+      color: "#ffc677",
     },
   ],
 };
@@ -175,71 +571,6 @@ function compactConfig(value) {
   return value;
 }
 
-function deepEqual(a, b) {
-  if (Object.is(a, b)) {
-    return true;
-  }
-  if (a == null || b == null) {
-    return a === b;
-  }
-  if (typeof a !== typeof b) {
-    return false;
-  }
-  if (typeof a !== "object") {
-    return false;
-  }
-  if (Array.isArray(a)) {
-    if (!Array.isArray(b) || a.length !== b.length) {
-      return false;
-    }
-    return a.every((value, index) => deepEqual(value, b[index]));
-  }
-  if (Array.isArray(b)) {
-    return false;
-  }
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-  if (keysA.length !== keysB.length) {
-    return false;
-  }
-  return keysA.every(key => deepEqual(a[key], b[key]));
-}
-
-function stripEqualToDefaults(config, defaults) {
-  if (defaults === undefined || defaults === null) {
-    return deepClone(config);
-  }
-  if (config === undefined || config === null) {
-    return undefined;
-  }
-  if (Array.isArray(config)) {
-    return deepEqual(config, defaults) ? undefined : deepClone(config);
-  }
-  if (isObject(config) && isObject(defaults)) {
-    const out = {};
-    for (const key of Object.keys(config)) {
-      const cv = config[key];
-      const dv = defaults[key];
-      if (!(key in defaults)) {
-        out[key] = deepClone(cv);
-        continue;
-      }
-      if (deepEqual(cv, dv)) {
-        continue;
-      }
-      if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
-        const stripped = stripEqualToDefaults(cv, dv);
-        if (stripped !== undefined) {
-          out[key] = stripped;
-        }
-      } else {
-        out[key] = deepClone(cv);
-      }
-    }
-    return Object.keys(out).length ? out : undefined;
-  }
-  return deepEqual(config, defaults) ? undefined : config;
-}
 
 function setByPath(target, path, value) {
   const parts = path.split(".");
@@ -349,8 +680,74 @@ function parseSizeToPixels(value, fallback = 0) {
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
+/** Parses CSS padding shorthand into edge pixel values (numbers only tokens). */
+function parsePaddingEdges(value, fallback = 16) {
+  const fb = Number.isFinite(fallback) ? fallback : 16;
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return { top: fb, right: fb, bottom: fb, left: fb };
+  }
+  const parts = raw.split(/\s+/).map(token => parseSizeToPixels(token, NaN)).filter(n => Number.isFinite(n));
+  if (!parts.length) {
+    return { top: fb, right: fb, bottom: fb, left: fb };
+  }
+  if (parts.length === 1) {
+    const v = parts[0];
+    return { top: v, right: v, bottom: v, left: v };
+  }
+  if (parts.length === 2) {
+    const [vertical, horizontal] = parts;
+    return { top: vertical, right: horizontal, bottom: vertical, left: horizontal };
+  }
+  if (parts.length === 3) {
+    const [top, horizontal, bottom] = parts;
+    return { top, right: horizontal, bottom, left: horizontal };
+  }
+  const [top, right, bottom, left] = parts;
+  return { top, right, bottom, left };
+}
+
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+function getRenderSignatureRuntime() {
+  return window.NodaliaRenderSignature || {
+    toKey(value) {
+      if (value === null || value === undefined) {
+        return "";
+      }
+      if (typeof value === "number") {
+        return Number.isFinite(value) ? String(value) : "";
+      }
+      return String(value);
+    },
+    joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
+      return (Array.isArray(parts) ? parts : [])
+        .map(part => {
+          if (!part || !Array.isArray(part.values)) {
+            return "";
+          }
+          const prefix = String(part.prefix || "");
+          const body = part.values.map(value => this.toKey(value)).join(valueSeparator);
+          return `${prefix}${body}`;
+        })
+        .filter(Boolean)
+        .join(sectionSeparator);
+    },
+  };
+}
+
+/** Map SVG viewBox X (0..chart.width) to overlay percentage. */
+function graphChartXToPercent(x, chart) {
+  if (!chart || typeof chart.width !== "number") {
+    return 50;
+  }
+  const width = chart.width;
+  if (!Number.isFinite(width) || width <= 0) {
+    return 50;
+  }
+  return (x / width) * 100;
 }
 
 function escapeSelectorValue(value) {
@@ -628,6 +1025,8 @@ class NodaliaGraphCard extends HTMLElement {
     this._animateChartOnNextRender = false;
     this._lastRenderSignature = "";
     this._tooltipSyncFrame = 0;
+    this._lastTooltipViewportPosition = null;
+    this._documentHoverWatchAttached = false;
     this._touchPressTimer = 0;
     this._touchPressState = null;
     this._touchHoverActive = false;
@@ -635,6 +1034,9 @@ class NodaliaGraphCard extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
     this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
+    this._onHostPointerOut = this._onHostPointerOut.bind(this);
+    this._onDocumentPointerMove = this._onDocumentPointerMove.bind(this);
+    this._onHoverMediaChange = this._onHoverMediaChange.bind(this);
     this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
     this._onShadowTouchMove = this._onShadowTouchMove.bind(this);
     this._onShadowTouchEnd = this._onShadowTouchEnd.bind(this);
@@ -646,11 +1048,27 @@ class NodaliaGraphCard extends HTMLElement {
     this.shadowRoot.addEventListener("touchmove", this._onShadowTouchMove, { passive: false });
     this.shadowRoot.addEventListener("touchend", this._onShadowTouchEnd);
     this.shadowRoot.addEventListener("touchcancel", this._onShadowTouchCancel);
+    // Defensive close: in some pointer transitions the shadow-root leave may be skipped.
+    this.addEventListener("pointerleave", this._onShadowPointerLeave);
+    this.addEventListener("mouseleave", this._onShadowPointerLeave);
+    this.addEventListener("pointerout", this._onHostPointerOut);
+    this.addEventListener("mouseout", this._onHostPointerOut);
+    this._hoverMediaQuery =
+      typeof window !== "undefined" && typeof window.matchMedia === "function"
+        ? window.matchMedia("(hover: hover)")
+        : null;
+    this._hoverSupported = this._hoverMediaQuery ? this._hoverMediaQuery.matches : true;
+    if (this._hoverMediaQuery && typeof this._hoverMediaQuery.addEventListener === "function") {
+      this._hoverMediaQuery.addEventListener("change", this._onHoverMediaChange);
+    }
   }
 
   disconnectedCallback() {
     this._historyAbortController?.abort();
     this._historyAbortController = null;
+    this.removeEventListener("pointerout", this._onHostPointerOut);
+    this.removeEventListener("mouseout", this._onHostPointerOut);
+    this._detachDocumentHoverWatch();
     if (this._hoverFrame) {
       window.cancelAnimationFrame(this._hoverFrame);
       this._hoverFrame = 0;
@@ -660,9 +1078,19 @@ class NodaliaGraphCard extends HTMLElement {
       this._tooltipSyncFrame = 0;
     }
     this._pendingHoverIndex = null;
+    if (this._hoverMediaQuery && typeof this._hoverMediaQuery.removeEventListener === "function") {
+      this._hoverMediaQuery.removeEventListener("change", this._onHoverMediaChange);
+    }
     this._clearTouchPressTimer();
     this._touchPressState = null;
     this._touchHoverActive = false;
+  }
+
+  _onHoverMediaChange(event) {
+    this._hoverSupported = Boolean(event?.matches);
+    if (!this._hoverSupported) {
+      this._scheduleHoverRender(null);
+    }
   }
 
   connectedCallback() {
@@ -716,20 +1144,28 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   _getRenderSignature(hass = this._hass) {
-    const trackedStates = this._getEntityEntries().map(entry => {
-      const state = entry?.entity ? hass?.states?.[entry.entity] || null : null;
-      return {
-        entity: String(entry?.entity || ""),
-        state: String(state?.state || ""),
-        friendlyName: String(state?.attributes?.friendly_name || ""),
-        unit: String(state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || ""),
-      };
-    });
+    const runtime = getRenderSignatureRuntime();
+    const trackedStates = this._getTrackedStateSignatureRows(hass, runtime);
+    return runtime.joinParts([
+      { prefix: "ts:", values: [trackedStates.join("|")] },
+      { prefix: "a:", values: [this._activeSeriesEntityId || ""] },
+      { prefix: "s:", values: [this._selectedSeriesEntityId || ""] },
+    ]);
+  }
 
-    return JSON.stringify({
-      trackedStates,
-      activeSeries: String(this._activeSeriesEntityId || ""),
-      selectedSeries: String(this._selectedSeriesEntityId || ""),
+  _getTrackedStateSignatureRows(hass, runtime) {
+    return this._getEntityEntries().map(entry => {
+      const state = entry?.entity ? hass?.states?.[entry.entity] || null : null;
+      return runtime.joinParts([
+        {
+          values: [
+            entry?.entity || "",
+            state?.state || "",
+            state?.attributes?.friendly_name || "",
+            state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || "",
+          ],
+        },
+      ], "", "::");
     });
   }
 
@@ -999,7 +1435,7 @@ class NodaliaGraphCard extends HTMLElement {
   _onShadowPointerMove(event) {
     if (
       (typeof event.pointerType === "string" && event.pointerType === "touch")
-      || (typeof window !== "undefined" && typeof window.matchMedia === "function" && !window.matchMedia("(hover: hover)").matches)
+      || this._hoverSupported === false
     ) {
       return;
     }
@@ -1020,6 +1456,61 @@ class NodaliaGraphCard extends HTMLElement {
     }
 
     this._scheduleHoverRender(null);
+    this._lastTooltipViewportPosition = null;
+  }
+
+  _onHostPointerOut(event) {
+    if (this._touchHoverActive || this._hoverIndex === null) {
+      return;
+    }
+    const clientX = Number(event?.clientX);
+    const clientY = Number(event?.clientY);
+    if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) {
+      return;
+    }
+    const rect = this.getBoundingClientRect();
+    const isOutside = clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom;
+    if (!isOutside) {
+      return;
+    }
+    this._scheduleHoverRender(null);
+    this._lastTooltipViewportPosition = null;
+  }
+
+  _onDocumentPointerMove(event) {
+    if (this._touchHoverActive || this._hoverIndex === null) {
+      return;
+    }
+    const clientX = Number(event?.clientX);
+    const clientY = Number(event?.clientY);
+    if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) {
+      return;
+    }
+    const rect = this.getBoundingClientRect();
+    const isOutside = clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom;
+    if (!isOutside) {
+      return;
+    }
+    this._scheduleHoverRender(null);
+    this._lastTooltipViewportPosition = null;
+  }
+
+  _attachDocumentHoverWatch() {
+    if (this._documentHoverWatchAttached || typeof document === "undefined") {
+      return;
+    }
+    this._documentHoverWatchAttached = true;
+    document.addEventListener("pointermove", this._onDocumentPointerMove, true);
+    document.addEventListener("mousemove", this._onDocumentPointerMove, true);
+  }
+
+  _detachDocumentHoverWatch() {
+    if (!this._documentHoverWatchAttached || typeof document === "undefined") {
+      return;
+    }
+    this._documentHoverWatchAttached = false;
+    document.removeEventListener("pointermove", this._onDocumentPointerMove, true);
+    document.removeEventListener("mousemove", this._onDocumentPointerMove, true);
   }
 
   _clearTouchPressTimer() {
@@ -1145,19 +1636,32 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   _scheduleHoverRender(nextIndex) {
-    if (nextIndex === this._hoverIndex) {
+    if (nextIndex === this._hoverIndex && this._pendingHoverIndex === null) {
       return;
     }
 
+    this._pendingHoverIndex = nextIndex;
     if (this._hoverFrame) {
-      window.cancelAnimationFrame(this._hoverFrame);
-      this._hoverFrame = 0;
+      return;
     }
 
-    this._pendingHoverIndex = null;
-    this._hoverEntering = nextIndex !== null && this._hoverIndex === null;
-    this._hoverIndex = nextIndex;
-    this._render();
+    this._hoverFrame = window.requestAnimationFrame(() => {
+      this._hoverFrame = 0;
+      const resolvedIndex = this._pendingHoverIndex;
+      this._pendingHoverIndex = null;
+      if (resolvedIndex === this._hoverIndex) {
+        return;
+      }
+      this._hoverEntering = resolvedIndex !== null && this._hoverIndex === null;
+      if (resolvedIndex === null) {
+        this._detachDocumentHoverWatch();
+        this._lastTooltipViewportPosition = null;
+      } else {
+        this._attachDocumentHoverWatch();
+      }
+      this._hoverIndex = resolvedIndex;
+      this._render();
+    });
   }
 
   _getHistoryRequestKey() {
@@ -1581,12 +2085,20 @@ class NodaliaGraphCard extends HTMLElement {
     // Reserve extra bottom headroom so min values and stroke/glow
     // never get clipped by the rounded chart container.
     const paddingBottom = 14;
+    const spanX = width - (paddingX * 2);
+    const xMin = paddingX;
+    const xMax = paddingX + spanX;
     const bounds = this._getGraphBounds(series);
     const range = Math.max(bounds.max - bounds.min, 1);
 
     return {
       width,
       height,
+      paddingX,
+      paddingTop,
+      paddingBottom,
+      xMin,
+      xMax,
       entries: series.map(entry => {
         if (!entry.samples.length) {
           return {
@@ -1598,7 +2110,7 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         const points = entry.samples.map((sample, index) => {
-          const x = paddingX + ((width - (paddingX * 2)) * index) / Math.max(entry.samples.length - 1, 1);
+          const x = paddingX + (spanX * index) / Math.max(entry.samples.length - 1, 1);
           const normalized = clamp((sample.value - bounds.min) / range, 0, 1);
           const y = paddingTop + ((height - paddingTop - paddingBottom) * (1 - normalized));
           return { x, y };
@@ -1680,9 +2192,8 @@ class NodaliaGraphCard extends HTMLElement {
       return;
     }
 
-    const chartWidth = Number(tooltip.dataset.chartWidth || 0);
-    const anchorX = Number(tooltip.dataset.anchorX || 0);
-    if (!Number.isFinite(chartWidth) || chartWidth <= 0) {
+    const anchorXPct = Number(tooltip.dataset.anchorXPct);
+    if (!Number.isFinite(anchorXPct)) {
       return;
     }
 
@@ -1711,7 +2222,7 @@ class NodaliaGraphCard extends HTMLElement {
       || (typeof window !== "undefined" ? window.innerHeight : 0)
       || 640;
     const chartRect = chartWrap.getBoundingClientRect();
-    const anchorPx = clamp((anchorX / chartWidth) * chartRect.width, 0, chartRect.width);
+    const anchorPx = clamp((anchorXPct / 100) * chartRect.width, 0, chartRect.width);
     const anchorViewportX = chartRect.left + anchorPx;
     const anchorViewportY = chartRect.top + Math.max(22, chartRect.height * 0.28);
     const maxTooltipWidth = Math.min(260, viewportWidth - 24);
@@ -1740,9 +2251,16 @@ class NodaliaGraphCard extends HTMLElement {
 
     tooltip.style.left = `${resolvedCenter}px`;
     tooltip.style.top = `${resolvedTop}px`;
-    tooltip.style.setProperty("--graph-tooltip-transform", shouldShowBelow
-      ? "translate(-50%, 0)"
-      : "translate(-50%, -100%)");
+    tooltip.style.setProperty(
+      "--graph-tooltip-transform",
+      shouldShowBelow ? "translate(-50%, 0)" : "translate(-50%, -100%)",
+    );
+    tooltip.style.opacity = "1";
+    this._lastTooltipViewportPosition = {
+      left: resolvedCenter,
+      top: resolvedTop,
+      transform: shouldShowBelow ? "translate(-50%, 0)" : "translate(-50%, -100%)",
+    };
   }
 
   _getSeriesData() {
@@ -1819,14 +2337,18 @@ class NodaliaGraphCard extends HTMLElement {
     const icon = this._getIcon();
     const title = this._getTitle();
     const accentColor = chart.entries[0]?.color || legendEntries[0]?.color || "var(--primary-color)";
-    const chartHeight = `${Math.max(120, Math.min(parseSizeToPixels(styles.chart_height, 150), compactLayout ? 132 : 150))}px`;
-    const valueSize = `${Math.max(38, Math.min(parseSizeToPixels(styles.value_size, 46), compactLayout ? 42 : 46))}px`;
-    const unitSize = `${Math.max(15, Math.min(parseSizeToPixels(styles.unit_size, 18), compactLayout ? 16 : 18))}px`;
-    const titleSize = `${Math.max(13, Math.min(parseSizeToPixels(styles.title_size, 14), compactLayout ? 13 : 14))}px`;
-    const legendSize = `${Math.max(11, Math.min(parseSizeToPixels(styles.legend_size, 12), compactLayout ? 11 : 12))}px`;
+    const chartHeight = `${Math.max(136, Math.min(parseSizeToPixels(styles.chart_height, 150), compactLayout ? 148 : 172))}px`;
+    const valueSize = `${Math.max(26, Math.min(parseSizeToPixels(styles.value_size, 52), compactLayout ? 32 : 38))}px`;
+    const unitSize = `${Math.max(12, Math.min(parseSizeToPixels(styles.unit_size, 18), compactLayout ? 14 : 16))}px`;
+    const titleSize = `${Math.max(11, Math.min(parseSizeToPixels(styles.title_size, 14), compactLayout ? 11.5 : 12.5))}px`;
+    const legendSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.legend_size, 12), compactLayout ? 10 : 11))}px`;
     const lineWidth = `${Math.max(1.6, Math.min(parseSizeToPixels(styles.line_width, 2.2), compactLayout ? 1.9 : 2.2))}`;
-    const cardPaddingPx = Math.max(12, parseSizeToPixels(styles.card.padding, 16));
-    const chartBleed = Math.round(cardPaddingPx * 0.95);
+    const padEdges = parsePaddingEdges(styles.card.padding, 16);
+    const cardPaddingPx = Math.max(12, Math.round((padEdges.left + padEdges.right) / 2));
+    const chartBleed = Math.round(Math.max(padEdges.left, padEdges.right, cardPaddingPx) * 0.98);
+    const chartBleedLeft = Math.round(padEdges.left);
+    const chartBleedRight = Math.round(padEdges.right);
+    const chartBleedBottom = Math.round(padEdges.bottom);
     const cardBackground = `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, color-mix(in srgb, var(--primary-text-color) 2%, transparent)) 0%, ${styles.card.background} 100%)`;
     const computedCardBorder = `1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color))`;
     const cardBorder = String(styles.card.border || "").trim() && styles.card.border !== DEFAULT_CONFIG.styles.card.border
@@ -1837,13 +2359,16 @@ class NodaliaGraphCard extends HTMLElement {
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const shouldAnimateChart = animations.enabled && (shouldAnimateEntrance || this._animateChartOnNextRender);
+    const anchorXPct = hover ? graphChartXToPercent(hover.x, chart) : 0;
+    const initialTooltipStyle = this._lastTooltipViewportPosition
+      ? `left:${this._lastTooltipViewportPosition.left}px; top:${this._lastTooltipViewportPosition.top}px; opacity:1; --graph-tooltip-transform:${this._lastTooltipViewportPosition.transform}; --tooltip-tint:${escapeHtml(tooltipTint)};`
+      : `left:-9999px; top:-9999px; opacity:0; --tooltip-tint:${escapeHtml(tooltipTint)};`;
     const tooltipMarkup = hover
       ? `
         <div
           class="graph-card__tooltip ${this._hoverEntering && animations.enabled ? "graph-card__tooltip--entering" : ""}"
-          data-anchor-x="${hover.x.toFixed(2)}"
-          data-chart-width="${chart.width}"
-          style="left:${((hover.x / chart.width) * 100).toFixed(2)}%; --tooltip-tint:${escapeHtml(tooltipTint)};"
+          data-anchor-x-pct="${anchorXPct.toFixed(4)}"
+          style="${initialTooltipStyle}"
         >
           <div class="graph-card__tooltip-time">${escapeHtml(hover.label)}</div>
           <div class="graph-card__tooltip-values">
@@ -1909,15 +2434,48 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__header {
-          align-items: start;
-          display: grid;
-          gap: 10px;
-          grid-template-columns: minmax(0, 1fr) auto;
+          align-items: center;
+          display: flex;
+          gap: 8px;
+          justify-content: flex-start;
+          min-width: 0;
         }
 
         .graph-card__content--entering .graph-card__header {
           animation: graph-card-section-in calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.18, 0.9, 0.22, 1) both;
           animation-delay: 35ms;
+        }
+
+        .graph-card__primary-row {
+          align-items: center;
+          display: flex;
+          flex-direction: row;
+          flex-wrap: nowrap;
+          gap: 10px 14px;
+          justify-content: space-between;
+          min-height: 0;
+          min-width: 0;
+        }
+
+        .graph-card__header + .graph-card__primary-row {
+          margin-top: 6px;
+        }
+
+        .graph-card__primary-row .graph-card__value {
+          flex: 0 1 auto;
+          min-width: 0;
+        }
+
+        .graph-card__primary-row .graph-card__legend {
+          flex: 1 1 0;
+          justify-content: flex-end;
+          margin-bottom: 0;
+          min-width: 0;
+        }
+
+        .graph-card__legend--solo {
+          margin-bottom: 4px;
+          width: 100%;
         }
 
         .graph-card__title {
@@ -1936,13 +2494,13 @@ class NodaliaGraphCard extends HTMLElement {
           align-items: center;
           background: linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 0%, color-mix(in srgb, var(--primary-text-color) 3%, transparent) 100%);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 20px;
+          border-radius: 18px;
           color: ${styles.icon.color};
           display: inline-flex;
-          height: 42px;
+          height: 38px;
           justify-content: center;
           opacity: 0.9;
-          padding: 0 12px;
+          padding: 0 10px;
           position: relative;
         }
 
@@ -1984,7 +2542,8 @@ class NodaliaGraphCard extends HTMLElement {
           min-width: 0;
         }
 
-        .graph-card__content--entering .graph-card__value {
+        .graph-card__content--entering > .graph-card__value,
+        .graph-card__content--entering .graph-card__primary-row .graph-card__value {
           animation: graph-card-section-in calc(var(--graph-card-hover-duration) * 2.2) cubic-bezier(0.18, 0.9, 0.22, 1) both;
           animation-delay: 75ms;
         }
@@ -2009,14 +2568,15 @@ class NodaliaGraphCard extends HTMLElement {
           align-items: center;
           display: flex;
           flex-wrap: wrap;
-          gap: 6px 8px;
+          gap: 5px 6px;
           justify-content: flex-start;
-          margin-bottom: 8px;
+          margin-bottom: 0;
           min-height: 0;
           padding-top: 0;
         }
 
-        .graph-card__content--entering .graph-card__legend {
+        .graph-card__content--entering > .graph-card__legend,
+        .graph-card__content--entering .graph-card__primary-row .graph-card__legend {
           animation: graph-card-section-in calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.18, 0.9, 0.22, 1) both;
           animation-delay: 105ms;
         }
@@ -2029,12 +2589,12 @@ class NodaliaGraphCard extends HTMLElement {
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
-          font-size: max(11px, calc(${legendSize} - 1px));
-          gap: 8px;
-          max-width: min(100%, 192px);
+          font-size: max(10px, calc(${legendSize} - 1px));
+          gap: 6px;
+          max-width: min(100%, 184px);
           min-width: 0;
           opacity: 0.9;
-          padding: 5px 9px;
+          padding: 4px 8px;
           transform: translateZ(0);
           transform-origin: center;
           transition: opacity 160ms ease, transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
@@ -2080,19 +2640,20 @@ class NodaliaGraphCard extends HTMLElement {
             linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, transparent) 0%, transparent 62%),
             color-mix(in srgb, var(--primary-text-color) 2%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 7%, transparent);
-          border-radius: 20px;
+          border-radius: ${styles.card.border_radius};
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           flex: 1 1 auto;
+          margin: 14px -${chartBleedRight}px -${chartBleedBottom}px -${chartBleedLeft}px;
+          max-width: none;
           min-height: ${chartHeight};
-          margin-inline: 0;
-          margin-top: 14px;
+          min-width: 0;
           overflow: hidden;
-          padding: 4px 0 14px;
+          padding: 4px 0 12px;
           position: relative;
           touch-action: pan-y;
           user-select: none;
           -webkit-user-select: none;
-          width: 100%;
+          width: calc(100% + ${chartBleedLeft + chartBleedRight}px);
         }
 
         .graph-card__chart-wrap--entering {
@@ -2100,10 +2661,13 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__hover-points-layer {
-          inset: 0;
+          bottom: 12px;
+          left: 0;
           overflow: hidden;
           pointer-events: none;
           position: absolute;
+          right: 0;
+          top: 4px;
           z-index: 2;
         }
 
@@ -2124,58 +2688,47 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__hover-point {
           align-items: center;
           display: inline-flex;
-          height: 12px;
+          height: 14px;
           justify-content: center;
           left: 0;
           pointer-events: none;
           position: absolute;
           top: 0;
           transform: translate(-50%, -50%);
-          width: 12px;
+          width: 14px;
           z-index: 3;
         }
 
-        .graph-card__hover-point-halo {
-          background: radial-gradient(circle, color-mix(in srgb, var(--hover-color) 24%, transparent) 0 42%, transparent 72%);
-          border-radius: 999px;
-          inset: -8px;
-          opacity: 0.9;
-          position: absolute;
-        }
-
-        .graph-card__hover-point-outer {
-          background:
-            linear-gradient(180deg, color-mix(in srgb, var(--hover-color) 32%, rgba(255,255,255,0.76)), color-mix(in srgb, var(--ha-card-background, #1f1f24) 72%, var(--hover-color)));
-          border: 1px solid color-mix(in srgb, var(--hover-color) 52%, rgba(255, 255, 255, 0.34));
+        .graph-card__hover-dot {
+          background: radial-gradient(
+            circle at 35% 35%,
+            rgba(255, 255, 255, 0.98) 0 35%,
+            color-mix(in srgb, var(--dot-color) 44%, rgba(255, 255, 255, 0.92)) 36% 100%
+          );
           border-radius: 999px;
           box-shadow:
-            0 8px 18px rgba(0, 0, 0, 0.18),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-          inset: 0;
-          position: absolute;
-        }
-
-        .graph-card__hover-point-ring {
-          background: color-mix(in srgb, var(--hover-color) 82%, rgba(255, 255, 255, 0.86));
-          border-radius: 999px;
-          box-shadow: 0 0 10px color-mix(in srgb, var(--hover-color) 34%, transparent);
-          height: 4.5px;
-          left: 50%;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: 4.5px;
+            0 0 0 3px color-mix(in srgb, var(--dot-color) 14%, transparent),
+            0 0 10px color-mix(in srgb, var(--dot-color) 20%, transparent);
+          display: block;
+          flex-shrink: 0;
+          height: 8px;
+          width: 8px;
+          animation: graph-card-hover-dot-pulse calc(var(--graph-card-hover-duration, 180ms) * 2.35) ease-in-out infinite alternate;
+          transform-origin: center;
+          will-change: transform;
         }
 
         .graph-card__tooltip {
           -webkit-backdrop-filter: blur(14px);
           backdrop-filter: blur(14px);
           background:
-            linear-gradient(180deg, color-mix(in srgb, var(--tooltip-tint) 18%, rgba(255,255,255,0.09)), rgba(255,255,255,0.025)),
-            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 86%, transparent);
-          border: 1px solid color-mix(in srgb, var(--tooltip-tint) 34%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
+            linear-gradient(180deg, color-mix(in srgb, var(--tooltip-tint) 20%, rgba(255,255,255,0.1)), rgba(255,255,255,0.02)),
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, rgba(255,255,255,0.02));
+          border: 1px solid color-mix(in srgb, var(--tooltip-tint) 22%, color-mix(in srgb, var(--primary-text-color) 10%, transparent));
           border-radius: 16px;
-          box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+          box-shadow:
+            0 10px 24px rgba(0, 0, 0, 0.24),
+            0 2px 6px color-mix(in srgb, var(--tooltip-tint) 14%, transparent);
           color: var(--primary-text-color);
           display: grid;
           gap: 8px;
@@ -2187,6 +2740,21 @@ class NodaliaGraphCard extends HTMLElement {
           transform: var(--graph-tooltip-transform, translate(-50%, -100%));
           will-change: left, top, transform;
           z-index: 2147483001;
+        }
+
+        .graph-card__tooltip::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          pointer-events: none;
+          background:
+            linear-gradient(180deg, color-mix(in srgb, var(--tooltip-tint) 18%, rgba(255,255,255,0.09)), rgba(255,255,255,0.025)),
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 90%, transparent);
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 16%, transparent),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.06);
+          z-index: -1;
         }
 
         .graph-card__tooltip--entering {
@@ -2407,6 +2975,17 @@ class NodaliaGraphCard extends HTMLElement {
           }
         }
 
+        @keyframes graph-card-hover-dot-pulse {
+          0% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          100% {
+            opacity: 0.94;
+            transform: scale(1.14);
+          }
+        }
+
         @keyframes graph-card-hover-line-in {
           0% { opacity: 0; }
           100% { opacity: 1; }
@@ -2423,8 +3002,10 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__tooltip,
         .graph-card__hover-line,
         .graph-card__hover-point,
+        .graph-card__hover-dot,
         .graph-card__content,
         .graph-card__header,
+        .graph-card__primary-row,
         .graph-card__value,
         .graph-card__legend,
         .graph-card__chart-wrap,
@@ -2441,8 +3022,33 @@ class NodaliaGraphCard extends HTMLElement {
             gap: 8px;
           }
 
-          .graph-card__legend {
-            justify-content: flex-start;
+          /* Keep value + legend chips on one row; scroll chips horizontally if needed
+             (wrapping pushed the chart up and overlapped the plot). */
+          .graph-card__primary-row {
+            flex-wrap: nowrap;
+            gap: 8px 10px;
+          }
+
+          .graph-card__primary-row .graph-card__value {
+            flex: 0 1 auto;
+            min-width: 0;
+          }
+
+          .graph-card__primary-row .graph-card__legend {
+            flex: 1 1 0;
+            flex-wrap: nowrap;
+            justify-content: flex-end;
+            margin-bottom: 0;
+            min-width: 0;
+            overflow-x: auto;
+            overscroll-behavior-x: contain;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+          }
+
+          .graph-card__primary-row .graph-card__legend-item {
+            flex-shrink: 0;
+            max-width: min(52vw, 160px);
           }
         }
       </style>
@@ -2452,7 +3058,6 @@ class NodaliaGraphCard extends HTMLElement {
             config.show_header !== false
               ? `
                 <div class="graph-card__header">
-                  <div class="graph-card__title">${escapeHtml(title)}</div>
                   ${
                     config.show_icon !== false
                       ? `
@@ -2463,13 +3068,38 @@ class NodaliaGraphCard extends HTMLElement {
                       `
                       : ""
                   }
+                  <div class="graph-card__title">${escapeHtml(title)}</div>
                 </div>
               `
               : ""
           }
 
           ${
-            config.show_value !== false
+            config.show_value !== false && config.show_legend !== false
+              ? `
+                <div class="graph-card__primary-row">
+                  <div class="graph-card__value">
+                    <div class="graph-card__value-number">${escapeHtml(currentValue.value)}</div>
+                    ${currentValue.unit ? `<div class="graph-card__value-unit">${escapeHtml(currentValue.unit)}</div>` : ""}
+                  </div>
+                  <div class="graph-card__legend">
+                    ${legendEntries.map((entry, index) => `
+                      <div
+                        class="graph-card__legend-item ${entry.active ? "graph-card__legend-item--active" : ""} ${entry.muted ? "graph-card__legend-item--muted" : ""}"
+                        data-graph-series="${escapeHtml(entry.entity)}"
+                        style="--legend-color:${escapeHtml(entry.color)}; --legend-delay:${Math.min(index, 8) * 34}ms;"
+                      >
+                        <span class="graph-card__legend-dot" style="background:${escapeHtml(entry.color)};"></span>
+                        <span class="graph-card__legend-text">${escapeHtml(entry.name)}</span>
+                      </div>
+                    `).join("")}
+                  </div>
+                </div>
+              `
+              : ""
+          }
+          ${
+            config.show_value !== false && config.show_legend === false
               ? `
                 <div class="graph-card__value">
                   <div class="graph-card__value-number">${escapeHtml(currentValue.value)}</div>
@@ -2478,11 +3108,10 @@ class NodaliaGraphCard extends HTMLElement {
               `
               : ""
           }
-
           ${
-            config.show_legend !== false
+            config.show_value === false && config.show_legend !== false
               ? `
-                <div class="graph-card__legend">
+                <div class="graph-card__legend graph-card__legend--solo">
                   ${legendEntries.map((entry, index) => `
                     <div
                       class="graph-card__legend-item ${entry.active ? "graph-card__legend-item--active" : ""} ${entry.muted ? "graph-card__legend-item--muted" : ""}"
@@ -2536,13 +3165,11 @@ class NodaliaGraphCard extends HTMLElement {
                       if (!point) {
                         return "";
                       }
-                      const left = clamp((point.x / chart.width) * 100, 1.8, 98.2);
-                      const top = clamp((point.y / chart.height) * 100, 4, 96);
+                      const left = clamp(graphChartXToPercent(point.x, chart), 0.3, 99.7);
+                      const top = clamp((point.y / chart.height) * 100, 0.3, 99.7);
                       return `
-                        <span class="graph-card__hover-point" style="left:${left}%; top:${top}%; --hover-color:${escapeHtml(entry.color)};">
-                          <span class="graph-card__hover-point-halo"></span>
-                          <span class="graph-card__hover-point-outer"></span>
-                          <span class="graph-card__hover-point-ring"></span>
+                        <span class="graph-card__hover-point" style="left:${left}%; top:${top}%; --dot-color:${escapeHtml(entry.color)};">
+                          <span class="graph-card__hover-dot"></span>
                         </span>
                       `;
                     }).join("")}
@@ -2601,14 +3228,9 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass) {
-    if (!hass?.states) {
-      return "";
-    }
-
-    return Object.keys(hass.states)
-      .filter(entityId => entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number."))
-      .sort((left, right) => left.localeCompare(right, "es"))
-      .join("|");
+    return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, id =>
+      id.startsWith("sensor.") || id.startsWith("number.") || id.startsWith("input_number."),
+    );
   }
 
   _captureFocusState() {
@@ -2685,7 +3307,7 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -3036,7 +3658,7 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Humedad",
+              placeholder: "Temperatura",
             })}
             ${this._renderTextField("Icono", "icon", config.icon, {
               placeholder: "mdi:water-percent",
@@ -3219,15 +3841,9 @@ class NodaliaGraphCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    return Object.entries(hass?.states || {})
-      .filter(([entityId]) => (
-        entityId.startsWith("sensor.")
-        || entityId.startsWith("number.")
-        || entityId.startsWith("input_number.")
-      ))
-      .map(([entityId, state]) => `${entityId}:${String(state?.attributes?.friendly_name || "")}:${String(state?.attributes?.icon || "")}`)
-      .sort((left, right) => left.localeCompare(right, "es", { sensitivity: "base" }))
-      .join("|");
+    return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, id =>
+      id.startsWith("sensor.") || id.startsWith("number.") || id.startsWith("input_number."),
+    );
   }
 
   _getEntityOptions(field = "entities.0.entity", domains = []) {
@@ -3352,7 +3968,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 

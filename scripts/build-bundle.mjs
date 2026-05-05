@@ -2,14 +2,34 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { build } from "esbuild";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 
+const STANDALONE_UTILS_START = "// <nodalia-standalone-utils>";
+const STANDALONE_UTILS_END = "// </nodalia-standalone-utils>";
+
+/** Strip inlined nodalia-utils copy used for standalone card scripts (see scripts/sync-standalone-embed.mjs). */
+function stripStandaloneUtilsEmbed(source) {
+  const i0 = source.indexOf(STANDALONE_UTILS_START);
+  if (i0 === -1) {
+    return source;
+  }
+  const i1 = source.indexOf(STANDALONE_UTILS_END, i0);
+  if (i1 === -1) {
+    throw new Error(`${STANDALONE_UTILS_START} without ${STANDALONE_UTILS_END} in bundled part`);
+  }
+  const tail = source.slice(i1 + STANDALONE_UTILS_END.length).replace(/^\s*\n/, "");
+  return source.slice(0, i0) + tail;
+}
+
 const parts = [
   "nodalia-i18n.js",
   "nodalia-editor-ui.js",
+  "nodalia-utils.js",
+  "nodalia-render-signature.js",
   "nodalia-bubble-contrast.js",
   "nodalia-navigation-bar.js",
   "nodalia-media-player.js",
@@ -31,10 +51,41 @@ const parts = [
 ];
 
 let body = "";
-for (const name of parts) {
-  body += "{\n";
-  body += fs.readFileSync(path.join(root, name), "utf8");
-  body += "\n}\n";
+const entryPath = path.join(root, ".tmp-nodalia-bundle-entry.mjs");
+const entrySource = parts.map(name => `import "./${name}";`).join("\n");
+fs.writeFileSync(entryPath, `${entrySource}\n`);
+
+try {
+  const result = await build({
+    absWorkingDir: root,
+    entryPoints: [entryPath],
+    bundle: true,
+    write: false,
+    format: "iife",
+    platform: "browser",
+    target: ["es2020"],
+    charset: "utf8",
+    legalComments: "none",
+    plugins: [
+      {
+        name: "strip-standalone-utils-embed",
+        setup(buildContext) {
+          buildContext.onLoad({ filter: /nodalia-.*\.js$/ }, args => {
+            const source = fs.readFileSync(args.path, "utf8");
+            return {
+              contents: stripStandaloneUtilsEmbed(source),
+              loader: "js",
+            };
+          });
+        },
+      },
+    ],
+  });
+  body = result.outputFiles?.[0]?.text || "";
+} finally {
+  if (fs.existsSync(entryPath)) {
+    fs.unlinkSync(entryPath);
+  }
 }
 
 const contentHash = crypto.createHash("sha256").update(body).digest("hex").slice(0, 12);

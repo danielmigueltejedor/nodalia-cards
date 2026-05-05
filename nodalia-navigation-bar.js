@@ -1,3 +1,396 @@
+// <nodalia-standalone-utils>
+// Inlined for standalone Lovelace resources (single JS file). Stripped when building nodalia-cards.js.
+// Source of truth: nodalia-utils.js — regenerate: node scripts/sync-standalone-embed.mjs
+/**
+ * Shared helpers for Nodalia cards (deep equality, config stripping, editor mounts).
+ * Loaded early in nodalia-cards.js bundle; exposed as window.NodaliaUtils.
+ */
+(function initNodaliaUtils() {
+  const REQUIRED_API_KEYS = [
+    "isObject",
+    "deepClone",
+    "deepEqual",
+    "stripEqualToDefaults",
+    "editorStatesSignature",
+    "editorFilteredStatesSignature",
+    "sanitizeActionUrl",
+    "mountEntityPickerHost",
+    "mountIconPickerHost",
+  ];
+  const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
+  if (
+    existing &&
+    REQUIRED_API_KEYS.every(key => typeof existing[key] === "function")
+  ) {
+    return;
+  }
+
+  function isObject(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function deepClone(value) {
+    if (value === undefined) {
+      return undefined;
+    }
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function deepEqual(a, b) {
+    if (Object.is(a, b)) {
+      return true;
+    }
+    if (a == null || b == null) {
+      return a === b;
+    }
+    if (typeof a !== typeof b) {
+      return false;
+    }
+    if (typeof a !== "object") {
+      return false;
+    }
+    if (Array.isArray(a)) {
+      if (!Array.isArray(b) || a.length !== b.length) {
+        return false;
+      }
+      return a.every((value, index) => deepEqual(value, b[index]));
+    }
+    if (Array.isArray(b)) {
+      return false;
+    }
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) {
+      return false;
+    }
+    return keysA.every(key => deepEqual(a[key], b[key]));
+  }
+
+  function stripEqualToDefaults(config, defaults) {
+    if (defaults === undefined || defaults === null) {
+      return deepClone(config);
+    }
+    if (config === undefined || config === null) {
+      return undefined;
+    }
+    if (Array.isArray(config)) {
+      return deepEqual(config, defaults) ? undefined : deepClone(config);
+    }
+    if (isObject(config) && isObject(defaults)) {
+      const out = {};
+      for (const key of Object.keys(config)) {
+        const cv = config[key];
+        const dv = defaults[key];
+        if (!(key in defaults)) {
+          out[key] = deepClone(cv);
+          continue;
+        }
+        if (deepEqual(cv, dv)) {
+          continue;
+        }
+        if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
+          const stripped = stripEqualToDefaults(cv, dv);
+          if (stripped !== undefined) {
+            out[key] = stripped;
+          }
+        } else {
+          out[key] = deepClone(cv);
+        }
+      }
+      return Object.keys(out).length ? out : undefined;
+    }
+    return deepEqual(config, defaults) ? undefined : config;
+  }
+
+  /**
+   * Signature for entities matching predicate(entityId): id + friendly_name + icon per row,
+   * so picker labels update when attributes change. Same locale prefix as editorStatesSignature.
+   */
+  function editorFilteredStatesSignature(hass, language, predicate) {
+    const states = hass?.states || {};
+    const rows = [];
+    for (const id of Object.keys(states)) {
+      if (!predicate(id)) {
+        continue;
+      }
+      const state = states[id];
+      rows.push(
+        `${id}:${String(state?.attributes?.friendly_name ?? "")}:${String(state?.attributes?.icon ?? "")}`,
+      );
+    }
+    rows.sort((left, right) => {
+      const idLeft = left.split(":")[0];
+      const idRight = right.split(":")[0];
+      return idLeft.localeCompare(idRight, undefined, { sensitivity: "base" });
+    });
+    const tag =
+      typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
+        ? window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language))
+        : "";
+    return `${tag}|${rows.join("|")}`;
+  }
+
+  /**
+   * Full hass.states signature: every entity as id + friendly_name + icon (sorted by id),
+   * plus locale tag — same shape as editorFilteredStatesSignature. Editors that list entities
+   * re-render when labels or icons change, not only when the entity count changes.
+   */
+  function editorStatesSignature(hass, language) {
+    return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Normalize and validate user-provided action URLs.
+   * Allows http/https and same-origin relative paths by default.
+   */
+  function sanitizeActionUrl(value, options = {}) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    const allowRelative = options.allowRelative !== false;
+    const allowHash = options.allowHash === true;
+    if (allowHash && raw.startsWith("#")) {
+      return raw;
+    }
+    if (allowRelative && (/^\/(?!\/)/.test(raw) || raw.startsWith("./") || raw.startsWith("../"))) {
+      return raw;
+    }
+    try {
+      const base =
+        typeof window !== "undefined" && window.location
+          ? window.location.origin
+          : "https://example.invalid";
+      const parsed = new URL(raw, base);
+      const protocol = String(parsed.protocol || "").toLowerCase();
+      if (protocol !== "http:" && protocol !== "https:") {
+        return "";
+      }
+      if (allowRelative && typeof window !== "undefined" && window.location && parsed.origin === window.location.origin) {
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+      return parsed.toString();
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  function copyDatasetExcept(control, host, skipKeys) {
+    const skip = new Set(skipKeys || []);
+    Object.entries(host.dataset || {}).forEach(([key, value]) => {
+      if (skip.has(key)) {
+        return;
+      }
+      control.dataset[key] = value;
+    });
+  }
+
+  /** Latest callbacks for reused picker controls (listeners call into this). */
+  const pickerCallbackState = new WeakMap();
+  const pickerControlsWithListeners = new WeakSet();
+
+  function dispatchPickerChange(ev) {
+    const control = ev.currentTarget;
+    const s = pickerCallbackState.get(control);
+    if (s && typeof s.onShadowInput === "function") {
+      s.onShadowInput(ev);
+    }
+  }
+
+  function dispatchPickerValueChanged(ev) {
+    const control = ev.currentTarget;
+    const s = pickerCallbackState.get(control);
+    if (!s) {
+      return;
+    }
+    const fn = s.onShadowValueChanged || s.onShadowInput;
+    if (typeof fn === "function") {
+      fn(ev);
+    }
+  }
+
+  /**
+   * Mount or update ha-entity-picker / ha-selector / text input without recreating each render.
+   */
+  function mountEntityPickerHost(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const hass = options.hass;
+    const field = options.field || host.dataset.field || "entity";
+    const nextValue = options.value !== undefined ? String(options.value) : String(host.dataset.value || "");
+    const placeholder =
+      options.placeholder !== undefined ? String(options.placeholder) : String(host.dataset.placeholder || "");
+    const onShadowInput = options.onShadowInput;
+    const onShadowValueChanged = options.onShadowValueChanged;
+    const copyDatasetFromHost = options.copyDatasetFromHost !== false;
+
+    const usePicker = typeof customElements !== "undefined" && customElements.get("ha-entity-picker");
+    const useSelector = typeof customElements !== "undefined" && customElements.get("ha-selector");
+
+    let desired = "input";
+    if (usePicker) {
+      desired = "picker";
+    } else if (useSelector) {
+      desired = "selector";
+    }
+
+    let control = host.firstElementChild;
+    const tag = control?.tagName || "";
+    const matches =
+      control &&
+      ((desired === "picker" && tag === "HA-ENTITY-PICKER")
+        || (desired === "selector" && tag === "HA-SELECTOR")
+        || (desired === "input" && tag === "INPUT"));
+
+    if (!matches) {
+      host.replaceChildren();
+      if (usePicker) {
+        control = document.createElement("ha-entity-picker");
+        control.allowCustomEntity = true;
+      } else if (useSelector) {
+        control = document.createElement("ha-selector");
+        control.selector = { entity: {} };
+      } else {
+        control = document.createElement("input");
+        control.type = "text";
+      }
+
+      control.dataset.field = field;
+      if (copyDatasetFromHost) {
+        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder", "field"]);
+      }
+
+      if ("hass" in control) {
+        control.hass = hass;
+      }
+      if ("value" in control) {
+        control.value = nextValue;
+      }
+      if (placeholder && "placeholder" in control) {
+        control.placeholder = placeholder;
+      }
+
+      pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+      if (!pickerControlsWithListeners.has(control)) {
+        pickerControlsWithListeners.add(control);
+        if (control.tagName === "INPUT") {
+          control.addEventListener("change", dispatchPickerChange);
+        } else {
+          control.addEventListener("value-changed", dispatchPickerValueChanged);
+        }
+      }
+
+      host.appendChild(control);
+      return;
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+    pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+    if ("hass" in control) {
+      control.hass = hass;
+    }
+    if (placeholder && "placeholder" in control) {
+      control.placeholder = placeholder;
+    }
+    if ("value" in control && control.value !== nextValue) {
+      control.value = nextValue;
+    }
+  }
+
+  /**
+   * Mount or update ha-icon-picker / text input without recreating each render.
+   */
+  function mountIconPickerHost(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+
+    const hass = options.hass;
+    const nextValue = options.value !== undefined ? String(options.value) : String(host.dataset.value || "");
+    const placeholder = options.placeholder !== undefined ? options.placeholder : host.dataset.placeholder || "";
+    const onShadowInput = options.onShadowInput;
+    const onShadowValueChanged = options.onShadowValueChanged;
+    const copyDatasetFromHost = options.copyDatasetFromHost !== false;
+
+    const useIconPicker = typeof customElements !== "undefined" && customElements.get("ha-icon-picker");
+
+    let desired = useIconPicker ? "icon" : "input";
+    let control = host.firstElementChild;
+    const tag = control?.tagName || "";
+    const matches =
+      control && ((desired === "icon" && tag === "HA-ICON-PICKER") || (desired === "input" && tag === "INPUT"));
+
+    if (!matches) {
+      host.replaceChildren();
+      if (useIconPicker) {
+        control = document.createElement("ha-icon-picker");
+      } else {
+        control = document.createElement("input");
+        control.type = "text";
+      }
+
+      if (copyDatasetFromHost) {
+        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder", "field"]);
+      }
+
+      if ("hass" in control) {
+        control.hass = hass;
+      }
+      if (placeholder && "placeholder" in control) {
+        control.placeholder = placeholder;
+      }
+      if ("value" in control) {
+        control.value = nextValue;
+      }
+
+      pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+      if (!pickerControlsWithListeners.has(control)) {
+        pickerControlsWithListeners.add(control);
+        if (control.tagName === "INPUT") {
+          control.addEventListener("change", dispatchPickerChange);
+        } else {
+          control.addEventListener("value-changed", dispatchPickerValueChanged);
+        }
+      }
+
+      host.appendChild(control);
+      return;
+    }
+
+    pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
+    if ("hass" in control) {
+      control.hass = hass;
+    }
+    if (placeholder && "placeholder" in control) {
+      control.placeholder = placeholder;
+    }
+    if ("value" in control && control.value !== nextValue) {
+      control.value = nextValue;
+    }
+  }
+
+  const api = {
+    isObject,
+    deepClone,
+    deepEqual,
+    stripEqualToDefaults,
+    editorStatesSignature,
+    editorFilteredStatesSignature,
+    sanitizeActionUrl,
+    mountEntityPickerHost,
+    mountIconPickerHost,
+  };
+
+  if (typeof window !== "undefined") {
+    window.NodaliaUtils = api;
+  }
+})();
+
+// </nodalia-standalone-utils>
+
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
 const CARD_VERSION = "0.6.5";
@@ -360,71 +753,6 @@ function compactConfig(value) {
   return value;
 }
 
-function deepEqual(a, b) {
-  if (Object.is(a, b)) {
-    return true;
-  }
-  if (a == null || b == null) {
-    return a === b;
-  }
-  if (typeof a !== typeof b) {
-    return false;
-  }
-  if (typeof a !== "object") {
-    return false;
-  }
-  if (Array.isArray(a)) {
-    if (!Array.isArray(b) || a.length !== b.length) {
-      return false;
-    }
-    return a.every((value, index) => deepEqual(value, b[index]));
-  }
-  if (Array.isArray(b)) {
-    return false;
-  }
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-  if (keysA.length !== keysB.length) {
-    return false;
-  }
-  return keysA.every(key => deepEqual(a[key], b[key]));
-}
-
-function stripEqualToDefaults(config, defaults) {
-  if (defaults === undefined || defaults === null) {
-    return deepClone(config);
-  }
-  if (config === undefined || config === null) {
-    return undefined;
-  }
-  if (Array.isArray(config)) {
-    return deepEqual(config, defaults) ? undefined : deepClone(config);
-  }
-  if (isObject(config) && isObject(defaults)) {
-    const out = {};
-    for (const key of Object.keys(config)) {
-      const cv = config[key];
-      const dv = defaults[key];
-      if (!(key in defaults)) {
-        out[key] = deepClone(cv);
-        continue;
-      }
-      if (deepEqual(cv, dv)) {
-        continue;
-      }
-      if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
-        const stripped = stripEqualToDefaults(cv, dv);
-        if (stripped !== undefined) {
-          out[key] = stripped;
-        }
-      } else {
-        out[key] = deepClone(cv);
-      }
-    }
-    return Object.keys(out).length ? out : undefined;
-  }
-  return deepEqual(config, defaults) ? undefined : config;
-}
 
 function setByPath(target, path, value) {
   const parts = path.split(".");
@@ -540,6 +868,62 @@ function normalizeTextKey(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function sanitizeCssRuntimeValue(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return "";
+  }
+  if (/[<>{};"']/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+    return "";
+  }
+  return raw;
+}
+
+function sanitizeMediaArtworkUrl(value, hass) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+  const safe = window.NodaliaUtils?.sanitizeActionUrl?.(raw, { allowRelative: true }) || "";
+  if (!safe) {
+    return "";
+  }
+  if (/^(?:https?:)?\/\//i.test(safe)) {
+    return safe;
+  }
+  if (typeof hass?.hassUrl === "function" && safe.startsWith("/")) {
+    return hass.hassUrl(safe);
+  }
+  return safe;
+}
+
+function getRenderSignatureRuntime() {
+  return window.NodaliaRenderSignature || {
+    toKey(value) {
+      if (value === null || value === undefined) {
+        return "";
+      }
+      if (typeof value === "number") {
+        return Number.isFinite(value) ? String(value) : "";
+      }
+      return String(value);
+    },
+    joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
+      return (Array.isArray(parts) ? parts : [])
+        .map(part => {
+          if (!part || !Array.isArray(part.values)) {
+            return "";
+          }
+          const prefix = String(part.prefix || "");
+          const body = part.values.map(value => this.toKey(value)).join(valueSeparator);
+          return `${prefix}${body}`;
+        })
+        .filter(Boolean)
+        .join(sectionSeparator);
+    },
+  };
+}
+
 function parsePrimitiveValue(value) {
   if (value === "true") {
     return true;
@@ -632,8 +1016,12 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._mediaTicker = null;
     this._lastRenderSignature = "";
     this._animateDockEntranceNext = true;
+    this._dockEntrancePlayed = false;
     this._lastShouldHide = false;
     this._playDockEntrance = false;
+    this._lastMediaToggleVisible = false;
+    this._playPopupEntrance = false;
+    this._lastMediaPlayerCardVisible = false;
     this._onResize = () => {
       this._closePopup(false);
       this._closeMediaBrowser(false);
@@ -750,7 +1138,27 @@ class NodaliaNavigationBarCard extends HTMLElement {
   }
 
   _getRenderSignature(hass = this._hass) {
-    const routeBadgeStates = (this._config?.routes || []).flatMap((route, routeIndex) => {
+    const runtime = getRenderSignatureRuntime();
+    const routeBadgeStates = this._getRouteBadgeSignatureRows(hass, runtime);
+    const mediaPlayerStates = this._getMediaPlayerSignatureRows(hass, runtime);
+
+    return runtime.joinParts([
+      {
+        prefix: "l:",
+        values: [window.NodaliaI18n.resolveLanguage(hass, this._config?.language)],
+      },
+      { prefix: "u:", values: [hass?.user?.id || ""] },
+      { prefix: "r:", values: [routeBadgeStates.join("|")] },
+      { prefix: "m:", values: [mediaPlayerStates.join("|")] },
+      { prefix: "mx:", values: [this._mediaPlayerExpanded ? 1 : 0] },
+      { prefix: "mi:", values: [Number(this._activeMediaPlayerIndex || 0)] },
+      { prefix: "po:", values: [this._popupState ? 1 : 0] },
+      { prefix: "mb:", values: [this._mediaBrowserState ? 1 : 0] },
+    ]);
+  }
+
+  _getRouteBadgeSignatureRows(hass, runtime) {
+    return (this._config?.routes || []).flatMap((route, routeIndex) => {
       const items = [{ badge: route?.badge, scope: `route:${routeIndex}` }];
       (route?.popup || []).forEach((item, popupIndex) => {
         items.push({ badge: item?.badge, scope: `popup:${routeIndex}:${popupIndex}` });
@@ -761,50 +1169,49 @@ class NodaliaNavigationBarCard extends HTMLElement {
         .map(item => {
           const state = hass?.states?.[item.badge.entity] || null;
           const attribute = String(item.badge.attribute || "");
-          return {
-            scope: item.scope,
-            entityId: String(item.badge.entity || ""),
-            state: String(state?.state || ""),
-            badgeAttribute: attribute,
-            badgeValue: attribute ? String(state?.attributes?.[attribute] ?? "") : String(state?.state || ""),
-          };
+          return runtime.joinParts([
+            {
+              values: [
+                item.scope,
+                item.badge.entity || "",
+                state?.state || "",
+                attribute,
+                attribute ? state?.attributes?.[attribute] ?? "" : state?.state || "",
+              ],
+            },
+          ], "", "::");
         });
     });
+  }
 
-    const mediaPlayerStates = (this._config?.media_player?.players || [])
+  _getMediaPlayerSignatureRows(hass, runtime) {
+    return (this._config?.media_player?.players || [])
       .filter(player => player?.entity)
       .map(player => {
         const state = hass?.states?.[player.entity] || null;
         const attrs = state?.attributes || {};
-        return {
-          entityId: String(player.entity || ""),
-          state: String(state?.state || ""),
-          friendlyName: String(attrs.friendly_name || ""),
-          entityPicture: String(attrs.entity_picture || ""),
-          mediaTitle: String(attrs.media_title || ""),
-          mediaArtist: String(attrs.media_artist || ""),
-          mediaSeriesTitle: String(attrs.media_series_title || ""),
-          mediaAlbumName: String(attrs.media_album_name || ""),
-          appName: String(attrs.app_name || ""),
-          source: String(attrs.source || ""),
-          mediaChannel: String(attrs.media_channel || ""),
-          volumeLevel: Number(attrs.volume_level ?? -1),
-          mediaDuration: Number(attrs.media_duration ?? -1),
-          supportedFeatures: Number(attrs.supported_features ?? 0),
-          sourceList: Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
-        };
+        return runtime.joinParts([
+          {
+            values: [
+              player.entity || "",
+              state?.state || "",
+              attrs.friendly_name || "",
+              attrs.entity_picture || "",
+              attrs.media_title || "",
+              attrs.media_artist || "",
+              attrs.media_series_title || "",
+              attrs.media_album_name || "",
+              attrs.app_name || "",
+              attrs.source || "",
+              attrs.media_channel || "",
+              Number(attrs.volume_level ?? -1),
+              Number(attrs.media_duration ?? -1),
+              Number(attrs.supported_features ?? 0),
+              Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
+            ],
+          },
+        ], "", "::");
       });
-
-    return JSON.stringify({
-      locale: window.NodaliaI18n.resolveLanguage(hass, this._config?.language),
-      user: String(hass?.user?.id || ""),
-      routeBadgeStates,
-      mediaPlayerStates,
-      mediaExpanded: Boolean(this._mediaPlayerExpanded),
-      activePlayerIndex: Number(this._activeMediaPlayerIndex || 0),
-      popupOpen: Boolean(this._popupState),
-      mediaBrowserOpen: Boolean(this._mediaBrowserState),
-    });
   }
 
   _triggerHaptic(style = this._config?.haptics?.style) {
@@ -1285,12 +1692,112 @@ class NodaliaNavigationBarCard extends HTMLElement {
       return;
     }
 
+    if (!this._isServiceAllowed(action.service)) {
+      return;
+    }
+
     const [domain, service] = String(action.service).split(".");
     if (!domain || !service) {
       return;
     }
 
     this._hass.callService(domain, service, action.service_data || {}, action.target);
+  }
+
+  _isServiceAllowed(serviceValue) {
+    const security = this._config?.security || {};
+    if (security.strict_service_actions === false) {
+      return true;
+    }
+    const normalizedService = String(serviceValue || "").trim().toLowerCase();
+    if (!normalizedService || !normalizedService.includes(".")) {
+      return false;
+    }
+    const [domain] = normalizedService.split(".");
+    const domains = Array.isArray(security.allowed_service_domains)
+      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const services = Array.isArray(security.allowed_services)
+      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    if (!domains.length && !services.length) {
+      return false;
+    }
+    return services.includes(normalizedService) || domains.includes(domain);
+  }
+
+  _applyRouteRuntimeStyles(visibleRoutes, playDockEntrance) {
+    if (!this.shadowRoot) {
+      return;
+    }
+    visibleRoutes.forEach((route, index) => {
+      const node = this.shadowRoot.querySelector(`.nav-item[data-route-index="${index}"]`);
+      if (!(node instanceof HTMLElement)) {
+        return;
+      }
+      if (playDockEntrance) {
+        node.style.setProperty("--nav-enter-delay", `${Math.min(index * 38, 520)}ms`);
+      }
+      const routeBackground = sanitizeCssRuntimeValue(route.background);
+      const routeColor = sanitizeCssRuntimeValue(route.color);
+      const routeActiveColor = sanitizeCssRuntimeValue(route.active_color);
+      const routeActiveBackground = sanitizeCssRuntimeValue(route.active_background);
+      if (routeBackground) node.style.setProperty("--route-background", routeBackground);
+      if (routeColor) node.style.setProperty("--route-color", routeColor);
+      if (routeActiveColor) node.style.setProperty("--route-active-color", routeActiveColor);
+      if (routeActiveBackground) node.style.setProperty("--route-active-background", routeActiveBackground);
+      const badge = this._getBadge(route);
+      const badgeNode = node.querySelector(".nav-badge");
+      if (badgeNode instanceof HTMLElement) {
+        const badgeBackground = sanitizeCssRuntimeValue(badge.background);
+        const badgeColor = sanitizeCssRuntimeValue(badge.color);
+        if (badgeBackground) badgeNode.style.setProperty("--badge-background", badgeBackground);
+        if (badgeColor) badgeNode.style.setProperty("--badge-color", badgeColor);
+      }
+    });
+  }
+
+  _applyPopupRuntimeStyles() {
+    if (!this.shadowRoot || !this._popupState?.route) {
+      return;
+    }
+    const panel = this.shadowRoot.querySelector(".popup-panel");
+    if (panel instanceof HTMLElement) {
+      const popupItems = this._getPopupItems(this._popupState.route);
+      const popupHasText = popupItems.some(item => Boolean(this._getRouteLabel(item) || item.description));
+      const isCompactPopup = !popupHasText && Number(this._popupState.columns || 1) === 1;
+      panel.style.left = this._popupState.left;
+      panel.style.top = this._popupState.top;
+      panel.style.width = isCompactPopup ? "fit-content" : this._popupState.width;
+      panel.style.setProperty("--popup-columns", String(this._popupState.columns || 1));
+      panel.style.setProperty(
+        "--popup-item-min",
+        this._popupState.itemMinWidth || `calc(${this._config.styles.popup.item_size} + 24px)`,
+      );
+    }
+    const popupItems = this._getPopupItems(this._popupState.route);
+    popupItems.forEach((item, popupIndex) => {
+      const node = this.shadowRoot.querySelector(`.popup-item[data-popup-item-index="${popupIndex}"]`);
+      if (!(node instanceof HTMLElement)) {
+        return;
+      }
+      const itemBackground = sanitizeCssRuntimeValue(item.background);
+      const itemColor = sanitizeCssRuntimeValue(item.color);
+      const itemActiveColor = sanitizeCssRuntimeValue(item.active_color);
+      const itemActiveBackground = sanitizeCssRuntimeValue(item.active_background);
+      if (itemBackground) node.style.setProperty("--popup-route-background", itemBackground);
+      if (itemColor) node.style.setProperty("--popup-route-color", itemColor);
+      if (itemActiveColor) node.style.setProperty("--popup-route-active-color", itemActiveColor);
+      if (itemActiveBackground) node.style.setProperty("--popup-route-active-background", itemActiveBackground);
+      const badge = this._getBadge(item);
+      const badgeNode = node.querySelector(".nav-badge");
+      if (badgeNode instanceof HTMLElement) {
+        const badgeBackground = sanitizeCssRuntimeValue(badge.background);
+        const badgeColor = sanitizeCssRuntimeValue(badge.color);
+        if (badgeBackground) badgeNode.style.setProperty("--badge-background", badgeBackground);
+        if (badgeColor) badgeNode.style.setProperty("--badge-color", badgeColor);
+      }
+    });
   }
 
   _closePopup(shouldRender = true) {
@@ -1435,6 +1942,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       routeIndex,
       width: `${popupWidth}px`,
     };
+    this._playPopupEntrance = true;
     this._render();
   }
 
@@ -1537,18 +2045,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
   }
 
   _resolveMediaUrl(value, options = {}) {
-    const raw = String(value || "").trim();
-    if (!raw) {
+    const baseUrl = sanitizeMediaArtworkUrl(value, this._hass);
+    if (!baseUrl) {
       return "";
     }
-
-    const isAbsolute = /^(?:https?:)?\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:");
-    const baseUrl = isAbsolute
-      ? raw
-      : typeof this._hass?.hassUrl === "function"
-        ? this._hass.hassUrl(raw.startsWith("/") ? raw : `/${raw.replace(/^\.?\//, "")}`)
-        : raw;
-
     return appendQueryParam(baseUrl, "nodalia_ts", options.cacheToken);
   }
 
@@ -1723,7 +2223,12 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const sourceKey = normalizeTextKey(sourceLabel);
 
-    if (!sourceKey || sourceKey.includes("music assistant")) {
+    if (
+      !sourceKey ||
+      sourceKey.includes("music assistant") ||
+      sourceKey === "airmusic" ||
+      sourceKey.startsWith("airmusic ")
+    ) {
       return null;
     }
 
@@ -2267,13 +2772,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
         this._openPopup(route, options.anchorElement);
         return;
       case "url": {
-        const url = action.url_path || action.url || route.url || route.path;
+        const url = window.NodaliaUtils?.sanitizeActionUrl(action.url_path || action.url || route.url || route.path, { allowRelative: true }) || "";
         if (!url) {
           return;
         }
 
         if (action.new_tab) {
-          window.open(url, "_blank", "noopener");
+          window.open(url, "_blank", "noopener,noreferrer");
         } else {
           window.location.assign(url);
         }
@@ -2310,7 +2815,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
   }
 
-  _renderPopup(currentPath) {
+  _renderPopup(currentPath, playPopupEntrance = false) {
     if (!this._popupState?.route) {
       return "";
     }
@@ -2337,22 +2842,12 @@ class NodaliaNavigationBarCard extends HTMLElement {
         const hasDescription = Boolean(item.description);
         const isIconOnly = !hasLabel && !hasDescription;
         const ariaLabel = label || item.description || item.path || `Popup ${popupIndex + 1}`;
-        const itemStyle = [
-          item.background ? `--popup-route-background:${item.background};` : "",
-          item.color ? `--popup-route-color:${item.color};` : "",
-          item.active_color ? `--popup-route-active-color:${item.active_color};` : "",
-          item.active_background ? `--popup-route-active-background:${item.active_background};` : "",
-        ]
-          .filter(Boolean)
-          .join("");
-
         return `
           <button
             class="popup-item ${isActive ? "active" : ""} ${isIconOnly ? "icon-only" : ""}"
             type="button"
             data-popup-route-index="${this._popupState.routeIndex}"
             data-popup-item-index="${popupIndex}"
-            style="${itemStyle}"
             aria-label="${escapeHtml(ariaLabel)}"
           >
             <span class="popup-item__icon-wrap">
@@ -2361,7 +2856,6 @@ class NodaliaNavigationBarCard extends HTMLElement {
                 badge
                   ? `<span
                       class="nav-badge"
-                      style="--badge-background:${badge.background};--badge-color:${badge.color};"
                     >${escapeHtml(badge.content)}</span>`
                   : ""
               }
@@ -2392,8 +2886,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return `
       <div class="popup-backdrop" data-popup-close="true"></div>
       <div
-        class="popup-panel popup-panel--${this._popupState.direction} popup-panel--layout-${this._popupState.layout || "auto"} ${popupHasText ? "popup-panel--with-text" : "popup-panel--icon-only"} ${isCompactPopup ? "popup-panel--compact" : ""}"
-        style="left:${this._popupState.left};top:${this._popupState.top};width:${isCompactPopup ? "fit-content" : this._popupState.width};--popup-columns:${this._popupState.columns || 1};--popup-item-min:${this._popupState.itemMinWidth || `calc(${this._config.styles.popup.item_size} + 24px)`};"
+        class="popup-panel popup-panel--${this._popupState.direction} popup-panel--layout-${this._popupState.layout || "auto"} ${popupHasText ? "popup-panel--with-text" : "popup-panel--icon-only"} ${isCompactPopup ? "popup-panel--compact" : ""}${playPopupEntrance ? " popup-panel--entering" : ""}"
       >
         <div class="popup-items">
           ${popupMarkup}
@@ -2507,7 +3000,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     `;
   }
 
-  _renderMediaPlayer(visiblePlayers) {
+  _renderMediaPlayer(visiblePlayers, animateCardEntrance = false) {
     if (!visiblePlayers.length) {
       return "";
     }
@@ -2656,7 +3149,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     return `
       <div
-        class="media-player-card ${albumCoverBackground ? "has-album-background" : ""}"
+        class="media-player-card ${albumCoverBackground ? "has-album-background" : ""}${animateCardEntrance ? " media-player-card--entering" : ""}"
         data-media-card-index="${this._activeMediaPlayerIndex}"
       >
         ${
@@ -2739,7 +3232,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     `;
   }
 
-  _renderMediaPlayerToggle(visiblePlayers) {
+  _renderMediaPlayerToggle(visiblePlayers, playToggleEntrance = false) {
     if (!visiblePlayers.length) {
       return "";
     }
@@ -2765,7 +3258,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       <div class="media-player-toggle-wrap${this._playDockEntrance ? " media-player-toggle-wrap--entering" : ""}">
         <button
           type="button"
-          class="media-player-toggle"
+          class="media-player-toggle${playToggleEntrance ? " media-player-toggle--entering" : ""}"
           data-media-toggle="expand"
           aria-label="Mostrar reproductor"
         >
@@ -2825,7 +3318,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._lastShouldHide = false;
 
     const hasActiveOverlay = Boolean(this._popupState || this._mediaBrowserState);
-    const playDockEntrance = animations.enabled && this._animateDockEntranceNext && !hasActiveOverlay;
+    const playDockEntrance = animations.enabled
+      && this._animateDockEntranceNext
+      && !hasActiveOverlay
+      && !this._dockEntrancePlayed;
+    if (playDockEntrance) {
+      this._dockEntrancePlayed = true;
+    }
     // Lovelace typically calls setConfig then set(hass) in the same turn; clearing the flag
     // synchronously made the second _render strip entrance classes before paint. Defer reset
     // one frame so follow-up renders still emit --entering until the browser composites.
@@ -2851,6 +3350,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const showMediaPlayerCard = hasVisiblePlayers && (inEditMode || this._mediaPlayerExpanded === true);
     const showMediaPlayerToggle = hasVisiblePlayers && !showMediaPlayerCard;
+    const playMediaToggleEntrance = animations.enabled && showMediaPlayerToggle && !this._lastMediaToggleVisible;
+    this._lastMediaToggleVisible = showMediaPlayerToggle;
+    const playMediaCardEntrance = animations.enabled && showMediaPlayerCard && !this._lastMediaPlayerCardVisible;
+    this._lastMediaPlayerCardVisible = showMediaPlayerCard;
     const mediaStackGap = hasVisiblePlayers ? config.media_player.gap || "0px" : "0px";
     const currentPath = normalizePath(window.location.pathname) || "/";
     const isFixed = config.layout.fixed && !inEditMode;
@@ -2864,8 +3367,12 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._renderedRoutes = visibleRoutes;
     this._syncMediaTicker(showMediaPlayerCard ? visiblePlayers : []);
 
-    const mediaPlayerMarkup = showMediaPlayerCard ? this._renderMediaPlayer(visiblePlayers) : "";
-    const mediaPlayerToggleMarkup = showMediaPlayerToggle ? this._renderMediaPlayerToggle(visiblePlayers) : "";
+    const mediaPlayerMarkup = showMediaPlayerCard
+      ? this._renderMediaPlayer(visiblePlayers, playMediaCardEntrance)
+      : "";
+    const mediaPlayerToggleMarkup = showMediaPlayerToggle
+      ? this._renderMediaPlayerToggle(visiblePlayers, playMediaToggleEntrance)
+      : "";
     const fullWidthBar = config.layout.full_width === true;
     const barRadiusToken = String(config.styles.bar.border_radius || "28px")
       .trim()
@@ -2877,7 +3384,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
         : config.layout.position === "top"
           ? `0 0 ${barRadiusToken} ${barRadiusToken}`
           : config.styles.bar.border_radius;
-    const popupMarkup = this._renderPopup(currentPath);
+    const popupMarkup = this._renderPopup(currentPath, Boolean(this._popupState) && this._playPopupEntrance);
     const mediaBrowserMarkup = this._renderMediaBrowser();
 
     const routesMarkup =
@@ -2887,15 +3394,6 @@ class NodaliaNavigationBarCard extends HTMLElement {
               const isActive = this._isRouteActive(route, currentPath);
               const badge = this._getBadge(route);
               const label = this._getRouteLabel(route);
-              const routeStyle = [
-                playDockEntrance ? `--nav-enter-delay:${Math.min(index * 38, 520)}ms;` : "",
-                route.background ? `--route-background:${route.background};` : "",
-                route.color ? `--route-color:${route.color};` : "",
-                route.active_color ? `--route-active-color:${route.active_color};` : "",
-                route.active_background ? `--route-active-background:${route.active_background};` : "",
-              ]
-                .filter(Boolean)
-                .join("");
               const hasPopup = this._getPopupItems(route).length > 0;
 
               return `
@@ -2903,7 +3401,6 @@ class NodaliaNavigationBarCard extends HTMLElement {
                   class="nav-item ${isActive ? "active" : ""} ${hasPopup ? "has-popup" : ""}${playDockEntrance ? " nav-item--entering" : ""}"
                   data-route-index="${index}"
                   type="button"
-                  style="${routeStyle}"
                   aria-label="${escapeHtml(label || route.path || `Route ${index + 1}`)}"
                 >
                   <span class="nav-icon-wrap">
@@ -2912,7 +3409,6 @@ class NodaliaNavigationBarCard extends HTMLElement {
                       badge
                         ? `<span
                             class="nav-badge"
-                            style="--badge-background:${badge.background};--badge-color:${badge.color};"
                           >${escapeHtml(badge.content)}</span>`
                         : ""
                     }
@@ -3298,6 +3794,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
           transform-origin: center bottom;
           width: min(${config.styles.popup.max_width}, calc(100vw - 24px));
           z-index: ${Number(config.layout.z_index) + 2};
+        }
+
+        .popup-panel.popup-panel--entering {
           ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.popupDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
 
@@ -3559,7 +4058,6 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .popup-item:hover {
           background: rgba(var(--rgb-primary-color), 0.08);
-          transform: translateY(-1px);
         }
 
         .popup-item.active {
@@ -3658,6 +4156,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
           overflow: hidden;
           padding: ${config.styles.media_player.padding};
           position: relative;
+        }
+
+        .media-player-card.media-player-card--entering {
           ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.mediaDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
 
@@ -4067,34 +4568,38 @@ class NodaliaNavigationBarCard extends HTMLElement {
         .media-player-toggle {
           align-items: center;
           appearance: none;
-          background: ${config.styles.media_player.background};
-          border: ${config.styles.media_player.border};
-          border-radius: 999px;
-          box-shadow: ${config.styles.media_player.box_shadow};
+          background: color-mix(in srgb, ${config.styles.media_player.background} 78%, var(--card-background-color) 22%);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 18px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.16);
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
-          gap: 10px;
-          max-width: min(100%, 280px);
-          min-height: 44px;
-          padding: 6px 10px 6px 6px;
+          gap: 11px;
+          max-width: min(100%, 292px);
+          min-height: 48px;
+          padding: 8px 12px 8px 8px;
           transition:
             background ${animations.enabled ? animations.barDuration : 0}ms ease,
-            box-shadow ${animations.enabled ? animations.barDuration : 0}ms ease,
-            transform ${animations.enabled ? animations.buttonBounceDuration : 0}ms ease;
+            box-shadow ${animations.enabled ? animations.barDuration : 0}ms ease;
+        }
+
+        .media-player-toggle.media-player-toggle--entering {
           ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.mediaDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
 
         .media-player-toggle__artwork {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
+          background: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          border-radius: 14px;
           display: inline-flex;
           flex: 0 0 auto;
-          height: 32px;
+          height: 34px;
           justify-content: center;
           overflow: hidden;
-          width: 32px;
+          width: 34px;
         }
 
         .media-player-toggle__artwork img,
@@ -4200,6 +4705,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
       ${mediaBrowserMarkup}
     `;
 
+    this._applyRouteRuntimeStyles(visibleRoutes, playDockEntrance);
+    this._applyPopupRuntimeStyles();
+    this._playPopupEntrance = false;
+
     if (this._popupState) {
       this._schedulePopupPositionSync();
     }
@@ -4281,85 +4790,27 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     `;
   }
 
-  _copyDatasetToControl(host, control) {
-    Object.entries(host.dataset || {}).forEach(([key, value]) => {
-      if (key === "mountedControl" || key === "value" || key === "placeholder") {
-        return;
-      }
-      control.dataset[key] = value;
+  _mountEntityPicker(host) {
+    window.NodaliaUtils.mountEntityPickerHost(host, {
+      hass: this._hass,
+      field: host.dataset.field || "entity",
+      value: host.dataset.value || "",
+      placeholder: host.dataset.placeholder || "",
+      onShadowInput: this._onShadowInput,
+      onShadowValueChanged: this._onShadowInput,
+      copyDatasetFromHost: true,
     });
   }
 
-  _mountEntityPicker(host) {
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-
-    const nextValue = host.dataset.value || "";
-    const placeholder = host.dataset.placeholder || "";
-    let control = null;
-
-    if (customElements.get("ha-entity-picker")) {
-      control = document.createElement("ha-entity-picker");
-      control.allowCustomEntity = true;
-    } else if (customElements.get("ha-selector")) {
-      control = document.createElement("ha-selector");
-      control.selector = { entity: {} };
-    } else {
-      control = document.createElement("input");
-      control.type = "text";
-    }
-
-    this._copyDatasetToControl(host, control);
-
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
-    if (placeholder && "placeholder" in control) {
-      control.placeholder = placeholder;
-    }
-    if ("value" in control) {
-      control.value = nextValue;
-    }
-    if (control.tagName !== "INPUT") {
-      control.addEventListener("value-changed", this._onShadowInput);
-    }
-
-    host.replaceChildren(control);
-  }
-
   _mountIconPicker(host) {
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-
-    const nextValue = host.dataset.value || "";
-    const placeholder = host.dataset.placeholder || "";
-    let control = null;
-
-    if (customElements.get("ha-icon-picker")) {
-      control = document.createElement("ha-icon-picker");
-    } else {
-      control = document.createElement("input");
-      control.type = "text";
-    }
-
-    this._copyDatasetToControl(host, control);
-
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
-    if (placeholder && "placeholder" in control) {
-      control.placeholder = placeholder;
-    }
-    if ("value" in control) {
-      control.value = nextValue;
-    }
-    if (control.tagName !== "INPUT") {
-      control.addEventListener("value-changed", this._onShadowInput);
-    }
-
-    host.replaceChildren(control);
+    window.NodaliaUtils.mountIconPickerHost(host, {
+      hass: this._hass,
+      value: host.dataset.value || "",
+      placeholder: host.dataset.placeholder || "",
+      onShadowInput: this._onShadowInput,
+      onShadowValueChanged: this._onShadowInput,
+      copyDatasetFromHost: true,
+    });
   }
 
   _prepareEditorConfig(config) {
@@ -4500,7 +4951,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     this._restoreFocusState(focusState);
     const merged = mergeConfig(DEFAULT_CONFIG, prepared);
     fireEvent(this, "config-changed", {
-      config: compactConfig(stripEqualToDefaults(merged, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(merged, DEFAULT_CONFIG) ?? {}),
     });
   }
 
