@@ -10,6 +10,99 @@ Work toward **`0.6.x`** on **`alpha`** / **`beta`** and eventual **`main`**: add
 
 ---
 
+## [0.6.0] - 2026-05-05
+
+Second stable release on **`main`**.
+
+This version focuses on **refinement, stability and consistency across the entire UI**, consolidating all validated work from the `0.6.0-alpha.*` and `0.6.0-beta.*` cycles into a smoother, more reliable and secure experience.
+
+---
+
+## ✨ Highlights
+
+- Noticeably smoother interactions across multiple cards
+- Improved visual consistency aligned with Nodalia design language
+- Strengthened security model for actions and user-defined configs
+- Better internal structure for long-term maintainability
+
+---
+
+## 🧠 Stability & UX
+
+- **Graph card**
+  - Fully stabilized tooltip and hook lifecycle for continuous tracking
+  - Reliable close behavior across desktop and mobile
+  - Fixed legend chip clipping on press (mobile)
+
+- **Navigation bar**
+  - Reduced micro-bounce in mini-player and popups
+  - Entrance animations now trigger only on real visibility changes
+
+- **Media presentation**
+  - Mini media player visually aligned with Nodalia design system
+  - Filtered noisy/irrelevant sources (e.g. `AirMusic` in HomePod scenarios)
+
+---
+
+## 🔒 Security
+
+- Service actions remain **strict by default**
+- Visual editors now expose:
+  - `strict_service_actions`
+  - `allowed_services`
+- URL handling fully hardened:
+  - Unsafe schemes blocked
+  - External links protected with `noopener,noreferrer`
+- Runtime style values are sanitized in critical rendering paths
+
+---
+
+## ⚡ Performance & Architecture
+
+- Drag interactions optimized:
+  - Geometry caching reused across components
+  - Reduced layout recalculations
+
+- Render system improvements:
+  - Unified render signature strategy via shared helper
+  - More predictable updates in high-frequency UI elements
+
+- Internal structure:
+  - Modularization groundwork completed (navigation, graph, media flows)
+  - Cleaner separation between runtime and rendering logic
+
+---
+
+## 🛠️ Tooling & Release Quality
+
+- CI pipeline introduced:
+  - `npm ci`
+  - `npm test`
+  - `npm run bundle`
+
+- Expanded test coverage:
+  - Interaction tests
+  - Smoke tests
+  - Security guards
+  - Render signature validation
+
+- Stability checklist formalized:
+  - `docs/STABILITY_CHECKLIST_0_6_0.md`
+
+- Bundle diagnostics:
+  - Version + content hash exposed at startup for quick validation
+
+---
+
+## 💬 Notes
+
+This release is focused on **making everything feel better**:
+less friction, fewer edge cases, and more predictable behavior across all cards.
+
+It sets a solid foundation for upcoming improvements in UI, new cards, and advanced features.
+
+---
+
 ## [0.6.0-alpha.5] - 2026-05-05
 
 Fifth **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). This release mirrors the latest beta-level fixes under the alpha distribution channel to help validate real-world loading/resource-cache behavior where alpha delivery is preferred. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.5`** (tag **`v0.6.0-alpha.5`** optional).

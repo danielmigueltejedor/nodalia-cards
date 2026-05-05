@@ -74412,4 +74412,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.6.0-alpha.5","contentSha256_12":"0bd25d655307"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v0.6.0-alpha.5 (0bd25d655307) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.6.0","contentSha256_12":"0bd25d655307"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v0.6.0 (0bd25d655307) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
