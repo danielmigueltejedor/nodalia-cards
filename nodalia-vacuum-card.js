@@ -393,7 +393,7 @@
 
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "0.6.2";
+const CARD_VERSION = "0.6.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -4103,6 +4103,9 @@ class NodaliaVacuumCardEditor extends HTMLElement {
   _renderEntityPickerField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
+    const placeholderAttr = options.placeholder
+      ? `data-placeholder="${escapeHtml(options.placeholder)}"`
+      : "";
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
@@ -4111,6 +4114,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
           data-mounted-control="${escapeHtml(options.controlType || "entity")}"
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
+          ${placeholderAttr}
         ></div>
       </div>
     `;
@@ -4140,15 +4144,40 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
     const field = host.dataset.field || pickerOptions.field || "entity";
     const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || pickerOptions.placeholder || "";
+    const domains = pickerOptions.includeDomains || [];
     let control = null;
 
     if (customElements.get("ha-entity-picker")) {
       control = document.createElement("ha-entity-picker");
-      control.includeDomains = pickerOptions.includeDomains || [];
+      if (domains.length) {
+        control.includeDomains = domains;
+        control.entityFilter =
+          pickerOptions.entityFilter ||
+          (stateObj => domains.some(d => String(stateObj?.entity_id || "").startsWith(`${d}.`)));
+      }
       control.allowCustomEntity = true;
-      control.entityFilter = pickerOptions.entityFilter;
+      if (placeholder) {
+        control.setAttribute("placeholder", placeholder);
+      }
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      const entitySelector =
+        domains.length === 1
+          ? { domain: domains[0] }
+          : domains.length > 1
+            ? { domain: domains }
+            : {};
+      control.selector = { entity: entitySelector };
+      if (placeholder) {
+        control.setAttribute("label", placeholder);
+      }
     } else {
       control = document.createElement("select");
+      const emptyOption = document.createElement("option");
+      emptyOption.value = "";
+      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
+      control.appendChild(emptyOption);
       pickerOptions.getOptions(field).forEach(option => {
         const optionElement = document.createElement("option");
         optionElement.value = option.value;
@@ -4512,6 +4541,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
             ${this._renderEntityPickerField("Entidad del robot", "entity", config.entity, {
               controlType: "vacuum-entity",
               fullWidth: true,
+              placeholder: "vacuum.robot",
             })}
             ${this._renderIconPickerField("Icono", "icon", config.icon, {
               placeholder: "mdi:robot-vacuum",
@@ -4562,18 +4592,23 @@ class NodaliaVacuumCardEditor extends HTMLElement {
           <div class="editor-grid">
             ${this._renderEntityPickerField("Sensor de estado", "state_entity", config.state_entity, {
               controlType: "sensor-entity",
+              placeholder: "sensor.robot_estado",
             })}
             ${this._renderEntityPickerField("Sensor de batería", "battery_entity", config.battery_entity, {
               controlType: "sensor-entity",
+              placeholder: "sensor.robot_bateria",
             })}
             ${this._renderEntityPickerField("Sensor de habitaciones", "room_mapping_entity", config.room_mapping_entity, {
               controlType: "sensor-entity",
+              placeholder: "sensor.room_mapping",
             })}
             ${this._renderEntityPickerField("Selector de aspirado", "suction_select_entity", config.suction_select_entity, {
               controlType: "select-entity",
+              placeholder: "select.robot_fan_speed",
             })}
             ${this._renderEntityPickerField("Selector de fregado", "mop_select_entity", config.mop_select_entity, {
               controlType: "select-entity",
+              placeholder: "select.robot_mop_mode",
             })}
           </div>
         </section>

@@ -47,6 +47,7 @@ const parts = [
   "nodalia-insignia-card.js",
   "nodalia-person-card.js",
   "nodalia-weather-card.js",
+  "nodalia-calendar-card.js",
   "nodalia-vacuum-card.js",
 ];
 

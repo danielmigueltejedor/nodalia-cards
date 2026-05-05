@@ -3291,17 +3291,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const config = this._config;
     const mediaToggleBackgroundBase = sanitizeCssRuntimeValue(config.styles.media_player.background)
-      || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.background)
-      || "var(--ha-card-background, var(--card-background-color))";
+      || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.background);
     const mediaToggleBorder = sanitizeCssRuntimeValue(config.styles.media_player.border)
-      || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border)
-      || "1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent)";
+      || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border);
     const mediaToggleBorderRadius = sanitizeCssRuntimeValue(config.styles.media_player.border_radius)
-      || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border_radius)
-      || "18px";
+      || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border_radius);
     const mediaToggleBoxShadow = sanitizeCssRuntimeValue(config.styles.media_player.box_shadow)
-      || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.box_shadow)
-      || "inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16)";
+      || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.box_shadow);
     const animations = {
       enabled: config.animations?.enabled !== false,
       barDuration: clamp(Number(config.animations?.bar_duration) || DEFAULT_CONFIG.animations.bar_duration, 120, 1600),

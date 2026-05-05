@@ -393,7 +393,7 @@
 
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.13.3";
+const CARD_VERSION = "0.13.6";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2566,16 +2566,29 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       serialized = "";
     }
 
-    const currentValue = String(this._getSharedCleaningSessionState()?.state || "");
-    if (serialized === currentValue || serialized === this._lastSubmittedSharedCleaningSessionValue) {
+    const serializedTrim = serialized.trim();
+    const currentValue = String(this._getSharedCleaningSessionState()?.state ?? "").trim();
+    if (serializedTrim === currentValue) {
       return;
     }
 
-    this._lastSubmittedSharedCleaningSessionValue = serialized;
-    this._callNamedService("input_text.set_value", {
+    const pending = this._callNamedService("input_text.set_value", {
       entity_id: entityId,
-      value: serialized,
+      value: serializedTrim,
     });
+    if (pending && typeof pending.then === "function") {
+      pending
+        .then(() => {
+          this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
+        })
+        .catch(err => {
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
+          }
+        });
+    } else {
+      this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
+    }
   }
 
   _clearSharedCleaningSession() {
@@ -2605,7 +2618,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     const mode = ["rooms", "zone"].includes(session.mode) ? session.mode : "";
-    const activeMode = ["all", "rooms", "zone", "goto"].includes(session.activeMode) ? session.activeMode : "";
+    const activeMode = ["all", "rooms", "zone", "goto", "routines"].includes(session.activeMode)
+      ? session.activeMode
+      : "";
     const activeRoomIds = arrayFromMaybe(session.activeRoomIds)
       .map(item => String(item || "").trim())
       .filter(Boolean);
@@ -5257,13 +5272,24 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
       : [];
     if (!domains.length && !services.length) {
-      return false;
+      return true;
     }
     return services.includes(normalizedService) || domains.includes(domain);
   }
 
   _callNamedService(service, data = {}, target = null) {
-    if (!this._hass || !service || !this._isServiceAllowed(service)) {
+    if (!this._hass || !service) {
+      return;
+    }
+
+    const svcLower = String(service).trim().toLowerCase();
+    const targetEntity = String(data?.entity_id || "").trim();
+    const persistenceBypass =
+      svcLower === "input_text.set_value" &&
+      targetEntity &&
+      targetEntity === this._getSharedCleaningSessionEntityId();
+
+    if (!persistenceBypass && !this._isServiceAllowed(service)) {
       return;
     }
 
@@ -8535,22 +8561,28 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
       .filter(Boolean);
     let control = null;
 
-    if (customElements.get("ha-selector")) {
-      const entitySelector = domains.length
-        ? { domain: domains.length === 1 ? domains[0] : domains }
-        : {};
+    if (customElements.get("ha-entity-picker")) {
+      control = document.createElement("ha-entity-picker");
+      if (domains.length) {
+        control.includeDomains = domains;
+        control.entityFilter = stateObj =>
+          domains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+      }
+      control.allowCustomEntity = true;
+      if (placeholder) {
+        control.setAttribute("placeholder", placeholder);
+      }
+    } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
+      const entitySelector =
+        domains.length === 1
+          ? { domain: domains[0] }
+          : domains.length > 1
+            ? { domain: domains }
+            : {};
       control.selector = { entity: entitySelector };
       if (placeholder) {
         control.setAttribute("label", placeholder);
-      }
-    } else if (customElements.get("ha-entity-picker")) {
-      control = document.createElement("ha-entity-picker");
-      control.includeDomains = domains;
-      control.allowCustomEntity = true;
-      control.entityFilter = stateObj => !domains.length || domains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
-      if (placeholder) {
-        control.setAttribute("placeholder", placeholder);
       }
     } else {
       control = document.createElement("select");
@@ -8568,7 +8600,9 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
     control.dataset.field = field;
     control.dataset.value = nextValue;
-    control.hass = this._hass;
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
 
     if ("value" in control) {
       control.value = nextValue;
@@ -8767,6 +8801,13 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
           font-weight: 600;
         }
 
+        .editor-field__hint {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          font-weight: 500;
+          line-height: 1.45;
+        }
+
         .editor-field input,
         .editor-field select,
         .editor-field textarea {
@@ -8910,7 +8951,22 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
               { value: "send_command", label: "Send command" },
             ])}
             ${this._renderEntityPickerField("Entidad calibracion", "calibration_source.entity", config.calibration_source?.entity, { domains: ["camera", "image", "sensor"] })}
-            ${this._renderEntityPickerField("Helper sesion compartida", "shared_cleaning_session_entity", config.shared_cleaning_session_entity, { domains: ["input_text"] })}
+            <div class="editor-field editor-field--full">
+              <span>${escapeHtml(this._editorLabel("Helper input_text (sesión compartida)"))}</span>
+              <div
+                class="editor-control-host"
+                data-mounted-control="entity"
+                data-field="shared_cleaning_session_entity"
+                data-domains="input_text"
+                data-value="${escapeHtml(String(config.shared_cleaning_session_entity ?? ""))}"
+                data-placeholder="${escapeHtml("input_text.roborock_session")}"
+              ></div>
+              <span class="editor-field__hint">${escapeHtml(
+                this._editorLabel(
+                  "Opcional: guarda selección de habitaciones, modo y repeticiones en este helper para recuperarlas entre dispositivos. Crea un input_text en YAML y elígelo aquí.",
+                ),
+              )}</span>
+            </div>
           </div>
         </section>
 

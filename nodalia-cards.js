@@ -14752,10 +14752,10 @@
     if (existing && REQUIRED_API_KEYS.every((key) => typeof existing[key] === "function")) {
       return;
     }
-    function isObject18(value) {
+    function isObject19(value) {
       return value !== null && typeof value === "object" && !Array.isArray(value);
     }
-    function deepClone18(value) {
+    function deepClone19(value) {
       if (value === void 0) {
         return void 0;
       }
@@ -14792,33 +14792,33 @@
     }
     function stripEqualToDefaults(config, defaults) {
       if (defaults === void 0 || defaults === null) {
-        return deepClone18(config);
+        return deepClone19(config);
       }
       if (config === void 0 || config === null) {
         return void 0;
       }
       if (Array.isArray(config)) {
-        return deepEqual(config, defaults) ? void 0 : deepClone18(config);
+        return deepEqual(config, defaults) ? void 0 : deepClone19(config);
       }
-      if (isObject18(config) && isObject18(defaults)) {
+      if (isObject19(config) && isObject19(defaults)) {
         const out = {};
         for (const key of Object.keys(config)) {
           const cv = config[key];
           const dv = defaults[key];
           if (!(key in defaults)) {
-            out[key] = deepClone18(cv);
+            out[key] = deepClone19(cv);
             continue;
           }
           if (deepEqual(cv, dv)) {
             continue;
           }
-          if (isObject18(cv) && !Array.isArray(cv) && isObject18(dv) && !Array.isArray(dv)) {
+          if (isObject19(cv) && !Array.isArray(cv) && isObject19(dv) && !Array.isArray(dv)) {
             const stripped = stripEqualToDefaults(cv, dv);
             if (stripped !== void 0) {
               out[key] = stripped;
             }
           } else {
-            out[key] = deepClone18(cv);
+            out[key] = deepClone19(cv);
           }
         }
         return Object.keys(out).length ? out : void 0;
@@ -15036,8 +15036,8 @@
       }
     }
     const api = {
-      isObject: isObject18,
-      deepClone: deepClone18,
+      isObject: isObject19,
+      deepClone: deepClone19,
       deepEqual,
       stripEqualToDefaults,
       editorStatesSignature,
@@ -15098,7 +15098,7 @@
       return entityId.includes(".") ? entityId.split(".")[0] : "";
     }
     const resolveEditorColorValueCache = /* @__PURE__ */ new Map();
-    function resolveEditorColorValue13(value) {
+    function resolveEditorColorValue14(value) {
       const rawValue = String(value ?? "").trim();
       if (!rawValue || typeof document === "undefined") {
         return "";
@@ -15175,7 +15175,7 @@
         return rgbToHueDegrees(Number(rgbFn[1]), Number(rgbFn[2]), Number(rgbFn[3]));
       }
       if (resolveDepth === 0 && typeof document !== "undefined") {
-        const resolved = resolveEditorColorValue13(raw);
+        const resolved = resolveEditorColorValue14(raw);
         const resolvedTrim = String(resolved || "").trim();
         if (resolvedTrim && resolvedTrim !== raw) {
           return parseCssColorHue(resolvedTrim, 1);
@@ -15232,7 +15232,7 @@
     }
     if (typeof window !== "undefined") {
       window.NodaliaBubbleContrast = {
-        resolveEditorColorValue: resolveEditorColorValue13,
+        resolveEditorColorValue: resolveEditorColorValue14,
         parseCssColorHue,
         shouldDarkenBubbleIconGlyph
       };
@@ -17583,10 +17583,10 @@
         return;
       }
       const config = this._config;
-      const mediaToggleBackgroundBase = sanitizeCssRuntimeValue(config.styles.media_player.background) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.background) || "var(--ha-card-background, var(--card-background-color))";
-      const mediaToggleBorder = sanitizeCssRuntimeValue(config.styles.media_player.border) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border) || "1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent)";
-      const mediaToggleBorderRadius = sanitizeCssRuntimeValue(config.styles.media_player.border_radius) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border_radius) || "18px";
-      const mediaToggleBoxShadow = sanitizeCssRuntimeValue(config.styles.media_player.box_shadow) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.box_shadow) || "inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16)";
+      const mediaToggleBackgroundBase = sanitizeCssRuntimeValue(config.styles.media_player.background) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.background);
+      const mediaToggleBorder = sanitizeCssRuntimeValue(config.styles.media_player.border) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border);
+      const mediaToggleBorderRadius = sanitizeCssRuntimeValue(config.styles.media_player.border_radius) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border_radius);
+      const mediaToggleBoxShadow = sanitizeCssRuntimeValue(config.styles.media_player.box_shadow) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.box_shadow);
       const animations = {
         enabled: config.animations?.enabled !== false,
         barDuration: clamp(Number(config.animations?.bar_duration) || DEFAULT_CONFIG.animations.bar_duration, 120, 1600),
@@ -53057,15 +53057,26 @@
         }
         serialized = "";
       }
-      const currentValue = String(this._getSharedCleaningSessionState()?.state || "");
-      if (serialized === currentValue || serialized === this._lastSubmittedSharedCleaningSessionValue) {
+      const serializedTrim = serialized.trim();
+      const currentValue = String(this._getSharedCleaningSessionState()?.state ?? "").trim();
+      if (serializedTrim === currentValue) {
         return;
       }
-      this._lastSubmittedSharedCleaningSessionValue = serialized;
-      this._callNamedService("input_text.set_value", {
+      const pending = this._callNamedService("input_text.set_value", {
         entity_id: entityId,
-        value: serialized
+        value: serializedTrim
       });
+      if (pending && typeof pending.then === "function") {
+        pending.then(() => {
+          this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
+        }).catch((err) => {
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
+          }
+        });
+      } else {
+        this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
+      }
     }
     _clearSharedCleaningSession() {
       const entityId = this._getSharedCleaningSessionEntityId();
@@ -53087,7 +53098,7 @@
         return null;
       }
       const mode = ["rooms", "zone"].includes(session.mode) ? session.mode : "";
-      const activeMode = ["all", "rooms", "zone", "goto"].includes(session.activeMode) ? session.activeMode : "";
+      const activeMode = ["all", "rooms", "zone", "goto", "routines"].includes(session.activeMode) ? session.activeMode : "";
       const activeRoomIds = arrayFromMaybe2(session.activeRoomIds).map((item) => String(item || "").trim()).filter(Boolean);
       const activeZones = arrayFromMaybe2(session.activeZones).map((zone) => parseZoneRect(zone)).filter(Boolean);
       const selectedRoomIds = arrayFromMaybe2(session.selectedRoomIds).map((item) => String(item || "").trim()).filter(Boolean);
@@ -55170,12 +55181,18 @@
       const domains = Array.isArray(security.allowed_service_domains) ? security.allowed_service_domains.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
       const services = Array.isArray(security.allowed_services) ? security.allowed_services.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
       if (!domains.length && !services.length) {
-        return false;
+        return true;
       }
       return services.includes(normalizedService) || domains.includes(domain);
     }
     _callNamedService(service, data = {}, target = null) {
-      if (!this._hass || !service || !this._isServiceAllowed(service)) {
+      if (!this._hass || !service) {
+        return;
+      }
+      const svcLower = String(service).trim().toLowerCase();
+      const targetEntity = String(data?.entity_id || "").trim();
+      const persistenceBypass = svcLower === "input_text.set_value" && targetEntity && targetEntity === this._getSharedCleaningSessionEntityId();
+      if (!persistenceBypass && !this._isServiceAllowed(service)) {
         return;
       }
       const [domain, serviceName] = String(service).split(".");
@@ -57964,20 +57981,22 @@
       const placeholder = host.dataset.placeholder || "";
       const domains = String(host.dataset.domains || "").split(",").map((domain) => domain.trim()).filter(Boolean);
       let control = null;
-      if (customElements.get("ha-selector")) {
-        const entitySelector = domains.length ? { domain: domains.length === 1 ? domains[0] : domains } : {};
+      if (customElements.get("ha-entity-picker")) {
+        control = document.createElement("ha-entity-picker");
+        if (domains.length) {
+          control.includeDomains = domains;
+          control.entityFilter = (stateObj) => domains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+        }
+        control.allowCustomEntity = true;
+        if (placeholder) {
+          control.setAttribute("placeholder", placeholder);
+        }
+      } else if (customElements.get("ha-selector")) {
         control = document.createElement("ha-selector");
+        const entitySelector = domains.length === 1 ? { domain: domains[0] } : domains.length > 1 ? { domain: domains } : {};
         control.selector = { entity: entitySelector };
         if (placeholder) {
           control.setAttribute("label", placeholder);
-        }
-      } else if (customElements.get("ha-entity-picker")) {
-        control = document.createElement("ha-entity-picker");
-        control.includeDomains = domains;
-        control.allowCustomEntity = true;
-        control.entityFilter = (stateObj) => !domains.length || domains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
-        if (placeholder) {
-          control.setAttribute("placeholder", placeholder);
         }
       } else {
         control = document.createElement("select");
@@ -57994,7 +58013,9 @@
       }
       control.dataset.field = field;
       control.dataset.value = nextValue;
-      control.hass = this._hass;
+      if ("hass" in control) {
+        control.hass = this._hass;
+      }
       if ("value" in control) {
         control.value = nextValue;
       }
@@ -58182,6 +58203,13 @@
           font-weight: 600;
         }
 
+        .editor-field__hint {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          font-weight: 500;
+          line-height: 1.45;
+        }
+
         .editor-field input,
         .editor-field select,
         .editor-field textarea {
@@ -58325,7 +58353,22 @@
         { value: "send_command", label: "Send command" }
       ])}
             ${this._renderEntityPickerField("Entidad calibracion", "calibration_source.entity", config.calibration_source?.entity, { domains: ["camera", "image", "sensor"] })}
-            ${this._renderEntityPickerField("Helper sesion compartida", "shared_cleaning_session_entity", config.shared_cleaning_session_entity, { domains: ["input_text"] })}
+            <div class="editor-field editor-field--full">
+              <span>${escapeHtml11(this._editorLabel("Helper input_text (sesión compartida)"))}</span>
+              <div
+                class="editor-control-host"
+                data-mounted-control="entity"
+                data-field="shared_cleaning_session_entity"
+                data-domains="input_text"
+                data-value="${escapeHtml11(String(config.shared_cleaning_session_entity ?? ""))}"
+                data-placeholder="${escapeHtml11("input_text.roborock_session")}"
+              ></div>
+              <span class="editor-field__hint">${escapeHtml11(
+        this._editorLabel(
+          "Opcional: guarda selección de habitaciones, modo y repeticiones en este helper para recuperarlas entre dispositivos. Crea un input_text en YAML y elígelo aquí."
+        )
+      )}</span>
+            </div>
           </div>
         </section>
 
@@ -70785,9 +70828,2883 @@
     preview: true
   });
 
+  // nodalia-calendar-card.js
+  var CARD_TAG17 = "nodalia-calendar-card";
+  var EDITOR_TAG17 = "nodalia-calendar-card-editor";
+  var COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
+  var VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
+  var DEFAULT_CONFIG17 = {
+    title: "Calendario",
+    icon: "mdi:calendar-month",
+    calendars: [],
+    time_range: "1w",
+    days_to_show: 7,
+    max_visible_events: 2,
+    refresh_interval: 300,
+    show_completed: false,
+    allow_complete: true,
+    shared_completed_events_entity: "",
+    tint_auto: true,
+    animations: {
+      enabled: true,
+      content_duration: 260
+    },
+    styles: {
+      card: {
+        background: "var(--ha-card-background, var(--card-background-color))",
+        border: "1px solid var(--divider-color)",
+        border_radius: "28px",
+        box_shadow: "var(--ha-card-box-shadow)",
+        padding: "14px",
+        gap: "12px"
+      },
+      icon: {
+        background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
+        on_color: "color-mix(in srgb, var(--primary-color) 52%, var(--primary-text-color))",
+        off_color: "color-mix(in srgb, var(--primary-text-color) 62%, var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 48%, transparent)))",
+        size: "38px"
+      },
+      tint: {
+        color: "var(--primary-color)"
+      },
+      title_size: "17px",
+      event_size: "13px",
+      chip_height: "24px",
+      chip_font_size: "11px",
+      chip_padding: "0 9px",
+      chip_size: "11px"
+    }
+  };
+  function deepClone17(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+  function isObject17(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+  function mergeConfig17(base, override) {
+    if (Array.isArray(base)) {
+      return Array.isArray(override) ? deepClone17(override) : deepClone17(base);
+    }
+    if (!isObject17(base)) {
+      return override === void 0 ? base : override;
+    }
+    const out = {};
+    const keys = /* @__PURE__ */ new Set([...Object.keys(base), ...Object.keys(override || {})]);
+    keys.forEach((key) => {
+      const baseValue = base[key];
+      const overrideValue = override ? override[key] : void 0;
+      if (overrideValue === void 0) {
+        out[key] = deepClone17(baseValue);
+        return;
+      }
+      if (isObject17(baseValue) && isObject17(overrideValue)) {
+        out[key] = mergeConfig17(baseValue, overrideValue);
+        return;
+      }
+      out[key] = deepClone17(overrideValue);
+    });
+    return out;
+  }
+  function compactCalendarConfig(value) {
+    if (Array.isArray(value)) {
+      return value.map((item) => compactCalendarConfig(item)).filter((item) => item !== void 0);
+    }
+    if (isObject17(value)) {
+      const compacted = {};
+      Object.entries(value).forEach(([key, item]) => {
+        const cleaned = compactCalendarConfig(item);
+        const isEmptyObject = isObject17(cleaned) && Object.keys(cleaned).length === 0;
+        if (cleaned !== void 0 && !isEmptyObject) {
+          compacted[key] = cleaned;
+        }
+      });
+      return compacted;
+    }
+    if (value === "" || value === null || value === void 0) {
+      return void 0;
+    }
+    return value;
+  }
+  function sanitizeCalendarTint(value) {
+    const s = String(value ?? "").trim();
+    if (!s) {
+      return "";
+    }
+    if (/^#[0-9a-f]{3,8}$/i.test(s)) {
+      return s;
+    }
+    if (/^rgba?\(/i.test(s) && s.length < 140) {
+      return s;
+    }
+    if (/^color-mix\(/i.test(s) && s.length < 240) {
+      return s;
+    }
+    if (/^var\(--[a-zA-Z0-9_-]+\)$/i.test(s)) {
+      return s;
+    }
+    return "";
+  }
+  function daysFromTimeRange(tr) {
+    const map = { "3d": 3, "1w": 7, "2w": 14, "1m": 31 };
+    return map[tr] || 7;
+  }
+  function normalizeCalendarEntries(calendars) {
+    if (!Array.isArray(calendars)) {
+      return [];
+    }
+    const out = [];
+    calendars.forEach((raw) => {
+      if (typeof raw === "string") {
+        out.push({
+          entity: String(raw ?? "").trim(),
+          label: "",
+          tint: ""
+        });
+        return;
+      }
+      if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+        out.push({
+          entity: String(raw.entity ?? "").trim(),
+          label: String(raw.label ?? "").trim(),
+          tint: sanitizeCalendarTint(raw.tint)
+        });
+      }
+    });
+    return out;
+  }
+  function normalizeConfig17(config) {
+    const normalized = mergeConfig17(DEFAULT_CONFIG17, config || {});
+    normalized.calendars = normalizeCalendarEntries(normalized.calendars);
+    let timeRange = String(normalized.time_range || "").trim();
+    if (!VALID_TIME_RANGES.includes(timeRange)) {
+      const legacyDays = Number(normalized.days_to_show);
+      if (Number.isFinite(legacyDays)) {
+        if (legacyDays <= 3) {
+          timeRange = "3d";
+        } else if (legacyDays <= 7) {
+          timeRange = "1w";
+        } else if (legacyDays <= 14) {
+          timeRange = "2w";
+        } else {
+          timeRange = "1m";
+        }
+      } else {
+        timeRange = DEFAULT_CONFIG17.time_range;
+      }
+    }
+    normalized.time_range = timeRange;
+    normalized.days_to_show = Math.min(62, Math.max(1, daysFromTimeRange(timeRange)));
+    normalized.shared_completed_events_entity = String(normalized.shared_completed_events_entity ?? "").trim();
+    normalized.max_visible_events = Math.min(
+      12,
+      Math.max(1, Number(normalized.max_visible_events) || DEFAULT_CONFIG17.max_visible_events)
+    );
+    normalized.refresh_interval = Math.min(3600, Math.max(30, Number(normalized.refresh_interval) || DEFAULT_CONFIG17.refresh_interval));
+    if (!normalized.styles.chip_font_size && normalized.styles.chip_size) {
+      normalized.styles.chip_font_size = normalized.styles.chip_size;
+    }
+    const iconStyle = normalized.styles?.icon;
+    if (iconStyle && iconStyle.color && !iconStyle.on_color) {
+      iconStyle.on_color = iconStyle.color;
+    }
+    return normalized;
+  }
+  function calendarExitDurationMs(contentDuration) {
+    const base = Math.min(1600, Math.max(120, Number(contentDuration) || DEFAULT_CONFIG17.animations.content_duration));
+    return Math.min(640, Math.max(320, Math.round(base * 0.62)));
+  }
+  function timeRangeChipLabel(tr) {
+    const labels = {
+      "3d": "3 dias",
+      "1w": "1 semana",
+      "2w": "2 semanas",
+      "1m": "1 mes"
+    };
+    return labels[tr] || labels["1w"];
+  }
+  function escapeHtml17(value) {
+    return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+  }
+  function escapeSelectorValue16(value) {
+    return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+  }
+  function clamp16(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+  function resolveEditorColorValue12(value) {
+    const rawValue = String(value ?? "").trim();
+    if (!rawValue || typeof document === "undefined") {
+      return "";
+    }
+    const probe = document.createElement("span");
+    probe.style.position = "fixed";
+    probe.style.opacity = "0";
+    probe.style.pointerEvents = "none";
+    probe.style.color = "";
+    probe.style.color = rawValue;
+    if (!probe.style.color) {
+      return rawValue;
+    }
+    (document.body || document.documentElement).appendChild(probe);
+    const resolved = getComputedStyle(probe).color;
+    probe.remove();
+    return resolved || rawValue;
+  }
+  function formatEditorHexChannel15(value) {
+    return clamp16(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+  }
+  function formatEditorColorFromHex15(hex, alpha = 1) {
+    const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+    if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+      return String(hex ?? "");
+    }
+    const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+    const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+    const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+    const safeAlpha = clamp16(Number(alpha), 0, 1);
+    if (safeAlpha >= 0.999) {
+      return `#${normalizedHex}`;
+    }
+    return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+  }
+  function getEditorColorModel15(value, fallbackValue = "#71c0ff") {
+    const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+    const resolvedValue = resolveEditorColorValue12(sourceValue) || resolveEditorColorValue12(fallbackValue) || "rgb(113, 192, 255)";
+    const channels = resolvedValue.match(/[\d.]+/g) || [];
+    const red = clamp16(Math.round(Number(channels[0] ?? 113)), 0, 255);
+    const green = clamp16(Math.round(Number(channels[1] ?? 192)), 0, 255);
+    const blue = clamp16(Math.round(Number(channels[2] ?? 255)), 0, 255);
+    const alpha = channels.length > 3 ? clamp16(Number(channels[3]), 0, 1) : 1;
+    const hex = `#${formatEditorHexChannel15(red)}${formatEditorHexChannel15(green)}${formatEditorHexChannel15(blue)}`;
+    return {
+      alpha,
+      hex,
+      resolved: resolvedValue,
+      source: sourceValue,
+      value: formatEditorColorFromHex15(hex, alpha)
+    };
+  }
+  function getEditorColorFallbackValue15(field) {
+    const normalizedField = String(field ?? "");
+    if (normalizedField.endsWith("styles.card.background")) {
+      return DEFAULT_CONFIG17.styles.card.background;
+    }
+    if (normalizedField.endsWith("styles.icon.background")) {
+      return DEFAULT_CONFIG17.styles.icon.background;
+    }
+    if (normalizedField.endsWith("styles.icon.on_color")) {
+      return DEFAULT_CONFIG17.styles.icon.on_color;
+    }
+    if (normalizedField.endsWith("styles.icon.off_color")) {
+      return DEFAULT_CONFIG17.styles.icon.off_color;
+    }
+    if (normalizedField.endsWith("styles.tint.color")) {
+      return DEFAULT_CONFIG17.styles.tint.color;
+    }
+    if (normalizedField.endsWith("background")) {
+      return "var(--ha-card-background)";
+    }
+    return "var(--info-color, #71c0ff)";
+  }
+  function formatDateLabel(date, locale) {
+    return new Intl.DateTimeFormat(locale, {
+      weekday: "short",
+      day: "2-digit",
+      month: "short"
+    }).format(date);
+  }
+  function formatTimeLabel(date, locale) {
+    return new Intl.DateTimeFormat(locale, {
+      hour: "2-digit",
+      minute: "2-digit"
+    }).format(date);
+  }
+  function parseCalendarDateOnlyLocal(raw) {
+    const s = String(raw ?? "").trim();
+    const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!dm) {
+      return null;
+    }
+    const y = Number(dm[1]);
+    const mo = Number(dm[2]) - 1;
+    const d = Number(dm[3]);
+    const local = new Date(y, mo, d, 12, 0, 0);
+    return Number.isFinite(local.getTime()) ? local : null;
+  }
+  function normalizeCalendarFetchResult(raw) {
+    if (Array.isArray(raw)) {
+      return raw;
+    }
+    if (raw && typeof raw === "object" && Array.isArray(raw.events)) {
+      return raw.events;
+    }
+    return [];
+  }
+  function eventDate(value) {
+    if (!value) {
+      return null;
+    }
+    if (typeof value === "string") {
+      const dayLocal = parseCalendarDateOnlyLocal(value);
+      if (dayLocal) {
+        return dayLocal;
+      }
+      const parsed = new Date(value);
+      return Number.isFinite(parsed.getTime()) ? parsed : null;
+    }
+    if (typeof value === "object") {
+      if (value.dateTime) {
+        const parsed = new Date(value.dateTime);
+        return Number.isFinite(parsed.getTime()) ? parsed : null;
+      }
+      if (value.date) {
+        const dayLocal = parseCalendarDateOnlyLocal(value.date);
+        if (dayLocal) {
+          return dayLocal;
+        }
+        const parsed = new Date(value.date);
+        return Number.isFinite(parsed.getTime()) ? parsed : null;
+      }
+      return null;
+    }
+    return null;
+  }
+  function eventIsAllDay(event) {
+    return Boolean(event?.start?.date && !event?.start?.dateTime);
+  }
+  function completionKey(event) {
+    const source = String(event?._entity || "");
+    const uid = String(event?.uid || event?.id || "");
+    const start = eventDate(event?.start)?.toISOString() || "";
+    const summary = String(event?.summary || "");
+    return `${source}|${uid}|${start}|${summary}`;
+  }
+  var NodaliaCalendarCard = class extends HTMLElement {
+    static getStubConfig() {
+      return deepClone17(DEFAULT_CONFIG17);
+    }
+    static getConfigElement() {
+      return document.createElement(EDITOR_TAG17);
+    }
+    constructor() {
+      super();
+      this.attachShadow({ mode: "open" });
+      this._config = normalizeConfig17(DEFAULT_CONFIG17);
+      this._hass = null;
+      this._events = [];
+      this._loading = false;
+      this._error = "";
+      this._refreshTimer = 0;
+      this._completed = /* @__PURE__ */ new Set();
+      this._hadHass = false;
+      this._lastRenderSignature = "";
+      this._calendarEntrancePlayed = false;
+      this._expandedOverlayEntrancePlayed = false;
+      this._expandedOpen = false;
+      this._expandedMonthDayKey = "";
+      this._completeExitKeys = /* @__PURE__ */ new Set();
+      this._completeExitTimers = /* @__PURE__ */ new Map();
+      this._onShadowClick = this._onShadowClick.bind(this);
+      this._onShadowKeydown = this._onShadowKeydown.bind(this);
+      this._onDocVisibility = this._onDocVisibility.bind(this);
+      this._lastSubmittedSharedCompletedValue = "";
+      this._lastSyncedSharedCompletedRaw = void 0;
+      this._completedMergedOnce = false;
+    }
+    _onDocVisibility() {
+      if (typeof document === "undefined" || document.visibilityState !== "visible") {
+        return;
+      }
+      if (!this._hass || !(this._config.calendars || []).some((c) => c && c.entity)) {
+        return;
+      }
+      this._refreshEvents();
+    }
+    async _fetchCalendarEventsViaRest(entityId, start, end) {
+      const hass = this._hass;
+      if (!hass?.auth?.fetchWithAuth || typeof hass.auth.fetchWithAuth !== "function") {
+        return [];
+      }
+      const qs = `start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
+      try {
+        const response = await hass.auth.fetchWithAuth(
+          `/api/calendars/${encodeURIComponent(entityId)}?${qs}`
+        );
+        if (!response.ok) {
+          return [];
+        }
+        const data = await response.json();
+        return normalizeCalendarFetchResult(data);
+      } catch (_error) {
+        return [];
+      }
+    }
+    _shouldShowEventInList(event) {
+      const config = this._config;
+      const key = completionKey(event);
+      const done = this._completed.has(key);
+      return config.show_completed || !done || this._completeExitKeys.has(key);
+    }
+    connectedCallback() {
+      this.shadowRoot?.addEventListener("click", this._onShadowClick);
+      this.shadowRoot?.addEventListener("keydown", this._onShadowKeydown);
+      if (typeof document !== "undefined") {
+        document.addEventListener("visibilitychange", this._onDocVisibility);
+      }
+      this._loadCompleted();
+      if (!this._hadHass) {
+        this._refreshEvents();
+      }
+    }
+    disconnectedCallback() {
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", this._onDocVisibility);
+      }
+      this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+      this.shadowRoot?.removeEventListener("keydown", this._onShadowKeydown);
+      if (this._refreshTimer) {
+        window.clearTimeout(this._refreshTimer);
+        this._refreshTimer = 0;
+      }
+      this._completeExitTimers.forEach((tid) => window.clearTimeout(tid));
+      this._completeExitTimers.clear();
+      this._completeExitKeys.clear();
+    }
+    setConfig(config) {
+      const prevHelper = String(this._config?.shared_completed_events_entity || "").trim();
+      this._config = normalizeConfig17(config);
+      const nextHelper = String(this._config.shared_completed_events_entity || "").trim();
+      if (prevHelper !== nextHelper) {
+        this._completedMergedOnce = false;
+        this._lastSyncedSharedCompletedRaw = void 0;
+        this._lastSubmittedSharedCompletedValue = "";
+      }
+      this._loadCompleted();
+      if (this._hass && this._getSharedCompletedEntityId()) {
+        this._syncCompletedPersistenceFromHass();
+      }
+      this._refreshEvents();
+    }
+    _getSharedCompletedEntityId() {
+      const id = String(this._config?.shared_completed_events_entity || "").trim();
+      return id.startsWith("input_text.") ? id : "";
+    }
+    _getSharedCompletedPersistenceSignature() {
+      const id = this._getSharedCompletedEntityId();
+      if (!id || !this._hass?.states?.[id]) {
+        return "";
+      }
+      const st = this._hass.states[id];
+      const maxLen = Number(st.attributes?.max);
+      return `${id}${String(st.state ?? "")}${Number.isFinite(maxLen) ? maxLen : 0}`;
+    }
+    _getSharedCompletedMaxLength() {
+      const id = this._getSharedCompletedEntityId();
+      if (!id || !this._hass?.states?.[id]) {
+        return 255;
+      }
+      const max = Number(this._hass.states[id].attributes?.max);
+      return Number.isFinite(max) && max > 0 ? max : 255;
+    }
+    _readLocalCompletedKeysOnly() {
+      if (typeof window === "undefined" || !window.localStorage) {
+        return [];
+      }
+      try {
+        const raw = window.localStorage.getItem(COMPLETION_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed.map((k) => String(k)) : [];
+      } catch (_error) {
+        return [];
+      }
+    }
+    _syncCompletedPersistenceFromHass() {
+      const id = this._getSharedCompletedEntityId();
+      if (!id || !this._hass?.states?.[id]) {
+        return;
+      }
+      const st = this._hass.states[id];
+      const raw = String(st?.state ?? "");
+      if (["unknown", "unavailable"].includes(raw)) {
+        return;
+      }
+      if (raw === this._lastSyncedSharedCompletedRaw) {
+        return;
+      }
+      let parsed = [];
+      try {
+        const v = JSON.parse(raw || "[]");
+        if (!Array.isArray(v)) {
+          return;
+        }
+        parsed = v.map((k) => String(k));
+      } catch (_error) {
+        return;
+      }
+      this._lastSyncedSharedCompletedRaw = raw;
+      if (!this._completedMergedOnce) {
+        const local = this._readLocalCompletedKeysOnly();
+        this._completed = /* @__PURE__ */ new Set([...local, ...parsed]);
+        this._completedMergedOnce = true;
+        this._saveCompleted();
+        return;
+      }
+      this._completed = new Set(parsed);
+      try {
+        if (typeof window !== "undefined" && window.localStorage) {
+          window.localStorage.setItem(COMPLETION_STORAGE_KEY, JSON.stringify(parsed));
+        }
+      } catch (_error) {
+      }
+    }
+    set hass(hass) {
+      const hadHass = this._hadHass;
+      const prevLocale = this._hass?.locale?.language;
+      const prevLabelSig = hadHass ? this._getCalendarEntityLabelsSignature() : "";
+      const prevSharedSig = hadHass ? this._getSharedCompletedPersistenceSignature() : "";
+      this._hass = hass;
+      if (!hass) {
+        return;
+      }
+      if (!hadHass) {
+        this._hadHass = true;
+        this._syncCompletedPersistenceFromHass();
+        if (this._config.calendars.some((c) => c && c.entity)) {
+          this._refreshEvents();
+        } else {
+          this._renderIfChanged();
+        }
+        return;
+      }
+      const nextSharedSig = this._getSharedCompletedPersistenceSignature();
+      if (prevSharedSig !== nextSharedSig) {
+        this._syncCompletedPersistenceFromHass();
+        this._renderIfChanged(true);
+      }
+      const nextLabelSig = this._getCalendarEntityLabelsSignature();
+      if (prevLocale !== hass.locale?.language || prevLabelSig !== nextLabelSig) {
+        this._renderIfChanged(true);
+      }
+    }
+    _getLocale() {
+      return this._hass?.locale?.language || "es-ES";
+    }
+    _getCalendarEntityLabel(entityId) {
+      const id = String(entityId ?? "").trim();
+      if (!id) {
+        return "";
+      }
+      const friendly = String(this._hass?.states?.[id]?.attributes?.friendly_name ?? "").trim();
+      if (friendly) {
+        return friendly;
+      }
+      const short = id.includes(".") ? id.slice(id.indexOf(".") + 1) : id;
+      const humanized = short.replace(/_/g, " ").trim();
+      return humanized || id;
+    }
+    _getCalendarEntityLabelsSignature() {
+      const hass = this._hass;
+      if (!hass?.states) {
+        return "";
+      }
+      const ids = /* @__PURE__ */ new Set([
+        ...(this._config?.calendars || []).map((c) => c?.entity).filter(Boolean),
+        ...this._events.map((event) => event._entity).filter(Boolean)
+      ]);
+      const meta = (this._config?.calendars || []).map((c) => `${c?.entity || ""}${c?.label || ""}${c?.tint || ""}`).join("");
+      return [
+        [...ids].sort().map((id) => {
+          const friendly = String(hass.states[id]?.attributes?.friendly_name ?? "").trim();
+          return `${id}${friendly}`;
+        }).join(""),
+        meta
+      ].join("");
+    }
+    _getCalendarEntry(entityId) {
+      const id = String(entityId ?? "").trim();
+      const list = Array.isArray(this._config?.calendars) ? this._config.calendars : [];
+      return list.find((c) => c.entity === id) || { entity: id, label: "", tint: "" };
+    }
+    _getEventSubtitleForDisplay(entityId) {
+      const entry = this._getCalendarEntry(entityId);
+      if (entry.label) {
+        return entry.label;
+      }
+      return this._getCalendarEntityLabel(entityId);
+    }
+    _getCalendarTintDotCss(entityId) {
+      const tint = sanitizeCalendarTint(this._getCalendarEntry(entityId).tint);
+      return tint || "var(--primary-color)";
+    }
+    _capitalizeFirst(text) {
+      const s = String(text ?? "").trim();
+      if (!s) {
+        return "";
+      }
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+    _renderExpandedMonthDayDetail(events, focusDate, config, locale) {
+      const sorted = [...events].sort((left, right) => {
+        const a = eventDate(left?.start)?.getTime() || 0;
+        const b = eventDate(right?.start)?.getTime() || 0;
+        return a - b;
+      });
+      const longTitle = this._capitalizeFirst(
+        new Intl.DateTimeFormat(locale, {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric"
+        }).format(focusDate)
+      );
+      if (!sorted.length) {
+        return `
+        <div class="calendar-expanded__day-detail">
+          <div class="calendar-expanded__day-detail-toolbar">
+            <button type="button" class="calendar-expanded__day-back" data-action="month-day-back">
+              <ha-icon icon="mdi:chevron-left"></ha-icon>
+              <span>Mes</span>
+            </button>
+          </div>
+          <div class="calendar-expanded__day-detail-title">${escapeHtml17(longTitle)}</div>
+          <div class="calendar-expanded__day-empty">Sin eventos este día.</div>
+        </div>
+      `;
+      }
+      const eventsHtml = sorted.map((ev) => this._renderSingleEventHtml(ev, config, locale)).join("");
+      return `
+      <div class="calendar-expanded__day-detail">
+        <div class="calendar-expanded__day-detail-toolbar">
+          <button type="button" class="calendar-expanded__day-back" data-action="month-day-back">
+            <ha-icon icon="mdi:chevron-left"></ha-icon>
+            <span>Mes</span>
+          </button>
+        </div>
+        <div class="calendar-expanded__day-detail-title">${escapeHtml17(longTitle)}</div>
+        <div class="calendar-expanded__day-detail-scroll">${eventsHtml}</div>
+      </div>
+    `;
+    }
+    _expandedLayoutKind(timeRange) {
+      const tr = timeRange || DEFAULT_CONFIG17.time_range;
+      if (tr === "3d") {
+        return "column";
+      }
+      if (tr === "1m") {
+        return "month";
+      }
+      return "horizontal";
+    }
+    _groupsByDayKey(groups) {
+      const map = /* @__PURE__ */ new Map();
+      groups.forEach((group) => {
+        const ev = group.events[0];
+        const d = ev ? eventDate(ev.start) : null;
+        if (d) {
+          map.set(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`, group);
+        }
+      });
+      return map;
+    }
+    _weekdayHeadersMondayFirst(locale) {
+      const refMonday = new Date(2024, 0, 1);
+      return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(refMonday.getTime() + i * 864e5);
+        return new Intl.DateTimeFormat(locale, { weekday: "short" }).format(d);
+      });
+    }
+    _renderSingleEventHtml(event, config, locale, options = {}) {
+      const compact = options.compact === true;
+      const doneKey = completionKey(event);
+      const done = this._completed.has(doneKey);
+      const start = eventDate(event.start);
+      const timeLabel = eventIsAllDay(event) ? "Todo el dia" : start ? formatTimeLabel(start, locale) : "--:--";
+      const summary = String(event.summary || event.message || "Evento sin titulo");
+      const subtitle = this._getEventSubtitleForDisplay(event._entity);
+      const tintRaw = sanitizeCalendarTint(this._getCalendarEntry(event._entity).tint);
+      const tintClass = tintRaw ? " calendar-event--tinted" : "";
+      const tintStyle = tintRaw ? ` style="--cal-tint:${escapeHtml17(tintRaw)}"` : "";
+      const compactClass = compact ? " calendar-event--compact" : "";
+      const exiting = this._completeExitKeys.has(doneKey);
+      const exitClass = exiting ? " calendar-event--exit" : "";
+      return `
+      <div class="calendar-event ${done ? "is-completed" : ""}${tintClass}${compactClass}${exitClass}"${tintStyle}>
+        <div class="calendar-event__time">${escapeHtml17(timeLabel)}</div>
+        <div class="calendar-event__summary">
+          ${escapeHtml17(summary)}
+          ${subtitle ? `<small>${escapeHtml17(subtitle)}</small>` : ""}
+        </div>
+        ${config.allow_complete ? `<button type="button" class="calendar-event__done" data-action="toggle-complete" data-key="${escapeHtml17(doneKey)}">${done ? "Hecho" : "Marcar"}</button>` : ""}
+      </div>
+    `;
+    }
+    _renderExpandedBody(groups, config, locale) {
+      const tr = config.time_range || DEFAULT_CONFIG17.time_range;
+      const mode = this._expandedLayoutKind(tr);
+      if (mode === "month") {
+        const now = /* @__PURE__ */ new Date();
+        const y = now.getFullYear();
+        const m = now.getMonth();
+        const first = new Date(y, m, 1);
+        const last = new Date(y, m + 1, 0);
+        const daysInMonth = last.getDate();
+        const leading = (first.getDay() + 6) % 7;
+        const map = this._groupsByDayKey(groups);
+        const title = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(first);
+        const headers = this._weekdayHeadersMondayFirst(locale);
+        const cells = [];
+        for (let i = 0; i < leading; i += 1) {
+          cells.push({ kind: "pad" });
+        }
+        for (let d = 1; d <= daysInMonth; d += 1) {
+          cells.push({ kind: "day", day: d, date: new Date(y, m, d) });
+        }
+        while (cells.length % 7 !== 0) {
+          cells.push({ kind: "pad" });
+        }
+        if (this._expandedMonthDayKey) {
+          const group = map.get(this._expandedMonthDayKey);
+          const rawParts = String(this._expandedMonthDayKey).split("-");
+          const py = Number(rawParts[0]);
+          const pm = Number(rawParts[1]);
+          const pd = Number(rawParts[2]);
+          if (Number.isFinite(py) && Number.isFinite(pm) && Number.isFinite(pd) && py === y && pm === m && rawParts.length === 3) {
+            const focusDate = new Date(py, pm, pd);
+            const dayEvents = Array.isArray(group?.events) ? group.events : [];
+            return this._renderExpandedMonthDayDetail(dayEvents, focusDate, config, locale);
+          }
+          this._expandedMonthDayKey = "";
+        }
+        return `
+        <div class="calendar-expanded__month">
+          <div class="calendar-expanded__month-banner">${escapeHtml17(title)}</div>
+          <div class="calendar-expanded__month-matrix-wrap">
+            <div class="calendar-expanded__month-matrix">
+              <div class="calendar-expanded__month-weekdays">
+                ${headers.map((h) => `<div class="calendar-expanded__month-weekday">${escapeHtml17(h)}</div>`).join("")}
+              </div>
+              <div class="calendar-expanded__month-grid">
+                ${cells.map((cell) => {
+          if (cell.kind === "pad") {
+            return `<div class="calendar-expanded__month-cell calendar-expanded__month-cell--pad"></div>`;
+          }
+          const key = `${cell.date.getFullYear()}-${cell.date.getMonth()}-${cell.date.getDate()}`;
+          const group = map.get(key);
+          let monthPeekInner = "";
+          if (group?.events?.length) {
+            const sortedDay = [...group.events].sort((a, b) => {
+              const ta = eventDate(a?.start)?.getTime() || 0;
+              const tb = eventDate(b?.start)?.getTime() || 0;
+              return ta - tb;
+            });
+            const headEv = sortedDay[0];
+            const tail = sortedDay.slice(1);
+            monthPeekInner += this._renderSingleEventHtml(headEv, config, locale, { compact: true });
+            if (tail.length) {
+              monthPeekInner += `<div class="calendar-expanded__month-cell-dots">${tail.map((ev) => {
+                const tint = this._getCalendarTintDotCss(ev._entity);
+                const summary = String(ev.summary || ev.message || "").trim();
+                const hint = summary || this._getEventSubtitleForDisplay(ev._entity);
+                return `<span class="calendar-expanded__month-cell-dot" style="--cal-dot:${escapeHtml17(tint)}" title="${escapeHtml17(hint)}"></span>`;
+              }).join("")}</div>`;
+            }
+          }
+          return `
+                      <div
+                        class="calendar-expanded__month-cell calendar-expanded__month-cell--day"
+                        data-action="open-month-day"
+                        data-day-key="${escapeHtml17(key)}"
+                        role="button"
+                        tabindex="0"
+                      >
+                        <div class="calendar-expanded__month-daynum">${cell.day}</div>
+                        <div class="calendar-expanded__month-events calendar-expanded__month-events--month-grid">
+                          ${monthPeekInner}
+                        </div>
+                      </div>
+                    `;
+        }).join("")}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      }
+      const rowClass = mode === "column" ? "calendar-expanded__column" : "calendar-expanded__horizontal";
+      return `
+      <div class="${rowClass}">
+        ${groups.map(
+        (group) => `
+          <div class="calendar-expanded__col">
+            <div class="calendar-expanded__col-label">${escapeHtml17(group.label)}</div>
+            <div class="calendar-expanded__col-events">
+              ${group.events.map((ev) => this._renderSingleEventHtml(ev, config, locale)).join("")}
+            </div>
+          </div>
+        `
+      ).join("")}
+      </div>
+    `;
+    }
+    _loadCompleted() {
+      this._completed = new Set(this._readLocalCompletedKeysOnly());
+    }
+    _saveCompleted() {
+      const sortedKeys = [...this._completed].sort();
+      const payload = JSON.stringify(sortedKeys);
+      if (typeof window !== "undefined" && window.localStorage) {
+        try {
+          window.localStorage.setItem(COMPLETION_STORAGE_KEY, payload);
+        } catch (_error) {
+        }
+      }
+      const entityId = this._getSharedCompletedEntityId();
+      if (!entityId || !this._hass?.callService) {
+        return;
+      }
+      const maxLen = this._getSharedCompletedMaxLength();
+      if (payload.length > maxLen) {
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn(
+            "Nodalia Calendar Card: la lista de eventos completados no cabe en el input_text (aumenta max en el helper o marca menos eventos)."
+          );
+        }
+        return;
+      }
+      const currentState = String(this._hass.states?.[entityId]?.state ?? "").trim();
+      if (payload === currentState) {
+        return;
+      }
+      try {
+        const result = this._hass.callService("input_text", "set_value", {
+          entity_id: entityId,
+          value: payload
+        });
+        if (result && typeof result.then === "function") {
+          result.then(() => {
+            this._lastSubmittedSharedCompletedValue = payload;
+          }).catch((err) => {
+            if (typeof console !== "undefined" && typeof console.warn === "function") {
+              console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
+            }
+          });
+        } else {
+          this._lastSubmittedSharedCompletedValue = payload;
+        }
+      } catch (err) {
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
+        }
+      }
+    }
+    _scheduleRefresh() {
+      if (this._refreshTimer) {
+        window.clearTimeout(this._refreshTimer);
+        this._refreshTimer = 0;
+      }
+      this._refreshTimer = window.setTimeout(() => {
+        this._refreshTimer = 0;
+        this._refreshEvents();
+      }, this._config.refresh_interval * 1e3);
+    }
+    _getRenderSignature() {
+      const config = this._config;
+      const styles = config.styles || DEFAULT_CONFIG17.styles;
+      const visibleEvents = this._events.filter((event) => this._shouldShowEventInList(event));
+      const eventKeys = visibleEvents.map((event) => {
+        const start = eventDate(event?.start)?.getTime() || 0;
+        return `${completionKey(event)}@${start}`;
+      }).join("|");
+      const completedSig = [...this._completed].sort().join("|");
+      const calendarSig = (config.calendars || []).map((c) => `${c.entity}${c.label}${c.tint}`).join("|");
+      return [
+        calendarSig,
+        config.title,
+        config.icon,
+        config.time_range || DEFAULT_CONFIG17.time_range,
+        config.days_to_show,
+        config.max_visible_events,
+        config.show_completed,
+        config.allow_complete,
+        config.shared_completed_events_entity || "",
+        config.tint_auto,
+        config.animations?.enabled,
+        config.animations?.content_duration,
+        styles.card?.background,
+        styles.card?.border,
+        styles.card?.border_radius,
+        styles.card?.box_shadow,
+        styles.card?.padding,
+        styles.card?.gap,
+        styles.title_size,
+        styles.event_size,
+        styles.chip_height,
+        styles.chip_font_size,
+        styles.chip_padding,
+        styles.chip_size,
+        styles.icon?.background,
+        styles.icon?.on_color,
+        styles.icon?.off_color,
+        styles.icon?.size,
+        styles.tint?.color,
+        this._getLocale(),
+        this._loading ? "1" : "0",
+        this._error,
+        eventKeys,
+        completedSig,
+        this._expandedOpen ? "1" : "0",
+        this._expandedMonthDayKey || "",
+        [...this._completeExitKeys].sort().join("|")
+      ].join("");
+    }
+    _renderIfChanged(force = false) {
+      const next = this._getRenderSignature();
+      if (!force && next === this._lastRenderSignature) {
+        return;
+      }
+      this._lastRenderSignature = next;
+      this._render();
+    }
+    async _refreshEvents() {
+      const calendarIds = (this._config.calendars || []).map((c) => c.entity).filter(Boolean);
+      if (!this._hass || !calendarIds.length) {
+        this._events = [];
+        this._loading = false;
+        this._error = "";
+        this._renderIfChanged(true);
+        return;
+      }
+      this._loading = true;
+      this._error = "";
+      this._renderIfChanged(true);
+      const hass = this._hass;
+      try {
+        const start = /* @__PURE__ */ new Date();
+        const end = new Date(start.getTime() + this._config.days_to_show * 24 * 60 * 60 * 1e3);
+        const all = [];
+        for (const entityId of calendarIds) {
+          const path = `calendars/${encodeURIComponent(entityId)}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
+          let rows = [];
+          try {
+            const raw = await hass.callApi("GET", path);
+            rows = normalizeCalendarFetchResult(raw);
+            if (!Array.isArray(raw)) {
+              const fallback = await this._fetchCalendarEventsViaRest(entityId, start, end);
+              if (fallback.length) {
+                rows = fallback;
+              }
+            }
+          } catch (_apiError) {
+            rows = await this._fetchCalendarEventsViaRest(entityId, start, end);
+          }
+          rows.forEach((item) => all.push({ ...item, _entity: entityId }));
+        }
+        all.sort((left, right) => {
+          const a = eventDate(left?.start)?.getTime() || 0;
+          const b = eventDate(right?.start)?.getTime() || 0;
+          return a - b;
+        });
+        this._events = all;
+      } catch (_error) {
+        this._error = "No se pudieron cargar eventos del calendario.";
+      } finally {
+        this._loading = false;
+        this._renderIfChanged(true);
+        this._scheduleRefresh();
+      }
+    }
+    _toggleCompleted(key) {
+      if (!key) {
+        return;
+      }
+      const config = this._config;
+      const exitMs = calendarExitDurationMs(config.animations?.content_duration);
+      if (this._completed.has(key)) {
+        const pending = this._completeExitTimers.get(key);
+        if (pending) {
+          window.clearTimeout(pending);
+          this._completeExitTimers.delete(key);
+        }
+        this._completeExitKeys.delete(key);
+        this._completed.delete(key);
+        this._saveCompleted();
+        this._renderIfChanged(true);
+        return;
+      }
+      this._completed.add(key);
+      this._saveCompleted();
+      const shouldExitAnimate = config.animations?.enabled !== false && !config.show_completed && !this._completeExitKeys.has(key);
+      if (!shouldExitAnimate) {
+        this._renderIfChanged(true);
+        return;
+      }
+      this._completeExitKeys.add(key);
+      this._renderIfChanged(true);
+      const tid = window.setTimeout(() => {
+        this._completeExitTimers.delete(key);
+        this._completeExitKeys.delete(key);
+        this._renderIfChanged(true);
+      }, exitMs);
+      this._completeExitTimers.set(key, tid);
+    }
+    _groupEvents(events) {
+      const locale = this._getLocale();
+      const groups = /* @__PURE__ */ new Map();
+      events.forEach((event) => {
+        const date = eventDate(event.start);
+        if (!date) {
+          return;
+        }
+        const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+        if (!groups.has(key)) {
+          groups.set(key, {
+            label: formatDateLabel(date, locale),
+            events: []
+          });
+        }
+        groups.get(key).events.push(event);
+      });
+      return [...groups.values()];
+    }
+    _render() {
+      if (!this.shadowRoot) {
+        return;
+      }
+      const config = this._config;
+      const styles = config.styles || DEFAULT_CONFIG17.styles;
+      const locale = this._getLocale();
+      const useAutoPrimaryTint = config.tint_auto !== false;
+      const accentColor = useAutoPrimaryTint ? "var(--primary-color)" : String(styles.tint?.color || DEFAULT_CONFIG17.styles.tint.color).trim() || "var(--primary-color)";
+      const baseCardBg = styles.card.background;
+      const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${baseCardBg}) 0%, color-mix(in srgb, ${accentColor} 10%, ${baseCardBg}) 52%, ${baseCardBg} 100%)`;
+      const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
+      const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
+      const cardBackground = onCardBackground;
+      const cardBorder = `1px solid ${onCardBorder}`;
+      const cardShadow = `${styles.card.box_shadow}, ${onCardShadow}`;
+      const iconBubbleBg = `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`;
+      const iconBubbleGlyph = String(styles.icon?.on_color || DEFAULT_CONFIG17.styles.icon.on_color);
+      const iconSize = styles.icon?.size || DEFAULT_CONFIG17.styles.icon.size;
+      const chipHeight = styles.chip_height || DEFAULT_CONFIG17.styles.chip_height;
+      const chipFontSize = styles.chip_font_size || styles.chip_size || DEFAULT_CONFIG17.styles.chip_font_size;
+      const chipPadding = styles.chip_padding || DEFAULT_CONFIG17.styles.chip_padding;
+      const animationDuration = Math.min(
+        1600,
+        Math.max(120, Number(config.animations?.content_duration) || DEFAULT_CONFIG17.animations.content_duration)
+      );
+      const exitDurationMs = calendarExitDurationMs(config.animations?.content_duration);
+      const maxVisibleEvents = Math.max(1, Number(config.max_visible_events) || DEFAULT_CONFIG17.max_visible_events);
+      const visibleEvents = this._events.filter((event) => this._shouldShowEventInList(event));
+      const groups = this._groupEvents(visibleEvents);
+      const hasEvents = visibleEvents.length > 0;
+      const playEntrance = config.animations?.enabled !== false && !this._calendarEntrancePlayed && !this._loading;
+      if (playEntrance) {
+        this._calendarEntrancePlayed = true;
+      }
+      const playExpandedPanelEntrance = config.animations?.enabled !== false && this._expandedOpen && !this._expandedOverlayEntrancePlayed;
+      if (playExpandedPanelEntrance) {
+        this._expandedOverlayEntrancePlayed = true;
+      }
+      this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display:block;
+          --calendar-exit-duration: ${exitDurationMs}ms;
+        }
+        * { box-sizing:border-box; }
+        ha-card {
+          background: ${cardBackground};
+          border: ${cardBorder};
+          border-radius: ${styles.card.border_radius};
+          box-shadow: ${cardShadow};
+          color: var(--primary-text-color);
+          display: block;
+          isolation: isolate;
+          overflow: hidden;
+          overscroll-behavior-y: contain;
+          position: relative;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+        ha-card::before {
+          background: linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0));
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+        ha-card::after {
+          background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
+          content: "";
+          inset: 0;
+          opacity: 1;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+        .calendar-card {
+          cursor: pointer;
+          display:grid;
+          gap:${styles.card.gap};
+          padding:${styles.card.padding};
+          position: relative;
+          z-index: 1;
+          ${playEntrance ? `animation: calendar-card-in ${animationDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
+        }
+        .calendar-header {
+          align-items:center;
+          display:flex;
+          justify-content:flex-start;
+          gap:10px;
+        }
+        .calendar-icon-bubble {
+          -webkit-tap-highlight-color: transparent;
+          align-items:center;
+          background:${iconBubbleBg};
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius:999px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.16);
+          color:${iconBubbleGlyph};
+          display:inline-flex;
+          flex:0 0 auto;
+          height:${iconSize};
+          justify-content:center;
+          line-height:0;
+          position:relative;
+          width:${iconSize};
+        }
+        .calendar-icon-bubble ha-icon {
+          --mdc-icon-size: calc(0.44 * ${iconSize});
+          color:${iconBubbleGlyph};
+          display:inline-flex;
+          height:calc(0.44 * ${iconSize});
+          left:50%;
+          position:absolute;
+          top:50%;
+          transform:translate(-50%, -50%);
+          width:calc(0.44 * ${iconSize});
+        }
+        .calendar-title {
+          font-size:${styles.title_size};
+          font-weight:700;
+          letter-spacing:-0.02em;
+          line-height:1.15;
+          min-width:0;
+        }
+        .calendar-chip {
+          align-items:center;
+          background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius:999px;
+          color:var(--secondary-text-color);
+          display:inline-flex;
+          flex:0 0 auto;
+          font-size:${chipFontSize};
+          font-weight:600;
+          line-height:1;
+          max-width:100%;
+          min-height:${chipHeight};
+          min-width:0;
+          overflow:hidden;
+          padding:${chipPadding};
+          text-overflow:ellipsis;
+          white-space:nowrap;
+        }
+        .calendar-header__spacer {
+          flex:1 1 auto;
+        }
+        .calendar-empty,
+        .calendar-loading,
+        .calendar-error {
+          color:var(--secondary-text-color);
+          font-size:${styles.event_size};
+          line-height:1.45;
+          padding:8px 2px;
+        }
+        .calendar-error { color: var(--error-color); }
+        .calendar-day {
+          display:grid;
+          gap:8px;
+        }
+        .calendar-events-scroll {
+          display:grid;
+          gap:10px;
+          max-height: calc(${maxVisibleEvents} * 64px + 28px);
+          overflow-y:auto;
+          overscroll-behavior-y: contain;
+          padding-right: 2px;
+          touch-action: pan-y;
+          -webkit-overflow-scrolling: touch;
+        }
+        .calendar-day__label {
+          color:var(--secondary-text-color);
+          font-size:11px;
+          font-weight:700;
+          letter-spacing:0.08em;
+          text-transform:uppercase;
+        }
+        .calendar-event {
+          align-items:center;
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 14px;
+          display:grid;
+          gap:8px;
+          grid-template-columns:auto 1fr auto;
+          min-height:46px;
+          padding:8px 10px;
+        }
+        .calendar-event--tinted {
+          background: color-mix(in srgb, var(--cal-tint) 10%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
+          border-color: color-mix(in srgb, var(--cal-tint) 32%, var(--divider-color));
+        }
+        .calendar-event--compact {
+          gap:4px;
+          grid-template-columns: 1fr;
+          min-height: 0;
+          padding:6px 8px;
+        }
+        .calendar-event--compact .calendar-event__time {
+          font-size:10px;
+          min-width: 0;
+        }
+        .calendar-event--compact .calendar-event__summary {
+          white-space: normal;
+          font-size:11px;
+        }
+        .calendar-event--compact .calendar-event__done {
+          display:none;
+        }
+        .calendar-event.is-completed {
+          opacity:0.62;
+        }
+        .calendar-event.is-completed.calendar-event--exit {
+          opacity: 1;
+        }
+        .calendar-event--exit {
+          animation: calendar-event-complete-out var(--calendar-exit-duration, 420ms) cubic-bezier(0.22, 0.82, 0.28, 1) forwards;
+          pointer-events: none;
+          transform-origin: center center;
+          will-change: transform, opacity;
+        }
+        .calendar-event--exit .calendar-event__done {
+          opacity: 0.25;
+          transition: opacity 180ms ease;
+        }
+        @keyframes calendar-event-complete-out {
+          0% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+          18% {
+            opacity: 1;
+            transform: translateY(-2px) scale(1.008);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-14px) scale(0.94);
+          }
+        }
+        .calendar-event__time {
+          color:var(--secondary-text-color);
+          font-size:11px;
+          font-weight:700;
+          min-width:52px;
+        }
+        .calendar-event__summary {
+          font-size:${styles.event_size};
+          line-height:1.35;
+          overflow:hidden;
+          text-overflow:ellipsis;
+          white-space:nowrap;
+        }
+        .calendar-event__summary small {
+          color:var(--secondary-text-color);
+          display:block;
+          font-size:11px;
+          margin-top:2px;
+        }
+        .calendar-event__done {
+          align-items:center;
+          appearance:none;
+          background:transparent;
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+          border-radius:999px;
+          color:var(--secondary-text-color);
+          cursor:pointer;
+          display:inline-flex;
+          font-size:11px;
+          font-weight:700;
+          min-height:28px;
+          padding:0 9px;
+        }
+        @keyframes calendar-card-in {
+          0% {
+            opacity: 0;
+            transform: translateY(10px) scale(0.988);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        .calendar-expanded {
+          --calendar-expanded-accent: var(--primary-color);
+          inset: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: fixed;
+          transition: opacity 220ms cubic-bezier(0.16, 0.84, 0.22, 1);
+          z-index: 120;
+        }
+        .calendar-expanded.is-open {
+          opacity: 1;
+          pointer-events: auto;
+        }
+        .calendar-expanded__backdrop {
+          -webkit-backdrop-filter: blur(12px);
+          backdrop-filter: blur(12px);
+          background: rgba(0, 0, 0, 0.32);
+          inset: 0;
+          position: absolute;
+        }
+        .calendar-expanded__panel {
+          background:
+            linear-gradient(180deg, color-mix(in srgb, var(--calendar-expanded-accent) 18%, rgba(255, 255, 255, 0.08)), rgba(255, 255, 255, 0.02)),
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, rgba(255, 255, 255, 0.02));
+          border: 1px solid color-mix(in srgb, var(--calendar-expanded-accent) 34%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
+          border-radius: 16px;
+          box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+          color: var(--primary-text-color);
+          display: grid;
+          gap: 10px;
+          isolation: isolate;
+          left: 50%;
+          max-height: min(88vh, 920px);
+          max-width: min(96vw, 1100px);
+          overflow: hidden;
+          padding: 11px 12px 13px;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: min(96vw, 1100px);
+        }
+        .calendar-expanded__panel--entrance {
+          animation: calendar-expanded-panel-in calc(${animationDuration}ms * 0.55) cubic-bezier(0.16, 0.84, 0.22, 1) both;
+        }
+        .calendar-expanded__toolbar {
+          align-items: flex-start;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+          min-height: 28px;
+          padding-right: 2px;
+          position: relative;
+        }
+        .calendar-expanded__toolbar-title {
+          flex: 1 1 auto;
+          font-size: ${styles.title_size};
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          line-height: 1.2;
+          min-width: 0;
+          padding-right: 28px;
+        }
+        .calendar-expanded__close {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--secondary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 24px;
+          justify-content: center;
+          line-height: 0;
+          margin: 0;
+          padding: 0;
+          position: absolute;
+          right: 0;
+          top: 0;
+          width: 24px;
+        }
+        .calendar-expanded__close ha-icon {
+          --mdc-icon-size: 14px;
+        }
+        .calendar-expanded__body {
+          max-height: min(76vh, 820px);
+          overflow: auto;
+          overscroll-behavior: contain;
+          padding-right: 2px;
+          touch-action: pan-y;
+        }
+        @keyframes calendar-expanded-panel-in {
+          0% {
+            clip-path: inset(0 42% 58% 42% round 16px);
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.97);
+          }
+          68% {
+            clip-path: inset(0 4% 2% 4% round 16px);
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+          }
+          100% {
+            clip-path: inset(0 0 0 0 round 16px);
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+          }
+        }
+        .calendar-expanded__horizontal {
+          display: flex;
+          gap: 12px;
+          overflow-x: auto;
+          padding-bottom: 8px;
+          scroll-snap-type: x proximity;
+        }
+        .calendar-expanded__horizontal .calendar-expanded__col {
+          flex: 0 0 min(240px, 78vw);
+          max-width: min(260px, 85vw);
+          scroll-snap-align: start;
+        }
+        .calendar-expanded__column {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+        .calendar-expanded__column .calendar-expanded__col {
+          width: 100%;
+        }
+        .calendar-expanded__col-label {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          margin-bottom: 8px;
+          text-transform: uppercase;
+        }
+        .calendar-expanded__col-events {
+          display: grid;
+          gap: 10px;
+        }
+        .calendar-expanded__month-banner {
+          font-size: ${styles.title_size};
+          font-weight: 700;
+          margin-bottom: 8px;
+          text-transform: capitalize;
+        }
+        .calendar-expanded__month {
+          --cal-month-cell-min: 88px;
+          --cal-month-cell-h: 122px;
+          --cal-month-gap: 6px;
+        }
+        .calendar-expanded__month-matrix-wrap {
+          margin-left: -2px;
+          margin-right: -2px;
+          overflow-x: auto;
+          overscroll-behavior-x: contain;
+          padding-bottom: 6px;
+          touch-action: pan-x pan-y;
+          -webkit-overflow-scrolling: touch;
+        }
+        .calendar-expanded__month-matrix {
+          display: flex;
+          flex-direction: column;
+          gap: var(--cal-month-gap);
+          min-width: max(100%, calc(7 * var(--cal-month-cell-min) + 6 * var(--cal-month-gap)));
+          width: 100%;
+        }
+        .calendar-expanded__month-weekdays {
+          color: var(--secondary-text-color);
+          display: grid;
+          font-size: 10px;
+          font-weight: 700;
+          gap: var(--cal-month-gap);
+          grid-template-columns: repeat(7, minmax(var(--cal-month-cell-min), 1fr));
+          letter-spacing: 0.06em;
+          margin-bottom: 0;
+          text-align: center;
+          text-transform: uppercase;
+        }
+        .calendar-expanded__month-grid {
+          display: grid;
+          gap: var(--cal-month-gap);
+          grid-auto-rows: var(--cal-month-cell-h, 122px);
+          grid-template-columns: repeat(7, minmax(var(--cal-month-cell-min), 1fr));
+        }
+        .calendar-expanded__month-cell {
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 14px;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          height: 100%;
+          max-height: var(--cal-month-cell-h, 122px);
+          min-height: 0;
+          min-width: 0;
+          overflow: hidden;
+          padding: 6px;
+        }
+        .calendar-expanded__month-cell--pad {
+          background: transparent;
+          border-color: transparent;
+          height: auto;
+          max-height: none;
+          min-height: 0;
+          padding: 0;
+        }
+        .calendar-expanded__month-daynum {
+          color: var(--secondary-text-color);
+          flex: 0 0 auto;
+          font-size: 11px;
+          font-weight: 800;
+          line-height: 1.2;
+        }
+        .calendar-expanded__month-events {
+          display: flex;
+          flex: 1 1 0;
+          flex-direction: column;
+          gap: 4px;
+          min-height: 0;
+          overflow: hidden;
+        }
+        .calendar-expanded__month-events--month-grid {
+          justify-content: flex-start;
+        }
+        .calendar-expanded__month-events > .calendar-event {
+          flex-shrink: 0;
+        }
+        .calendar-expanded__month-cell-dots {
+          display: flex;
+          flex-shrink: 0;
+          flex-wrap: wrap;
+          gap: 4px;
+          justify-content: center;
+          padding-top: 2px;
+        }
+        .calendar-expanded__month-cell-dot {
+          background: var(--cal-dot, var(--primary-color));
+          border-radius: 999px;
+          box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
+            0 1px 3px rgba(0, 0, 0, 0.1);
+          flex: 0 0 auto;
+          height: 6px;
+          width: 6px;
+        }
+        .calendar-expanded__month-events .calendar-event--compact {
+          min-height: unset;
+        }
+        .calendar-expanded__month-events .calendar-event--compact .calendar-event__summary {
+          line-height: 1.25;
+          overflow-wrap: anywhere;
+          word-break: break-word;
+        }
+        .calendar-expanded__month-events .calendar-event--compact .calendar-event__summary small {
+          display: block;
+          line-height: 1.2;
+          margin-top: 2px;
+          opacity: 0.85;
+        }
+        .calendar-expanded__month-cell--day {
+          -webkit-tap-highlight-color: transparent;
+          cursor: pointer;
+        }
+        .calendar-expanded__month-cell--day:focus-visible {
+          outline: 2px solid color-mix(in srgb, var(--primary-color) 55%, transparent);
+          outline-offset: 2px;
+        }
+        .calendar-expanded__day-detail {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          min-height: 0;
+        }
+        .calendar-expanded__day-detail-toolbar {
+          display: flex;
+          justify-content: flex-start;
+        }
+        .calendar-expanded__day-back {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          gap: 4px;
+          font: inherit;
+          font-size: 13px;
+          font-weight: 700;
+          min-height: 36px;
+          padding: 0 12px 0 8px;
+        }
+        .calendar-expanded__day-back ha-icon {
+          --mdc-icon-size: 20px;
+          margin-left: -2px;
+        }
+        .calendar-expanded__day-detail-title {
+          font-size: ${styles.title_size};
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          line-height: 1.2;
+          text-transform: capitalize;
+        }
+        .calendar-expanded__day-detail-scroll {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          max-height: min(46vh, 420px);
+          min-height: 0;
+          overflow-x: hidden;
+          overflow-y: auto;
+          overscroll-behavior-y: contain;
+          padding-right: 2px;
+          touch-action: pan-y;
+          -webkit-overflow-scrolling: touch;
+        }
+        .calendar-expanded__day-detail-scroll > .calendar-event {
+          grid-template-columns: auto 1fr auto;
+          min-height: 46px;
+        }
+        .calendar-expanded__day-empty {
+          color: var(--secondary-text-color);
+          font-size: ${styles.event_size};
+          line-height: 1.45;
+          padding: 12px 4px;
+        }
+        @media (max-width: 520px) {
+          .calendar-expanded__month {
+            --cal-month-cell-min: 92px;
+          }
+        }
+      </style>
+      <ha-card>
+        <div class="calendar-card">
+          <div class="calendar-header">
+            <span class="calendar-icon-bubble"><ha-icon icon="${escapeHtml17(config.icon || DEFAULT_CONFIG17.icon)}"></ha-icon></span>
+            <div class="calendar-title">${escapeHtml17(config.title)}</div>
+            <span class="calendar-header__spacer"></span>
+            <div class="calendar-chip">${escapeHtml17(timeRangeChipLabel(config.time_range || DEFAULT_CONFIG17.time_range))}</div>
+          </div>
+          ${this._loading ? `<div class="calendar-loading">Cargando eventos...</div>` : this._error ? `<div class="calendar-error">${escapeHtml17(this._error)}</div>` : !hasEvents ? `<div class="calendar-empty">No hay eventos en este rango.</div>` : `<div class="calendar-events-scroll">
+                      ${groups.map((group) => `
+                        <div class="calendar-day">
+                          <div class="calendar-day__label">${escapeHtml17(group.label)}</div>
+                          ${group.events.map((event) => this._renderSingleEventHtml(event, config, locale)).join("")}
+                        </div>
+                      `).join("")}
+                    </div>`}
+        </div>
+      </ha-card>
+      <div class="calendar-expanded ${this._expandedOpen ? "is-open" : ""}" style="--calendar-expanded-accent:${accentColor};" aria-hidden="${this._expandedOpen ? "false" : "true"}">
+        <div class="calendar-expanded__backdrop" data-action="expanded-backdrop"></div>
+        <div class="calendar-expanded__panel ${playExpandedPanelEntrance ? "calendar-expanded__panel--entrance" : ""}" role="dialog" aria-modal="true" aria-label="${escapeHtml17(config.title)}">
+          <div class="calendar-expanded__toolbar">
+            <div class="calendar-expanded__toolbar-title">${escapeHtml17(config.title)}</div>
+            <button type="button" class="calendar-expanded__close" data-action="close-expanded" aria-label="Cerrar">
+              <ha-icon icon="mdi:close"></ha-icon>
+            </button>
+          </div>
+          <div class="calendar-expanded__body">
+            ${this._loading ? `<div class="calendar-loading">Cargando eventos...</div>` : this._error ? `<div class="calendar-error">${escapeHtml17(this._error)}</div>` : !hasEvents ? `<div class="calendar-empty">No hay eventos en este rango.</div>` : this._renderExpandedBody(groups, config, locale)}
+          </div>
+        </div>
+      </div>
+    `;
+    }
+    _onShadowKeydown(event) {
+      if (!this._expandedOpen) {
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        if (this._expandedMonthDayKey) {
+          this._expandedMonthDayKey = "";
+          this._renderIfChanged(true);
+          return;
+        }
+        this._expandedOpen = false;
+        this._expandedOverlayEntrancePlayed = false;
+        this._renderIfChanged(true);
+        return;
+      }
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+      const path = event.composedPath();
+      const monthDayCell = path.find(
+        (node) => node instanceof HTMLElement && node.dataset?.action === "open-month-day" && node.classList?.contains("calendar-expanded__month-cell--day")
+      );
+      if (!(monthDayCell instanceof HTMLElement)) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      this._expandedMonthDayKey = monthDayCell.dataset.dayKey || "";
+      this._renderIfChanged(true);
+    }
+    _onShadowClick(event) {
+      const path = event.composedPath();
+      const toggleBtn = path.find(
+        (node) => node instanceof HTMLElement && node.dataset?.action === "toggle-complete"
+      );
+      if (toggleBtn instanceof HTMLElement) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._toggleCompleted(toggleBtn.dataset.key || "");
+        return;
+      }
+      const closeAction = path.find(
+        (node) => node instanceof HTMLElement && (node.dataset?.action === "close-expanded" || node.dataset?.action === "expanded-backdrop")
+      );
+      if (closeAction) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._expandedMonthDayKey = "";
+        this._expandedOpen = false;
+        this._expandedOverlayEntrancePlayed = false;
+        this._renderIfChanged(true);
+        return;
+      }
+      const monthDayBack = path.find(
+        (node) => node instanceof HTMLElement && node.dataset?.action === "month-day-back"
+      );
+      if (monthDayBack && this._expandedOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._expandedMonthDayKey = "";
+        this._renderIfChanged(true);
+        return;
+      }
+      const monthDayOpen = path.find(
+        (node) => node instanceof HTMLElement && node.dataset?.action === "open-month-day" && node.classList?.contains("calendar-expanded__month-cell--day")
+      );
+      if (monthDayOpen instanceof HTMLElement && this._expandedOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._expandedMonthDayKey = monthDayOpen.dataset.dayKey || "";
+        this._renderIfChanged(true);
+        return;
+      }
+      if (this._expandedOpen) {
+        return;
+      }
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest?.("button")) {
+        return;
+      }
+      if (!target?.closest?.(".calendar-card")) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      this._expandedMonthDayKey = "";
+      this._expandedOpen = true;
+      this._renderIfChanged(true);
+    }
+  };
+  var NodaliaCalendarCardEditor = class extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({ mode: "open" });
+      this._config = normalizeConfig17(DEFAULT_CONFIG17);
+      this._hass = null;
+      this._showAnimationSection = false;
+      this._showStyleSection = false;
+      this._entityOptionsSignature = "";
+      this._pendingEditorControlTags = /* @__PURE__ */ new Set();
+      this._onShadowInput = this._onShadowInput.bind(this);
+      this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+      this._onShadowClick = this._onShadowClick.bind(this);
+      this.shadowRoot.addEventListener("input", this._onShadowInput);
+      this.shadowRoot.addEventListener("change", this._onShadowInput);
+      this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
+      this.shadowRoot.addEventListener("click", this._onShadowClick);
+    }
+    set hass(hass) {
+      const nextSignature = this._getEntityOptionsSignature(hass);
+      const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+      this._hass = hass;
+      this._entityOptionsSignature = nextSignature;
+      if (shouldRender) {
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+        return;
+      }
+      this.shadowRoot?.querySelectorAll("ha-entity-picker, ha-selector, ha-icon-picker").forEach((el) => {
+        if ("hass" in el) {
+          el.hass = hass;
+        }
+      });
+    }
+    setConfig(config) {
+      const focusState = this._captureFocusState();
+      this._config = normalizeConfig17(config || {});
+      this._render();
+      this._restoreFocusState(focusState);
+    }
+    _getEntityOptionsSignature(hass = this._hass) {
+      if (window.NodaliaUtils?.editorStatesSignature) {
+        return window.NodaliaUtils.editorStatesSignature(hass, this._config?.language);
+      }
+      return String(Object.keys(hass?.states || {}).length);
+    }
+    _editorLabel(s) {
+      if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+        return s;
+      }
+      return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", s);
+    }
+    _emitConfig() {
+      const raw = deepClone17(this._config || DEFAULT_CONFIG17);
+      const stripped = typeof window !== "undefined" && window.NodaliaUtils?.stripEqualToDefaults ? window.NodaliaUtils.stripEqualToDefaults(raw, DEFAULT_CONFIG17) : raw;
+      const payload = compactCalendarConfig(
+        stripped !== void 0 && stripped !== null ? stripped : {}
+      );
+      this.dispatchEvent(
+        new CustomEvent("config-changed", {
+          bubbles: true,
+          composed: true,
+          detail: { config: payload }
+        })
+      );
+    }
+    _captureFocusState() {
+      const activeElement = this.shadowRoot?.activeElement;
+      if (!(activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement || activeElement instanceof HTMLSelectElement)) {
+        return null;
+      }
+      const dataset = activeElement.dataset || {};
+      const selector = dataset.field ? `[data-field="${escapeSelectorValue16(dataset.field)}"]` : null;
+      if (!selector) {
+        return null;
+      }
+      const supportsSelection = typeof activeElement.selectionStart === "number" && typeof activeElement.selectionEnd === "number";
+      return {
+        selector,
+        selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
+        selectionStart: supportsSelection ? activeElement.selectionStart : null,
+        type: activeElement.type
+      };
+    }
+    _restoreFocusState(focusState) {
+      if (!focusState?.selector || !this.shadowRoot) {
+        return;
+      }
+      const target = this.shadowRoot.querySelector(focusState.selector);
+      if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement)) {
+        return;
+      }
+      try {
+        target.focus({ preventScroll: true });
+      } catch (_error) {
+        target.focus();
+      }
+      const canRestoreSelection = focusState.type !== "checkbox" && typeof focusState.selectionStart === "number" && typeof focusState.selectionEnd === "number" && typeof target.setSelectionRange === "function";
+      if (!canRestoreSelection) {
+        return;
+      }
+      try {
+        target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+      } catch (_error) {
+      }
+    }
+    _watchEditorControlTag(tagName) {
+      if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+        return;
+      }
+      if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+        return;
+      }
+      this._pendingEditorControlTags.add(tagName);
+      customElements.whenDefined(tagName).then(() => {
+        this._pendingEditorControlTags.delete(tagName);
+        if (!this._hass || !this.shadowRoot) {
+          return;
+        }
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+      }).catch(() => {
+        this._pendingEditorControlTags.delete(tagName);
+      });
+    }
+    _ensureEditorControlsReady() {
+      this._watchEditorControlTag("ha-entity-picker");
+      this._watchEditorControlTag("ha-selector");
+      this._watchEditorControlTag("ha-icon-picker");
+    }
+    _setFieldValue(targetConfig, field, value) {
+      if (!field) {
+        return;
+      }
+      if (field.startsWith("calendars.")) {
+        const parts = field.split(".");
+        const index = Number(parts[1]);
+        if (!Number.isFinite(index) || index < 0) {
+          return;
+        }
+        if (!Array.isArray(targetConfig.calendars)) {
+          targetConfig.calendars = [];
+        }
+        while (targetConfig.calendars.length <= index) {
+          targetConfig.calendars.push({ entity: "", label: "", tint: "" });
+        }
+        if (parts.length >= 3) {
+          const key = parts[2];
+          let entry = targetConfig.calendars[index];
+          if (typeof entry === "string") {
+            entry = { entity: String(entry).trim(), label: "", tint: "" };
+          } else if (!entry || typeof entry !== "object") {
+            entry = { entity: "", label: "", tint: "" };
+          }
+          if (key === "entity") {
+            entry.entity = String(value ?? "").trim();
+          } else if (key === "label") {
+            entry.label = String(value ?? "").trim();
+          } else if (key === "tint") {
+            entry.tint = sanitizeCalendarTint(value);
+          }
+          targetConfig.calendars[index] = entry;
+          return;
+        }
+        targetConfig.calendars[index] = {
+          entity: String(value ?? "").trim(),
+          label: "",
+          tint: ""
+        };
+        return;
+      }
+      if (field.startsWith("styles.")) {
+        const parts = field.split(".");
+        let cursor = targetConfig;
+        for (let index = 0; index < parts.length - 1; index += 1) {
+          const key = parts[index];
+          if (!isObject17(cursor[key])) {
+            cursor[key] = {};
+          }
+          cursor = cursor[key];
+        }
+        cursor[parts[parts.length - 1]] = value;
+        return;
+      }
+      if (field.startsWith("animations.")) {
+        const key = field.split(".")[1];
+        if (!isObject17(targetConfig.animations)) {
+          targetConfig.animations = {};
+        }
+        targetConfig.animations[key] = value;
+        return;
+      }
+      targetConfig[field] = value;
+    }
+    _readFieldValue(input) {
+      const valueType = input.dataset.valueType || "string";
+      if (valueType === "boolean") {
+        return Boolean(input.checked);
+      }
+      if (valueType === "number") {
+        return Number(input.value || 0);
+      }
+      if (valueType === "color") {
+        return formatEditorColorFromHex15(input.value, Number(input.dataset.alpha || 1));
+      }
+      return input.value;
+    }
+    _onShadowInput(event) {
+      const input = event.composedPath().find(
+        (node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement
+      );
+      if (!input?.dataset?.field) {
+        return;
+      }
+      event.stopPropagation();
+      if (event.type === "input" && input.type !== "checkbox") {
+        return;
+      }
+      if (input.type === "checkbox" && event.type === "input") {
+        return;
+      }
+      const next = deepClone17(this._config || DEFAULT_CONFIG17);
+      const field = input.dataset.field || "";
+      const value = this._readFieldValue(input);
+      this._setFieldValue(next, field, value);
+      this._config = normalizeConfig17(next);
+      if (event.type === "change") {
+        this._emitConfig();
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+      }
+    }
+    _onShadowValueChanged(event) {
+      const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+      if (!control?.dataset?.field) {
+        return;
+      }
+      event.stopPropagation();
+      const field = control.dataset.field;
+      const next = deepClone17(this._config || DEFAULT_CONFIG17);
+      const raw = event.detail?.value;
+      const value = typeof raw === "string" ? raw : control.value;
+      this._setFieldValue(next, field, value);
+      this._config = normalizeConfig17(next);
+      this._emitConfig();
+      const focusState = this._captureFocusState();
+      this._render();
+      this._restoreFocusState(focusState);
+    }
+    _moveCalendar(index, delta) {
+      const next = deepClone17(this._config || DEFAULT_CONFIG17);
+      const list = Array.isArray(next.calendars) ? [...next.calendars] : [];
+      const j = index + delta;
+      if (!Number.isFinite(index) || index < 0 || !Number.isFinite(j) || j < 0 || j >= list.length) {
+        return;
+      }
+      [list[index], list[j]] = [list[j], list[index]];
+      next.calendars = list;
+      this._config = normalizeConfig17(next);
+      this._emitConfig();
+      const focusState = this._captureFocusState();
+      this._render();
+      this._restoreFocusState(focusState);
+    }
+    _onShadowClick(event) {
+      const rootTarget = event.target instanceof Element ? event.target : null;
+      const toggleButton = rootTarget?.closest?.("[data-editor-toggle]");
+      if (toggleButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (toggleButton.dataset.editorToggle === "styles") {
+          this._showStyleSection = !this._showStyleSection;
+        } else if (toggleButton.dataset.editorToggle === "animations") {
+          this._showAnimationSection = !this._showAnimationSection;
+        }
+        const focusState2 = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState2);
+        return;
+      }
+      const button = rootTarget?.closest?.("[data-editor-action]");
+      if (!button) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      const action = button.dataset.editorAction;
+      if (action === "move-calendar-up") {
+        this._moveCalendar(Number(button.dataset.index || -1), -1);
+        return;
+      }
+      if (action === "move-calendar-down") {
+        this._moveCalendar(Number(button.dataset.index || -1), 1);
+        return;
+      }
+      const next = deepClone17(this._config || DEFAULT_CONFIG17);
+      if (!Array.isArray(next.calendars)) {
+        next.calendars = [];
+      }
+      if (action === "add-calendar") {
+        next.calendars.push({ entity: "", label: "", tint: "" });
+      } else if (action === "remove-calendar") {
+        const index = Number(button.dataset.index || -1);
+        if (Number.isFinite(index) && index >= 0 && index < next.calendars.length) {
+          next.calendars.splice(index, 1);
+        }
+      } else {
+        return;
+      }
+      this._config = normalizeConfig17(next);
+      this._emitConfig();
+      const focusState = this._captureFocusState();
+      this._render();
+      this._restoreFocusState(focusState);
+    }
+    _mountCalendarEntityHost(host) {
+      if (!(host instanceof HTMLElement)) {
+        return;
+      }
+      const field = host.dataset.field || "calendars.0";
+      const nextValue = host.dataset.value || "";
+      const placeholder = host.dataset.placeholder || "";
+      const allowedDomains = String(host.dataset.domains || "").split(",").map((domain) => domain.trim()).filter(Boolean);
+      let control = null;
+      if (customElements.get("ha-entity-picker")) {
+        control = document.createElement("ha-entity-picker");
+        if (allowedDomains.length) {
+          control.includeDomains = allowedDomains;
+          control.entityFilter = (stateObj) => allowedDomains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+        }
+        if (placeholder) {
+          control.setAttribute("placeholder", placeholder);
+        }
+        control.allowCustomEntity = true;
+      } else if (customElements.get("ha-selector")) {
+        control = document.createElement("ha-selector");
+        control.selector = {
+          entity: allowedDomains.length === 1 ? { domain: allowedDomains[0] } : {}
+        };
+      } else {
+        control = document.createElement("input");
+        control.type = "text";
+        control.placeholder = placeholder || "calendar.ejemplo";
+        control.addEventListener("change", this._onShadowInput);
+      }
+      control.dataset.field = field;
+      control.dataset.value = nextValue;
+      if ("hass" in control) {
+        control.hass = this._hass;
+      }
+      if ("value" in control) {
+        control.value = nextValue;
+      }
+      if (control.tagName !== "INPUT") {
+        control.addEventListener("value-changed", this._onShadowValueChanged);
+      }
+      host.replaceChildren(control);
+    }
+    _renderCheckboxField(label, field, checked) {
+      const tLabel = this._editorLabel(label);
+      return `
+      <label class="editor-toggle">
+        <input
+          type="checkbox"
+          data-field="${escapeHtml17(field)}"
+          data-value-type="boolean"
+          ${checked ? "checked" : ""}
+        />
+        <span class="editor-toggle__switch" aria-hidden="true"></span>
+        <span class="editor-toggle__label">${escapeHtml17(tLabel)}</span>
+      </label>
+    `;
+    }
+    _renderTintAutoToggle(checked) {
+      const tTitle = this._editorLabel("Tintado automatico");
+      const tHint = this._editorLabel(
+        "Usa el color primario del tema en la tarjeta. Desactiva para definir un color de acento en Estilos."
+      );
+      const aria = escapeHtml17(`${tTitle}. ${tHint}`);
+      return `
+      <div class="editor-tint-block">
+        <div class="editor-tint-block__text">
+          <div class="editor-tint-block__title">${escapeHtml17(tTitle)}</div>
+          <div class="editor-tint-block__hint">${escapeHtml17(tHint)}</div>
+        </div>
+        <label class="editor-toggle">
+          <input
+            type="checkbox"
+            data-field="tint_auto"
+            data-value-type="boolean"
+            aria-label="${aria}"
+            ${checked ? "checked" : ""}
+          />
+          <span class="editor-toggle__switch" aria-hidden="true"></span>
+          <span class="editor-toggle__label"></span>
+        </label>
+      </div>
+    `;
+    }
+    _renderSelectField(label, field, value, options = {}) {
+      const tLabel = this._editorLabel(label);
+      const opts = options.options || [];
+      const current = String(value ?? "");
+      return `
+      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml17(tLabel)}</span>
+        <select data-field="${escapeHtml17(field)}">
+          ${opts.map(
+        (o) => `<option value="${escapeHtml17(String(o.value))}" ${String(o.value) === current ? "selected" : ""}>${escapeHtml17(
+          String(o.label)
+        )}</option>`
+      ).join("")}
+        </select>
+      </label>
+    `;
+    }
+    _renderTextField(label, field, value, options = {}) {
+      const tLabel = this._editorLabel(label);
+      const inputType = options.type || "text";
+      const placeholder = options.placeholder ? `placeholder="${escapeHtml17(options.placeholder)}"` : "";
+      const valueType = options.valueType || (inputType === "number" ? "number" : "string");
+      const inputValue = value === void 0 || value === null ? "" : String(value);
+      return `
+      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml17(tLabel)}</span>
+        <input
+          type="${escapeHtml17(inputType)}"
+          data-field="${escapeHtml17(field)}"
+          data-value-type="${escapeHtml17(valueType)}"
+          value="${escapeHtml17(inputValue)}"
+          ${placeholder}
+        />
+      </label>
+    `;
+    }
+    _renderIconPickerField(label, field, value, options = {}) {
+      const tLabel = this._editorLabel(label);
+      const inputValue = value === void 0 || value === null ? "" : String(value);
+      const placeholder = options.placeholder ? `placeholder="${escapeHtml17(options.placeholder)}"` : "";
+      return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml17(tLabel)}</span>
+        <ha-icon-picker
+          data-field="${escapeHtml17(field)}"
+          data-value="${escapeHtml17(inputValue)}"
+          value="${escapeHtml17(inputValue)}"
+          ${placeholder}
+        ></ha-icon-picker>
+      </div>
+    `;
+    }
+    _renderColorField(label, field, value, options = {}) {
+      const tLabel = this._editorLabel(label);
+      const tColorCustom = this._editorLabel("Color personalizado");
+      const fallbackValue = options.fallbackValue || getEditorColorFallbackValue15(field);
+      const currentValue = value === void 0 || value === null || value === "" ? fallbackValue : String(value);
+      const colorModel = getEditorColorModel15(currentValue, fallbackValue);
+      return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml17(tLabel)}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="${escapeHtml17(tColorCustom)}">
+            <input
+              type="color"
+              data-field="${escapeHtml17(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml17(String(colorModel.alpha))}"
+              value="${escapeHtml17(colorModel.hex)}"
+              aria-label="${escapeHtml17(tLabel)}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml17(currentValue)};"></span>
+          </label>
+        </div>
+      </div>
+    `;
+    }
+    _renderCalendarCard(entry, index, total) {
+      const ent = entry && typeof entry === "object" && !Array.isArray(entry) ? entry : { entity: String(entry ?? "").trim(), label: "", tint: "" };
+      const entityId = String(ent.entity ?? "").trim();
+      const label = String(ent.label ?? "").trim();
+      const tint = String(ent.tint ?? "").trim();
+      return `
+      <div class="series-editor-card">
+        <div class="series-editor-card__header">
+          <div class="series-editor-card__title">${escapeHtml17(this._editorLabel("Calendario"))} ${index + 1}</div>
+          <div class="series-editor-card__actions">
+            <button type="button" data-editor-action="move-calendar-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>${escapeHtml17(this._editorLabel("Subir"))}</button>
+            <button type="button" data-editor-action="move-calendar-down" data-index="${index}" ${index === total - 1 ? "disabled" : ""}>${escapeHtml17(this._editorLabel("Bajar"))}</button>
+            <button type="button" data-editor-action="remove-calendar" data-index="${index}" class="danger">${escapeHtml17(this._editorLabel("Eliminar"))}</button>
+          </div>
+        </div>
+        <div class="series-editor-subgroup">
+          <div class="series-editor-subgroup__title">${escapeHtml17(this._editorLabel("Entidad"))}</div>
+          <div class="editor-grid editor-grid--stacked">
+            <div class="editor-field editor-field--full">
+              <span>${escapeHtml17(this._editorLabel("Calendario de Home Assistant"))}</span>
+              <div
+                class="editor-control-host"
+                data-mounted-control="calendar-entity"
+                data-field="calendars.${index}.entity"
+                data-value="${escapeHtml17(entityId)}"
+                data-domains="calendar"
+                data-placeholder="calendar.cumpleanos"
+              ></div>
+            </div>
+            ${this._renderTextField("Etiqueta visible", `calendars.${index}.label`, label, {
+        fullWidth: true,
+        placeholder: this._editorLabel("Ej. Familia")
+      })}
+            ${this._renderColorField("Tintado en la tarjeta", `calendars.${index}.tint`, tint, {
+        fullWidth: true,
+        fallbackValue: "#71c0ff"
+      })}
+          </div>
+        </div>
+      </div>
+    `;
+    }
+    _render() {
+      if (!this.shadowRoot) {
+        return;
+      }
+      this._ensureEditorControlsReady();
+      const config = normalizeConfig17(this._config || DEFAULT_CONFIG17);
+      const calendars = Array.isArray(config.calendars) && config.calendars.length ? config.calendars : [{ entity: "", label: "", tint: "" }];
+      const animations = config.animations || DEFAULT_CONFIG17.animations;
+      this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        .editor {
+          color: var(--primary-text-color);
+          display: grid;
+          gap: 16px;
+        }
+
+        .editor-section {
+          background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 18px;
+          display: grid;
+          gap: 14px;
+          padding: 16px;
+        }
+
+        .editor-section__header {
+          display: grid;
+          gap: 4px;
+        }
+
+        .editor-section__title {
+          font-size: 15px;
+          font-weight: 700;
+        }
+
+        .editor-section__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .editor-section__actions {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 2px;
+        }
+
+        .editor-section__toggle-button {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        .editor-section__toggle-button ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
+        .editor-grid {
+          display: grid;
+          gap: 12px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .editor-grid--stacked {
+          grid-template-columns: 1fr;
+        }
+
+        .editor-field,
+        .editor-toggle {
+          display: grid;
+          gap: 6px;
+          min-width: 0;
+        }
+
+        .editor-field--full {
+          grid-column: 1 / -1;
+        }
+
+        .editor-tint-block {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-color) 22%, transparent);
+          border-radius: 16px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px 18px;
+          grid-column: 1 / -1;
+          justify-content: space-between;
+          padding: 14px 16px;
+        }
+
+        .editor-tint-block__text {
+          display: grid;
+          flex: 1 1 220px;
+          gap: 5px;
+          min-width: 0;
+        }
+
+        .editor-tint-block__title {
+          font-size: 13px;
+          font-weight: 700;
+          letter-spacing: -0.01em;
+        }
+
+        .editor-tint-block__hint {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          line-height: 1.45;
+          max-width: 44em;
+        }
+
+        .editor-tint-block .editor-toggle {
+          align-self: center;
+          flex: 0 0 auto;
+          margin: 0;
+          min-height: 0;
+          padding-top: 0;
+        }
+
+        .editor-tint-block .editor-toggle__label:empty {
+          display: none;
+        }
+
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="calendar-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="input-text-entity"]),
+        .editor-field:has(> ha-icon-picker) {
+          grid-column: 1 / -1;
+        }
+
+        .editor-field > span,
+        .editor-toggle > span {
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .editor-field__hint {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          font-weight: 500;
+          line-height: 1.45;
+        }
+
+        .editor-field input,
+        .editor-field select,
+        .editor-field textarea,
+        .editor-control-host input,
+        .editor-control-host select,
+        .editor-control-host textarea {
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 12px;
+          color: var(--primary-text-color);
+          font: inherit;
+          min-height: 40px;
+          padding: 10px 12px;
+          width: 100%;
+        }
+
+        .editor-field ha-icon-picker,
+        .editor-field ha-entity-picker,
+        .editor-field ha-selector,
+        .editor-control-host,
+        .editor-control-host > * {
+          display: block;
+          width: 100%;
+        }
+
+        .editor-color-field {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          min-height: 40px;
+        }
+
+        .editor-color-picker {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 40px;
+          justify-content: center;
+          position: relative;
+          width: 40px;
+        }
+
+        .editor-color-picker input {
+          cursor: pointer;
+          inset: 0;
+          opacity: 0;
+          position: absolute;
+        }
+
+        .editor-color-picker:hover,
+        .editor-color-picker:focus-within {
+          border-color: color-mix(in srgb, var(--primary-text-color) 22%, transparent);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+        }
+
+        .editor-color-swatch {
+          --editor-swatch: #71c0ff;
+          background:
+            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+            conic-gradient(from 90deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 25%, rgba(0, 0, 0, 0.12) 0 50%, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 0 75%, rgba(0, 0, 0, 0.12) 0);
+          background-position: center;
+          background-size: cover, 10px 10px;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+          border-radius: 999px;
+          display: block;
+          height: 22px;
+          width: 22px;
+        }
+
+        .editor-color-picker .editor-color-swatch {
+          height: 22px;
+          width: 22px;
+        }
+
+        .editor-actions {
+          display: flex;
+          justify-content: flex-start;
+        }
+
+        button {
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        button.danger {
+          color: var(--error-color);
+        }
+
+        button:disabled {
+          cursor: default;
+          opacity: 0.45;
+        }
+
+        .series-editor-list {
+          display: grid;
+          gap: 12px;
+        }
+
+        .series-editor-card {
+          background: rgba(255, 255, 255, 0.025);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 16px;
+          display: grid;
+          gap: 12px;
+          padding: 14px;
+        }
+
+        .series-editor-subgroup {
+          background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border-radius: 14px;
+          display: grid;
+          gap: 12px;
+          padding: 12px;
+        }
+
+        .series-editor-subgroup__title {
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .series-editor-card__header {
+          align-items: center;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+        }
+
+        .series-editor-card__title {
+          font-size: 13px;
+          font-weight: 700;
+        }
+
+        .series-editor-card__actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: flex-end;
+        }
+
+        .empty-note {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.5;
+        }
+
+        @media (max-width: 640px) {
+          .editor-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .series-editor-card__header {
+            align-items: start;
+            flex-direction: column;
+          }
+
+          .series-editor-card__actions {
+            justify-content: flex-start;
+          }
+        }
+
+        :is(.editor-toggle, .editor-checkbox) {
+          align-items: center;
+          column-gap: 10px;
+          cursor: pointer;
+          grid-auto-flow: row;
+          grid-template-columns: auto minmax(0, 1fr);
+          justify-content: stretch;
+          min-height: 40px;
+          padding-top: 0;
+          position: relative;
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input {
+          block-size: 1px;
+          inline-size: 1px;
+          margin: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: absolute;
+        }
+
+        .editor-toggle__switch {
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          display: inline-flex;
+          font-size: 0;
+          height: 22px;
+          line-height: 0;
+          position: relative;
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+          width: 40px;
+        }
+
+        .editor-toggle__switch::before {
+          background: rgba(255, 255, 255, 0.92);
+          border-radius: 999px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+          content: "";
+          height: 18px;
+          left: 1px;
+          position: absolute;
+          top: 1px;
+          transition: transform 160ms ease;
+          width: 18px;
+        }
+
+        .editor-toggle__label {
+          min-width: 0;
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch {
+          background: var(--primary-color);
+          border-color: var(--primary-color);
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch::before {
+          transform: translateX(18px);
+        }
+
+        :is(.editor-toggle, .editor-checkbox) input:focus-visible + .editor-toggle__switch {
+          box-shadow:
+            0 0 0 3px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+        }
+      </style>
+      <div class="editor">
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml17(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Titulo visible, icono, rango temporal, refresco de datos y opciones de eventos completados."))}</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderTextField("Titulo", "title", config.title, { fullWidth: true, placeholder: "Calendario" })}
+            ${this._renderIconPickerField("Icono", "icon", config.icon || DEFAULT_CONFIG17.icon, {
+        fullWidth: true,
+        placeholder: "mdi:calendar-month"
+      })}
+            ${this._renderSelectField("Rango visible", "time_range", config.time_range || DEFAULT_CONFIG17.time_range, {
+        fullWidth: true,
+        options: [
+          { value: "3d", label: this._editorLabel("3 dias") },
+          { value: "1w", label: this._editorLabel("1 semana") },
+          { value: "2w", label: this._editorLabel("2 semanas") },
+          { value: "1m", label: this._editorLabel("1 mes") }
+        ]
+      })}
+            ${this._renderTextField("Eventos visibles antes de scroll", "max_visible_events", config.max_visible_events, { type: "number" })}
+            ${this._renderTextField("Refresco (segundos)", "refresh_interval", config.refresh_interval, { type: "number" })}
+            ${this._renderTintAutoToggle(config.tint_auto !== false)}
+            ${this._renderCheckboxField("Permitir marcar eventos como completados", "allow_complete", config.allow_complete === true)}
+            ${this._renderCheckboxField("Mostrar eventos completados", "show_completed", config.show_completed === true)}
+            <div class="editor-field editor-field--full">
+              <span>${escapeHtml17(this._editorLabel("Helper input_text (completados compartidos)"))}</span>
+              <div
+                class="editor-control-host"
+                data-mounted-control="input-text-entity"
+                data-field="shared_completed_events_entity"
+                data-value="${escapeHtml17(String(config.shared_completed_events_entity ?? ""))}"
+                data-domains="input_text"
+                data-placeholder="input_text.nodalia_calendar_hechos"
+              ></div>
+              <span class="editor-field__hint">${escapeHtml17(
+        this._editorLabel(
+          "Opcional: misma lista en movil y PC. Crea un input_text y elije aqui; la tarjeta guarda un JSON con las claves de eventos hechos."
+        )
+      )}</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml17(this._editorLabel("Calendarios"))}</div>
+            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Anade una o varias entidades calendar y reordena el orden en que se combinan los eventos."))}</div>
+          </div>
+          <div class="series-editor-list">
+            ${calendars.length ? calendars.map((entityId, index) => this._renderCalendarCard(entityId, index, calendars.length)).join("") : `<div class="empty-note">${escapeHtml17(this._editorLabel("Todavia no hay calendarios configurados."))}</div>`}
+          </div>
+          <div class="editor-actions">
+            <button type="button" class="editor-section__toggle-button" data-editor-action="add-calendar">
+              <ha-icon icon="mdi:plus"></ha-icon>
+              <span>${escapeHtml17(this._editorLabel("Anadir calendario"))}</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml17(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Entrada suave del contenido de la tarjeta al cargar."))}</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="animations"
+                aria-expanded="${this._showAnimationSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${escapeHtml17(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animacion") : this._editorLabel("Mostrar ajustes de animacion"))}</span>
+              </button>
+            </div>
+          </div>
+          ${this._showAnimationSection ? `
+                <div class="editor-grid">
+                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", animations.content_duration, {
+        type: "number"
+      })}
+                </div>
+              ` : ""}
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml17(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Ajustes visuales de la tarjeta, tipografia y burbuja de icono."))}</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="styles"
+                aria-expanded="${this._showStyleSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${escapeHtml17(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
+              </button>
+            </div>
+          </div>
+          ${this._showStyleSection ? `
+                <div class="editor-grid">
+                  ${this._renderColorField("Fondo tarjeta", "styles.card.background", config.styles?.card?.background, {
+        fullWidth: true,
+        fallbackValue: DEFAULT_CONFIG17.styles.card.background
+      })}
+                  ${this._renderTextField("Borde tarjeta", "styles.card.border", config.styles?.card?.border)}
+                  ${this._renderTextField("Radio tarjeta", "styles.card.border_radius", config.styles?.card?.border_radius)}
+                  ${this._renderTextField("Sombra tarjeta", "styles.card.box_shadow", config.styles?.card?.box_shadow, { fullWidth: true })}
+                  ${this._renderTextField("Padding", "styles.card.padding", config.styles?.card?.padding)}
+                  ${this._renderTextField("Separacion", "styles.card.gap", config.styles?.card?.gap)}
+                  ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles?.title_size)}
+                  ${this._renderTextField("Tamano evento", "styles.event_size", config.styles?.event_size)}
+                  ${this._renderTextField("Alto chips", "styles.chip_height", config.styles?.chip_height)}
+                  ${this._renderTextField("Texto chips", "styles.chip_font_size", config.styles?.chip_font_size)}
+                  ${this._renderTextField("Relleno chips", "styles.chip_padding", config.styles?.chip_padding)}
+                  ${this._renderColorField("Icono burbuja fondo", "styles.icon.background", config.styles?.icon?.background, {
+        fullWidth: true,
+        fallbackValue: DEFAULT_CONFIG17.styles.icon.background
+      })}
+                  ${this._renderColorField("Color icono activo", "styles.icon.on_color", config.styles?.icon?.on_color, {
+        fullWidth: true,
+        fallbackValue: DEFAULT_CONFIG17.styles.icon.on_color
+      })}
+                  ${this._renderColorField("Color icono inactivo", "styles.icon.off_color", config.styles?.icon?.off_color, {
+        fullWidth: true,
+        fallbackValue: DEFAULT_CONFIG17.styles.icon.off_color
+      })}
+                  ${this._renderTextField("Icono burbuja tamano", "styles.icon.size", config.styles?.icon?.size)}
+                  ${this._renderColorField("Color de acento (si el tintado automático está desactivado)", "styles.tint.color", config.styles?.tint?.color, {
+        fullWidth: true,
+        fallbackValue: DEFAULT_CONFIG17.styles.tint.color
+      })}
+                </div>
+              ` : ""}
+        </section>
+      </div>
+    `;
+      this.shadowRoot.querySelectorAll('[data-mounted-control="calendar-entity"], [data-mounted-control="input-text-entity"]').forEach((host) => {
+        this._mountCalendarEntityHost(host);
+      });
+    }
+  };
+  if (!customElements.get(CARD_TAG17)) {
+    customElements.define(CARD_TAG17, NodaliaCalendarCard);
+  }
+  if (!customElements.get(EDITOR_TAG17)) {
+    customElements.define(EDITOR_TAG17, NodaliaCalendarCardEditor);
+  }
+  window.customCards = window.customCards || [];
+  window.customCards.push({
+    type: CARD_TAG17,
+    name: "Nodalia Calendar Card",
+    description: "Tarjeta de calendario elegante estilo Nodalia con eventos y marcado de completados.",
+    preview: true
+  });
+
   // nodalia-vacuum-card.js
-  var CARD_TAG17 = "nodalia-vacuum-card";
-  var EDITOR_TAG17 = "nodalia-vacuum-card-editor";
+  var CARD_TAG18 = "nodalia-vacuum-card";
+  var EDITOR_TAG18 = "nodalia-vacuum-card-editor";
   var HAPTIC_PATTERNS17 = {
     selection: 8,
     light: 10,
@@ -70855,7 +73772,7 @@
     intense: "Intenso",
     deep: "Profundo"
   };
-  var DEFAULT_CONFIG17 = {
+  var DEFAULT_CONFIG18 = {
     entity: "",
     name: "",
     icon: "",
@@ -70924,10 +73841,10 @@
     entity: "vacuum.salon",
     name: "Robot salon"
   };
-  function isObject17(value) {
+  function isObject18(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
   }
-  function deepClone17(value) {
+  function deepClone18(value) {
     if (value === void 0) {
       return void 0;
     }
@@ -70947,11 +73864,11 @@
     config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
     return config;
   }
-  function mergeConfig17(base, override) {
+  function mergeConfig18(base, override) {
     if (Array.isArray(base)) {
-      return Array.isArray(override) ? override.map((item) => deepClone17(item)) : deepClone17(base);
+      return Array.isArray(override) ? override.map((item) => deepClone18(item)) : deepClone18(base);
     }
-    if (!isObject17(base)) {
+    if (!isObject18(base)) {
       return override === void 0 ? base : override;
     }
     const result = {};
@@ -70960,15 +73877,15 @@
       const baseValue = base[key];
       const overrideValue = override ? override[key] : void 0;
       if (overrideValue === void 0) {
-        result[key] = deepClone17(baseValue);
+        result[key] = deepClone18(baseValue);
         return;
       }
       if (Array.isArray(overrideValue)) {
-        result[key] = deepClone17(overrideValue);
+        result[key] = deepClone18(overrideValue);
         return;
       }
-      if (isObject17(baseValue) && isObject17(overrideValue)) {
-        result[key] = mergeConfig17(baseValue, overrideValue);
+      if (isObject18(baseValue) && isObject18(overrideValue)) {
+        result[key] = mergeConfig18(baseValue, overrideValue);
         return;
       }
       result[key] = overrideValue;
@@ -70979,11 +73896,11 @@
     if (Array.isArray(value)) {
       return value.map((item) => compactConfig17(item)).filter((item) => item !== void 0);
     }
-    if (isObject17(value)) {
+    if (isObject18(value)) {
       const compacted = {};
       Object.entries(value).forEach(([key, item]) => {
         const cleaned = compactConfig17(item);
-        const isEmptyObject = isObject17(cleaned) && Object.keys(cleaned).length === 0;
+        const isEmptyObject = isObject18(cleaned) && Object.keys(cleaned).length === 0;
         if (cleaned !== void 0 && !isEmptyObject) {
           compacted[key] = cleaned;
         }
@@ -71000,7 +73917,7 @@
     let cursor = target;
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
-      if (!isObject17(cursor[key]) && !Array.isArray(cursor[key])) {
+      if (!isObject18(cursor[key]) && !Array.isArray(cursor[key])) {
         cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
       }
       cursor = cursor[key];
@@ -71012,14 +73929,14 @@
     let cursor = target;
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
-      if (!isObject17(cursor[key]) && !Array.isArray(cursor[key])) {
+      if (!isObject18(cursor[key]) && !Array.isArray(cursor[key])) {
         return;
       }
       cursor = cursor[key];
     }
     delete cursor[parts[parts.length - 1]];
   }
-  function clamp16(value, min, max) {
+  function clamp17(value, min, max) {
     return Math.min(Math.max(value, min), max);
   }
   function parseSizeToPixels14(value, fallback = 0) {
@@ -71029,10 +73946,10 @@
   function arrayFromCsv4(value) {
     return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
   }
-  function escapeHtml17(value) {
+  function escapeHtml18(value) {
     return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
   }
-  function escapeSelectorValue16(value) {
+  function escapeSelectorValue17(value) {
     return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
   }
   function sanitizeCssValue6(value, fallback) {
@@ -71046,11 +73963,11 @@
     }
     return raw;
   }
-  function getSafeStyles6(styles = DEFAULT_CONFIG17.styles) {
+  function getSafeStyles6(styles = DEFAULT_CONFIG18.styles) {
     const walk = (candidate, fallback) => {
-      if (isObject17(fallback)) {
+      if (isObject18(fallback)) {
         const out = {};
-        const source = isObject17(candidate) ? candidate : {};
+        const source = isObject18(candidate) ? candidate : {};
         Object.keys(fallback).forEach((key) => {
           out[key] = walk(source[key], fallback[key]);
         });
@@ -71061,9 +73978,9 @@
       }
       return candidate === void 0 ? fallback : candidate;
     };
-    return walk(styles, DEFAULT_CONFIG17.styles);
+    return walk(styles, DEFAULT_CONFIG18.styles);
   }
-  function resolveEditorColorValue12(value) {
+  function resolveEditorColorValue13(value) {
     const rawValue = String(value ?? "").trim();
     if (!rawValue || typeof document === "undefined") {
       return "";
@@ -71082,10 +73999,10 @@
     probe.remove();
     return resolved || rawValue;
   }
-  function formatEditorHexChannel15(value) {
-    return clamp16(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+  function formatEditorHexChannel16(value) {
+    return clamp17(Math.round(value), 0, 255).toString(16).padStart(2, "0");
   }
-  function formatEditorColorFromHex15(hex, alpha = 1) {
+  function formatEditorColorFromHex16(hex, alpha = 1) {
     const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
     if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
       return String(hex ?? "");
@@ -71093,30 +74010,30 @@
     const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
     const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
     const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
-    const safeAlpha = clamp16(Number(alpha), 0, 1);
+    const safeAlpha = clamp17(Number(alpha), 0, 1);
     if (safeAlpha >= 0.999) {
       return `#${normalizedHex}`;
     }
     return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
   }
-  function getEditorColorModel15(value, fallbackValue = "#71c0ff") {
+  function getEditorColorModel16(value, fallbackValue = "#71c0ff") {
     const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
-    const resolvedValue = resolveEditorColorValue12(sourceValue) || resolveEditorColorValue12(fallbackValue) || "rgb(113, 192, 255)";
+    const resolvedValue = resolveEditorColorValue13(sourceValue) || resolveEditorColorValue13(fallbackValue) || "rgb(113, 192, 255)";
     const channels = resolvedValue.match(/[\d.]+/g) || [];
-    const red = clamp16(Math.round(Number(channels[0] ?? 113)), 0, 255);
-    const green = clamp16(Math.round(Number(channels[1] ?? 192)), 0, 255);
-    const blue = clamp16(Math.round(Number(channels[2] ?? 255)), 0, 255);
-    const alpha = channels.length > 3 ? clamp16(Number(channels[3]), 0, 1) : 1;
-    const hex = `#${formatEditorHexChannel15(red)}${formatEditorHexChannel15(green)}${formatEditorHexChannel15(blue)}`;
+    const red = clamp17(Math.round(Number(channels[0] ?? 113)), 0, 255);
+    const green = clamp17(Math.round(Number(channels[1] ?? 192)), 0, 255);
+    const blue = clamp17(Math.round(Number(channels[2] ?? 255)), 0, 255);
+    const alpha = channels.length > 3 ? clamp17(Number(channels[3]), 0, 1) : 1;
+    const hex = `#${formatEditorHexChannel16(red)}${formatEditorHexChannel16(green)}${formatEditorHexChannel16(blue)}`;
     return {
       alpha,
       hex,
       resolved: resolvedValue,
       source: sourceValue,
-      value: formatEditorColorFromHex15(hex, alpha)
+      value: formatEditorColorFromHex16(hex, alpha)
     };
   }
-  function getEditorColorFallbackValue15(field) {
+  function getEditorColorFallbackValue16(field) {
     const normalizedField = String(field ?? "");
     if (normalizedField.endsWith("off_color") || normalizedField.endsWith("docked_color")) {
       return "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))";
@@ -71166,8 +74083,8 @@
     }
     return raw.replaceAll("_", " ").replace(/\b\w/g, (match) => match.toUpperCase());
   }
-  function normalizeConfig17(rawConfig) {
-    const config = mergeConfig17(DEFAULT_CONFIG17, rawConfig || {});
+  function normalizeConfig18(rawConfig) {
+    const config = mergeConfig18(DEFAULT_CONFIG18, rawConfig || {});
     const normalizeList = (value) => (Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : []).map((item) => String(item || "").trim()).filter(Boolean);
     if (!Array.isArray(config.fan_presets)) {
       config.fan_presets = [];
@@ -71179,10 +74096,10 @@
   }
   var NodaliaVacuumCard = class extends HTMLElement {
     static async getConfigElement() {
-      return document.createElement(EDITOR_TAG17);
+      return document.createElement(EDITOR_TAG18);
     }
     static getStubConfig(hass) {
-      return applyStubEntity13(deepClone17(STUB_CONFIG16), hass, ["vacuum"]);
+      return applyStubEntity13(deepClone18(STUB_CONFIG16), hass, ["vacuum"]);
     }
     constructor() {
       super();
@@ -71250,7 +74167,7 @@
       this._lastRenderSignature = "";
     }
     setConfig(config) {
-      this._config = normalizeConfig17(config || {});
+      this._config = normalizeConfig18(config || {});
       this._isCompactLayout = this._shouldUseCompactLayout(
         Math.round(this._cardWidth || this.clientWidth || 0)
       );
@@ -71300,7 +74217,7 @@
         window.clearTimeout(this._entranceAnimationResetTimer);
         this._entranceAnimationResetTimer = 0;
       }
-      const safeDelay = clamp16(Math.round(Number(delay) || 0), 0, 3e3);
+      const safeDelay = clamp17(Math.round(Number(delay) || 0), 0, 3e3);
       if (!safeDelay || typeof window === "undefined") {
         this._animateContentOnNextRender = false;
         return;
@@ -71327,7 +74244,7 @@
     }
     _getRoomPanelMaxHeight(roomMappings) {
       const roomCount = Array.isArray(roomMappings) ? roomMappings.length : 0;
-      return clamp16(84 + roomCount * 52, 220, 720);
+      return clamp17(84 + roomCount * 52, 220, 720);
     }
     _getRenderSignature(hass = this._hass) {
       const entityId = this._config?.entity || "";
@@ -71391,16 +74308,16 @@
       navigator.vibrate(HAPTIC_PATTERNS17[hapticStyle] || HAPTIC_PATTERNS17.selection);
     }
     _getAnimationSettings() {
-      const configuredAnimations = this._config?.animations || DEFAULT_CONFIG17.animations;
+      const configuredAnimations = this._config?.animations || DEFAULT_CONFIG18.animations;
       return {
         enabled: configuredAnimations.enabled !== false,
-        panelDuration: clamp16(
-          Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG17.animations.panel_duration,
+        panelDuration: clamp17(
+          Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG18.animations.panel_duration,
           120,
           2400
         ),
-        buttonBounceDuration: clamp16(
-          Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG17.animations.button_bounce_duration,
+        buttonBounceDuration: clamp17(
+          Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG18.animations.button_bounce_duration,
           120,
           1200
         )
@@ -71785,21 +74702,21 @@
     _getBatteryLevel(state) {
       const directValue = Number(state?.attributes?.battery_level);
       if (Number.isFinite(directValue)) {
-        return clamp16(Math.round(directValue), 0, 100);
+        return clamp17(Math.round(directValue), 0, 100);
       }
       const auxiliaryState = this._getAuxiliaryState();
       const auxiliaryBatteryLevel = Number(
         auxiliaryState?.attributes?.battery_level ?? auxiliaryState?.attributes?.battery ?? auxiliaryState?.attributes?.battery_remaining
       );
       if (Number.isFinite(auxiliaryBatteryLevel)) {
-        return clamp16(Math.round(auxiliaryBatteryLevel), 0, 100);
+        return clamp17(Math.round(auxiliaryBatteryLevel), 0, 100);
       }
       const batterySensorState = this._getAuxiliaryBatteryState();
       const batterySensorValue = Number(
         batterySensorState?.state ?? batterySensorState?.attributes?.battery_level ?? batterySensorState?.attributes?.battery ?? batterySensorState?.attributes?.battery_remaining
       );
       if (Number.isFinite(batterySensorValue)) {
-        return clamp16(Math.round(batterySensorValue), 0, 100);
+        return clamp17(Math.round(batterySensorValue), 0, 100);
       }
       return null;
     }
@@ -72037,7 +74954,7 @@
     }
     _getModePanelMaxHeight(descriptors) {
       const maxOptions = Array.isArray(descriptors) ? descriptors.reduce((maxValue, descriptor) => Math.max(maxValue, descriptor?.options?.length || 0), 0) : 0;
-      return clamp16(84 + maxOptions * 52, 220, 560);
+      return clamp17(84 + maxOptions * 52, 220, 560);
     }
     _getModePanelMarkup(panelKind, state = this._getState()) {
       const descriptor = this._getActiveModeDescriptor(state, panelKind);
@@ -72056,11 +74973,11 @@
               class="vacuum-card__preset ${normalizeTextKey16(option) === normalizeTextKey16(activeModeDisplayValue) ? "vacuum-card__preset--active" : ""}"
               type="button"
               data-vacuum-action="${descriptor.service === "select" ? "select" : "fan"}"
-              ${descriptor.service === "select" ? `data-target-entity="${escapeHtml17(descriptor.target)}"` : ""}
-              data-mode-kind="${escapeHtml17(descriptor.kind)}"
-              data-value="${escapeHtml17(option)}"
+              ${descriptor.service === "select" ? `data-target-entity="${escapeHtml18(descriptor.target)}"` : ""}
+              data-mode-kind="${escapeHtml18(descriptor.kind)}"
+              data-value="${escapeHtml18(option)}"
             >
-              ${escapeHtml17(humanizeModeLabel2(option, descriptor.kind, this._hass, this._config?.language ?? "auto"))}
+              ${escapeHtml18(humanizeModeLabel2(option, descriptor.kind, this._hass, this._config?.language ?? "auto"))}
             </button>
           `).join("")}
       </div>
@@ -72078,9 +74995,9 @@
               class="vacuum-card__preset ${this._selectedCleaningAreas.includes(room.cleaningAreaId) ? "vacuum-card__preset--active" : ""}"
               type="button"
               data-vacuum-action="toggle-room"
-              data-cleaning-area-id="${escapeHtml17(room.cleaningAreaId)}"
+              data-cleaning-area-id="${escapeHtml18(room.cleaningAreaId)}"
             >
-              ${escapeHtml17(room.name)}
+              ${escapeHtml18(room.name)}
             </button>
           `).join("")}
       </div>
@@ -72778,7 +75695,7 @@
       const cardBorder = isTintedState ? `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))` : styles.card.border;
       const cardShadow = isTintedState ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))` : styles.card.box_shadow;
       if (config.show_state_chip !== false) {
-        chips.push(`<span class="vacuum-card__chip vacuum-card__chip--state">${escapeHtml17(stateLabel)}</span>`);
+        chips.push(`<span class="vacuum-card__chip vacuum-card__chip--state">${escapeHtml18(stateLabel)}</span>`);
       }
       if (this._activeModePanel && !availableModeDescriptors.some((mode) => mode.kind === this._activeModePanel)) {
         this._activeModePanel = null;
@@ -72792,7 +75709,7 @@
       const currentPanelKey = this._roomPanelOpen && roomMappings.length ? "room" : activeModeDescriptor?.kind || "";
       const currentPanelMarkup = currentPanelKey ? this._getPanelMarkup(currentPanelKey, state) : "";
       const panelShellMarkup = currentPanelMarkup ? `
-        <div class="vacuum-card__panel-shell" data-panel-key="${escapeHtml17(currentPanelKey)}">
+        <div class="vacuum-card__panel-shell" data-panel-key="${escapeHtml18(currentPanelKey)}">
           <div class="vacuum-card__panel-inner">
             ${currentPanelMarkup}
           </div>
@@ -72805,7 +75722,7 @@
       this.shadowRoot.innerHTML = `
         <style>
           :host {
-            --vacuum-card-content-duration: ${animations.enabled ? clamp16(Math.round(animations.panelDuration * 0.9), 180, 900) : 0}ms;
+            --vacuum-card-content-duration: ${animations.enabled ? clamp17(Math.round(animations.panelDuration * 0.9), 180, 900) : 0}ms;
             display: block;
           }
 
@@ -73300,14 +76217,14 @@
               class="vacuum-card__icon-button"
               type="button"
               ${canRunCardTapAction ? 'data-vacuum-action="card_tap"' : ""}
-              aria-label="${escapeHtml17(iconButtonLabel)}"
+              aria-label="${escapeHtml18(iconButtonLabel)}"
             >
-              <ha-icon icon="${escapeHtml17(icon)}"></ha-icon>
+              <ha-icon icon="${escapeHtml18(icon)}"></ha-icon>
               ${showUnavailableBadge ? `<span class="vacuum-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${showCopyBlock ? `
                   <div class="vacuum-card__copy">
-                    <div class="vacuum-card__title">${escapeHtml17(title)}</div>
+                    <div class="vacuum-card__title">${escapeHtml18(title)}</div>
                     ${chips.length ? `<div class="vacuum-card__chips">${chips.join("")}</div>` : ""}
                   </div>
                 ` : ""}
@@ -73322,10 +76239,10 @@
                           <button
                               class="vacuum-card__control ${control.active ? "vacuum-card__control--active" : ""}"
                               type="button"
-                              data-vacuum-action="${escapeHtml17(control.action)}"
-                              aria-label="${escapeHtml17(control.label)}"
+                              data-vacuum-action="${escapeHtml18(control.action)}"
+                              aria-label="${escapeHtml18(control.label)}"
                             >
-                              <ha-icon icon="${escapeHtml17(control.icon)}"></ha-icon>
+                              <ha-icon icon="${escapeHtml18(control.icon)}"></ha-icon>
                             </button>
                           `).join("")}
                       ${availableModeDescriptors.map((mode) => `
@@ -73333,8 +76250,8 @@
                             class="vacuum-card__control vacuum-card__mode-toggle ${activeModeDescriptor?.kind === mode.kind ? "vacuum-card__mode-toggle--active vacuum-card__control--active" : ""}"
                             type="button"
                             data-vacuum-action="toggle-mode-panel"
-                            data-mode-kind="${escapeHtml17(mode.kind)}"
-                            aria-label="${escapeHtml17(mode.label)}"
+                            data-mode-kind="${escapeHtml18(mode.kind)}"
+                            aria-label="${escapeHtml18(mode.label)}"
                           >
                             <ha-icon icon="${mode.kind === "mop" ? "mdi:waves" : "mdi:fan"}"></ha-icon>
                           </button>
@@ -73352,18 +76269,18 @@
       </ha-card>
     `;
       if (shouldAnimateEntrance) {
-        this._scheduleEntranceAnimationReset(clamp16(Math.round(animations.panelDuration * 0.9), 180, 900) + 120);
+        this._scheduleEntranceAnimationReset(clamp17(Math.round(animations.panelDuration * 0.9), 180, 900) + 120);
       }
     }
   };
-  if (!customElements.get(CARD_TAG17)) {
-    customElements.define(CARD_TAG17, NodaliaVacuumCard);
+  if (!customElements.get(CARD_TAG18)) {
+    customElements.define(CARD_TAG18, NodaliaVacuumCard);
   }
   var NodaliaVacuumCardEditor = class extends HTMLElement {
     constructor() {
       super();
       this.attachShadow({ mode: "open" });
-      this._config = normalizeConfig17(STUB_CONFIG16);
+      this._config = normalizeConfig18(STUB_CONFIG16);
       this._hass = null;
       this._entityOptionsSignature = "";
       this._showStyleSection = false;
@@ -73391,7 +76308,7 @@
     }
     setConfig(config) {
       const focusState = this._captureFocusState();
-      this._config = normalizeConfig17(config || {});
+      this._config = normalizeConfig18(config || {});
       this._render();
       this._restoreFocusState(focusState);
     }
@@ -73469,7 +76386,7 @@
         return null;
       }
       const dataset = activeElement.dataset || {};
-      const selector = dataset.field ? `[data-field="${escapeSelectorValue16(dataset.field)}"]` : null;
+      const selector = dataset.field ? `[data-field="${escapeSelectorValue17(dataset.field)}"]` : null;
       if (!selector) {
         return null;
       }
@@ -73505,16 +76422,16 @@
     }
     _emitConfig() {
       const focusState = this._captureFocusState();
-      const nextConfig = deepClone17(this._config);
-      this._config = normalizeConfig17(compactConfig17(nextConfig));
+      const nextConfig = deepClone18(this._config);
+      this._config = normalizeConfig18(compactConfig17(nextConfig));
       this._render();
       this._restoreFocusState(focusState);
       fireEvent17(this, "config-changed", {
-        config: compactConfig17(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG17) ?? {})
+        config: compactConfig17(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG18) ?? {})
       });
     }
     _setEditorConfig() {
-      this._config = normalizeConfig17(compactConfig17(this._config));
+      this._config = normalizeConfig18(compactConfig17(this._config));
     }
     _setFieldValue(path, value) {
       if (value === void 0 || value === null || value === "") {
@@ -73529,7 +76446,7 @@
         case "boolean":
           return Boolean(input.checked);
         case "color":
-          return formatEditorColorFromHex15(input.value, Number(input.dataset.alpha || 1));
+          return formatEditorColorFromHex16(input.value, Number(input.dataset.alpha || 1));
         case "csv":
           return arrayFromCsv4(input.value);
         default:
@@ -73598,17 +76515,17 @@
     _renderTextField(label, field, value, options = {}) {
       const tLabel = this._editorLabel(label);
       const inputType = options.type || "text";
-      const placeholder = options.placeholder ? `placeholder="${escapeHtml17(options.placeholder)}"` : "";
+      const placeholder = options.placeholder ? `placeholder="${escapeHtml18(options.placeholder)}"` : "";
       const valueType = options.valueType || "string";
       const inputValue = value === void 0 || value === null ? "" : String(value);
       return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml17(tLabel)}</span>
+        <span>${escapeHtml18(tLabel)}</span>
         <input
-          type="${escapeHtml17(inputType)}"
-          data-field="${escapeHtml17(field)}"
-          data-value-type="${escapeHtml17(valueType)}"
-          value="${escapeHtml17(inputValue)}"
+          type="${escapeHtml18(inputType)}"
+          data-field="${escapeHtml18(field)}"
+          data-value-type="${escapeHtml18(valueType)}"
+          value="${escapeHtml18(inputValue)}"
           ${placeholder}
         />
       </label>
@@ -73617,23 +76534,23 @@
     _renderColorField(label, field, value, options = {}) {
       const tLabel = this._editorLabel(label);
       const tColorCustom = this._editorLabel("Color personalizado");
-      const fallbackValue = options.fallbackValue || getEditorColorFallbackValue15(field);
+      const fallbackValue = options.fallbackValue || getEditorColorFallbackValue16(field);
       const currentValue = value === void 0 || value === null || value === "" ? fallbackValue : String(value);
-      const colorModel = getEditorColorModel15(currentValue, fallbackValue);
+      const colorModel = getEditorColorModel16(currentValue, fallbackValue);
       return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml17(tLabel)}</span>
+        <span>${escapeHtml18(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="${escapeHtml17(tColorCustom)}">
+          <label class="editor-color-picker" title="${escapeHtml18(tColorCustom)}">
             <input
               type="color"
-              data-field="${escapeHtml17(field)}"
+              data-field="${escapeHtml18(field)}"
               data-value-type="color"
-              data-alpha="${escapeHtml17(String(colorModel.alpha))}"
-              value="${escapeHtml17(colorModel.hex)}"
-              aria-label="${escapeHtml17(tLabel)}"
+              data-alpha="${escapeHtml18(String(colorModel.alpha))}"
+              value="${escapeHtml18(colorModel.hex)}"
+              aria-label="${escapeHtml18(tLabel)}"
             />
-            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml17(currentValue)};"></span>
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml18(currentValue)};"></span>
           </label>
         </div>
       </div>
@@ -73645,12 +76562,12 @@
       <label class="editor-toggle">
         <input
           type="checkbox"
-          data-field="${escapeHtml17(field)}"
+          data-field="${escapeHtml18(field)}"
           data-value-type="boolean"
           ${checked ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml17(tLabel)}</span>
+        <span class="editor-toggle__label">${escapeHtml18(tLabel)}</span>
       </label>
     `;
     }
@@ -73742,12 +76659,12 @@
       <label class="editor-toggle">
         <input
           type="checkbox"
-          data-mode-list-field="${escapeHtml17(field)}"
-          data-mode-value="${escapeHtml17(modeValue)}"
+          data-mode-list-field="${escapeHtml18(field)}"
+          data-mode-value="${escapeHtml18(modeValue)}"
           ${this._isModeVisible(field, modeValue) ? "checked" : ""}
         />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml17(label)}</span>
+        <span class="editor-toggle__label">${escapeHtml18(label)}</span>
       </label>
     `;
     }
@@ -73755,11 +76672,11 @@
       const tLabel = this._editorLabel(label);
       return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml17(tLabel)}</span>
-        <select data-field="${escapeHtml17(field)}">
+        <span>${escapeHtml18(tLabel)}</span>
+        <select data-field="${escapeHtml18(field)}">
           ${options.map((option) => `
-              <option value="${escapeHtml17(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml17(this._editorLabel(option.label))}
+              <option value="${escapeHtml18(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
+                ${escapeHtml18(this._editorLabel(option.label))}
               </option>
             `).join("")}
         </select>
@@ -73769,29 +76686,31 @@
     _renderEntityPickerField(label, field, value, options = {}) {
       const tLabel = this._editorLabel(label);
       const inputValue = value === void 0 || value === null ? "" : String(value);
+      const placeholderAttr = options.placeholder ? `data-placeholder="${escapeHtml18(options.placeholder)}"` : "";
       return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml17(tLabel)}</span>
+        <span>${escapeHtml18(tLabel)}</span>
         <div
           class="editor-control-host"
-          data-mounted-control="${escapeHtml17(options.controlType || "entity")}"
-          data-field="${escapeHtml17(field)}"
-          data-value="${escapeHtml17(inputValue)}"
+          data-mounted-control="${escapeHtml18(options.controlType || "entity")}"
+          data-field="${escapeHtml18(field)}"
+          data-value="${escapeHtml18(inputValue)}"
+          ${placeholderAttr}
         ></div>
       </div>
     `;
     }
     _renderIconPickerField(label, field, value, options = {}) {
       const tLabel = this._editorLabel(label);
-      const placeholder = options.placeholder ? `placeholder="${escapeHtml17(options.placeholder)}"` : "";
+      const placeholder = options.placeholder ? `placeholder="${escapeHtml18(options.placeholder)}"` : "";
       const inputValue = value === void 0 || value === null ? "" : String(value);
       return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml17(tLabel)}</span>
+        <span>${escapeHtml18(tLabel)}</span>
         <ha-icon-picker
-          data-field="${escapeHtml17(field)}"
-          data-value="${escapeHtml17(inputValue)}"
-          value="${escapeHtml17(inputValue)}"
+          data-field="${escapeHtml18(field)}"
+          data-value="${escapeHtml18(inputValue)}"
+          value="${escapeHtml18(inputValue)}"
           ${placeholder}
         ></ha-icon-picker>
       </div>
@@ -73803,14 +76722,32 @@
       }
       const field = host.dataset.field || pickerOptions.field || "entity";
       const nextValue = host.dataset.value || "";
+      const placeholder = host.dataset.placeholder || pickerOptions.placeholder || "";
+      const domains = pickerOptions.includeDomains || [];
       let control = null;
       if (customElements.get("ha-entity-picker")) {
         control = document.createElement("ha-entity-picker");
-        control.includeDomains = pickerOptions.includeDomains || [];
+        if (domains.length) {
+          control.includeDomains = domains;
+          control.entityFilter = pickerOptions.entityFilter || ((stateObj) => domains.some((d) => String(stateObj?.entity_id || "").startsWith(`${d}.`)));
+        }
         control.allowCustomEntity = true;
-        control.entityFilter = pickerOptions.entityFilter;
+        if (placeholder) {
+          control.setAttribute("placeholder", placeholder);
+        }
+      } else if (customElements.get("ha-selector")) {
+        control = document.createElement("ha-selector");
+        const entitySelector = domains.length === 1 ? { domain: domains[0] } : domains.length > 1 ? { domain: domains } : {};
+        control.selector = { entity: entitySelector };
+        if (placeholder) {
+          control.setAttribute("label", placeholder);
+        }
       } else {
         control = document.createElement("select");
+        const emptyOption = document.createElement("option");
+        emptyOption.value = "";
+        emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
+        control.appendChild(emptyOption);
         pickerOptions.getOptions(field).forEach((option) => {
           const optionElement = document.createElement("option");
           optionElement.value = option.value;
@@ -73857,7 +76794,7 @@
       if (!this.shadowRoot) {
         return;
       }
-      const config = this._config || normalizeConfig17({});
+      const config = this._config || normalizeConfig18({});
       const hapticStyle = config.haptics?.style || "medium";
       const suctionModeVisibilityOptions = this._getModeVisibilityOptions("suction");
       const mopModeVisibilityOptions = this._getModeVisibilityOptions("mop");
@@ -74156,13 +77093,14 @@
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml17(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Entidad principal, nombre visible y comportamiento al tocar la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml18(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml18(this._editorLabel("Entidad principal, nombre visible y comportamiento al tocar la tarjeta."))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityPickerField("Entidad del robot", "entity", config.entity, {
         controlType: "vacuum-entity",
-        fullWidth: true
+        fullWidth: true,
+        placeholder: "vacuum.robot"
       })}
             ${this._renderIconPickerField("Icono", "icon", config.icon, {
         placeholder: "mdi:robot-vacuum",
@@ -74203,32 +77141,37 @@
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml17(this._editorLabel("Entidades auxiliares"))}</div>
-            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Sensores y selectores opcionales para enriquecer el estado y los controles."))}</div>
+            <div class="editor-section__title">${escapeHtml18(this._editorLabel("Entidades auxiliares"))}</div>
+            <div class="editor-section__hint">${escapeHtml18(this._editorLabel("Sensores y selectores opcionales para enriquecer el estado y los controles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderEntityPickerField("Sensor de estado", "state_entity", config.state_entity, {
-        controlType: "sensor-entity"
+        controlType: "sensor-entity",
+        placeholder: "sensor.robot_estado"
       })}
             ${this._renderEntityPickerField("Sensor de batería", "battery_entity", config.battery_entity, {
-        controlType: "sensor-entity"
+        controlType: "sensor-entity",
+        placeholder: "sensor.robot_bateria"
       })}
             ${this._renderEntityPickerField("Sensor de habitaciones", "room_mapping_entity", config.room_mapping_entity, {
-        controlType: "sensor-entity"
+        controlType: "sensor-entity",
+        placeholder: "sensor.room_mapping"
       })}
             ${this._renderEntityPickerField("Selector de aspirado", "suction_select_entity", config.suction_select_entity, {
-        controlType: "select-entity"
+        controlType: "select-entity",
+        placeholder: "select.robot_fan_speed"
       })}
             ${this._renderEntityPickerField("Selector de fregado", "mop_select_entity", config.mop_select_entity, {
-        controlType: "select-entity"
+        controlType: "select-entity",
+        placeholder: "select.robot_mop_mode"
       })}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml17(this._editorLabel("Visibilidad"))}</div>
-            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Qué elementos quieres mostrar dentro de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml18(this._editorLabel("Visibilidad"))}</div>
+            <div class="editor-section__hint">${escapeHtml18(this._editorLabel("Qué elementos quieres mostrar dentro de la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
@@ -74271,8 +77214,8 @@
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml17(this._editorLabel("Haptics"))}</div>
-            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Respuesta háptica opcional para los controles."))}</div>
+            <div class="editor-section__title">${escapeHtml18(this._editorLabel("Haptics"))}</div>
+            <div class="editor-section__hint">${escapeHtml18(this._editorLabel("Respuesta háptica opcional para los controles."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
@@ -74296,8 +77239,8 @@
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml17(this._editorLabel("Animaciones"))}</div>
-            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Feedback visual para botones y paneles del robot."))}</div>
+            <div class="editor-section__title">${escapeHtml18(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml18(this._editorLabel("Feedback visual para botones y paneles del robot."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -74306,7 +77249,7 @@
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml17(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
+                <span>${escapeHtml18(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
               </button>
             </div>
           </div>
@@ -74325,8 +77268,8 @@
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml17(this._editorLabel("Estilos"))}</div>
-            <div class="editor-section__hint">${escapeHtml17(this._editorLabel("Ajustes visuales básicos del look Nodalia."))}</div>
+            <div class="editor-section__title">${escapeHtml18(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml18(this._editorLabel("Ajustes visuales básicos del look Nodalia."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -74335,7 +77278,7 @@
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml17(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
+                <span>${escapeHtml18(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
               </button>
             </div>
           </div>
@@ -74402,16 +77345,16 @@
       this._ensureEditorControlsReady();
     }
   };
-  if (!customElements.get(EDITOR_TAG17)) {
-    customElements.define(EDITOR_TAG17, NodaliaVacuumCardEditor);
+  if (!customElements.get(EDITOR_TAG18)) {
+    customElements.define(EDITOR_TAG18, NodaliaVacuumCardEditor);
   }
   window.customCards = window.customCards || [];
   window.customCards.push({
-    type: CARD_TAG17,
+    type: CARD_TAG18,
     name: "Nodalia Vacuum Card",
     description: "Tarjeta de aspirador con look Nodalia, acciones rápidas y editor visual.",
     preview: true
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.6.1-alpha.1","contentSha256_12":"582aeb0816ed"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v0.6.1-alpha.1 (582aeb0816ed) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-beta.1","contentSha256_12":"28f1c5288c32"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-beta.1 (28f1c5288c32) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}

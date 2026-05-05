@@ -6,7 +6,167 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Work toward **`0.6.x`** on **`alpha`** / **`beta`** and eventual **`main`**: additional polish, performance and feature work after the **`0.5.0`** stable release. Prerelease workflow and tagging: **CONTRIBUTING**.
+Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains the stable baseline on **`main`**: additional polish, performance, security and feature work before the next major stable. Prerelease workflow and tagging: **CONTRIBUTING**.
+
+---
+
+## [1.0.0-beta.1] - 2026-05-06
+
+First **`beta`** on the **`1.0.0`** line (**branch `beta`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-beta.1`** (Git tag **`v1.0.0-beta.1`** recommended for HACS/GitHub Releases).
+
+- **Nodalia Vacuum Card (`nodalia-vacuum-card`) `0.6.3`:** editor visual alineado con Advance/calendario: **`ha-entity-picker`** primero, **`ha-selector`** como respaldo, **`select`** nativo al final; placeholders en campos de entidad auxiliar.
+
+---
+
+## [1.0.0-alpha.19] - 2026-05-06
+
+Nineteenth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.19`** (tag **`v1.0.0-alpha.19`** optional).
+
+- **Calendar / Advance Vacuum:** persistencia en **`input_text`**: se evitaba reenviar tras un **`set_value` fallido** porque la deduplicación guardaba el valor “optimista” antes de confirmar el servicio; ahora solo se compara con el estado en HA y **`_lastSubmitted`** solo se actualiza si la llamada termina bien (con **`trim`** en calendario). **Vacuum:** **`input_text.set_value`** hacia el helper configurado **ignora la allowlist** de **`security.allowed_*`** para que el modo estricto no bloquee la sincronización. **Vacuum card** **`0.13.6`**: editor visual con **`ha-entity-picker`** primero (como calendario), bloque ancho + texto de ayuda para **`shared_cleaning_session_entity`**.
+
+---
+
+## [1.0.0-alpha.18] - 2026-05-06
+
+Eighteenth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.18`** (tag **`v1.0.0-alpha.18`** optional).
+
+- **Calendar card:** vista **mes**: un evento compacto por día y **puntos** (tint) para más eventos; vista **día**: todos los eventos con **scroll**; la animación de apertura del **panel** del popup no se repite al marcar **hecho** ni al actualizar dentro del popup.
+
+---
+
+## [1.0.0-alpha.14] - 2026-05-06
+
+Fourteenth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.14`** (tag **`v1.0.0-alpha.14`** optional).
+
+---
+
+## [1.0.0-alpha.13] - 2026-05-06
+
+Thirteenth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.13`** (tag **`v1.0.0-alpha.13`** optional).
+
+- **Calendar card:** en el popup **mes**, **pulsa un día** para abrir la vista centrada en ese día: primer evento destacado, **puntos de color** (tint de cada calendario) para el resto, lista **con scroll** de los demás eventos; botón **«Mes»**, **Escape** vuelve al calendario mensual antes de cerrar el popup.
+
+---
+
+## [1.0.0-alpha.12] - 2026-05-06
+
+Twelfth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.12`** (tag **`v1.0.0-alpha.12`** optional).
+
+- **Calendar card:** en el popup **mes**, los días con **varios eventos** usan de nuevo **scroll vertical dentro del día**: los bloques eran ítems flex con **`flex-shrink: 1`** y **`min-height: 0`** (compact), así que se **aplastaban** unos sobre otros en lugar de desbordar con scroll; ahora cada evento tiene **`flex-shrink: 0`**, altura de fila **`grid-auto-rows`** fija y la zona de eventos ocupa el resto del día con **`overflow-y: auto`**.
+
+---
+
+## [1.0.0-alpha.11] - 2026-05-06
+
+Eleventh **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.11`** (tag **`v1.0.0-alpha.11`** optional).
+
+- **Advance Vacuum card:** **`shared_cleaning_session_entity`** vuelve a **persistir** cuando el modo activo es **`routines`**: `_normalizeCleaningSession` solo admitía `activeMode` en `all` / `rooms` / `zone` / `goto`, así que **`routines`** se perdía y el helper podía quedar vacío o sin `a=routines`. **`nodalia-advance-vacuum-card.js`**: `CARD_VERSION` **0.13.4**.
+- **Calendar card:** opción **`shared_completed_events_entity`** (`input_text`): los completados se sincronizan entre dispositivos vía HA (sin helper, solo `localStorage`).
+- **Calendar card:** vista mensual del popup con **scroll horizontal** en pantallas estrechas y columnas con **ancho mínimo** para legibilidad en móvil.
+
+---
+
+## [1.0.0-alpha.10] - 2026-05-06
+
+Tenth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.10`** (tag **`v1.0.0-alpha.10`** optional).
+
+- **Calendar card:** carga de eventos más **compatible con HA Companion / WebKit**: si `callApi` devuelve algo que no es un array o falla, se reintenta con **`fetchWithAuth`** sobre `/api/calendars/...`; respuestas envueltas en objeto se normalizan cuando traen una lista en **`events`**.
+- **Calendar card:** fechas **solo día** (`YYYY-MM-DD` / `start.date`) se interpretan en **calendario local** para que el agrupado coincida en **iOS/Safari** con escritorio.
+- **Calendar card:** al volver a la pestaña o a la app (`visibilitychange`), se **vuelven a pedir** eventos para recuperar datos tras suspender la vista en móvil.
+
+---
+
+## [1.0.0-alpha.9] - 2026-05-06
+
+Ninth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.9`** (tag **`v1.0.0-alpha.9`** optional).
+
+- **Calendar card:** panel ampliado con estilo acorde al **popup del gráfico** en Weather (vidrio, acento, animación de entrada); **tintado manual** aplica el mismo cromado que el primario cuando el automático está desactivado; icono por defecto con **mezcla tema** (`primary` + texto) para legibilidad en claro/oscuro.
+- **Calendar card:** animación de **entrada** solo tras terminar la carga (no se “gasta” en la vista de carga); al **marcar** un evento como hecho, **salida animada** (escala + desvanecimiento) antes de ocultar la fila.
+
+---
+
+## [1.0.0-alpha.8] - 2026-05-05
+
+Eighth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.8`** (tag **`v1.0.0-alpha.8`** optional).
+
+- **Calendar card:** editor adds **etiqueta** y **color de tintado** por calendario (la etiqueta sustituye al subtítulo bajo el evento cuando está definida); el chip del encabezado usa **rangos predefinidos** (3 días, 1 semana, 2 semanas, 1 mes) en lugar de un número libre de días.
+- **Calendar card:** al pulsar la tarjeta se abre un **panel ampliado** con todo el rango: columna vertical para 3 días, columnas horizontales desplazables para 1–2 semanas, y **rejilla mensual** para el rango de un mes; **Escape** o el fondo cierran el panel.
+- **Calendar card:** con **tintado automático**, la tarjeta usa el mismo esquema visual que **Entity card** en estado activo (degradado 135° sobre `ha-card`, borde `color-mix` con `--divider-color`, sombra de elevación, overlays `::before` / `::after`), burbuja de icono con borde/sombra tipo pill y chips de cabecera alineados con los chips de Entity (`fondo/borde` al 6%, peso 600). Con tintado automático desactivado, la tarjeta pasa a fondo y borde neutros como Entity **inactiva**.
+
+---
+
+## [1.0.0-alpha.7] - 2026-05-05
+
+Seventh **`alpha`** on the **`1.0.0`** line (**branch `alpha`**).
+
+- **Calendar card:** debajo del título del evento se muestra el **nombre amistoso** de la entidad (`friendly_name`) en lugar del id crudo (`calendar.xxx`); si no hay nombre, se usa una forma legible del sufijo de entidad.
+
+---
+
+## [1.0.0-alpha.6] - 2026-05-05
+
+Sixth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**).
+
+- **Calendar editor:** color-related style fields use the same visual color picker + swatch pattern as other Nodalia cards.
+- **Calendar editor:** “Añadir calendario” works again (empty calendar slots are preserved instead of being stripped on normalize).
+- **Calendar:** default **`max_visible_events`** is now **2** (was 3).
+
+---
+
+## [1.0.0-alpha.5] - 2026-05-05
+
+Fifth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**).
+
+- **Calendar visual editor:** aligned layout and styling with other Nodalia editors (section headers + hints, 18px rounded panels, graph-style series cards per calendar, primary-color toggles, collapsible Animaciones/Estilos with chevron buttons, `ha-icon-picker` for icon, `editorStatesSignature` + focus restore on hass updates).
+
+---
+
+## [1.0.0-alpha.4] - 2026-05-05
+
+Fourth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Calendar card stability fix.
+
+- **Calendar card:** stopped re-rendering the full shadow DOM on every Home Assistant `hass` update (the setter was rebuilding `innerHTML` continuously, which caused visible flicker and replayed the entrance animation). Renders are now driven by first `hass`, locale changes, config/refresh, completion toggles, and deduplicated when the visible model is unchanged.
+- **Calendar card:** entrance animation runs once per card instance instead of on every paint.
+
+---
+
+## [1.0.0-alpha.3] - 2026-05-05
+
+Third **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). This release continues polishing the new calendar card and editor experience.
+
+- **Calendar editor parity:** visual editor aligned further with Nodalia card-editor patterns and interaction behavior.
+- **Calendar UX polish:** continued refinement of list visibility/scroll behavior and event configuration controls.
+- **Iteration release:** version bump to keep alpha feedback cycles short while `0.6.1` remains stable on `main`.
+
+---
+
+## [1.0.0-alpha.2] - 2026-05-05
+
+Second **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). This cut refines the initial calendar-card introduction with a stronger visual-editor workflow and event-list behavior.
+
+- **Calendar editor UX:** moved calendar selection to native entity picker rows with add/remove controls (multi-calendar friendly, consistent with other Nodalia editors).
+- **Calendar list behavior:** added configurable `max_visible_events` (originally default **3**, now **2** from **1.0.0-alpha.6**) and vertical scroll beyond the visible-event threshold.
+- **Polish pass:** aligned interaction flow and config normalization for the new card while keeping `0.6.1` as stable baseline on `main`.
+
+---
+
+## [1.0.0-alpha.1] - 2026-05-05
+
+First **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). This marks the start of the next major cycle while `0.6.1` remains the stable baseline on `main`.
+
+- **New card:** added **`nodalia-calendar-card`** with Nodalia visual style to show upcoming events by configurable day range.
+- **Calendar UX:** supports selecting calendar entities, elegant grouped event display, and in-card event completion toggles for already completed/personal tracking flows.
+- **Editor support:** added a visual editor for title, calendars list, day range, refresh interval, and completed-event visibility/marking behavior.
+
+---
+
+## [0.6.1] - 2026-05-05
+
+Patch stable release on **`main`**. This version promotes the `0.6.1-alpha.1` fixes to stable, focused on security/i18n consistency and preserving media player style flexibility in navigation.
+
+- **Editor i18n consistency:** new service-security labels are normalized for translation flow in visual editors (Insignia, Entity, Fav, Advance Vacuum).
+- **Navigation hardening:** `media_player.background` is sanitized with safe fallback before being used in `color-mix(...)`.
+- **Navigation customization restored:** user-configurable `styles.media_player.border`, `styles.media_player.border_radius`, and `styles.media_player.box_shadow` are honored again (with sanitization + defaults).
 
 ---
 
