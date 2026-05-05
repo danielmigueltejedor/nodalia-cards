@@ -393,7 +393,7 @@
 
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.13.6";
+const CARD_VERSION = "0.13.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2449,6 +2449,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       pendingStartAt: normalizedSession.pendingStartAt,
       resumeRoomIdsAfterZone: normalizedSession.resumeRoomIdsAfterZone,
       resumeRepeatsAfterZone: normalizedSession.resumeRepeatsAfterZone,
+      modePanelPreset: normalizedSession.modePanelPreset,
+      utilityPanel: normalizedSession.utilityPanel,
     });
   }
 
@@ -2496,6 +2498,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (snapshot.resumeRepeatsAfterZone) {
       parts.push(`rq=${snapshot.resumeRepeatsAfterZone}`);
     }
+    if (snapshot.modePanelPreset) {
+      parts.push(`pp=${encodeURIComponent(snapshot.modePanelPreset)}`);
+    }
+    if (snapshot.utilityPanel) {
+      parts.push(`xu=${encodeURIComponent(snapshot.utilityPanel)}`);
+    }
 
     return parts.join("&");
   }
@@ -2532,6 +2540,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       pendingStartAt: Number(params.get("p") || 0),
       resumeRoomIdsAfterZone: decodeSharedSessionList(params.get("rr")),
       resumeRepeatsAfterZone: Number(params.get("rq") || 1),
+      modePanelPreset: params.get("pp") || "",
+      utilityPanel: params.get("xu") || "",
     });
   }
 
@@ -2568,26 +2578,26 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const serializedTrim = serialized.trim();
     const currentValue = String(this._getSharedCleaningSessionState()?.state ?? "").trim();
-    if (serializedTrim === currentValue) {
+    if (
+      serializedTrim === currentValue ||
+      serializedTrim === this._lastSubmittedSharedCleaningSessionValue
+    ) {
       return;
     }
+
+    this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
 
     const pending = this._callNamedService("input_text.set_value", {
       entity_id: entityId,
       value: serializedTrim,
     });
     if (pending && typeof pending.then === "function") {
-      pending
-        .then(() => {
-          this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
-        })
-        .catch(err => {
-          if (typeof console !== "undefined" && typeof console.warn === "function") {
-            console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
-          }
-        });
-    } else {
-      this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
+      pending.catch(err => {
+        this._lastSubmittedSharedCleaningSessionValue = null;
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
+        }
+      });
     }
   }
 
@@ -2643,6 +2653,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       .map(item => String(item || "").trim())
       .filter(Boolean);
     const resumeRepeatsAfterZone = clamp(Number(session.resumeRepeatsAfterZone || repeats || 1), 1, 9);
+    const modePanelPreset = String(session.modePanelPreset ?? "").trim().slice(0, 64);
+    const utilityPanel = String(session.utilityPanel ?? "").trim().slice(0, 64);
 
     if (
       !mode &&
@@ -2654,7 +2666,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       !manualZones.length &&
       !selectionUpdatedAt &&
       !pendingStartAt &&
-      !resumeRoomIdsAfterZone.length
+      !resumeRoomIdsAfterZone.length &&
+      !modePanelPreset &&
+      !utilityPanel
     ) {
       return null;
     }
@@ -2672,6 +2686,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       pendingStartAt,
       resumeRoomIdsAfterZone,
       resumeRepeatsAfterZone,
+      modePanelPreset,
+      utilityPanel,
     };
   }
 
@@ -2699,6 +2715,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._activeMode = persistedSession.activeMode;
     }
     this._repeats = clamp(Number(persistedSession.repeats || this._repeats || 1), 1, 9);
+    const presetPersist = String(persistedSession.modePanelPreset ?? "").trim().slice(0, 64);
+    if (presetPersist) {
+      this._activeModePanelPreset = presetPersist;
+      this._lastResolvedModePanelPreset = presetPersist;
+    }
+    const utilPersist = String(persistedSession.utilityPanel ?? "").trim().slice(0, 64);
+    this._activeUtilityPanel = utilPersist || null;
     return true;
   }
 
@@ -2766,6 +2789,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       pendingStartAt: this._pendingCleaningSessionStartAt,
       resumeRoomIdsAfterZone: this._pendingRoomCleaningResumeRoomIds,
       resumeRepeatsAfterZone: this._pendingRoomCleaningResumeRepeats,
+      modePanelPreset: String(this._activeModePanelPreset || "").trim().slice(0, 64),
+      utilityPanel: this._activeUtilityPanel ? String(this._activeUtilityPanel).trim().slice(0, 64) : "",
     });
   }
 
@@ -4539,6 +4564,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const selection = this._getModePanelPresetSelection(presetId, state);
     if (!selection) {
+      this._persistCurrentCleaningSessionState(this._activeMode, {
+        markSelectionChange: true,
+      });
       this._triggerHaptic("selection");
       this._render();
       return;
@@ -4565,6 +4593,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._setModeOption("mop_mode", selection.mopMode, state, { triggerHaptic: false });
     }
 
+    this._persistCurrentCleaningSessionState(this._activeMode, {
+      markSelectionChange: true,
+    });
     this._triggerHaptic("selection");
     this._render();
   }
@@ -5272,7 +5303,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
       : [];
     if (!domains.length && !services.length) {
-      return true;
+      return security.strict_service_actions !== true;
     }
     return services.includes(normalizedService) || domains.includes(domain);
   }
@@ -5400,6 +5431,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   _toggleUtilityPanel(panelId) {
     this._activeUtilityPanel = this._activeUtilityPanel === panelId ? null : panelId;
+    this._persistCurrentCleaningSessionState(this._activeMode, {
+      markSelectionChange: true,
+    });
     this._triggerHaptic("selection");
     this._render();
   }

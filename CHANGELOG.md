@@ -10,6 +10,29 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.21] - 2026-05-06
+
+Twenty-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.21`** (tag **`v1.0.0-alpha.21`** optional).
+
+- **Advance Vacuum (`0.13.8`):** persistencia **`input_text`** — vuelve la deduplicación con **`_lastSubmittedSharedCleaningSessionValue`** antes del servicio y **`null`** en **`catch`** para no spamear **`set_value`** mientras HA sincroniza y permitir reintento si falla. **`security.strict_service_actions`** explícito **`true`** con listas vacías ya **no** abre todo el mundo: sin entradas en la allowlist se deniega ( **`fail-closed`** ); la persistencia al helper sigue usando el bypass dedicado.
+- **Calendar card:** mismo patrón optimista + **`catch`** en **`_saveCompleted`** para el helper de completados.
+
+---
+
+## [1.0.0-alpha.20] - 2026-05-06
+
+Twentieth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.20`** (tag **`v1.0.0-alpha.20`** optional).
+
+---
+
+## [1.0.0-beta.2] - 2026-05-06
+
+Second **`beta`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-beta.2`** (tag **`v1.0.0-beta.2`** optional).
+
+- **Advance Vacuum (`0.13.7`):** la sesión compartida en **`input_text`** incluye ahora la «vista» de la tarjeta: **preset del panel de modos** (aspirado/fregado, `pp=` en el helper) y **panel lateral utilidades** abierto (`modes` / `dock`, `xu=`). Cambiar pestañas de modo o abrir/cerrar esos paneles llama a **`set_value`** como el resto de selecciones.
+
+---
+
 ## [1.0.0-beta.1] - 2026-05-06
 
 First **`beta`** on the **`1.0.0`** line (**branch `beta`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-beta.1`** (Git tag **`v1.0.0-beta.1`** recommended for HACS/GitHub Releases).

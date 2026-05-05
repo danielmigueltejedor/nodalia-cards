@@ -52954,7 +52954,9 @@
         selectionUpdatedAt: normalizedSession.selectionUpdatedAt,
         pendingStartAt: normalizedSession.pendingStartAt,
         resumeRoomIdsAfterZone: normalizedSession.resumeRoomIdsAfterZone,
-        resumeRepeatsAfterZone: normalizedSession.resumeRepeatsAfterZone
+        resumeRepeatsAfterZone: normalizedSession.resumeRepeatsAfterZone,
+        modePanelPreset: normalizedSession.modePanelPreset,
+        utilityPanel: normalizedSession.utilityPanel
       });
     }
     _serializeSharedCleaningSession(session, options = {}) {
@@ -52999,6 +53001,12 @@
       if (snapshot.resumeRepeatsAfterZone) {
         parts.push(`rq=${snapshot.resumeRepeatsAfterZone}`);
       }
+      if (snapshot.modePanelPreset) {
+        parts.push(`pp=${encodeURIComponent(snapshot.modePanelPreset)}`);
+      }
+      if (snapshot.utilityPanel) {
+        parts.push(`xu=${encodeURIComponent(snapshot.utilityPanel)}`);
+      }
       return parts.join("&");
     }
     _deserializeSharedCleaningSession(rawValue) {
@@ -53029,7 +53037,9 @@
         selectionUpdatedAt: Number(params.get("su") || 0),
         pendingStartAt: Number(params.get("p") || 0),
         resumeRoomIdsAfterZone: decodeSharedSessionList(params.get("rr")),
-        resumeRepeatsAfterZone: Number(params.get("rq") || 1)
+        resumeRepeatsAfterZone: Number(params.get("rq") || 1),
+        modePanelPreset: params.get("pp") || "",
+        utilityPanel: params.get("xu") || ""
       });
     }
     _readSharedCleaningSession() {
@@ -53059,23 +53069,21 @@
       }
       const serializedTrim = serialized.trim();
       const currentValue = String(this._getSharedCleaningSessionState()?.state ?? "").trim();
-      if (serializedTrim === currentValue) {
+      if (serializedTrim === currentValue || serializedTrim === this._lastSubmittedSharedCleaningSessionValue) {
         return;
       }
+      this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
       const pending = this._callNamedService("input_text.set_value", {
         entity_id: entityId,
         value: serializedTrim
       });
       if (pending && typeof pending.then === "function") {
-        pending.then(() => {
-          this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
-        }).catch((err) => {
+        pending.catch((err) => {
+          this._lastSubmittedSharedCleaningSessionValue = null;
           if (typeof console !== "undefined" && typeof console.warn === "function") {
             console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
           }
         });
-      } else {
-        this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
       }
     }
     _clearSharedCleaningSession() {
@@ -53109,7 +53117,9 @@
       const pendingStartAt = Number(session.pendingStartAt || 0);
       const resumeRoomIdsAfterZone = arrayFromMaybe2(session.resumeRoomIdsAfterZone).map((item) => String(item || "").trim()).filter(Boolean);
       const resumeRepeatsAfterZone = clamp11(Number(session.resumeRepeatsAfterZone || repeats || 1), 1, 9);
-      if (!mode && !activeMode && !activeRoomIds.length && !activeZones.length && !selectedRoomIds.length && !selectedPredefinedZoneIds.length && !manualZones.length && !selectionUpdatedAt && !pendingStartAt && !resumeRoomIdsAfterZone.length) {
+      const modePanelPreset = String(session.modePanelPreset ?? "").trim().slice(0, 64);
+      const utilityPanel = String(session.utilityPanel ?? "").trim().slice(0, 64);
+      if (!mode && !activeMode && !activeRoomIds.length && !activeZones.length && !selectedRoomIds.length && !selectedPredefinedZoneIds.length && !manualZones.length && !selectionUpdatedAt && !pendingStartAt && !resumeRoomIdsAfterZone.length && !modePanelPreset && !utilityPanel) {
         return null;
       }
       return {
@@ -53124,7 +53134,9 @@
         selectionUpdatedAt,
         pendingStartAt,
         resumeRoomIdsAfterZone,
-        resumeRepeatsAfterZone
+        resumeRepeatsAfterZone,
+        modePanelPreset,
+        utilityPanel
       };
     }
     _restorePersistedCleaningSessionState() {
@@ -53148,6 +53160,13 @@
         this._activeMode = persistedSession.activeMode;
       }
       this._repeats = clamp11(Number(persistedSession.repeats || this._repeats || 1), 1, 9);
+      const presetPersist = String(persistedSession.modePanelPreset ?? "").trim().slice(0, 64);
+      if (presetPersist) {
+        this._activeModePanelPreset = presetPersist;
+        this._lastResolvedModePanelPreset = presetPersist;
+      }
+      const utilPersist = String(persistedSession.utilityPanel ?? "").trim().slice(0, 64);
+      this._activeUtilityPanel = utilPersist || null;
       return true;
     }
     _ensurePersistedCleaningSessionStateLoaded() {
@@ -53199,7 +53218,9 @@
         selectionUpdatedAt: nextSelectionUpdatedAt,
         pendingStartAt: this._pendingCleaningSessionStartAt,
         resumeRoomIdsAfterZone: this._pendingRoomCleaningResumeRoomIds,
-        resumeRepeatsAfterZone: this._pendingRoomCleaningResumeRepeats
+        resumeRepeatsAfterZone: this._pendingRoomCleaningResumeRepeats,
+        modePanelPreset: String(this._activeModePanelPreset || "").trim().slice(0, 64),
+        utilityPanel: this._activeUtilityPanel ? String(this._activeUtilityPanel).trim().slice(0, 64) : ""
       });
     }
     _setPendingRoomCleaningResume(roomIds = [], repeats = this._repeats) {
@@ -54574,6 +54595,9 @@
       this._lastResolvedModePanelPreset = presetId;
       const selection = this._getModePanelPresetSelection(presetId, state);
       if (!selection) {
+        this._persistCurrentCleaningSessionState(this._activeMode, {
+          markSelectionChange: true
+        });
         this._triggerHaptic("selection");
         this._render();
         return;
@@ -54587,6 +54611,9 @@
       if (selection.mopMode && normalizeTextKey10(selection.mopMode) !== normalizeTextKey10(this._getMopModeDescriptor(state)?.current)) {
         this._setModeOption("mop_mode", selection.mopMode, state, { triggerHaptic: false });
       }
+      this._persistCurrentCleaningSessionState(this._activeMode, {
+        markSelectionChange: true
+      });
       this._triggerHaptic("selection");
       this._render();
     }
@@ -55181,7 +55208,7 @@
       const domains = Array.isArray(security.allowed_service_domains) ? security.allowed_service_domains.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
       const services = Array.isArray(security.allowed_services) ? security.allowed_services.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
       if (!domains.length && !services.length) {
-        return true;
+        return security.strict_service_actions !== true;
       }
       return services.includes(normalizedService) || domains.includes(domain);
     }
@@ -55281,6 +55308,9 @@
     }
     _toggleUtilityPanel(panelId) {
       this._activeUtilityPanel = this._activeUtilityPanel === panelId ? null : panelId;
+      this._persistCurrentCleaningSessionState(this._activeMode, {
+        markSelectionChange: true
+      });
       this._triggerHaptic("selection");
       this._render();
     }
@@ -71672,26 +71702,25 @@
         return;
       }
       const currentState = String(this._hass.states?.[entityId]?.state ?? "").trim();
-      if (payload === currentState) {
+      if (payload === currentState || payload === this._lastSubmittedSharedCompletedValue) {
         return;
       }
+      this._lastSubmittedSharedCompletedValue = payload;
       try {
         const result = this._hass.callService("input_text", "set_value", {
           entity_id: entityId,
           value: payload
         });
         if (result && typeof result.then === "function") {
-          result.then(() => {
-            this._lastSubmittedSharedCompletedValue = payload;
-          }).catch((err) => {
+          result.catch((err) => {
+            this._lastSubmittedSharedCompletedValue = null;
             if (typeof console !== "undefined" && typeof console.warn === "function") {
               console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
             }
           });
-        } else {
-          this._lastSubmittedSharedCompletedValue = payload;
         }
       } catch (err) {
+        this._lastSubmittedSharedCompletedValue = null;
         if (typeof console !== "undefined" && typeof console.warn === "function") {
           console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
         }
@@ -77357,4 +77386,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-beta.1","contentSha256_12":"28f1c5288c32"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-beta.1 (28f1c5288c32) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.21","contentSha256_12":"b6f35ffaa439"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.21 (b6f35ffaa439) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
