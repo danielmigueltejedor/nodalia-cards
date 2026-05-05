@@ -10,6 +10,16 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.3] - 2026-05-05
+
+Third **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). This release continues polishing the new calendar card and editor experience.
+
+- **Calendar editor parity:** visual editor aligned further with Nodalia card-editor patterns and interaction behavior.
+- **Calendar UX polish:** continued refinement of list visibility/scroll behavior and event configuration controls.
+- **Iteration release:** version bump to keep alpha feedback cycles short while `0.6.1` remains stable on `main`.
+
+---
+
 ## [1.0.0-alpha.2] - 2026-05-05
 
 Second **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). This cut refines the initial calendar-card introduction with a stronger visual-editor workflow and event-list behavior.
