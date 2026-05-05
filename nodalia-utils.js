@@ -99,19 +99,6 @@
   }
 
   /**
-   * Cheap signature when the editor only needs to know if hass/stale registry size changed.
-   * Includes locale tag so language switches still re-render translated labels.
-   */
-  function editorStatesSignature(hass, language) {
-    const count = Object.keys(hass?.states || {}).length;
-    const tag =
-      typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
-        ? window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language))
-        : "";
-    return `${tag}|${count}`;
-  }
-
-  /**
    * Signature for entities matching predicate(entityId): id + friendly_name + icon per row,
    * so picker labels update when attributes change. Same locale prefix as editorStatesSignature.
    */
@@ -137,6 +124,15 @@
         ? window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language))
         : "";
     return `${tag}|${rows.join("|")}`;
+  }
+
+  /**
+   * Full hass.states signature: every entity as id + friendly_name + icon (sorted by id),
+   * plus locale tag — same shape as editorFilteredStatesSignature. Editors that list entities
+   * re-render when labels or icons change, not only when the entity count changes.
+   */
+  function editorStatesSignature(hass, language) {
+    return editorFilteredStatesSignature(hass, language, () => true);
   }
 
   function copyDatasetExcept(control, host, skipKeys) {

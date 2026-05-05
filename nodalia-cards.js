@@ -14714,19 +14714,6 @@
   }
 
   /**
-   * Cheap signature when the editor only needs to know if hass/stale registry size changed.
-   * Includes locale tag so language switches still re-render translated labels.
-   */
-  function editorStatesSignature(hass, language) {
-    const count = Object.keys(hass?.states || {}).length;
-    const tag =
-      typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
-        ? window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language))
-        : "";
-    return `${tag}|${count}`;
-  }
-
-  /**
    * Signature for entities matching predicate(entityId): id + friendly_name + icon per row,
    * so picker labels update when attributes change. Same locale prefix as editorStatesSignature.
    */
@@ -14752,6 +14739,15 @@
         ? window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language))
         : "";
     return `${tag}|${rows.join("|")}`;
+  }
+
+  /**
+   * Full hass.states signature: every entity as id + friendly_name + icon (sorted by id),
+   * plus locale tag — same shape as editorFilteredStatesSignature. Editors that list entities
+   * re-render when labels or icons change, not only when the entity count changes.
+   */
+  function editorStatesSignature(hass, language) {
+    return editorFilteredStatesSignature(hass, language, () => true);
   }
 
   function copyDatasetExcept(control, host, skipKeys) {
@@ -42279,7 +42275,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.18";
+const CARD_VERSION = "0.12.19";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -44739,22 +44735,33 @@ class NodaliaGraphCard extends HTMLElement {
             gap: 8px;
           }
 
-          .graph-card__legend {
-            justify-content: flex-start;
-          }
-
+          /* Keep value + legend chips on one row; scroll chips horizontally if needed
+             (wrapping pushed the chart up and overlapped the plot). */
           .graph-card__primary-row {
-            flex-wrap: wrap;
-            row-gap: 6px;
+            flex-wrap: nowrap;
+            gap: 8px 10px;
           }
 
           .graph-card__primary-row .graph-card__value {
-            flex: 1 1 auto;
+            flex: 0 1 auto;
+            min-width: 0;
           }
 
           .graph-card__primary-row .graph-card__legend {
-            flex: 1 1 100%;
-            justify-content: flex-start;
+            flex: 1 1 0;
+            flex-wrap: nowrap;
+            justify-content: flex-end;
+            margin-bottom: 0;
+            min-width: 0;
+            overflow-x: auto;
+            overscroll-behavior-x: contain;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+          }
+
+          .graph-card__primary-row .graph-card__legend-item {
+            flex-shrink: 0;
+            max-width: min(52vw, 160px);
           }
         }
       </style>
@@ -72695,7 +72702,7 @@ window.customCards.push({
 {
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "0.2.9";
+const CARD_VERSION = "0.2.10";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -73620,7 +73627,7 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         .insignia-card--icon-only {
-          border-radius: 999px;
+          border-radius: ${styles.card.border_radius};
           display: flex;
           align-items: center;
           justify-content: center;
@@ -73669,6 +73676,7 @@ class NodaliaInsigniaCard extends HTMLElement {
 
         .insignia-card--icon-only .insignia-card__content {
           align-items: center;
+          border-radius: inherit;
           box-sizing: border-box;
           display: grid;
           place-items: center;
@@ -73699,6 +73707,7 @@ class NodaliaInsigniaCard extends HTMLElement {
 
         .insignia-card--icon-only .insignia-card__icon {
           align-self: center;
+          border-radius: inherit;
           justify-self: center;
           display: flex;
           align-items: center;
@@ -73716,7 +73725,7 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         .insignia-card__icon img {
-          border-radius: 999px;
+          border-radius: inherit;
           height: 100%;
           object-fit: cover;
           width: 100%;
@@ -85193,4 +85202,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0-alpha.8","contentSha256_12":"a25ebaa76762"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0-alpha.9","contentSha256_12":"12d89e29e7bd"};}

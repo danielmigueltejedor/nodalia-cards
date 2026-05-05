@@ -7,6 +7,23 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 
+const STANDALONE_UTILS_START = "// <nodalia-standalone-utils>";
+const STANDALONE_UTILS_END = "// </nodalia-standalone-utils>";
+
+/** Strip inlined nodalia-utils copy used for standalone card scripts (see scripts/sync-standalone-embed.mjs). */
+function stripStandaloneUtilsEmbed(source) {
+  const i0 = source.indexOf(STANDALONE_UTILS_START);
+  if (i0 === -1) {
+    return source;
+  }
+  const i1 = source.indexOf(STANDALONE_UTILS_END, i0);
+  if (i1 === -1) {
+    throw new Error(`${STANDALONE_UTILS_START} without ${STANDALONE_UTILS_END} in bundled part`);
+  }
+  const tail = source.slice(i1 + STANDALONE_UTILS_END.length).replace(/^\s*\n/, "");
+  return source.slice(0, i0) + tail;
+}
+
 const parts = [
   "nodalia-i18n.js",
   "nodalia-editor-ui.js",
@@ -34,7 +51,7 @@ const parts = [
 let body = "";
 for (const name of parts) {
   body += "{\n";
-  body += fs.readFileSync(path.join(root, name), "utf8");
+  body += stripStandaloneUtilsEmbed(fs.readFileSync(path.join(root, name), "utf8"));
   body += "\n}\n";
 }
 

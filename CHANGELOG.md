@@ -10,6 +10,17 @@ Work toward **`0.5.x`** on **`alpha`** / **`beta`** and eventual **`main`**: **P
 
 ---
 
+## [0.5.0-alpha.9] - 2026-05-05
+
+Ninth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.9`** (tag **`v0.5.0-alpha.9`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Graph card** (`0.12.19`): vista **estrecha** (`max-width: 640px`) — **valor y chips de leyenda** en la **misma fila**; leyenda con **scroll horizontal** si hace falta (ya no se fuerza **`flex-wrap`** de la fila ni **`100%`** de ancho en la leyenda, evitando solaparse con el **chart**).
+- **Insignia card** (`0.2.10`): modo **solo icono** — **`border-radius`** del contenedor alineado con **`styles.card.border_radius`** (igual que la píldora con nombre/valor); **`inherit`** en contenido, icono e **imagen**.
+- **Standalone scripts:** **`nodalia-utils.js`** incrustado al inicio de cada tarjeta **`nodalia-*.js`** que usa **`window.NodaliaUtils`** (marcadores **`nodalia-standalone-utils`**); **`npm run bundle`** lo **elimina** del **`nodalia-cards.js`** para no duplicar. **`nodalia-bubble-contrast.js`** no lleva embed (no usa **`NodaliaUtils`**).
+- **Tooling** (**`scripts/sync-standalone-embed.mjs`**): sincronización **idempotente** — tras **`</nodalia-standalone-utils>`** se eliminan **todos** los saltos de línea iniciales (round-trip estable con **`wrapEmbed`**); comparación con **`CRLF`** normalizado a **`LF`**, de modo que **`npm run bundle`** no reescribe en masa los **`nodalia-*.js`** cuando **`nodalia-utils.js`** no cambia.
+
+---
+
 ## [0.5.0-alpha.8] - 2026-05-06
 
 Eighth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.8`** (tag **`v0.5.0-alpha.8`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
