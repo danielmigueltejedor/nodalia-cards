@@ -355,7 +355,7 @@
 
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "0.2.10";
+const CARD_VERSION = "0.2.11";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -544,6 +544,29 @@ function deleteByPath(target, path) {
 function parseSizeToPixels(value, fallback = 0) {
   const numeric = Number.parseFloat(String(value ?? ""));
   return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+/** Sum of top + bottom padding from CSS shorthand (px numbers). */
+function parsePaddingVertical(padding, fallback = 8) {
+  const raw = String(padding ?? "").trim();
+  if (!raw) {
+    return fallback;
+  }
+  const tokens = raw.split(/\s+/).filter(Boolean);
+  const px = tokens.map(token => parseSizeToPixels(token, Number.NaN)).filter(n => Number.isFinite(n));
+  if (!px.length) {
+    return fallback;
+  }
+  if (px.length === 1) {
+    return px[0] * 2;
+  }
+  if (px.length === 2) {
+    return px[0] * 2;
+  }
+  if (px.length === 3) {
+    return px[0] + px[2];
+  }
+  return px[0] + px[2];
 }
 
 function normalizeTextKey(value) {
@@ -1220,9 +1243,16 @@ class NodaliaInsigniaCard extends HTMLElement {
     const showName = config.show_name !== false;
     const showValue = config.show_value !== false && Boolean(value);
     const iconOnly = !showName && !showValue;
-    const iconOnlySize = Math.max(36, Math.min(iconSizePx + 12, 46));
-    const iconOnlyIconBase = parseSizeToPixels(styles.icon?.size, iconSizePx);
-    const iconOnlyIconSize = Math.max(18, Math.min(Math.round(iconOnlyIconBase), iconOnlySize - 12));
+    const cardPaddingVertical = parsePaddingVertical(
+      styles.card?.padding ?? DEFAULT_CONFIG.styles.card.padding,
+      8,
+    );
+    // Outer square matches pill height: vertical padding + icon disc (same as non–icon-only row).
+    const iconOnlySize = cardPaddingVertical + iconSizePx;
+    const iconOnlyContentInset = 6;
+    const iconOnlyInner = Math.max(0, iconOnlySize - iconOnlyContentInset);
+    const iconGlyphDefault = Math.round(iconSizePx * 0.5);
+    const iconOnlyIconSize = Math.max(16, Math.min(iconGlyphDefault, iconOnlyInner));
     const iconOnlyOffsetY = String(styles.icon?.icon_only_offset_y ?? DEFAULT_CONFIG.styles.icon.icon_only_offset_y);
     const pictureUrl = this._getResolvedPicture(state);
     const showPicture = Boolean(pictureUrl);
@@ -1250,9 +1280,10 @@ class NodaliaInsigniaCard extends HTMLElement {
           width: auto;
           min-height: min-content;
           transform: translateY(var(--insignia-icon-only-row-nudge, -2px));
+          /* Default 0 so icon-only height matches the text pill; use vars in horizontal scroll strips. */
           padding-block: var(
             --insignia-scroll-strip-padding-block,
-            var(--insignia-scroll-strip-margin-block, 4px)
+            var(--insignia-scroll-strip-margin-block, 0px)
           );
         }
 

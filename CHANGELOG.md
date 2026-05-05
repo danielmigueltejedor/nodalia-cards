@@ -10,6 +10,15 @@ Work toward **`0.5.x`** on **`alpha`** / **`beta`** and eventual **`main`**: **P
 
 ---
 
+## [0.5.0-alpha.10] - 2026-05-06
+
+Tenth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.10`** (tag **`v0.5.0-alpha.10`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Internals** (**`nodalia-utils.js`**): **`editorStatesSignature`** vuelve a reflejar **todas** las entidades (**`id`**, **`friendly_name`**, **`icon`** por fila), delegando en **`editorFilteredStatesSignature`** — los editores que listan entidades se actualizan al cambiar etiquetas o iconos, no solo al variar el **conteo**.
+- **Insignia card** (`0.2.11`): modo **solo icono** — tamaño exterior alineado con la **píldora con nombre/valor** (**padding** vertical de **`styles.card`** + disco del icono); **`padding-block`** del host por defecto **`0`** (franjas con scroll: variables **`--insignia-scroll-strip-*`**).
+
+---
+
 ## [0.5.0-alpha.9] - 2026-05-05
 
 Ninth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.9`** (tag **`v0.5.0-alpha.9`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
