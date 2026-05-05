@@ -121,7 +121,7 @@
     rows.sort((left, right) => {
       const idLeft = left.split(":")[0];
       const idRight = right.split(":")[0];
-      return idLeft.localeCompare(idRight, "es", { sensitivity: "base" });
+      return idLeft.localeCompare(idRight, undefined, { sensitivity: "base" });
     });
     const tag =
       typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
@@ -962,6 +962,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._animateDockEntranceNext = true;
     this._lastShouldHide = false;
     this._playDockEntrance = false;
+    this._lastMediaPlayerCardVisible = false;
     this._onResize = () => {
       this._closePopup(false);
       this._closeMediaBrowser(false);
@@ -2911,7 +2912,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     `;
   }
 
-  _renderMediaPlayer(visiblePlayers) {
+  _renderMediaPlayer(visiblePlayers, animateCardEntrance = false) {
     if (!visiblePlayers.length) {
       return "";
     }
@@ -3060,7 +3061,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     return `
       <div
-        class="media-player-card ${albumCoverBackground ? "has-album-background" : ""}"
+        class="media-player-card ${albumCoverBackground ? "has-album-background" : ""}${animateCardEntrance ? " media-player-card--entering" : ""}"
         data-media-card-index="${this._activeMediaPlayerIndex}"
       >
         ${
@@ -3255,6 +3256,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const showMediaPlayerCard = hasVisiblePlayers && (inEditMode || this._mediaPlayerExpanded === true);
     const showMediaPlayerToggle = hasVisiblePlayers && !showMediaPlayerCard;
+    const playMediaCardEntrance = animations.enabled && showMediaPlayerCard && !this._lastMediaPlayerCardVisible;
+    this._lastMediaPlayerCardVisible = showMediaPlayerCard;
     const mediaStackGap = hasVisiblePlayers ? config.media_player.gap || "0px" : "0px";
     const currentPath = normalizePath(window.location.pathname) || "/";
     const isFixed = config.layout.fixed && !inEditMode;
@@ -3268,7 +3271,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._renderedRoutes = visibleRoutes;
     this._syncMediaTicker(showMediaPlayerCard ? visiblePlayers : []);
 
-    const mediaPlayerMarkup = showMediaPlayerCard ? this._renderMediaPlayer(visiblePlayers) : "";
+    const mediaPlayerMarkup = showMediaPlayerCard
+      ? this._renderMediaPlayer(visiblePlayers, playMediaCardEntrance)
+      : "";
     const mediaPlayerToggleMarkup = showMediaPlayerToggle ? this._renderMediaPlayerToggle(visiblePlayers) : "";
     const fullWidthBar = config.layout.full_width === true;
     const barRadiusToken = String(config.styles.bar.border_radius || "28px")
@@ -4051,6 +4056,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
           overflow: hidden;
           padding: ${config.styles.media_player.padding};
           position: relative;
+        }
+
+        .media-player-card.media-player-card--entering {
           ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.mediaDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
 

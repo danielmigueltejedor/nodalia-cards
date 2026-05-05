@@ -14964,7 +14964,7 @@
     rows.sort((left, right) => {
       const idLeft = left.split(":")[0];
       const idRight = right.split(":")[0];
-      return idLeft.localeCompare(idRight, "es", { sensitivity: "base" });
+      return idLeft.localeCompare(idRight, undefined, { sensitivity: "base" });
     });
     const tag =
       typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
@@ -15991,6 +15991,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._animateDockEntranceNext = true;
     this._lastShouldHide = false;
     this._playDockEntrance = false;
+    this._lastMediaPlayerCardVisible = false;
     this._onResize = () => {
       this._closePopup(false);
       this._closeMediaBrowser(false);
@@ -17940,7 +17941,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     `;
   }
 
-  _renderMediaPlayer(visiblePlayers) {
+  _renderMediaPlayer(visiblePlayers, animateCardEntrance = false) {
     if (!visiblePlayers.length) {
       return "";
     }
@@ -18089,7 +18090,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     return `
       <div
-        class="media-player-card ${albumCoverBackground ? "has-album-background" : ""}"
+        class="media-player-card ${albumCoverBackground ? "has-album-background" : ""}${animateCardEntrance ? " media-player-card--entering" : ""}"
         data-media-card-index="${this._activeMediaPlayerIndex}"
       >
         ${
@@ -18284,6 +18285,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const showMediaPlayerCard = hasVisiblePlayers && (inEditMode || this._mediaPlayerExpanded === true);
     const showMediaPlayerToggle = hasVisiblePlayers && !showMediaPlayerCard;
+    const playMediaCardEntrance = animations.enabled && showMediaPlayerCard && !this._lastMediaPlayerCardVisible;
+    this._lastMediaPlayerCardVisible = showMediaPlayerCard;
     const mediaStackGap = hasVisiblePlayers ? config.media_player.gap || "0px" : "0px";
     const currentPath = normalizePath(window.location.pathname) || "/";
     const isFixed = config.layout.fixed && !inEditMode;
@@ -18297,7 +18300,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._renderedRoutes = visibleRoutes;
     this._syncMediaTicker(showMediaPlayerCard ? visiblePlayers : []);
 
-    const mediaPlayerMarkup = showMediaPlayerCard ? this._renderMediaPlayer(visiblePlayers) : "";
+    const mediaPlayerMarkup = showMediaPlayerCard
+      ? this._renderMediaPlayer(visiblePlayers, playMediaCardEntrance)
+      : "";
     const mediaPlayerToggleMarkup = showMediaPlayerToggle ? this._renderMediaPlayerToggle(visiblePlayers) : "";
     const fullWidthBar = config.layout.full_width === true;
     const barRadiusToken = String(config.styles.bar.border_radius || "28px")
@@ -19080,6 +19085,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
           overflow: hidden;
           padding: ${config.styles.media_player.padding};
           position: relative;
+        }
+
+        .media-player-card.media-player-card--entering {
           ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.mediaDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
         }
 
@@ -43327,6 +43335,7 @@ class NodaliaGraphCard extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
     this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
+    this._onHostPointerOut = this._onHostPointerOut.bind(this);
     this._onHoverMediaChange = this._onHoverMediaChange.bind(this);
     this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
     this._onShadowTouchMove = this._onShadowTouchMove.bind(this);
@@ -43342,6 +43351,8 @@ class NodaliaGraphCard extends HTMLElement {
     // Defensive close: in some pointer transitions the shadow-root leave may be skipped.
     this.addEventListener("pointerleave", this._onShadowPointerLeave);
     this.addEventListener("mouseleave", this._onShadowPointerLeave);
+    this.addEventListener("pointerout", this._onHostPointerOut);
+    this.addEventListener("mouseout", this._onHostPointerOut);
     this._hoverMediaQuery =
       typeof window !== "undefined" && typeof window.matchMedia === "function"
         ? window.matchMedia("(hover: hover)")
@@ -43355,6 +43366,8 @@ class NodaliaGraphCard extends HTMLElement {
   disconnectedCallback() {
     this._historyAbortController?.abort();
     this._historyAbortController = null;
+    this.removeEventListener("pointerout", this._onHostPointerOut);
+    this.removeEventListener("mouseout", this._onHostPointerOut);
     if (this._hoverFrame) {
       window.cancelAnimationFrame(this._hoverFrame);
       this._hoverFrame = 0;
@@ -43737,6 +43750,24 @@ class NodaliaGraphCard extends HTMLElement {
     this._lastTooltipViewportPosition = null;
   }
 
+  _onHostPointerOut(event) {
+    if (this._touchHoverActive || this._hoverIndex === null) {
+      return;
+    }
+    const clientX = Number(event?.clientX);
+    const clientY = Number(event?.clientY);
+    if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) {
+      return;
+    }
+    const rect = this.getBoundingClientRect();
+    const isOutside = clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom;
+    if (!isOutside) {
+      return;
+    }
+    this._scheduleHoverRender(null);
+    this._lastTooltipViewportPosition = null;
+  }
+
   _clearTouchPressTimer() {
     if (!this._touchPressTimer) {
       return;
@@ -43877,7 +43908,7 @@ class NodaliaGraphCard extends HTMLElement {
         return;
       }
       this._hoverEntering = resolvedIndex !== null && this._hoverIndex === null;
-      if (resolvedIndex === null) {
+      if (resolvedIndex === null || resolvedIndex !== this._hoverIndex) {
         this._lastTooltipViewportPosition = null;
       }
       this._hoverIndex = resolvedIndex;
@@ -63690,57 +63721,56 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
     this._mapActionInFlight = true;
     try {
-    const state = this._getVacuumState();
-    const selectedPredefinedZones = this._getPredefinedZones()
-      .filter(zone => this._selectedPredefinedZoneIds.includes(zone.id))
-      .flatMap(zone => zone.zones.map(item => [...item, this._repeats]));
-    const manualZones = this._manualZones.map(zone => [zone.x1, zone.y1, zone.x2, zone.y2, this._repeats]);
-    const selectedZones = [...selectedPredefinedZones, ...manualZones].slice(0, clamp(Number(this._config?.max_zone_selections || 5), 1, 10));
-    const canRunZoneAction = this._activeMode === "zone" && selectedZones.length > 0;
+      const state = this._getVacuumState();
+      const selectedPredefinedZones = this._getPredefinedZones()
+        .filter(zone => this._selectedPredefinedZoneIds.includes(zone.id))
+        .flatMap(zone => zone.zones.map(item => [...item, this._repeats]));
+      const manualZones = this._manualZones.map(zone => [zone.x1, zone.y1, zone.x2, zone.y2, this._repeats]);
+      const selectedZones = [...selectedPredefinedZones, ...manualZones].slice(0, clamp(Number(this._config?.max_zone_selections || 5), 1, 10));
+      const canRunZoneAction = this._activeMode === "zone" && selectedZones.length > 0;
 
-    if ((this._isCleaning(state) || this._isPaused(state)) && !canRunZoneAction) {
-      await this._callVacuumService(this._isCleaning(state) ? "pause" : "start");
-      this._triggerHaptic("selection");
-      return;
-    }
-
-    if (this._activeMode === "rooms" && this._selectedRoomIds.length) {
-      const segments = this._selectedRoomIds
-        .map(id => parseInteger(id))
-        .filter(Number.isFinite);
-
-      if (segments.length) {
-        this._freezeCurrentModePanelPreset(state);
-        this._clearPendingRoomCleaningResume();
-        this._activeCleaningRoomIds = segments.map(item => String(item));
-        this._activeCleaningZones = [];
-        this._activeCleaningSessionMode = "rooms";
-        this._markCleaningSessionPendingStart();
-        this._persistCurrentCleaningSessionState("rooms", {
-          markSelectionChange: true,
-        });
-        await this._callNamedService("vacuum.send_command", {
-          entity_id: this._config.entity,
-          command: "app_segment_clean",
-          params: [{
-            segments,
-            repeat: this._repeats,
-          }],
-        });
-        this._persistCurrentCleaningSessionState("rooms");
-        this._triggerHaptic("success");
-        this._render();
+      if ((this._isCleaning(state) || this._isPaused(state)) && !canRunZoneAction) {
+        await this._callVacuumService(this._isCleaning(state) ? "pause" : "start");
+        this._triggerHaptic("selection");
         return;
       }
-    }
 
-    if (this._activeMode === "zone") {
-      if (selectedZones.length) {
+      if (this._activeMode === "rooms" && this._selectedRoomIds.length) {
+        const segments = this._selectedRoomIds
+          .map(id => parseInteger(id))
+          .filter(Number.isFinite);
+
+        if (segments.length) {
+          this._freezeCurrentModePanelPreset(state);
+          this._clearPendingRoomCleaningResume();
+          this._activeCleaningRoomIds = segments.map(item => String(item));
+          this._activeCleaningZones = [];
+          this._activeCleaningSessionMode = "rooms";
+          this._markCleaningSessionPendingStart();
+          this._persistCurrentCleaningSessionState("rooms", {
+            markSelectionChange: true,
+          });
+          await this._callNamedService("vacuum.send_command", {
+            entity_id: this._config.entity,
+            command: "app_segment_clean",
+            params: [{
+              segments,
+              repeat: this._repeats,
+            }],
+          });
+          this._persistCurrentCleaningSessionState("rooms");
+          this._triggerHaptic("success");
+          this._render();
+          return;
+        }
+      }
+
+      if (this._activeMode === "zone" && selectedZones.length) {
         const isTransientZoneAddition = Boolean(this._transientZoneReturnMode) && (
-          this._isCleaning(state) ||
-          this._isPaused(state) ||
-          this._isReturning(state) ||
-          this._isRoomCleaningSessionActive(state)
+          this._isCleaning(state)
+          || this._isPaused(state)
+          || this._isReturning(state)
+          || this._isRoomCleaningSessionActive(state)
         );
         this._freezeCurrentModePanelPreset(state);
         if (isTransientZoneAddition && this._isRoomCleaningSessionActive(state)) {
@@ -63785,9 +63815,24 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._render();
         return;
       }
-    }
 
-    if (this._activeMode === "goto" && this._gotoPoint) {
+      if (this._activeMode === "goto" && this._gotoPoint) {
+        this._freezeCurrentModePanelPreset(state);
+        this._clearPendingRoomCleaningResume();
+        this._activeCleaningRoomIds = [];
+        this._activeCleaningZones = [];
+        this._activeCleaningSessionMode = "";
+        this._clearCleaningSessionPendingStart();
+        this._clearPersistedCleaningSession();
+        await this._callNamedService("roborock.set_vacuum_goto_position", {
+          entity_id: this._config.entity,
+          x: Math.round(this._gotoPoint.x),
+          y: Math.round(this._gotoPoint.y),
+        });
+        this._triggerHaptic("success");
+        return;
+      }
+
       this._freezeCurrentModePanelPreset(state);
       this._clearPendingRoomCleaningResume();
       this._activeCleaningRoomIds = [];
@@ -63795,24 +63840,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._activeCleaningSessionMode = "";
       this._clearCleaningSessionPendingStart();
       this._clearPersistedCleaningSession();
-      await this._callNamedService("roborock.set_vacuum_goto_position", {
-        entity_id: this._config.entity,
-        x: Math.round(this._gotoPoint.x),
-        y: Math.round(this._gotoPoint.y),
-      });
-      this._triggerHaptic("success");
-      return;
-    }
-
-    this._freezeCurrentModePanelPreset(state);
-    this._clearPendingRoomCleaningResume();
-    this._activeCleaningRoomIds = [];
-    this._activeCleaningZones = [];
-    this._activeCleaningSessionMode = "";
-    this._clearCleaningSessionPendingStart();
-    this._clearPersistedCleaningSession();
-    await this._callVacuumService("start");
-    this._triggerHaptic("selection");
+      await this._callVacuumService("start");
+      this._triggerHaptic("selection");
     } finally {
       this._mapActionInFlight = false;
     }
@@ -85862,4 +85891,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0","contentSha256_12":"6c52559e0f8e"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.6.0-alpha.1","contentSha256_12":"8ce6817e86d9"};}

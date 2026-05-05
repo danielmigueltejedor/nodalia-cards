@@ -121,7 +121,7 @@
     rows.sort((left, right) => {
       const idLeft = left.split(":")[0];
       const idRight = right.split(":")[0];
-      return idLeft.localeCompare(idRight, "es", { sensitivity: "base" });
+      return idLeft.localeCompare(idRight, undefined, { sensitivity: "base" });
     });
     const tag =
       typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
@@ -5399,57 +5399,56 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
     this._mapActionInFlight = true;
     try {
-    const state = this._getVacuumState();
-    const selectedPredefinedZones = this._getPredefinedZones()
-      .filter(zone => this._selectedPredefinedZoneIds.includes(zone.id))
-      .flatMap(zone => zone.zones.map(item => [...item, this._repeats]));
-    const manualZones = this._manualZones.map(zone => [zone.x1, zone.y1, zone.x2, zone.y2, this._repeats]);
-    const selectedZones = [...selectedPredefinedZones, ...manualZones].slice(0, clamp(Number(this._config?.max_zone_selections || 5), 1, 10));
-    const canRunZoneAction = this._activeMode === "zone" && selectedZones.length > 0;
+      const state = this._getVacuumState();
+      const selectedPredefinedZones = this._getPredefinedZones()
+        .filter(zone => this._selectedPredefinedZoneIds.includes(zone.id))
+        .flatMap(zone => zone.zones.map(item => [...item, this._repeats]));
+      const manualZones = this._manualZones.map(zone => [zone.x1, zone.y1, zone.x2, zone.y2, this._repeats]);
+      const selectedZones = [...selectedPredefinedZones, ...manualZones].slice(0, clamp(Number(this._config?.max_zone_selections || 5), 1, 10));
+      const canRunZoneAction = this._activeMode === "zone" && selectedZones.length > 0;
 
-    if ((this._isCleaning(state) || this._isPaused(state)) && !canRunZoneAction) {
-      await this._callVacuumService(this._isCleaning(state) ? "pause" : "start");
-      this._triggerHaptic("selection");
-      return;
-    }
-
-    if (this._activeMode === "rooms" && this._selectedRoomIds.length) {
-      const segments = this._selectedRoomIds
-        .map(id => parseInteger(id))
-        .filter(Number.isFinite);
-
-      if (segments.length) {
-        this._freezeCurrentModePanelPreset(state);
-        this._clearPendingRoomCleaningResume();
-        this._activeCleaningRoomIds = segments.map(item => String(item));
-        this._activeCleaningZones = [];
-        this._activeCleaningSessionMode = "rooms";
-        this._markCleaningSessionPendingStart();
-        this._persistCurrentCleaningSessionState("rooms", {
-          markSelectionChange: true,
-        });
-        await this._callNamedService("vacuum.send_command", {
-          entity_id: this._config.entity,
-          command: "app_segment_clean",
-          params: [{
-            segments,
-            repeat: this._repeats,
-          }],
-        });
-        this._persistCurrentCleaningSessionState("rooms");
-        this._triggerHaptic("success");
-        this._render();
+      if ((this._isCleaning(state) || this._isPaused(state)) && !canRunZoneAction) {
+        await this._callVacuumService(this._isCleaning(state) ? "pause" : "start");
+        this._triggerHaptic("selection");
         return;
       }
-    }
 
-    if (this._activeMode === "zone") {
-      if (selectedZones.length) {
+      if (this._activeMode === "rooms" && this._selectedRoomIds.length) {
+        const segments = this._selectedRoomIds
+          .map(id => parseInteger(id))
+          .filter(Number.isFinite);
+
+        if (segments.length) {
+          this._freezeCurrentModePanelPreset(state);
+          this._clearPendingRoomCleaningResume();
+          this._activeCleaningRoomIds = segments.map(item => String(item));
+          this._activeCleaningZones = [];
+          this._activeCleaningSessionMode = "rooms";
+          this._markCleaningSessionPendingStart();
+          this._persistCurrentCleaningSessionState("rooms", {
+            markSelectionChange: true,
+          });
+          await this._callNamedService("vacuum.send_command", {
+            entity_id: this._config.entity,
+            command: "app_segment_clean",
+            params: [{
+              segments,
+              repeat: this._repeats,
+            }],
+          });
+          this._persistCurrentCleaningSessionState("rooms");
+          this._triggerHaptic("success");
+          this._render();
+          return;
+        }
+      }
+
+      if (this._activeMode === "zone" && selectedZones.length) {
         const isTransientZoneAddition = Boolean(this._transientZoneReturnMode) && (
-          this._isCleaning(state) ||
-          this._isPaused(state) ||
-          this._isReturning(state) ||
-          this._isRoomCleaningSessionActive(state)
+          this._isCleaning(state)
+          || this._isPaused(state)
+          || this._isReturning(state)
+          || this._isRoomCleaningSessionActive(state)
         );
         this._freezeCurrentModePanelPreset(state);
         if (isTransientZoneAddition && this._isRoomCleaningSessionActive(state)) {
@@ -5494,9 +5493,24 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._render();
         return;
       }
-    }
 
-    if (this._activeMode === "goto" && this._gotoPoint) {
+      if (this._activeMode === "goto" && this._gotoPoint) {
+        this._freezeCurrentModePanelPreset(state);
+        this._clearPendingRoomCleaningResume();
+        this._activeCleaningRoomIds = [];
+        this._activeCleaningZones = [];
+        this._activeCleaningSessionMode = "";
+        this._clearCleaningSessionPendingStart();
+        this._clearPersistedCleaningSession();
+        await this._callNamedService("roborock.set_vacuum_goto_position", {
+          entity_id: this._config.entity,
+          x: Math.round(this._gotoPoint.x),
+          y: Math.round(this._gotoPoint.y),
+        });
+        this._triggerHaptic("success");
+        return;
+      }
+
       this._freezeCurrentModePanelPreset(state);
       this._clearPendingRoomCleaningResume();
       this._activeCleaningRoomIds = [];
@@ -5504,24 +5518,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._activeCleaningSessionMode = "";
       this._clearCleaningSessionPendingStart();
       this._clearPersistedCleaningSession();
-      await this._callNamedService("roborock.set_vacuum_goto_position", {
-        entity_id: this._config.entity,
-        x: Math.round(this._gotoPoint.x),
-        y: Math.round(this._gotoPoint.y),
-      });
-      this._triggerHaptic("success");
-      return;
-    }
-
-    this._freezeCurrentModePanelPreset(state);
-    this._clearPendingRoomCleaningResume();
-    this._activeCleaningRoomIds = [];
-    this._activeCleaningZones = [];
-    this._activeCleaningSessionMode = "";
-    this._clearCleaningSessionPendingStart();
-    this._clearPersistedCleaningSession();
-    await this._callVacuumService("start");
-    this._triggerHaptic("selection");
+      await this._callVacuumService("start");
+      this._triggerHaptic("selection");
     } finally {
       this._mapActionInFlight = false;
     }

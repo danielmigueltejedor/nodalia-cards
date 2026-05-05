@@ -10,6 +10,17 @@ Work toward **`0.6.x`** on **`alpha`** / **`beta`** and eventual **`main`**: add
 
 ---
 
+## [0.6.0-alpha.1] - 2026-05-05
+
+First **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.1`** (tag **`v0.6.0-alpha.1`** optional). Breaking changes are allowed; prefer stable **`main`** for production dashboards.
+
+- **Graph card:** hover/tooltip behavior refined during pointer movement, with stronger leave/close handling so the popup does not remain stuck when leaving the card.
+- **Navigation bar / media player:** reduced visible flicker when toggling mini ↔ expanded media player and during unrelated dashboard interactions by limiting entrance animation to actual visibility transitions.
+- **Advance Vacuum:** map action flow cleanup and async guard polishing (`_mapActionInFlight`) for safer concurrent interaction handling.
+- **Shared utils / i18n infra:** neutralized entity-id collation in shared editor signature utilities to avoid locale-hardcoded sorting behavior.
+
+---
+
 ## [0.5.0] - 2026-05-06
 
 First stable release on the **`0.5.x`** line (**branch `main`**). This version consolidates all validated work from the **`0.5.0-alpha.*`** cycle into a production-ready bundle aimed at smoother interaction, stronger hardening, better editor UX and broader translation coverage.

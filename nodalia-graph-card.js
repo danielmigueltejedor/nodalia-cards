@@ -121,7 +121,7 @@
     rows.sort((left, right) => {
       const idLeft = left.split(":")[0];
       const idRight = right.split(":")[0];
-      return idLeft.localeCompare(idRight, "es", { sensitivity: "base" });
+      return idLeft.localeCompare(idRight, undefined, { sensitivity: "base" });
     });
     const tag =
       typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
@@ -1006,6 +1006,7 @@ class NodaliaGraphCard extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
     this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
+    this._onHostPointerOut = this._onHostPointerOut.bind(this);
     this._onHoverMediaChange = this._onHoverMediaChange.bind(this);
     this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
     this._onShadowTouchMove = this._onShadowTouchMove.bind(this);
@@ -1021,6 +1022,8 @@ class NodaliaGraphCard extends HTMLElement {
     // Defensive close: in some pointer transitions the shadow-root leave may be skipped.
     this.addEventListener("pointerleave", this._onShadowPointerLeave);
     this.addEventListener("mouseleave", this._onShadowPointerLeave);
+    this.addEventListener("pointerout", this._onHostPointerOut);
+    this.addEventListener("mouseout", this._onHostPointerOut);
     this._hoverMediaQuery =
       typeof window !== "undefined" && typeof window.matchMedia === "function"
         ? window.matchMedia("(hover: hover)")
@@ -1034,6 +1037,8 @@ class NodaliaGraphCard extends HTMLElement {
   disconnectedCallback() {
     this._historyAbortController?.abort();
     this._historyAbortController = null;
+    this.removeEventListener("pointerout", this._onHostPointerOut);
+    this.removeEventListener("mouseout", this._onHostPointerOut);
     if (this._hoverFrame) {
       window.cancelAnimationFrame(this._hoverFrame);
       this._hoverFrame = 0;
@@ -1416,6 +1421,24 @@ class NodaliaGraphCard extends HTMLElement {
     this._lastTooltipViewportPosition = null;
   }
 
+  _onHostPointerOut(event) {
+    if (this._touchHoverActive || this._hoverIndex === null) {
+      return;
+    }
+    const clientX = Number(event?.clientX);
+    const clientY = Number(event?.clientY);
+    if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) {
+      return;
+    }
+    const rect = this.getBoundingClientRect();
+    const isOutside = clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom;
+    if (!isOutside) {
+      return;
+    }
+    this._scheduleHoverRender(null);
+    this._lastTooltipViewportPosition = null;
+  }
+
   _clearTouchPressTimer() {
     if (!this._touchPressTimer) {
       return;
@@ -1556,7 +1579,7 @@ class NodaliaGraphCard extends HTMLElement {
         return;
       }
       this._hoverEntering = resolvedIndex !== null && this._hoverIndex === null;
-      if (resolvedIndex === null) {
+      if (resolvedIndex === null || resolvedIndex !== this._hoverIndex) {
         this._lastTooltipViewportPosition = null;
       }
       this._hoverIndex = resolvedIndex;
