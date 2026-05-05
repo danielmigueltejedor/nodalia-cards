@@ -13,6 +13,7 @@
     "stripEqualToDefaults",
     "editorStatesSignature",
     "editorFilteredStatesSignature",
+    "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
   ];
@@ -136,6 +137,42 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Normalize and validate user-provided action URLs.
+   * Allows http/https and same-origin relative paths by default.
+   */
+  function sanitizeActionUrl(value, options = {}) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    const allowRelative = options.allowRelative !== false;
+    const allowHash = options.allowHash === true;
+    if (allowHash && raw.startsWith("#")) {
+      return raw;
+    }
+    if (allowRelative && (/^\/(?!\/)/.test(raw) || raw.startsWith("./") || raw.startsWith("../"))) {
+      return raw;
+    }
+    try {
+      const base =
+        typeof window !== "undefined" && window.location
+          ? window.location.origin
+          : "https://example.invalid";
+      const parsed = new URL(raw, base);
+      const protocol = String(parsed.protocol || "").toLowerCase();
+      if (protocol !== "http:" && protocol !== "https:") {
+        return "";
+      }
+      if (allowRelative && typeof window !== "undefined" && window.location && parsed.origin === window.location.origin) {
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+      return parsed.toString();
+    } catch (_error) {
+      return "";
+    }
   }
 
   function copyDatasetExcept(control, host, skipKeys) {
@@ -342,6 +379,7 @@
     stripEqualToDefaults,
     editorStatesSignature,
     editorFilteredStatesSignature,
+    sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
   };

@@ -10,6 +10,18 @@ Work toward **`0.5.x`** on **`alpha`** / **`beta`** and eventual **`main`**: **P
 
 ---
 
+## [0.5.0-alpha.15] - 2026-05-06
+
+Fifteenth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.15`** (tag **`v0.5.0-alpha.15`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Performance** (**Graph card**): hover más fluido y estable — actualizaciones coalescidas por **`requestAnimationFrame`**, menos trabajo por evento de puntero y cierre más robusto del popup/hook al salir de la tarjeta.
+- **Security hardening**: helper común **`sanitizeActionUrl`** en utilidades compartidas y aplicado a sinks de URL en tarjetas interactivas; aperturas en pestaña nueva unificadas a **`noopener,noreferrer`**.
+- **Security hardening** (**Navigation bar**): eliminación de interpolación de estilos inline dinámicos en HTML de runtime; estilos aplicados por **`style.setProperty(...)`** para reducir superficie de inyección.
+- **Security hardening**: modo estricto opcional para acciones de servicio configurable por tarjeta (**`strict_service_actions`** + allowlists de dominios/servicios).
+- **Editor UI**: corrección definitiva de sufijos literales como **`$1`** en etiquetas normalizadas (p. ej. **Mínimo/Máximo**).
+
+---
+
 ## [0.5.0-alpha.14] - 2026-05-06
 
 Fourteenth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.14`** (tag **`v0.5.0-alpha.14`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.

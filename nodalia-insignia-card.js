@@ -13,6 +13,7 @@
     "stripEqualToDefaults",
     "editorStatesSignature",
     "editorFilteredStatesSignature",
+    "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
   ];
@@ -136,6 +137,42 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Normalize and validate user-provided action URLs.
+   * Allows http/https and same-origin relative paths by default.
+   */
+  function sanitizeActionUrl(value, options = {}) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    const allowRelative = options.allowRelative !== false;
+    const allowHash = options.allowHash === true;
+    if (allowHash && raw.startsWith("#")) {
+      return raw;
+    }
+    if (allowRelative && (/^\/(?!\/)/.test(raw) || raw.startsWith("./") || raw.startsWith("../"))) {
+      return raw;
+    }
+    try {
+      const base =
+        typeof window !== "undefined" && window.location
+          ? window.location.origin
+          : "https://example.invalid";
+      const parsed = new URL(raw, base);
+      const protocol = String(parsed.protocol || "").toLowerCase();
+      if (protocol !== "http:" && protocol !== "https:") {
+        return "";
+      }
+      if (allowRelative && typeof window !== "undefined" && window.location && parsed.origin === window.location.origin) {
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+      return parsed.toString();
+    } catch (_error) {
+      return "";
+    }
   }
 
   function copyDatasetExcept(control, host, skipKeys) {
@@ -342,6 +379,7 @@
     stripEqualToDefaults,
     editorStatesSignature,
     editorFilteredStatesSignature,
+    sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
   };
@@ -1111,6 +1149,28 @@ class NodaliaInsigniaCard extends HTMLElement {
     return "var(--info-color, #71c0ff)";
   }
 
+  _isServiceAllowed(serviceValue) {
+    const security = this._config?.security || {};
+    if (security.strict_service_actions !== true) {
+      return true;
+    }
+    const normalizedService = String(serviceValue || "").trim().toLowerCase();
+    if (!normalizedService || !normalizedService.includes(".")) {
+      return false;
+    }
+    const [domain] = normalizedService.split(".");
+    const domains = Array.isArray(security.allowed_service_domains)
+      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const services = Array.isArray(security.allowed_services)
+      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    if (!domains.length && !services.length) {
+      return false;
+    }
+    return services.includes(normalizedService) || domains.includes(domain);
+  }
+
   _onClick(event) {
     const trigger = event
       .composedPath()
@@ -1149,6 +1209,9 @@ class NodaliaInsigniaCard extends HTMLElement {
     }
 
     if (action === "service" && this._config.tap_service) {
+      if (!this._isServiceAllowed(this._config.tap_service)) {
+        return;
+      }
       const [domain, service] = this._config.tap_service.split(".");
       if (domain && service) {
         let serviceData = {};
@@ -1180,10 +1243,14 @@ class NodaliaInsigniaCard extends HTMLElement {
     }
 
     if (action === "url" && this._config.tap_url) {
+      const safeUrl = window.NodaliaUtils?.sanitizeActionUrl(this._config.tap_url, { allowRelative: true });
+      if (!safeUrl) {
+        return;
+      }
       if (this._config.tap_new_tab) {
-        window.open(this._config.tap_url, "_blank", "noopener");
+        window.open(safeUrl, "_blank", "noopener,noreferrer");
       } else {
-        window.location.href = this._config.tap_url;
+        window.location.href = safeUrl;
       }
     }
   }

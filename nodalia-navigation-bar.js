@@ -13,6 +13,7 @@
     "stripEqualToDefaults",
     "editorStatesSignature",
     "editorFilteredStatesSignature",
+    "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
   ];
@@ -136,6 +137,42 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Normalize and validate user-provided action URLs.
+   * Allows http/https and same-origin relative paths by default.
+   */
+  function sanitizeActionUrl(value, options = {}) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    const allowRelative = options.allowRelative !== false;
+    const allowHash = options.allowHash === true;
+    if (allowHash && raw.startsWith("#")) {
+      return raw;
+    }
+    if (allowRelative && (/^\/(?!\/)/.test(raw) || raw.startsWith("./") || raw.startsWith("../"))) {
+      return raw;
+    }
+    try {
+      const base =
+        typeof window !== "undefined" && window.location
+          ? window.location.origin
+          : "https://example.invalid";
+      const parsed = new URL(raw, base);
+      const protocol = String(parsed.protocol || "").toLowerCase();
+      if (protocol !== "http:" && protocol !== "https:") {
+        return "";
+      }
+      if (allowRelative && typeof window !== "undefined" && window.location && parsed.origin === window.location.origin) {
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+      return parsed.toString();
+    } catch (_error) {
+      return "";
+    }
   }
 
   function copyDatasetExcept(control, host, skipKeys) {
@@ -342,6 +379,7 @@
     stripEqualToDefaults,
     editorStatesSignature,
     editorFilteredStatesSignature,
+    sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
   };
@@ -1575,12 +1613,100 @@ class NodaliaNavigationBarCard extends HTMLElement {
       return;
     }
 
+    if (!this._isServiceAllowed(action.service)) {
+      return;
+    }
+
     const [domain, service] = String(action.service).split(".");
     if (!domain || !service) {
       return;
     }
 
     this._hass.callService(domain, service, action.service_data || {}, action.target);
+  }
+
+  _isServiceAllowed(serviceValue) {
+    const security = this._config?.security || {};
+    if (security.strict_service_actions !== true) {
+      return true;
+    }
+    const normalizedService = String(serviceValue || "").trim().toLowerCase();
+    if (!normalizedService || !normalizedService.includes(".")) {
+      return false;
+    }
+    const [domain] = normalizedService.split(".");
+    const domains = Array.isArray(security.allowed_service_domains)
+      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const services = Array.isArray(security.allowed_services)
+      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    if (!domains.length && !services.length) {
+      return false;
+    }
+    return services.includes(normalizedService) || domains.includes(domain);
+  }
+
+  _applyRouteRuntimeStyles(visibleRoutes, playDockEntrance) {
+    if (!this.shadowRoot) {
+      return;
+    }
+    visibleRoutes.forEach((route, index) => {
+      const node = this.shadowRoot.querySelector(`.nav-item[data-route-index="${index}"]`);
+      if (!(node instanceof HTMLElement)) {
+        return;
+      }
+      if (playDockEntrance) {
+        node.style.setProperty("--nav-enter-delay", `${Math.min(index * 38, 520)}ms`);
+      }
+      if (route.background) node.style.setProperty("--route-background", route.background);
+      if (route.color) node.style.setProperty("--route-color", route.color);
+      if (route.active_color) node.style.setProperty("--route-active-color", route.active_color);
+      if (route.active_background) node.style.setProperty("--route-active-background", route.active_background);
+      const badge = this._getBadge(route);
+      const badgeNode = node.querySelector(".nav-badge");
+      if (badgeNode instanceof HTMLElement) {
+        if (badge.background) badgeNode.style.setProperty("--badge-background", badge.background);
+        if (badge.color) badgeNode.style.setProperty("--badge-color", badge.color);
+      }
+    });
+  }
+
+  _applyPopupRuntimeStyles() {
+    if (!this.shadowRoot || !this._popupState?.route) {
+      return;
+    }
+    const panel = this.shadowRoot.querySelector(".popup-panel");
+    if (panel instanceof HTMLElement) {
+      const popupItems = this._getPopupItems(this._popupState.route);
+      const popupHasText = popupItems.some(item => Boolean(this._getRouteLabel(item) || item.description));
+      const isCompactPopup = !popupHasText && Number(this._popupState.columns || 1) === 1;
+      panel.style.left = this._popupState.left;
+      panel.style.top = this._popupState.top;
+      panel.style.width = isCompactPopup ? "fit-content" : this._popupState.width;
+      panel.style.setProperty("--popup-columns", String(this._popupState.columns || 1));
+      panel.style.setProperty(
+        "--popup-item-min",
+        this._popupState.itemMinWidth || `calc(${this._config.styles.popup.item_size} + 24px)`,
+      );
+    }
+    const popupItems = this._getPopupItems(this._popupState.route);
+    popupItems.forEach((item, popupIndex) => {
+      const node = this.shadowRoot.querySelector(`.popup-item[data-popup-item-index="${popupIndex}"]`);
+      if (!(node instanceof HTMLElement)) {
+        return;
+      }
+      if (item.background) node.style.setProperty("--popup-route-background", item.background);
+      if (item.color) node.style.setProperty("--popup-route-color", item.color);
+      if (item.active_color) node.style.setProperty("--popup-route-active-color", item.active_color);
+      if (item.active_background) node.style.setProperty("--popup-route-active-background", item.active_background);
+      const badge = this._getBadge(item);
+      const badgeNode = node.querySelector(".nav-badge");
+      if (badgeNode instanceof HTMLElement) {
+        if (badge.background) badgeNode.style.setProperty("--badge-background", badge.background);
+        if (badge.color) badgeNode.style.setProperty("--badge-color", badge.color);
+      }
+    });
   }
 
   _closePopup(shouldRender = true) {
@@ -2557,13 +2683,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
         this._openPopup(route, options.anchorElement);
         return;
       case "url": {
-        const url = action.url_path || action.url || route.url || route.path;
+        const url = window.NodaliaUtils?.sanitizeActionUrl(action.url_path || action.url || route.url || route.path, { allowRelative: true }) || "";
         if (!url) {
           return;
         }
 
         if (action.new_tab) {
-          window.open(url, "_blank", "noopener");
+          window.open(url, "_blank", "noopener,noreferrer");
         } else {
           window.location.assign(url);
         }
@@ -2627,22 +2753,12 @@ class NodaliaNavigationBarCard extends HTMLElement {
         const hasDescription = Boolean(item.description);
         const isIconOnly = !hasLabel && !hasDescription;
         const ariaLabel = label || item.description || item.path || `Popup ${popupIndex + 1}`;
-        const itemStyle = [
-          item.background ? `--popup-route-background:${item.background};` : "",
-          item.color ? `--popup-route-color:${item.color};` : "",
-          item.active_color ? `--popup-route-active-color:${item.active_color};` : "",
-          item.active_background ? `--popup-route-active-background:${item.active_background};` : "",
-        ]
-          .filter(Boolean)
-          .join("");
-
         return `
           <button
             class="popup-item ${isActive ? "active" : ""} ${isIconOnly ? "icon-only" : ""}"
             type="button"
             data-popup-route-index="${this._popupState.routeIndex}"
             data-popup-item-index="${popupIndex}"
-            style="${itemStyle}"
             aria-label="${escapeHtml(ariaLabel)}"
           >
             <span class="popup-item__icon-wrap">
@@ -2651,7 +2767,6 @@ class NodaliaNavigationBarCard extends HTMLElement {
                 badge
                   ? `<span
                       class="nav-badge"
-                      style="--badge-background:${badge.background};--badge-color:${badge.color};"
                     >${escapeHtml(badge.content)}</span>`
                   : ""
               }
@@ -2683,7 +2798,6 @@ class NodaliaNavigationBarCard extends HTMLElement {
       <div class="popup-backdrop" data-popup-close="true"></div>
       <div
         class="popup-panel popup-panel--${this._popupState.direction} popup-panel--layout-${this._popupState.layout || "auto"} ${popupHasText ? "popup-panel--with-text" : "popup-panel--icon-only"} ${isCompactPopup ? "popup-panel--compact" : ""}"
-        style="left:${this._popupState.left};top:${this._popupState.top};width:${isCompactPopup ? "fit-content" : this._popupState.width};--popup-columns:${this._popupState.columns || 1};--popup-item-min:${this._popupState.itemMinWidth || `calc(${this._config.styles.popup.item_size} + 24px)`};"
       >
         <div class="popup-items">
           ${popupMarkup}
@@ -3177,15 +3291,6 @@ class NodaliaNavigationBarCard extends HTMLElement {
               const isActive = this._isRouteActive(route, currentPath);
               const badge = this._getBadge(route);
               const label = this._getRouteLabel(route);
-              const routeStyle = [
-                playDockEntrance ? `--nav-enter-delay:${Math.min(index * 38, 520)}ms;` : "",
-                route.background ? `--route-background:${route.background};` : "",
-                route.color ? `--route-color:${route.color};` : "",
-                route.active_color ? `--route-active-color:${route.active_color};` : "",
-                route.active_background ? `--route-active-background:${route.active_background};` : "",
-              ]
-                .filter(Boolean)
-                .join("");
               const hasPopup = this._getPopupItems(route).length > 0;
 
               return `
@@ -3193,7 +3298,6 @@ class NodaliaNavigationBarCard extends HTMLElement {
                   class="nav-item ${isActive ? "active" : ""} ${hasPopup ? "has-popup" : ""}${playDockEntrance ? " nav-item--entering" : ""}"
                   data-route-index="${index}"
                   type="button"
-                  style="${routeStyle}"
                   aria-label="${escapeHtml(label || route.path || `Route ${index + 1}`)}"
                 >
                   <span class="nav-icon-wrap">
@@ -3202,7 +3306,6 @@ class NodaliaNavigationBarCard extends HTMLElement {
                       badge
                         ? `<span
                             class="nav-badge"
-                            style="--badge-background:${badge.background};--badge-color:${badge.color};"
                           >${escapeHtml(badge.content)}</span>`
                         : ""
                     }
@@ -4489,6 +4592,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
       ${popupMarkup}
       ${mediaBrowserMarkup}
     `;
+
+    this._applyRouteRuntimeStyles(visibleRoutes, playDockEntrance);
+    this._applyPopupRuntimeStyles();
 
     if (this._popupState) {
       this._schedulePopupPositionSync();

@@ -13,6 +13,7 @@
     "stripEqualToDefaults",
     "editorStatesSignature",
     "editorFilteredStatesSignature",
+    "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
   ];
@@ -136,6 +137,42 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Normalize and validate user-provided action URLs.
+   * Allows http/https and same-origin relative paths by default.
+   */
+  function sanitizeActionUrl(value, options = {}) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    const allowRelative = options.allowRelative !== false;
+    const allowHash = options.allowHash === true;
+    if (allowHash && raw.startsWith("#")) {
+      return raw;
+    }
+    if (allowRelative && (/^\/(?!\/)/.test(raw) || raw.startsWith("./") || raw.startsWith("../"))) {
+      return raw;
+    }
+    try {
+      const base =
+        typeof window !== "undefined" && window.location
+          ? window.location.origin
+          : "https://example.invalid";
+      const parsed = new URL(raw, base);
+      const protocol = String(parsed.protocol || "").toLowerCase();
+      if (protocol !== "http:" && protocol !== "https:") {
+        return "";
+      }
+      if (allowRelative && typeof window !== "undefined" && window.location && parsed.origin === window.location.origin) {
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+      return parsed.toString();
+    } catch (_error) {
+      return "";
+    }
   }
 
   function copyDatasetExcept(control, host, skipKeys) {
@@ -342,6 +379,7 @@
     stripEqualToDefaults,
     editorStatesSignature,
     editorFilteredStatesSignature,
+    sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
   };
@@ -967,6 +1005,7 @@ class NodaliaGraphCard extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
     this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
+    this._onHoverMediaChange = this._onHoverMediaChange.bind(this);
     this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
     this._onShadowTouchMove = this._onShadowTouchMove.bind(this);
     this._onShadowTouchEnd = this._onShadowTouchEnd.bind(this);
@@ -978,6 +1017,17 @@ class NodaliaGraphCard extends HTMLElement {
     this.shadowRoot.addEventListener("touchmove", this._onShadowTouchMove, { passive: false });
     this.shadowRoot.addEventListener("touchend", this._onShadowTouchEnd);
     this.shadowRoot.addEventListener("touchcancel", this._onShadowTouchCancel);
+    // Defensive close: in some pointer transitions the shadow-root leave may be skipped.
+    this.addEventListener("pointerleave", this._onShadowPointerLeave);
+    this.addEventListener("mouseleave", this._onShadowPointerLeave);
+    this._hoverMediaQuery =
+      typeof window !== "undefined" && typeof window.matchMedia === "function"
+        ? window.matchMedia("(hover: hover)")
+        : null;
+    this._hoverSupported = this._hoverMediaQuery ? this._hoverMediaQuery.matches : true;
+    if (this._hoverMediaQuery && typeof this._hoverMediaQuery.addEventListener === "function") {
+      this._hoverMediaQuery.addEventListener("change", this._onHoverMediaChange);
+    }
   }
 
   disconnectedCallback() {
@@ -992,9 +1042,19 @@ class NodaliaGraphCard extends HTMLElement {
       this._tooltipSyncFrame = 0;
     }
     this._pendingHoverIndex = null;
+    if (this._hoverMediaQuery && typeof this._hoverMediaQuery.removeEventListener === "function") {
+      this._hoverMediaQuery.removeEventListener("change", this._onHoverMediaChange);
+    }
     this._clearTouchPressTimer();
     this._touchPressState = null;
     this._touchHoverActive = false;
+  }
+
+  _onHoverMediaChange(event) {
+    this._hoverSupported = Boolean(event?.matches);
+    if (!this._hoverSupported) {
+      this._scheduleHoverRender(null);
+    }
   }
 
   connectedCallback() {
@@ -1331,7 +1391,7 @@ class NodaliaGraphCard extends HTMLElement {
   _onShadowPointerMove(event) {
     if (
       (typeof event.pointerType === "string" && event.pointerType === "touch")
-      || (typeof window !== "undefined" && typeof window.matchMedia === "function" && !window.matchMedia("(hover: hover)").matches)
+      || this._hoverSupported === false
     ) {
       return;
     }
@@ -1477,19 +1537,26 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   _scheduleHoverRender(nextIndex) {
-    if (nextIndex === this._hoverIndex) {
+    if (nextIndex === this._hoverIndex && this._pendingHoverIndex === null) {
       return;
     }
 
+    this._pendingHoverIndex = nextIndex;
     if (this._hoverFrame) {
-      window.cancelAnimationFrame(this._hoverFrame);
-      this._hoverFrame = 0;
+      return;
     }
 
-    this._pendingHoverIndex = null;
-    this._hoverEntering = nextIndex !== null && this._hoverIndex === null;
-    this._hoverIndex = nextIndex;
-    this._render();
+    this._hoverFrame = window.requestAnimationFrame(() => {
+      this._hoverFrame = 0;
+      const resolvedIndex = this._pendingHoverIndex;
+      this._pendingHoverIndex = null;
+      if (resolvedIndex === this._hoverIndex) {
+        return;
+      }
+      this._hoverEntering = resolvedIndex !== null && this._hoverIndex === null;
+      this._hoverIndex = resolvedIndex;
+      this._render();
+    });
   }
 
   _getHistoryRequestKey() {

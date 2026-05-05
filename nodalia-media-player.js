@@ -13,6 +13,7 @@
     "stripEqualToDefaults",
     "editorStatesSignature",
     "editorFilteredStatesSignature",
+    "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
   ];
@@ -136,6 +137,42 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Normalize and validate user-provided action URLs.
+   * Allows http/https and same-origin relative paths by default.
+   */
+  function sanitizeActionUrl(value, options = {}) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    const allowRelative = options.allowRelative !== false;
+    const allowHash = options.allowHash === true;
+    if (allowHash && raw.startsWith("#")) {
+      return raw;
+    }
+    if (allowRelative && (/^\/(?!\/)/.test(raw) || raw.startsWith("./") || raw.startsWith("../"))) {
+      return raw;
+    }
+    try {
+      const base =
+        typeof window !== "undefined" && window.location
+          ? window.location.origin
+          : "https://example.invalid";
+      const parsed = new URL(raw, base);
+      const protocol = String(parsed.protocol || "").toLowerCase();
+      if (protocol !== "http:" && protocol !== "https:") {
+        return "";
+      }
+      if (allowRelative && typeof window !== "undefined" && window.location && parsed.origin === window.location.origin) {
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+      return parsed.toString();
+    } catch (_error) {
+      return "";
+    }
   }
 
   function copyDatasetExcept(control, host, skipKeys) {
@@ -342,6 +379,7 @@
     stripEqualToDefaults,
     editorStatesSignature,
     editorFilteredStatesSignature,
+    sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
   };
@@ -2284,6 +2322,10 @@ class NodaliaMediaPlayer extends HTMLElement {
       return;
     }
 
+    if (!this._isServiceAllowed(action.service)) {
+      return;
+    }
+
     const [domain, service] = String(action.service).split(".");
     if (!domain || !service) {
       return;
@@ -2307,6 +2349,28 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._hass.callService(domain, service, payload);
   }
 
+  _isServiceAllowed(serviceValue) {
+    const security = this._config?.security || {};
+    if (security.strict_service_actions !== true) {
+      return true;
+    }
+    const normalizedService = String(serviceValue || "").trim().toLowerCase();
+    if (!normalizedService || !normalizedService.includes(".")) {
+      return false;
+    }
+    const [domain] = normalizedService.split(".");
+    const domains = Array.isArray(security.allowed_service_domains)
+      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const services = Array.isArray(security.allowed_services)
+      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    if (!domains.length && !services.length) {
+      return false;
+    }
+    return services.includes(normalizedService) || domains.includes(domain);
+  }
+
   _runActionDefinition(action, fallbackEntityId = "") {
     if (!action || action.action === "none") {
       return;
@@ -2327,13 +2391,13 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
         break;
       case "url": {
-        const url = action.url_path || action.url;
+        const url = window.NodaliaUtils?.sanitizeActionUrl(action.url_path || action.url, { allowRelative: true }) || "";
         if (!url) {
           return;
         }
 
         if (action.new_tab) {
-          window.open(url, "_blank", "noopener");
+          window.open(url, "_blank", "noopener,noreferrer");
         } else {
           window.location.assign(url);
         }

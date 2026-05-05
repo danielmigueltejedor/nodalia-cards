@@ -1625,6 +1625,9 @@ const out = `/* eslint-disable max-len */
       });
     });
 
+    // Clean up legacy literal replacement artifacts left by earlier generator versions.
+    out = out.replace(/\$(\d+)/g, "");
+
     return out;
   }
 

@@ -13,6 +13,7 @@
     "stripEqualToDefaults",
     "editorStatesSignature",
     "editorFilteredStatesSignature",
+    "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
   ];
@@ -136,6 +137,42 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Normalize and validate user-provided action URLs.
+   * Allows http/https and same-origin relative paths by default.
+   */
+  function sanitizeActionUrl(value, options = {}) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    const allowRelative = options.allowRelative !== false;
+    const allowHash = options.allowHash === true;
+    if (allowHash && raw.startsWith("#")) {
+      return raw;
+    }
+    if (allowRelative && (/^\/(?!\/)/.test(raw) || raw.startsWith("./") || raw.startsWith("../"))) {
+      return raw;
+    }
+    try {
+      const base =
+        typeof window !== "undefined" && window.location
+          ? window.location.origin
+          : "https://example.invalid";
+      const parsed = new URL(raw, base);
+      const protocol = String(parsed.protocol || "").toLowerCase();
+      if (protocol !== "http:" && protocol !== "https:") {
+        return "";
+      }
+      if (allowRelative && typeof window !== "undefined" && window.location && parsed.origin === window.location.origin) {
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+      return parsed.toString();
+    } catch (_error) {
+      return "";
+    }
   }
 
   function copyDatasetExcept(control, host, skipKeys) {
@@ -342,6 +379,7 @@
     stripEqualToDefaults,
     editorStatesSignature,
     editorFilteredStatesSignature,
+    sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
   };
@@ -5118,7 +5156,15 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     if (action === "url") {
       const target = actionConfig.new_tab === true ? "_blank" : "_self";
-      window.open(actionConfig.url_path || actionConfig.url, target);
+      const safeUrl = window.NodaliaUtils?.sanitizeActionUrl(actionConfig.url_path || actionConfig.url, { allowRelative: true }) || "";
+      if (!safeUrl) {
+        return;
+      }
+      if (target === "_blank") {
+        window.open(safeUrl, "_blank", "noopener,noreferrer");
+      } else {
+        window.location.assign(safeUrl);
+      }
       return;
     }
 
@@ -5131,7 +5177,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     if (["call_service", "call-service", "perform_action", "perform-action"].includes(action)) {
       const service = actionConfig.service || actionConfig.perform_action;
-      if (!service || !this._hass) {
+      if (!service || !this._hass || !this._isServiceAllowed(service)) {
         return;
       }
       const [domain, serviceName] = String(service).split(".");
@@ -5153,8 +5199,30 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     });
   }
 
+  _isServiceAllowed(serviceValue) {
+    const security = this._config?.security || {};
+    if (security.strict_service_actions !== true) {
+      return true;
+    }
+    const normalizedService = String(serviceValue || "").trim().toLowerCase();
+    if (!normalizedService || !normalizedService.includes(".")) {
+      return false;
+    }
+    const [domain] = normalizedService.split(".");
+    const domains = Array.isArray(security.allowed_service_domains)
+      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const services = Array.isArray(security.allowed_services)
+      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    if (!domains.length && !services.length) {
+      return false;
+    }
+    return services.includes(normalizedService) || domains.includes(domain);
+  }
+
   _callNamedService(service, data = {}, target = null) {
-    if (!this._hass || !service) {
+    if (!this._hass || !service || !this._isServiceAllowed(service)) {
       return;
     }
 
