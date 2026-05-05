@@ -10,6 +10,16 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.10] - 2026-05-06
+
+Tenth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.10`** (tag **`v1.0.0-alpha.10`** optional).
+
+- **Calendar card:** carga de eventos más **compatible con HA Companion / WebKit**: si `callApi` devuelve algo que no es un array o falla, se reintenta con **`fetchWithAuth`** sobre `/api/calendars/...`; respuestas envueltas en objeto se normalizan cuando traen una lista en **`events`**.
+- **Calendar card:** fechas **solo día** (`YYYY-MM-DD` / `start.date`) se interpretan en **calendario local** para que el agrupado coincida en **iOS/Safari** con escritorio.
+- **Calendar card:** al volver a la pestaña o a la app (`visibilitychange`), se **vuelven a pedir** eventos para recuperar datos tras suspender la vista en móvil.
+
+---
+
 ## [1.0.0-alpha.9] - 2026-05-06
 
 Ninth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.9`** (tag **`v1.0.0-alpha.9`** optional).

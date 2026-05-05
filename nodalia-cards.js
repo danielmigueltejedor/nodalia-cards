@@ -70861,6 +70861,26 @@
     });
     return out;
   }
+  function compactCalendarConfig(value) {
+    if (Array.isArray(value)) {
+      return value.map((item) => compactCalendarConfig(item)).filter((item) => item !== void 0);
+    }
+    if (isObject17(value)) {
+      const compacted = {};
+      Object.entries(value).forEach(([key, item]) => {
+        const cleaned = compactCalendarConfig(item);
+        const isEmptyObject = isObject17(cleaned) && Object.keys(cleaned).length === 0;
+        if (cleaned !== void 0 && !isEmptyObject) {
+          compacted[key] = cleaned;
+        }
+      });
+      return compacted;
+    }
+    if (value === "" || value === null || value === void 0) {
+      return void 0;
+    }
+    return value;
+  }
   function sanitizeCalendarTint(value) {
     const s = String(value ?? "").trim();
     if (!s) {
@@ -70946,7 +70966,7 @@
   }
   function calendarExitDurationMs(contentDuration) {
     const base = Math.min(1600, Math.max(120, Number(contentDuration) || DEFAULT_CONFIG17.animations.content_duration));
-    return Math.min(520, Math.max(280, Math.round(base * 0.52)));
+    return Math.min(640, Math.max(320, Math.round(base * 0.62)));
   }
   function timeRangeChipLabel(tr) {
     const labels = {
@@ -71054,18 +71074,53 @@
       minute: "2-digit"
     }).format(date);
   }
+  function parseCalendarDateOnlyLocal(raw) {
+    const s = String(raw ?? "").trim();
+    const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!dm) {
+      return null;
+    }
+    const y = Number(dm[1]);
+    const mo = Number(dm[2]) - 1;
+    const d = Number(dm[3]);
+    const local = new Date(y, mo, d, 12, 0, 0);
+    return Number.isFinite(local.getTime()) ? local : null;
+  }
+  function normalizeCalendarFetchResult(raw) {
+    if (Array.isArray(raw)) {
+      return raw;
+    }
+    if (raw && typeof raw === "object" && Array.isArray(raw.events)) {
+      return raw.events;
+    }
+    return [];
+  }
   function eventDate(value) {
     if (!value) {
       return null;
     }
     if (typeof value === "string") {
+      const dayLocal = parseCalendarDateOnlyLocal(value);
+      if (dayLocal) {
+        return dayLocal;
+      }
       const parsed = new Date(value);
       return Number.isFinite(parsed.getTime()) ? parsed : null;
     }
     if (typeof value === "object") {
-      const raw = value.dateTime || value.date || "";
-      const parsed = new Date(raw);
-      return Number.isFinite(parsed.getTime()) ? parsed : null;
+      if (value.dateTime) {
+        const parsed = new Date(value.dateTime);
+        return Number.isFinite(parsed.getTime()) ? parsed : null;
+      }
+      if (value.date) {
+        const dayLocal = parseCalendarDateOnlyLocal(value.date);
+        if (dayLocal) {
+          return dayLocal;
+        }
+        const parsed = new Date(value.date);
+        return Number.isFinite(parsed.getTime()) ? parsed : null;
+      }
+      return null;
     }
     return null;
   }
@@ -71104,6 +71159,35 @@
       this._completeExitTimers = /* @__PURE__ */ new Map();
       this._onShadowClick = this._onShadowClick.bind(this);
       this._onShadowKeydown = this._onShadowKeydown.bind(this);
+      this._onDocVisibility = this._onDocVisibility.bind(this);
+    }
+    _onDocVisibility() {
+      if (typeof document === "undefined" || document.visibilityState !== "visible") {
+        return;
+      }
+      if (!this._hass || !(this._config.calendars || []).some((c) => c && c.entity)) {
+        return;
+      }
+      this._refreshEvents();
+    }
+    async _fetchCalendarEventsViaRest(entityId, start, end) {
+      const hass = this._hass;
+      if (!hass?.auth?.fetchWithAuth || typeof hass.auth.fetchWithAuth !== "function") {
+        return [];
+      }
+      const qs = `start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
+      try {
+        const response = await hass.auth.fetchWithAuth(
+          `/api/calendars/${encodeURIComponent(entityId)}?${qs}`
+        );
+        if (!response.ok) {
+          return [];
+        }
+        const data = await response.json();
+        return normalizeCalendarFetchResult(data);
+      } catch (_error) {
+        return [];
+      }
     }
     _shouldShowEventInList(event) {
       const config = this._config;
@@ -71114,12 +71198,18 @@
     connectedCallback() {
       this.shadowRoot?.addEventListener("click", this._onShadowClick);
       this.shadowRoot?.addEventListener("keydown", this._onShadowKeydown);
+      if (typeof document !== "undefined") {
+        document.addEventListener("visibilitychange", this._onDocVisibility);
+      }
       this._loadCompleted();
       if (!this._hadHass) {
         this._refreshEvents();
       }
     }
     disconnectedCallback() {
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", this._onDocVisibility);
+      }
       this.shadowRoot?.removeEventListener("click", this._onShadowClick);
       this.shadowRoot?.removeEventListener("keydown", this._onShadowKeydown);
       if (this._refreshTimer) {
@@ -71422,16 +71512,27 @@
       this._loading = true;
       this._error = "";
       this._renderIfChanged(true);
+      const hass = this._hass;
       try {
         const start = /* @__PURE__ */ new Date();
         const end = new Date(start.getTime() + this._config.days_to_show * 24 * 60 * 60 * 1e3);
         const all = [];
         for (const entityId of calendarIds) {
           const path = `calendars/${encodeURIComponent(entityId)}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
-          const rows = await this._hass.callApi("GET", path);
-          if (Array.isArray(rows)) {
-            rows.forEach((item) => all.push({ ...item, _entity: entityId }));
+          let rows = [];
+          try {
+            const raw = await hass.callApi("GET", path);
+            rows = normalizeCalendarFetchResult(raw);
+            if (!Array.isArray(raw)) {
+              const fallback = await this._fetchCalendarEventsViaRest(entityId, start, end);
+              if (fallback.length) {
+                rows = fallback;
+              }
+            }
+          } catch (_apiError) {
+            rows = await this._fetchCalendarEventsViaRest(entityId, start, end);
           }
+          rows.forEach((item) => all.push({ ...item, _entity: entityId }));
         }
         all.sort((left, right) => {
           const a = eventDate(left?.start)?.getTime() || 0;
@@ -71716,28 +71817,27 @@
           opacity: 1;
         }
         .calendar-event--exit {
-          animation: calendar-event-complete-out var(--calendar-exit-duration, 380ms) cubic-bezier(0.32, 0.72, 0.28, 1) forwards;
+          animation: calendar-event-complete-out var(--calendar-exit-duration, 420ms) cubic-bezier(0.22, 0.82, 0.28, 1) forwards;
           pointer-events: none;
-          transform-origin: center top;
+          transform-origin: center center;
+          will-change: transform, opacity;
         }
         .calendar-event--exit .calendar-event__done {
-          opacity: 0.35;
+          opacity: 0.25;
+          transition: opacity 180ms ease;
         }
         @keyframes calendar-event-complete-out {
           0% {
-            filter: blur(0);
             opacity: 1;
-            transform: scale(1) translateY(0);
+            transform: translateY(0) scale(1);
           }
-          55% {
-            filter: blur(0.5px);
-            opacity: 0.55;
-            transform: scale(0.97) translateY(-3px);
+          18% {
+            opacity: 1;
+            transform: translateY(-2px) scale(1.008);
           }
           100% {
-            filter: blur(3px);
             opacity: 0;
-            transform: scale(0.82) translateY(-10px);
+            transform: translateY(-14px) scale(0.94);
           }
         }
         .calendar-event__time {
@@ -72105,12 +72205,19 @@
       }
       return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", s);
     }
-    _emitConfig(next) {
-      this.dispatchEvent(new CustomEvent("config-changed", {
-        bubbles: true,
-        composed: true,
-        detail: { config: next }
-      }));
+    _emitConfig() {
+      const raw = deepClone17(this._config || DEFAULT_CONFIG17);
+      const stripped = typeof window !== "undefined" && window.NodaliaUtils?.stripEqualToDefaults ? window.NodaliaUtils.stripEqualToDefaults(raw, DEFAULT_CONFIG17) : raw;
+      const payload = compactCalendarConfig(
+        stripped !== void 0 && stripped !== null ? stripped : {}
+      );
+      this.dispatchEvent(
+        new CustomEvent("config-changed", {
+          bubbles: true,
+          composed: true,
+          detail: { config: payload }
+        })
+      );
     }
     _captureFocusState() {
       const activeElement = this.shadowRoot?.activeElement;
@@ -72274,7 +72381,7 @@
       this._setFieldValue(next, field, value);
       this._config = normalizeConfig17(next);
       if (event.type === "change") {
-        this._emitConfig(this._config);
+        this._emitConfig();
         const focusState = this._captureFocusState();
         this._render();
         this._restoreFocusState(focusState);
@@ -72292,7 +72399,7 @@
       const value = typeof raw === "string" ? raw : control.value;
       this._setFieldValue(next, field, value);
       this._config = normalizeConfig17(next);
-      this._emitConfig(this._config);
+      this._emitConfig();
       const focusState = this._captureFocusState();
       this._render();
       this._restoreFocusState(focusState);
@@ -72307,7 +72414,7 @@
       [list[index], list[j]] = [list[j], list[index]];
       next.calendars = list;
       this._config = normalizeConfig17(next);
-      this._emitConfig(this._config);
+      this._emitConfig();
       const focusState = this._captureFocusState();
       this._render();
       this._restoreFocusState(focusState);
@@ -72358,7 +72465,7 @@
         return;
       }
       this._config = normalizeConfig17(next);
-      this._emitConfig(this._config);
+      this._emitConfig();
       const focusState = this._captureFocusState();
       this._render();
       this._restoreFocusState(focusState);
@@ -72419,6 +72526,32 @@
         <span class="editor-toggle__switch" aria-hidden="true"></span>
         <span class="editor-toggle__label">${escapeHtml17(tLabel)}</span>
       </label>
+    `;
+    }
+    _renderTintAutoToggle(checked) {
+      const tTitle = this._editorLabel("Tintado automatico");
+      const tHint = this._editorLabel(
+        "Usa el color primario del tema en la tarjeta. Desactiva para definir un color de acento en Estilos."
+      );
+      const aria = escapeHtml17(`${tTitle}. ${tHint}`);
+      return `
+      <div class="editor-tint-block">
+        <div class="editor-tint-block__text">
+          <div class="editor-tint-block__title">${escapeHtml17(tTitle)}</div>
+          <div class="editor-tint-block__hint">${escapeHtml17(tHint)}</div>
+        </div>
+        <label class="editor-toggle">
+          <input
+            type="checkbox"
+            data-field="tint_auto"
+            data-value-type="boolean"
+            aria-label="${aria}"
+            ${checked ? "checked" : ""}
+          />
+          <span class="editor-toggle__switch" aria-hidden="true"></span>
+          <span class="editor-toggle__label"></span>
+        </label>
+      </div>
     `;
     }
     _renderSelectField(label, field, value, options = {}) {
@@ -72637,6 +72770,51 @@
 
         .editor-field--full {
           grid-column: 1 / -1;
+        }
+
+        .editor-tint-block {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-color) 22%, transparent);
+          border-radius: 16px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px 18px;
+          grid-column: 1 / -1;
+          justify-content: space-between;
+          padding: 14px 16px;
+        }
+
+        .editor-tint-block__text {
+          display: grid;
+          flex: 1 1 220px;
+          gap: 5px;
+          min-width: 0;
+        }
+
+        .editor-tint-block__title {
+          font-size: 13px;
+          font-weight: 700;
+          letter-spacing: -0.01em;
+        }
+
+        .editor-tint-block__hint {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          line-height: 1.45;
+          max-width: 44em;
+        }
+
+        .editor-tint-block .editor-toggle {
+          align-self: center;
+          flex: 0 0 auto;
+          margin: 0;
+          min-height: 0;
+          padding-top: 0;
+        }
+
+        .editor-tint-block .editor-toggle__label:empty {
+          display: none;
         }
 
         .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
@@ -72917,9 +73095,9 @@
       })}
             ${this._renderTextField("Eventos visibles antes de scroll", "max_visible_events", config.max_visible_events, { type: "number" })}
             ${this._renderTextField("Refresco (segundos)", "refresh_interval", config.refresh_interval, { type: "number" })}
+            ${this._renderTintAutoToggle(config.tint_auto !== false)}
             ${this._renderCheckboxField("Permitir marcar eventos como completados", "allow_complete", config.allow_complete === true)}
             ${this._renderCheckboxField("Mostrar eventos completados", "show_completed", config.show_completed === true)}
-            ${this._renderCheckboxField("Tintado con color primario del tema", "tint_auto", config.tint_auto !== false)}
           </div>
         </section>
 
@@ -76667,4 +76845,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.9","contentSha256_12":"d534d986d5b8"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.9 (d534d986d5b8) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.10","contentSha256_12":"44b2f3393e5e"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.10 (44b2f3393e5e) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
