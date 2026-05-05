@@ -693,6 +693,48 @@ function escapeSelectorValue(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
+function sanitizeCssValue(value, fallback) {
+  const raw = String(value ?? "").trim();
+  const safeFallback = String(fallback ?? "").trim();
+  if (!raw) {
+    return safeFallback;
+  }
+  if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+    return safeFallback;
+  }
+  return raw;
+}
+
+function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
+  const defaults = DEFAULT_CONFIG.styles;
+  const card = styles?.card || {};
+  const icon = styles?.icon || {};
+  const tint = styles?.tint || {};
+
+  return {
+    card: {
+      background: sanitizeCssValue(card.background, defaults.card.background),
+      border: sanitizeCssValue(card.border, defaults.card.border),
+      border_radius: sanitizeCssValue(card.border_radius, defaults.card.border_radius),
+      box_shadow: sanitizeCssValue(card.box_shadow, defaults.card.box_shadow),
+      gap: sanitizeCssValue(card.gap, defaults.card.gap),
+      padding: sanitizeCssValue(card.padding, defaults.card.padding),
+    },
+    icon: {
+      background: sanitizeCssValue(icon.background, defaults.icon.background),
+      icon_only_offset_y: sanitizeCssValue(icon.icon_only_offset_y, defaults.icon.icon_only_offset_y),
+      off_color: sanitizeCssValue(icon.off_color, defaults.icon.off_color),
+      on_color: sanitizeCssValue(icon.on_color, defaults.icon.on_color),
+      size: sanitizeCssValue(icon.size, defaults.icon.size),
+    },
+    tint: {
+      color: sanitizeCssValue(tint.color, defaults.tint.color),
+    },
+    title_size: sanitizeCssValue(styles?.title_size, defaults.title_size),
+    value_size: sanitizeCssValue(styles?.value_size, defaults.value_size),
+  };
+}
+
 function clampNumber(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
@@ -1030,7 +1072,7 @@ class NodaliaInsigniaCard extends HTMLElement {
 
   _getTintColor(state) {
     if (this._config?.tint_auto === false) {
-      return this._config?.styles?.tint?.color || DEFAULT_CONFIG.styles.tint.color;
+      return sanitizeCssValue(this._config?.styles?.tint?.color, DEFAULT_CONFIG.styles.tint.color);
     }
 
     const domain = getEntityDomain(state);
@@ -1161,7 +1203,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const styles = config.styles || DEFAULT_CONFIG.styles;
+    const styles = getSafeStyles(config.styles);
     const state = this._getState();
 
     if (!state && !config.name && !config.icon) {
@@ -1203,7 +1245,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     const icon = this._getResolvedIcon(state);
     const active = this._isActive(state);
     const dimIcon = this._shouldDimIcon(state);
-    const tint = this._getTintColor(state);
+    const tint = sanitizeCssValue(this._getTintColor(state), DEFAULT_CONFIG.styles.tint.color);
     const strongTint = this._shouldApplyStrongCardTint(state);
     const cardBackground = strongTint
       ? `linear-gradient(135deg, color-mix(in srgb, ${tint} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${tint} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`

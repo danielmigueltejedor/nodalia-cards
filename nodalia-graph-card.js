@@ -2275,6 +2275,10 @@ class NodaliaGraphCard extends HTMLElement {
           min-width: 0;
         }
 
+        .graph-card__header + .graph-card__primary-row {
+          margin-top: 6px;
+        }
+
         .graph-card__primary-row .graph-card__value {
           flex: 0 1 auto;
           min-width: 0;
