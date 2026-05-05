@@ -6,7 +6,50 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Work toward **`0.5.x`** on **`alpha`** / **`beta`** and eventual **`main`**: **Power Flow** polish, **translations**, **Graph Card** tuning, **Insignia** and editors. Prerelease workflow and tagging: **CONTRIBUTING**.
+Work toward **`0.6.x`** on **`alpha`** / **`beta`** and eventual **`main`**: additional polish, performance and feature work after the **`0.5.0`** stable release. Prerelease workflow and tagging: **CONTRIBUTING**.
+
+---
+
+## [0.5.0] - 2026-05-06
+
+First stable release on the **`0.5.x`** line (**branch `main`**). This version consolidates all validated work from the **`0.5.0-alpha.*`** cycle into a production-ready bundle aimed at smoother interaction, stronger hardening, better editor UX and broader translation coverage.
+
+### Security hardening
+
+- Added shared **`sanitizeActionUrl()`** and applied it across URL action sinks to block unsafe schemes and normalize relative/same-origin navigation.
+- Standardized new-tab actions to **`noopener,noreferrer`** to reduce tabnabbing/referrer leakage risks.
+- Hardened service actions with optional strict mode and allowlists (**domains/services**) to reduce accidental abuse in action configs.
+- Removed dynamic inline style string interpolation in critical runtime paths (notably Navigation Bar route/popup styles), applying safe runtime style properties instead.
+- Added render-boundary CSS sanitization for user-configurable styles in cards with dynamic style templates (including Insignia and Circular Gauge paths), with safe fallback behavior.
+
+### Performance and fluency
+
+- Improved Graph hover fluidity with **`requestAnimationFrame`** coalescing and reduced per-move work under heavy pointer movement.
+- Fixed Graph tooltip lifecycle for stable tracking while moving the pointer (without waiting for stationary hover), with robust leave/close behavior.
+- Reduced drag overhead in interactive controls by caching geometry during slider drags and minimizing repeated layout reads.
+- Smoothed Climate dial interaction by coalescing drag updates per frame.
+- Kept standalone embedding/bundle sync idempotent to avoid unnecessary rewrites and noisy rebuild diffs.
+
+### Stability and bug fixes
+
+- Fixed Graph hook alignment issues (marker/guide/popup sync over chart path and viewBox mapping).
+- Fixed Graph header layout so icon bubble and title align consistently in the top-left header row.
+- Added spacing and layout refinements in Graph value/chips area for better readability in compact and normal views.
+- Fixed tooltip edge cases where popups could remain visible after leaving the card.
+- Corrected Insignia icon-only sizing/height parity with normal mode and removed clipping/regression cases in strip/scroll layouts.
+- Improved async state consistency in Advance Vacuum map actions by preventing overlapping runs and reducing race conditions after awaited service calls.
+
+### Editor and i18n
+
+- Fixed Spanish editor normalization artifacts where labels like **`Mínimo$1`** / **`Máximo$1`** could appear.
+- Strengthened editor label normalization and replacement group handling in generated editor UI runtime.
+- Expanded editor/source strings and completed additional translation keys across supported locales.
+- Maintained bundled language set coverage for cards and visual editors (**es, en, de, fr, it, nl, pt, ru, el, zh, ro**), with graceful fallback behavior for partial trees.
+
+### Developer and tooling
+
+- Refined shared utility behavior for editor entity signatures so label/icon attribute changes trigger expected refreshes (not only entity count changes).
+- Kept standalone utility embedding centralized and automatically stripped during bundle build to avoid duplicated runtime code in `nodalia-cards.js`.
 
 ---
 

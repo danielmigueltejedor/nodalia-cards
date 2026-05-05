@@ -43319,6 +43319,7 @@ class NodaliaGraphCard extends HTMLElement {
     this._animateChartOnNextRender = false;
     this._lastRenderSignature = "";
     this._tooltipSyncFrame = 0;
+    this._lastTooltipViewportPosition = null;
     this._touchPressTimer = 0;
     this._touchPressState = null;
     this._touchHoverActive = false;
@@ -43733,6 +43734,7 @@ class NodaliaGraphCard extends HTMLElement {
     }
 
     this._scheduleHoverRender(null);
+    this._lastTooltipViewportPosition = null;
   }
 
   _clearTouchPressTimer() {
@@ -43875,6 +43877,9 @@ class NodaliaGraphCard extends HTMLElement {
         return;
       }
       this._hoverEntering = resolvedIndex !== null && this._hoverIndex === null;
+      if (resolvedIndex === null) {
+        this._lastTooltipViewportPosition = null;
+      }
       this._hoverIndex = resolvedIndex;
       this._render();
     });
@@ -44472,6 +44477,11 @@ class NodaliaGraphCard extends HTMLElement {
       shouldShowBelow ? "translate(-50%, 0)" : "translate(-50%, -100%)",
     );
     tooltip.style.opacity = "1";
+    this._lastTooltipViewportPosition = {
+      left: resolvedCenter,
+      top: resolvedTop,
+      transform: shouldShowBelow ? "translate(-50%, 0)" : "translate(-50%, -100%)",
+    };
   }
 
   _getSeriesData() {
@@ -44571,12 +44581,15 @@ class NodaliaGraphCard extends HTMLElement {
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const shouldAnimateChart = animations.enabled && (shouldAnimateEntrance || this._animateChartOnNextRender);
     const anchorXPct = hover ? graphChartXToPercent(hover.x, chart) : 0;
+    const initialTooltipStyle = this._lastTooltipViewportPosition
+      ? `left:${this._lastTooltipViewportPosition.left}px; top:${this._lastTooltipViewportPosition.top}px; opacity:1; --graph-tooltip-transform:${this._lastTooltipViewportPosition.transform}; --tooltip-tint:${escapeHtml(tooltipTint)};`
+      : `left:-9999px; top:-9999px; opacity:0; --tooltip-tint:${escapeHtml(tooltipTint)};`;
     const tooltipMarkup = hover
       ? `
         <div
           class="graph-card__tooltip ${this._hoverEntering && animations.enabled ? "graph-card__tooltip--entering" : ""}"
           data-anchor-x-pct="${anchorXPct.toFixed(4)}"
-          style="left:-9999px; top:-9999px; opacity:0; --tooltip-tint:${escapeHtml(tooltipTint)};"
+          style="${initialTooltipStyle}"
         >
           <div class="graph-card__tooltip-time">${escapeHtml(hover.label)}</div>
           <div class="graph-card__tooltip-values">
@@ -85849,4 +85862,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0-alpha.16","contentSha256_12":"65441736f930"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0","contentSha256_12":"6c52559e0f8e"};}

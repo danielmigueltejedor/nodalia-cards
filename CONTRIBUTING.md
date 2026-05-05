@@ -158,7 +158,7 @@ Or branch **`alpha`** from **`beta`** if **`beta`** already tracks **`0.5.0-beta
 
 ### Stable **`main`**, then **`beta`**, then ongoing **`alpha` → beta`**
 
-1. **`main` (stable)** — **`package.json`** e.g. **`0.4.0`**, **`CHANGELOG`** **`[0.4.0]`**, **`npm run bundle`**, tag **`v0.4.0`**, GitHub **Release**.
+1. **`main` (stable)** — **`package.json`** e.g. **`0.5.0`**, **`CHANGELOG`** **`[0.5.0]`**, **`npm run bundle`**, tag **`v0.5.0`**, GitHub **Release**.
 
 2. **`beta` (first prerelease of the next minor)** — merge **`main`** into **`beta`**, bump to **`0.5.0-beta.1`**, **`CHANGELOG`** **`## [0.5.0-beta.1]`**, **`npm run bundle`**, tag **`v0.5.0-beta.1`**.
 
