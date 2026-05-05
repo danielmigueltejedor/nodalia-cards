@@ -10,6 +10,16 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.2] - 2026-05-05
+
+Second **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). This cut refines the initial calendar-card introduction with a stronger visual-editor workflow and event-list behavior.
+
+- **Calendar editor UX:** moved calendar selection to native entity picker rows with add/remove controls (multi-calendar friendly, consistent with other Nodalia editors).
+- **Calendar list behavior:** added configurable `max_visible_events` (default **3**) and vertical scroll beyond the visible-event threshold.
+- **Polish pass:** aligned interaction flow and config normalization for the new card while keeping `0.6.1` as stable baseline on `main`.
+
+---
+
 ## [1.0.0-alpha.1] - 2026-05-05
 
 First **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). This marks the start of the next major cycle while `0.6.1` remains the stable baseline on `main`.

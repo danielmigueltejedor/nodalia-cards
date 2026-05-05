@@ -70793,6 +70793,7 @@
     title: "Calendario",
     calendars: [],
     days_to_show: 7,
+    max_visible_events: 3,
     refresh_interval: 300,
     show_completed: false,
     allow_complete: true,
@@ -70844,6 +70845,10 @@
     const normalized = mergeConfig17(DEFAULT_CONFIG17, config || {});
     normalized.calendars = Array.isArray(normalized.calendars) ? normalized.calendars.map((item) => String(item || "").trim()).filter(Boolean) : [];
     normalized.days_to_show = Math.min(30, Math.max(1, Number(normalized.days_to_show) || DEFAULT_CONFIG17.days_to_show));
+    normalized.max_visible_events = Math.min(
+      12,
+      Math.max(1, Number(normalized.max_visible_events) || DEFAULT_CONFIG17.max_visible_events)
+    );
     normalized.refresh_interval = Math.min(3600, Math.max(30, Number(normalized.refresh_interval) || DEFAULT_CONFIG17.refresh_interval));
     return normalized;
   }
@@ -71037,6 +71042,7 @@
       const config = this._config;
       const styles = config.styles || DEFAULT_CONFIG17.styles;
       const locale = this._getLocale();
+      const maxVisibleEvents = Math.max(1, Number(config.max_visible_events) || DEFAULT_CONFIG17.max_visible_events);
       const visibleEvents = this._events.filter((event) => {
         const done = this._completed.has(completionKey(event));
         return config.show_completed || !done;
@@ -71090,6 +71096,14 @@
         .calendar-day {
           display:grid;
           gap:8px;
+        }
+        .calendar-events-scroll {
+          display:grid;
+          gap:10px;
+          max-height: calc(${maxVisibleEvents} * 64px + 28px);
+          overflow-y:auto;
+          overscroll-behavior: contain;
+          padding-right: 2px;
         }
         .calendar-day__label {
           color:var(--secondary-text-color);
@@ -71152,10 +71166,11 @@
             <div class="calendar-title">${escapeHtml17(config.title)}</div>
             <div class="calendar-chip">${escapeHtml17(`${config.days_to_show} dias`)}</div>
           </div>
-          ${this._loading ? `<div class="calendar-loading">Cargando eventos...</div>` : this._error ? `<div class="calendar-error">${escapeHtml17(this._error)}</div>` : !hasEvents ? `<div class="calendar-empty">No hay eventos en este rango.</div>` : groups.map((group) => `
-                      <div class="calendar-day">
-                        <div class="calendar-day__label">${escapeHtml17(group.label)}</div>
-                        ${group.events.map((event) => {
+          ${this._loading ? `<div class="calendar-loading">Cargando eventos...</div>` : this._error ? `<div class="calendar-error">${escapeHtml17(this._error)}</div>` : !hasEvents ? `<div class="calendar-empty">No hay eventos en este rango.</div>` : `<div class="calendar-events-scroll">
+                      ${groups.map((group) => `
+                        <div class="calendar-day">
+                          <div class="calendar-day__label">${escapeHtml17(group.label)}</div>
+                          ${group.events.map((event) => {
         const doneKey = completionKey(event);
         const done = this._completed.has(doneKey);
         const start = eventDate(event.start);
@@ -71163,18 +71178,19 @@
         const summary = String(event.summary || event.message || "Evento sin titulo");
         const source = String(event._entity || "");
         return `
-                            <div class="calendar-event ${done ? "is-completed" : ""}">
-                              <div class="calendar-event__time">${escapeHtml17(timeLabel)}</div>
-                              <div class="calendar-event__summary">
-                                ${escapeHtml17(summary)}
-                                <small>${escapeHtml17(source)}</small>
+                              <div class="calendar-event ${done ? "is-completed" : ""}">
+                                <div class="calendar-event__time">${escapeHtml17(timeLabel)}</div>
+                                <div class="calendar-event__summary">
+                                  ${escapeHtml17(summary)}
+                                  <small>${escapeHtml17(source)}</small>
+                                </div>
+                                ${config.allow_complete ? `<button type="button" class="calendar-event__done" data-action="toggle-complete" data-key="${escapeHtml17(doneKey)}">${done ? "Hecho" : "Marcar"}</button>` : ""}
                               </div>
-                              ${config.allow_complete ? `<button type="button" class="calendar-event__done" data-action="toggle-complete" data-key="${escapeHtml17(doneKey)}">${done ? "Hecho" : "Marcar"}</button>` : ""}
-                            </div>
-                          `;
+                            `;
       }).join("")}
-                      </div>
-                    `).join("")}
+                        </div>
+                      `).join("")}
+                    </div>`}
         </div>
       </ha-card>
     `;
@@ -71190,6 +71206,30 @@
     }
   };
   var NodaliaCalendarCardEditor = class extends HTMLElement {
+    constructor() {
+      super();
+      this._config = normalizeConfig17(DEFAULT_CONFIG17);
+      this._hass = null;
+      this._onShadowInput = this._onShadowInput.bind(this);
+      this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+      this._onShadowClick = this._onShadowClick.bind(this);
+    }
+    connectedCallback() {
+      if (!this.shadowRoot) {
+        this.attachShadow({ mode: "open" });
+      }
+      this.shadowRoot.addEventListener("input", this._onShadowInput);
+      this.shadowRoot.addEventListener("change", this._onShadowInput);
+      this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
+      this.shadowRoot.addEventListener("click", this._onShadowClick);
+      this._render();
+    }
+    disconnectedCallback() {
+      this.shadowRoot?.removeEventListener("input", this._onShadowInput);
+      this.shadowRoot?.removeEventListener("change", this._onShadowInput);
+      this.shadowRoot?.removeEventListener("value-changed", this._onShadowValueChanged);
+      this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+    }
     setConfig(config) {
       this._config = normalizeConfig17(config);
       this._render();
@@ -71204,28 +71244,101 @@
         detail: { config: next }
       }));
     }
-    _onInputChange(event) {
-      const input = event.currentTarget;
-      const field = input.dataset.field || "";
+    _setFieldValue(targetConfig, field, value) {
+      if (!field) {
+        return;
+      }
+      if (field.startsWith("calendars.")) {
+        const index = Number(field.split(".")[1]);
+        if (!Number.isFinite(index) || index < 0) {
+          return;
+        }
+        if (!Array.isArray(targetConfig.calendars)) {
+          targetConfig.calendars = [];
+        }
+        targetConfig.calendars[index] = String(value || "").trim();
+        targetConfig.calendars = targetConfig.calendars.filter(Boolean);
+        return;
+      }
+      targetConfig[field] = value;
+    }
+    _onShadowInput(event) {
+      const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+      if (!input?.dataset?.field) {
+        return;
+      }
       const next = deepClone17(this._config || DEFAULT_CONFIG17);
-      if (field === "calendars") {
-        next.calendars = String(input.value || "").split(",").map((item) => item.trim()).filter(Boolean);
-      } else if (input.type === "checkbox") {
-        next[field] = input.checked;
-      } else if (field === "days_to_show" || field === "refresh_interval") {
-        next[field] = Number(input.value || 0);
+      const field = input.dataset.field || "";
+      let value = input.value;
+      if (input.type === "checkbox") {
+        value = input.checked;
+      } else if (field === "days_to_show" || field === "refresh_interval" || field === "max_visible_events") {
+        value = Number(input.value || 0);
+      }
+      this._setFieldValue(next, field, value);
+      this._config = normalizeConfig17(next);
+      this._emitConfig(this._config);
+      this._render();
+    }
+    _onShadowValueChanged(event) {
+      const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+      if (!control?.dataset?.field) {
+        return;
+      }
+      const field = control.dataset.field;
+      const next = deepClone17(this._config || DEFAULT_CONFIG17);
+      const value = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+      this._setFieldValue(next, field, value);
+      this._config = normalizeConfig17(next);
+      this._emitConfig(this._config);
+      this._render();
+    }
+    _onShadowClick(event) {
+      const button = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorAction);
+      if (!button) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      const next = deepClone17(this._config || DEFAULT_CONFIG17);
+      if (!Array.isArray(next.calendars)) {
+        next.calendars = [];
+      }
+      if (button.dataset.editorAction === "add-calendar") {
+        next.calendars.push("");
+      } else if (button.dataset.editorAction === "remove-calendar") {
+        const index = Number(button.dataset.index || -1);
+        if (Number.isFinite(index) && index >= 0 && index < next.calendars.length) {
+          next.calendars.splice(index, 1);
+        }
       } else {
-        next[field] = input.value;
+        return;
       }
       this._config = normalizeConfig17(next);
       this._emitConfig(this._config);
       this._render();
+    }
+    _mountEntityPickers() {
+      if (!this.shadowRoot) {
+        return;
+      }
+      this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach((host) => {
+        window.NodaliaUtils?.mountEntityPickerHost?.(host, {
+          hass: this._hass,
+          field: host.dataset.field || "entity",
+          value: host.dataset.value || "",
+          onShadowInput: this._onShadowInput,
+          onShadowValueChanged: this._onShadowValueChanged,
+          copyDatasetFromHost: true
+        });
+      });
     }
     _render() {
       if (!this.shadowRoot) {
         this.attachShadow({ mode: "open" });
       }
       const config = normalizeConfig17(this._config || DEFAULT_CONFIG17);
+      const calendars = Array.isArray(config.calendars) && config.calendars.length ? config.calendars : [""];
       this.shadowRoot.innerHTML = `
       <style>
         :host{display:block}
@@ -71233,6 +71346,9 @@
         label{display:grid;gap:4px;font-size:12px;font-weight:600}
         input{min-height:38px;padding:8px 10px;border-radius:10px;border:1px solid color-mix(in srgb,var(--primary-text-color) 10%, transparent);background:color-mix(in srgb,var(--primary-text-color) 4%, transparent);color:var(--primary-text-color)}
         .row{display:grid;gap:8px;grid-template-columns:1fr 1fr}
+        .editor-control-host{display:block;width:100%}
+        .calendar-row{display:grid;gap:8px;grid-template-columns:1fr auto;align-items:end}
+        .calendar-row button,.calendar-add{min-height:38px;padding:0 10px;border-radius:10px;border:1px solid color-mix(in srgb,var(--primary-text-color) 12%, transparent);background:color-mix(in srgb,var(--primary-text-color) 6%, transparent);color:var(--primary-text-color);cursor:pointer}
       </style>
       <div class="wrap">
         <label>
@@ -71240,18 +71356,39 @@
           <input data-field="title" value="${escapeHtml17(config.title)}" />
         </label>
         <label>
-          <span>Calendarios (separados por comas)</span>
-          <input data-field="calendars" value="${escapeHtml17(config.calendars.join(", "))}" placeholder="calendar.personal, calendar.work"/>
+          <span>Calendarios</span>
+          <div class="wrap">
+            ${calendars.map((entityId, index) => `
+              <div class="calendar-row">
+                <div
+                  class="editor-control-host"
+                  data-mounted-control="entity"
+                  data-field="calendars.${index}"
+                  data-value="${escapeHtml17(entityId)}"
+                  data-entity-filter-domain="calendar"
+                ></div>
+                <button type="button" data-editor-action="remove-calendar" data-index="${index}">Eliminar</button>
+              </div>
+            `).join("")}
+          </div>
         </label>
+        <button type="button" class="calendar-add" data-editor-action="add-calendar">Agregar calendario</button>
         <div class="row">
           <label>
             <span>Dias a mostrar</span>
             <input type="number" data-field="days_to_show" value="${escapeHtml17(config.days_to_show)}" />
           </label>
           <label>
+            <span>Eventos visibles antes de scroll</span>
+            <input type="number" data-field="max_visible_events" value="${escapeHtml17(config.max_visible_events)}" />
+          </label>
+        </div>
+        <div class="row">
+          <label>
             <span>Refresco (segundos)</span>
             <input type="number" data-field="refresh_interval" value="${escapeHtml17(config.refresh_interval)}" />
           </label>
+          <div></div>
         </div>
         <label>
           <span><input type="checkbox" data-field="allow_complete" ${config.allow_complete ? "checked" : ""}/> Permitir marcar eventos como completados</span>
@@ -71261,12 +71398,7 @@
         </label>
       </div>
     `;
-      this.shadowRoot.querySelectorAll("input").forEach((input) => {
-        input.addEventListener("change", this._onInputChange.bind(this));
-        if (input.type !== "checkbox") {
-          input.addEventListener("input", this._onInputChange.bind(this));
-        }
-      });
+      this._mountEntityPickers();
     }
   };
   if (!customElements.get(CARD_TAG17)) {
@@ -74912,4 +75044,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.1","contentSha256_12":"195af2c4fab7"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.1 (195af2c4fab7) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.1","contentSha256_12":"a06add8da83c"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.1 (a06add8da83c) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
