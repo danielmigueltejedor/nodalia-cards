@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "0.2.4";
+const CARD_VERSION = "0.2.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -884,10 +884,18 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         :host([data-icon-only]) {
+          align-self: stretch;
+          box-sizing: border-box;
+          display: flex;
+          align-items: center;
           justify-content: center;
           overflow: visible;
           width: auto;
-          margin-block: var(--insignia-scroll-strip-margin-block, 8px);
+          min-height: min-content;
+          padding-block: var(
+            --insignia-scroll-strip-padding-block,
+            var(--insignia-scroll-strip-margin-block, 4px)
+          );
         }
 
         * {
@@ -1033,7 +1041,11 @@ class NodaliaInsigniaCard extends HTMLElement {
           overflow: visible;
           position: relative;
           top: var(--icon-only-offset-y);
-          transform: translateY(0) !important;
+          transform: translateY(var(--insignia-icon-optical-y, -1px)) !important;
+        }
+
+        .insignia-card--icon-only .insignia-card__icon ha-icon svg {
+          display: block;
         }
 
         .insignia-card__copy {

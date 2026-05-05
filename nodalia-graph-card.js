@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "0.12.16";
+const CARD_VERSION = "0.12.17";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -316,6 +316,18 @@ function parsePaddingEdges(value, fallback = 16) {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+/** Map SVG chart X (same space as viewBox width 100, incl. negative pad) to overlay %. */
+function graphChartXToPercent(x, chart) {
+  if (!chart || typeof chart.xMin !== "number" || typeof chart.xMax !== "number") {
+    return 50;
+  }
+  const span = chart.xMax - chart.xMin;
+  if (!Number.isFinite(span) || span <= 0) {
+    return 50;
+  }
+  return ((x - chart.xMin) / span) * 100;
 }
 
 function escapeSelectorValue(value) {
@@ -1546,12 +1558,20 @@ class NodaliaGraphCard extends HTMLElement {
     // Reserve extra bottom headroom so min values and stroke/glow
     // never get clipped by the rounded chart container.
     const paddingBottom = 14;
+    const spanX = width - (paddingX * 2);
+    const xMin = paddingX;
+    const xMax = paddingX + spanX;
     const bounds = this._getGraphBounds(series);
     const range = Math.max(bounds.max - bounds.min, 1);
 
     return {
       width,
       height,
+      paddingX,
+      paddingTop,
+      paddingBottom,
+      xMin,
+      xMax,
       entries: series.map(entry => {
         if (!entry.samples.length) {
           return {
@@ -1563,7 +1583,7 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         const points = entry.samples.map((sample, index) => {
-          const x = paddingX + ((width - (paddingX * 2)) * index) / Math.max(entry.samples.length - 1, 1);
+          const x = paddingX + (spanX * index) / Math.max(entry.samples.length - 1, 1);
           const normalized = clamp((sample.value - bounds.min) / range, 0, 1);
           const y = paddingTop + ((height - paddingTop - paddingBottom) * (1 - normalized));
           return { x, y };
@@ -1645,9 +1665,8 @@ class NodaliaGraphCard extends HTMLElement {
       return;
     }
 
-    const chartWidth = Number(tooltip.dataset.chartWidth || 0);
-    const anchorX = Number(tooltip.dataset.anchorX || 0);
-    if (!Number.isFinite(chartWidth) || chartWidth <= 0) {
+    const anchorXPct = Number(tooltip.dataset.anchorXPct);
+    if (!Number.isFinite(anchorXPct)) {
       return;
     }
 
@@ -1676,7 +1695,7 @@ class NodaliaGraphCard extends HTMLElement {
       || (typeof window !== "undefined" ? window.innerHeight : 0)
       || 640;
     const chartRect = chartWrap.getBoundingClientRect();
-    const anchorPx = clamp((anchorX / chartWidth) * chartRect.width, 0, chartRect.width);
+    const anchorPx = clamp((anchorXPct / 100) * chartRect.width, 0, chartRect.width);
     const anchorViewportX = chartRect.left + anchorPx;
     const anchorViewportY = chartRect.top + Math.max(22, chartRect.height * 0.28);
     const maxTooltipWidth = Math.min(260, viewportWidth - 24);
@@ -1806,13 +1825,13 @@ class NodaliaGraphCard extends HTMLElement {
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const shouldAnimateChart = animations.enabled && (shouldAnimateEntrance || this._animateChartOnNextRender);
+    const anchorXPct = graphChartXToPercent(hover.x, chart);
     const tooltipMarkup = hover
       ? `
         <div
           class="graph-card__tooltip ${this._hoverEntering && animations.enabled ? "graph-card__tooltip--entering" : ""}"
-          data-anchor-x="${hover.x.toFixed(2)}"
-          data-chart-width="${chart.width}"
-          style="left:${((hover.x / chart.width) * 100).toFixed(2)}%; --tooltip-tint:${escapeHtml(tooltipTint)};"
+          data-anchor-x-pct="${anchorXPct.toFixed(4)}"
+          style="left:${anchorXPct.toFixed(3)}%; --tooltip-tint:${escapeHtml(tooltipTint)};"
         >
           <div class="graph-card__tooltip-time">${escapeHtml(hover.label)}</div>
           <div class="graph-card__tooltip-values">
@@ -2124,47 +2143,34 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__hover-point {
           align-items: center;
           display: inline-flex;
-          height: 12px;
+          height: 14px;
           justify-content: center;
           left: 0;
           pointer-events: none;
           position: absolute;
           top: 0;
           transform: translate(-50%, -50%);
-          width: 12px;
+          width: 14px;
           z-index: 3;
         }
 
-        .graph-card__hover-point-halo {
-          background: radial-gradient(circle, color-mix(in srgb, var(--hover-color) 24%, transparent) 0 42%, transparent 72%);
-          border-radius: 999px;
-          inset: -8px;
-          opacity: 0.9;
-          position: absolute;
-        }
-
-        .graph-card__hover-point-outer {
-          background:
-            linear-gradient(180deg, color-mix(in srgb, var(--hover-color) 32%, rgba(255,255,255,0.76)), color-mix(in srgb, var(--ha-card-background, #1f1f24) 72%, var(--hover-color)));
-          border: 1px solid color-mix(in srgb, var(--hover-color) 52%, rgba(255, 255, 255, 0.34));
+        .graph-card__hover-dot {
+          background: radial-gradient(
+            circle at 35% 35%,
+            rgba(255, 255, 255, 0.98) 0 35%,
+            color-mix(in srgb, var(--dot-color) 44%, rgba(255, 255, 255, 0.92)) 36% 100%
+          );
           border-radius: 999px;
           box-shadow:
-            0 8px 18px rgba(0, 0, 0, 0.18),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-          inset: 0;
-          position: absolute;
-        }
-
-        .graph-card__hover-point-ring {
-          background: color-mix(in srgb, var(--hover-color) 82%, rgba(255, 255, 255, 0.86));
-          border-radius: 999px;
-          box-shadow: 0 0 10px color-mix(in srgb, var(--hover-color) 34%, transparent);
-          height: 4.5px;
-          left: 50%;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: 4.5px;
+            0 0 0 3px color-mix(in srgb, var(--dot-color) 14%, transparent),
+            0 0 10px color-mix(in srgb, var(--dot-color) 20%, transparent);
+          display: block;
+          flex-shrink: 0;
+          height: 8px;
+          width: 8px;
+          animation: graph-card-hover-dot-pulse calc(var(--graph-card-hover-duration, 180ms) * 2.35) ease-in-out infinite alternate;
+          transform-origin: center;
+          will-change: transform;
         }
 
         .graph-card__tooltip {
@@ -2407,6 +2413,17 @@ class NodaliaGraphCard extends HTMLElement {
           }
         }
 
+        @keyframes graph-card-hover-dot-pulse {
+          0% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          100% {
+            opacity: 0.94;
+            transform: scale(1.14);
+          }
+        }
+
         @keyframes graph-card-hover-line-in {
           0% { opacity: 0; }
           100% { opacity: 1; }
@@ -2423,6 +2440,7 @@ class NodaliaGraphCard extends HTMLElement {
         .graph-card__tooltip,
         .graph-card__hover-line,
         .graph-card__hover-point,
+        .graph-card__hover-dot,
         .graph-card__content,
         .graph-card__header,
         .graph-card__primary-row,
@@ -2574,13 +2592,11 @@ class NodaliaGraphCard extends HTMLElement {
                       if (!point) {
                         return "";
                       }
-                      const left = clamp((point.x / chart.width) * 100, 1.8, 98.2);
-                      const top = clamp((point.y / chart.height) * 100, 4, 96);
+                      const left = clamp(graphChartXToPercent(point.x, chart), 0.3, 99.7);
+                      const top = clamp((point.y / chart.height) * 100, 0.3, 99.7);
                       return `
-                        <span class="graph-card__hover-point" style="left:${left}%; top:${top}%; --hover-color:${escapeHtml(entry.color)};">
-                          <span class="graph-card__hover-point-halo"></span>
-                          <span class="graph-card__hover-point-outer"></span>
-                          <span class="graph-card__hover-point-ring"></span>
+                        <span class="graph-card__hover-point" style="left:${left}%; top:${top}%; --dot-color:${escapeHtml(entry.color)};">
+                          <span class="graph-card__hover-dot"></span>
                         </span>
                       `;
                     }).join("")}
