@@ -1857,6 +1857,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
+    this._mapActionInFlight = false;
 
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
@@ -5393,6 +5394,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   async _runMapAction() {
+    if (this._mapActionInFlight) {
+      return;
+    }
+    this._mapActionInFlight = true;
+    try {
     const state = this._getVacuumState();
     const selectedPredefinedZones = this._getPredefinedZones()
       .filter(zone => this._selectedPredefinedZoneIds.includes(zone.id))
@@ -5476,7 +5482,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           command: "app_zoned_clean",
           params: selectedZones,
         });
-        const activeCleaningSessionMode = this._isRoomCleaningSessionActive(state) ? "rooms" : "zone";
+        const latestState = this._getVacuumState();
+        const activeCleaningSessionMode = this._isRoomCleaningSessionActive(latestState) ? "rooms" : "zone";
         if (!this._restoreTransientZoneMode()) {
           this._selectedManualZoneIndex = -1;
           this._draftZone = null;
@@ -5515,6 +5522,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._clearPersistedCleaningSession();
     await this._callVacuumService("start");
     this._triggerHaptic("selection");
+    } finally {
+      this._mapActionInFlight = false;
+    }
   }
 
   _runCustomMenuItem(item) {

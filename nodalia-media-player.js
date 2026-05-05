@@ -1017,6 +1017,29 @@ function getRangeValueFromClientX(slider, clientX) {
   return clamp(nextValue, min, max);
 }
 
+function getSliderDragGeometry(slider) {
+  const rect = slider.getBoundingClientRect();
+  return {
+    left: rect.left,
+    width: rect.width,
+    min: Number(slider.min || 0),
+    max: Number(slider.max || 100),
+    step: slider.step === "any" ? 0 : Number(slider.step || 1),
+  };
+}
+
+function getRangeValueFromGeometry(geometry, currentValue, clientX) {
+  if (!geometry || !Number.isFinite(geometry.width) || geometry.width <= 0) {
+    return Number(currentValue || 0);
+  }
+  const ratio = clamp((clientX - geometry.left) / geometry.width, 0, 1);
+  let nextValue = geometry.min + ((geometry.max - geometry.min) * ratio);
+  if (Number.isFinite(geometry.step) && geometry.step > 0) {
+    nextValue = geometry.min + (Math.round((nextValue - geometry.min) / geometry.step) * geometry.step);
+  }
+  return clamp(nextValue, geometry.min, geometry.max);
+}
+
 function formatDuration(totalSeconds) {
   const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
   const hours = Math.floor(safeSeconds / 3600);
@@ -2591,6 +2614,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._activeSliderDrag = {
       pointerId,
       slider,
+      geometry: getSliderDragGeometry(slider),
     };
 
     if (event) {
@@ -2604,7 +2628,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       this._dragFrame = 0;
     }
 
-    const nextValue = getRangeValueFromClientX(slider, clientX);
+    const nextValue = getRangeValueFromGeometry(this._activeSliderDrag.geometry, slider.value, clientX);
     slider.value = String(nextValue);
 
     if (slider.dataset.mediaSlider === "volume") {
@@ -2614,7 +2638,7 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _queueSliderDragUpdate(slider, clientX) {
-    const nextValue = getRangeValueFromClientX(slider, clientX);
+    const nextValue = getRangeValueFromGeometry(this._activeSliderDrag?.geometry, slider.value, clientX);
     slider.value = String(nextValue);
 
     if (slider.dataset.mediaSlider === "volume") {
@@ -2639,7 +2663,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       this._dragFrame = 0;
     }
 
-    const nextValue = getRangeValueFromClientX(drag.slider, clientX);
+    const nextValue = getRangeValueFromGeometry(drag.geometry, drag.slider.value, clientX);
     drag.slider.value = String(nextValue);
     this._skipNextSliderChange = drag.slider;
 

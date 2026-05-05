@@ -983,6 +983,8 @@ class NodaliaClimateCard extends HTMLElement {
     this._temperatureCommitInFlight = false;
     this._temperatureCommitRetryCount = 0;
     this._activeDialDrag = null;
+    this._dialDragFrame = 0;
+    this._pendingDialDragPoint = null;
     this._pendingRenderAfterDrag = false;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
@@ -1051,6 +1053,11 @@ class NodaliaClimateCard extends HTMLElement {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
+    if (this._dialDragFrame) {
+      window.cancelAnimationFrame(this._dialDragFrame);
+      this._dialDragFrame = 0;
+    }
+    this._pendingDialDragPoint = null;
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
   }
@@ -1774,6 +1781,22 @@ class NodaliaClimateCard extends HTMLElement {
     this._applyDialValue(nextValue, { commit: false });
   }
 
+  _queueDialDragMove(clientX, clientY, event = null) {
+    this._pendingDialDragPoint = { clientX, clientY, event };
+    if (this._dialDragFrame) {
+      return;
+    }
+    this._dialDragFrame = window.requestAnimationFrame(() => {
+      this._dialDragFrame = 0;
+      const pending = this._pendingDialDragPoint;
+      this._pendingDialDragPoint = null;
+      if (!pending) {
+        return;
+      }
+      this._moveDialDrag(pending.clientX, pending.clientY, pending.event);
+    });
+  }
+
   _commitDialDrag(clientX, clientY, event = null, pointerId = null) {
     const drag = this._activeDialDrag;
     const state = this._getState();
@@ -1785,6 +1808,11 @@ class NodaliaClimateCard extends HTMLElement {
     if (event) {
       event.preventDefault();
     }
+    if (this._dialDragFrame) {
+      window.cancelAnimationFrame(this._dialDragFrame);
+      this._dialDragFrame = 0;
+    }
+    this._pendingDialDragPoint = null;
 
     const nextValue = getDialValueFromPoint(
       drag.dial,
@@ -1879,7 +1907,7 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    this._moveDialDrag(event.clientX, event.clientY, event);
+    this._queueDialDragMove(event.clientX, event.clientY, event);
   }
 
   _onWindowPointerUp(event) {
@@ -1896,7 +1924,7 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    this._moveDialDrag(event.clientX, event.clientY, event);
+    this._queueDialDragMove(event.clientX, event.clientY, event);
   }
 
   _onWindowMouseUp(event) {
@@ -1912,7 +1940,7 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    this._moveDialDrag(event.touches[0].clientX, event.touches[0].clientY, event);
+    this._queueDialDragMove(event.touches[0].clientX, event.touches[0].clientY, event);
   }
 
   _onWindowTouchStartCapture(event) {

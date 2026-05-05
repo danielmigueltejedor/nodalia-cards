@@ -10,6 +10,17 @@ Work toward **`0.5.x`** on **`alpha`** / **`beta`** and eventual **`main`**: **P
 
 ---
 
+## [0.5.0-alpha.16] - 2026-05-06
+
+Sixteenth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.16`** (tag **`v0.5.0-alpha.16`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.
+
+- **Security hardening** (**Circular Gauge**): sanitización de valores CSS configurables en el borde de render (`styles.card`, `styles.icon`, `styles.gauge`, tamaños/chips) con fallback seguro antes de interpolación en `<style>`/SVG.
+- **Stability** (**Advance Vacuum**): lock de concurrencia para acciones de mapa (`_mapActionInFlight`) y resolución de modo de sesión con estado refrescado tras `await` para evitar carreras en interacciones rápidas.
+- **Performance / fluidez**: cache de geometría en arrastre de sliders de **Media Player** (menos `getBoundingClientRect()` por `pointermove`) y coalescing por `requestAnimationFrame` en drag del dial de **Climate**.
+- **i18n / editor UI**: ampliadas claves base de traducción y ajuste del generador para preservar correctamente expansiones con grupos (`$1`) en la salida embebida.
+
+---
+
 ## [0.5.0-alpha.15] - 2026-05-06
 
 Fifteenth **`alpha`** on **`0.5.x`** (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.5.0-alpha.15`** (tag **`v0.5.0-alpha.15`** optional). Breaking changes are allowed; prefer **`main`** **`0.4.0`** stable for production dashboards.

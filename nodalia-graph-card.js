@@ -2146,9 +2146,11 @@ class NodaliaGraphCard extends HTMLElement {
 
     tooltip.style.left = `${resolvedCenter}px`;
     tooltip.style.top = `${resolvedTop}px`;
-    tooltip.style.setProperty("--graph-tooltip-transform", shouldShowBelow
-      ? "translate(-50%, 0)"
-      : "translate(-50%, -100%)");
+    tooltip.style.setProperty(
+      "--graph-tooltip-transform",
+      shouldShowBelow ? "translate(-50%, 0)" : "translate(-50%, -100%)",
+    );
+    tooltip.style.opacity = "1";
   }
 
   _getSeriesData() {
@@ -2253,7 +2255,7 @@ class NodaliaGraphCard extends HTMLElement {
         <div
           class="graph-card__tooltip ${this._hoverEntering && animations.enabled ? "graph-card__tooltip--entering" : ""}"
           data-anchor-x-pct="${anchorXPct.toFixed(4)}"
-          style="left:${anchorXPct.toFixed(3)}%; --tooltip-tint:${escapeHtml(tooltipTint)};"
+          style="left:-9999px; top:-9999px; opacity:0; --tooltip-tint:${escapeHtml(tooltipTint)};"
         >
           <div class="graph-card__tooltip-time">${escapeHtml(hover.label)}</div>
           <div class="graph-card__tooltip-values">

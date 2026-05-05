@@ -11842,6 +11842,227 @@
     "ro": "Vizibilitate"
   },
   {
+    "es": "Insignia",
+    "en": "Insignia",
+    "de": "Insignia",
+    "fr": "Insignia",
+    "it": "Insignia",
+    "nl": "Insignia",
+    "pt": "Insignia",
+    "ru": "Insignia",
+    "el": "Insignia",
+    "zh": "Insignia",
+    "ro": "Insignia"
+  },
+  {
+    "es": "Chip compacto para la barra de insignias: entidad, icono y texto opcionales.",
+    "en": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales.",
+    "de": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales.",
+    "fr": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales.",
+    "it": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales.",
+    "nl": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales.",
+    "pt": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales.",
+    "ru": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales.",
+    "el": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales.",
+    "zh": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales.",
+    "ro": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales."
+  },
+  {
+    "es": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "en": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "de": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "fr": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "it": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "nl": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "pt": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "ru": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "el": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "zh": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "ro": "Vibración al pulsar la insignia (si el dispositivo lo permite)."
+  },
+  {
+    "es": "Acción al pulsar",
+    "en": "Acción al pulsar",
+    "de": "Acción al pulsar",
+    "fr": "Acción al pulsar",
+    "it": "Acción al pulsar",
+    "nl": "Acción al pulsar",
+    "pt": "Acción al pulsar",
+    "ru": "Acción al pulsar",
+    "el": "Acción al pulsar",
+    "zh": "Acción al pulsar",
+    "ro": "Acción al pulsar"
+  },
+  {
+    "es": "Qué ocurre al tocar la insignia.",
+    "en": "Qué ocurre al tocar la insignia.",
+    "de": "Qué ocurre al tocar la insignia.",
+    "fr": "Qué ocurre al tocar la insignia.",
+    "it": "Qué ocurre al tocar la insignia.",
+    "nl": "Qué ocurre al tocar la insignia.",
+    "pt": "Qué ocurre al tocar la insignia.",
+    "ru": "Qué ocurre al tocar la insignia.",
+    "el": "Qué ocurre al tocar la insignia.",
+    "zh": "Qué ocurre al tocar la insignia.",
+    "ro": "Qué ocurre al tocar la insignia."
+  },
+  {
+    "es": "Apariencia",
+    "en": "Apariencia",
+    "de": "Apariencia",
+    "fr": "Apariencia",
+    "it": "Apariencia",
+    "nl": "Apariencia",
+    "pt": "Apariencia",
+    "ru": "Apariencia",
+    "el": "Apariencia",
+    "zh": "Apariencia",
+    "ro": "Apariencia"
+  },
+  {
+    "es": "Tamaños, colores del icono y tinte de la burbuja.",
+    "en": "Tamaños, Colores del Icon y Tint de la burbuja.",
+    "de": "Tamaños, Colores del Icon y Tint de la burbuja.",
+    "fr": "Tamaños, Colores del Icon y Tint de la burbuja.",
+    "it": "Tamaños, Colores del Icon y Tint de la burbuja.",
+    "nl": "Tamaños, Colores del Icon y Tint de la burbuja.",
+    "pt": "Tamaños, Colores del Icon y Tint de la burbuja.",
+    "ru": "Tamaños, Colores del Icon y Tint de la burbuja.",
+    "el": "Tamaños, Colores del Icon y Tint de la burbuja.",
+    "zh": "Tamaños, Colores del Icon y Tint de la burbuja.",
+    "ro": "Tamaños, Colores del Icon y Tint de la burbuja."
+  },
+  {
+    "es": "Mostrar detalles de estilo",
+    "en": "Mostrar detalles de Style",
+    "de": "Mostrar detalles de Style",
+    "fr": "Mostrar detalles de Style",
+    "it": "Mostrar detalles de Style",
+    "nl": "Mostrar detalles de Style",
+    "pt": "Mostrar detalles de Style",
+    "ru": "Mostrar detalles de Style",
+    "el": "Mostrar detalles de Style",
+    "zh": "Mostrar detalles de Style",
+    "ro": "Mostrar detalles de Style"
+  },
+  {
+    "es": "Ocultar detalles de estilo",
+    "en": "Ocultar detalles de Style",
+    "de": "Ocultar detalles de Style",
+    "fr": "Ocultar detalles de Style",
+    "it": "Ocultar detalles de Style",
+    "nl": "Ocultar detalles de Style",
+    "pt": "Ocultar detalles de Style",
+    "ru": "Ocultar detalles de Style",
+    "el": "Ocultar detalles de Style",
+    "zh": "Ocultar detalles de Style",
+    "ro": "Ocultar detalles de Style"
+  },
+  {
+    "es": "Subtitulo",
+    "en": "SubTitle",
+    "de": "SubTitle",
+    "fr": "SubTitle",
+    "it": "SubTitle",
+    "nl": "SubTitle",
+    "pt": "SubTitle",
+    "ru": "SubTitle",
+    "el": "SubTitle",
+    "zh": "SubTitle",
+    "ro": "SubTitle"
+  },
+  {
+    "es": "Subtítulo",
+    "en": "Subtítulo",
+    "de": "Subtítulo",
+    "fr": "Subtítulo",
+    "it": "Subtítulo",
+    "nl": "Subtítulo",
+    "pt": "Subtítulo",
+    "ru": "Subtítulo",
+    "el": "Subtítulo",
+    "zh": "Subtítulo",
+    "ro": "Subtítulo"
+  },
+  {
+    "es": "Posicion",
+    "en": "Posicion",
+    "de": "Posicion",
+    "fr": "Posicion",
+    "it": "Posicion",
+    "nl": "Posicion",
+    "pt": "Posicion",
+    "ru": "Posicion",
+    "el": "Posicion",
+    "zh": "Posicion",
+    "ro": "Posicion"
+  },
+  {
+    "es": "Posición",
+    "en": "Posición",
+    "de": "Posición",
+    "fr": "Posición",
+    "it": "Posición",
+    "nl": "Posición",
+    "pt": "Posición",
+    "ru": "Posición",
+    "el": "Posición",
+    "zh": "Posición",
+    "ro": "Posición"
+  },
+  {
+    "es": "Reproductor",
+    "en": "Player",
+    "de": "Player",
+    "fr": "Player",
+    "it": "Player",
+    "nl": "Player",
+    "pt": "Player",
+    "ru": "Player",
+    "el": "Player",
+    "zh": "Player",
+    "ro": "Player"
+  },
+  {
+    "es": "Principal",
+    "en": "Main",
+    "de": "Main",
+    "fr": "Main",
+    "it": "Main",
+    "nl": "Main",
+    "pt": "Main",
+    "ru": "Main",
+    "el": "Main",
+    "zh": "Main",
+    "ro": "Main"
+  },
+  {
+    "es": "Mostrar ajustes de animacion",
+    "en": "Mostrar ajustes de animacion",
+    "de": "Mostrar ajustes de animacion",
+    "fr": "Mostrar ajustes de animacion",
+    "it": "Mostrar ajustes de animacion",
+    "nl": "Mostrar ajustes de animacion",
+    "pt": "Mostrar ajustes de animacion",
+    "ru": "Mostrar ajustes de animacion",
+    "el": "Mostrar ajustes de animacion",
+    "zh": "Mostrar ajustes de animacion",
+    "ro": "Mostrar ajustes de animacion"
+  },
+  {
+    "es": "Ocultar ajustes de animacion",
+    "en": "Ocultar ajustes de animacion",
+    "de": "Ocultar ajustes de animacion",
+    "fr": "Ocultar ajustes de animacion",
+    "it": "Ocultar ajustes de animacion",
+    "nl": "Ocultar ajustes de animacion",
+    "pt": "Ocultar ajustes de animacion",
+    "ru": "Ocultar ajustes de animacion",
+    "el": "Ocultar ajustes de animacion",
+    "zh": "Ocultar ajustes de animacion",
+    "ro": "Ocultar ajustes de animacion"
+  },
+  {
     "es": "Anadir ruta",
     "en": "Add route",
     "de": "Add route",
@@ -14580,7 +14801,7 @@
     substitutions.forEach(([pattern, replacement]) => {
       out = out.replace(pattern, (match, ...rest) => {
         const groups = rest.slice(0, -2);
-        const expanded = String(replacement).replace(/$(d+)/g, (_, groupIndexRaw) => {
+        const expanded = String(replacement).replace(/\$(\d+)/g, (_, groupIndexRaw) => {
           const groupIndex = Number(groupIndexRaw) - 1;
           return groups[groupIndex] ?? "";
         });
@@ -14589,7 +14810,7 @@
     });
 
     // Clean up legacy literal replacement artifacts left by earlier generator versions.
-    out = out.replace(/$(d+)/g, "");
+    out = out.replace(/\$(\d+)/g, "");
 
     return out;
   }
@@ -21508,6 +21729,29 @@ function getRangeValueFromClientX(slider, clientX) {
   return clamp(nextValue, min, max);
 }
 
+function getSliderDragGeometry(slider) {
+  const rect = slider.getBoundingClientRect();
+  return {
+    left: rect.left,
+    width: rect.width,
+    min: Number(slider.min || 0),
+    max: Number(slider.max || 100),
+    step: slider.step === "any" ? 0 : Number(slider.step || 1),
+  };
+}
+
+function getRangeValueFromGeometry(geometry, currentValue, clientX) {
+  if (!geometry || !Number.isFinite(geometry.width) || geometry.width <= 0) {
+    return Number(currentValue || 0);
+  }
+  const ratio = clamp((clientX - geometry.left) / geometry.width, 0, 1);
+  let nextValue = geometry.min + ((geometry.max - geometry.min) * ratio);
+  if (Number.isFinite(geometry.step) && geometry.step > 0) {
+    nextValue = geometry.min + (Math.round((nextValue - geometry.min) / geometry.step) * geometry.step);
+  }
+  return clamp(nextValue, geometry.min, geometry.max);
+}
+
 function formatDuration(totalSeconds) {
   const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
   const hours = Math.floor(safeSeconds / 3600);
@@ -23082,6 +23326,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._activeSliderDrag = {
       pointerId,
       slider,
+      geometry: getSliderDragGeometry(slider),
     };
 
     if (event) {
@@ -23095,7 +23340,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       this._dragFrame = 0;
     }
 
-    const nextValue = getRangeValueFromClientX(slider, clientX);
+    const nextValue = getRangeValueFromGeometry(this._activeSliderDrag.geometry, slider.value, clientX);
     slider.value = String(nextValue);
 
     if (slider.dataset.mediaSlider === "volume") {
@@ -23105,7 +23350,7 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _queueSliderDragUpdate(slider, clientX) {
-    const nextValue = getRangeValueFromClientX(slider, clientX);
+    const nextValue = getRangeValueFromGeometry(this._activeSliderDrag?.geometry, slider.value, clientX);
     slider.value = String(nextValue);
 
     if (slider.dataset.mediaSlider === "volume") {
@@ -23130,7 +23375,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       this._dragFrame = 0;
     }
 
-    const nextValue = getRangeValueFromClientX(drag.slider, clientX);
+    const nextValue = getRangeValueFromGeometry(drag.geometry, drag.slider.value, clientX);
     drag.slider.value = String(nextValue);
     this._skipNextSliderChange = drag.slider;
 
@@ -39803,6 +40048,57 @@ function escapeSelectorValue(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
+function sanitizeCssValue(value, fallback) {
+  const raw = String(value ?? "").trim();
+  const safeFallback = String(fallback ?? "").trim();
+  if (!raw) {
+    return safeFallback;
+  }
+  if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+    return safeFallback;
+  }
+  return raw;
+}
+
+function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
+  const defaults = DEFAULT_CONFIG.styles;
+  const card = styles?.card || {};
+  const icon = styles?.icon || {};
+  const gauge = styles?.gauge || {};
+  return {
+    card: {
+      background: sanitizeCssValue(card.background, defaults.card.background),
+      border: sanitizeCssValue(card.border, defaults.card.border),
+      border_radius: sanitizeCssValue(card.border_radius, defaults.card.border_radius),
+      box_shadow: sanitizeCssValue(card.box_shadow, defaults.card.box_shadow),
+      padding: sanitizeCssValue(card.padding, defaults.card.padding),
+      gap: sanitizeCssValue(card.gap, defaults.card.gap),
+    },
+    icon: {
+      size: sanitizeCssValue(icon.size, defaults.icon.size),
+      background: sanitizeCssValue(icon.background, defaults.icon.background),
+      color: sanitizeCssValue(icon.color, defaults.icon.color),
+    },
+    chip_height: sanitizeCssValue(styles?.chip_height, defaults.chip_height),
+    chip_font_size: sanitizeCssValue(styles?.chip_font_size, defaults.chip_font_size),
+    chip_padding: sanitizeCssValue(styles?.chip_padding, defaults.chip_padding),
+    title_size: sanitizeCssValue(styles?.title_size, defaults.title_size),
+    value_size: sanitizeCssValue(styles?.value_size, defaults.value_size),
+    range_size: sanitizeCssValue(styles?.range_size, defaults.range_size),
+    name_chip_max_width: sanitizeCssValue(styles?.name_chip_max_width, defaults.name_chip_max_width),
+    gauge: {
+      size: sanitizeCssValue(gauge.size, defaults.gauge.size),
+      stroke: sanitizeCssValue(gauge.stroke, defaults.gauge.stroke),
+      thumb_size: sanitizeCssValue(gauge.thumb_size, defaults.gauge.thumb_size),
+      track_color: sanitizeCssValue(gauge.track_color, defaults.gauge.track_color),
+      background: sanitizeCssValue(gauge.background, defaults.gauge.background),
+      min_tint_color: sanitizeCssValue(gauge.min_tint_color, defaults.gauge.min_tint_color),
+      max_tint_color: sanitizeCssValue(gauge.max_tint_color, defaults.gauge.max_tint_color),
+      foreground_color: sanitizeCssValue(gauge.foreground_color, defaults.gauge.foreground_color),
+    },
+  };
+}
+
 function resolveEditorColorValue(value) {
   const rawValue = String(value ?? "").trim();
   if (!rawValue || typeof document === "undefined") {
@@ -40589,7 +40885,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const styles = config.styles || DEFAULT_CONFIG.styles;
+    const styles = getSafeStyles(config.styles);
     const state = this._getState();
 
     if (!state) {
@@ -40610,7 +40906,8 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const dialAngle = DIAL_START_ANGLE + (ratio * DIAL_SWEEP);
     const thumbPosition = getDialMarkerPosition(dialAngle);
     const dialStartCoordinates = getDialMarkerCoordinates(DIAL_START_ANGLE);
-    const dialStartCapColor = String(styles.gauge.foreground_color || "").trim() || resolveGaugeTintColor(tintScale, 0.02);
+    const dialStartCapColor =
+      sanitizeCssValue(styles.gauge.foreground_color, "") || resolveGaugeTintColor(tintScale, 0.02);
     const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
     const showHeader = config.show_header !== false;
     const showName = config.show_name !== false;
@@ -41256,7 +41553,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
                       cx="${DIAL_VIEWBOX_SIZE / 2}"
                       cy="${DIAL_VIEWBOX_SIZE / 2}"
                       r="${DIAL_CIRCLE_RADIUS}"
-                      style="stroke:${segment.color};stroke-dasharray:${segment.dasharray};stroke-dashoffset:${segment.dashoffset};opacity:${segment.opacity};"
+                      style="stroke:${sanitizeCssValue(segment.color, styles.gauge.max_tint_color)};stroke-dasharray:${segment.dasharray};stroke-dashoffset:${segment.dashoffset};opacity:${segment.opacity};"
                     ></circle>
                   `)
                   .join("")}
@@ -41266,7 +41563,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
                   cx="${dialStartCoordinates.x}"
                   cy="${dialStartCoordinates.y}"
                   r="${Number((dialStrokePx / 2).toFixed(3))}"
-                  style="fill:${dialStartCapColor};"
+                  style="fill:${sanitizeCssValue(dialStartCapColor, styles.gauge.max_tint_color)};"
                 ></circle>
               </svg>
               <span class="gauge-card__dial-thumb" aria-hidden="true"></span>
@@ -44170,9 +44467,11 @@ class NodaliaGraphCard extends HTMLElement {
 
     tooltip.style.left = `${resolvedCenter}px`;
     tooltip.style.top = `${resolvedTop}px`;
-    tooltip.style.setProperty("--graph-tooltip-transform", shouldShowBelow
-      ? "translate(-50%, 0)"
-      : "translate(-50%, -100%)");
+    tooltip.style.setProperty(
+      "--graph-tooltip-transform",
+      shouldShowBelow ? "translate(-50%, 0)" : "translate(-50%, -100%)",
+    );
+    tooltip.style.opacity = "1";
   }
 
   _getSeriesData() {
@@ -44277,7 +44576,7 @@ class NodaliaGraphCard extends HTMLElement {
         <div
           class="graph-card__tooltip ${this._hoverEntering && animations.enabled ? "graph-card__tooltip--entering" : ""}"
           data-anchor-x-pct="${anchorXPct.toFixed(4)}"
-          style="left:${anchorXPct.toFixed(3)}%; --tooltip-tint:${escapeHtml(tooltipTint)};"
+          style="left:-9999px; top:-9999px; opacity:0; --tooltip-tint:${escapeHtml(tooltipTint)};"
         >
           <div class="graph-card__tooltip-time">${escapeHtml(hover.label)}</div>
           <div class="graph-card__tooltip-values">
@@ -52067,6 +52366,8 @@ class NodaliaClimateCard extends HTMLElement {
     this._temperatureCommitInFlight = false;
     this._temperatureCommitRetryCount = 0;
     this._activeDialDrag = null;
+    this._dialDragFrame = 0;
+    this._pendingDialDragPoint = null;
     this._pendingRenderAfterDrag = false;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
@@ -52135,6 +52436,11 @@ class NodaliaClimateCard extends HTMLElement {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
+    if (this._dialDragFrame) {
+      window.cancelAnimationFrame(this._dialDragFrame);
+      this._dialDragFrame = 0;
+    }
+    this._pendingDialDragPoint = null;
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
   }
@@ -52858,6 +53164,22 @@ class NodaliaClimateCard extends HTMLElement {
     this._applyDialValue(nextValue, { commit: false });
   }
 
+  _queueDialDragMove(clientX, clientY, event = null) {
+    this._pendingDialDragPoint = { clientX, clientY, event };
+    if (this._dialDragFrame) {
+      return;
+    }
+    this._dialDragFrame = window.requestAnimationFrame(() => {
+      this._dialDragFrame = 0;
+      const pending = this._pendingDialDragPoint;
+      this._pendingDialDragPoint = null;
+      if (!pending) {
+        return;
+      }
+      this._moveDialDrag(pending.clientX, pending.clientY, pending.event);
+    });
+  }
+
   _commitDialDrag(clientX, clientY, event = null, pointerId = null) {
     const drag = this._activeDialDrag;
     const state = this._getState();
@@ -52869,6 +53191,11 @@ class NodaliaClimateCard extends HTMLElement {
     if (event) {
       event.preventDefault();
     }
+    if (this._dialDragFrame) {
+      window.cancelAnimationFrame(this._dialDragFrame);
+      this._dialDragFrame = 0;
+    }
+    this._pendingDialDragPoint = null;
 
     const nextValue = getDialValueFromPoint(
       drag.dial,
@@ -52963,7 +53290,7 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    this._moveDialDrag(event.clientX, event.clientY, event);
+    this._queueDialDragMove(event.clientX, event.clientY, event);
   }
 
   _onWindowPointerUp(event) {
@@ -52980,7 +53307,7 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    this._moveDialDrag(event.clientX, event.clientY, event);
+    this._queueDialDragMove(event.clientX, event.clientY, event);
   }
 
   _onWindowMouseUp(event) {
@@ -52996,7 +53323,7 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    this._moveDialDrag(event.touches[0].clientX, event.touches[0].clientY, event);
+    this._queueDialDragMove(event.touches[0].clientX, event.touches[0].clientY, event);
   }
 
   _onWindowTouchStartCapture(event) {
@@ -59808,6 +60135,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
+    this._mapActionInFlight = false;
 
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
@@ -63344,6 +63672,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   async _runMapAction() {
+    if (this._mapActionInFlight) {
+      return;
+    }
+    this._mapActionInFlight = true;
+    try {
     const state = this._getVacuumState();
     const selectedPredefinedZones = this._getPredefinedZones()
       .filter(zone => this._selectedPredefinedZoneIds.includes(zone.id))
@@ -63427,7 +63760,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           command: "app_zoned_clean",
           params: selectedZones,
         });
-        const activeCleaningSessionMode = this._isRoomCleaningSessionActive(state) ? "rooms" : "zone";
+        const latestState = this._getVacuumState();
+        const activeCleaningSessionMode = this._isRoomCleaningSessionActive(latestState) ? "rooms" : "zone";
         if (!this._restoreTransientZoneMode()) {
           this._selectedManualZoneIndex = -1;
           this._draftZone = null;
@@ -63466,6 +63800,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._clearPersistedCleaningSession();
     await this._callVacuumService("start");
     this._triggerHaptic("selection");
+    } finally {
+      this._mapActionInFlight = false;
+    }
   }
 
   _runCustomMenuItem(item) {
@@ -85512,4 +85849,4 @@ window.customCards.push({
 
 }
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0-alpha.15","contentSha256_12":"92311cc34a35"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.5.0-alpha.16","contentSha256_12":"65441736f930"};}

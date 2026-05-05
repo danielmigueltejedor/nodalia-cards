@@ -6399,6 +6399,227 @@
     "ro": "Vizibilitate"
   },
   {
+    "es": "Insignia",
+    "en": "Insignia",
+    "de": "Insignia",
+    "fr": "Insignia",
+    "it": "Insignia",
+    "nl": "Insignia",
+    "pt": "Insignia",
+    "ru": "Insignia",
+    "el": "Insignia",
+    "zh": "Insignia",
+    "ro": "Insignia"
+  },
+  {
+    "es": "Chip compacto para la barra de insignias: entidad, icono y texto opcionales.",
+    "en": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales.",
+    "de": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales.",
+    "fr": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales.",
+    "it": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales.",
+    "nl": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales.",
+    "pt": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales.",
+    "ru": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales.",
+    "el": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales.",
+    "zh": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales.",
+    "ro": "Chip compacto para la barra de insignias: Entity, Icon y texto opcionales."
+  },
+  {
+    "es": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "en": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "de": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "fr": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "it": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "nl": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "pt": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "ru": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "el": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "zh": "Vibración al pulsar la insignia (si el dispositivo lo permite).",
+    "ro": "Vibración al pulsar la insignia (si el dispositivo lo permite)."
+  },
+  {
+    "es": "Acción al pulsar",
+    "en": "Acción al pulsar",
+    "de": "Acción al pulsar",
+    "fr": "Acción al pulsar",
+    "it": "Acción al pulsar",
+    "nl": "Acción al pulsar",
+    "pt": "Acción al pulsar",
+    "ru": "Acción al pulsar",
+    "el": "Acción al pulsar",
+    "zh": "Acción al pulsar",
+    "ro": "Acción al pulsar"
+  },
+  {
+    "es": "Qué ocurre al tocar la insignia.",
+    "en": "Qué ocurre al tocar la insignia.",
+    "de": "Qué ocurre al tocar la insignia.",
+    "fr": "Qué ocurre al tocar la insignia.",
+    "it": "Qué ocurre al tocar la insignia.",
+    "nl": "Qué ocurre al tocar la insignia.",
+    "pt": "Qué ocurre al tocar la insignia.",
+    "ru": "Qué ocurre al tocar la insignia.",
+    "el": "Qué ocurre al tocar la insignia.",
+    "zh": "Qué ocurre al tocar la insignia.",
+    "ro": "Qué ocurre al tocar la insignia."
+  },
+  {
+    "es": "Apariencia",
+    "en": "Apariencia",
+    "de": "Apariencia",
+    "fr": "Apariencia",
+    "it": "Apariencia",
+    "nl": "Apariencia",
+    "pt": "Apariencia",
+    "ru": "Apariencia",
+    "el": "Apariencia",
+    "zh": "Apariencia",
+    "ro": "Apariencia"
+  },
+  {
+    "es": "Tamaños, colores del icono y tinte de la burbuja.",
+    "en": "Tamaños, Colores del Icon y Tint de la burbuja.",
+    "de": "Tamaños, Colores del Icon y Tint de la burbuja.",
+    "fr": "Tamaños, Colores del Icon y Tint de la burbuja.",
+    "it": "Tamaños, Colores del Icon y Tint de la burbuja.",
+    "nl": "Tamaños, Colores del Icon y Tint de la burbuja.",
+    "pt": "Tamaños, Colores del Icon y Tint de la burbuja.",
+    "ru": "Tamaños, Colores del Icon y Tint de la burbuja.",
+    "el": "Tamaños, Colores del Icon y Tint de la burbuja.",
+    "zh": "Tamaños, Colores del Icon y Tint de la burbuja.",
+    "ro": "Tamaños, Colores del Icon y Tint de la burbuja."
+  },
+  {
+    "es": "Mostrar detalles de estilo",
+    "en": "Mostrar detalles de Style",
+    "de": "Mostrar detalles de Style",
+    "fr": "Mostrar detalles de Style",
+    "it": "Mostrar detalles de Style",
+    "nl": "Mostrar detalles de Style",
+    "pt": "Mostrar detalles de Style",
+    "ru": "Mostrar detalles de Style",
+    "el": "Mostrar detalles de Style",
+    "zh": "Mostrar detalles de Style",
+    "ro": "Mostrar detalles de Style"
+  },
+  {
+    "es": "Ocultar detalles de estilo",
+    "en": "Ocultar detalles de Style",
+    "de": "Ocultar detalles de Style",
+    "fr": "Ocultar detalles de Style",
+    "it": "Ocultar detalles de Style",
+    "nl": "Ocultar detalles de Style",
+    "pt": "Ocultar detalles de Style",
+    "ru": "Ocultar detalles de Style",
+    "el": "Ocultar detalles de Style",
+    "zh": "Ocultar detalles de Style",
+    "ro": "Ocultar detalles de Style"
+  },
+  {
+    "es": "Subtitulo",
+    "en": "SubTitle",
+    "de": "SubTitle",
+    "fr": "SubTitle",
+    "it": "SubTitle",
+    "nl": "SubTitle",
+    "pt": "SubTitle",
+    "ru": "SubTitle",
+    "el": "SubTitle",
+    "zh": "SubTitle",
+    "ro": "SubTitle"
+  },
+  {
+    "es": "Subtítulo",
+    "en": "Subtítulo",
+    "de": "Subtítulo",
+    "fr": "Subtítulo",
+    "it": "Subtítulo",
+    "nl": "Subtítulo",
+    "pt": "Subtítulo",
+    "ru": "Subtítulo",
+    "el": "Subtítulo",
+    "zh": "Subtítulo",
+    "ro": "Subtítulo"
+  },
+  {
+    "es": "Posicion",
+    "en": "Posicion",
+    "de": "Posicion",
+    "fr": "Posicion",
+    "it": "Posicion",
+    "nl": "Posicion",
+    "pt": "Posicion",
+    "ru": "Posicion",
+    "el": "Posicion",
+    "zh": "Posicion",
+    "ro": "Posicion"
+  },
+  {
+    "es": "Posición",
+    "en": "Posición",
+    "de": "Posición",
+    "fr": "Posición",
+    "it": "Posición",
+    "nl": "Posición",
+    "pt": "Posición",
+    "ru": "Posición",
+    "el": "Posición",
+    "zh": "Posición",
+    "ro": "Posición"
+  },
+  {
+    "es": "Reproductor",
+    "en": "Player",
+    "de": "Player",
+    "fr": "Player",
+    "it": "Player",
+    "nl": "Player",
+    "pt": "Player",
+    "ru": "Player",
+    "el": "Player",
+    "zh": "Player",
+    "ro": "Player"
+  },
+  {
+    "es": "Principal",
+    "en": "Main",
+    "de": "Main",
+    "fr": "Main",
+    "it": "Main",
+    "nl": "Main",
+    "pt": "Main",
+    "ru": "Main",
+    "el": "Main",
+    "zh": "Main",
+    "ro": "Main"
+  },
+  {
+    "es": "Mostrar ajustes de animacion",
+    "en": "Mostrar ajustes de animacion",
+    "de": "Mostrar ajustes de animacion",
+    "fr": "Mostrar ajustes de animacion",
+    "it": "Mostrar ajustes de animacion",
+    "nl": "Mostrar ajustes de animacion",
+    "pt": "Mostrar ajustes de animacion",
+    "ru": "Mostrar ajustes de animacion",
+    "el": "Mostrar ajustes de animacion",
+    "zh": "Mostrar ajustes de animacion",
+    "ro": "Mostrar ajustes de animacion"
+  },
+  {
+    "es": "Ocultar ajustes de animacion",
+    "en": "Ocultar ajustes de animacion",
+    "de": "Ocultar ajustes de animacion",
+    "fr": "Ocultar ajustes de animacion",
+    "it": "Ocultar ajustes de animacion",
+    "nl": "Ocultar ajustes de animacion",
+    "pt": "Ocultar ajustes de animacion",
+    "ru": "Ocultar ajustes de animacion",
+    "el": "Ocultar ajustes de animacion",
+    "zh": "Ocultar ajustes de animacion",
+    "ro": "Ocultar ajustes de animacion"
+  },
+  {
     "es": "Anadir ruta",
     "en": "Add route",
     "de": "Add route",
@@ -9137,7 +9358,7 @@
     substitutions.forEach(([pattern, replacement]) => {
       out = out.replace(pattern, (match, ...rest) => {
         const groups = rest.slice(0, -2);
-        const expanded = String(replacement).replace(/$(d+)/g, (_, groupIndexRaw) => {
+        const expanded = String(replacement).replace(/\$(\d+)/g, (_, groupIndexRaw) => {
           const groupIndex = Number(groupIndexRaw) - 1;
           return groups[groupIndex] ?? "";
         });
@@ -9146,7 +9367,7 @@
     });
 
     // Clean up legacy literal replacement artifacts left by earlier generator versions.
-    out = out.replace(/$(d+)/g, "");
+    out = out.replace(/\$(\d+)/g, "");
 
     return out;
   }

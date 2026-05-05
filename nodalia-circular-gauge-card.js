@@ -653,6 +653,57 @@ function escapeSelectorValue(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
+function sanitizeCssValue(value, fallback) {
+  const raw = String(value ?? "").trim();
+  const safeFallback = String(fallback ?? "").trim();
+  if (!raw) {
+    return safeFallback;
+  }
+  if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+    return safeFallback;
+  }
+  return raw;
+}
+
+function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
+  const defaults = DEFAULT_CONFIG.styles;
+  const card = styles?.card || {};
+  const icon = styles?.icon || {};
+  const gauge = styles?.gauge || {};
+  return {
+    card: {
+      background: sanitizeCssValue(card.background, defaults.card.background),
+      border: sanitizeCssValue(card.border, defaults.card.border),
+      border_radius: sanitizeCssValue(card.border_radius, defaults.card.border_radius),
+      box_shadow: sanitizeCssValue(card.box_shadow, defaults.card.box_shadow),
+      padding: sanitizeCssValue(card.padding, defaults.card.padding),
+      gap: sanitizeCssValue(card.gap, defaults.card.gap),
+    },
+    icon: {
+      size: sanitizeCssValue(icon.size, defaults.icon.size),
+      background: sanitizeCssValue(icon.background, defaults.icon.background),
+      color: sanitizeCssValue(icon.color, defaults.icon.color),
+    },
+    chip_height: sanitizeCssValue(styles?.chip_height, defaults.chip_height),
+    chip_font_size: sanitizeCssValue(styles?.chip_font_size, defaults.chip_font_size),
+    chip_padding: sanitizeCssValue(styles?.chip_padding, defaults.chip_padding),
+    title_size: sanitizeCssValue(styles?.title_size, defaults.title_size),
+    value_size: sanitizeCssValue(styles?.value_size, defaults.value_size),
+    range_size: sanitizeCssValue(styles?.range_size, defaults.range_size),
+    name_chip_max_width: sanitizeCssValue(styles?.name_chip_max_width, defaults.name_chip_max_width),
+    gauge: {
+      size: sanitizeCssValue(gauge.size, defaults.gauge.size),
+      stroke: sanitizeCssValue(gauge.stroke, defaults.gauge.stroke),
+      thumb_size: sanitizeCssValue(gauge.thumb_size, defaults.gauge.thumb_size),
+      track_color: sanitizeCssValue(gauge.track_color, defaults.gauge.track_color),
+      background: sanitizeCssValue(gauge.background, defaults.gauge.background),
+      min_tint_color: sanitizeCssValue(gauge.min_tint_color, defaults.gauge.min_tint_color),
+      max_tint_color: sanitizeCssValue(gauge.max_tint_color, defaults.gauge.max_tint_color),
+      foreground_color: sanitizeCssValue(gauge.foreground_color, defaults.gauge.foreground_color),
+    },
+  };
+}
+
 function resolveEditorColorValue(value) {
   const rawValue = String(value ?? "").trim();
   if (!rawValue || typeof document === "undefined") {
@@ -1439,7 +1490,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const styles = config.styles || DEFAULT_CONFIG.styles;
+    const styles = getSafeStyles(config.styles);
     const state = this._getState();
 
     if (!state) {
@@ -1460,7 +1511,8 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const dialAngle = DIAL_START_ANGLE + (ratio * DIAL_SWEEP);
     const thumbPosition = getDialMarkerPosition(dialAngle);
     const dialStartCoordinates = getDialMarkerCoordinates(DIAL_START_ANGLE);
-    const dialStartCapColor = String(styles.gauge.foreground_color || "").trim() || resolveGaugeTintColor(tintScale, 0.02);
+    const dialStartCapColor =
+      sanitizeCssValue(styles.gauge.foreground_color, "") || resolveGaugeTintColor(tintScale, 0.02);
     const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
     const showHeader = config.show_header !== false;
     const showName = config.show_name !== false;
@@ -2106,7 +2158,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
                       cx="${DIAL_VIEWBOX_SIZE / 2}"
                       cy="${DIAL_VIEWBOX_SIZE / 2}"
                       r="${DIAL_CIRCLE_RADIUS}"
-                      style="stroke:${segment.color};stroke-dasharray:${segment.dasharray};stroke-dashoffset:${segment.dashoffset};opacity:${segment.opacity};"
+                      style="stroke:${sanitizeCssValue(segment.color, styles.gauge.max_tint_color)};stroke-dasharray:${segment.dasharray};stroke-dashoffset:${segment.dashoffset};opacity:${segment.opacity};"
                     ></circle>
                   `)
                   .join("")}
@@ -2116,7 +2168,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
                   cx="${dialStartCoordinates.x}"
                   cy="${dialStartCoordinates.y}"
                   r="${Number((dialStrokePx / 2).toFixed(3))}"
-                  style="fill:${dialStartCapColor};"
+                  style="fill:${sanitizeCssValue(dialStartCapColor, styles.gauge.max_tint_color)};"
                 ></circle>
               </svg>
               <span class="gauge-card__dial-thumb" aria-hidden="true"></span>
