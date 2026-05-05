@@ -55170,7 +55170,7 @@
       const domains = Array.isArray(security.allowed_service_domains) ? security.allowed_service_domains.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
       const services = Array.isArray(security.allowed_services) ? security.allowed_services.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
       if (!domains.length && !services.length) {
-        return false;
+        return true;
       }
       return services.includes(normalizedService) || domains.includes(domain);
     }
@@ -71156,6 +71156,7 @@
       this._hadHass = false;
       this._lastRenderSignature = "";
       this._calendarEntrancePlayed = false;
+      this._expandedOverlayEntrancePlayed = false;
       this._expandedOpen = false;
       this._expandedMonthDayKey = "";
       this._completeExitKeys = /* @__PURE__ */ new Set();
@@ -71427,15 +71428,7 @@
         </div>
       `;
       }
-      const first = sorted[0];
-      const rest = sorted.slice(1);
-      const dotsHtml = rest.map((ev) => {
-        const tint = this._getCalendarTintDotCss(ev._entity);
-        const summary = String(ev.summary || ev.message || "").trim();
-        const hint = summary || this._getEventSubtitleForDisplay(ev._entity);
-        return `<span class="calendar-expanded__day-dot" style="--cal-dot:${escapeHtml17(tint)}" title="${escapeHtml17(hint)}"></span>`;
-      }).join("");
-      const restHtml = rest.map((ev) => this._renderSingleEventHtml(ev, config, locale)).join("");
+      const eventsHtml = sorted.map((ev) => this._renderSingleEventHtml(ev, config, locale)).join("");
       return `
       <div class="calendar-expanded__day-detail">
         <div class="calendar-expanded__day-detail-toolbar">
@@ -71445,11 +71438,7 @@
           </button>
         </div>
         <div class="calendar-expanded__day-detail-title">${escapeHtml17(longTitle)}</div>
-        <div class="calendar-expanded__day-detail-hero">
-          ${this._renderSingleEventHtml(first, config, locale)}
-        </div>
-        ${rest.length ? `<div class="calendar-expanded__day-detail-dots" aria-label="Más eventos este día">${dotsHtml}</div>` : ""}
-        ${rest.length ? `<div class="calendar-expanded__day-detail-rest">${restHtml}</div>` : ""}
+        <div class="calendar-expanded__day-detail-scroll">${eventsHtml}</div>
       </div>
     `;
     }
@@ -71558,6 +71547,25 @@
           }
           const key = `${cell.date.getFullYear()}-${cell.date.getMonth()}-${cell.date.getDate()}`;
           const group = map.get(key);
+          let monthPeekInner = "";
+          if (group?.events?.length) {
+            const sortedDay = [...group.events].sort((a, b) => {
+              const ta = eventDate(a?.start)?.getTime() || 0;
+              const tb = eventDate(b?.start)?.getTime() || 0;
+              return ta - tb;
+            });
+            const headEv = sortedDay[0];
+            const tail = sortedDay.slice(1);
+            monthPeekInner += this._renderSingleEventHtml(headEv, config, locale, { compact: true });
+            if (tail.length) {
+              monthPeekInner += `<div class="calendar-expanded__month-cell-dots">${tail.map((ev) => {
+                const tint = this._getCalendarTintDotCss(ev._entity);
+                const summary = String(ev.summary || ev.message || "").trim();
+                const hint = summary || this._getEventSubtitleForDisplay(ev._entity);
+                return `<span class="calendar-expanded__month-cell-dot" style="--cal-dot:${escapeHtml17(tint)}" title="${escapeHtml17(hint)}"></span>`;
+              }).join("")}</div>`;
+            }
+          }
           return `
                       <div
                         class="calendar-expanded__month-cell calendar-expanded__month-cell--day"
@@ -71567,8 +71575,8 @@
                         tabindex="0"
                       >
                         <div class="calendar-expanded__month-daynum">${cell.day}</div>
-                        <div class="calendar-expanded__month-events">
-                          ${group ? group.events.map((ev) => this._renderSingleEventHtml(ev, config, locale, { compact: true })).join("") : ""}
+                        <div class="calendar-expanded__month-events calendar-expanded__month-events--month-grid">
+                          ${monthPeekInner}
                         </div>
                       </div>
                     `;
@@ -71625,10 +71633,23 @@
         return;
       }
       this._lastSubmittedSharedCompletedValue = payload;
-      this._hass.callService("input_text", "set_value", {
-        entity_id: entityId,
-        value: payload
-      });
+      try {
+        const result = this._hass.callService("input_text", "set_value", {
+          entity_id: entityId,
+          value: payload
+        });
+        if (result && typeof result.then === "function") {
+          result.catch((err) => {
+            if (typeof console !== "undefined" && typeof console.warn === "function") {
+              console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
+            }
+          });
+        }
+      } catch (err) {
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
+        }
+      }
     }
     _scheduleRefresh() {
       if (this._refreshTimer) {
@@ -71833,6 +71854,10 @@
       const playEntrance = config.animations?.enabled !== false && !this._calendarEntrancePlayed && !this._loading;
       if (playEntrance) {
         this._calendarEntrancePlayed = true;
+      }
+      const playExpandedPanelEntrance = config.animations?.enabled !== false && this._expandedOpen && !this._expandedOverlayEntrancePlayed;
+      if (playExpandedPanelEntrance) {
+        this._expandedOverlayEntrancePlayed = true;
       }
       this.shadowRoot.innerHTML = `
       <style>
@@ -72102,7 +72127,6 @@
           position: absolute;
         }
         .calendar-expanded__panel {
-          animation: calendar-expanded-panel-in calc(${animationDuration}ms * 0.55) cubic-bezier(0.16, 0.84, 0.22, 1) both;
           background:
             linear-gradient(180deg, color-mix(in srgb, var(--calendar-expanded-accent) 18%, rgba(255, 255, 255, 0.08)), rgba(255, 255, 255, 0.02)),
             color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, rgba(255, 255, 255, 0.02));
@@ -72122,6 +72146,9 @@
           top: 50%;
           transform: translate(-50%, -50%);
           width: min(96vw, 1100px);
+        }
+        .calendar-expanded__panel--entrance {
+          animation: calendar-expanded-panel-in calc(${animationDuration}ms * 0.55) cubic-bezier(0.16, 0.84, 0.22, 1) both;
         }
         .calendar-expanded__toolbar {
           align-items: flex-start;
@@ -72299,16 +72326,33 @@
           display: flex;
           flex: 1 1 0;
           flex-direction: column;
-          gap: 6px;
+          gap: 4px;
           min-height: 0;
-          overflow-x: hidden;
-          overflow-y: auto;
-          overscroll-behavior-y: contain;
-          touch-action: pan-y;
-          -webkit-overflow-scrolling: touch;
+          overflow: hidden;
+        }
+        .calendar-expanded__month-events--month-grid {
+          justify-content: flex-start;
         }
         .calendar-expanded__month-events > .calendar-event {
           flex-shrink: 0;
+        }
+        .calendar-expanded__month-cell-dots {
+          display: flex;
+          flex-shrink: 0;
+          flex-wrap: wrap;
+          gap: 4px;
+          justify-content: center;
+          padding-top: 2px;
+        }
+        .calendar-expanded__month-cell-dot {
+          background: var(--cal-dot, var(--primary-color));
+          border-radius: 999px;
+          box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
+            0 1px 3px rgba(0, 0, 0, 0.1);
+          flex: 0 0 auto;
+          height: 6px;
+          width: 6px;
         }
         .calendar-expanded__month-events .calendar-event--compact {
           min-height: unset;
@@ -72369,28 +72413,7 @@
           line-height: 1.2;
           text-transform: capitalize;
         }
-        .calendar-expanded__day-detail-hero .calendar-event {
-          grid-template-columns: auto 1fr auto;
-          min-height: 46px;
-        }
-        .calendar-expanded__day-detail-dots {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          justify-content: center;
-          padding: 4px 0 2px;
-        }
-        .calendar-expanded__day-dot {
-          background: var(--cal-dot, var(--primary-color));
-          border-radius: 999px;
-          box-shadow:
-            0 0 0 1px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
-            0 2px 6px rgba(0, 0, 0, 0.12);
-          flex: 0 0 auto;
-          height: 10px;
-          width: 10px;
-        }
-        .calendar-expanded__day-detail-rest {
+        .calendar-expanded__day-detail-scroll {
           display: flex;
           flex-direction: column;
           gap: 10px;
@@ -72402,6 +72425,10 @@
           padding-right: 2px;
           touch-action: pan-y;
           -webkit-overflow-scrolling: touch;
+        }
+        .calendar-expanded__day-detail-scroll > .calendar-event {
+          grid-template-columns: auto 1fr auto;
+          min-height: 46px;
         }
         .calendar-expanded__day-empty {
           color: var(--secondary-text-color);
@@ -72435,7 +72462,7 @@
       </ha-card>
       <div class="calendar-expanded ${this._expandedOpen ? "is-open" : ""}" style="--calendar-expanded-accent:${accentColor};" aria-hidden="${this._expandedOpen ? "false" : "true"}">
         <div class="calendar-expanded__backdrop" data-action="expanded-backdrop"></div>
-        <div class="calendar-expanded__panel" role="dialog" aria-modal="true" aria-label="${escapeHtml17(config.title)}">
+        <div class="calendar-expanded__panel ${playExpandedPanelEntrance ? "calendar-expanded__panel--entrance" : ""}" role="dialog" aria-modal="true" aria-label="${escapeHtml17(config.title)}">
           <div class="calendar-expanded__toolbar">
             <div class="calendar-expanded__toolbar-title">${escapeHtml17(config.title)}</div>
             <button type="button" class="calendar-expanded__close" data-action="close-expanded" aria-label="Cerrar">
@@ -72462,6 +72489,7 @@
           return;
         }
         this._expandedOpen = false;
+        this._expandedOverlayEntrancePlayed = false;
         this._renderIfChanged(true);
         return;
       }
@@ -72499,6 +72527,7 @@
         event.stopPropagation();
         this._expandedMonthDayKey = "";
         this._expandedOpen = false;
+        this._expandedOverlayEntrancePlayed = false;
         this._renderIfChanged(true);
         return;
       }
@@ -77256,4 +77285,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.14","contentSha256_12":"f40591b5abc0"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.14 (f40591b5abc0) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.18","contentSha256_12":"b9dc239e424a"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.18 (b9dc239e424a) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}

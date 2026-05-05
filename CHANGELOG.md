@@ -10,6 +10,14 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.18] - 2026-05-06
+
+Eighteenth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.18`** (tag **`v1.0.0-alpha.18`** optional).
+
+- **Calendar card:** vista **mes**: un evento compacto por día y **puntos** (tint) para más eventos; vista **día**: todos los eventos con **scroll**; la animación de apertura del **panel** del popup no se repite al marcar **hecho** ni al actualizar dentro del popup.
+
+---
+
 ## [1.0.0-alpha.14] - 2026-05-06
 
 Fourteenth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.14`** (tag **`v1.0.0-alpha.14`** optional).

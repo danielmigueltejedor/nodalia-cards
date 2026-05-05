@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.14";
+const CARD_VERSION = "1.0.0-alpha.18";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 
 const VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
@@ -412,6 +412,8 @@ class NodaliaCalendarCard extends HTMLElement {
     this._hadHass = false;
     this._lastRenderSignature = "";
     this._calendarEntrancePlayed = false;
+    /** Evita repetir la animación del panel expandido en cada re-render (p. ej. al marcar hecho). */
+    this._expandedOverlayEntrancePlayed = false;
     this._expandedOpen = false;
     /** Month popup: `Y-M-D` (M 0–11) when a single-day view is open; empty string = full month grid */
     this._expandedMonthDayKey = "";
@@ -718,18 +720,7 @@ class NodaliaCalendarCard extends HTMLElement {
       `;
     }
 
-    const first = sorted[0];
-    const rest = sorted.slice(1);
-    const dotsHtml = rest
-      .map(ev => {
-        const tint = this._getCalendarTintDotCss(ev._entity);
-        const summary = String(ev.summary || ev.message || "").trim();
-        const hint = summary || this._getEventSubtitleForDisplay(ev._entity);
-        return `<span class="calendar-expanded__day-dot" style="--cal-dot:${escapeHtml(tint)}" title="${escapeHtml(hint)}"></span>`;
-      })
-      .join("");
-
-    const restHtml = rest.map(ev => this._renderSingleEventHtml(ev, config, locale)).join("");
+    const eventsHtml = sorted.map(ev => this._renderSingleEventHtml(ev, config, locale)).join("");
 
     return `
       <div class="calendar-expanded__day-detail">
@@ -740,15 +731,7 @@ class NodaliaCalendarCard extends HTMLElement {
           </button>
         </div>
         <div class="calendar-expanded__day-detail-title">${escapeHtml(longTitle)}</div>
-        <div class="calendar-expanded__day-detail-hero">
-          ${this._renderSingleEventHtml(first, config, locale)}
-        </div>
-        ${
-          rest.length
-            ? `<div class="calendar-expanded__day-detail-dots" aria-label="Más eventos este día">${dotsHtml}</div>`
-            : ""
-        }
-        ${rest.length ? `<div class="calendar-expanded__day-detail-rest">${restHtml}</div>` : ""}
+        <div class="calendar-expanded__day-detail-scroll">${eventsHtml}</div>
       </div>
     `;
   }
@@ -880,6 +863,27 @@ class NodaliaCalendarCard extends HTMLElement {
                     }
                     const key = `${cell.date.getFullYear()}-${cell.date.getMonth()}-${cell.date.getDate()}`;
                     const group = map.get(key);
+                    let monthPeekInner = "";
+                    if (group?.events?.length) {
+                      const sortedDay = [...group.events].sort((a, b) => {
+                        const ta = eventDate(a?.start)?.getTime() || 0;
+                        const tb = eventDate(b?.start)?.getTime() || 0;
+                        return ta - tb;
+                      });
+                      const headEv = sortedDay[0];
+                      const tail = sortedDay.slice(1);
+                      monthPeekInner += this._renderSingleEventHtml(headEv, config, locale, { compact: true });
+                      if (tail.length) {
+                        monthPeekInner += `<div class="calendar-expanded__month-cell-dots">${tail
+                          .map(ev => {
+                            const tint = this._getCalendarTintDotCss(ev._entity);
+                            const summary = String(ev.summary || ev.message || "").trim();
+                            const hint = summary || this._getEventSubtitleForDisplay(ev._entity);
+                            return `<span class="calendar-expanded__month-cell-dot" style="--cal-dot:${escapeHtml(tint)}" title="${escapeHtml(hint)}"></span>`;
+                          })
+                          .join("")}</div>`;
+                      }
+                    }
                     return `
                       <div
                         class="calendar-expanded__month-cell calendar-expanded__month-cell--day"
@@ -889,12 +893,8 @@ class NodaliaCalendarCard extends HTMLElement {
                         tabindex="0"
                       >
                         <div class="calendar-expanded__month-daynum">${cell.day}</div>
-                        <div class="calendar-expanded__month-events">
-                          ${
-                            group
-                              ? group.events.map(ev => this._renderSingleEventHtml(ev, config, locale, { compact: true })).join("")
-                              : ""
-                          }
+                        <div class="calendar-expanded__month-events calendar-expanded__month-events--month-grid">
+                          ${monthPeekInner}
                         </div>
                       </div>
                     `;
@@ -962,10 +962,23 @@ class NodaliaCalendarCard extends HTMLElement {
     }
 
     this._lastSubmittedSharedCompletedValue = payload;
-    this._hass.callService("input_text", "set_value", {
-      entity_id: entityId,
-      value: payload,
-    });
+    try {
+      const result = this._hass.callService("input_text", "set_value", {
+        entity_id: entityId,
+        value: payload,
+      });
+      if (result && typeof result.then === "function") {
+        result.catch(err => {
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
+          }
+        });
+      }
+    } catch (err) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
+      }
+    }
   }
 
   _scheduleRefresh() {
@@ -1185,6 +1198,13 @@ class NodaliaCalendarCard extends HTMLElement {
       config.animations?.enabled !== false && !this._calendarEntrancePlayed && !this._loading;
     if (playEntrance) {
       this._calendarEntrancePlayed = true;
+    }
+    const playExpandedPanelEntrance =
+      config.animations?.enabled !== false &&
+      this._expandedOpen &&
+      !this._expandedOverlayEntrancePlayed;
+    if (playExpandedPanelEntrance) {
+      this._expandedOverlayEntrancePlayed = true;
     }
 
     this.shadowRoot.innerHTML = `
@@ -1455,7 +1475,6 @@ class NodaliaCalendarCard extends HTMLElement {
           position: absolute;
         }
         .calendar-expanded__panel {
-          animation: calendar-expanded-panel-in calc(${animationDuration}ms * 0.55) cubic-bezier(0.16, 0.84, 0.22, 1) both;
           background:
             linear-gradient(180deg, color-mix(in srgb, var(--calendar-expanded-accent) 18%, rgba(255, 255, 255, 0.08)), rgba(255, 255, 255, 0.02)),
             color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, rgba(255, 255, 255, 0.02));
@@ -1475,6 +1494,9 @@ class NodaliaCalendarCard extends HTMLElement {
           top: 50%;
           transform: translate(-50%, -50%);
           width: min(96vw, 1100px);
+        }
+        .calendar-expanded__panel--entrance {
+          animation: calendar-expanded-panel-in calc(${animationDuration}ms * 0.55) cubic-bezier(0.16, 0.84, 0.22, 1) both;
         }
         .calendar-expanded__toolbar {
           align-items: flex-start;
@@ -1652,16 +1674,33 @@ class NodaliaCalendarCard extends HTMLElement {
           display: flex;
           flex: 1 1 0;
           flex-direction: column;
-          gap: 6px;
+          gap: 4px;
           min-height: 0;
-          overflow-x: hidden;
-          overflow-y: auto;
-          overscroll-behavior-y: contain;
-          touch-action: pan-y;
-          -webkit-overflow-scrolling: touch;
+          overflow: hidden;
+        }
+        .calendar-expanded__month-events--month-grid {
+          justify-content: flex-start;
         }
         .calendar-expanded__month-events > .calendar-event {
           flex-shrink: 0;
+        }
+        .calendar-expanded__month-cell-dots {
+          display: flex;
+          flex-shrink: 0;
+          flex-wrap: wrap;
+          gap: 4px;
+          justify-content: center;
+          padding-top: 2px;
+        }
+        .calendar-expanded__month-cell-dot {
+          background: var(--cal-dot, var(--primary-color));
+          border-radius: 999px;
+          box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
+            0 1px 3px rgba(0, 0, 0, 0.1);
+          flex: 0 0 auto;
+          height: 6px;
+          width: 6px;
         }
         .calendar-expanded__month-events .calendar-event--compact {
           min-height: unset;
@@ -1722,28 +1761,7 @@ class NodaliaCalendarCard extends HTMLElement {
           line-height: 1.2;
           text-transform: capitalize;
         }
-        .calendar-expanded__day-detail-hero .calendar-event {
-          grid-template-columns: auto 1fr auto;
-          min-height: 46px;
-        }
-        .calendar-expanded__day-detail-dots {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          justify-content: center;
-          padding: 4px 0 2px;
-        }
-        .calendar-expanded__day-dot {
-          background: var(--cal-dot, var(--primary-color));
-          border-radius: 999px;
-          box-shadow:
-            0 0 0 1px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
-            0 2px 6px rgba(0, 0, 0, 0.12);
-          flex: 0 0 auto;
-          height: 10px;
-          width: 10px;
-        }
-        .calendar-expanded__day-detail-rest {
+        .calendar-expanded__day-detail-scroll {
           display: flex;
           flex-direction: column;
           gap: 10px;
@@ -1755,6 +1773,10 @@ class NodaliaCalendarCard extends HTMLElement {
           padding-right: 2px;
           touch-action: pan-y;
           -webkit-overflow-scrolling: touch;
+        }
+        .calendar-expanded__day-detail-scroll > .calendar-event {
+          grid-template-columns: auto 1fr auto;
+          min-height: 46px;
         }
         .calendar-expanded__day-empty {
           color: var(--secondary-text-color);
@@ -1796,7 +1818,7 @@ class NodaliaCalendarCard extends HTMLElement {
       </ha-card>
       <div class="calendar-expanded ${this._expandedOpen ? "is-open" : ""}" style="--calendar-expanded-accent:${accentColor};" aria-hidden="${this._expandedOpen ? "false" : "true"}">
         <div class="calendar-expanded__backdrop" data-action="expanded-backdrop"></div>
-        <div class="calendar-expanded__panel" role="dialog" aria-modal="true" aria-label="${escapeHtml(config.title)}">
+        <div class="calendar-expanded__panel ${playExpandedPanelEntrance ? "calendar-expanded__panel--entrance" : ""}" role="dialog" aria-modal="true" aria-label="${escapeHtml(config.title)}">
           <div class="calendar-expanded__toolbar">
             <div class="calendar-expanded__toolbar-title">${escapeHtml(config.title)}</div>
             <button type="button" class="calendar-expanded__close" data-action="close-expanded" aria-label="Cerrar">
@@ -1832,6 +1854,7 @@ class NodaliaCalendarCard extends HTMLElement {
         return;
       }
       this._expandedOpen = false;
+      this._expandedOverlayEntrancePlayed = false;
       this._renderIfChanged(true);
       return;
     }
@@ -1875,6 +1898,7 @@ class NodaliaCalendarCard extends HTMLElement {
       event.stopPropagation();
       this._expandedMonthDayKey = "";
       this._expandedOpen = false;
+      this._expandedOverlayEntrancePlayed = false;
       this._renderIfChanged(true);
       return;
     }
