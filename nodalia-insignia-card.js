@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "0.2.8";
+const CARD_VERSION = "0.2.9";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -884,8 +884,8 @@ class NodaliaInsigniaCard extends HTMLElement {
         }
 
         :host([data-icon-only]) {
-          /* Same cross-axis behavior as non–icon-only pills (`align-items: center` on row).
-             `stretch` forced full line height and skewed vertical center vs text pills + menu. */
+          /* Same cross-axis behavior as non–icon-only pills (align-items: center on row).
+             stretch forced full line height and skewed vertical center vs text pills + menu. */
           align-self: var(--insignia-icon-only-align-self, center);
           box-sizing: border-box;
           display: flex;
