@@ -1579,7 +1579,7 @@ class NodaliaGraphCard extends HTMLElement {
         return;
       }
       this._hoverEntering = resolvedIndex !== null && this._hoverIndex === null;
-      if (resolvedIndex === null || resolvedIndex !== this._hoverIndex) {
+      if (resolvedIndex === null) {
         this._lastTooltipViewportPosition = null;
       }
       this._hoverIndex = resolvedIndex;

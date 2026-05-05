@@ -1703,7 +1703,7 @@ class NodaliaFavCard extends HTMLElement {
 
   _isServiceAllowed(serviceValue) {
     const security = this._config?.security || {};
-    if (security.strict_service_actions !== true) {
+    if (security.strict_service_actions === false) {
       return true;
     }
     const normalizedService = String(serviceValue || "").trim().toLowerCase();

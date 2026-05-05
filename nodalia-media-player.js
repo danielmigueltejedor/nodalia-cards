@@ -1177,6 +1177,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._skipNextSliderChange = null;
     this._dragFrame = 0;
     this._pendingDragUpdate = null;
+    this._dragWindowListenersAttached = false;
     this._volumeStepFallback = new Set();
     this._tvSourcePickerEntity = null;
     this._tvVolumePickerEntity = null;
@@ -1230,17 +1231,6 @@ class NodaliaMediaPlayer extends HTMLElement {
     window.addEventListener("resize", this._onResize);
     window.addEventListener("keydown", this._onWindowKeyDown);
     document.addEventListener("visibilitychange", this._onVisibilityChange);
-    window.addEventListener("pointermove", this._onWindowPointerMove);
-    window.addEventListener("pointerup", this._onWindowPointerUp);
-    window.addEventListener("pointercancel", this._onWindowPointerUp);
-    window.addEventListener("mousemove", this._onWindowMouseMove);
-    window.addEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
-      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
-    }
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
     this._render();
@@ -1250,17 +1240,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     window.removeEventListener("resize", this._onResize);
     window.removeEventListener("keydown", this._onWindowKeyDown);
     document.removeEventListener("visibilitychange", this._onVisibilityChange);
-    window.removeEventListener("pointermove", this._onWindowPointerMove);
-    window.removeEventListener("pointerup", this._onWindowPointerUp);
-    window.removeEventListener("pointercancel", this._onWindowPointerUp);
-    window.removeEventListener("mousemove", this._onWindowMouseMove);
-    window.removeEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
-      window.removeEventListener("touchmove", this._onWindowTouchMove);
-      window.removeEventListener("touchend", this._onWindowTouchEnd);
-      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
-    }
+    this._detachWindowDragListeners();
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
@@ -2374,7 +2354,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
   _isServiceAllowed(serviceValue) {
     const security = this._config?.security || {};
-    if (security.strict_service_actions !== true) {
+    if (security.strict_service_actions === false) {
       return true;
     }
     const normalizedService = String(serviceValue || "").trim().toLowerCase();
@@ -2616,6 +2596,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       slider,
       geometry: getSliderDragGeometry(slider),
     };
+    this._attachWindowDragListeners();
 
     if (event) {
       event.preventDefault();
@@ -2675,6 +2656,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     this._activeSliderDrag = null;
+    this._detachWindowDragListeners();
 
     if (this._pendingRenderAfterDrag) {
       this._pendingRenderAfterDrag = false;
@@ -2771,6 +2753,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     this._activeSliderDrag = null;
+    this._detachWindowDragListeners();
     this._pendingDragUpdate = null;
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
@@ -2791,6 +2774,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     const clientX = event.changedTouches?.[0]?.clientX;
     if (!Number.isFinite(clientX)) {
       this._activeSliderDrag = null;
+      this._detachWindowDragListeners();
       if (this._pendingRenderAfterDrag) {
         this._pendingRenderAfterDrag = false;
         this._render();
@@ -2799,6 +2783,42 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     this._commitSliderDrag(clientX, event);
+  }
+
+  _attachWindowDragListeners() {
+    if (this._dragWindowListenersAttached) {
+      return;
+    }
+    this._dragWindowListenersAttached = true;
+    window.addEventListener("pointermove", this._onWindowPointerMove);
+    window.addEventListener("pointerup", this._onWindowPointerUp);
+    window.addEventListener("pointercancel", this._onWindowPointerUp);
+    window.addEventListener("mousemove", this._onWindowMouseMove);
+    window.addEventListener("mouseup", this._onWindowMouseUp);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
+      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    }
+  }
+
+  _detachWindowDragListeners() {
+    if (!this._dragWindowListenersAttached) {
+      return;
+    }
+    this._dragWindowListenersAttached = false;
+    window.removeEventListener("pointermove", this._onWindowPointerMove);
+    window.removeEventListener("pointerup", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    window.removeEventListener("mousemove", this._onWindowMouseMove);
+    window.removeEventListener("mouseup", this._onWindowMouseUp);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
+      window.removeEventListener("touchmove", this._onWindowTouchMove);
+      window.removeEventListener("touchend", this._onWindowTouchEnd);
+      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    }
   }
 
   _onShadowChange(event) {

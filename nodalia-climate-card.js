@@ -914,8 +914,8 @@ function normalizeConfig(rawConfig) {
   return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
 }
 
-function getDialValueFromPoint(dial, clientX, clientY, range, step, fallbackValue = null) {
-  const rect = dial.getBoundingClientRect();
+function getDialValueFromPoint(dial, clientX, clientY, range, step, fallbackValue = null, geometry = null) {
+  const rect = geometry || dial.getBoundingClientRect();
   if (!rect.width || !rect.height) {
     return Number.isFinite(Number(fallbackValue)) ? Number(fallbackValue) : range.min;
   }
@@ -1731,6 +1731,7 @@ class NodaliaClimateCard extends HTMLElement {
 
     this._activeDialDrag = {
       dial,
+      geometry: dial.getBoundingClientRect(),
       pointerId,
       lastValue: null,
     };
@@ -1752,6 +1753,8 @@ class NodaliaClimateCard extends HTMLElement {
       clientY,
       this._getTemperatureRange(state),
       this._getTemperatureStep(state),
+      null,
+      this._activeDialDrag.geometry,
     );
     this._activeDialDrag.lastValue = nextValue;
     this._applyDialValue(nextValue, { commit: false });
@@ -1776,6 +1779,7 @@ class NodaliaClimateCard extends HTMLElement {
       this._getTemperatureRange(state),
       this._getTemperatureStep(state),
       drag.lastValue,
+      drag.geometry,
     );
     drag.lastValue = nextValue;
     this._applyDialValue(nextValue, { commit: false });
@@ -1821,6 +1825,7 @@ class NodaliaClimateCard extends HTMLElement {
       this._getTemperatureRange(state),
       this._getTemperatureStep(state),
       drag.lastValue,
+      drag.geometry,
     );
     drag.lastValue = nextValue;
     this._applyDialValue(nextValue, { commit: true });

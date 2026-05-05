@@ -1,6 +1,6 @@
 {
   "name": "nodalia-cards",
-  "version": "0.6.0-alpha.1",
+  "version": "0.6.0-alpha.2",
   "private": false,
   "type": "module",
   "description": "Suite de tarjetas personalizadas de Home Assistant para Nodalia.",
@@ -41,5 +41,8 @@
     "custom-card",
     "nodalia"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "esbuild": "^0.28.0"
+  }
 }

@@ -776,6 +776,29 @@ function getRangeValueFromClientX(slider, clientX) {
   return clamp(nextValue, min, max);
 }
 
+function getSliderDragGeometry(slider) {
+  const rect = slider.getBoundingClientRect();
+  return {
+    left: rect.left,
+    width: rect.width,
+    min: Number(slider.min || 0),
+    max: Number(slider.max || 100),
+    step: slider.step === "any" ? 0 : Number(slider.step || 1),
+  };
+}
+
+function getRangeValueFromGeometry(geometry, currentValue, clientX) {
+  if (!geometry || !Number.isFinite(geometry.width) || geometry.width <= 0) {
+    return Number(currentValue || 0);
+  }
+  const ratio = clamp((clientX - geometry.left) / geometry.width, 0, 1);
+  let nextValue = geometry.min + ((geometry.max - geometry.min) * ratio);
+  if (Number.isFinite(geometry.step) && geometry.step > 0) {
+    nextValue = geometry.min + (Math.round((nextValue - geometry.min) / geometry.step) * geometry.step);
+  }
+  return clamp(nextValue, geometry.min, geometry.max);
+}
+
 function fireEvent(node, type, detail, options) {
   const event = new CustomEvent(type, {
     bubbles: options?.bubbles ?? true,
@@ -861,6 +884,7 @@ class NodaliaLightCard extends HTMLElement {
     this._skipNextSliderChange = null;
     this._dragFrame = 0;
     this._pendingDragUpdate = null;
+    this._dragWindowListenersAttached = false;
     this._lastRenderSignature = "";
     this._lastRenderedIsOn = null;
     this._lastControlsMarkup = "";
@@ -925,17 +949,6 @@ class NodaliaLightCard extends HTMLElement {
 
   connectedCallback() {
     this._resizeObserver?.observe(this);
-    window.addEventListener("pointermove", this._onWindowPointerMove);
-    window.addEventListener("pointerup", this._onWindowPointerUp);
-    window.addEventListener("pointercancel", this._onWindowPointerUp);
-    window.addEventListener("mousemove", this._onWindowMouseMove);
-    window.addEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
-      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
-    }
     this._scheduleOptimisticTurnOnTimeout();
     this._scheduleOptimisticTurnOffTimeout();
     this._animateContentOnNextRender = true;
@@ -947,17 +960,7 @@ class NodaliaLightCard extends HTMLElement {
 
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
-    window.removeEventListener("pointermove", this._onWindowPointerMove);
-    window.removeEventListener("pointerup", this._onWindowPointerUp);
-    window.removeEventListener("pointercancel", this._onWindowPointerUp);
-    window.removeEventListener("mousemove", this._onWindowMouseMove);
-    window.removeEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
-      window.removeEventListener("touchmove", this._onWindowTouchMove);
-      window.removeEventListener("touchend", this._onWindowTouchEnd);
-      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
-    }
+    this._detachWindowDragListeners();
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
@@ -1061,23 +1064,23 @@ class NodaliaLightCard extends HTMLElement {
   _getRenderSignature(state = this._getState()) {
     const entityId = this._config?.entity || "";
     const attrs = state?.attributes || {};
-    return JSON.stringify({
-      entityId,
-      state: String(state?.state || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      brightness: Number(attrs.brightness ?? -1),
-      colorTemp: Number(attrs.color_temp ?? -1),
-      colorTempKelvin: Number(attrs.color_temp_kelvin ?? -1),
-      hsColor: Array.isArray(attrs.hs_color) ? attrs.hs_color.join(",") : "",
-      rgbColor: Array.isArray(attrs.rgb_color) ? attrs.rgb_color.join(",") : "",
-      effect: String(attrs.effect || ""),
-      supportedColorModes: Array.isArray(attrs.supported_color_modes) ? attrs.supported_color_modes.join("|") : "",
-      supportedFeatures: Number(attrs.supported_features ?? -1),
-      compact: Boolean(this._isCompactLayout),
-      mini: Boolean(this._shouldUseMiniLayout()),
-      controlMode: String(this._activeControlMode || ""),
-    });
+    return [
+      `e:${entityId}`,
+      `s:${String(state?.state || "")}`,
+      `n:${String(attrs.friendly_name || "")}`,
+      `i:${String(attrs.icon || "")}`,
+      `b:${Number(attrs.brightness ?? -1)}`,
+      `ct:${Number(attrs.color_temp ?? -1)}`,
+      `ctk:${Number(attrs.color_temp_kelvin ?? -1)}`,
+      `hs:${Array.isArray(attrs.hs_color) ? attrs.hs_color.join(",") : ""}`,
+      `rgb:${Array.isArray(attrs.rgb_color) ? attrs.rgb_color.join(",") : ""}`,
+      `fx:${String(attrs.effect || "")}`,
+      `m:${Array.isArray(attrs.supported_color_modes) ? attrs.supported_color_modes.join("|") : ""}`,
+      `sf:${Number(attrs.supported_features ?? -1)}`,
+      `c:${this._isCompactLayout ? 1 : 0}`,
+      `mini:${this._shouldUseMiniLayout() ? 1 : 0}`,
+      `cm:${String(this._activeControlMode || "")}`,
+    ].join("|");
   }
 
   _getConfiguredGridColumns() {
@@ -2276,7 +2279,7 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _queueSliderDragUpdate(slider, clientX) {
-    const nextValue = getRangeValueFromClientX(slider, clientX);
+    const nextValue = getRangeValueFromGeometry(this._activeSliderDrag?.geometry, slider.value, clientX);
     slider.value = String(nextValue);
     this._applySliderValue(slider, nextValue, { commit: false });
   }
@@ -2298,7 +2301,9 @@ class NodaliaLightCard extends HTMLElement {
     this._activeSliderDrag = {
       pointerId,
       slider,
+      geometry: getSliderDragGeometry(slider),
     };
+    this._attachWindowDragListeners();
 
     if (event) {
       event.preventDefault();
@@ -2312,7 +2317,7 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     this._setSliderDragVisualState(slider, true);
-    const nextValue = getRangeValueFromClientX(slider, clientX);
+    const nextValue = getRangeValueFromGeometry(this._activeSliderDrag.geometry, slider.value, clientX);
     slider.value = String(nextValue);
     this._applySliderValue(slider, nextValue, { commit: false });
   }
@@ -2333,13 +2338,14 @@ class NodaliaLightCard extends HTMLElement {
       this._dragFrame = 0;
     }
 
-    const nextValue = getRangeValueFromClientX(drag.slider, clientX);
+    const nextValue = getRangeValueFromGeometry(drag.geometry, drag.slider.value, clientX);
     drag.slider.value = String(nextValue);
     this._skipNextSliderChange = drag.slider;
     this._applySliderValue(drag.slider, nextValue, { commit: true });
     this._setSliderDragVisualState(drag.slider, false);
 
     this._activeSliderDrag = null;
+    this._detachWindowDragListeners();
 
     if (this._pendingRenderAfterDrag) {
       this._pendingRenderAfterDrag = false;
@@ -2437,6 +2443,7 @@ class NodaliaLightCard extends HTMLElement {
 
     this._setSliderDragVisualState(drag.slider, false);
     this._activeSliderDrag = null;
+    this._detachWindowDragListeners();
     this._pendingDragUpdate = null;
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
@@ -2458,6 +2465,7 @@ class NodaliaLightCard extends HTMLElement {
     if (!Number.isFinite(clientX)) {
       this._setSliderDragVisualState(this._activeSliderDrag.slider, false);
       this._activeSliderDrag = null;
+      this._detachWindowDragListeners();
       if (this._pendingRenderAfterDrag) {
         this._pendingRenderAfterDrag = false;
         this._render();
@@ -2466,6 +2474,42 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     this._commitSliderDrag(clientX, event);
+  }
+
+  _attachWindowDragListeners() {
+    if (this._dragWindowListenersAttached) {
+      return;
+    }
+    this._dragWindowListenersAttached = true;
+    window.addEventListener("pointermove", this._onWindowPointerMove);
+    window.addEventListener("pointerup", this._onWindowPointerUp);
+    window.addEventListener("pointercancel", this._onWindowPointerUp);
+    window.addEventListener("mousemove", this._onWindowMouseMove);
+    window.addEventListener("mouseup", this._onWindowMouseUp);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
+      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    }
+  }
+
+  _detachWindowDragListeners() {
+    if (!this._dragWindowListenersAttached) {
+      return;
+    }
+    this._dragWindowListenersAttached = false;
+    window.removeEventListener("pointermove", this._onWindowPointerMove);
+    window.removeEventListener("pointerup", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    window.removeEventListener("mousemove", this._onWindowMouseMove);
+    window.removeEventListener("mouseup", this._onWindowMouseUp);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
+      window.removeEventListener("touchmove", this._onWindowTouchMove);
+      window.removeEventListener("touchend", this._onWindowTouchEnd);
+      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    }
   }
 
   _getAvailableControlModes(state) {

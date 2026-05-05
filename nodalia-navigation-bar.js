@@ -960,6 +960,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._mediaTicker = null;
     this._lastRenderSignature = "";
     this._animateDockEntranceNext = true;
+    this._dockEntrancePlayed = false;
     this._lastShouldHide = false;
     this._playDockEntrance = false;
     this._lastMediaPlayerCardVisible = false;
@@ -1090,13 +1091,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
         .map(item => {
           const state = hass?.states?.[item.badge.entity] || null;
           const attribute = String(item.badge.attribute || "");
-          return {
-            scope: item.scope,
-            entityId: String(item.badge.entity || ""),
-            state: String(state?.state || ""),
-            badgeAttribute: attribute,
-            badgeValue: attribute ? String(state?.attributes?.[attribute] ?? "") : String(state?.state || ""),
-          };
+          return [
+            item.scope,
+            String(item.badge.entity || ""),
+            String(state?.state || ""),
+            attribute,
+            attribute ? String(state?.attributes?.[attribute] ?? "") : String(state?.state || ""),
+          ].join("::");
         });
     });
 
@@ -1105,35 +1106,35 @@ class NodaliaNavigationBarCard extends HTMLElement {
       .map(player => {
         const state = hass?.states?.[player.entity] || null;
         const attrs = state?.attributes || {};
-        return {
-          entityId: String(player.entity || ""),
-          state: String(state?.state || ""),
-          friendlyName: String(attrs.friendly_name || ""),
-          entityPicture: String(attrs.entity_picture || ""),
-          mediaTitle: String(attrs.media_title || ""),
-          mediaArtist: String(attrs.media_artist || ""),
-          mediaSeriesTitle: String(attrs.media_series_title || ""),
-          mediaAlbumName: String(attrs.media_album_name || ""),
-          appName: String(attrs.app_name || ""),
-          source: String(attrs.source || ""),
-          mediaChannel: String(attrs.media_channel || ""),
-          volumeLevel: Number(attrs.volume_level ?? -1),
-          mediaDuration: Number(attrs.media_duration ?? -1),
-          supportedFeatures: Number(attrs.supported_features ?? 0),
-          sourceList: Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
-        };
+        return [
+          String(player.entity || ""),
+          String(state?.state || ""),
+          String(attrs.friendly_name || ""),
+          String(attrs.entity_picture || ""),
+          String(attrs.media_title || ""),
+          String(attrs.media_artist || ""),
+          String(attrs.media_series_title || ""),
+          String(attrs.media_album_name || ""),
+          String(attrs.app_name || ""),
+          String(attrs.source || ""),
+          String(attrs.media_channel || ""),
+          Number(attrs.volume_level ?? -1),
+          Number(attrs.media_duration ?? -1),
+          Number(attrs.supported_features ?? 0),
+          Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
+        ].join("::");
       });
 
-    return JSON.stringify({
-      locale: window.NodaliaI18n.resolveLanguage(hass, this._config?.language),
-      user: String(hass?.user?.id || ""),
-      routeBadgeStates,
-      mediaPlayerStates,
-      mediaExpanded: Boolean(this._mediaPlayerExpanded),
-      activePlayerIndex: Number(this._activeMediaPlayerIndex || 0),
-      popupOpen: Boolean(this._popupState),
-      mediaBrowserOpen: Boolean(this._mediaBrowserState),
-    });
+    return [
+      `l:${window.NodaliaI18n.resolveLanguage(hass, this._config?.language)}`,
+      `u:${String(hass?.user?.id || "")}`,
+      `r:${routeBadgeStates.join("|")}`,
+      `m:${mediaPlayerStates.join("|")}`,
+      `mx:${this._mediaPlayerExpanded ? 1 : 0}`,
+      `mi:${Number(this._activeMediaPlayerIndex || 0)}`,
+      `po:${this._popupState ? 1 : 0}`,
+      `mb:${this._mediaBrowserState ? 1 : 0}`,
+    ].join("||");
   }
 
   _triggerHaptic(style = this._config?.haptics?.style) {
@@ -1628,7 +1629,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
   _isServiceAllowed(serviceValue) {
     const security = this._config?.security || {};
-    if (security.strict_service_actions !== true) {
+    if (security.strict_service_actions === false) {
       return true;
     }
     const normalizedService = String(serviceValue || "").trim().toLowerCase();
@@ -3230,7 +3231,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._lastShouldHide = false;
 
     const hasActiveOverlay = Boolean(this._popupState || this._mediaBrowserState);
-    const playDockEntrance = animations.enabled && this._animateDockEntranceNext && !hasActiveOverlay;
+    const playDockEntrance = animations.enabled
+      && this._animateDockEntranceNext
+      && !hasActiveOverlay
+      && !this._dockEntrancePlayed;
+    if (playDockEntrance) {
+      this._dockEntrancePlayed = true;
+    }
     // Lovelace typically calls setConfig then set(hass) in the same turn; clearing the flag
     // synchronously made the second _render strip entrance classes before paint. Defer reset
     // one frame so follow-up renders still emit --entering until the browser composites.

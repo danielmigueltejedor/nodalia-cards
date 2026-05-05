@@ -10,6 +10,17 @@ Work toward **`0.6.x`** on **`alpha`** / **`beta`** and eventual **`main`**: add
 
 ---
 
+## [0.6.0-alpha.2] - 2026-05-05
+
+Second **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.2`** (tag **`v0.6.0-alpha.2`** optional). Breaking changes are allowed; prefer stable **`main`** for production dashboards.
+
+- **Fluidez (Fase 2):** cache de geometría + listeners globales `move/up` solo durante drag en sliders interactivos (**Light/Fan/Humidifier/Media Player**), reduciendo carga en idle y en arrastre continuo.
+- **Fluidez (Fase 2):** dial de **Climate** optimizado con geometría cacheada durante drag para evitar lecturas de layout por frame.
+- **Eficiencia render (Fase 3):** firmas de render en **Light / Entity / Navigation** migradas de `JSON.stringify` de objetos a firmas string compactas, con menos allocations y menor presión de GC.
+- **Infra (Fase 4):** bundling modernizado con **esbuild** en `scripts/build-bundle.mjs`, manteniendo orden de módulos y stripping de embeds standalone para no alterar comportamiento funcional del bundle.
+
+---
+
 ## [0.6.0-alpha.1] - 2026-05-05
 
 First **`alpha`** on the **`0.6.x`** line (**branch `alpha`**). **Experimental:** installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`0.6.0-alpha.1`** (tag **`v0.6.0-alpha.1`** optional). Breaking changes are allowed; prefer stable **`main`** for production dashboards.

@@ -2,6 +2,7 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { build } from "esbuild";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
@@ -49,10 +50,41 @@ const parts = [
 ];
 
 let body = "";
-for (const name of parts) {
-  body += "{\n";
-  body += stripStandaloneUtilsEmbed(fs.readFileSync(path.join(root, name), "utf8"));
-  body += "\n}\n";
+const entryPath = path.join(root, ".tmp-nodalia-bundle-entry.mjs");
+const entrySource = parts.map(name => `import "./${name}";`).join("\n");
+fs.writeFileSync(entryPath, `${entrySource}\n`);
+
+try {
+  const result = await build({
+    absWorkingDir: root,
+    entryPoints: [entryPath],
+    bundle: true,
+    write: false,
+    format: "iife",
+    platform: "browser",
+    target: ["es2020"],
+    charset: "utf8",
+    legalComments: "none",
+    plugins: [
+      {
+        name: "strip-standalone-utils-embed",
+        setup(buildContext) {
+          buildContext.onLoad({ filter: /nodalia-.*\.js$/ }, args => {
+            const source = fs.readFileSync(args.path, "utf8");
+            return {
+              contents: stripStandaloneUtilsEmbed(source),
+              loader: "js",
+            };
+          });
+        },
+      },
+    ],
+  });
+  body = result.outputFiles?.[0]?.text || "";
+} finally {
+  if (fs.existsSync(entryPath)) {
+    fs.unlinkSync(entryPath);
+  }
 }
 
 const contentHash = crypto.createHash("sha256").update(body).digest("hex").slice(0, 12);

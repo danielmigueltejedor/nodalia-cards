@@ -616,6 +616,36 @@ function escapeSelectorValue(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
+function sanitizeCssValue(value, fallback) {
+  const raw = String(value ?? "").trim();
+  const safeFallback = String(fallback ?? "").trim();
+  if (!raw) {
+    return safeFallback;
+  }
+  if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+    return safeFallback;
+  }
+  return raw;
+}
+
+function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
+  const walk = (candidate, fallback) => {
+    if (isObject(fallback)) {
+      const out = {};
+      const source = isObject(candidate) ? candidate : {};
+      Object.keys(fallback).forEach(key => {
+        out[key] = walk(source[key], fallback[key]);
+      });
+      return out;
+    }
+    if (typeof fallback === "string") {
+      return sanitizeCssValue(candidate, fallback);
+    }
+    return candidate === undefined ? fallback : candidate;
+  };
+  return walk(styles, DEFAULT_CONFIG.styles);
+}
+
 function formatEditorHexChannel(value) {
   return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
 }
@@ -727,6 +757,29 @@ function getRangeValueFromClientX(slider, clientX) {
   return clamp(nextValue, min, max);
 }
 
+function getSliderDragGeometry(slider) {
+  const rect = slider.getBoundingClientRect();
+  return {
+    left: rect.left,
+    width: rect.width,
+    min: Number(slider.min || 0),
+    max: Number(slider.max || 100),
+    step: slider.step === "any" ? 0 : Number(slider.step || 1),
+  };
+}
+
+function getRangeValueFromGeometry(geometry, currentValue, clientX) {
+  if (!geometry || !Number.isFinite(geometry.width) || geometry.width <= 0) {
+    return Number(currentValue || 0);
+  }
+  const ratio = clamp((clientX - geometry.left) / geometry.width, 0, 1);
+  let nextValue = geometry.min + ((geometry.max - geometry.min) * ratio);
+  if (Number.isFinite(geometry.step) && geometry.step > 0) {
+    nextValue = geometry.min + (Math.round((nextValue - geometry.min) / geometry.step) * geometry.step);
+  }
+  return clamp(nextValue, geometry.min, geometry.max);
+}
+
 function translatePresetLabel(value) {
   const normalized = normalizeTextKey(value);
 
@@ -808,6 +861,7 @@ class NodaliaFanCard extends HTMLElement {
     this._skipNextSliderChange = null;
     this._dragFrame = 0;
     this._pendingDragUpdate = null;
+    this._dragWindowListenersAttached = false;
     this._lastRenderSignature = "";
     this._lastRenderedIsOn = null;
     this._lastRenderedPresetPanelVisible = false;
@@ -865,32 +919,11 @@ class NodaliaFanCard extends HTMLElement {
 
   connectedCallback() {
     this._resizeObserver?.observe(this);
-    window.addEventListener("pointermove", this._onWindowPointerMove);
-    window.addEventListener("pointerup", this._onWindowPointerUp);
-    window.addEventListener("pointercancel", this._onWindowPointerUp);
-    window.addEventListener("mousemove", this._onWindowMouseMove);
-    window.addEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
-      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
-    }
   }
 
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
-    window.removeEventListener("pointermove", this._onWindowPointerMove);
-    window.removeEventListener("pointerup", this._onWindowPointerUp);
-    window.removeEventListener("pointercancel", this._onWindowPointerUp);
-    window.removeEventListener("mousemove", this._onWindowMouseMove);
-    window.removeEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
-      window.removeEventListener("touchmove", this._onWindowTouchMove);
-      window.removeEventListener("touchend", this._onWindowTouchEnd);
-      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
-    }
+    this._detachWindowDragListeners();
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
@@ -971,7 +1004,7 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   _getCompactLayoutThreshold() {
-    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    const styles = getSafeStyles(this._config?.styles);
     const iconSize = parseSizeToPixels(styles?.icon?.size, 58);
     const cardPadding = parseSizeToPixels(styles?.card?.padding, 14);
     const cardGap = parseSizeToPixels(styles?.card?.gap, 12);
@@ -1126,7 +1159,7 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   _getAccentColor(state) {
-    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    const styles = getSafeStyles(this._config?.styles);
     return this._isOn(state)
       ? styles?.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color
       : styles?.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color;
@@ -1441,7 +1474,7 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   _queueSliderDragUpdate(slider, clientX) {
-    const nextValue = getRangeValueFromClientX(slider, clientX);
+    const nextValue = getRangeValueFromGeometry(this._activeSliderDrag?.geometry, slider.value, clientX);
     slider.value = String(nextValue);
     this._applySliderValue(slider, nextValue, { commit: false });
   }
@@ -1454,7 +1487,9 @@ class NodaliaFanCard extends HTMLElement {
     this._activeSliderDrag = {
       pointerId,
       slider,
+      geometry: getSliderDragGeometry(slider),
     };
+    this._attachWindowDragListeners();
 
     if (event) {
       event.preventDefault();
@@ -1467,7 +1502,7 @@ class NodaliaFanCard extends HTMLElement {
       this._dragFrame = 0;
     }
 
-    const nextValue = getRangeValueFromClientX(slider, clientX);
+    const nextValue = getRangeValueFromGeometry(this._activeSliderDrag.geometry, slider.value, clientX);
     slider.value = String(nextValue);
     this._applySliderValue(slider, nextValue, { commit: false });
   }
@@ -1488,12 +1523,13 @@ class NodaliaFanCard extends HTMLElement {
       this._dragFrame = 0;
     }
 
-    const nextValue = getRangeValueFromClientX(drag.slider, clientX);
+    const nextValue = getRangeValueFromGeometry(drag.geometry, drag.slider.value, clientX);
     drag.slider.value = String(nextValue);
     this._skipNextSliderChange = drag.slider;
     this._applySliderValue(drag.slider, nextValue, { commit: true });
 
     this._activeSliderDrag = null;
+    this._detachWindowDragListeners();
 
     if (this._pendingRenderAfterDrag) {
       this._pendingRenderAfterDrag = false;
@@ -1590,6 +1626,7 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     this._activeSliderDrag = null;
+    this._detachWindowDragListeners();
     this._pendingDragUpdate = null;
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
@@ -1610,6 +1647,7 @@ class NodaliaFanCard extends HTMLElement {
     const clientX = event.changedTouches?.[0]?.clientX;
     if (!Number.isFinite(clientX)) {
       this._activeSliderDrag = null;
+      this._detachWindowDragListeners();
       if (this._pendingRenderAfterDrag) {
         this._pendingRenderAfterDrag = false;
         this._render();
@@ -1618,6 +1656,42 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     this._commitSliderDrag(clientX, event);
+  }
+
+  _attachWindowDragListeners() {
+    if (this._dragWindowListenersAttached) {
+      return;
+    }
+    this._dragWindowListenersAttached = true;
+    window.addEventListener("pointermove", this._onWindowPointerMove);
+    window.addEventListener("pointerup", this._onWindowPointerUp);
+    window.addEventListener("pointercancel", this._onWindowPointerUp);
+    window.addEventListener("mousemove", this._onWindowMouseMove);
+    window.addEventListener("mouseup", this._onWindowMouseUp);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
+      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    }
+  }
+
+  _detachWindowDragListeners() {
+    if (!this._dragWindowListenersAttached) {
+      return;
+    }
+    this._dragWindowListenersAttached = false;
+    window.removeEventListener("pointermove", this._onWindowPointerMove);
+    window.removeEventListener("pointerup", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    window.removeEventListener("mousemove", this._onWindowMouseMove);
+    window.removeEventListener("mouseup", this._onWindowMouseUp);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
+      window.removeEventListener("touchmove", this._onWindowTouchMove);
+      window.removeEventListener("touchend", this._onWindowTouchEnd);
+      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    }
   }
 
   _onShadowInput(event) {

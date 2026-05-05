@@ -690,6 +690,36 @@ function escapeSelectorValue(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
+function sanitizeCssValue(value, fallback) {
+  const raw = String(value ?? "").trim();
+  const safeFallback = String(fallback ?? "").trim();
+  if (!raw) {
+    return safeFallback;
+  }
+  if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+    return safeFallback;
+  }
+  return raw;
+}
+
+function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
+  const walk = (candidate, fallback) => {
+    if (isObject(fallback)) {
+      const out = {};
+      const source = isObject(candidate) ? candidate : {};
+      Object.keys(fallback).forEach(key => {
+        out[key] = walk(source[key], fallback[key]);
+      });
+      return out;
+    }
+    if (typeof fallback === "string") {
+      return sanitizeCssValue(candidate, fallback);
+    }
+    return candidate === undefined ? fallback : candidate;
+  };
+  return walk(styles, DEFAULT_CONFIG.styles);
+}
+
 function resolveEditorColorValue(value) {
   const rawValue = String(value ?? "").trim();
   if (!rawValue || typeof document === "undefined") {
@@ -1052,7 +1082,7 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _getCompactLayoutThreshold() {
-    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    const styles = getSafeStyles(this._config?.styles);
     const iconSize = parseSizeToPixels(styles?.icon?.size, 58);
     const cardPadding = parseSizeToPixels(styles?.card?.padding, 14);
     const cardGap = parseSizeToPixels(styles?.card?.gap, 12);
@@ -2401,7 +2431,7 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _getAccentColor(state) {
-    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    const styles = getSafeStyles(this._config?.styles);
 
     if (state?.state === "error") {
       return styles.icon.error_color;
