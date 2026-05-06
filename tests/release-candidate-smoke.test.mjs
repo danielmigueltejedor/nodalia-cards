@@ -82,6 +82,12 @@ test("calendar weather forecast normalization keeps date-keyed and tabular daily
   assert.match(source, /weather\/subscribe_forecast/);
   assert.match(source, /_ensureWeatherForecastSubscription\(\)/);
   assert.match(source, /_weatherForecastEvents/);
+  assert.match(source, /supportedWeatherForecastTypes\(stateObj\)/);
+  assert.match(source, /_fetchForecastViaService\(entityId, forecastType\)/);
+  assert.match(source, /_selectBestForecastRows\(forecastCandidates\)/);
+  assert.match(source, /preserveRicherExisting: true/);
+  assert.match(source, /_nodaliaForecastType === "hourly"/);
+  assert.match(source, /_tagForecastRows\(event\?\.forecast \?\? event, forecastType\)/);
   assert.match(source, /raw\.time \?\? raw\.datetime \?\? raw\.date \?\? raw\.dates/);
   assert.match(source, /this\._normalizeForecastRows\(withForecastDateFromKey\(key, value\)\)/);
   assert.match(source, /item\.temperatureLow/);
@@ -95,4 +101,17 @@ test("calendar expanded popup reuses daily weather badges", () => {
   assert.match(source, /calendar-expanded__month-weather/);
   assert.match(source, /calendar-expanded__day-detail-heading/);
   assert.match(source, /calendar-expanded__col-head/);
+});
+
+test("calendar editor signature only scans relevant entity domains", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /editorFilteredStatesSignature/);
+  assert.match(source, /id\.startsWith\("calendar\."\)/);
+  assert.match(source, /id\.startsWith\("input_text\."\)/);
+  assert.match(source, /id\.startsWith\("weather\."\)/);
+});
+
+test("bundle build minifies production output", () => {
+  const source = read("scripts/build-bundle.mjs");
+  assert.match(source, /minify:\s*true/);
 });

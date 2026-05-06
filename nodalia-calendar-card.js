@@ -9,7 +9,7 @@ import {
 
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.41";
+const CARD_VERSION = "1.0.0-alpha.42";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 const QUICK_REMINDER_STORAGE_KEY = "nodalia_calendar_quick_reminders_v1";
 
@@ -427,6 +427,24 @@ function pickFirstFiniteNumber(...candidates) {
     }
   }
   return null;
+}
+
+function weatherSupportedFeature(state, feature) {
+  return Boolean((Number(state?.attributes?.supported_features) || 0) & feature);
+}
+
+function supportedWeatherForecastTypes(state) {
+  const types = [];
+  if (weatherSupportedFeature(state, 1)) {
+    types.push("daily");
+  }
+  if (weatherSupportedFeature(state, 4)) {
+    types.push("twice_daily");
+  }
+  if (weatherSupportedFeature(state, 2)) {
+    types.push("hourly");
+  }
+  return types.length ? types : ["daily", "twice_daily", "hourly"];
 }
 
 function resolveEditorColorValue(value) {
@@ -1740,9 +1758,6 @@ class NodaliaCalendarCard extends HTMLElement {
       if (!dayKey) {
         return;
       }
-      if (map.has(dayKey)) {
-        return;
-      }
       const maxCandidate = pickFirstFiniteNumber(
         item.temperature,
         item.temperature_max,
@@ -1797,13 +1812,99 @@ class NodaliaCalendarCard extends HTMLElement {
           item.symbol ??
           "",
       ).trim();
+      const existing = map.get(dayKey) || { condition: "", tempMax: null, tempMin: null };
+      const temperatureCandidate = pickFirstFiniteNumber(item.temperature, item.native_temperature, item.native_temp);
+      const canUsePointTemperatureAsLow =
+        item._nodaliaForecastType === "hourly" || item._nodaliaForecastType === "twice_daily";
+      const numericForHigh = Number.isFinite(maxCandidate) ? maxCandidate : temperatureCandidate;
+      const numericForLow = Number.isFinite(minCandidate)
+        ? minCandidate
+        : (canUsePointTemperatureAsLow ? temperatureCandidate : null);
+      const nextMax = Number.isFinite(numericForHigh)
+        ? (Number.isFinite(existing.tempMax) ? Math.max(existing.tempMax, numericForHigh) : numericForHigh)
+        : existing.tempMax;
+      const nextMin = Number.isFinite(numericForLow)
+        ? (Number.isFinite(existing.tempMin) ? Math.min(existing.tempMin, numericForLow) : numericForLow)
+        : existing.tempMin;
       map.set(dayKey, {
-        condition,
-        tempMax: maxCandidate,
-        tempMin: minCandidate,
+        condition: existing.condition || condition,
+        tempMax: nextMax,
+        tempMin: nextMin,
       });
     });
     return map;
+  }
+
+  _tagForecastRows(rows, forecastType = "") {
+    const normalized = this._normalizeForecastRows(rows);
+    const type = String(forecastType || "").trim();
+    if (!type) {
+      return normalized;
+    }
+    return normalized.map(item => (
+      item && typeof item === "object" ? { ...item, _nodaliaForecastType: type } : item
+    ));
+  }
+
+  _scoreForecastMap(forecastMap) {
+    if (!(forecastMap instanceof Map) || !forecastMap.size) {
+      return 0;
+    }
+    const now = new Date();
+    const todayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    let currentOrFutureDays = 0;
+    let minDays = 0;
+    let maxDays = 0;
+    let conditionDays = 0;
+    forecastMap.forEach((item, key) => {
+      const parsed = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(key));
+      if (parsed) {
+        const y = Number(parsed[1]);
+        const m = Number(parsed[2]);
+        const d = Number(parsed[3]);
+        const dayMs = new Date(y, m, d).getTime();
+        if (Number.isFinite(dayMs) && dayMs >= todayMs) {
+          currentOrFutureDays += 1;
+        }
+      }
+      if (Number.isFinite(item?.tempMin)) {
+        minDays += 1;
+      }
+      if (Number.isFinite(item?.tempMax)) {
+        maxDays += 1;
+      }
+      if (String(item?.condition || "").trim()) {
+        conditionDays += 1;
+      }
+    });
+    return (currentOrFutureDays * 10000) + (forecastMap.size * 1000) + (minDays * 100) + (maxDays * 20) + conditionDays;
+  }
+
+  _isRicherForecastMap(candidateMap, currentMap) {
+    const candidateScore = this._scoreForecastMap(candidateMap);
+    const currentScore = this._scoreForecastMap(currentMap);
+    if (!candidateScore) {
+      return false;
+    }
+    return candidateScore >= currentScore;
+  }
+
+  _selectBestForecastRows(candidateSets) {
+    let bestRows = [];
+    let bestMap = new Map();
+    const normalizedSets = (Array.isArray(candidateSets) ? candidateSets : [])
+      .map(rows => this._normalizeForecastRows(rows))
+      .filter(rows => rows.length);
+    const combinedRows = normalizedSets.flat();
+    const setsToCompare = combinedRows.length ? [...normalizedSets, combinedRows] : normalizedSets;
+    setsToCompare.forEach(rows => {
+      const candidateMap = this._buildForecastDayMap(rows);
+      if (this._isRicherForecastMap(candidateMap, bestMap)) {
+        bestRows = rows;
+        bestMap = candidateMap;
+      }
+    });
+    return bestRows;
   }
 
   _normalizeForecastRows(raw) {
@@ -1859,7 +1960,7 @@ class NodaliaCalendarCard extends HTMLElement {
     return looksLikeForecastPoint ? [raw] : [];
   }
 
-  _applyWeatherForecastRows(forecastRows, { allowFallback = true } = {}) {
+  _applyWeatherForecastRows(forecastRows, { allowFallback = true, preserveRicherExisting = false } = {}) {
     const forecastMap = this._buildForecastDayMap(forecastRows);
     if (!forecastMap.size && allowFallback) {
       const entityId = this._getWeatherEntityId();
@@ -1887,6 +1988,14 @@ class NodaliaCalendarCard extends HTMLElement {
         }
       }
     }
+    if (
+      preserveRicherExisting &&
+      this._weatherForecastByDay instanceof Map &&
+      this._weatherForecastByDay.size &&
+      !this._isRicherForecastMap(forecastMap, this._weatherForecastByDay)
+    ) {
+      return this._weatherForecastByDay;
+    }
     this._weatherForecastByDay = forecastMap;
     return forecastMap;
   }
@@ -1909,7 +2018,8 @@ class NodaliaCalendarCard extends HTMLElement {
 
   _ensureWeatherForecastSubscription() {
     const entityId = this._getWeatherEntityId();
-    if (!this.isConnected || !this._hass || !entityId || !this._hass.states?.[entityId]) {
+    const stateObj = entityId ? this._hass?.states?.[entityId] : null;
+    if (!this.isConnected || !this._hass || !entityId || !stateObj) {
       this._unsubscribeWeatherForecast();
       return;
     }
@@ -1918,7 +2028,8 @@ class NodaliaCalendarCard extends HTMLElement {
       this._unsubscribeWeatherForecast();
       return;
     }
-    const subscriptionKey = `${entityId}:daily`;
+    const forecastType = supportedWeatherForecastTypes(stateObj)[0] || "daily";
+    const subscriptionKey = `${entityId}:${forecastType}`;
     if (subscriptionKey === this._weatherForecastSubscriptionKey && this._weatherForecastSubscription) {
       return;
     }
@@ -1927,10 +2038,13 @@ class NodaliaCalendarCard extends HTMLElement {
     this._weatherForecastSubscription = subscribeMessage(event => {
       this._weatherForecastEvents = {
         ...this._weatherForecastEvents,
-        daily: event,
+        [forecastType]: event,
       };
-      const rows = this._normalizeForecastRows(event?.forecast ?? event);
-      const forecastMap = this._applyWeatherForecastRows(rows, { allowFallback: rows.length === 0 });
+      const rows = this._tagForecastRows(event?.forecast ?? event, forecastType);
+      const forecastMap = this._applyWeatherForecastRows(rows, {
+        allowFallback: rows.length === 0,
+        preserveRicherExisting: true,
+      });
       if (forecastMap.size) {
         this._lastRenderSignature = "";
         this._renderIfChanged(true);
@@ -1938,62 +2052,63 @@ class NodaliaCalendarCard extends HTMLElement {
     }, {
       type: "weather/subscribe_forecast",
       entity_id: entityId,
-      forecast_type: "daily",
+      forecast_type: forecastType,
     }).catch(() => {
       this._weatherForecastSubscription = null;
       this._weatherForecastSubscriptionKey = "";
     });
   }
 
-  _fetchDailyForecastViaSubscription(entityId) {
-    const subscribeMessage = this._hass?.connection?.subscribeMessage;
-    if (typeof subscribeMessage !== "function") {
-      return Promise.resolve([]);
+  _extractForecastRowsFromResponse(response, entityId) {
+    const candidates = [
+      response?.[entityId],
+      response?.response?.[entityId],
+      response?.service_response?.[entityId],
+      response?.result?.[entityId],
+      response,
+      response?.response,
+      response?.service_response,
+      response?.result,
+    ];
+    for (const candidate of candidates) {
+      const normalized = this._normalizeForecastRows(candidate);
+      if (normalized.length) {
+        return normalized;
+      }
     }
-    return new Promise(resolve => {
-      let settled = false;
-      let unsubscribePromise = null;
-      let timeoutId = null;
-      const finish = rows => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        if (timeoutId && typeof window !== "undefined") {
-          window.clearTimeout(timeoutId);
-        }
-        Promise.resolve(unsubscribePromise)
-          .then(unsubscribe => {
-            if (typeof unsubscribe === "function") {
-              unsubscribe();
-            }
-          })
-          .catch(() => {});
-        resolve(Array.isArray(rows) ? rows : []);
-      };
-      if (typeof window !== "undefined") {
-        timeoutId = window.setTimeout(() => finish([]), 2600);
-      }
-      try {
-        unsubscribePromise = subscribeMessage(
-          event => finish(this._normalizeForecastRows(event?.forecast ?? event)),
-          {
-            type: "weather/subscribe_forecast",
-            entity_id: entityId,
-            forecast_type: "daily",
-          },
-        );
-        Promise.resolve(unsubscribePromise)
-          .then(unsubscribe => {
-            if (settled && typeof unsubscribe === "function") {
-              unsubscribe();
-            }
-          })
-          .catch(() => finish([]));
-      } catch (_error) {
-        finish([]);
-      }
+    return [];
+  }
+
+  async _fetchForecastViaWebSocket(entityId, forecastType) {
+    if (typeof this._hass?.callWS !== "function") {
+      return [];
+    }
+    const response = await this._hass.callWS({
+      type: "weather/get_forecasts",
+      entity_ids: [entityId],
+      forecast_type: forecastType,
     });
+    return this._tagForecastRows(this._extractForecastRowsFromResponse(response, entityId), forecastType);
+  }
+
+  async _fetchForecastViaService(entityId, forecastType) {
+    if (typeof this._hass?.callService !== "function") {
+      return [];
+    }
+    const response = await this._hass.callService(
+      "weather",
+      "get_forecasts",
+      { type: forecastType },
+      { entity_id: entityId },
+      false,
+      true,
+    );
+    return this._tagForecastRows(this._extractForecastRowsFromResponse(response, entityId), forecastType);
+  }
+
+  _getCachedForecastRows(forecastTypes) {
+    return (Array.isArray(forecastTypes) ? forecastTypes : [])
+      .flatMap(forecastType => this._tagForecastRows(this._weatherForecastEvents?.[forecastType]?.forecast, forecastType));
   }
 
   async _refreshWeatherForecastByDay() {
@@ -2003,64 +2118,42 @@ class NodaliaCalendarCard extends HTMLElement {
       return;
     }
     const stateObj = this._hass.states[entityId];
-    let forecastRows = this._normalizeForecastRows(this._weatherForecastEvents?.daily?.forecast);
-    try {
-      if (!forecastRows.length) {
-        forecastRows = await this._fetchDailyForecastViaSubscription(entityId);
+    const forecastTypes = supportedWeatherForecastTypes(stateObj);
+    const forecastCandidates = [];
+    const addForecastCandidate = rows => {
+      const normalized = this._normalizeForecastRows(rows);
+      if (normalized.length) {
+        forecastCandidates.push(normalized);
       }
-    } catch (_error) {
-      // fallback below
-    }
-    try {
-      if (!forecastRows.length && typeof this._hass.callWS === "function") {
-        const response = await this._hass.callWS({
-          type: "weather/get_forecasts",
-          entity_ids: [entityId],
-          forecast_type: "daily",
-        });
-        const wsEntity = response?.[entityId] || response;
-        const wsCandidates = [
-          wsEntity?.forecast,
-          wsEntity?.daily?.forecast,
-          wsEntity?.daily,
-          response?.forecast,
-          response?.daily?.forecast,
-          response?.daily,
-        ];
-        for (const candidate of wsCandidates) {
-          const normalized = this._normalizeForecastRows(candidate);
-          if (normalized.length) {
-            forecastRows = normalized;
-            break;
-          }
-        }
+    };
+    addForecastCandidate(this._getCachedForecastRows(forecastTypes));
+    for (const forecastType of forecastTypes) {
+      try {
+        addForecastCandidate(await this._fetchForecastViaWebSocket(entityId, forecastType));
+      } catch (_error) {
+        // fallback below
       }
-    } catch (_error) {
-      // fallback below
+      try {
+        addForecastCandidate(await this._fetchForecastViaService(entityId, forecastType));
+      } catch (_error) {
+        // fallback below
+      }
     }
-    if (!forecastRows.length) {
-      forecastRows = this._normalizeForecastRows(stateObj.attributes?.forecast);
-    }
-    if (!forecastRows.length) {
-      forecastRows = this._normalizeForecastRows(stateObj.attributes?.forecast_daily);
-    }
-    if (!forecastRows.length) {
-      forecastRows = this._normalizeForecastRows(stateObj.attributes?.daily_forecast);
-    }
-    if (!forecastRows.length && typeof this._hass?.callApi === "function") {
+    addForecastCandidate(this._tagForecastRows(stateObj.attributes?.forecast, "daily"));
+    addForecastCandidate(this._tagForecastRows(stateObj.attributes?.forecast_daily, "daily"));
+    addForecastCandidate(this._tagForecastRows(stateObj.attributes?.daily_forecast, "daily"));
+    if (typeof this._hass?.callApi === "function") {
       try {
         const restDaily = await this._hass.callApi(
           "GET",
           `weather/forecast/${encodeURIComponent(entityId)}?type=daily`,
         );
-        const restRows = this._normalizeForecastRows(restDaily);
-        if (restRows.length) {
-          forecastRows = restRows;
-        }
+        addForecastCandidate(this._tagForecastRows(restDaily, "daily"));
       } catch (_error) {
         // Keep silent, not all HA versions expose this endpoint.
       }
     }
+    const forecastRows = this._selectBestForecastRows(forecastCandidates);
     this._applyWeatherForecastRows(forecastRows);
   }
 
@@ -3780,10 +3873,16 @@ class NodaliaCalendarCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    if (window.NodaliaUtils?.editorStatesSignature) {
-      return window.NodaliaUtils.editorStatesSignature(hass, this._config?.language);
+    if (window.NodaliaUtils?.editorFilteredStatesSignature) {
+      return window.NodaliaUtils.editorFilteredStatesSignature(
+        hass,
+        this._config?.language,
+        id => id.startsWith("calendar.") || id.startsWith("input_text.") || id.startsWith("weather."),
+      );
     }
-    return String(Object.keys(hass?.states || {}).length);
+    return Object.keys(hass?.states || {})
+      .filter(id => id.startsWith("calendar.") || id.startsWith("input_text.") || id.startsWith("weather."))
+      .join("|");
   }
 
   _editorLabel(s) {

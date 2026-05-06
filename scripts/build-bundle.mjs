@@ -67,6 +67,7 @@ try {
     target: ["es2020"],
     charset: "utf8",
     legalComments: "none",
+    minify: true,
     plugins: [
       {
         name: "strip-standalone-utils-embed",
