@@ -2572,7 +2572,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     this._lastSubmittedSharedCleaningSessionValue = serialized;
-    this._callNamedService("input_text.set_value", {
+    this._callInternalService("input_text.set_value", {
       entity_id: entityId,
       value: serialized,
     });
@@ -2593,7 +2593,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     this._lastSubmittedSharedCleaningSessionValue = "";
-    this._callNamedService("input_text.set_value", {
+    this._callInternalService("input_text.set_value", {
       entity_id: entityId,
       value: "",
     });
@@ -3086,7 +3086,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._markCleaningSessionPendingStart();
     this._persistCurrentCleaningSessionState("rooms");
 
-    Promise.resolve(this._callNamedService("vacuum.send_command", {
+    Promise.resolve(this._callInternalService("vacuum.send_command", {
       entity_id: this._config.entity,
       command: "app_segment_clean",
       params: [{
@@ -3594,7 +3594,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const domain = this._getEntityDomain(entityId);
     const serviceName = domain === "input_select" ? "input_select.select_option" : "select.select_option";
-    this._callNamedService(serviceName, {
+    this._callInternalService(serviceName, {
       entity_id: entityId,
       option: value,
     });
@@ -5275,6 +5275,19 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return this._hass.callService(domain, serviceName, data, target || undefined);
   }
 
+  _callInternalService(service, data = {}, target = null) {
+    if (!this._hass || !service) {
+      return;
+    }
+
+    const [domain, serviceName] = String(service).split(".");
+    if (!domain || !serviceName) {
+      return;
+    }
+
+    return this._hass.callService(domain, serviceName, data, target || undefined);
+  }
+
   _toggleRoomSelection(roomId) {
     roomId = String(roomId || "").trim();
     if (!roomId) {
@@ -5468,7 +5481,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           this._persistCurrentCleaningSessionState("rooms", {
             markSelectionChange: true,
           });
-          await this._callNamedService("vacuum.send_command", {
+          await this._callInternalService("vacuum.send_command", {
             entity_id: this._config.entity,
             command: "app_segment_clean",
             params: [{
@@ -5516,7 +5529,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           await new Promise(resolve => window.setTimeout(resolve, 450));
         }
 
-        await this._callNamedService("vacuum.send_command", {
+        await this._callInternalService("vacuum.send_command", {
           entity_id: this._config.entity,
           command: "app_zoned_clean",
           params: selectedZones,
@@ -5542,7 +5555,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._activeCleaningSessionMode = "";
         this._clearCleaningSessionPendingStart();
         this._clearPersistedCleaningSession();
-        await this._callNamedService("roborock.set_vacuum_goto_position", {
+        await this._callInternalService("roborock.set_vacuum_goto_position", {
           entity_id: this._config.entity,
           x: Math.round(this._gotoPoint.x),
           y: Math.round(this._gotoPoint.y),
