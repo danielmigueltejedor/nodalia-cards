@@ -9,7 +9,7 @@ import {
 
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.37";
+const CARD_VERSION = "1.0.0-alpha.38";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 const QUICK_REMINDER_STORAGE_KEY = "nodalia_calendar_quick_reminders_v1";
 
@@ -407,6 +407,16 @@ function forecastDayKey(value) {
     return "";
   }
   return `${parsed.getFullYear()}-${parsed.getMonth()}-${parsed.getDate()}`;
+}
+
+function withForecastDateFromKey(key, value) {
+  if (!value || typeof value !== "object" || !forecastDayKey(key)) {
+    return value;
+  }
+  if ("datetime" in value || "date" in value || "day" in value || "time" in value || "timestamp" in value) {
+    return value;
+  }
+  return { date: key, ...value };
 }
 
 function pickFirstFiniteNumber(...candidates) {
@@ -1051,7 +1061,24 @@ class NodaliaCalendarCard extends HTMLElement {
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
-  _renderExpandedMonthDayDetail(events, focusDate, config, locale) {
+  _renderWeatherBadge(dayDate, weatherByDay, className = "calendar-day__weather") {
+    const w = this._getWeatherForDay(dayDate, weatherByDay);
+    if (!w) {
+      return "";
+    }
+    const icon = weatherConditionIcon(w?.condition);
+    const minRaw = Number.isFinite(w?.tempMin) ? Math.round(w.tempMin) : null;
+    const maxRaw = Number.isFinite(w?.tempMax) ? Math.round(w.tempMax) : null;
+    const hasCondition = Boolean(String(w?.condition || "").trim());
+    if (minRaw === null && maxRaw === null && !hasCondition) {
+      return "";
+    }
+    const minText = minRaw === null ? "—" : `${minRaw}°`;
+    const maxText = maxRaw === null ? "—" : `${maxRaw}°`;
+    return `<div class="${escapeHtml(className)}"><ha-icon icon="${escapeHtml(icon)}"></ha-icon><span>${escapeHtml(minText)} / ${escapeHtml(maxText)}</span></div>`;
+  }
+
+  _renderExpandedMonthDayDetail(events, focusDate, config, locale, weatherByDay) {
     const sorted = [...events].sort((left, right) => {
       const a = eventDate(left?.start)?.getTime() || 0;
       const b = eventDate(right?.start)?.getTime() || 0;
@@ -1075,7 +1102,10 @@ class NodaliaCalendarCard extends HTMLElement {
               <span>Mes</span>
             </button>
           </div>
-          <div class="calendar-expanded__day-detail-title">${escapeHtml(longTitle)}</div>
+          <div class="calendar-expanded__day-detail-heading">
+            <div class="calendar-expanded__day-detail-title">${escapeHtml(longTitle)}</div>
+            ${this._renderWeatherBadge(focusDate, weatherByDay, "calendar-expanded__weather")}
+          </div>
           <div class="calendar-expanded__day-empty">Sin eventos este día.</div>
         </div>
       `;
@@ -1091,7 +1121,10 @@ class NodaliaCalendarCard extends HTMLElement {
             <span>Mes</span>
           </button>
         </div>
-        <div class="calendar-expanded__day-detail-title">${escapeHtml(longTitle)}</div>
+        <div class="calendar-expanded__day-detail-heading">
+          <div class="calendar-expanded__day-detail-title">${escapeHtml(longTitle)}</div>
+          ${this._renderWeatherBadge(focusDate, weatherByDay, "calendar-expanded__weather")}
+        </div>
         <div class="calendar-expanded__day-detail-scroll">${eventsHtml}</div>
       </div>
     `;
@@ -1167,7 +1200,7 @@ class NodaliaCalendarCard extends HTMLElement {
     `;
   }
 
-  _renderExpandedBody(groups, config, locale) {
+  _renderExpandedBody(groups, config, locale, weatherByDay) {
     const tr = config.time_range || DEFAULT_CONFIG.time_range;
     const mode = this._expandedLayoutKind(tr);
     if (mode === "month") {
@@ -1208,7 +1241,7 @@ class NodaliaCalendarCard extends HTMLElement {
         ) {
           const focusDate = new Date(py, pm, pd);
           const dayEvents = Array.isArray(group?.events) ? group.events : [];
-          return this._renderExpandedMonthDayDetail(dayEvents, focusDate, config, locale);
+          return this._renderExpandedMonthDayDetail(dayEvents, focusDate, config, locale, weatherByDay);
         }
         this._expandedMonthDayKey = "";
       }
@@ -1258,7 +1291,10 @@ class NodaliaCalendarCard extends HTMLElement {
                         role="button"
                         tabindex="0"
                       >
-                        <div class="calendar-expanded__month-daynum">${cell.day}</div>
+                        <div class="calendar-expanded__month-cell-head">
+                          <div class="calendar-expanded__month-daynum">${cell.day}</div>
+                          ${this._renderWeatherBadge(cell.date, weatherByDay, "calendar-expanded__month-weather")}
+                        </div>
                         <div class="calendar-expanded__month-events calendar-expanded__month-events--month-grid">
                           ${monthPeekInner}
                         </div>
@@ -1279,7 +1315,10 @@ class NodaliaCalendarCard extends HTMLElement {
           .map(
             group => `
           <div class="calendar-expanded__col">
-            <div class="calendar-expanded__col-label">${escapeHtml(group.label)}</div>
+            <div class="calendar-expanded__col-head">
+              <div class="calendar-expanded__col-label">${escapeHtml(group.label)}</div>
+              ${this._renderWeatherBadge(group.dayDate, weatherByDay, "calendar-expanded__weather")}
+            </div>
             <div class="calendar-expanded__col-events">
               ${group.events.map(ev => this._renderSingleEventHtml(ev, config, locale)).join("")}
             </div>
@@ -1682,7 +1721,7 @@ class NodaliaCalendarCard extends HTMLElement {
       if (!item || typeof item !== "object") {
         return;
       }
-      const dayKey = forecastDayKey(item.datetime ?? item.date ?? "");
+      const dayKey = forecastDayKey(item.datetime ?? item.date ?? item.day ?? item.time ?? item.timestamp ?? item.dt ?? "");
       if (!dayKey) {
         return;
       }
@@ -1697,25 +1736,43 @@ class NodaliaCalendarCard extends HTMLElement {
         item.temperature_high,
         item.tempHigh,
         item.temp_high,
+        item.high,
+        item.high_temp,
+        item.maxtemp,
+        item.max_temperature,
         item.max,
         item.max_temp,
         item.day_temp,
         item.native_temperature,
         item.native_temp,
+        item.native_temperature_max,
+        item.native_temp_max,
+        item.temperature_2m_max,
+        item.apparent_temperature_max,
       );
       const minCandidate = pickFirstFiniteNumber(
         item.templow,
         item.temperature_low,
         item.temp_low,
+        item.temperatureLow,
         item.temperatureMin,
         item.temperature_min,
         item.tempMin,
         item.temp_min,
+        item.low,
+        item.low_temp,
+        item.mintemp,
+        item.min_temperature,
         item.min,
         item.min_temp,
         item.night_temp,
         item.native_templow,
         item.native_temp_low,
+        item.native_temperature_low,
+        item.native_temperature_min,
+        item.native_temp_min,
+        item.temperature_2m_min,
+        item.apparent_temperature_min,
       );
       const condition = String(
         item.condition ??
@@ -1736,27 +1793,54 @@ class NodaliaCalendarCard extends HTMLElement {
 
   _normalizeForecastRows(raw) {
     if (Array.isArray(raw)) {
-      return raw.filter(item => item && typeof item === "object");
+      return raw.flatMap(item => this._normalizeForecastRows(item));
     }
     if (!raw || typeof raw !== "object") {
       return [];
     }
+    const dateSeries = raw.time ?? raw.datetime ?? raw.date ?? raw.dates;
+    if (Array.isArray(dateSeries)) {
+      return dateSeries
+        .map((dateValue, index) => {
+          const row = { date: dateValue };
+          Object.entries(raw).forEach(([key, value]) => {
+            if (Array.isArray(value) && index < value.length) {
+              row[key] = value[index];
+            }
+          });
+          return row;
+        })
+        .filter(item => item && typeof item === "object");
+    }
     if (Array.isArray(raw.forecast)) {
-      return raw.forecast.filter(item => item && typeof item === "object");
+      return raw.forecast.flatMap(item => this._normalizeForecastRows(item));
     }
     if (Array.isArray(raw.daily)) {
-      return raw.daily.filter(item => item && typeof item === "object");
+      return raw.daily.flatMap(item => this._normalizeForecastRows(item));
     }
     if (Array.isArray(raw.hourly)) {
-      return raw.hourly.filter(item => item && typeof item === "object");
+      return raw.hourly.flatMap(item => this._normalizeForecastRows(item));
     }
-    const objectValues = Object.values(raw).filter(value => value && typeof value === "object");
-    const nestedArrays = objectValues.flatMap(value => this._normalizeForecastRows(value));
+    const objectEntries = Object.entries(raw).filter(([, value]) => value && typeof value === "object");
+    const nestedArrays = objectEntries.flatMap(([key, value]) =>
+      this._normalizeForecastRows(withForecastDateFromKey(key, value)).map(item => withForecastDateFromKey(key, item)),
+    );
     if (nestedArrays.length) {
       return nestedArrays;
     }
     const looksLikeForecastPoint =
-      "datetime" in raw || "date" in raw || "temperature" in raw || "templow" in raw || "condition" in raw;
+      "datetime" in raw ||
+      "date" in raw ||
+      "day" in raw ||
+      "time" in raw ||
+      "timestamp" in raw ||
+      "temperature" in raw ||
+      "temperature_2m_max" in raw ||
+      "templow" in raw ||
+      "temperatureLow" in raw ||
+      "temperature_2m_min" in raw ||
+      "condition" in raw ||
+      "weather" in raw;
     return looksLikeForecastPoint ? [raw] : [];
   }
 
@@ -2968,13 +3052,42 @@ class NodaliaCalendarCard extends HTMLElement {
         .calendar-expanded__column .calendar-expanded__col {
           width: 100%;
         }
+        .calendar-expanded__col-head {
+          align-items: center;
+          display: flex;
+          gap: 8px;
+          justify-content: space-between;
+          margin-bottom: 8px;
+          min-width: 0;
+        }
         .calendar-expanded__col-label {
           color: var(--secondary-text-color);
           font-size: 11px;
           font-weight: 700;
           letter-spacing: 0.08em;
-          margin-bottom: 8px;
+          min-width: 0;
           text-transform: uppercase;
+        }
+        .calendar-expanded__weather,
+        .calendar-expanded__month-weather {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--secondary-text-color);
+          display: inline-flex;
+          flex: 0 0 auto;
+          font-size: 10px;
+          font-weight: 700;
+          gap: 4px;
+          min-height: 22px;
+          padding: 0 8px;
+          white-space: nowrap;
+        }
+        .calendar-expanded__weather ha-icon,
+        .calendar-expanded__month-weather ha-icon {
+          --mdc-icon-size: 14px;
+          color: var(--primary-color);
         }
         .calendar-expanded__col-events {
           display: grid;
@@ -3048,12 +3161,30 @@ class NodaliaCalendarCard extends HTMLElement {
           min-height: 0;
           padding: 0;
         }
+        .calendar-expanded__month-cell-head {
+          align-items: center;
+          display: flex;
+          flex: 0 0 auto;
+          gap: 4px;
+          justify-content: space-between;
+          min-width: 0;
+        }
         .calendar-expanded__month-daynum {
           color: var(--secondary-text-color);
           flex: 0 0 auto;
           font-size: 11px;
           font-weight: 800;
           line-height: 1.2;
+        }
+        .calendar-expanded__month-weather {
+          font-size: 9px;
+          gap: 2px;
+          min-height: 18px;
+          overflow: hidden;
+          padding: 0 5px;
+        }
+        .calendar-expanded__month-weather ha-icon {
+          --mdc-icon-size: 12px;
         }
         .calendar-expanded__month-events {
           display: flex;
@@ -3139,11 +3270,19 @@ class NodaliaCalendarCard extends HTMLElement {
           --mdc-icon-size: 20px;
           margin-left: -2px;
         }
+        .calendar-expanded__day-detail-heading {
+          align-items: center;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+          min-width: 0;
+        }
         .calendar-expanded__day-detail-title {
           font-size: ${styles.title_size};
           font-weight: 800;
           letter-spacing: -0.02em;
           line-height: 1.2;
+          min-width: 0;
           text-transform: capitalize;
         }
         .calendar-expanded__day-detail-scroll {
@@ -3196,20 +3335,7 @@ class NodaliaCalendarCard extends HTMLElement {
                           <div class="calendar-day__header">
                             <div class="calendar-day__label">${escapeHtml(group.label)}</div>
                             ${(() => {
-                              const w = this._getWeatherForDay(group.dayDate, weatherByDay);
-                              if (!w) {
-                                return "";
-                              }
-                              const icon = weatherConditionIcon(w?.condition);
-                              const minRaw = Number.isFinite(w?.tempMin) ? Math.round(w.tempMin) : null;
-                              const maxRaw = Number.isFinite(w?.tempMax) ? Math.round(w.tempMax) : null;
-                              const hasCondition = Boolean(String(w?.condition || "").trim());
-                              if (minRaw === null && maxRaw === null && !hasCondition) {
-                                return "";
-                              }
-                              const minText = minRaw === null ? "—" : `${minRaw}°`;
-                              const maxText = maxRaw === null ? "—" : `${maxRaw}°`;
-                              return `<div class="calendar-day__weather"><ha-icon icon="${escapeHtml(icon)}"></ha-icon><span>${escapeHtml(minText)} / ${escapeHtml(maxText)}</span></div>`;
+                              return this._renderWeatherBadge(group.dayDate, weatherByDay);
                             })()}
                           </div>
                           ${group.events.map(event => this._renderSingleEventHtml(event, config, locale)).join("")}
@@ -3244,7 +3370,7 @@ class NodaliaCalendarCard extends HTMLElement {
                   ? `<div class="calendar-error">${escapeHtml(this._error)}</div>`
                   : !hasEvents
                     ? `<div class="calendar-empty">No hay eventos en este rango.</div>`
-                    : this._renderExpandedBody(groups, config, locale)
+                    : this._renderExpandedBody(groups, config, locale, weatherByDay)
             }
           </div>
           ${this._quickReminderComposerMarkup()}

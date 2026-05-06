@@ -75,3 +75,21 @@ test("calendar runtime css sanitizer and webhook admin guard are present", () =>
   assert.match(source, /security\.allow_webhooks_for_non_admin/);
   assert.match(source, /webhook bloqueado para usuario no administrador/);
 });
+
+test("calendar weather forecast normalization keeps date-keyed and tabular daily rows", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /function withForecastDateFromKey\(key, value\)/);
+  assert.match(source, /raw\.time \?\? raw\.datetime \?\? raw\.date \?\? raw\.dates/);
+  assert.match(source, /this\._normalizeForecastRows\(withForecastDateFromKey\(key, value\)\)/);
+  assert.match(source, /item\.temperatureLow/);
+  assert.match(source, /item\.temperature_2m_min/);
+});
+
+test("calendar expanded popup reuses daily weather badges", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /_renderWeatherBadge\(dayDate, weatherByDay/);
+  assert.match(source, /this\._renderExpandedBody\(groups, config, locale, weatherByDay\)/);
+  assert.match(source, /calendar-expanded__month-weather/);
+  assert.match(source, /calendar-expanded__day-detail-heading/);
+  assert.match(source, /calendar-expanded__col-head/);
+});
