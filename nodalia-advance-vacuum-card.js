@@ -2855,7 +2855,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._lastResolvedModePanelPreset = presetPersist;
     }
     const utilPersist = String(persistedSession.utilityPanel ?? "").trim().slice(0, 64);
-    this._activeUtilityPanel = utilPersist || null;
+    if (utilPersist) {
+      this._activeUtilityPanel = utilPersist;
+    }
     return true;
   }
 

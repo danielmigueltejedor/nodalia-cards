@@ -39451,6 +39451,8 @@
       this._touchPressState = null;
       this._touchHoverActive = false;
       this._suppressClickUntil = 0;
+      this._viewVisibilityObserver = null;
+      this._wasInViewport = false;
       this._onShadowClick = this._onShadowClick.bind(this);
       this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
       this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
@@ -39481,6 +39483,7 @@
     disconnectedCallback() {
       this._historyAbortController?.abort();
       this._historyAbortController = null;
+      this._detachViewVisibilityObserver();
       this.removeEventListener("pointerout", this._onHostPointerOut);
       this.removeEventListener("mouseout", this._onHostPointerOut);
       this._detachDocumentHoverWatch();
@@ -39499,6 +39502,7 @@
       this._clearTouchPressTimer();
       this._touchPressState = null;
       this._touchHoverActive = false;
+      this._wasInViewport = false;
     }
     _onHoverMediaChange(event) {
       this._hoverSupported = Boolean(event?.matches);
@@ -39510,9 +39514,42 @@
       this._animateContentOnNextRender = true;
       this._animateChartOnNextRender = true;
       this._lastRenderSignature = "";
+      this._attachViewVisibilityObserver();
       if (this._hass && this._config) {
         this._render();
       }
+    }
+    _attachViewVisibilityObserver() {
+      if (this._viewVisibilityObserver || typeof IntersectionObserver !== "function") {
+        return;
+      }
+      this._viewVisibilityObserver = new IntersectionObserver(
+        (entries) => {
+          const visible = entries.some((entry) => entry.isIntersecting && entry.intersectionRatio > 0);
+          if (visible === this._wasInViewport) {
+            return;
+          }
+          this._wasInViewport = visible;
+          if (!visible) {
+            return;
+          }
+          this._animateContentOnNextRender = true;
+          this._animateChartOnNextRender = true;
+          this._lastRenderSignature = "";
+          if (this._hass && this._config) {
+            this._render();
+          }
+        },
+        { threshold: [0, 0.01] }
+      );
+      this._viewVisibilityObserver.observe(this);
+    }
+    _detachViewVisibilityObserver() {
+      if (!this._viewVisibilityObserver) {
+        return;
+      }
+      this._viewVisibilityObserver.disconnect();
+      this._viewVisibilityObserver = null;
     }
     setConfig(config) {
       this._config = normalizeConfig7(config || {});
@@ -53301,7 +53338,9 @@
         this._lastResolvedModePanelPreset = presetPersist;
       }
       const utilPersist = String(persistedSession.utilityPanel ?? "").trim().slice(0, 64);
-      this._activeUtilityPanel = utilPersist || null;
+      if (utilPersist) {
+        this._activeUtilityPanel = utilPersist;
+      }
       return true;
     }
     _ensurePersistedCleaningSessionStateLoaded() {
@@ -71982,6 +72021,8 @@
       this._lastSyncedSharedCompletedRaw = void 0;
       this._completedMergedOnce = false;
       this._localV2PendingDecode = false;
+      this._viewVisibilityObserver = null;
+      this._wasInViewport = false;
     }
     _onDocVisibility() {
       if (typeof document === "undefined" || document.visibilityState !== "visible") {
@@ -72023,6 +72064,7 @@
       if (typeof document !== "undefined") {
         document.addEventListener("visibilitychange", this._onDocVisibility);
       }
+      this._attachViewVisibilityObserver();
       this._calendarEntrancePlayed = false;
       if (this._hadHass) {
         this._renderIfChanged(true);
@@ -72036,6 +72078,7 @@
       if (typeof document !== "undefined") {
         document.removeEventListener("visibilitychange", this._onDocVisibility);
       }
+      this._detachViewVisibilityObserver();
       this.shadowRoot?.removeEventListener("click", this._onShadowClick);
       this.shadowRoot?.removeEventListener("keydown", this._onShadowKeydown);
       if (this._refreshTimer) {
@@ -72046,6 +72089,35 @@
       this._completeExitTimers.clear();
       this._completeExitKeys.clear();
       this._calendarEntrancePlayed = false;
+      this._wasInViewport = false;
+    }
+    _attachViewVisibilityObserver() {
+      if (this._viewVisibilityObserver || typeof IntersectionObserver !== "function") {
+        return;
+      }
+      this._viewVisibilityObserver = new IntersectionObserver(
+        (entries) => {
+          const visible = entries.some((entry) => entry.isIntersecting && entry.intersectionRatio > 0);
+          if (visible === this._wasInViewport) {
+            return;
+          }
+          this._wasInViewport = visible;
+          if (!visible) {
+            return;
+          }
+          this._calendarEntrancePlayed = false;
+          this._renderIfChanged(true);
+        },
+        { threshold: [0, 0.01] }
+      );
+      this._viewVisibilityObserver.observe(this);
+    }
+    _detachViewVisibilityObserver() {
+      if (!this._viewVisibilityObserver) {
+        return;
+      }
+      this._viewVisibilityObserver.disconnect();
+      this._viewVisibilityObserver = null;
     }
     setConfig(config) {
       const prevHelper = String(this._config?.shared_completed_events_entity || "").trim();
@@ -78217,4 +78289,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.27","contentSha256_12":"5628973bb86d"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.27 (5628973bb86d) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.28","contentSha256_12":"d83f5bfa3e46"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.28 (d83f5bfa3e46) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}

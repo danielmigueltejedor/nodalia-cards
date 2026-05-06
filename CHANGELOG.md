@@ -10,6 +10,15 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.28] - 2026-05-06
+
+Twenty-eighth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.28`** (tag **`v1.0.0-alpha.28`** optional).
+
+- **Calendar / Graph cards:** la animación de entrada se rearma al volver a mostrar la vista aunque HA mantenga la tarjeta montada (detección por visibilidad en viewport con `IntersectionObserver`).
+- **Advance Vacuum:** restauración de sesión corregida para `utilityPanel` (solo se aplica si hay valor persistido, coherente con `modePanelPreset`; evita reset espurio a `null`).
+
+---
+
 ## [1.0.0-alpha.27] - 2026-05-06
 
 Twenty-seventh **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.27`** (tag **`v1.0.0-alpha.27`** optional).

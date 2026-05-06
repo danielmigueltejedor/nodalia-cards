@@ -388,6 +388,8 @@ class NodaliaCalendarCard extends HTMLElement {
     this._completedMergedOnce = false;
     /** `localStorage` tiene `v2:` pero aún no hay `_events`; solo sin helper HA se re-expande al refrescar. */
     this._localV2PendingDecode = false;
+    this._viewVisibilityObserver = null;
+    this._wasInViewport = false;
   }
 
   _onDocVisibility() {
@@ -433,6 +435,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (typeof document !== "undefined") {
       document.addEventListener("visibilitychange", this._onDocVisibility);
     }
+    this._attachViewVisibilityObserver();
     // Replay entrance animation whenever the card is re-attached to the dashboard view.
     this._calendarEntrancePlayed = false;
     if (this._hadHass) {
@@ -448,6 +451,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (typeof document !== "undefined") {
       document.removeEventListener("visibilitychange", this._onDocVisibility);
     }
+    this._detachViewVisibilityObserver();
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
     this.shadowRoot?.removeEventListener("keydown", this._onShadowKeydown);
     if (this._refreshTimer) {
@@ -458,6 +462,38 @@ class NodaliaCalendarCard extends HTMLElement {
     this._completeExitTimers.clear();
     this._completeExitKeys.clear();
     this._calendarEntrancePlayed = false;
+    this._wasInViewport = false;
+  }
+
+  _attachViewVisibilityObserver() {
+    if (this._viewVisibilityObserver || typeof IntersectionObserver !== "function") {
+      return;
+    }
+    this._viewVisibilityObserver = new IntersectionObserver(
+      entries => {
+        const visible = entries.some(entry => entry.isIntersecting && entry.intersectionRatio > 0);
+        if (visible === this._wasInViewport) {
+          return;
+        }
+        this._wasInViewport = visible;
+        if (!visible) {
+          return;
+        }
+        // When HA keeps the card mounted but hidden between view switches, replay entrance on return.
+        this._calendarEntrancePlayed = false;
+        this._renderIfChanged(true);
+      },
+      { threshold: [0, 0.01] },
+    );
+    this._viewVisibilityObserver.observe(this);
+  }
+
+  _detachViewVisibilityObserver() {
+    if (!this._viewVisibilityObserver) {
+      return;
+    }
+    this._viewVisibilityObserver.disconnect();
+    this._viewVisibilityObserver = null;
   }
 
   setConfig(config) {

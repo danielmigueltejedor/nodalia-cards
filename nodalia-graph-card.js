@@ -1106,6 +1106,8 @@ class NodaliaGraphCard extends HTMLElement {
     this._touchPressState = null;
     this._touchHoverActive = false;
     this._suppressClickUntil = 0;
+    this._viewVisibilityObserver = null;
+    this._wasInViewport = false;
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
     this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
@@ -1141,6 +1143,7 @@ class NodaliaGraphCard extends HTMLElement {
   disconnectedCallback() {
     this._historyAbortController?.abort();
     this._historyAbortController = null;
+    this._detachViewVisibilityObserver();
     this.removeEventListener("pointerout", this._onHostPointerOut);
     this.removeEventListener("mouseout", this._onHostPointerOut);
     this._detachDocumentHoverWatch();
@@ -1159,6 +1162,7 @@ class NodaliaGraphCard extends HTMLElement {
     this._clearTouchPressTimer();
     this._touchPressState = null;
     this._touchHoverActive = false;
+    this._wasInViewport = false;
   }
 
   _onHoverMediaChange(event) {
@@ -1172,9 +1176,44 @@ class NodaliaGraphCard extends HTMLElement {
     this._animateContentOnNextRender = true;
     this._animateChartOnNextRender = true;
     this._lastRenderSignature = "";
+    this._attachViewVisibilityObserver();
     if (this._hass && this._config) {
       this._render();
     }
+  }
+
+  _attachViewVisibilityObserver() {
+    if (this._viewVisibilityObserver || typeof IntersectionObserver !== "function") {
+      return;
+    }
+    this._viewVisibilityObserver = new IntersectionObserver(
+      entries => {
+        const visible = entries.some(entry => entry.isIntersecting && entry.intersectionRatio > 0);
+        if (visible === this._wasInViewport) {
+          return;
+        }
+        this._wasInViewport = visible;
+        if (!visible) {
+          return;
+        }
+        this._animateContentOnNextRender = true;
+        this._animateChartOnNextRender = true;
+        this._lastRenderSignature = "";
+        if (this._hass && this._config) {
+          this._render();
+        }
+      },
+      { threshold: [0, 0.01] },
+    );
+    this._viewVisibilityObserver.observe(this);
+  }
+
+  _detachViewVisibilityObserver() {
+    if (!this._viewVisibilityObserver) {
+      return;
+    }
+    this._viewVisibilityObserver.disconnect();
+    this._viewVisibilityObserver = null;
   }
 
   setConfig(config) {
