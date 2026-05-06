@@ -1,9 +1,10 @@
 /**
- * Codificación compacta v2–v5 de eventos completados para el input_text (límite 255).
+ * Codificación compacta v2–v6 de eventos completados para el input_text.
  * - v2: índices en ventana + trozos por día (depende del orden de carga).
  * - v3: huella FNV-1a 64-bit por clave lógica (orden-independiente; tokens base62 de 11 chars).
  * - v4: mismas claves; binario + Base64URL. **`0x02`:** huellas **40-bit**, `uint8` count (≤255 marcados). **`0x01`:** huellas **48-bit**, `uint16` count (solo si >255 huellas únicas).
  * - v5: huellas **24-bit** (FNV-1a truncada) + `uint8` count (≤255); **máx. ~62** marcados en 255 chars (riesgo de colisión mayor que v4).
+ * - v6: huellas **24-bit** + `uint16` count (hasta 65535); pensado para persistencia multi-helper (255xN).
  * @see nodalia-calendar-card.js
  */
 
@@ -20,14 +21,37 @@ const V4_SCHEMA_V1 = 1;
 const V4_SCHEMA_V2 = 2;
 /** `uint8(count)` + `count × uint24_be` (v5). */
 const V5_SCHEMA_V1 = 1;
+/** `uint16_be(count)` + `count × uint24_be` (v6). */
+const V6_SCHEMA_V1 = 1;
 
 function fnv1a64Utf8(str) {
+  const utf8Fallback = input => {
+    const out = [];
+    for (const ch of String(input)) {
+      const cp = ch.codePointAt(0);
+      if (cp <= 0x7f) {
+        out.push(cp);
+      } else if (cp <= 0x7ff) {
+        out.push(0xc0 | (cp >> 6), 0x80 | (cp & 0x3f));
+      } else if (cp <= 0xffff) {
+        out.push(0xe0 | (cp >> 12), 0x80 | ((cp >> 6) & 0x3f), 0x80 | (cp & 0x3f));
+      } else {
+        out.push(
+          0xf0 | (cp >> 18),
+          0x80 | ((cp >> 12) & 0x3f),
+          0x80 | ((cp >> 6) & 0x3f),
+          0x80 | (cp & 0x3f),
+        );
+      }
+    }
+    return new Uint8Array(out);
+  };
   const bytes =
     typeof TextEncoder !== "undefined"
       ? new TextEncoder().encode(String(str))
       : typeof Buffer !== "undefined"
         ? Buffer.from(String(str), "utf8")
-        : new Uint8Array([...String(str)].map(c => c.charCodeAt(0) & 0xff));
+        : utf8Fallback(str);
   let h = 14695981039346656037n;
   const p = 1099511628211n;
   const mask = (1n << 64n) - 1n;
@@ -369,6 +393,50 @@ function decodeCompactCalendarCompletionV5(raw, orderedEvents) {
   return keys;
 }
 
+function decodeCompactCalendarCompletionV6(raw, orderedEvents) {
+  const head = String(raw ?? "").trim();
+  if (head === "v6:z") {
+    return [];
+  }
+  if (!head.startsWith("v6:")) {
+    return [];
+  }
+  const body = head.slice(3);
+  if (body === "z") {
+    return [];
+  }
+  let bytes;
+  try {
+    bytes = base64UrlToBytes(body);
+  } catch (_err) {
+    return [];
+  }
+  if (bytes.length < 3) {
+    return [];
+  }
+  const schema = bytes[0];
+  if (schema !== V6_SCHEMA_V1) {
+    return [];
+  }
+  const n = (bytes[1] << 8) | bytes[2];
+  if (n === 0 || bytes.length !== 3 + 3 * n) {
+    return [];
+  }
+  const fpWanted = new Set();
+  for (let i = 0; i < n; i += 1) {
+    fpWanted.add(readUint24BE(bytes, 3 + i * 3));
+  }
+  const list = Array.isArray(orderedEvents) ? orderedEvents : [];
+  const keys = [];
+  for (const ev of list) {
+    const k = completionKey(ev);
+    if (fpWanted.has(fingerprint24FromKey(k))) {
+      keys.push(k);
+    }
+  }
+  return keys;
+}
+
 function decodeCompactCalendarCompletionV3(raw, orderedEvents) {
   const body = String(raw ?? "").trim().startsWith("v3:") ? String(raw).trim().slice(3) : String(raw ?? "").trim();
   if (body === "z") {
@@ -435,6 +503,9 @@ export function expandCompletionPayloadToKeys(raw, orderedEvents) {
   if (s.startsWith("v5:")) {
     return decodeCompactCalendarCompletionV5(s, orderedEvents);
   }
+  if (s.startsWith("v6:")) {
+    return decodeCompactCalendarCompletionV6(s, orderedEvents);
+  }
   if (s.startsWith("v4:")) {
     return decodeCompactCalendarCompletionV4(s, orderedEvents);
   }
@@ -460,7 +531,11 @@ export function normalizeCompletionPayloadForCompare(raw, orderedEvents) {
   const head = String(raw ?? "").trim();
   if (
     !keys.length &&
-    (head.startsWith("v2:") || head.startsWith("v3:") || head.startsWith("v4:") || head.startsWith("v5:")) &&
+    (head.startsWith("v2:") ||
+      head.startsWith("v3:") ||
+      head.startsWith("v4:") ||
+      head.startsWith("v5:") ||
+      head.startsWith("v6:")) &&
     !(orderedEvents || []).length
   ) {
     return null;
@@ -663,8 +738,39 @@ export function serializeCompactCompletionV5(completedSet) {
 }
 
 /**
+ * Codificación v6: binario + Base64URL; huellas 24-bit + `uint16` count (hasta 65535).
+ * Diseñada para persistencia en múltiples helpers `input_text` (255xN).
+ */
+export function serializeCompactCompletionV6(completedSet) {
+  const C = completedSet instanceof Set ? completedSet : new Set(completedSet || []);
+  if (C.size === 0) {
+    return "v6:z";
+  }
+  const fps = [...new Set([...C].map(key => fingerprint24FromKey(String(key))))].sort((a, b) =>
+    a < b ? -1 : a > b ? 1 : 0,
+  );
+  if (!fps.length) {
+    return "v6:z";
+  }
+  if (fps.length > 65535) {
+    return null;
+  }
+  const n = fps.length;
+  const buf = new Uint8Array(3 + 3 * n);
+  buf[0] = V6_SCHEMA_V1;
+  buf[1] = (n >>> 8) & 0xff;
+  buf[2] = n & 0xff;
+  let off = 3;
+  for (const fp of fps) {
+    writeUint24BE(buf, off, fp);
+    off += 3;
+  }
+  return `v6:${bytesToBase64Url(buf)}`;
+}
+
+/**
  * Elige el payload a guardar respetando `maxLen`.
- * Entre formatos **estables** (`v5:` / `v4:` / `v3:`) elige el **más corto** que quepa (orden-independientes).
+ * Entre formatos **estables** (`v6:` / `v5:` / `v4:` / `v3:`) elige el **más corto** que quepa (orden-independientes).
  * Si ninguno cabe, **`v2:`** y JSON por longitud creciente.
  */
 export function pickShortestCompletionPayload(completedSet, orderedEvents, maxLen) {
@@ -674,14 +780,21 @@ export function pickShortestCompletionPayload(completedSet, orderedEvents, maxLe
   const compactV3 = serializeCompactCompletionV3(completedSet);
   const compactV4 = serializeCompactCompletionV4(completedSet);
   const compactV5 = serializeCompactCompletionV5(completedSet);
+  const compactV6 = serializeCompactCompletionV6(completedSet);
 
-  const stable = [compactV5, compactV4, compactV3].filter(p => p && p.length <= maxLen);
+  const stable = [compactV6, compactV5, compactV4, compactV3].filter(p => p && p.length <= maxLen);
   stable.sort((a, b) => {
     if (a.length !== b.length) {
       return a.length - b.length;
     }
     const rank = p =>
-      String(p).startsWith("v5:") ? 0 : String(p).startsWith("v4:") ? 1 : 2;
+      String(p).startsWith("v6:")
+        ? 0
+        : String(p).startsWith("v5:")
+          ? 1
+          : String(p).startsWith("v4:")
+            ? 2
+            : 3;
     return rank(a) - rank(b);
   });
   if (stable.length) {

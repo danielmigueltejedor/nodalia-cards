@@ -9,7 +9,7 @@ import {
 
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.25";
+const CARD_VERSION = "1.0.0-alpha.35";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 const QUICK_REMINDER_STORAGE_KEY = "nodalia_calendar_quick_reminders_v1";
 
@@ -27,7 +27,13 @@ const DEFAULT_CONFIG = {
   allow_complete: true,
   weather_entity: "",
   shared_completed_events_entity: "",
+  shared_completed_events_entity_2: "",
+  shared_completed_events_entity_3: "",
+  shared_completed_events_entity_4: "",
+  shared_completed_events_entities: [],
   shared_completed_events_webhook: "",
+  quick_reminder_webhook: "",
+  native_event_webhook: "",
   tint_auto: true,
   animations: {
     enabled: true,
@@ -61,6 +67,18 @@ const DEFAULT_CONFIG = {
     chip_size: "11px",
   },
 };
+
+function normalizeSharedCompletedEntities(raw) {
+  const src = Array.isArray(raw) ? raw : [];
+  const ids = [];
+  src.forEach(value => {
+    const id = String(value ?? "").trim();
+    if (id.startsWith("input_text.") && !ids.includes(id)) {
+      ids.push(id);
+    }
+  });
+  return ids.slice(0, 4);
+}
 
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -189,7 +207,26 @@ function normalizeConfig(config) {
   normalized.time_range = timeRange;
   normalized.days_to_show = Math.min(62, Math.max(1, daysFromTimeRange(timeRange)));
   normalized.shared_completed_events_entity = String(normalized.shared_completed_events_entity ?? "").trim();
+  normalized.shared_completed_events_entity_2 = String(normalized.shared_completed_events_entity_2 ?? "").trim();
+  normalized.shared_completed_events_entity_3 = String(normalized.shared_completed_events_entity_3 ?? "").trim();
+  normalized.shared_completed_events_entity_4 = String(normalized.shared_completed_events_entity_4 ?? "").trim();
+  const sharedEntities = normalizeSharedCompletedEntities([
+    normalized.shared_completed_events_entity,
+    normalized.shared_completed_events_entity_2,
+    normalized.shared_completed_events_entity_3,
+    normalized.shared_completed_events_entity_4,
+    ...(Array.isArray(normalized.shared_completed_events_entities)
+      ? normalized.shared_completed_events_entities
+      : []),
+  ]);
+  normalized.shared_completed_events_entities = sharedEntities;
+  normalized.shared_completed_events_entity = sharedEntities[0] || "";
+  normalized.shared_completed_events_entity_2 = sharedEntities[1] || "";
+  normalized.shared_completed_events_entity_3 = sharedEntities[2] || "";
+  normalized.shared_completed_events_entity_4 = sharedEntities[3] || "";
   normalized.shared_completed_events_webhook = String(normalized.shared_completed_events_webhook ?? "").trim();
+  normalized.quick_reminder_webhook = String(normalized.quick_reminder_webhook ?? "").trim();
+  normalized.native_event_webhook = String(normalized.native_event_webhook ?? "").trim();
   normalized.weather_entity = String(normalized.weather_entity ?? "").trim();
   normalized.max_visible_events = Math.min(
     12,
@@ -589,10 +626,10 @@ class NodaliaCalendarCard extends HTMLElement {
   }
 
   setConfig(config) {
-    const prevHelper = String(this._config?.shared_completed_events_entity || "").trim();
+    const prevHelper = this._getSharedCompletedEntityIds(String(this._config?.shared_completed_events_entity || "").trim()).join("|");
     const prevWebhook = String(this._config?.shared_completed_events_webhook || "").trim();
     this._config = normalizeConfig(config);
-    const nextHelper = String(this._config.shared_completed_events_entity || "").trim();
+    const nextHelper = this._getSharedCompletedEntityIds(String(this._config.shared_completed_events_entity || "").trim()).join("|");
     const nextWebhook = String(this._config.shared_completed_events_webhook || "").trim();
     if (prevHelper !== nextHelper || prevWebhook !== nextWebhook) {
       this._completedMergedOnce = false;
@@ -607,28 +644,48 @@ class NodaliaCalendarCard extends HTMLElement {
     this._refreshEvents();
   }
 
+  _getSharedCompletedEntityIds(fallbackSingle) {
+    const explicit = normalizeSharedCompletedEntities(this._config?.shared_completed_events_entities);
+    if (explicit.length) {
+      return explicit;
+    }
+    const legacy = normalizeSharedCompletedEntities([
+      this._config?.shared_completed_events_entity,
+      this._config?.shared_completed_events_entity_2,
+      this._config?.shared_completed_events_entity_3,
+      this._config?.shared_completed_events_entity_4,
+      fallbackSingle,
+    ]);
+    return legacy;
+  }
+
   _getSharedCompletedEntityId() {
-    const id = String(this._config?.shared_completed_events_entity || "").trim();
-    return id.startsWith("input_text.") ? id : "";
+    return this._getSharedCompletedEntityIds()[0] || "";
   }
 
   _getSharedCompletedPersistenceSignature() {
-    const id = this._getSharedCompletedEntityId();
-    if (!id || !this._hass?.states?.[id]) {
+    const ids = this._getSharedCompletedEntityIds();
+    if (!ids.length || !this._hass?.states) {
       return "";
     }
-    const st = this._hass.states[id];
-    const maxLen = Number(st.attributes?.max);
-    return `${id}\u001f${String(st.state ?? "")}\u001f${Number.isFinite(maxLen) ? maxLen : 0}`;
+    return ids
+      .map(id => {
+        const st = this._hass.states[id];
+        const maxLen = Number(st?.attributes?.max);
+        return `${id}\u001f${String(st?.state ?? "")}\u001f${Number.isFinite(maxLen) ? maxLen : 0}`;
+      })
+      .join("\u001e");
   }
 
   _getSharedCompletedMaxLength() {
-    const id = this._getSharedCompletedEntityId();
-    if (!id || !this._hass?.states?.[id]) {
+    const ids = this._getSharedCompletedEntityIds();
+    if (!ids.length) {
       return 255;
     }
-    const max = Number(this._hass.states[id].attributes?.max);
-    return Number.isFinite(max) && max > 0 ? max : 255;
+    return ids.reduce((acc, id) => {
+      const max = Number(this._hass?.states?.[id]?.attributes?.max);
+      return acc + (Number.isFinite(max) && max > 0 ? max : 255);
+    }, 0);
   }
 
   _readLocalCompletionRaw() {
@@ -694,14 +751,69 @@ class NodaliaCalendarCard extends HTMLElement {
     }
   }
 
+  _packSharedCompletedPayloadForEntities(payload, entityIds) {
+    const ids = Array.isArray(entityIds) ? entityIds : [];
+    const cleanPayload = String(payload ?? "").trim();
+    if (!cleanPayload || !ids.length) {
+      return [];
+    }
+    if (ids.length === 1) {
+      return [cleanPayload];
+    }
+    let offset = 0;
+    const chunks = [];
+    ids.forEach((id, index) => {
+      const maxLen = Number(this._hass?.states?.[id]?.attributes?.max);
+      const limit = Number.isFinite(maxLen) && maxLen > 0 ? maxLen : 255;
+      const prefix = `v6p:${index + 1}/${ids.length}:`;
+      const available = Math.max(0, limit - prefix.length);
+      const part = available > 0 ? cleanPayload.slice(offset, offset + available) : "";
+      offset += part.length;
+      chunks.push(`${prefix}${part}`);
+    });
+    return offset >= cleanPayload.length ? chunks : [];
+  }
+
+  _readSharedCompletedPayloadFromHass() {
+    const ids = this._getSharedCompletedEntityIds();
+    if (!ids.length || !this._hass?.states) {
+      return "";
+    }
+    if (ids.length === 1) {
+      return String(this._hass.states[ids[0]]?.state ?? "");
+    }
+    const parts = [];
+    let totalExpected = ids.length;
+    ids.forEach(id => {
+      const raw = String(this._hass.states[id]?.state ?? "").trim();
+      const m = /^v6p:(\d+)\/(\d+):(.*)$/s.exec(raw);
+      if (m) {
+        const idx = Number(m[1]);
+        const total = Number(m[2]);
+        if (Number.isFinite(total) && total > 0) {
+          totalExpected = total;
+        }
+        if (Number.isFinite(idx) && idx > 0) {
+          parts[idx - 1] = m[3] || "";
+        }
+        return;
+      }
+      if (!parts.length && raw) {
+        parts[0] = raw;
+      }
+    });
+    if (parts.length && parts.filter(part => part !== undefined).length >= totalExpected) {
+      return parts.slice(0, totalExpected).join("");
+    }
+    return parts[0] || "";
+  }
+
   _syncCompletedPersistenceFromHass() {
-    const id = this._getSharedCompletedEntityId();
-    if (!id || !this._hass?.states?.[id]) {
+    const ids = this._getSharedCompletedEntityIds();
+    if (!ids.length || !this._hass?.states) {
       return;
     }
-
-    const st = this._hass.states[id];
-    const raw = String(st?.state ?? "");
+    const raw = String(this._readSharedCompletedPayloadFromHass() ?? "");
     if (["unknown", "unavailable"].includes(raw)) {
       return;
     }
@@ -719,10 +831,12 @@ class NodaliaCalendarCard extends HTMLElement {
       (rawT.startsWith("v2:") ||
         rawT.startsWith("v3:") ||
         rawT.startsWith("v4:") ||
+        rawT.startsWith("v6:") ||
         rawT.startsWith("v5:") ||
         localT.startsWith("v2:") ||
         localT.startsWith("v3:") ||
         localT.startsWith("v4:") ||
+        localT.startsWith("v6:") ||
         localT.startsWith("v5:"))
     ) {
       return;
@@ -1150,9 +1264,9 @@ class NodaliaCalendarCard extends HTMLElement {
     }
 
     const webhookId = String(this._config?.shared_completed_events_webhook ?? "").trim();
-    const entityId = this._getSharedCompletedEntityId();
+    const entityIds = this._getSharedCompletedEntityIds();
 
-    if (!webhookId && (!entityId || !this._hass?.callService)) {
+    if (!webhookId && (!entityIds.length || !this._hass?.callService)) {
       return;
     }
 
@@ -1161,16 +1275,13 @@ class NodaliaCalendarCard extends HTMLElement {
     if (!payloadHa) {
       if (typeof console !== "undefined" && typeof console.warn === "function") {
         console.warn(
-          "Nodalia Calendar Card: la lista de eventos completados no cabe en el input_text ni en formatos compactos v4/v3/v2 (aumenta max en el helper o reduce eventos completados).",
+          "Nodalia Calendar Card: la lista de eventos completados no cabe en los input_text configurados ni en formatos compactos v6/v5/v4/v3/v2.",
         );
       }
       return;
     }
 
-    const currentState =
-      entityId && this._hass?.states?.[entityId]
-        ? String(this._hass.states[entityId].state ?? "").trim()
-        : "";
+    const currentState = this._readSharedCompletedPayloadFromHass().trim();
     const canonicalCurrent = normalizeCompletionPayloadForCompare(currentState, events);
     const canonicalLastSubmit = normalizeCompletionPayloadForCompare(this._lastSubmittedSharedCompletedValue, events);
     if (canonicalCurrent !== null && canonicalExpanded === canonicalCurrent) {
@@ -1209,26 +1320,39 @@ class NodaliaCalendarCard extends HTMLElement {
       return;
     }
 
+    const packedForEntities = this._packSharedCompletedPayloadForEntities(payloadHa, entityIds);
+    if (entityIds.length && !packedForEntities.length) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn(
+          "Nodalia Calendar Card: payload no cabe en el reparto multi-helper; revisa max en input_text o reduce completados.",
+        );
+      }
+      return;
+    }
     this._lastSubmittedSharedCompletedValue = payloadHa;
     this._pendingSharedCompletedPayload = canonicalExpanded;
 
     try {
-      const result = this._hass.callService("input_text", "set_value", {
-        entity_id: entityId,
-        value: payloadHa,
+      const writes = (entityIds.length ? entityIds : [])
+        .map((id, idx) => ({ id, value: packedForEntities[idx] || "" }))
+        .filter(item => item.id && item.value);
+      Promise.all(
+        writes.map(item =>
+          this._hass.callService("input_text", "set_value", {
+            entity_id: item.id,
+            value: item.value,
+          }),
+        ),
+      ).catch(err => {
+        this._lastSubmittedSharedCompletedValue = null;
+        this._pendingSharedCompletedPayload = null;
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
+          console.warn(
+            "Nodalia Calendar Card: concede permiso de control sobre los input_text o usa shared_completed_events_webhook.",
+          );
+        }
       });
-      if (result && typeof result.then === "function") {
-        result.catch(err => {
-          this._lastSubmittedSharedCompletedValue = null;
-          this._pendingSharedCompletedPayload = null;
-          if (typeof console !== "undefined" && typeof console.warn === "function") {
-            console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
-            console.warn(
-              "Nodalia Calendar Card: si usas un usuario no administrador, concede permiso de control sobre la entidad input_text del helper o configura shared_completed_events_webhook con una automatización webhook que llame a input_text.set_value.",
-            );
-          }
-        });
-      }
     } catch (err) {
       this._lastSubmittedSharedCompletedValue = null;
       this._pendingSharedCompletedPayload = null;
@@ -1279,7 +1403,13 @@ class NodaliaCalendarCard extends HTMLElement {
     mix(config.allow_complete ? 1 : 0);
     mix(config.weather_entity || "");
     mix(config.shared_completed_events_entity || "");
+    mix(config.shared_completed_events_entity_2 || "");
+    mix(config.shared_completed_events_entity_3 || "");
+    mix(config.shared_completed_events_entity_4 || "");
+    mix((config.shared_completed_events_entities || []).join(","));
     mix(config.shared_completed_events_webhook || "");
+    mix(config.quick_reminder_webhook || "");
+    mix(config.native_event_webhook || "");
     mix(config.tint_auto ? 1 : 0);
     mix(config.animations?.enabled ? 1 : 0);
     mix(config.animations?.content_duration);
@@ -1374,7 +1504,7 @@ class NodaliaCalendarCard extends HTMLElement {
             rows = normalizeCalendarFetchResult(raw);
             // Solo REST fallback si sigue vacío *y* la respuesta no era ya un array JSON (p. ej. `{ events: [...] }`
             // normaliza bien pero no es array → el viejo `!Array.isArray(raw)` disparaba fetch duplicado).
-            if (!rows.length && !Array.isArray(raw)) {
+            if (!rows.length && (raw === undefined || raw === null)) {
               const fallback = await this._fetchCalendarEventsViaRest(entityId, start, end);
               if (fallback.length) {
                 rows = fallback;
@@ -1592,7 +1722,30 @@ class NodaliaCalendarCard extends HTMLElement {
         // Keep silent, not all HA versions expose this endpoint.
       }
     }
-    this._weatherForecastByDay = this._buildForecastDayMap(forecastRows);
+    const forecastMap = this._buildForecastDayMap(forecastRows);
+    if (!forecastMap.size) {
+      const now = new Date();
+      const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+      const currentTemp = Number(
+        stateObj.attributes?.temperature ?? stateObj.attributes?.native_temperature,
+      );
+      const lowTemp = Number(
+        stateObj.attributes?.templow ??
+          stateObj.attributes?.temperature_low ??
+          stateObj.attributes?.native_templow,
+      );
+      const condition = String(
+        stateObj.attributes?.condition ?? stateObj.state ?? "",
+      ).trim();
+      if (condition || Number.isFinite(currentTemp) || Number.isFinite(lowTemp)) {
+        forecastMap.set(todayKey, {
+          condition,
+          tempMax: Number.isFinite(currentTemp) ? currentTemp : null,
+          tempMin: Number.isFinite(lowTemp) ? lowTemp : null,
+        });
+      }
+    }
+    this._weatherForecastByDay = forecastMap;
   }
 
   _buildWeatherForecastByDay() {
@@ -1644,18 +1797,24 @@ class NodaliaCalendarCard extends HTMLElement {
           const yyyy = d.getFullYear();
           const mm = String(d.getMonth() + 1).padStart(2, "0");
           const dd = String(d.getDate()).padStart(2, "0");
+          const nextDay = new Date(d.getTime() + 86400000);
+          const ny = nextDay.getFullYear();
+          const nm = String(nextDay.getMonth() + 1).padStart(2, "0");
+          const nd = String(nextDay.getDate()).padStart(2, "0");
           return {
             _entity: "__quick_reminder__",
             _quickReminderId: item.id,
+            uid: item.id,
             _quickReminderColor: item.color || "",
             summary: item.title,
             start: { date: `${yyyy}-${mm}-${dd}` },
-            end: { date: `${yyyy}-${mm}-${dd}` },
+            end: { date: `${ny}-${nm}-${nd}` },
           };
         }
         return {
           _entity: "__quick_reminder__",
           _quickReminderId: item.id,
+          uid: item.id,
           _quickReminderColor: item.color || "",
           summary: item.title,
           start: { dateTime: d.toISOString() },
@@ -1698,6 +1857,27 @@ class NodaliaCalendarCard extends HTMLElement {
     this._renderIfChanged(true);
   }
 
+  async _postWebhookPayload(webhookId, body) {
+    const id = String(webhookId ?? "").trim();
+    if (!id) {
+      return false;
+    }
+    const post =
+      typeof window !== "undefined" &&
+      window.NodaliaUtils &&
+      typeof window.NodaliaUtils.postHomeAssistantWebhook === "function"
+        ? window.NodaliaUtils.postHomeAssistantWebhook
+        : null;
+    if (!post) {
+      return false;
+    }
+    try {
+      return Boolean(await post(id, body, this._hass));
+    } catch (_error) {
+      return false;
+    }
+  }
+
   _submitQuickReminderComposer() {
     if (!this.shadowRoot) {
       return;
@@ -1732,14 +1912,22 @@ class NodaliaCalendarCard extends HTMLElement {
     if (Number.isNaN(d.getTime())) {
       return;
     }
-    this._quickReminders.push({
+    const reminder = {
       id: `qr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       title,
       start: d.toISOString(),
       color,
       allDay,
-    });
+    };
+    this._quickReminders.push(reminder);
     this._saveQuickReminders();
+    const quickWebhookId = String(this._config?.quick_reminder_webhook || "").trim();
+    if (quickWebhookId) {
+      void this._postWebhookPayload(quickWebhookId, {
+        type: "quick_reminder_create",
+        reminder,
+      });
+    }
     this._quickReminderComposerOpen = false;
     this._refreshEvents();
   }
@@ -1812,20 +2000,63 @@ class NodaliaCalendarCard extends HTMLElement {
       return;
     }
     try {
+      const nativeWebhookId = String(this._config?.native_event_webhook || "").trim();
       if (allDay) {
-        await this._hass.callService("calendar", "create_event", {
+        const startDay = new Date(`${dateRaw}T00:00:00`);
+        const nextDay = Number.isNaN(startDay.getTime()) ? null : new Date(startDay.getTime() + 86400000);
+        const endDate =
+          nextDay
+            ? `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, "0")}-${String(nextDay.getDate()).padStart(2, "0")}`
+            : dateRaw;
+        const payload = {
           entity_id: calendarId,
           summary: title,
           start_date: dateRaw,
-          end_date: dateRaw,
-        });
+          end_date: endDate,
+        };
+        if (nativeWebhookId) {
+          const ok = await this._postWebhookPayload(nativeWebhookId, {
+            type: "calendar_create_event",
+            data: payload,
+          });
+          if (!ok) {
+            return;
+          }
+        } else {
+          await this._hass.callService("calendar", "create_event", payload);
+        }
       } else {
-        await this._hass.callService("calendar", "create_event", {
+        const formatLocalDateTime = value => {
+          const yy = value.getFullYear();
+          const mm = String(value.getMonth() + 1).padStart(2, "0");
+          const dd = String(value.getDate()).padStart(2, "0");
+          const hh = String(value.getHours()).padStart(2, "0");
+          const mi = String(value.getMinutes()).padStart(2, "0");
+          const ss = String(value.getSeconds()).padStart(2, "0");
+          return `${yy}-${mm}-${dd}T${hh}:${mi}:${ss}`;
+        };
+        const startDateTime = new Date(`${dateRaw}T${startRaw}:00`);
+        let endDateTime = new Date(`${dateRaw}T${endRaw}:00`);
+        if (!Number.isNaN(startDateTime.getTime()) && !Number.isNaN(endDateTime.getTime()) && endDateTime <= startDateTime) {
+          endDateTime = new Date(endDateTime.getTime() + 86400000);
+        }
+        const payload = {
           entity_id: calendarId,
           summary: title,
-          start_date_time: `${dateRaw}T${startRaw}:00`,
-          end_date_time: `${dateRaw}T${endRaw}:00`,
-        });
+          start_date_time: Number.isNaN(startDateTime.getTime()) ? `${dateRaw}T${startRaw}:00` : formatLocalDateTime(startDateTime),
+          end_date_time: Number.isNaN(endDateTime.getTime()) ? `${dateRaw}T${endRaw}:00` : formatLocalDateTime(endDateTime),
+        };
+        if (nativeWebhookId) {
+          const ok = await this._postWebhookPayload(nativeWebhookId, {
+            type: "calendar_create_event",
+            data: payload,
+          });
+          if (!ok) {
+            return;
+          }
+        } else {
+          await this._hass.callService("calendar", "create_event", payload);
+        }
       }
       this._nativeEventComposerOpen = false;
       this._refreshEvents();
@@ -1953,7 +2184,7 @@ class NodaliaCalendarCard extends HTMLElement {
           color: var(--primary-text-color);
           display: block;
           isolation: isolate;
-          overflow: hidden;
+          overflow: visible;
           overscroll-behavior-y: contain;
           position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
@@ -2408,7 +2639,9 @@ class NodaliaCalendarCard extends HTMLElement {
           display: grid;
           gap: 10px;
           left: 50%;
+          max-height: min(84vh, 760px);
           max-width: min(94vw, 520px);
+          overflow: auto;
           padding: 14px;
           position: absolute;
           top: 50%;
@@ -3836,6 +4069,9 @@ class NodaliaCalendarCardEditor extends HTMLElement {
         .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="calendar-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="input-text-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="input-text-entity-2"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="input-text-entity-3"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="input-text-entity-4"]),
         .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
@@ -4150,15 +4386,60 @@ class NodaliaCalendarCardEditor extends HTMLElement {
               ></div>
               <span class="editor-field__hint">${escapeHtml(
                 this._editorLabel(
-                  "Opcional: misma lista en movil y PC. Crea un input_text y elije aqui; la tarjeta guarda un JSON con las claves de eventos hechos.",
+                  "Opcional: misma lista en movil y PC. Puedes usar hasta 4 helpers (v6 multi-helper) para ampliar capacidad total.",
                 ),
               )}</span>
+            </div>
+            <div class="editor-field editor-field--full">
+              <span>${escapeHtml(this._editorLabel("Helper input_text #2 (opcional)"))}</span>
+              <div
+                class="editor-control-host"
+                data-mounted-control="input-text-entity-2"
+                data-field="shared_completed_events_entity_2"
+                data-value="${escapeHtml(String(config.shared_completed_events_entity_2 ?? ""))}"
+                data-domains="input_text"
+                data-placeholder="input_text.nodalia_calendar_hechos_2"
+              ></div>
+            </div>
+            <div class="editor-field editor-field--full">
+              <span>${escapeHtml(this._editorLabel("Helper input_text #3 (opcional)"))}</span>
+              <div
+                class="editor-control-host"
+                data-mounted-control="input-text-entity-3"
+                data-field="shared_completed_events_entity_3"
+                data-value="${escapeHtml(String(config.shared_completed_events_entity_3 ?? ""))}"
+                data-domains="input_text"
+                data-placeholder="input_text.nodalia_calendar_hechos_3"
+              ></div>
+            </div>
+            <div class="editor-field editor-field--full">
+              <span>${escapeHtml(this._editorLabel("Helper input_text #4 (opcional)"))}</span>
+              <div
+                class="editor-control-host"
+                data-mounted-control="input-text-entity-4"
+                data-field="shared_completed_events_entity_4"
+                data-value="${escapeHtml(String(config.shared_completed_events_entity_4 ?? ""))}"
+                data-domains="input_text"
+                data-placeholder="input_text.nodalia_calendar_hechos_4"
+              ></div>
             </div>
             ${this._renderTextField("Webhook persistencia (ID, opcional)", "shared_completed_events_webhook", config.shared_completed_events_webhook || "", {
               fullWidth: true,
               placeholder: "nodalia_calendar_completed",
               hint:
                 "Si los usuarios no pueden llamar a input_text.set_value, pon aqui el webhook_id de una automatización que escriba el mismo helper. La tarjeta hace POST a /api/webhook/<id> con JSON {\"value\": \"...\"}.",
+            })}
+            ${this._renderTextField("Webhook quick reminder (ID, opcional)", "quick_reminder_webhook", config.quick_reminder_webhook || "", {
+              fullWidth: true,
+              placeholder: "nodalia_calendar_quick_reminder_create",
+              hint:
+                "Si se define, al guardar recordatorio rapido tambien se envia POST webhook con {type:'quick_reminder_create', reminder:{...}}.",
+            })}
+            ${this._renderTextField("Webhook evento nativo (ID, opcional)", "native_event_webhook", config.native_event_webhook || "", {
+              fullWidth: true,
+              placeholder: "nodalia_calendar_create_event",
+              hint:
+                "Si se define, crear evento nativo usa webhook en lugar de calendar.create_event directo.",
             })}
           </div>
         </section>
@@ -4273,7 +4554,9 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     `;
 
     this.shadowRoot
-      .querySelectorAll('[data-mounted-control="calendar-entity"], [data-mounted-control="input-text-entity"], [data-mounted-control="weather-entity"]')
+      .querySelectorAll(
+        '[data-mounted-control="calendar-entity"], [data-mounted-control="input-text-entity"], [data-mounted-control="input-text-entity-2"], [data-mounted-control="input-text-entity-3"], [data-mounted-control="input-text-entity-4"], [data-mounted-control="weather-entity"]',
+      )
       .forEach(host => {
         this._mountCalendarEntityHost(host);
       });

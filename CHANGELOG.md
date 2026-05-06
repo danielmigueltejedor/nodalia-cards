@@ -10,6 +10,17 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.35] - 2026-05-06
+
+Thirty-fifth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.35`** (tag **`v1.0.0-alpha.35`** optional).
+
+- **Calendar card — persistencia `v6` multi-helper (255x4):** nuevo formato compacto `v6:` y soporte para hasta **4** `input_text` (`shared_completed_events_entity` + `_2/_3/_4`) con reparto/reensamblado de payload para ampliar capacidad total.
+- **Calendar card — webhook de creación al vuelo:** nuevos campos `quick_reminder_webhook` y `native_event_webhook` para crear recordatorios/eventos mediante automatizaciones webhook cuando el usuario no tiene permisos directos de servicio.
+- **Calendar card — clima más resiliente:** si no hay forecast diario utilizable, fallback visual con estado/temperatura actual del `weather_entity` para evitar cabeceras vacías.
+- **Calendar card — fix visual composer:** el sub-popup de creación ya no se recorta cuando la vista base tiene poca altura (panel con scroll y sin clipping del contenedor).
+
+---
+
 ## [1.0.0-alpha.34] - 2026-05-06
 
 Thirty-fourth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.34`** (tag **`v1.0.0-alpha.34`** optional).

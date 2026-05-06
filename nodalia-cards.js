@@ -71118,8 +71118,30 @@
   var V4_SCHEMA_V1 = 1;
   var V4_SCHEMA_V2 = 2;
   var V5_SCHEMA_V1 = 1;
+  var V6_SCHEMA_V1 = 1;
   function fnv1a64Utf8(str) {
-    const bytes = typeof TextEncoder !== "undefined" ? new TextEncoder().encode(String(str)) : typeof Buffer !== "undefined" ? Buffer.from(String(str), "utf8") : new Uint8Array([...String(str)].map((c) => c.charCodeAt(0) & 255));
+    const utf8Fallback = (input) => {
+      const out = [];
+      for (const ch of String(input)) {
+        const cp = ch.codePointAt(0);
+        if (cp <= 127) {
+          out.push(cp);
+        } else if (cp <= 2047) {
+          out.push(192 | cp >> 6, 128 | cp & 63);
+        } else if (cp <= 65535) {
+          out.push(224 | cp >> 12, 128 | cp >> 6 & 63, 128 | cp & 63);
+        } else {
+          out.push(
+            240 | cp >> 18,
+            128 | cp >> 12 & 63,
+            128 | cp >> 6 & 63,
+            128 | cp & 63
+          );
+        }
+      }
+      return new Uint8Array(out);
+    };
+    const bytes = typeof TextEncoder !== "undefined" ? new TextEncoder().encode(String(str)) : typeof Buffer !== "undefined" ? Buffer.from(String(str), "utf8") : utf8Fallback(str);
     let h = 14695981039346656037n;
     const p = 1099511628211n;
     const mask = (1n << 64n) - 1n;
@@ -71423,6 +71445,49 @@
     }
     return keys;
   }
+  function decodeCompactCalendarCompletionV6(raw, orderedEvents) {
+    const head = String(raw ?? "").trim();
+    if (head === "v6:z") {
+      return [];
+    }
+    if (!head.startsWith("v6:")) {
+      return [];
+    }
+    const body = head.slice(3);
+    if (body === "z") {
+      return [];
+    }
+    let bytes;
+    try {
+      bytes = base64UrlToBytes(body);
+    } catch (_err) {
+      return [];
+    }
+    if (bytes.length < 3) {
+      return [];
+    }
+    const schema = bytes[0];
+    if (schema !== V6_SCHEMA_V1) {
+      return [];
+    }
+    const n = bytes[1] << 8 | bytes[2];
+    if (n === 0 || bytes.length !== 3 + 3 * n) {
+      return [];
+    }
+    const fpWanted = /* @__PURE__ */ new Set();
+    for (let i = 0; i < n; i += 1) {
+      fpWanted.add(readUint24BE(bytes, 3 + i * 3));
+    }
+    const list = Array.isArray(orderedEvents) ? orderedEvents : [];
+    const keys = [];
+    for (const ev of list) {
+      const k = completionKey(ev);
+      if (fpWanted.has(fingerprint24FromKey(k))) {
+        keys.push(k);
+      }
+    }
+    return keys;
+  }
   function decodeCompactCalendarCompletionV3(raw, orderedEvents) {
     const body = String(raw ?? "").trim().startsWith("v3:") ? String(raw).trim().slice(3) : String(raw ?? "").trim();
     if (body === "z") {
@@ -71483,6 +71548,9 @@
     if (s.startsWith("v5:")) {
       return decodeCompactCalendarCompletionV5(s, orderedEvents);
     }
+    if (s.startsWith("v6:")) {
+      return decodeCompactCalendarCompletionV6(s, orderedEvents);
+    }
     if (s.startsWith("v4:")) {
       return decodeCompactCalendarCompletionV4(s, orderedEvents);
     }
@@ -71505,7 +71573,7 @@
   function normalizeCompletionPayloadForCompare(raw, orderedEvents) {
     const keys = expandCompletionPayloadToKeys(raw, orderedEvents);
     const head = String(raw ?? "").trim();
-    if (!keys.length && (head.startsWith("v2:") || head.startsWith("v3:") || head.startsWith("v4:") || head.startsWith("v5:")) && !(orderedEvents || []).length) {
+    if (!keys.length && (head.startsWith("v2:") || head.startsWith("v3:") || head.startsWith("v4:") || head.startsWith("v5:") || head.startsWith("v6:")) && !(orderedEvents || []).length) {
       return null;
     }
     return canonicalCompletionKeysJson(keys);
@@ -71672,6 +71740,32 @@
     }
     return `v5:${bytesToBase64Url(buf)}`;
   }
+  function serializeCompactCompletionV6(completedSet) {
+    const C = completedSet instanceof Set ? completedSet : new Set(completedSet || []);
+    if (C.size === 0) {
+      return "v6:z";
+    }
+    const fps = [...new Set([...C].map((key) => fingerprint24FromKey(String(key))))].sort(
+      (a, b) => a < b ? -1 : a > b ? 1 : 0
+    );
+    if (!fps.length) {
+      return "v6:z";
+    }
+    if (fps.length > 65535) {
+      return null;
+    }
+    const n = fps.length;
+    const buf = new Uint8Array(3 + 3 * n);
+    buf[0] = V6_SCHEMA_V1;
+    buf[1] = n >>> 8 & 255;
+    buf[2] = n & 255;
+    let off = 3;
+    for (const fp of fps) {
+      writeUint24BE(buf, off, fp);
+      off += 3;
+    }
+    return `v6:${bytesToBase64Url(buf)}`;
+  }
   function pickShortestCompletionPayload(completedSet, orderedEvents, maxLen) {
     const keys = [...completedSet instanceof Set ? completedSet : new Set(completedSet)];
     const jsonPayload = canonicalCompletionKeysJson(keys);
@@ -71679,12 +71773,13 @@
     const compactV3 = serializeCompactCompletionV3(completedSet);
     const compactV4 = serializeCompactCompletionV4(completedSet);
     const compactV5 = serializeCompactCompletionV5(completedSet);
-    const stable = [compactV5, compactV4, compactV3].filter((p) => p && p.length <= maxLen);
+    const compactV6 = serializeCompactCompletionV6(completedSet);
+    const stable = [compactV6, compactV5, compactV4, compactV3].filter((p) => p && p.length <= maxLen);
     stable.sort((a, b) => {
       if (a.length !== b.length) {
         return a.length - b.length;
       }
-      const rank = (p) => String(p).startsWith("v5:") ? 0 : String(p).startsWith("v4:") ? 1 : 2;
+      const rank = (p) => String(p).startsWith("v6:") ? 0 : String(p).startsWith("v5:") ? 1 : String(p).startsWith("v4:") ? 2 : 3;
       return rank(a) - rank(b);
     });
     if (stable.length) {
@@ -71722,7 +71817,13 @@
     allow_complete: true,
     weather_entity: "",
     shared_completed_events_entity: "",
+    shared_completed_events_entity_2: "",
+    shared_completed_events_entity_3: "",
+    shared_completed_events_entity_4: "",
+    shared_completed_events_entities: [],
     shared_completed_events_webhook: "",
+    quick_reminder_webhook: "",
+    native_event_webhook: "",
     tint_auto: true,
     animations: {
       enabled: true,
@@ -71754,6 +71855,17 @@
       chip_size: "11px"
     }
   };
+  function normalizeSharedCompletedEntities(raw) {
+    const src = Array.isArray(raw) ? raw : [];
+    const ids = [];
+    src.forEach((value) => {
+      const id = String(value ?? "").trim();
+      if (id.startsWith("input_text.") && !ids.includes(id)) {
+        ids.push(id);
+      }
+    });
+    return ids.slice(0, 4);
+  }
   function deepClone17(value) {
     return JSON.parse(JSON.stringify(value));
   }
@@ -71874,7 +71986,24 @@
     normalized.time_range = timeRange;
     normalized.days_to_show = Math.min(62, Math.max(1, daysFromTimeRange(timeRange)));
     normalized.shared_completed_events_entity = String(normalized.shared_completed_events_entity ?? "").trim();
+    normalized.shared_completed_events_entity_2 = String(normalized.shared_completed_events_entity_2 ?? "").trim();
+    normalized.shared_completed_events_entity_3 = String(normalized.shared_completed_events_entity_3 ?? "").trim();
+    normalized.shared_completed_events_entity_4 = String(normalized.shared_completed_events_entity_4 ?? "").trim();
+    const sharedEntities = normalizeSharedCompletedEntities([
+      normalized.shared_completed_events_entity,
+      normalized.shared_completed_events_entity_2,
+      normalized.shared_completed_events_entity_3,
+      normalized.shared_completed_events_entity_4,
+      ...Array.isArray(normalized.shared_completed_events_entities) ? normalized.shared_completed_events_entities : []
+    ]);
+    normalized.shared_completed_events_entities = sharedEntities;
+    normalized.shared_completed_events_entity = sharedEntities[0] || "";
+    normalized.shared_completed_events_entity_2 = sharedEntities[1] || "";
+    normalized.shared_completed_events_entity_3 = sharedEntities[2] || "";
+    normalized.shared_completed_events_entity_4 = sharedEntities[3] || "";
     normalized.shared_completed_events_webhook = String(normalized.shared_completed_events_webhook ?? "").trim();
+    normalized.quick_reminder_webhook = String(normalized.quick_reminder_webhook ?? "").trim();
+    normalized.native_event_webhook = String(normalized.native_event_webhook ?? "").trim();
     normalized.weather_entity = String(normalized.weather_entity ?? "").trim();
     normalized.max_visible_events = Math.min(
       12,
@@ -72227,10 +72356,10 @@
       this._viewVisibilityObserver = null;
     }
     setConfig(config) {
-      const prevHelper = String(this._config?.shared_completed_events_entity || "").trim();
+      const prevHelper = this._getSharedCompletedEntityIds(String(this._config?.shared_completed_events_entity || "").trim()).join("|");
       const prevWebhook = String(this._config?.shared_completed_events_webhook || "").trim();
       this._config = normalizeConfig17(config);
-      const nextHelper = String(this._config.shared_completed_events_entity || "").trim();
+      const nextHelper = this._getSharedCompletedEntityIds(String(this._config.shared_completed_events_entity || "").trim()).join("|");
       const nextWebhook = String(this._config.shared_completed_events_webhook || "").trim();
       if (prevHelper !== nextHelper || prevWebhook !== nextWebhook) {
         this._completedMergedOnce = false;
@@ -72244,26 +72373,43 @@
       }
       this._refreshEvents();
     }
+    _getSharedCompletedEntityIds(fallbackSingle) {
+      const explicit = normalizeSharedCompletedEntities(this._config?.shared_completed_events_entities);
+      if (explicit.length) {
+        return explicit;
+      }
+      const legacy = normalizeSharedCompletedEntities([
+        this._config?.shared_completed_events_entity,
+        this._config?.shared_completed_events_entity_2,
+        this._config?.shared_completed_events_entity_3,
+        this._config?.shared_completed_events_entity_4,
+        fallbackSingle
+      ]);
+      return legacy;
+    }
     _getSharedCompletedEntityId() {
-      const id = String(this._config?.shared_completed_events_entity || "").trim();
-      return id.startsWith("input_text.") ? id : "";
+      return this._getSharedCompletedEntityIds()[0] || "";
     }
     _getSharedCompletedPersistenceSignature() {
-      const id = this._getSharedCompletedEntityId();
-      if (!id || !this._hass?.states?.[id]) {
+      const ids = this._getSharedCompletedEntityIds();
+      if (!ids.length || !this._hass?.states) {
         return "";
       }
-      const st = this._hass.states[id];
-      const maxLen = Number(st.attributes?.max);
-      return `${id}${String(st.state ?? "")}${Number.isFinite(maxLen) ? maxLen : 0}`;
+      return ids.map((id) => {
+        const st = this._hass.states[id];
+        const maxLen = Number(st?.attributes?.max);
+        return `${id}${String(st?.state ?? "")}${Number.isFinite(maxLen) ? maxLen : 0}`;
+      }).join("");
     }
     _getSharedCompletedMaxLength() {
-      const id = this._getSharedCompletedEntityId();
-      if (!id || !this._hass?.states?.[id]) {
+      const ids = this._getSharedCompletedEntityIds();
+      if (!ids.length) {
         return 255;
       }
-      const max = Number(this._hass.states[id].attributes?.max);
-      return Number.isFinite(max) && max > 0 ? max : 255;
+      return ids.reduce((acc, id) => {
+        const max = Number(this._hass?.states?.[id]?.attributes?.max);
+        return acc + (Number.isFinite(max) && max > 0 ? max : 255);
+      }, 0);
     }
     _readLocalCompletionRaw() {
       if (typeof window === "undefined" || !window.localStorage) {
@@ -72321,13 +72467,67 @@
       } catch (_error) {
       }
     }
+    _packSharedCompletedPayloadForEntities(payload, entityIds) {
+      const ids = Array.isArray(entityIds) ? entityIds : [];
+      const cleanPayload = String(payload ?? "").trim();
+      if (!cleanPayload || !ids.length) {
+        return [];
+      }
+      if (ids.length === 1) {
+        return [cleanPayload];
+      }
+      let offset = 0;
+      const chunks = [];
+      ids.forEach((id, index) => {
+        const maxLen = Number(this._hass?.states?.[id]?.attributes?.max);
+        const limit = Number.isFinite(maxLen) && maxLen > 0 ? maxLen : 255;
+        const prefix = `v6p:${index + 1}/${ids.length}:`;
+        const available = Math.max(0, limit - prefix.length);
+        const part = available > 0 ? cleanPayload.slice(offset, offset + available) : "";
+        offset += part.length;
+        chunks.push(`${prefix}${part}`);
+      });
+      return offset >= cleanPayload.length ? chunks : [];
+    }
+    _readSharedCompletedPayloadFromHass() {
+      const ids = this._getSharedCompletedEntityIds();
+      if (!ids.length || !this._hass?.states) {
+        return "";
+      }
+      if (ids.length === 1) {
+        return String(this._hass.states[ids[0]]?.state ?? "");
+      }
+      const parts = [];
+      let totalExpected = ids.length;
+      ids.forEach((id) => {
+        const raw = String(this._hass.states[id]?.state ?? "").trim();
+        const m = /^v6p:(\d+)\/(\d+):(.*)$/s.exec(raw);
+        if (m) {
+          const idx = Number(m[1]);
+          const total = Number(m[2]);
+          if (Number.isFinite(total) && total > 0) {
+            totalExpected = total;
+          }
+          if (Number.isFinite(idx) && idx > 0) {
+            parts[idx - 1] = m[3] || "";
+          }
+          return;
+        }
+        if (!parts.length && raw) {
+          parts[0] = raw;
+        }
+      });
+      if (parts.length && parts.filter((part) => part !== void 0).length >= totalExpected) {
+        return parts.slice(0, totalExpected).join("");
+      }
+      return parts[0] || "";
+    }
     _syncCompletedPersistenceFromHass() {
-      const id = this._getSharedCompletedEntityId();
-      if (!id || !this._hass?.states?.[id]) {
+      const ids = this._getSharedCompletedEntityIds();
+      if (!ids.length || !this._hass?.states) {
         return;
       }
-      const st = this._hass.states[id];
-      const raw = String(st?.state ?? "");
+      const raw = String(this._readSharedCompletedPayloadFromHass() ?? "");
       if (["unknown", "unavailable"].includes(raw)) {
         return;
       }
@@ -72338,7 +72538,7 @@
       const localRaw = this._readLocalCompletionRaw();
       const rawT = raw.trim();
       const localT = localRaw.trim();
-      if (!events.length && (rawT.startsWith("v2:") || rawT.startsWith("v3:") || rawT.startsWith("v4:") || rawT.startsWith("v5:") || localT.startsWith("v2:") || localT.startsWith("v3:") || localT.startsWith("v4:") || localT.startsWith("v5:"))) {
+      if (!events.length && (rawT.startsWith("v2:") || rawT.startsWith("v3:") || rawT.startsWith("v4:") || rawT.startsWith("v6:") || rawT.startsWith("v5:") || localT.startsWith("v2:") || localT.startsWith("v3:") || localT.startsWith("v4:") || localT.startsWith("v6:") || localT.startsWith("v5:"))) {
         return;
       }
       const incomingKeys = expandCompletionPayloadToKeys(raw, events);
@@ -72689,8 +72889,8 @@
         }
       }
       const webhookId = String(this._config?.shared_completed_events_webhook ?? "").trim();
-      const entityId = this._getSharedCompletedEntityId();
-      if (!webhookId && (!entityId || !this._hass?.callService)) {
+      const entityIds = this._getSharedCompletedEntityIds();
+      if (!webhookId && (!entityIds.length || !this._hass?.callService)) {
         return;
       }
       const maxLen = this._getSharedCompletedMaxLength();
@@ -72698,12 +72898,12 @@
       if (!payloadHa) {
         if (typeof console !== "undefined" && typeof console.warn === "function") {
           console.warn(
-            "Nodalia Calendar Card: la lista de eventos completados no cabe en el input_text ni en formatos compactos v4/v3/v2 (aumenta max en el helper o reduce eventos completados)."
+            "Nodalia Calendar Card: la lista de eventos completados no cabe en los input_text configurados ni en formatos compactos v6/v5/v4/v3/v2."
           );
         }
         return;
       }
-      const currentState = entityId && this._hass?.states?.[entityId] ? String(this._hass.states[entityId].state ?? "").trim() : "";
+      const currentState = this._readSharedCompletedPayloadFromHass().trim();
       const canonicalCurrent = normalizeCompletionPayloadForCompare(currentState, events);
       const canonicalLastSubmit = normalizeCompletionPayloadForCompare(this._lastSubmittedSharedCompletedValue, events);
       if (canonicalCurrent !== null && canonicalExpanded === canonicalCurrent) {
@@ -72737,25 +72937,36 @@
         });
         return;
       }
+      const packedForEntities = this._packSharedCompletedPayloadForEntities(payloadHa, entityIds);
+      if (entityIds.length && !packedForEntities.length) {
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn(
+            "Nodalia Calendar Card: payload no cabe en el reparto multi-helper; revisa max en input_text o reduce completados."
+          );
+        }
+        return;
+      }
       this._lastSubmittedSharedCompletedValue = payloadHa;
       this._pendingSharedCompletedPayload = canonicalExpanded;
       try {
-        const result = this._hass.callService("input_text", "set_value", {
-          entity_id: entityId,
-          value: payloadHa
+        const writes = (entityIds.length ? entityIds : []).map((id, idx) => ({ id, value: packedForEntities[idx] || "" })).filter((item) => item.id && item.value);
+        Promise.all(
+          writes.map(
+            (item) => this._hass.callService("input_text", "set_value", {
+              entity_id: item.id,
+              value: item.value
+            })
+          )
+        ).catch((err) => {
+          this._lastSubmittedSharedCompletedValue = null;
+          this._pendingSharedCompletedPayload = null;
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
+            console.warn(
+              "Nodalia Calendar Card: concede permiso de control sobre los input_text o usa shared_completed_events_webhook."
+            );
+          }
         });
-        if (result && typeof result.then === "function") {
-          result.catch((err) => {
-            this._lastSubmittedSharedCompletedValue = null;
-            this._pendingSharedCompletedPayload = null;
-            if (typeof console !== "undefined" && typeof console.warn === "function") {
-              console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
-              console.warn(
-                "Nodalia Calendar Card: si usas un usuario no administrador, concede permiso de control sobre la entidad input_text del helper o configura shared_completed_events_webhook con una automatización webhook que llame a input_text.set_value."
-              );
-            }
-          });
-        }
       } catch (err) {
         this._lastSubmittedSharedCompletedValue = null;
         this._pendingSharedCompletedPayload = null;
@@ -72804,7 +73015,13 @@
       mix(config.allow_complete ? 1 : 0);
       mix(config.weather_entity || "");
       mix(config.shared_completed_events_entity || "");
+      mix(config.shared_completed_events_entity_2 || "");
+      mix(config.shared_completed_events_entity_3 || "");
+      mix(config.shared_completed_events_entity_4 || "");
+      mix((config.shared_completed_events_entities || []).join(","));
       mix(config.shared_completed_events_webhook || "");
+      mix(config.quick_reminder_webhook || "");
+      mix(config.native_event_webhook || "");
       mix(config.tint_auto ? 1 : 0);
       mix(config.animations?.enabled ? 1 : 0);
       mix(config.animations?.content_duration);
@@ -72895,7 +73112,7 @@
             try {
               const raw = await hass.callApi("GET", path);
               rows = normalizeCalendarFetchResult(raw);
-              if (!rows.length && !Array.isArray(raw)) {
+              if (!rows.length && (raw === void 0 || raw === null)) {
                 const fallback = await this._fetchCalendarEventsViaRest(entityId, start, end);
                 if (fallback.length) {
                   rows = fallback;
@@ -73103,7 +73320,28 @@
         } catch (_error) {
         }
       }
-      this._weatherForecastByDay = this._buildForecastDayMap(forecastRows);
+      const forecastMap = this._buildForecastDayMap(forecastRows);
+      if (!forecastMap.size) {
+        const now = /* @__PURE__ */ new Date();
+        const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+        const currentTemp = Number(
+          stateObj.attributes?.temperature ?? stateObj.attributes?.native_temperature
+        );
+        const lowTemp = Number(
+          stateObj.attributes?.templow ?? stateObj.attributes?.temperature_low ?? stateObj.attributes?.native_templow
+        );
+        const condition = String(
+          stateObj.attributes?.condition ?? stateObj.state ?? ""
+        ).trim();
+        if (condition || Number.isFinite(currentTemp) || Number.isFinite(lowTemp)) {
+          forecastMap.set(todayKey, {
+            condition,
+            tempMax: Number.isFinite(currentTemp) ? currentTemp : null,
+            tempMin: Number.isFinite(lowTemp) ? lowTemp : null
+          });
+        }
+      }
+      this._weatherForecastByDay = forecastMap;
     }
     _buildWeatherForecastByDay() {
       return this._weatherForecastByDay instanceof Map ? this._weatherForecastByDay : /* @__PURE__ */ new Map();
@@ -73149,18 +73387,24 @@
           const yyyy = d.getFullYear();
           const mm = String(d.getMonth() + 1).padStart(2, "0");
           const dd = String(d.getDate()).padStart(2, "0");
+          const nextDay = new Date(d.getTime() + 864e5);
+          const ny = nextDay.getFullYear();
+          const nm = String(nextDay.getMonth() + 1).padStart(2, "0");
+          const nd = String(nextDay.getDate()).padStart(2, "0");
           return {
             _entity: "__quick_reminder__",
             _quickReminderId: item.id,
+            uid: item.id,
             _quickReminderColor: item.color || "",
             summary: item.title,
             start: { date: `${yyyy}-${mm}-${dd}` },
-            end: { date: `${yyyy}-${mm}-${dd}` }
+            end: { date: `${ny}-${nm}-${nd}` }
           };
         }
         return {
           _entity: "__quick_reminder__",
           _quickReminderId: item.id,
+          uid: item.id,
           _quickReminderColor: item.color || "",
           summary: item.title,
           start: { dateTime: d.toISOString() },
@@ -73194,6 +73438,21 @@
       }
       this._nativeEventComposerOpen = false;
       this._renderIfChanged(true);
+    }
+    async _postWebhookPayload(webhookId, body) {
+      const id = String(webhookId ?? "").trim();
+      if (!id) {
+        return false;
+      }
+      const post = typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.postHomeAssistantWebhook === "function" ? window.NodaliaUtils.postHomeAssistantWebhook : null;
+      if (!post) {
+        return false;
+      }
+      try {
+        return Boolean(await post(id, body, this._hass));
+      } catch (_error) {
+        return false;
+      }
     }
     _submitQuickReminderComposer() {
       if (!this.shadowRoot) {
@@ -73229,14 +73488,22 @@
       if (Number.isNaN(d.getTime())) {
         return;
       }
-      this._quickReminders.push({
+      const reminder = {
         id: `qr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         title,
         start: d.toISOString(),
         color,
         allDay
-      });
+      };
+      this._quickReminders.push(reminder);
       this._saveQuickReminders();
+      const quickWebhookId = String(this._config?.quick_reminder_webhook || "").trim();
+      if (quickWebhookId) {
+        void this._postWebhookPayload(quickWebhookId, {
+          type: "quick_reminder_create",
+          reminder
+        });
+      }
       this._quickReminderComposerOpen = false;
       this._refreshEvents();
     }
@@ -73307,20 +73574,60 @@
         return;
       }
       try {
+        const nativeWebhookId = String(this._config?.native_event_webhook || "").trim();
         if (allDay) {
-          await this._hass.callService("calendar", "create_event", {
+          const startDay = /* @__PURE__ */ new Date(`${dateRaw}T00:00:00`);
+          const nextDay = Number.isNaN(startDay.getTime()) ? null : new Date(startDay.getTime() + 864e5);
+          const endDate = nextDay ? `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, "0")}-${String(nextDay.getDate()).padStart(2, "0")}` : dateRaw;
+          const payload = {
             entity_id: calendarId,
             summary: title,
             start_date: dateRaw,
-            end_date: dateRaw
-          });
+            end_date: endDate
+          };
+          if (nativeWebhookId) {
+            const ok = await this._postWebhookPayload(nativeWebhookId, {
+              type: "calendar_create_event",
+              data: payload
+            });
+            if (!ok) {
+              return;
+            }
+          } else {
+            await this._hass.callService("calendar", "create_event", payload);
+          }
         } else {
-          await this._hass.callService("calendar", "create_event", {
+          const formatLocalDateTime = (value) => {
+            const yy = value.getFullYear();
+            const mm = String(value.getMonth() + 1).padStart(2, "0");
+            const dd = String(value.getDate()).padStart(2, "0");
+            const hh = String(value.getHours()).padStart(2, "0");
+            const mi = String(value.getMinutes()).padStart(2, "0");
+            const ss = String(value.getSeconds()).padStart(2, "0");
+            return `${yy}-${mm}-${dd}T${hh}:${mi}:${ss}`;
+          };
+          const startDateTime = /* @__PURE__ */ new Date(`${dateRaw}T${startRaw}:00`);
+          let endDateTime = /* @__PURE__ */ new Date(`${dateRaw}T${endRaw}:00`);
+          if (!Number.isNaN(startDateTime.getTime()) && !Number.isNaN(endDateTime.getTime()) && endDateTime <= startDateTime) {
+            endDateTime = new Date(endDateTime.getTime() + 864e5);
+          }
+          const payload = {
             entity_id: calendarId,
             summary: title,
-            start_date_time: `${dateRaw}T${startRaw}:00`,
-            end_date_time: `${dateRaw}T${endRaw}:00`
-          });
+            start_date_time: Number.isNaN(startDateTime.getTime()) ? `${dateRaw}T${startRaw}:00` : formatLocalDateTime(startDateTime),
+            end_date_time: Number.isNaN(endDateTime.getTime()) ? `${dateRaw}T${endRaw}:00` : formatLocalDateTime(endDateTime)
+          };
+          if (nativeWebhookId) {
+            const ok = await this._postWebhookPayload(nativeWebhookId, {
+              type: "calendar_create_event",
+              data: payload
+            });
+            if (!ok) {
+              return;
+            }
+          } else {
+            await this._hass.callService("calendar", "create_event", payload);
+          }
         }
         this._nativeEventComposerOpen = false;
         this._refreshEvents();
@@ -73436,7 +73743,7 @@
           color: var(--primary-text-color);
           display: block;
           isolation: isolate;
-          overflow: hidden;
+          overflow: visible;
           overscroll-behavior-y: contain;
           position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
@@ -73891,7 +74198,9 @@
           display: grid;
           gap: 10px;
           left: 50%;
+          max-height: min(84vh, 760px);
           max-width: min(94vw, 520px);
+          overflow: auto;
           padding: 14px;
           position: absolute;
           top: 50%;
@@ -75195,6 +75504,9 @@
         .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="calendar-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="input-text-entity"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="input-text-entity-2"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="input-text-entity-3"]),
+        .editor-field:has(> .editor-control-host[data-mounted-control="input-text-entity-4"]),
         .editor-field:has(> ha-icon-picker) {
           grid-column: 1 / -1;
         }
@@ -75509,14 +75821,57 @@
               ></div>
               <span class="editor-field__hint">${escapeHtml17(
         this._editorLabel(
-          "Opcional: misma lista en movil y PC. Crea un input_text y elije aqui; la tarjeta guarda un JSON con las claves de eventos hechos."
+          "Opcional: misma lista en movil y PC. Puedes usar hasta 4 helpers (v6 multi-helper) para ampliar capacidad total."
         )
       )}</span>
+            </div>
+            <div class="editor-field editor-field--full">
+              <span>${escapeHtml17(this._editorLabel("Helper input_text #2 (opcional)"))}</span>
+              <div
+                class="editor-control-host"
+                data-mounted-control="input-text-entity-2"
+                data-field="shared_completed_events_entity_2"
+                data-value="${escapeHtml17(String(config.shared_completed_events_entity_2 ?? ""))}"
+                data-domains="input_text"
+                data-placeholder="input_text.nodalia_calendar_hechos_2"
+              ></div>
+            </div>
+            <div class="editor-field editor-field--full">
+              <span>${escapeHtml17(this._editorLabel("Helper input_text #3 (opcional)"))}</span>
+              <div
+                class="editor-control-host"
+                data-mounted-control="input-text-entity-3"
+                data-field="shared_completed_events_entity_3"
+                data-value="${escapeHtml17(String(config.shared_completed_events_entity_3 ?? ""))}"
+                data-domains="input_text"
+                data-placeholder="input_text.nodalia_calendar_hechos_3"
+              ></div>
+            </div>
+            <div class="editor-field editor-field--full">
+              <span>${escapeHtml17(this._editorLabel("Helper input_text #4 (opcional)"))}</span>
+              <div
+                class="editor-control-host"
+                data-mounted-control="input-text-entity-4"
+                data-field="shared_completed_events_entity_4"
+                data-value="${escapeHtml17(String(config.shared_completed_events_entity_4 ?? ""))}"
+                data-domains="input_text"
+                data-placeholder="input_text.nodalia_calendar_hechos_4"
+              ></div>
             </div>
             ${this._renderTextField("Webhook persistencia (ID, opcional)", "shared_completed_events_webhook", config.shared_completed_events_webhook || "", {
         fullWidth: true,
         placeholder: "nodalia_calendar_completed",
         hint: 'Si los usuarios no pueden llamar a input_text.set_value, pon aqui el webhook_id de una automatización que escriba el mismo helper. La tarjeta hace POST a /api/webhook/<id> con JSON {"value": "..."}.'
+      })}
+            ${this._renderTextField("Webhook quick reminder (ID, opcional)", "quick_reminder_webhook", config.quick_reminder_webhook || "", {
+        fullWidth: true,
+        placeholder: "nodalia_calendar_quick_reminder_create",
+        hint: "Si se define, al guardar recordatorio rapido tambien se envia POST webhook con {type:'quick_reminder_create', reminder:{...}}."
+      })}
+            ${this._renderTextField("Webhook evento nativo (ID, opcional)", "native_event_webhook", config.native_event_webhook || "", {
+        fullWidth: true,
+        placeholder: "nodalia_calendar_create_event",
+        hint: "Si se define, crear evento nativo usa webhook en lugar de calendar.create_event directo."
       })}
           </div>
         </section>
@@ -75617,7 +75972,9 @@
         </section>
       </div>
     `;
-      this.shadowRoot.querySelectorAll('[data-mounted-control="calendar-entity"], [data-mounted-control="input-text-entity"], [data-mounted-control="weather-entity"]').forEach((host) => {
+      this.shadowRoot.querySelectorAll(
+        '[data-mounted-control="calendar-entity"], [data-mounted-control="input-text-entity"], [data-mounted-control="input-text-entity-2"], [data-mounted-control="input-text-entity-3"], [data-mounted-control="input-text-entity-4"], [data-mounted-control="weather-entity"]'
+      ).forEach((host) => {
         this._mountCalendarEntityHost(host);
       });
     }
@@ -79291,4 +79648,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.34","contentSha256_12":"fdfa39d13ae8"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.34 (fdfa39d13ae8) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.35","contentSha256_12":"b9c9c53863db"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.35 (b9c9c53863db) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
