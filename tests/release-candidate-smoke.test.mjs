@@ -171,6 +171,33 @@ test("calendar editor signature only scans relevant entity domains", () => {
   assert.match(source, /id\.startsWith\("weather\."\)/);
 });
 
+test("notifications card is bundled and supports smart dismissible notifications", () => {
+  const source = read("nodalia-notifications-card.js");
+  const build = read("scripts/build-bundle.mjs");
+  const pkg = read("package.json");
+  const readme = read("README.md");
+  assert.match(source, /customElements\.define\(CARD_TAG, NodaliaNotificationsCard\)/);
+  assert.match(source, /custom_notifications/);
+  assert.match(source, /calendar_entities/);
+  assert.match(source, /vacuum_entities/);
+  assert.match(source, /weather_entities/);
+  assert.match(source, /fan_entities/);
+  assert.match(source, /motion_entities/);
+  assert.match(source, /door_entities/);
+  assert.match(source, /window_entities/);
+  assert.match(source, /temperature_entities/);
+  assert.match(source, /humidity_entities/);
+  assert.match(source, /localStorage\.setItem\(this\._getStorageKey\(\)/);
+  assert.match(source, /data-action="toggle-stack"/);
+  assert.match(source, /fan\.turn_on/);
+  assert.match(source, /calendars\/\$\{encodeURIComponent\(entityId\)\}/);
+  assert.match(source, /editorFilteredStatesSignature/);
+  assert.match(source, /sanitizeCssRuntimeValue/);
+  assert.match(build, /nodalia-notifications-card\.js/);
+  assert.match(pkg, /"nodalia-notifications-card\.js"/);
+  assert.match(readme, /custom:nodalia-notifications-card/);
+});
+
 test("bundle build minifies production output", () => {
   const source = read("scripts/build-bundle.mjs");
   assert.match(source, /minify:\s*true/);

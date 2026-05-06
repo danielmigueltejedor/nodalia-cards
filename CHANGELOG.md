@@ -10,6 +10,15 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.47] - 2026-05-07
+
+Forty-seventh **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.47`** (tag **`v1.0.0-alpha.47`** optional).
+
+- **Notifications card:** primera alpha versionada de `custom:nodalia-notifications-card` en el bundle, con centro inteligente de avisos, pila expandible, borrado persistente, recomendaciones y editor visual.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.47`**.
+
+---
+
 ## [1.0.0-alpha.46] - 2026-05-07
 
 Forty-sixth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.46`** (tag **`v1.0.0-alpha.46`** optional).
@@ -23,6 +32,7 @@ Forty-sixth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`_
 - **Calendar card — webhook evento nativo:** el payload de creación añade `service_data` y `ha_action` saneados para `calendar.create_event`, evitando enviar campos vacíos incompatibles como `start_date_time: ""` en eventos de todo el día y pasando `description`/`location` solo si existen; la recurrencia queda en `calendar_event`/websocket para no romper el servicio HA.
 - **Calendar card — validación de fechas:** crear un evento nativo con fecha anterior a hoy muestra un error integrado en el popup y evita enviar el webhook/servicio.
 - **Calendar card — tiempo en popup ampliado:** la vista grande también muestra el chip de tiempo en columnas/días, celdas del mes y detalle de día cuando hay forecast disponible.
+- **Notifications card:** nueva `custom:nodalia-notifications-card` como centro inteligente con vacio amable, pila expandible, borrado persistente, eventos de calendario de hoy, estados de robot, recomendaciones weather/fan, sensores y notificaciones personalizadas desde editor visual.
 - **Performance:** bundle minificado y editor de Calendar con firma de entidades filtrada a `calendar`, `input_text` y `weather` para reducir parseo/coste en instalaciones grandes.
 - **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.46`**.
 
