@@ -2661,8 +2661,18 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const serializedTrim = serialized.trim();
     const currentValue = entityId ? String(this._getSharedCleaningSessionState()?.state ?? "").trim() : "";
+    const hasEntityTarget = Boolean(entityId);
+    const hasWebhookTarget = Boolean(webhookId);
+    if (hasEntityTarget && serializedTrim === currentValue) {
+      return;
+    }
+    if (hasEntityTarget && serializedTrim === this._lastSubmittedSharedCleaningSessionValue) {
+      return;
+    }
     if (
-      serializedTrim === currentValue ||
+      !hasEntityTarget &&
+      hasWebhookTarget &&
+      serializedTrim !== "" &&
       serializedTrim === this._lastSubmittedSharedCleaningSessionValue
     ) {
       return;

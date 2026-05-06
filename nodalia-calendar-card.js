@@ -444,6 +444,7 @@ class NodaliaCalendarCard extends HTMLElement {
     this._expandedOpen = false;
     this._quickReminderComposerOpen = false;
     this._nativeEventComposerOpen = false;
+    this._nativeComposerCalendarValue = "";
     /** Month popup: `Y-M-D` (M 0–11) when a single-day view is open; empty string = full month grid */
     this._expandedMonthDayKey = "";
     this._completeExitKeys = new Set();
@@ -1476,10 +1477,17 @@ class NodaliaCalendarCard extends HTMLElement {
           entity_ids: [entityId],
           forecast_type: "daily",
         });
-        const wsRows = response?.[entityId]?.forecast;
-        if (Array.isArray(wsRows) && wsRows.length) {
-          forecastRows = wsRows;
-        }
+        const wsEntity = response?.[entityId] || response;
+        const wsCandidates = [
+          wsEntity?.forecast,
+          wsEntity?.daily?.forecast,
+          wsEntity?.daily,
+          response?.forecast,
+          response?.daily?.forecast,
+          response?.daily,
+        ];
+        const wsRows = wsCandidates.find(rows => Array.isArray(rows) && rows.length);
+        if (Array.isArray(wsRows)) forecastRows = wsRows;
       }
     } catch (_error) {
       // fallback below
@@ -1560,6 +1568,11 @@ class NodaliaCalendarCard extends HTMLElement {
 
   _openNativeEventComposer() {
     this._quickReminderComposerOpen = false;
+    if (!this._nativeComposerCalendarValue) {
+      this._nativeComposerCalendarValue = (this._config.calendars || [])
+        .map(c => String(c?.entity || "").trim())
+        .find(Boolean) || "";
+    }
     this._nativeEventComposerOpen = true;
     this._renderIfChanged(true);
   }
@@ -1665,9 +1678,8 @@ class NodaliaCalendarCard extends HTMLElement {
     if (!this._hass || !this.shadowRoot) {
       return;
     }
-    const calendarId = String(
-      this.shadowRoot.querySelector('[data-native-field="calendar"]')?.value || "",
-    ).trim();
+    const pickerValue = this.shadowRoot.querySelector('[data-native-field="calendar"]')?.value;
+    const calendarId = String(this._nativeComposerCalendarValue || pickerValue || "").trim();
     const title = String(
       this.shadowRoot.querySelector('[data-native-field="title"]')?.value || "",
     ).trim();
@@ -1731,9 +1743,7 @@ class NodaliaCalendarCard extends HTMLElement {
           <div class="calendar-composer__title">Nuevo evento</div>
           <label class="calendar-composer__field">
             <span>Calendario</span>
-            <select data-native-field="calendar">
-              ${calendarIds.map(id => `<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join("")}
-            </select>
+            <div data-native-calendar-host></div>
           </label>
           <label class="calendar-composer__field">
             <span>Titulo</span>
@@ -2736,6 +2746,50 @@ class NodaliaCalendarCard extends HTMLElement {
         </div>
       </div>
     `;
+    this._mountNativeCalendarControl();
+  }
+
+  _mountNativeCalendarControl() {
+    if (!this._nativeEventComposerOpen || !this.shadowRoot) {
+      return;
+    }
+    const host = this.shadowRoot.querySelector("[data-native-calendar-host]");
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+    const nextValue = this._nativeComposerCalendarValue || "";
+    let control = null;
+    if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = { entity: { domain: "calendar" } };
+      control.addEventListener("value-changed", event => {
+        this._nativeComposerCalendarValue = String(event?.detail?.value || "").trim();
+      });
+    } else if (customElements.get("ha-entity-picker")) {
+      control = document.createElement("ha-entity-picker");
+      control.includeDomains = ["calendar"];
+      control.allowCustomEntity = false;
+      control.entityFilter = stateObj =>
+        String(stateObj?.entity_id || "").startsWith("calendar.");
+      control.addEventListener("value-changed", event => {
+        this._nativeComposerCalendarValue = String(event?.detail?.value || "").trim();
+      });
+    } else {
+      control = document.createElement("input");
+      control.type = "text";
+      control.placeholder = "calendar.ejemplo";
+      control.addEventListener("change", () => {
+        this._nativeComposerCalendarValue = String(control.value || "").trim();
+      });
+    }
+    control.dataset.nativeField = "calendar";
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+    host.replaceChildren(control);
   }
 
   _onShadowKeydown(event) {

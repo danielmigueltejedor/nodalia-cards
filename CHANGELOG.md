@@ -10,6 +10,17 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.32] - 2026-05-06
+
+Thirty-second **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.32`** (tag **`v1.0.0-alpha.32`** optional).
+
+- **Calendar card — selector nativo HA en composer:** el alta de eventos nativos dentro del popup usa control nativo (`ha-selector` de entidad `calendar`) en lugar de `select` HTML, manteniendo fallback de compatibilidad.
+- **Calendar card — forecast diario más tolerante:** lectura de `weather/get_forecasts` ampliada para contemplar variantes de estructura de respuesta y fallback a atributos de estado cuando aplica.
+- **Advance Vacuum — persistencia webhook-only:** la deduplicación de sesión compartida separa rama webhook sin entidad para no bloquear retransmisión de sesión vacía en casos límite.
+- **Tests:** nuevo test de regresión para persistencia webhook-only en Advance Vacuum.
+
+---
+
 ## [1.0.0-alpha.31] - 2026-05-06
 
 Thirty-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.31`** (tag **`v1.0.0-alpha.31`** optional).

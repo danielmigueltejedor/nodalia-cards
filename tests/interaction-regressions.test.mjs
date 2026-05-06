@@ -52,3 +52,15 @@ test("advanced vacuum internal service calls bypass strict external allowlist", 
   assert.match(source, /_callInternalService\("roborock\.set_vacuum_goto_position"/);
   assert.match(source, /_callNamedService\(item\.service, serviceData, item\.target \|\| null\)/);
 });
+
+test("advanced vacuum webhook-only persistence does not suppress empty session retransmit", () => {
+  const source = read("nodalia-advance-vacuum-card.js");
+  assert.match(source, /const hasEntityTarget = Boolean\(entityId\)/);
+  assert.match(source, /const hasWebhookTarget = Boolean\(webhookId\)/);
+  assert.match(source, /if \(hasEntityTarget && serializedTrim === currentValue\)/);
+  assert.match(source, /if \(hasEntityTarget && serializedTrim === this\._lastSubmittedSharedCleaningSessionValue\)/);
+  assert.match(
+    source,
+    /!hasEntityTarget &&\s*hasWebhookTarget &&\s*serializedTrim !== "" &&\s*serializedTrim === this\._lastSubmittedSharedCleaningSessionValue/,
+  );
+});

@@ -53211,7 +53211,15 @@
       }
       const serializedTrim = serialized.trim();
       const currentValue = entityId ? String(this._getSharedCleaningSessionState()?.state ?? "").trim() : "";
-      if (serializedTrim === currentValue || serializedTrim === this._lastSubmittedSharedCleaningSessionValue) {
+      const hasEntityTarget = Boolean(entityId);
+      const hasWebhookTarget = Boolean(webhookId);
+      if (hasEntityTarget && serializedTrim === currentValue) {
+        return;
+      }
+      if (hasEntityTarget && serializedTrim === this._lastSubmittedSharedCleaningSessionValue) {
+        return;
+      }
+      if (!hasEntityTarget && hasWebhookTarget && serializedTrim !== "" && serializedTrim === this._lastSubmittedSharedCleaningSessionValue) {
         return;
       }
       this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
@@ -72087,6 +72095,7 @@
       this._expandedOpen = false;
       this._quickReminderComposerOpen = false;
       this._nativeEventComposerOpen = false;
+      this._nativeComposerCalendarValue = "";
       this._expandedMonthDayKey = "";
       this._completeExitKeys = /* @__PURE__ */ new Set();
       this._completeExitTimers = /* @__PURE__ */ new Map();
@@ -72977,10 +72986,17 @@
             entity_ids: [entityId],
             forecast_type: "daily"
           });
-          const wsRows = response?.[entityId]?.forecast;
-          if (Array.isArray(wsRows) && wsRows.length) {
-            forecastRows = wsRows;
-          }
+          const wsEntity = response?.[entityId] || response;
+          const wsCandidates = [
+            wsEntity?.forecast,
+            wsEntity?.daily?.forecast,
+            wsEntity?.daily,
+            response?.forecast,
+            response?.daily?.forecast,
+            response?.daily
+          ];
+          const wsRows = wsCandidates.find((rows) => Array.isArray(rows) && rows.length);
+          if (Array.isArray(wsRows)) forecastRows = wsRows;
         }
       } catch (_error) {
       }
@@ -73050,6 +73066,9 @@
     }
     _openNativeEventComposer() {
       this._quickReminderComposerOpen = false;
+      if (!this._nativeComposerCalendarValue) {
+        this._nativeComposerCalendarValue = (this._config.calendars || []).map((c) => String(c?.entity || "").trim()).find(Boolean) || "";
+      }
       this._nativeEventComposerOpen = true;
       this._renderIfChanged(true);
     }
@@ -73151,9 +73170,8 @@
       if (!this._hass || !this.shadowRoot) {
         return;
       }
-      const calendarId = String(
-        this.shadowRoot.querySelector('[data-native-field="calendar"]')?.value || ""
-      ).trim();
+      const pickerValue = this.shadowRoot.querySelector('[data-native-field="calendar"]')?.value;
+      const calendarId = String(this._nativeComposerCalendarValue || pickerValue || "").trim();
       const title = String(
         this.shadowRoot.querySelector('[data-native-field="title"]')?.value || ""
       ).trim();
@@ -73213,9 +73231,7 @@
           <div class="calendar-composer__title">Nuevo evento</div>
           <label class="calendar-composer__field">
             <span>Calendario</span>
-            <select data-native-field="calendar">
-              ${calendarIds.map((id) => `<option value="${escapeHtml17(id)}">${escapeHtml17(id)}</option>`).join("")}
-            </select>
+            <div data-native-calendar-host></div>
           </label>
           <label class="calendar-composer__field">
             <span>Titulo</span>
@@ -74190,6 +74206,48 @@
         </div>
       </div>
     `;
+      this._mountNativeCalendarControl();
+    }
+    _mountNativeCalendarControl() {
+      if (!this._nativeEventComposerOpen || !this.shadowRoot) {
+        return;
+      }
+      const host = this.shadowRoot.querySelector("[data-native-calendar-host]");
+      if (!(host instanceof HTMLElement)) {
+        return;
+      }
+      const nextValue = this._nativeComposerCalendarValue || "";
+      let control = null;
+      if (customElements.get("ha-selector")) {
+        control = document.createElement("ha-selector");
+        control.selector = { entity: { domain: "calendar" } };
+        control.addEventListener("value-changed", (event) => {
+          this._nativeComposerCalendarValue = String(event?.detail?.value || "").trim();
+        });
+      } else if (customElements.get("ha-entity-picker")) {
+        control = document.createElement("ha-entity-picker");
+        control.includeDomains = ["calendar"];
+        control.allowCustomEntity = false;
+        control.entityFilter = (stateObj) => String(stateObj?.entity_id || "").startsWith("calendar.");
+        control.addEventListener("value-changed", (event) => {
+          this._nativeComposerCalendarValue = String(event?.detail?.value || "").trim();
+        });
+      } else {
+        control = document.createElement("input");
+        control.type = "text";
+        control.placeholder = "calendar.ejemplo";
+        control.addEventListener("change", () => {
+          this._nativeComposerCalendarValue = String(control.value || "").trim();
+        });
+      }
+      control.dataset.nativeField = "calendar";
+      if ("hass" in control) {
+        control.hass = this._hass;
+      }
+      if ("value" in control) {
+        control.value = nextValue;
+      }
+      host.replaceChildren(control);
     }
     _onShadowKeydown(event) {
       if (!this._expandedOpen) {
@@ -79116,4 +79174,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.31","contentSha256_12":"30c5105a34b7"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.31 (30c5105a34b7) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.32","contentSha256_12":"d6e3cfac731c"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.32 (d6e3cfac731c) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
