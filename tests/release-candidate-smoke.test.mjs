@@ -148,9 +148,11 @@ test("calendar native composer supports rich HA event fields and details", () =>
   const example = read("examples/calendar-native-event-webhook.yaml");
   assert.match(source, /data-native-field="description"/);
   assert.match(source, /data-native-field="location"/);
-  assert.match(source, /data-native-field="repeat"/);
   assert.match(source, /data-native-field="repeatKind"/);
-  assert.match(source, /data-native-field="rrule"/);
+  assert.match(source, /value="none">No se repite/);
+  assert.match(source, /value="yearly">Anualmente/);
+  assert.doesNotMatch(source, /data-native-field="repeat"/);
+  assert.doesNotMatch(source, /data-native-field="rrule"/);
   assert.match(source, /appendNodaliaEventMetadata/);
   assert.match(source, /extractNodaliaEventColor/);
   assert.match(source, /calendar\/event\/create/);

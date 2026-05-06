@@ -9,7 +9,7 @@ import {
 
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.45";
+const CARD_VERSION = "1.0.0-alpha.46";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 
@@ -2483,15 +2483,9 @@ class NodaliaCalendarCard extends HTMLElement {
     const colorRaw = String(
       this.shadowRoot.querySelector('[data-native-field="color"]')?.value || "",
     ).trim();
-    const repeatEnabled = Boolean(
-      this.shadowRoot.querySelector('[data-native-field="repeat"]')?.checked,
-    );
     const repeatKind = String(
-      this.shadowRoot.querySelector('[data-native-field="repeatKind"]')?.value || "weekly",
-    ).trim();
-    const customRrule = String(
-      this.shadowRoot.querySelector('[data-native-field="rrule"]')?.value || "",
-    ).trim().replace(/^RRULE:/i, "");
+      this.shadowRoot.querySelector('[data-native-field="repeatKind"]')?.value || "none",
+    ).trim().toLowerCase();
     if (!calendarId || !title || !dateRaw || (!allDay && (!startRaw || !endRaw))) {
       return;
     }
@@ -2500,21 +2494,12 @@ class NodaliaCalendarCard extends HTMLElement {
       return;
     }
     const rruleByKind = {
-      daily: "FREQ=DAILY",
-      weekly: "FREQ=WEEKLY",
+      yearly: "FREQ=YEARLY",
       monthly: "FREQ=MONTHLY",
+      weekly: "FREQ=WEEKLY",
+      daily: "FREQ=DAILY",
     };
-    const rrule = repeatEnabled
-      ? (repeatKind === "custom" ? customRrule : rruleByKind[repeatKind])
-      : "";
-    if (repeatEnabled && !String(rrule || "").trim()) {
-      this._setComposerError("native", "Define la repeticion personalizada.");
-      return;
-    }
-    if (repeatEnabled && !/^FREQ=/i.test(String(rrule || "").trim())) {
-      this._setComposerError("native", "La repeticion personalizada debe empezar por FREQ=.");
-      return;
-    }
+    const rrule = rruleByKind[repeatKind] || "";
     const colorOverride = colorEnabled ? (sanitizeCalendarTint(colorRaw) || "#ff7ab6") : "";
     const description = appendNodaliaEventMetadata(descriptionRaw, { color: colorOverride });
     const addOptionalEventFields = payload => {
@@ -2701,24 +2686,15 @@ class NodaliaCalendarCard extends HTMLElement {
               <input data-native-field="end" type="time" value="${escapeHtml(defaultEnd)}" />
             </label>
           </div>
-          <div class="calendar-composer__row calendar-composer__row--middle">
-            <label class="calendar-composer__check">
-              <input data-native-field="repeat" type="checkbox" />
-              <span>Se repite</span>
-            </label>
-            <label class="calendar-composer__field">
-              <span>Frecuencia</span>
-              <select data-native-field="repeatKind">
-                <option value="weekly">Semanalmente</option>
-                <option value="daily">Diariamente</option>
-                <option value="monthly">Mensualmente</option>
-                <option value="custom">Personalizado</option>
-              </select>
-            </label>
-          </div>
           <label class="calendar-composer__field">
-            <span>Regla personalizada</span>
-            <input data-native-field="rrule" type="text" placeholder="FREQ=WEEKLY;COUNT=6" />
+            <span>Repeticion</span>
+            <select data-native-field="repeatKind">
+              <option value="none">No se repite</option>
+              <option value="yearly">Anualmente</option>
+              <option value="monthly">Mensualmente</option>
+              <option value="weekly">Semanalmente</option>
+              <option value="daily">Diariamente</option>
+            </select>
           </label>
           <div class="calendar-composer__row calendar-composer__row--middle">
             <label class="calendar-composer__check">
