@@ -10,12 +10,20 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.41] - 2026-05-06
+
+Forty-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.41`** (tag **`v1.0.0-alpha.41`** optional).
+
+- **Calendar card — forecast HA moderno:** suscripción diaria persistente con `weather/subscribe_forecast`, alineada con Weather Card, para recibir días futuros y `templow` cuando `weather/get_forecasts` o atributos legacy no devuelven datos.
+- **Calendar card — tiempo en popup ampliado:** la vista grande también muestra el chip de tiempo en columnas/días, celdas del mes y detalle de día cuando hay forecast disponible.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.41`**.
+
+---
+
 ## [1.0.0-alpha.40] - 2026-05-06
 
 Fortieth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.40`** (tag **`v1.0.0-alpha.40`** optional).
 
-- **Calendar card — forecast HA moderno:** lectura diaria por `weather/subscribe_forecast`, alineada con Weather Card, para recibir días futuros y `templow` cuando `weather/get_forecasts` o atributos legacy no devuelven datos.
-- **Calendar card — tiempo en popup ampliado:** la vista grande también muestra el chip de tiempo en columnas/días, celdas del mes y detalle de día cuando hay forecast disponible.
 - **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.40`**.
 
 ---

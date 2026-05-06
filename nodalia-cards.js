@@ -72309,6 +72309,9 @@
       this._viewVisibilityObserver = null;
       this._wasInViewport = false;
       this._weatherForecastByDay = /* @__PURE__ */ new Map();
+      this._weatherForecastEvents = {};
+      this._weatherForecastSubscription = null;
+      this._weatherForecastSubscriptionKey = "";
       this._refreshInFlight = false;
       this._refreshQueued = false;
       this._renderVisibleEventsCache = null;
@@ -72360,6 +72363,7 @@
       }
       this._loadCompleted();
       this._loadQuickReminders();
+      this._ensureWeatherForecastSubscription();
       if (!this._hadHass) {
         this._refreshEvents();
       }
@@ -72380,6 +72384,7 @@
       this._completeExitKeys.clear();
       this._calendarEntrancePlayed = false;
       this._wasInViewport = false;
+      this._unsubscribeWeatherForecast();
     }
     _attachViewVisibilityObserver() {
       if (this._viewVisibilityObserver || typeof IntersectionObserver !== "function") {
@@ -72412,7 +72417,14 @@
     setConfig(config) {
       const prevHelper = this._getSharedCompletedEntityIds(String(this._config?.shared_completed_events_entity || "").trim()).join("|");
       const prevWebhook = String(this._config?.shared_completed_events_webhook || "").trim();
+      const prevWeatherEntity = this._getWeatherEntityId();
       this._config = normalizeConfig17(config);
+      const nextWeatherEntity = this._getWeatherEntityId();
+      if (prevWeatherEntity !== nextWeatherEntity) {
+        this._unsubscribeWeatherForecast();
+        this._weatherForecastByDay = /* @__PURE__ */ new Map();
+        this._weatherForecastEvents = {};
+      }
       const nextHelper = this._getSharedCompletedEntityIds(String(this._config.shared_completed_events_entity || "").trim()).join("|");
       const nextWebhook = String(this._config.shared_completed_events_webhook || "").trim();
       if (prevHelper !== nextHelper || prevWebhook !== nextWebhook) {
@@ -72425,6 +72437,7 @@
       if (this._hass && this._getSharedCompletedEntityId()) {
         this._syncCompletedPersistenceFromHass();
       }
+      this._ensureWeatherForecastSubscription();
       this._refreshEvents();
     }
     _getSharedCompletedEntityIds(fallbackSingle) {
@@ -72630,8 +72643,10 @@
       const prevSharedSig = hadHass ? this._getSharedCompletedPersistenceSignature() : "";
       this._hass = hass;
       if (!hass) {
+        this._unsubscribeWeatherForecast();
         return;
       }
+      this._ensureWeatherForecastSubscription();
       if (!hadHass) {
         this._hadHass = true;
         this._syncCompletedPersistenceFromHass();
@@ -73405,6 +73420,86 @@
       const looksLikeForecastPoint = "datetime" in raw || "date" in raw || "day" in raw || "time" in raw || "timestamp" in raw || "temperature" in raw || "temperature_2m_max" in raw || "templow" in raw || "temperatureLow" in raw || "temperature_2m_min" in raw || "condition" in raw || "weather" in raw;
       return looksLikeForecastPoint ? [raw] : [];
     }
+    _applyWeatherForecastRows(forecastRows, { allowFallback = true } = {}) {
+      const forecastMap = this._buildForecastDayMap(forecastRows);
+      if (!forecastMap.size && allowFallback) {
+        const entityId = this._getWeatherEntityId();
+        const stateObj = entityId ? this._hass?.states?.[entityId] : null;
+        if (stateObj) {
+          const now = /* @__PURE__ */ new Date();
+          const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+          const currentTemp = Number(
+            stateObj.attributes?.temperature ?? stateObj.attributes?.native_temperature
+          );
+          const lowTemp = Number(
+            stateObj.attributes?.templow ?? stateObj.attributes?.temperature_low ?? stateObj.attributes?.native_templow
+          );
+          const condition = String(
+            stateObj.attributes?.condition ?? stateObj.state ?? ""
+          ).trim();
+          if (condition || Number.isFinite(currentTemp) || Number.isFinite(lowTemp)) {
+            forecastMap.set(todayKey, {
+              condition,
+              tempMax: Number.isFinite(currentTemp) ? currentTemp : null,
+              tempMin: Number.isFinite(lowTemp) ? lowTemp : null
+            });
+          }
+        }
+      }
+      this._weatherForecastByDay = forecastMap;
+      return forecastMap;
+    }
+    _unsubscribeWeatherForecast() {
+      if (!this._weatherForecastSubscription) {
+        this._weatherForecastSubscriptionKey = "";
+        return;
+      }
+      this._weatherForecastSubscription.then((unsubscribe) => {
+        if (typeof unsubscribe === "function") {
+          unsubscribe();
+        }
+      }).catch(() => {
+      });
+      this._weatherForecastSubscription = null;
+      this._weatherForecastSubscriptionKey = "";
+    }
+    _ensureWeatherForecastSubscription() {
+      const entityId = this._getWeatherEntityId();
+      if (!this.isConnected || !this._hass || !entityId || !this._hass.states?.[entityId]) {
+        this._unsubscribeWeatherForecast();
+        return;
+      }
+      const subscribeMessage = this._hass.connection?.subscribeMessage;
+      if (typeof subscribeMessage !== "function") {
+        this._unsubscribeWeatherForecast();
+        return;
+      }
+      const subscriptionKey = `${entityId}:daily`;
+      if (subscriptionKey === this._weatherForecastSubscriptionKey && this._weatherForecastSubscription) {
+        return;
+      }
+      this._unsubscribeWeatherForecast();
+      this._weatherForecastSubscriptionKey = subscriptionKey;
+      this._weatherForecastSubscription = subscribeMessage((event) => {
+        this._weatherForecastEvents = {
+          ...this._weatherForecastEvents,
+          daily: event
+        };
+        const rows = this._normalizeForecastRows(event?.forecast ?? event);
+        const forecastMap = this._applyWeatherForecastRows(rows, { allowFallback: rows.length === 0 });
+        if (forecastMap.size) {
+          this._lastRenderSignature = "";
+          this._renderIfChanged(true);
+        }
+      }, {
+        type: "weather/subscribe_forecast",
+        entity_id: entityId,
+        forecast_type: "daily"
+      }).catch(() => {
+        this._weatherForecastSubscription = null;
+        this._weatherForecastSubscriptionKey = "";
+      });
+    }
     _fetchDailyForecastViaSubscription(entityId) {
       const subscribeMessage = this._hass?.connection?.subscribeMessage;
       if (typeof subscribeMessage !== "function") {
@@ -73459,9 +73554,11 @@
         return;
       }
       const stateObj = this._hass.states[entityId];
-      let forecastRows = [];
+      let forecastRows = this._normalizeForecastRows(this._weatherForecastEvents?.daily?.forecast);
       try {
-        forecastRows = await this._fetchDailyForecastViaSubscription(entityId);
+        if (!forecastRows.length) {
+          forecastRows = await this._fetchDailyForecastViaSubscription(entityId);
+        }
       } catch (_error) {
       }
       try {
@@ -73512,28 +73609,7 @@
         } catch (_error) {
         }
       }
-      const forecastMap = this._buildForecastDayMap(forecastRows);
-      if (!forecastMap.size) {
-        const now = /* @__PURE__ */ new Date();
-        const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
-        const currentTemp = Number(
-          stateObj.attributes?.temperature ?? stateObj.attributes?.native_temperature
-        );
-        const lowTemp = Number(
-          stateObj.attributes?.templow ?? stateObj.attributes?.temperature_low ?? stateObj.attributes?.native_templow
-        );
-        const condition = String(
-          stateObj.attributes?.condition ?? stateObj.state ?? ""
-        ).trim();
-        if (condition || Number.isFinite(currentTemp) || Number.isFinite(lowTemp)) {
-          forecastMap.set(todayKey, {
-            condition,
-            tempMax: Number.isFinite(currentTemp) ? currentTemp : null,
-            tempMin: Number.isFinite(lowTemp) ? lowTemp : null
-          });
-        }
-      }
-      this._weatherForecastByDay = forecastMap;
+      this._applyWeatherForecastRows(forecastRows);
     }
     _buildWeatherForecastByDay() {
       return this._weatherForecastByDay instanceof Map ? this._weatherForecastByDay : /* @__PURE__ */ new Map();
@@ -79946,4 +80022,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.40","contentSha256_12":"a0e5027ec212"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.40 (a0e5027ec212) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.41","contentSha256_12":"e3899535c5a4"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.41 (e3899535c5a4) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}

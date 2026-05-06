@@ -80,6 +80,8 @@ test("calendar weather forecast normalization keeps date-keyed and tabular daily
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /function withForecastDateFromKey\(key, value\)/);
   assert.match(source, /weather\/subscribe_forecast/);
+  assert.match(source, /_ensureWeatherForecastSubscription\(\)/);
+  assert.match(source, /_weatherForecastEvents/);
   assert.match(source, /raw\.time \?\? raw\.datetime \?\? raw\.date \?\? raw\.dates/);
   assert.match(source, /this\._normalizeForecastRows\(withForecastDateFromKey\(key, value\)\)/);
   assert.match(source, /item\.temperatureLow/);
