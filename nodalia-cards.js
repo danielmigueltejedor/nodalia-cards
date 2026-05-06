@@ -27841,8 +27841,10 @@
         `;
         }
       }
-      const hasHeaderChips = Boolean(stateChipHeaderMarkup);
-      const hasBelowChips = Boolean(stateChipBelowMarkup || activeValueChipMarkup);
+      const activeValueChipHeaderMarkup = statePosition === "right" ? activeValueChipMarkup : "";
+      const activeValueChipBelowMarkup = statePosition === "below" ? activeValueChipMarkup : "";
+      const hasHeaderChips = Boolean(stateChipHeaderMarkup || activeValueChipHeaderMarkup);
+      const hasBelowChips = Boolean(stateChipBelowMarkup || activeValueChipBelowMarkup);
       const showCopyBlock = !isMiniLayout && (!isCompactLayout || hasHeaderChips || hasBelowChips);
       const sliderInnerMarkup = isOn && !isMiniLayout && availableControlModes.length > 0 ? `
         ${displayedControlMode === "temperature" ? `
@@ -29028,9 +29030,9 @@
                 <div class="light-card__copy">
                   <div class="light-card__copy-header">
                     ${isCompactLayout ? "" : `<div class="light-card__title">${escapeHtml3(title)}</div>`}
-                    ${hasHeaderChips ? `<div class="light-card__chips">${stateChipHeaderMarkup}</div>` : ""}
+                    ${hasHeaderChips ? `<div class="light-card__chips">${stateChipHeaderMarkup}${activeValueChipHeaderMarkup}</div>` : ""}
                   </div>
-                  ${hasBelowChips ? `<div class="light-card__chips light-card__chips--below">${stateChipBelowMarkup}${activeValueChipMarkup}</div>` : ""}
+                  ${hasBelowChips ? `<div class="light-card__chips light-card__chips--below">${stateChipBelowMarkup}${activeValueChipBelowMarkup}</div>` : ""}
                 </div>
               ` : ""}
           </div>
@@ -59724,7 +59726,7 @@
       const primaryValue = config.show_primary_chip !== false ? this._formatAttributeValue(state, config.primary_attribute) : null;
       const secondaryValue = config.show_secondary_chip !== false ? this._formatAttributeValue(state, config.secondary_attribute) : null;
       const showTitle = !isCompactLayout;
-      const placeStateChipOnTitleRow = statePosition === "right" && Boolean(stateChip) && showTitle;
+      const placeStateChipOnTitleRow = statePosition === "right" && Boolean(stateChip);
       const chips = [
         placeStateChipOnTitleRow ? "" : stateChip,
         this._renderChip(primaryValue, "value"),
@@ -66410,6 +66412,7 @@
       const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
       const animateWithPicture = shouldAnimateEntrance && pictureReady;
       const avatarCentered = !showName;
+      const showCopyBlock = showName || Boolean(subtitle);
       this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -66725,10 +66728,12 @@
             ${badge ? `<span class="person-card__badge" style="--badge-color:${escapeHtml15(badge.color)};"><ha-icon icon="${escapeHtml15(badge.icon)}"></ha-icon></span>` : ""}
             </div>
           </div>
+          ${showCopyBlock ? `
           <div class="person-card__copy ${animateWithPicture ? "person-card__copy--entering" : ""}">
             ${showName ? `<div class="person-card__title">${escapeHtml15(title)}</div>` : ""}
             ${subtitle ? `<div class="person-card__chips ${animateWithPicture ? "person-card__chips--entering" : ""}"><div class="person-card__state-chip">${escapeHtml15(subtitle)}</div></div>` : ""}
           </div>
+          ` : ""}
         </div>
       </ha-card>
     `;
@@ -72018,6 +72023,10 @@
       if (typeof document !== "undefined") {
         document.addEventListener("visibilitychange", this._onDocVisibility);
       }
+      this._calendarEntrancePlayed = false;
+      if (this._hadHass) {
+        this._renderIfChanged(true);
+      }
       this._loadCompleted();
       if (!this._hadHass) {
         this._refreshEvents();
@@ -72036,6 +72045,7 @@
       this._completeExitTimers.forEach((tid) => window.clearTimeout(tid));
       this._completeExitTimers.clear();
       this._completeExitKeys.clear();
+      this._calendarEntrancePlayed = false;
     }
     setConfig(config) {
       const prevHelper = String(this._config?.shared_completed_events_entity || "").trim();
@@ -78207,4 +78217,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.26","contentSha256_12":"8fbd5b5c68db"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.26 (8fbd5b5c68db) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.27","contentSha256_12":"5628973bb86d"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.27 (5628973bb86d) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}

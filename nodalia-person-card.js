@@ -1354,6 +1354,7 @@ class NodaliaPersonCard extends HTMLElement {
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const animateWithPicture = shouldAnimateEntrance && pictureReady;
     const avatarCentered = !showName;
+    const showCopyBlock = showName || Boolean(subtitle);
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1680,10 +1681,12 @@ class NodaliaPersonCard extends HTMLElement {
             }
             </div>
           </div>
+          ${showCopyBlock ? `
           <div class="person-card__copy ${animateWithPicture ? "person-card__copy--entering" : ""}">
             ${showName ? `<div class="person-card__title">${escapeHtml(title)}</div>` : ""}
             ${subtitle ? `<div class="person-card__chips ${animateWithPicture ? "person-card__chips--entering" : ""}"><div class="person-card__state-chip">${escapeHtml(subtitle)}</div></div>` : ""}
           </div>
+          ` : ""}
         </div>
       </ha-card>
     `;

@@ -2924,8 +2924,10 @@ class NodaliaLightCard extends HTMLElement {
       }
     }
 
-    const hasHeaderChips = Boolean(stateChipHeaderMarkup);
-    const hasBelowChips = Boolean(stateChipBelowMarkup || activeValueChipMarkup);
+    const activeValueChipHeaderMarkup = statePosition === "right" ? activeValueChipMarkup : "";
+    const activeValueChipBelowMarkup = statePosition === "below" ? activeValueChipMarkup : "";
+    const hasHeaderChips = Boolean(stateChipHeaderMarkup || activeValueChipHeaderMarkup);
+    const hasBelowChips = Boolean(stateChipBelowMarkup || activeValueChipBelowMarkup);
     const showCopyBlock = !isMiniLayout && (!isCompactLayout || hasHeaderChips || hasBelowChips);
     const sliderInnerMarkup = isOn && !isMiniLayout && availableControlModes.length > 0
       ? `
@@ -4182,9 +4184,9 @@ class NodaliaLightCard extends HTMLElement {
                 <div class="light-card__copy">
                   <div class="light-card__copy-header">
                     ${isCompactLayout ? "" : `<div class="light-card__title">${escapeHtml(title)}</div>`}
-                    ${hasHeaderChips ? `<div class="light-card__chips">${stateChipHeaderMarkup}</div>` : ""}
+                    ${hasHeaderChips ? `<div class="light-card__chips">${stateChipHeaderMarkup}${activeValueChipHeaderMarkup}</div>` : ""}
                   </div>
-                  ${hasBelowChips ? `<div class="light-card__chips light-card__chips--below">${stateChipBelowMarkup}${activeValueChipMarkup}</div>` : ""}
+                  ${hasBelowChips ? `<div class="light-card__chips light-card__chips--below">${stateChipBelowMarkup}${activeValueChipBelowMarkup}</div>` : ""}
                 </div>
               `
               : ""}

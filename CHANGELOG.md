@@ -10,6 +10,16 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.27] - 2026-05-06
+
+Twenty-seventh **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.27`** (tag **`v1.0.0-alpha.27`** optional).
+
+- **Calendar card:** la animación de entrada vuelve a dispararse al reentrar al dashboard (reset en attach/detach).
+- **Person card:** con **`show_name: false`** el bloque de texto se oculta por completo para centrar de verdad el avatar sin huecos.
+- **Light / Entity cards:** corrección de regresión en posición del estado (**derecha** / **debajo**), respetando explícitamente el ajuste seleccionado.
+
+---
+
 ## [1.0.0-alpha.26] - 2026-05-06
 
 Twenty-sixth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.26`** (tag **`v1.0.0-alpha.26`** optional).

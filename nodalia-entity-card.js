@@ -1664,7 +1664,7 @@ class NodaliaEntityCard extends HTMLElement {
       ? this._formatAttributeValue(state, config.secondary_attribute)
       : null;
     const showTitle = !isCompactLayout;
-    const placeStateChipOnTitleRow = statePosition === "right" && Boolean(stateChip) && showTitle;
+    const placeStateChipOnTitleRow = statePosition === "right" && Boolean(stateChip);
     const chips = [
       placeStateChipOnTitleRow ? "" : stateChip,
       this._renderChip(primaryValue, "value"),

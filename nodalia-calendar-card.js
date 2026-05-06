@@ -433,6 +433,11 @@ class NodaliaCalendarCard extends HTMLElement {
     if (typeof document !== "undefined") {
       document.addEventListener("visibilitychange", this._onDocVisibility);
     }
+    // Replay entrance animation whenever the card is re-attached to the dashboard view.
+    this._calendarEntrancePlayed = false;
+    if (this._hadHass) {
+      this._renderIfChanged(true);
+    }
     this._loadCompleted();
     if (!this._hadHass) {
       this._refreshEvents();
@@ -452,6 +457,7 @@ class NodaliaCalendarCard extends HTMLElement {
     this._completeExitTimers.forEach(tid => window.clearTimeout(tid));
     this._completeExitTimers.clear();
     this._completeExitKeys.clear();
+    this._calendarEntrancePlayed = false;
   }
 
   setConfig(config) {
