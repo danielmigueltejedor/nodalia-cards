@@ -5,6 +5,7 @@ import {
   expandCompletionPayloadToKeys,
   serializeCompactCompletionV2,
   serializeCompactCompletionV3,
+  serializeCompactCompletionV4,
   stableCompletionTokenFromKey,
   pickShortestCompletionPayload,
 } from "../nodalia-calendar-completion-codec.js";
@@ -50,14 +51,16 @@ test("same-day non-contiguous remainder round-trip", () => {
   assert.deepStrictEqual(back, keys);
 });
 
-test("pickShortest prefers compact under 255", () => {
+test("pickShortest prefers shorter stable v4 over v3 when both fit", () => {
   const ordered = [
     ev("calendar.a", "u1", "2026-05-06T10:00:00.000Z", "A"),
     ev("calendar.a", "u2", "2026-05-07T12:00:00.000Z", "B"),
   ];
   const keys = new Set(ordered.map(completionKey));
   const p = pickShortestCompletionPayload(keys, ordered, 255);
-  assert.ok(p.startsWith("v2:"));
+  assert.strictEqual(p, serializeCompactCompletionV4(keys));
+  assert.ok(p.startsWith("v4:"));
+  assert.ok(serializeCompactCompletionV4(keys).length < serializeCompactCompletionV3(keys).length);
 });
 
 test("v3 round-trip is independent of event order in list", () => {
@@ -93,12 +96,38 @@ test("v3 beats JSON when v2 cannot encode (no ordered events)", () => {
   assert.ok(picked.startsWith("v3:"));
 });
 
-test("pickShortest still prefers v2 when it is shorter than v3", () => {
+test("pickShortest falls back to shortest of v2 vs JSON when stable formats exceed maxLen", () => {
   const ordered = [
     ev("calendar.a", "u1", "2026-05-06T10:00:00.000Z", "A"),
     ev("calendar.a", "u2", "2026-05-07T12:00:00.000Z", "B"),
   ];
   const keys = new Set([completionKey(ordered[0])]);
-  const picked = pickShortestCompletionPayload(keys, ordered, 255);
+  const v3 = serializeCompactCompletionV3(keys);
+  assert.ok(v3.length > 10, "sanity");
+  const picked = pickShortestCompletionPayload(keys, ordered, 8);
+  assert.notStrictEqual(picked, v3);
   assert.strictEqual(picked, "v2:n1");
+});
+
+test("v4 round-trip is order-independent", () => {
+  const a = ev("calendar.a", "u1", "2026-05-06T10:00:00.000Z", "A");
+  const b = ev("calendar.a", "u2", "2026-05-07T12:00:00.000Z", "B");
+  const c = ev("calendar.a", "u3", "2026-05-08T14:00:00.000Z", "C");
+  const keys = new Set([completionKey(a), completionKey(c)]);
+  const payload = serializeCompactCompletionV4(keys);
+  assert.ok(payload.startsWith("v4:"));
+  const back = expandCompletionPayloadToKeys(payload, [c, a, b]);
+  assert.deepStrictEqual(new Set(back), keys);
+});
+
+test("pickShortest picks v3 when one completion (v4 overhead; still beats shorter v2:n1)", () => {
+  const ordered = [
+    ev("calendar.a", "u1", "2026-05-06T10:00:00.000Z", "A"),
+    ev("calendar.a", "u2", "2026-05-07T12:00:00.000Z", "B"),
+  ];
+  const keys = new Set([completionKey(ordered[0])]);
+  assert.ok(serializeCompactCompletionV4(keys).length > serializeCompactCompletionV3(keys).length);
+  const picked = pickShortestCompletionPayload(keys, ordered, 255);
+  assert.strictEqual(picked, serializeCompactCompletionV3(keys));
+  assert.strictEqual(picked, `v3:${stableCompletionTokenFromKey(completionKey(ordered[0]))}`);
 });

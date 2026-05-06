@@ -10,6 +10,14 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.25] - 2026-05-06
+
+Twenty-fifth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.25`** (tag **`v1.0.0-alpha.25`** optional).
+
+- **Calendar card — persistencia completados:** codec **`v4:`** (huellas FNV-1a 48-bit + binario Base64URL, orden-independiente); **`pickShortestCompletionPayload`** elige el **más corto** entre **`v4:`** y **`v3:`** si ambos caben; **`v2:`** / JSON solo si los estables no caben.
+
+---
+
 ## [1.0.0-alpha.24] - 2026-05-06
 
 Twenty-fourth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.24`** (tag **`v1.0.0-alpha.24`** optional).

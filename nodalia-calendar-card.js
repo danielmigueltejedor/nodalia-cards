@@ -9,7 +9,7 @@ import {
 
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.24";
+const CARD_VERSION = "1.0.0-alpha.25";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 
 const VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
@@ -526,9 +526,16 @@ class NodaliaCalendarCard extends HTMLElement {
 
     const events = this._events || [];
     const localRaw = this._readLocalCompletionRaw();
+    const rawT = raw.trim();
+    const localT = localRaw.trim();
     if (
       !events.length &&
-      (raw.trim().startsWith("v2:") || localRaw.trim().startsWith("v2:"))
+      (rawT.startsWith("v2:") ||
+        rawT.startsWith("v3:") ||
+        rawT.startsWith("v4:") ||
+        localT.startsWith("v2:") ||
+        localT.startsWith("v3:") ||
+        localT.startsWith("v4:"))
     ) {
       return;
     }
@@ -961,7 +968,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (!payloadHa) {
       if (typeof console !== "undefined" && typeof console.warn === "function") {
         console.warn(
-          "Nodalia Calendar Card: la lista de eventos completados no cabe en el input_text ni en formato compacto v2 (aumenta max en el helper o reduce eventos completados).",
+          "Nodalia Calendar Card: la lista de eventos completados no cabe en el input_text ni en formatos compactos v4/v3/v2 (aumenta max en el helper o reduce eventos completados).",
         );
       }
       return;
@@ -1140,7 +1147,9 @@ class NodaliaCalendarCard extends HTMLElement {
         try {
           const raw = await hass.callApi("GET", path);
           rows = normalizeCalendarFetchResult(raw);
-          if (!Array.isArray(raw)) {
+          // Solo REST fallback si sigue vacío *y* la respuesta no era ya un array JSON (p. ej. `{ events: [...] }`
+          // normaliza bien pero no es array → el viejo `!Array.isArray(raw)` disparaba fetch duplicado).
+          if (!rows.length && !Array.isArray(raw)) {
             const fallback = await this._fetchCalendarEventsViaRest(entityId, start, end);
             if (fallback.length) {
               rows = fallback;
