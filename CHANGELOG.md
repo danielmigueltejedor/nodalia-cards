@@ -10,13 +10,20 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.40] - 2026-05-06
+
+Fortieth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.40`** (tag **`v1.0.0-alpha.40`** optional).
+
+- **Calendar card — forecast HA moderno:** lectura diaria por `weather/subscribe_forecast`, alineada con Weather Card, para recibir días futuros y `templow` cuando `weather/get_forecasts` o atributos legacy no devuelven datos.
+- **Calendar card — tiempo en popup ampliado:** la vista grande también muestra el chip de tiempo en columnas/días, celdas del mes y detalle de día cuando hay forecast disponible.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.40`**.
+
+---
+
 ## [1.0.0-alpha.38] - 2026-05-06
 
 Thirty-eighth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.38`** (tag **`v1.0.0-alpha.38`** optional).
 
-- **Calendar card — forecast por clave de fecha:** el tiempo diario ahora conserva fechas cuando el `weather_entity` expone forecast como objeto indexado por día, evitando que días posteriores al actual se queden sin icono/temperatura.
-- **Calendar card — mínimas más compatibles:** lectura ampliada de campos de mínima/máxima (`temperatureLow`, `temperature_2m_min`, `native_temperature_min`, etc.) para mostrar mejor el par mínima/máxima.
-- **Calendar card — tiempo en popup ampliado:** la vista grande también muestra el chip de tiempo en columnas/días, celdas del mes y detalle de día cuando hay forecast disponible.
 - **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.38`**.
 
 ---

@@ -79,6 +79,7 @@ test("calendar runtime css sanitizer and webhook admin guard are present", () =>
 test("calendar weather forecast normalization keeps date-keyed and tabular daily rows", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /function withForecastDateFromKey\(key, value\)/);
+  assert.match(source, /weather\/subscribe_forecast/);
   assert.match(source, /raw\.time \?\? raw\.datetime \?\? raw\.date \?\? raw\.dates/);
   assert.match(source, /this\._normalizeForecastRows\(withForecastDateFromKey\(key, value\)\)/);
   assert.match(source, /item\.temperatureLow/);

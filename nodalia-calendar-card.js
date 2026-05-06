@@ -9,7 +9,7 @@ import {
 
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.38";
+const CARD_VERSION = "1.0.0-alpha.40";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 const QUICK_REMINDER_STORAGE_KEY = "nodalia_calendar_quick_reminders_v1";
 
@@ -1844,6 +1844,57 @@ class NodaliaCalendarCard extends HTMLElement {
     return looksLikeForecastPoint ? [raw] : [];
   }
 
+  _fetchDailyForecastViaSubscription(entityId) {
+    const subscribeMessage = this._hass?.connection?.subscribeMessage;
+    if (typeof subscribeMessage !== "function") {
+      return Promise.resolve([]);
+    }
+    return new Promise(resolve => {
+      let settled = false;
+      let unsubscribePromise = null;
+      let timeoutId = null;
+      const finish = rows => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        if (timeoutId && typeof window !== "undefined") {
+          window.clearTimeout(timeoutId);
+        }
+        Promise.resolve(unsubscribePromise)
+          .then(unsubscribe => {
+            if (typeof unsubscribe === "function") {
+              unsubscribe();
+            }
+          })
+          .catch(() => {});
+        resolve(Array.isArray(rows) ? rows : []);
+      };
+      if (typeof window !== "undefined") {
+        timeoutId = window.setTimeout(() => finish([]), 2600);
+      }
+      try {
+        unsubscribePromise = subscribeMessage(
+          event => finish(this._normalizeForecastRows(event?.forecast ?? event)),
+          {
+            type: "weather/subscribe_forecast",
+            entity_id: entityId,
+            forecast_type: "daily",
+          },
+        );
+        Promise.resolve(unsubscribePromise)
+          .then(unsubscribe => {
+            if (settled && typeof unsubscribe === "function") {
+              unsubscribe();
+            }
+          })
+          .catch(() => finish([]));
+      } catch (_error) {
+        finish([]);
+      }
+    });
+  }
+
   async _refreshWeatherForecastByDay() {
     const entityId = this._getWeatherEntityId();
     if (!entityId || !this._hass?.states?.[entityId]) {
@@ -1853,7 +1904,12 @@ class NodaliaCalendarCard extends HTMLElement {
     const stateObj = this._hass.states[entityId];
     let forecastRows = [];
     try {
-      if (typeof this._hass.callWS === "function") {
+      forecastRows = await this._fetchDailyForecastViaSubscription(entityId);
+    } catch (_error) {
+      // fallback below
+    }
+    try {
+      if (!forecastRows.length && typeof this._hass.callWS === "function") {
         const response = await this._hass.callWS({
           type: "weather/get_forecasts",
           entity_ids: [entityId],
