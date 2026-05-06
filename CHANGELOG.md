@@ -10,6 +10,14 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.37] - 2026-05-06
+
+Thirty-seventh **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.37`** (tag **`v1.0.0-alpha.37`** optional).
+
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.37`**.
+
+---
+
 ## [1.0.0-alpha.36] - 2026-05-06
 
 Thirty-sixth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.36`** (tag **`v1.0.0-alpha.36`** optional).

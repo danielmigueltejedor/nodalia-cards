@@ -9,7 +9,7 @@ import {
 
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.36";
+const CARD_VERSION = "1.0.0-alpha.37";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 const QUICK_REMINDER_STORAGE_KEY = "nodalia_calendar_quick_reminders_v1";
 
@@ -34,6 +34,9 @@ const DEFAULT_CONFIG = {
   shared_completed_events_webhook: "",
   quick_reminder_webhook: "",
   native_event_webhook: "",
+  security: {
+    allow_webhooks_for_non_admin: true,
+  },
   tint_auto: true,
   animations: {
     enabled: true,
@@ -154,6 +157,17 @@ function sanitizeCalendarTint(value) {
   return "";
 }
 
+function sanitizeCssRuntimeValue(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return "";
+  }
+  if (/[<>{};"']/.test(raw) || raw.includes("/*") || raw.includes("*/") || /<\/style/i.test(raw)) {
+    return "";
+  }
+  return raw;
+}
+
 function daysFromTimeRange(tr) {
   const map = { "3d": 3, "1w": 7, "2w": 14, "1m": 31 };
   return map[tr] || 7;
@@ -227,6 +241,13 @@ function normalizeConfig(config) {
   normalized.shared_completed_events_webhook = String(normalized.shared_completed_events_webhook ?? "").trim();
   normalized.quick_reminder_webhook = String(normalized.quick_reminder_webhook ?? "").trim();
   normalized.native_event_webhook = String(normalized.native_event_webhook ?? "").trim();
+  normalized.security = normalized.security || {};
+  const legacyRequireAdmin = normalized.security.require_admin_for_webhooks === true;
+  if (normalized.security.allow_webhooks_for_non_admin === undefined) {
+    normalized.security.allow_webhooks_for_non_admin = !legacyRequireAdmin;
+  }
+  normalized.security.allow_webhooks_for_non_admin =
+    normalized.security.allow_webhooks_for_non_admin !== false;
   normalized.weather_entity = String(normalized.weather_entity ?? "").trim();
   normalized.max_visible_events = Math.min(
     12,
@@ -236,6 +257,38 @@ function normalizeConfig(config) {
   if (!normalized.styles.chip_font_size && normalized.styles.chip_size) {
     normalized.styles.chip_font_size = normalized.styles.chip_size;
   }
+  normalized.styles.card.background =
+    sanitizeCssRuntimeValue(normalized.styles.card.background) || DEFAULT_CONFIG.styles.card.background;
+  normalized.styles.card.border =
+    sanitizeCssRuntimeValue(normalized.styles.card.border) || DEFAULT_CONFIG.styles.card.border;
+  normalized.styles.card.border_radius =
+    sanitizeCssRuntimeValue(normalized.styles.card.border_radius) || DEFAULT_CONFIG.styles.card.border_radius;
+  normalized.styles.card.box_shadow =
+    sanitizeCssRuntimeValue(normalized.styles.card.box_shadow) || DEFAULT_CONFIG.styles.card.box_shadow;
+  normalized.styles.card.padding =
+    sanitizeCssRuntimeValue(normalized.styles.card.padding) || DEFAULT_CONFIG.styles.card.padding;
+  normalized.styles.card.gap =
+    sanitizeCssRuntimeValue(normalized.styles.card.gap) || DEFAULT_CONFIG.styles.card.gap;
+  normalized.styles.title_size =
+    sanitizeCssRuntimeValue(normalized.styles.title_size) || DEFAULT_CONFIG.styles.title_size;
+  normalized.styles.event_size =
+    sanitizeCssRuntimeValue(normalized.styles.event_size) || DEFAULT_CONFIG.styles.event_size;
+  normalized.styles.chip_height =
+    sanitizeCssRuntimeValue(normalized.styles.chip_height) || DEFAULT_CONFIG.styles.chip_height;
+  normalized.styles.chip_font_size =
+    sanitizeCssRuntimeValue(normalized.styles.chip_font_size) || DEFAULT_CONFIG.styles.chip_font_size;
+  normalized.styles.chip_padding =
+    sanitizeCssRuntimeValue(normalized.styles.chip_padding) || DEFAULT_CONFIG.styles.chip_padding;
+  normalized.styles.icon.background =
+    sanitizeCssRuntimeValue(normalized.styles.icon.background) || DEFAULT_CONFIG.styles.icon.background;
+  normalized.styles.icon.on_color =
+    sanitizeCssRuntimeValue(normalized.styles.icon.on_color) || DEFAULT_CONFIG.styles.icon.on_color;
+  normalized.styles.icon.off_color =
+    sanitizeCssRuntimeValue(normalized.styles.icon.off_color) || DEFAULT_CONFIG.styles.icon.off_color;
+  normalized.styles.icon.size =
+    sanitizeCssRuntimeValue(normalized.styles.icon.size) || DEFAULT_CONFIG.styles.icon.size;
+  normalized.styles.tint.color =
+    sanitizeCssRuntimeValue(normalized.styles.tint.color) || DEFAULT_CONFIG.styles.tint.color;
   const iconStyle = normalized.styles?.icon;
   if (iconStyle && iconStyle.color && !iconStyle.on_color) {
     iconStyle.on_color = iconStyle.color;
@@ -354,6 +407,16 @@ function forecastDayKey(value) {
     return "";
   }
   return `${parsed.getFullYear()}-${parsed.getMonth()}-${parsed.getDate()}`;
+}
+
+function pickFirstFiniteNumber(...candidates) {
+  for (const candidate of candidates) {
+    const n = Number(candidate);
+    if (Number.isFinite(n)) {
+      return n;
+    }
+  }
+  return null;
 }
 
 function resolveEditorColorValue(value) {
@@ -518,6 +581,7 @@ class NodaliaCalendarCard extends HTMLElement {
     this._weatherForecastByDay = new Map();
     this._refreshInFlight = false;
     this._refreshQueued = false;
+    this._renderVisibleEventsCache = null;
   }
 
   _onDocVisibility() {
@@ -1380,6 +1444,7 @@ class NodaliaCalendarCard extends HTMLElement {
     const config = this._config;
     const styles = config.styles || DEFAULT_CONFIG.styles;
     const visibleEvents = this._events.filter(event => this._shouldShowEventInList(event));
+    this._renderVisibleEventsCache = visibleEvents;
     let hash = 2166136261;
     const mix = value => {
       const text = value === null || value === undefined ? "" : String(value);
@@ -1410,6 +1475,7 @@ class NodaliaCalendarCard extends HTMLElement {
     mix(config.shared_completed_events_webhook || "");
     mix(config.quick_reminder_webhook || "");
     mix(config.native_event_webhook || "");
+    mix(config.security?.allow_webhooks_for_non_admin ? 1 : 0);
     mix(config.tint_auto ? 1 : 0);
     mix(config.animations?.enabled ? 1 : 0);
     mix(config.animations?.content_duration);
@@ -1445,10 +1511,10 @@ class NodaliaCalendarCard extends HTMLElement {
       mix(completionKey(event));
       mix(eventDate(event?.start)?.getTime() || 0);
     });
-    [...this._completed].sort().forEach(key => mix(key));
+    this._completed.forEach(key => mix(key));
     mix(this._expandedOpen ? 1 : 0);
     mix(this._expandedMonthDayKey || "");
-    [...this._completeExitKeys].sort().forEach(key => mix(key));
+    this._completeExitKeys.forEach(key => mix(key));
     return `r:${hash.toString(36)}`;
   }
 
@@ -1623,16 +1689,46 @@ class NodaliaCalendarCard extends HTMLElement {
       if (map.has(dayKey)) {
         return;
       }
-      const maxCandidate = Number(
-        item.temperature ?? item.temperature_max ?? item.temp_max ?? item.native_temperature ?? item.native_temp,
+      const maxCandidate = pickFirstFiniteNumber(
+        item.temperature,
+        item.temperature_max,
+        item.temp_max,
+        item.temperatureHigh,
+        item.temperature_high,
+        item.tempHigh,
+        item.temp_high,
+        item.max,
+        item.max_temp,
+        item.day_temp,
+        item.native_temperature,
+        item.native_temp,
       );
-      const minCandidate = Number(
-        item.templow ?? item.temperature_low ?? item.temp_low ?? item.native_templow ?? item.native_temp_low,
+      const minCandidate = pickFirstFiniteNumber(
+        item.templow,
+        item.temperature_low,
+        item.temp_low,
+        item.temperatureMin,
+        item.temperature_min,
+        item.tempMin,
+        item.temp_min,
+        item.min,
+        item.min_temp,
+        item.night_temp,
+        item.native_templow,
+        item.native_temp_low,
       );
+      const condition = String(
+        item.condition ??
+          item.weather ??
+          item.main ??
+          item.state ??
+          item.symbol ??
+          "",
+      ).trim();
       map.set(dayKey, {
-        condition: String(item.condition ?? item.weather ?? "").trim(),
-        tempMax: Number.isFinite(maxCandidate) ? maxCandidate : null,
-        tempMin: Number.isFinite(minCandidate) ? minCandidate : null,
+        condition,
+        tempMax: maxCandidate,
+        tempMin: minCandidate,
       });
     });
     return map;
@@ -1901,6 +1997,17 @@ class NodaliaCalendarCard extends HTMLElement {
   async _postWebhookPayload(webhookId, body) {
     const id = String(webhookId ?? "").trim();
     if (!id) {
+      return false;
+    }
+    if (
+      this._config?.security?.allow_webhooks_for_non_admin === false &&
+      !this._hass?.user?.is_admin
+    ) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn(
+          "Nodalia Calendar Card: webhook bloqueado para usuario no administrador (security.allow_webhooks_for_non_admin=false).",
+        );
+      }
       return false;
     }
     const post =
@@ -2193,7 +2300,10 @@ class NodaliaCalendarCard extends HTMLElement {
     );
     const exitDurationMs = calendarExitDurationMs(config.animations?.content_duration);
     const maxVisibleEvents = Math.max(1, Number(config.max_visible_events) || DEFAULT_CONFIG.max_visible_events);
-    const visibleEvents = this._events.filter(event => this._shouldShowEventInList(event));
+    const visibleEvents = Array.isArray(this._renderVisibleEventsCache)
+      ? this._renderVisibleEventsCache
+      : this._events.filter(event => this._shouldShowEventInList(event));
+    this._renderVisibleEventsCache = null;
     const groups = this._groupEvents(visibleEvents);
     const weatherByDay = this._buildWeatherForecastByDay();
     const hasEvents = visibleEvents.length > 0;
@@ -2225,7 +2335,7 @@ class NodaliaCalendarCard extends HTMLElement {
           color: var(--primary-text-color);
           display: block;
           isolation: isolate;
-          overflow: visible;
+          overflow: hidden;
           overscroll-behavior-y: contain;
           position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
@@ -2233,6 +2343,7 @@ class NodaliaCalendarCard extends HTMLElement {
         ha-card::before {
           background: linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0));
           content: "";
+          border-radius: inherit;
           inset: 0;
           pointer-events: none;
           position: absolute;
@@ -2243,6 +2354,7 @@ class NodaliaCalendarCard extends HTMLElement {
             radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
             linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
           content: "";
+          border-radius: inherit;
           inset: 0;
           opacity: 1;
           pointer-events: none;
@@ -4488,6 +4600,11 @@ class NodaliaCalendarCardEditor extends HTMLElement {
               hint:
                 "Si se define, crear evento nativo usa webhook en lugar de calendar.create_event directo.",
             })}
+            ${this._renderCheckboxField(
+              "Permitir webhooks para cualquier usuario",
+              "security.allow_webhooks_for_non_admin",
+              config.security?.allow_webhooks_for_non_admin !== false,
+            )}
           </div>
         </section>
 

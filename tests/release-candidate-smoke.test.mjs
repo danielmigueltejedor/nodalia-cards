@@ -68,3 +68,10 @@ test("navigation runtime css sanitizer guard is present in source", () => {
   assert.match(source, /function sanitizeCssRuntimeValue\(value\)/);
   assert.match(source, /if \(\/\[<>\{\};"'\]\/\.test\(raw\) \|\| raw\.includes\("\/\*"\) \|\| raw\.includes\("\*\/"\)\)/);
 });
+
+test("calendar runtime css sanitizer and webhook admin guard are present", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /function sanitizeCssRuntimeValue\(value\)/);
+  assert.match(source, /security\.allow_webhooks_for_non_admin/);
+  assert.match(source, /webhook bloqueado para usuario no administrador/);
+});
