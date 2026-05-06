@@ -393,7 +393,7 @@
 
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.13.8";
+const CARD_VERSION = "0.13.9";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2596,6 +2596,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._lastSubmittedSharedCleaningSessionValue = null;
         if (typeof console !== "undefined" && typeof console.warn === "function") {
           console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
+          console.warn(
+            "Nodalia Advance Vacuum Card: usuarios no administradores necesitan permiso de control sobre el input_text del helper (shared_cleaning_session_entity) en Home Assistant.",
+          );
         }
       });
     }

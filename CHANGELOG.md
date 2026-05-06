@@ -10,6 +10,15 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.22] - 2026-05-06
+
+Twenty-second **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.22`** (tag **`v1.0.0-alpha.22`** optional).
+
+- **Calendar card:** persistencia en **`input_text`**: se ignoraban actualizaciones websocket **anticipadas** con el valor **viejo** del helper justo después de marcar completado; `_syncCompletedPersistenceFromHass` volvía a pisar **`_completed`** antes de que **`set_value`** reflejara en HA. Ahora hay **`_pendingSharedCompletedPayload`** (forma canónica del JSON) y no se aplica un estado remoto obsoleto mientras el pendiente no coincide; comparación canónica entre estado HA y payload local.
+- **Advance Vacuum (`0.13.9`):** segundo **`console.warn`** si **`set_value`** falla (p. ej. usuario sin permiso sobre el **`input_text`**).
+
+---
+
 ## [1.0.0-alpha.21] - 2026-05-06
 
 Twenty-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.21`** (tag **`v1.0.0-alpha.21`** optional).

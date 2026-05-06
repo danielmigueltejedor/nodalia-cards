@@ -53082,6 +53082,9 @@
           this._lastSubmittedSharedCleaningSessionValue = null;
           if (typeof console !== "undefined" && typeof console.warn === "function") {
             console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
+            console.warn(
+              "Nodalia Advance Vacuum Card: usuarios no administradores necesitan permiso de control sobre el input_text del helper (shared_cleaning_session_entity) en Home Assistant."
+            );
           }
         });
       }
@@ -71209,6 +71212,19 @@
     const summary = String(event?.summary || "");
     return `${source}|${uid}|${start}|${summary}`;
   }
+  function normalizeCompletedKeysJsonString(raw) {
+    try {
+      const v = JSON.parse(String(raw ?? "[]"));
+      if (!Array.isArray(v)) {
+        return null;
+      }
+      return JSON.stringify(
+        v.map((item) => String(item)).filter(Boolean).sort((a, b) => a.localeCompare(b, "en"))
+      );
+    } catch (_error) {
+      return null;
+    }
+  }
   var NodaliaCalendarCard = class extends HTMLElement {
     static getStubConfig() {
       return deepClone17(DEFAULT_CONFIG17);
@@ -71238,6 +71254,7 @@
       this._onShadowKeydown = this._onShadowKeydown.bind(this);
       this._onDocVisibility = this._onDocVisibility.bind(this);
       this._lastSubmittedSharedCompletedValue = "";
+      this._pendingSharedCompletedPayload = null;
       this._lastSyncedSharedCompletedRaw = void 0;
       this._completedMergedOnce = false;
     }
@@ -71308,6 +71325,7 @@
         this._completedMergedOnce = false;
         this._lastSyncedSharedCompletedRaw = void 0;
         this._lastSubmittedSharedCompletedValue = "";
+        this._pendingSharedCompletedPayload = null;
       }
       this._loadCompleted();
       if (this._hass && this._getSharedCompletedEntityId()) {
@@ -71370,6 +71388,16 @@
         parsed = v.map((k) => String(k));
       } catch (_error) {
         return;
+      }
+      const incomingCanonical = normalizeCompletedKeysJsonString(JSON.stringify(parsed));
+      const localCanonical = normalizeCompletedKeysJsonString(
+        JSON.stringify([...this._completed].map((k) => String(k)).sort((a, b) => a.localeCompare(b, "en")))
+      );
+      if (this._pendingSharedCompletedPayload && incomingCanonical && incomingCanonical !== this._pendingSharedCompletedPayload && incomingCanonical !== localCanonical) {
+        return;
+      }
+      if (this._pendingSharedCompletedPayload && incomingCanonical && incomingCanonical === this._pendingSharedCompletedPayload) {
+        this._pendingSharedCompletedPayload = null;
       }
       this._lastSyncedSharedCompletedRaw = raw;
       if (!this._completedMergedOnce) {
@@ -71702,10 +71730,19 @@
         return;
       }
       const currentState = String(this._hass.states?.[entityId]?.state ?? "").trim();
-      if (payload === currentState || payload === this._lastSubmittedSharedCompletedValue) {
+      const canonicalPayload = normalizeCompletedKeysJsonString(payload);
+      const canonicalCurrent = normalizeCompletedKeysJsonString(currentState);
+      const canonicalLastSubmit = normalizeCompletedKeysJsonString(this._lastSubmittedSharedCompletedValue);
+      if (canonicalPayload !== null && canonicalCurrent !== null && canonicalPayload === canonicalCurrent) {
+        return;
+      }
+      if (canonicalPayload !== null && canonicalLastSubmit !== null && canonicalPayload === canonicalLastSubmit) {
         return;
       }
       this._lastSubmittedSharedCompletedValue = payload;
+      if (canonicalPayload !== null) {
+        this._pendingSharedCompletedPayload = canonicalPayload;
+      }
       try {
         const result = this._hass.callService("input_text", "set_value", {
           entity_id: entityId,
@@ -71714,15 +71751,23 @@
         if (result && typeof result.then === "function") {
           result.catch((err) => {
             this._lastSubmittedSharedCompletedValue = null;
+            this._pendingSharedCompletedPayload = null;
             if (typeof console !== "undefined" && typeof console.warn === "function") {
               console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
+              console.warn(
+                "Nodalia Calendar Card: si usas un usuario no administrador, concede permiso de control sobre la entidad input_text del helper (Ajustes → … → Control de entidades / permisos)."
+              );
             }
           });
         }
       } catch (err) {
         this._lastSubmittedSharedCompletedValue = null;
+        this._pendingSharedCompletedPayload = null;
         if (typeof console !== "undefined" && typeof console.warn === "function") {
           console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
+          console.warn(
+            "Nodalia Calendar Card: si usas un usuario no administrador, concede permiso de control sobre la entidad input_text del helper."
+          );
         }
       }
     }
@@ -77386,4 +77431,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.21","contentSha256_12":"b6f35ffaa439"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.21 (b6f35ffaa439) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.22","contentSha256_12":"48a383788e62"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.22 (48a383788e62) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
