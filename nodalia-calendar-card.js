@@ -9,7 +9,7 @@ import {
 
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.44";
+const CARD_VERSION = "1.0.0-alpha.45";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 
@@ -3187,8 +3187,9 @@ class NodaliaCalendarCard extends HTMLElement {
           width: min(96vw, 1100px);
         }
         .calendar-expanded__panel--composer-open {
-          max-height: min(90vh, 920px);
-          min-height: min(76vh, 560px);
+          height: min(92vh, 940px);
+          max-height: min(92vh, 940px);
+          min-height: min(82vh, 640px);
         }
         .calendar-expanded__panel--entrance {
           animation: calendar-expanded-panel-in calc(${animationDuration}ms * 0.55) cubic-bezier(0.16, 0.84, 0.22, 1) both;
@@ -3245,14 +3246,23 @@ class NodaliaCalendarCard extends HTMLElement {
           touch-action: pan-y;
         }
         .calendar-expanded__panel--composer-open .calendar-expanded__body {
-          min-height: min(54vh, 420px);
+          max-height: none;
+          min-height: 0;
+          overflow: hidden;
         }
         .calendar-composer {
+          display: grid;
           inset: 0;
           opacity: 0;
+          overflow: auto;
+          overscroll-behavior: contain;
+          padding: 12px;
           pointer-events: none;
+          place-items: center;
           position: absolute;
+          touch-action: pan-y;
           transition: opacity 180ms ease;
+          -webkit-overflow-scrolling: touch;
           z-index: 3;
         }
         .calendar-composer.is-open {
@@ -3275,15 +3285,13 @@ class NodaliaCalendarCard extends HTMLElement {
           box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28);
           display: grid;
           gap: 10px;
-          left: 50%;
-          max-height: min(84vh, 760px);
-          max-width: min(94vw, 580px);
+          max-height: calc(100% - 24px);
+          max-width: min(100%, 640px);
           overflow: auto;
           padding: 14px;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: min(94vw, 580px);
+          position: relative;
+          width: min(100%, 640px);
+          z-index: 1;
         }
         .calendar-composer__title {
           font-size: ${styles.title_size};

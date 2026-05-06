@@ -23185,8 +23185,9 @@ ${a}`:a}function Xe(n){let e=String(n??"").trim();return!e||/[<>{};"']/.test(e)|
           width: min(96vw, 1100px);
         }
         .calendar-expanded__panel--composer-open {
-          max-height: min(90vh, 920px);
-          min-height: min(76vh, 560px);
+          height: min(92vh, 940px);
+          max-height: min(92vh, 940px);
+          min-height: min(82vh, 640px);
         }
         .calendar-expanded__panel--entrance {
           animation: calendar-expanded-panel-in calc(${k}ms * 0.55) cubic-bezier(0.16, 0.84, 0.22, 1) both;
@@ -23243,14 +23244,23 @@ ${a}`:a}function Xe(n){let e=String(n??"").trim();return!e||/[<>{};"']/.test(e)|
           touch-action: pan-y;
         }
         .calendar-expanded__panel--composer-open .calendar-expanded__body {
-          min-height: min(54vh, 420px);
+          max-height: none;
+          min-height: 0;
+          overflow: hidden;
         }
         .calendar-composer {
+          display: grid;
           inset: 0;
           opacity: 0;
+          overflow: auto;
+          overscroll-behavior: contain;
+          padding: 12px;
           pointer-events: none;
+          place-items: center;
           position: absolute;
+          touch-action: pan-y;
           transition: opacity 180ms ease;
+          -webkit-overflow-scrolling: touch;
           z-index: 3;
         }
         .calendar-composer.is-open {
@@ -23273,15 +23283,13 @@ ${a}`:a}function Xe(n){let e=String(n??"").trim();return!e||/[<>{};"']/.test(e)|
           box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28);
           display: grid;
           gap: 10px;
-          left: 50%;
-          max-height: min(84vh, 760px);
-          max-width: min(94vw, 580px);
+          max-height: calc(100% - 24px);
+          max-width: min(100%, 640px);
           overflow: auto;
           padding: 14px;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: min(94vw, 580px);
+          position: relative;
+          width: min(100%, 640px);
+          z-index: 1;
         }
         .calendar-composer__title {
           font-size: ${t.title_size};
@@ -25679,4 +25687,4 @@ ${a}`:a}function Xe(n){let e=String(n??"").trim();return!e||/[<>{};"']/.test(e)|
       </div>
     `,this.shadowRoot.querySelectorAll('[data-mounted-control="vacuum-entity"]').forEach(r=>this._mountVacuumEntityPicker(r)),this.shadowRoot.querySelectorAll('[data-mounted-control="select-entity"]').forEach(r=>this._mountSelectEntityPicker(r)),this.shadowRoot.querySelectorAll('[data-mounted-control="sensor-entity"]').forEach(r=>this._mountSensorEntityPicker(r)),this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach(r=>{r.hass=this._hass,r.value=r.dataset.value||"",r.addEventListener("value-changed",this._onShadowValueChanged)}),this._ensureEditorControlsReady()}};customElements.get(ms)||customElements.define(ms,gs);window.customCards=window.customCards||[];window.customCards.push({type:hs,name:"Nodalia Vacuum Card",description:"Tarjeta de aspirador con look Nodalia, acciones rápidas y editor visual.",preview:!0});})();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.44","contentSha256_12":"7d0703331ddc"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.44 (7d0703331ddc) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.45","contentSha256_12":"bdd8dbae46c8"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.45 (bdd8dbae46c8) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
