@@ -10,6 +10,18 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.26] - 2026-05-06
+
+Twenty-sixth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.26`** (tag **`v1.0.0-alpha.26`** optional).
+
+- **Calendar card — codec completados `v5:`:** huellas **24-bit** + binario Base64URL (`v5:`); hasta **~62** marcados en **255** caracteres; **`pickShortestCompletionPayload`** compite **`v5:`** / **`v4:`** / **`v3:`** (el más corto que quepa).
+- **Calendar card — `v4:` más denso:** huellas **40-bit** y recuento **`uint8`** (esquema binario `0x02`); se sigue leyendo el formato anterior **48-bit** / `uint16` (`0x01`).
+- **Advance Vacuum:** separación de llamadas internas y externas en modo estricto (`_callInternalService` para servicios fijos de la tarjeta como `vacuum.send_command`, `select.select_option`, `input_text.set_value`, `roborock.set_vacuum_goto_position`), manteniendo la allowlist para acciones definidas por el usuario.
+- **Light card:** opción **`state_position`** (`right` / `below`) para colocar el estado a la derecha del nombre o debajo.
+- **Person card:** opción **`show_name`** para ocultar el nombre; al ocultarlo, el avatar se centra en la tarjeta.
+
+---
+
 ## [1.0.0-alpha.25] - 2026-05-06
 
 Twenty-fifth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.25`** (tag **`v1.0.0-alpha.25`** optional).

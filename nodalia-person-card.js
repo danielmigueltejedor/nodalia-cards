@@ -484,6 +484,7 @@ const DEFAULT_CONFIG = {
   name: "",
   icon: "",
   tap_action: "more-info",
+  show_name: true,
   show_state: true,
   show_zone_badge: true,
   use_entity_picture: true,
@@ -1149,6 +1150,7 @@ class NodaliaPersonCard extends HTMLElement {
       zoneEntity: zoneState?.entity_id || "",
       zoneIcon: zoneState?.attributes?.icon || "",
       showState: this._config.show_state !== false,
+      showName: this._config.show_name !== false,
       showZoneBadge: this._config.show_zone_badge !== false,
       useEntityPicture: this._config.use_entity_picture !== false,
       useZoneIcon: this._config.use_zone_icon !== false,
@@ -1315,6 +1317,7 @@ class NodaliaPersonCard extends HTMLElement {
     const configuredRows = Number(this._config?.grid_options?.rows);
     const singleRowLayout = Number.isFinite(configuredRows) ? configuredRows <= 1 : true;
     const title = this._getTitle(state);
+    const showName = config.show_name !== false;
     const subtitle = config.show_state !== false ? this._translateState(state) : "";
     const desiredPicture = this._getPersonPicture(state);
     const pictureReady = !desiredPicture || this._ensurePersonPictureReady(desiredPicture);
@@ -1350,6 +1353,7 @@ class NodaliaPersonCard extends HTMLElement {
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const animateWithPicture = shouldAnimateEntrance && pictureReady;
+    const avatarCentered = !showName;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1409,6 +1413,11 @@ class NodaliaPersonCard extends HTMLElement {
           transition: transform 160ms ease;
           will-change: transform;
           z-index: 1;
+        }
+
+        .person-card--avatar-centered .person-card__content {
+          justify-content: center;
+          text-align: center;
         }
 
         .person-card__avatar-track {
@@ -1514,6 +1523,12 @@ class NodaliaPersonCard extends HTMLElement {
           flex: 1 1 auto;
           gap: ${singleRowLayout ? "4px" : "6px"};
           min-width: 0;
+        }
+
+        .person-card--avatar-centered .person-card__copy {
+          align-items: center;
+          justify-items: center;
+          text-align: center;
         }
 
         .person-card__copy--entering {
@@ -1649,7 +1664,7 @@ class NodaliaPersonCard extends HTMLElement {
         }
         `}
       </style>
-      <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""}">
+      <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""} ${avatarCentered ? "person-card--avatar-centered" : ""}">
         <div class="person-card__content ${animateWithPicture ? "person-card__content--entering" : ""}" ${canRunPrimaryAction ? 'data-person-action="primary"' : ""}>
           <div class="person-card__avatar-track">
             <div class="person-card__avatar ${animateWithPicture ? "person-card__avatar--entering" : ""}">
@@ -1666,7 +1681,7 @@ class NodaliaPersonCard extends HTMLElement {
             </div>
           </div>
           <div class="person-card__copy ${animateWithPicture ? "person-card__copy--entering" : ""}">
-            <div class="person-card__title">${escapeHtml(title)}</div>
+            ${showName ? `<div class="person-card__title">${escapeHtml(title)}</div>` : ""}
             ${subtitle ? `<div class="person-card__chips ${animateWithPicture ? "person-card__chips--entering" : ""}"><div class="person-card__state-chip">${escapeHtml(subtitle)}</div></div>` : ""}
           </div>
         </div>
@@ -2468,6 +2483,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
               placeholder: "Ana",
               fullWidth: true,
             })}
+            ${this._renderCheckboxField("Mostrar nombre", "show_name", config.show_name !== false)}
             ${this._renderSelectField(
               "Acción al tocar",
               "tap_action",

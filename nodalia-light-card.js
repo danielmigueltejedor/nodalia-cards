@@ -497,6 +497,7 @@ const DEFAULT_CONFIG = {
   name: "",
   icon: "",
   show_state: false,
+  state_position: "right",
   compact_layout_mode: "auto",
   show_brightness: true,
   show_slider_mode_buttons: true,
@@ -895,6 +896,8 @@ function kelvinToMired(value) {
 
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const normalizedStatePosition = String(config.state_position || "").toLowerCase();
+  config.state_position = normalizedStatePosition === "below" ? "below" : "right";
 
   if (!Array.isArray(config.quick_brightness) || !config.quick_brightness.length) {
     config.quick_brightness = deepClone(DEFAULT_CONFIG.quick_brightness);
@@ -1155,6 +1158,8 @@ class NodaliaLightCard extends HTMLElement {
       `c:${this._isCompactLayout ? 1 : 0}`,
       `mini:${this._shouldUseMiniLayout() ? 1 : 0}`,
       `cm:${String(this._activeControlMode || "")}`,
+      `ss:${this._config?.show_state === true ? 1 : 0}`,
+      `sp:${String(this._config?.state_position || "right")}`,
     ].join("|");
   }
 
@@ -2890,9 +2895,12 @@ class NodaliaLightCard extends HTMLElement {
       : 0;
     const brightnessSliderShellClass = shouldAnimateBrightnessFill ? " light-card__slider-shell--brightness-fill" : "";
 
+    const statePosition = config.state_position === "below" ? "below" : "right";
     if (!isMiniLayout && config.show_state === true) {
       stateChipMarkup = `<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`;
     }
+    const stateChipHeaderMarkup = statePosition === "right" ? stateChipMarkup : "";
+    const stateChipBelowMarkup = statePosition === "below" ? stateChipMarkup : "";
 
     if (isOn && !isMiniLayout) {
       let activeValueChip = null;
@@ -2916,8 +2924,9 @@ class NodaliaLightCard extends HTMLElement {
       }
     }
 
-    const hasHeaderChips = Boolean(stateChipMarkup || activeValueChipMarkup);
-    const showCopyBlock = !isMiniLayout && (!isCompactLayout || hasHeaderChips);
+    const hasHeaderChips = Boolean(stateChipHeaderMarkup);
+    const hasBelowChips = Boolean(stateChipBelowMarkup || activeValueChipMarkup);
+    const showCopyBlock = !isMiniLayout && (!isCompactLayout || hasHeaderChips || hasBelowChips);
     const sliderInnerMarkup = isOn && !isMiniLayout && availableControlModes.length > 0
       ? `
         ${
@@ -3373,7 +3382,7 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__copy {
           display: grid;
-          gap: 0;
+          gap: 6px;
           min-width: 0;
         }
 
@@ -3414,6 +3423,11 @@ class NodaliaLightCard extends HTMLElement {
           justify-content: flex-end;
           margin-left: auto;
           min-width: 0;
+        }
+
+        .light-card__chips--below {
+          justify-content: flex-start;
+          margin-left: 0;
         }
 
         .light-card--compact .light-card__chips {
@@ -4168,8 +4182,9 @@ class NodaliaLightCard extends HTMLElement {
                 <div class="light-card__copy">
                   <div class="light-card__copy-header">
                     ${isCompactLayout ? "" : `<div class="light-card__title">${escapeHtml(title)}</div>`}
-                    ${hasHeaderChips ? `<div class="light-card__chips">${stateChipMarkup}${activeValueChipMarkup}</div>` : ""}
+                    ${hasHeaderChips ? `<div class="light-card__chips">${stateChipHeaderMarkup}</div>` : ""}
                   </div>
+                  ${hasBelowChips ? `<div class="light-card__chips light-card__chips--below">${stateChipBelowMarkup}${activeValueChipMarkup}</div>` : ""}
                 </div>
               `
               : ""}
@@ -5032,6 +5047,15 @@ class NodaliaLightCardEditor extends HTMLElement {
               ],
             )}
             ${this._renderCheckboxField("Mostrar burbuja de estado", "show_state", config.show_state === true)}
+            ${this._renderSelectField(
+              "Posicion del estado",
+              "state_position",
+              config.state_position || "right",
+              [
+                { value: "right", label: "A la derecha del nombre" },
+                { value: "below", label: "Debajo del nombre" },
+              ],
+            )}
             ${this._renderCheckboxField("Mostrar brillo", "show_brightness", config.show_brightness !== false)}
             ${this._renderCheckboxField("Botones de modo junto al slider", "show_slider_mode_buttons", config.show_slider_mode_buttons !== false)}
             ${this._renderCheckboxField("Presets de brillo", "show_quick_brightness", config.show_quick_brightness !== false)}

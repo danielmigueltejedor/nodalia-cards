@@ -495,6 +495,7 @@ const DEFAULT_CONFIG = {
   tap_new_tab: false,
   show_state: true,
   state_chip_on_title_row: false,
+  state_position: "below",
   primary_attribute: "",
   secondary_attribute: "",
   show_primary_chip: true,
@@ -546,6 +547,7 @@ const STUB_CONFIG = {
   tap_action: "auto",
   show_state: true,
   state_chip_on_title_row: false,
+  state_position: "below",
   quick_actions: [
     {
       icon: "mdi:power",
@@ -989,6 +991,12 @@ function getDynamicEntityIcon(state) {
 
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const normalizedStatePosition = String(config.state_position || "").toLowerCase();
+  if (normalizedStatePosition === "right" || normalizedStatePosition === "below") {
+    config.state_position = normalizedStatePosition;
+  } else {
+    config.state_position = config.state_chip_on_title_row === true ? "right" : "below";
+  }
 
   config.quick_actions = Array.isArray(config.quick_actions)
     ? config.quick_actions
@@ -1648,6 +1656,7 @@ class NodaliaEntityCard extends HTMLElement {
     const showUnavailableBadge = isUnavailableState(state);
     const stateLabel = config.show_state ? this._translateStateValue(state) : null;
     const stateChip = this._renderChip(stateLabel, "state");
+    const statePosition = config.state_position === "right" ? "right" : "below";
     const primaryValue = config.show_primary_chip !== false
       ? this._formatAttributeValue(state, config.primary_attribute)
       : null;
@@ -1655,7 +1664,7 @@ class NodaliaEntityCard extends HTMLElement {
       ? this._formatAttributeValue(state, config.secondary_attribute)
       : null;
     const showTitle = !isCompactLayout;
-    const placeStateChipOnTitleRow = config.state_chip_on_title_row === true && Boolean(stateChip) && showTitle;
+    const placeStateChipOnTitleRow = statePosition === "right" && Boolean(stateChip) && showTitle;
     const chips = [
       placeStateChipOnTitleRow ? "" : stateChip,
       this._renderChip(primaryValue, "value"),
@@ -3215,7 +3224,15 @@ class NodaliaEntityCardEditor extends HTMLElement {
               ],
             )}
             ${this._renderCheckboxField("Mostrar estado", "show_state", config.show_state !== false)}
-            ${this._renderCheckboxField("Estado a la derecha del nombre", "state_chip_on_title_row", config.state_chip_on_title_row === true)}
+            ${this._renderSelectField(
+              "Posicion del estado",
+              "state_position",
+              config.state_position || (config.state_chip_on_title_row === true ? "right" : "below"),
+              [
+                { value: "below", label: "Debajo del nombre" },
+                { value: "right", label: "A la derecha del nombre" },
+              ],
+            )}
             ${this._renderTextField("Decimales en estado y chips", "number_decimals", config.number_decimals, {
               placeholder: "2",
               type: "number",

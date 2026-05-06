@@ -41,3 +41,14 @@ test("service-security controls are exposed in visual editors", () => {
     assert.match(source, /valueType:\s*"csv"|data-value-type="\$\{escapeHtml\(valueType\)\}"/);
   });
 });
+
+test("advanced vacuum internal service calls bypass strict external allowlist", () => {
+  const source = read("nodalia-advance-vacuum-card.js");
+  assert.match(source, /_callInternalService\(service, data = \{\}, target = null\)/);
+  assert.match(source, /_callNamedService\(service, data = \{\}, target = null\)/);
+  assert.doesNotMatch(source, /persistenceBypass/);
+  assert.match(source, /_callInternalService\("input_text\.set_value"/);
+  assert.match(source, /_callInternalService\("vacuum\.send_command"/);
+  assert.match(source, /_callInternalService\("roborock\.set_vacuum_goto_position"/);
+  assert.match(source, /_callNamedService\(item\.service, serviceData, item\.target \|\| null\)/);
+});

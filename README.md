@@ -3,7 +3,7 @@
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
 ![Latest stable](https://img.shields.io/badge/latest%20stable-0.6.1-2ea043)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
-![Alpha branch](https://img.shields.io/badge/alpha-1.0.0--alpha.25-orange)
+![Alpha branch](https://img.shields.io/badge/alpha-1.0.0--alpha.26-orange)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![GitHub](https://img.shields.io/badge/hosted%20on-GitHub-black?logo=github)
@@ -139,9 +139,9 @@ calendars:
 | `styles.chip_height` / `chip_font_size` / `chip_padding` | Header range chip |
 | `styles.chip_size` | Legacy alias mapped to `chip_font_size` if present |
 
-**Completed tasks storage:** persisted payloads use the **shortest order-stable** encoding that fits: **`v4:`** (48-bit fingerprints, binary + Base64URL) or **`v3:`** (11-character base62 per event — smaller overhead when you only have **one** completion). If the helper’s **`max`** is too small for both, the card falls back to **`v2:`** or sorted JSON. Legacy **`v4:`** / **`v3:`** / **`v2:`** / JSON all load correctly.
+**Completed tasks storage:** persisted payloads use the **shortest order-stable** encoding that fits: **`v5:`** (**24-bit** FNV-1a fragments in binary + Base64URL; fits **up to ~62** completed markers in **255** characters, higher collision risk than **`v4:`**), then **`v4:`** (**40-bit**, default when **`v5:`** is not shorter or not used), or **`v3:`** (11-character base62 per event) if shorter. If the helper’s **`max`** is too small, the card falls back to **`v2:`** or sorted JSON. Legacy **`v5:`** / **`v4:`** / **`v3:`** / **`v2:`** / JSON all load correctly.
 
-**Webhook automation example** (admin): use the same `webhook_id` string as `shared_completed_events_webhook` (calendar) or `shared_cleaning_session_webhook` (Advance Vacuum). Body is JSON `{"value": "..."}`; map it to `input_text.set_value` **data.value** (value may be **`v4:`**, **`v3:`**, **`v2:`**, or JSON).
+**Webhook automation example** (admin): use the same `webhook_id` string as `shared_completed_events_webhook` (calendar) or `shared_cleaning_session_webhook` (Advance Vacuum). Body is JSON `{"value": "..."}`; map it to `input_text.set_value` **data.value** (value may be **`v5:`**, **`v4:`**, **`v3:`**, **`v2:`**, or JSON).
 
 ```yaml
 automation:
@@ -184,7 +184,7 @@ Copy `nodalia-cards.js` into `config/www/` (or a subfolder) and add a resource u
 
 **Stable (`main`) — 0.6.1** includes **es, en, de, fr, it, nl** plus **pt, ru, el, zh** (simplified), and **ro** for the bundled cards and Lovelace visual editors (partial trees merge from English; coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
 
-**Prereleases:** active **`1.0.0-alpha.*`** line is now **`1.0.0-alpha.25`** on **`alpha`**. Recent **`1.0.0-beta.*`** cuts remain in **CHANGELOG**. **`0.6.1`** stays as the recommended stable line on **`main`** while polish continues toward **`1.0.0`** stable.
+**Prereleases:** active **`1.0.0-alpha.*`** line is now **`1.0.0-alpha.26`** on **`alpha`**. Recent **`1.0.0-beta.*`** cuts remain in **CHANGELOG**. **`0.6.1`** stays as the recommended stable line on **`main`** while polish continues toward **`1.0.0`** stable.
 
 ---
 

@@ -1,8 +1,9 @@
 /**
- * Codificación compacta v2/v3/v4 de eventos completados para el input_text (límite 255).
+ * Codificación compacta v2–v5 de eventos completados para el input_text (límite 255).
  * - v2: índices en ventana + trozos por día (depende del orden de carga).
  * - v3: huella FNV-1a 64-bit por clave lógica (orden-independiente; tokens base62 de 11 chars).
- * - v4: mismas claves; huellas FNV-1a **48-bit** ordenadas + binario + Base64URL (más denso que v3).
+ * - v4: mismas claves; binario + Base64URL. **`0x02`:** huellas **40-bit**, `uint8` count (≤255 marcados). **`0x01`:** huellas **48-bit**, `uint16` count (solo si >255 huellas únicas).
+ * - v5: huellas **24-bit** (FNV-1a truncada) + `uint8` count (≤255); **máx. ~62** marcados en 255 chars (riesgo de colisión mayor que v4).
  * @see nodalia-calendar-card.js
  */
 
@@ -10,9 +11,15 @@ const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 /** 62^10 < 2^64 < 62^11 — ancho fijo para concatenar tokens sin separador. */
 const V3_TOKEN_WIDTH = 11;
 
+const UINT24_MASK = (1n << 24n) - 1n;
+const UINT40_MASK = (1n << 40n) - 1n;
 const UINT48_MASK = (1n << 48n) - 1n;
-/** Esquema binario v4 (versión byte = 1): `uint16_be(count)` + `count × uint48_be` huellas ordenadas. */
-const V4_SCHEMA_VERSION = 1;
+/** `uint16_be(count)` + `count × uint48_be` (huellas ordenadas). Solo si hay >255 huellas únicas. */
+const V4_SCHEMA_V1 = 1;
+/** `uint8(count)` + `count × uint40_be` — formato preferido (más corto). */
+const V4_SCHEMA_V2 = 2;
+/** `uint8(count)` + `count × uint24_be` (v5). */
+const V5_SCHEMA_V1 = 1;
 
 function fnv1a64Utf8(str) {
   const bytes =
@@ -47,9 +54,52 @@ export function stableCompletionTokenFromKey(completionKeyStr) {
   return uint64ToBase62Fixed(fnv1a64Utf8(String(completionKeyStr ?? "")), V3_TOKEN_WIDTH);
 }
 
-/** Huella 48-bit (mismos bytes UTF-8 y FNV-1a que v3); uso en v4 binario. */
+/** Huella 48-bit (mismos bytes UTF-8 y FNV-1a que v3); uso en v4 esquema 1. */
 export function fingerprint48FromKey(completionKeyStr) {
   return fnv1a64Utf8(String(completionKeyStr ?? "")) & UINT48_MASK;
+}
+
+/** Huella 40-bit; v4 esquema 2 (máxima densidad habitual). */
+export function fingerprint40FromKey(completionKeyStr) {
+  return fnv1a64Utf8(String(completionKeyStr ?? "")) & UINT40_MASK;
+}
+
+/** Huella 24-bit; v5 (máxima densidad; colisiones más probables que v4). */
+export function fingerprint24FromKey(completionKeyStr) {
+  return fnv1a64Utf8(String(completionKeyStr ?? "")) & UINT24_MASK;
+}
+
+function writeUint40BE(arr, offset, valueBig) {
+  let v = BigInt(valueBig) & UINT40_MASK;
+  for (let i = 4; i >= 0; i -= 1) {
+    arr[offset + i] = Number(v & 0xffn);
+    v >>= 8n;
+  }
+}
+
+function readUint40BE(arr, offset) {
+  let v = 0n;
+  for (let i = 0; i < 5; i += 1) {
+    v = (v << 8n) | BigInt(arr[offset + i]);
+  }
+  return v & UINT40_MASK;
+}
+
+function writeUint24BE(arr, offset, valueBig) {
+  let v = BigInt(valueBig) & UINT24_MASK;
+  arr[offset + 2] = Number(v & 0xffn);
+  v >>= 8n;
+  arr[offset + 1] = Number(v & 0xffn);
+  v >>= 8n;
+  arr[offset] = Number(v & 0xffn);
+}
+
+function readUint24BE(arr, offset) {
+  let v = 0n;
+  for (let i = 0; i < 3; i += 1) {
+    v = (v << 8n) | BigInt(arr[offset + i]);
+  }
+  return v & UINT24_MASK;
 }
 
 function writeUint48BE(arr, offset, valueBig) {
@@ -227,25 +277,92 @@ function decodeCompactCalendarCompletionV4(raw, orderedEvents) {
   } catch (_err) {
     return [];
   }
-  if (bytes.length < 3) {
+  if (bytes.length < 2) {
     return [];
   }
-  if (bytes[0] !== V4_SCHEMA_VERSION) {
+  const schema = bytes[0];
+  if (schema === V4_SCHEMA_V2) {
+    const n = bytes[1];
+    if (n === 0 || bytes.length !== 2 + 5 * n) {
+      return [];
+    }
+    const fpWanted = new Set();
+    for (let i = 0; i < n; i += 1) {
+      fpWanted.add(readUint40BE(bytes, 2 + i * 5));
+    }
+    const list = Array.isArray(orderedEvents) ? orderedEvents : [];
+    const keys = [];
+    for (const ev of list) {
+      const k = completionKey(ev);
+      if (fpWanted.has(fingerprint40FromKey(k))) {
+        keys.push(k);
+      }
+    }
+    return keys;
+  }
+  if (schema === V4_SCHEMA_V1) {
+    if (bytes.length < 3) {
+      return [];
+    }
+    const n = (bytes[1] << 8) | bytes[2];
+    if (n === 0 || bytes.length !== 3 + 6 * n) {
+      return [];
+    }
+    const fpWanted = new Set();
+    for (let i = 0; i < n; i += 1) {
+      fpWanted.add(readUint48BE(bytes, 3 + i * 6));
+    }
+    const list = Array.isArray(orderedEvents) ? orderedEvents : [];
+    const keys = [];
+    for (const ev of list) {
+      const k = completionKey(ev);
+      if (fpWanted.has(fingerprint48FromKey(k))) {
+        keys.push(k);
+      }
+    }
+    return keys;
+  }
+  return [];
+}
+
+function decodeCompactCalendarCompletionV5(raw, orderedEvents) {
+  const head = String(raw ?? "").trim();
+  if (head === "v5:z") {
     return [];
   }
-  const n = (bytes[1] << 8) | bytes[2];
-  if (n === 0 || bytes.length !== 3 + 6 * n) {
+  if (!head.startsWith("v5:")) {
+    return [];
+  }
+  const body = head.slice(3);
+  if (body === "z") {
+    return [];
+  }
+  let bytes;
+  try {
+    bytes = base64UrlToBytes(body);
+  } catch (_err) {
+    return [];
+  }
+  if (bytes.length < 2) {
+    return [];
+  }
+  const schema = bytes[0];
+  if (schema !== V5_SCHEMA_V1) {
+    return [];
+  }
+  const n = bytes[1];
+  if (n === 0 || bytes.length !== 2 + 3 * n) {
     return [];
   }
   const fpWanted = new Set();
   for (let i = 0; i < n; i += 1) {
-    fpWanted.add(readUint48BE(bytes, 3 + i * 6));
+    fpWanted.add(readUint24BE(bytes, 2 + i * 3));
   }
   const list = Array.isArray(orderedEvents) ? orderedEvents : [];
   const keys = [];
   for (const ev of list) {
     const k = completionKey(ev);
-    if (fpWanted.has(fingerprint48FromKey(k))) {
+    if (fpWanted.has(fingerprint24FromKey(k))) {
       keys.push(k);
     }
   }
@@ -315,6 +432,9 @@ export function expandCompletionPayloadToKeys(raw, orderedEvents) {
   if (!s) {
     return [];
   }
+  if (s.startsWith("v5:")) {
+    return decodeCompactCalendarCompletionV5(s, orderedEvents);
+  }
   if (s.startsWith("v4:")) {
     return decodeCompactCalendarCompletionV4(s, orderedEvents);
   }
@@ -340,7 +460,7 @@ export function normalizeCompletionPayloadForCompare(raw, orderedEvents) {
   const head = String(raw ?? "").trim();
   if (
     !keys.length &&
-    (head.startsWith("v2:") || head.startsWith("v3:") || head.startsWith("v4:")) &&
+    (head.startsWith("v2:") || head.startsWith("v3:") || head.startsWith("v4:") || head.startsWith("v5:")) &&
     !(orderedEvents || []).length
   ) {
     return null;
@@ -456,7 +576,8 @@ export function serializeCompactCompletionV3(completedSet) {
 }
 
 /**
- * Codificación v4: huellas 48-bit (misma FNV-1a que v3), ordenadas, binario + Base64URL.
+ * Codificación v4: binario + Base64URL. Por defecto esquema **`0x02`** (40-bit, cabecera 2 bytes).
+ * Si hubiera >255 huellas únicas, esquema **`0x01`** (48-bit + `uint16` count).
  * Vacío `v4:z`.
  */
 export function serializeCompactCompletionV4(completedSet) {
@@ -466,7 +587,7 @@ export function serializeCompactCompletionV4(completedSet) {
   if (keys.length === 0) {
     return "v4:z";
   }
-  const uniqFp = [...new Set(keys.map(k => fingerprint48FromKey(k)))].sort((a, b) => {
+  const uniqFp40 = [...new Set(keys.map(k => fingerprint40FromKey(k)))].sort((a, b) => {
     if (a < b) {
       return -1;
     }
@@ -475,23 +596,75 @@ export function serializeCompactCompletionV4(completedSet) {
     }
     return 0;
   });
-  const n = uniqFp.length;
-  if (n > 0xffff) {
+  const n = uniqFp40.length;
+  if (n <= 255) {
+    const buf = new Uint8Array(2 + 5 * n);
+    buf[0] = V4_SCHEMA_V2;
+    buf[1] = n & 0xff;
+    for (let i = 0; i < n; i += 1) {
+      writeUint40BE(buf, 2 + i * 5, uniqFp40[i]);
+    }
+    return `v4:${bytesToBase64Url(buf)}`;
+  }
+  const uniqFp48 = [...new Set(keys.map(k => fingerprint48FromKey(k)))].sort((a, b) => {
+    if (a < b) {
+      return -1;
+    }
+    if (a > b) {
+      return 1;
+    }
+    return 0;
+  });
+  const n48 = uniqFp48.length;
+  if (n48 > 0xffff) {
     return null;
   }
-  const buf = new Uint8Array(3 + 6 * n);
-  buf[0] = V4_SCHEMA_VERSION;
-  buf[1] = (n >> 8) & 0xff;
-  buf[2] = n & 0xff;
-  for (let i = 0; i < n; i += 1) {
-    writeUint48BE(buf, 3 + i * 6, uniqFp[i]);
+  const buf = new Uint8Array(3 + 6 * n48);
+  buf[0] = V4_SCHEMA_V1;
+  buf[1] = (n48 >> 8) & 0xff;
+  buf[2] = n48 & 0xff;
+  for (let i = 0; i < n48; i += 1) {
+    writeUint48BE(buf, 3 + i * 6, uniqFp48[i]);
   }
   return `v4:${bytesToBase64Url(buf)}`;
 }
 
 /**
+ * Codificación v5: binario + Base64URL; huellas **24-bit** + `uint8` count (≤255 huellas únicas).
+ * Vacío `v5:z`. **~62** huellas como techo práctico en 255 caracteres (ver tests).
+ */
+export function serializeCompactCompletionV5(completedSet) {
+  const keys = [...(completedSet instanceof Set ? completedSet : new Set(completedSet))]
+    .map(k => String(k))
+    .filter(Boolean);
+  if (keys.length === 0) {
+    return "v5:z";
+  }
+  const uniqFp24 = [...new Set(keys.map(k => fingerprint24FromKey(k)))].sort((a, b) => {
+    if (a < b) {
+      return -1;
+    }
+    if (a > b) {
+      return 1;
+    }
+    return 0;
+  });
+  const n = uniqFp24.length;
+  if (n > 255) {
+    return null;
+  }
+  const buf = new Uint8Array(2 + 3 * n);
+  buf[0] = V5_SCHEMA_V1;
+  buf[1] = n & 0xff;
+  for (let i = 0; i < n; i += 1) {
+    writeUint24BE(buf, 2 + i * 3, uniqFp24[i]);
+  }
+  return `v5:${bytesToBase64Url(buf)}`;
+}
+
+/**
  * Elige el payload a guardar respetando `maxLen`.
- * Entre formatos **estables** (`v4:` / `v3:`) elige el **más corto** que quepa (orden-independientes).
+ * Entre formatos **estables** (`v5:` / `v4:` / `v3:`) elige el **más corto** que quepa (orden-independientes).
  * Si ninguno cabe, **`v2:`** y JSON por longitud creciente.
  */
 export function pickShortestCompletionPayload(completedSet, orderedEvents, maxLen) {
@@ -500,13 +673,15 @@ export function pickShortestCompletionPayload(completedSet, orderedEvents, maxLe
   const compactV2 = serializeCompactCompletionV2(completedSet, orderedEvents);
   const compactV3 = serializeCompactCompletionV3(completedSet);
   const compactV4 = serializeCompactCompletionV4(completedSet);
+  const compactV5 = serializeCompactCompletionV5(completedSet);
 
-  const stable = [compactV4, compactV3].filter(p => p && p.length <= maxLen);
+  const stable = [compactV5, compactV4, compactV3].filter(p => p && p.length <= maxLen);
   stable.sort((a, b) => {
     if (a.length !== b.length) {
       return a.length - b.length;
     }
-    const rank = p => (String(p).startsWith("v4:") ? 0 : 1);
+    const rank = p =>
+      String(p).startsWith("v5:") ? 0 : String(p).startsWith("v4:") ? 1 : 2;
     return rank(a) - rank(b);
   });
   if (stable.length) {

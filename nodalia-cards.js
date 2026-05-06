@@ -25918,6 +25918,7 @@
     name: "",
     icon: "",
     show_state: false,
+    state_position: "right",
     compact_layout_mode: "auto",
     show_brightness: true,
     show_slider_mode_buttons: true,
@@ -26223,6 +26224,8 @@
   }
   function normalizeConfig3(rawConfig) {
     const config = mergeConfig3(DEFAULT_CONFIG3, rawConfig || {});
+    const normalizedStatePosition = String(config.state_position || "").toLowerCase();
+    config.state_position = normalizedStatePosition === "below" ? "below" : "right";
     if (!Array.isArray(config.quick_brightness) || !config.quick_brightness.length) {
       config.quick_brightness = deepClone3(DEFAULT_CONFIG3.quick_brightness);
     }
@@ -26444,7 +26447,9 @@
         `sf:${Number(attrs.supported_features ?? -1)}`,
         `c:${this._isCompactLayout ? 1 : 0}`,
         `mini:${this._shouldUseMiniLayout() ? 1 : 0}`,
-        `cm:${String(this._activeControlMode || "")}`
+        `cm:${String(this._activeControlMode || "")}`,
+        `ss:${this._config?.show_state === true ? 1 : 0}`,
+        `sp:${String(this._config?.state_position || "right")}`
       ].join("|");
     }
     _getConfiguredGridColumns() {
@@ -27811,9 +27816,12 @@
       const shouldAnimateBrightnessFill = animations.enabled && powerAnimationState === "powering-up" && isOn && supportsBrightness && !isMiniLayout;
       const brightnessFillDuration = shouldAnimateBrightnessFill ? clamp3(Math.round(animations.controlsDuration * 0.82), 220, 1100) : 0;
       const brightnessSliderShellClass = shouldAnimateBrightnessFill ? " light-card__slider-shell--brightness-fill" : "";
+      const statePosition = config.state_position === "below" ? "below" : "right";
       if (!isMiniLayout && config.show_state === true) {
         stateChipMarkup = `<span class="light-card__chip light-card__chip--state">${escapeHtml3(stateLabel)}</span>`;
       }
+      const stateChipHeaderMarkup = statePosition === "right" ? stateChipMarkup : "";
+      const stateChipBelowMarkup = statePosition === "below" ? stateChipMarkup : "";
       if (isOn && !isMiniLayout) {
         let activeValueChip = null;
         if (displayedControlMode === "temperature" && config.show_temperature_controls !== false && supportsColorTemperature) {
@@ -27833,8 +27841,9 @@
         `;
         }
       }
-      const hasHeaderChips = Boolean(stateChipMarkup || activeValueChipMarkup);
-      const showCopyBlock = !isMiniLayout && (!isCompactLayout || hasHeaderChips);
+      const hasHeaderChips = Boolean(stateChipHeaderMarkup);
+      const hasBelowChips = Boolean(stateChipBelowMarkup || activeValueChipMarkup);
+      const showCopyBlock = !isMiniLayout && (!isCompactLayout || hasHeaderChips || hasBelowChips);
       const sliderInnerMarkup = isOn && !isMiniLayout && availableControlModes.length > 0 ? `
         ${displayedControlMode === "temperature" ? `
               <div class="light-card__slider-wrap">
@@ -28220,7 +28229,7 @@
 
         .light-card__copy {
           display: grid;
-          gap: 0;
+          gap: 6px;
           min-width: 0;
         }
 
@@ -28261,6 +28270,11 @@
           justify-content: flex-end;
           margin-left: auto;
           min-width: 0;
+        }
+
+        .light-card__chips--below {
+          justify-content: flex-start;
+          margin-left: 0;
         }
 
         .light-card--compact .light-card__chips {
@@ -29014,8 +29028,9 @@
                 <div class="light-card__copy">
                   <div class="light-card__copy-header">
                     ${isCompactLayout ? "" : `<div class="light-card__title">${escapeHtml3(title)}</div>`}
-                    ${hasHeaderChips ? `<div class="light-card__chips">${stateChipMarkup}${activeValueChipMarkup}</div>` : ""}
+                    ${hasHeaderChips ? `<div class="light-card__chips">${stateChipHeaderMarkup}</div>` : ""}
                   </div>
+                  ${hasBelowChips ? `<div class="light-card__chips light-card__chips--below">${stateChipBelowMarkup}${activeValueChipMarkup}</div>` : ""}
                 </div>
               ` : ""}
           </div>
@@ -29751,6 +29766,15 @@
         ]
       )}
             ${this._renderCheckboxField("Mostrar burbuja de estado", "show_state", config.show_state === true)}
+            ${this._renderSelectField(
+        "Posicion del estado",
+        "state_position",
+        config.state_position || "right",
+        [
+          { value: "right", label: "A la derecha del nombre" },
+          { value: "below", label: "Debajo del nombre" }
+        ]
+      )}
             ${this._renderCheckboxField("Mostrar brillo", "show_brightness", config.show_brightness !== false)}
             ${this._renderCheckboxField("Botones de modo junto al slider", "show_slider_mode_buttons", config.show_slider_mode_buttons !== false)}
             ${this._renderCheckboxField("Presets de brillo", "show_quick_brightness", config.show_quick_brightness !== false)}
@@ -53162,7 +53186,7 @@
         });
         return;
       }
-      const pending = this._callNamedService("input_text.set_value", {
+      const pending = this._callInternalService("input_text.set_value", {
         entity_id: entityId,
         value: serializedTrim
       });
@@ -53205,7 +53229,7 @@
         return;
       }
       this._lastSubmittedSharedCleaningSessionValue = "";
-      this._callNamedService("input_text.set_value", {
+      this._callInternalService("input_text.set_value", {
         entity_id: entityId,
         value: ""
       });
@@ -53581,7 +53605,7 @@
       this._activeCleaningSessionMode = "rooms";
       this._markCleaningSessionPendingStart();
       this._persistCurrentCleaningSessionState("rooms");
-      Promise.resolve(this._callNamedService("vacuum.send_command", {
+      Promise.resolve(this._callInternalService("vacuum.send_command", {
         entity_id: this._config.entity,
         command: "app_segment_clean",
         params: [{
@@ -53982,7 +54006,7 @@
       }
       const domain = this._getEntityDomain(entityId);
       const serviceName = domain === "input_select" ? "input_select.select_option" : "select.select_option";
-      this._callNamedService(serviceName, {
+      this._callInternalService(serviceName, {
         entity_id: entityId,
         option: value
       });
@@ -55326,10 +55350,21 @@
       if (!this._hass || !service) {
         return;
       }
-      const svcLower = String(service).trim().toLowerCase();
-      const targetEntity = String(data?.entity_id || "").trim();
-      const persistenceBypass = svcLower === "input_text.set_value" && targetEntity && targetEntity === this._getSharedCleaningSessionEntityId();
-      if (!persistenceBypass && !this._isServiceAllowed(service)) {
+      if (!this._isServiceAllowed(service)) {
+        return;
+      }
+      const [domain, serviceName] = String(service).split(".");
+      if (!domain || !serviceName) {
+        return;
+      }
+      return this._hass.callService(domain, serviceName, data, target || void 0);
+    }
+    /**
+     * Fixed, card-owned service calls that must not be blocked by strict allowlists.
+     * External/user-provided service actions still go through _callNamedService.
+     */
+    _callInternalService(service, data = {}, target = null) {
+      if (!this._hass || !service) {
         return;
       }
       const [domain, serviceName] = String(service).split(".");
@@ -55501,7 +55536,7 @@
             this._persistCurrentCleaningSessionState("rooms", {
               markSelectionChange: true
             });
-            await this._callNamedService("vacuum.send_command", {
+            await this._callInternalService("vacuum.send_command", {
               entity_id: this._config.entity,
               command: "app_segment_clean",
               params: [{
@@ -55541,7 +55576,7 @@
             await this._callVacuumService("pause");
             await new Promise((resolve) => window.setTimeout(resolve, 450));
           }
-          await this._callNamedService("vacuum.send_command", {
+          await this._callInternalService("vacuum.send_command", {
             entity_id: this._config.entity,
             command: "app_zoned_clean",
             params: selectedZones
@@ -55566,7 +55601,7 @@
           this._activeCleaningSessionMode = "";
           this._clearCleaningSessionPendingStart();
           this._clearPersistedCleaningSession();
-          await this._callNamedService("roborock.set_vacuum_goto_position", {
+          await this._callInternalService("roborock.set_vacuum_goto_position", {
             entity_id: this._config.entity,
             x: Math.round(this._gotoPoint.x),
             y: Math.round(this._gotoPoint.y)
@@ -58743,6 +58778,7 @@
     tap_new_tab: false,
     show_state: true,
     state_chip_on_title_row: false,
+    state_position: "below",
     primary_attribute: "",
     secondary_attribute: "",
     show_primary_chip: true,
@@ -58793,6 +58829,7 @@
     tap_action: "auto",
     show_state: true,
     state_chip_on_title_row: false,
+    state_position: "below",
     quick_actions: [
       {
         icon: "mdi:power",
@@ -59140,6 +59177,12 @@
   }
   function normalizeConfig12(rawConfig) {
     const config = mergeConfig12(DEFAULT_CONFIG12, rawConfig || {});
+    const normalizedStatePosition = String(config.state_position || "").toLowerCase();
+    if (normalizedStatePosition === "right" || normalizedStatePosition === "below") {
+      config.state_position = normalizedStatePosition;
+    } else {
+      config.state_position = config.state_chip_on_title_row === true ? "right" : "below";
+    }
     config.quick_actions = Array.isArray(config.quick_actions) ? config.quick_actions.filter((action) => isObject12(action)).map((action) => ({
       icon: action.icon || "mdi:flash",
       type: action.type || "toggle",
@@ -59677,10 +59720,11 @@
       const showUnavailableBadge = isUnavailableState11(state);
       const stateLabel = config.show_state ? this._translateStateValue(state) : null;
       const stateChip = this._renderChip(stateLabel, "state");
+      const statePosition = config.state_position === "right" ? "right" : "below";
       const primaryValue = config.show_primary_chip !== false ? this._formatAttributeValue(state, config.primary_attribute) : null;
       const secondaryValue = config.show_secondary_chip !== false ? this._formatAttributeValue(state, config.secondary_attribute) : null;
       const showTitle = !isCompactLayout;
-      const placeStateChipOnTitleRow = config.state_chip_on_title_row === true && Boolean(stateChip) && showTitle;
+      const placeStateChipOnTitleRow = statePosition === "right" && Boolean(stateChip) && showTitle;
       const chips = [
         placeStateChipOnTitleRow ? "" : stateChip,
         this._renderChip(primaryValue, "value"),
@@ -61066,7 +61110,15 @@
         ]
       )}
             ${this._renderCheckboxField("Mostrar estado", "show_state", config.show_state !== false)}
-            ${this._renderCheckboxField("Estado a la derecha del nombre", "state_chip_on_title_row", config.state_chip_on_title_row === true)}
+            ${this._renderSelectField(
+        "Posicion del estado",
+        "state_position",
+        config.state_position || (config.state_chip_on_title_row === true ? "right" : "below"),
+        [
+          { value: "below", label: "Debajo del nombre" },
+          { value: "right", label: "A la derecha del nombre" }
+        ]
+      )}
             ${this._renderTextField("Decimales en estado y chips", "number_decimals", config.number_decimals, {
         placeholder: "2",
         type: "number"
@@ -65649,6 +65701,7 @@
     name: "",
     icon: "",
     tap_action: "more-info",
+    show_name: true,
     show_state: true,
     show_zone_badge: true,
     use_entity_picture: true,
@@ -66186,6 +66239,7 @@
         zoneEntity: zoneState?.entity_id || "",
         zoneIcon: zoneState?.attributes?.icon || "",
         showState: this._config.show_state !== false,
+        showName: this._config.show_name !== false,
         showZoneBadge: this._config.show_zone_badge !== false,
         useEntityPicture: this._config.use_entity_picture !== false,
         useZoneIcon: this._config.use_zone_icon !== false,
@@ -66325,6 +66379,7 @@
       const configuredRows = Number(this._config?.grid_options?.rows);
       const singleRowLayout = Number.isFinite(configuredRows) ? configuredRows <= 1 : true;
       const title = this._getTitle(state);
+      const showName = config.show_name !== false;
       const subtitle = config.show_state !== false ? this._translateState(state) : "";
       const desiredPicture = this._getPersonPicture(state);
       const pictureReady = !desiredPicture || this._ensurePersonPictureReady(desiredPicture);
@@ -66354,6 +66409,7 @@
       const animations = this._getAnimationSettings();
       const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
       const animateWithPicture = shouldAnimateEntrance && pictureReady;
+      const avatarCentered = !showName;
       this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -66410,6 +66466,11 @@
           transition: transform 160ms ease;
           will-change: transform;
           z-index: 1;
+        }
+
+        .person-card--avatar-centered .person-card__content {
+          justify-content: center;
+          text-align: center;
         }
 
         .person-card__avatar-track {
@@ -66515,6 +66576,12 @@
           flex: 1 1 auto;
           gap: ${singleRowLayout ? "4px" : "6px"};
           min-width: 0;
+        }
+
+        .person-card--avatar-centered .person-card__copy {
+          align-items: center;
+          justify-items: center;
+          text-align: center;
         }
 
         .person-card__copy--entering {
@@ -66650,7 +66717,7 @@
         }
         `}
       </style>
-      <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""}">
+      <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""} ${avatarCentered ? "person-card--avatar-centered" : ""}">
         <div class="person-card__content ${animateWithPicture ? "person-card__content--entering" : ""}" ${canRunPrimaryAction ? 'data-person-action="primary"' : ""}>
           <div class="person-card__avatar-track">
             <div class="person-card__avatar ${animateWithPicture ? "person-card__avatar--entering" : ""}">
@@ -66659,7 +66726,7 @@
             </div>
           </div>
           <div class="person-card__copy ${animateWithPicture ? "person-card__copy--entering" : ""}">
-            <div class="person-card__title">${escapeHtml15(title)}</div>
+            ${showName ? `<div class="person-card__title">${escapeHtml15(title)}</div>` : ""}
             ${subtitle ? `<div class="person-card__chips ${animateWithPicture ? "person-card__chips--entering" : ""}"><div class="person-card__state-chip">${escapeHtml15(subtitle)}</div></div>` : ""}
           </div>
         </div>
@@ -67331,6 +67398,7 @@
         placeholder: "Ana",
         fullWidth: true
       })}
+            ${this._renderCheckboxField("Mostrar nombre", "show_name", config.show_name !== false)}
             ${this._renderSelectField(
         "Acción al tocar",
         "tap_action",
@@ -70979,8 +71047,12 @@
   // nodalia-calendar-completion-codec.js
   var BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
   var V3_TOKEN_WIDTH = 11;
+  var UINT24_MASK = (1n << 24n) - 1n;
+  var UINT40_MASK = (1n << 40n) - 1n;
   var UINT48_MASK = (1n << 48n) - 1n;
-  var V4_SCHEMA_VERSION = 1;
+  var V4_SCHEMA_V1 = 1;
+  var V4_SCHEMA_V2 = 2;
+  var V5_SCHEMA_V1 = 1;
   function fnv1a64Utf8(str) {
     const bytes = typeof TextEncoder !== "undefined" ? new TextEncoder().encode(String(str)) : typeof Buffer !== "undefined" ? Buffer.from(String(str), "utf8") : new Uint8Array([...String(str)].map((c) => c.charCodeAt(0) & 255));
     let h = 14695981039346656037n;
@@ -71007,6 +71079,41 @@
   }
   function fingerprint48FromKey(completionKeyStr) {
     return fnv1a64Utf8(String(completionKeyStr ?? "")) & UINT48_MASK;
+  }
+  function fingerprint40FromKey(completionKeyStr) {
+    return fnv1a64Utf8(String(completionKeyStr ?? "")) & UINT40_MASK;
+  }
+  function fingerprint24FromKey(completionKeyStr) {
+    return fnv1a64Utf8(String(completionKeyStr ?? "")) & UINT24_MASK;
+  }
+  function writeUint40BE(arr, offset, valueBig) {
+    let v = BigInt(valueBig) & UINT40_MASK;
+    for (let i = 4; i >= 0; i -= 1) {
+      arr[offset + i] = Number(v & 0xffn);
+      v >>= 8n;
+    }
+  }
+  function readUint40BE(arr, offset) {
+    let v = 0n;
+    for (let i = 0; i < 5; i += 1) {
+      v = v << 8n | BigInt(arr[offset + i]);
+    }
+    return v & UINT40_MASK;
+  }
+  function writeUint24BE(arr, offset, valueBig) {
+    let v = BigInt(valueBig) & UINT24_MASK;
+    arr[offset + 2] = Number(v & 0xffn);
+    v >>= 8n;
+    arr[offset + 1] = Number(v & 0xffn);
+    v >>= 8n;
+    arr[offset] = Number(v & 0xffn);
+  }
+  function readUint24BE(arr, offset) {
+    let v = 0n;
+    for (let i = 0; i < 3; i += 1) {
+      v = v << 8n | BigInt(arr[offset + i]);
+    }
+    return v & UINT24_MASK;
   }
   function writeUint48BE(arr, offset, valueBig) {
     let v = BigInt(valueBig) & UINT48_MASK;
@@ -71161,25 +71268,91 @@
     } catch (_err) {
       return [];
     }
-    if (bytes.length < 3) {
+    if (bytes.length < 2) {
       return [];
     }
-    if (bytes[0] !== V4_SCHEMA_VERSION) {
+    const schema = bytes[0];
+    if (schema === V4_SCHEMA_V2) {
+      const n = bytes[1];
+      if (n === 0 || bytes.length !== 2 + 5 * n) {
+        return [];
+      }
+      const fpWanted = /* @__PURE__ */ new Set();
+      for (let i = 0; i < n; i += 1) {
+        fpWanted.add(readUint40BE(bytes, 2 + i * 5));
+      }
+      const list = Array.isArray(orderedEvents) ? orderedEvents : [];
+      const keys = [];
+      for (const ev of list) {
+        const k = completionKey(ev);
+        if (fpWanted.has(fingerprint40FromKey(k))) {
+          keys.push(k);
+        }
+      }
+      return keys;
+    }
+    if (schema === V4_SCHEMA_V1) {
+      if (bytes.length < 3) {
+        return [];
+      }
+      const n = bytes[1] << 8 | bytes[2];
+      if (n === 0 || bytes.length !== 3 + 6 * n) {
+        return [];
+      }
+      const fpWanted = /* @__PURE__ */ new Set();
+      for (let i = 0; i < n; i += 1) {
+        fpWanted.add(readUint48BE(bytes, 3 + i * 6));
+      }
+      const list = Array.isArray(orderedEvents) ? orderedEvents : [];
+      const keys = [];
+      for (const ev of list) {
+        const k = completionKey(ev);
+        if (fpWanted.has(fingerprint48FromKey(k))) {
+          keys.push(k);
+        }
+      }
+      return keys;
+    }
+    return [];
+  }
+  function decodeCompactCalendarCompletionV5(raw, orderedEvents) {
+    const head = String(raw ?? "").trim();
+    if (head === "v5:z") {
       return [];
     }
-    const n = bytes[1] << 8 | bytes[2];
-    if (n === 0 || bytes.length !== 3 + 6 * n) {
+    if (!head.startsWith("v5:")) {
+      return [];
+    }
+    const body = head.slice(3);
+    if (body === "z") {
+      return [];
+    }
+    let bytes;
+    try {
+      bytes = base64UrlToBytes(body);
+    } catch (_err) {
+      return [];
+    }
+    if (bytes.length < 2) {
+      return [];
+    }
+    const schema = bytes[0];
+    if (schema !== V5_SCHEMA_V1) {
+      return [];
+    }
+    const n = bytes[1];
+    if (n === 0 || bytes.length !== 2 + 3 * n) {
       return [];
     }
     const fpWanted = /* @__PURE__ */ new Set();
     for (let i = 0; i < n; i += 1) {
-      fpWanted.add(readUint48BE(bytes, 3 + i * 6));
+      fpWanted.add(readUint24BE(bytes, 2 + i * 3));
     }
     const list = Array.isArray(orderedEvents) ? orderedEvents : [];
     const keys = [];
     for (const ev of list) {
       const k = completionKey(ev);
-      if (fpWanted.has(fingerprint48FromKey(k))) {
+      if (fpWanted.has(fingerprint24FromKey(k))) {
         keys.push(k);
       }
     }
@@ -71242,6 +71415,9 @@
     if (!s) {
       return [];
     }
+    if (s.startsWith("v5:")) {
+      return decodeCompactCalendarCompletionV5(s, orderedEvents);
+    }
     if (s.startsWith("v4:")) {
       return decodeCompactCalendarCompletionV4(s, orderedEvents);
     }
@@ -71264,7 +71440,7 @@
   function normalizeCompletionPayloadForCompare(raw, orderedEvents) {
     const keys = expandCompletionPayloadToKeys(raw, orderedEvents);
     const head = String(raw ?? "").trim();
-    if (!keys.length && (head.startsWith("v2:") || head.startsWith("v3:") || head.startsWith("v4:")) && !(orderedEvents || []).length) {
+    if (!keys.length && (head.startsWith("v2:") || head.startsWith("v3:") || head.startsWith("v4:") || head.startsWith("v5:")) && !(orderedEvents || []).length) {
       return null;
     }
     return canonicalCompletionKeysJson(keys);
@@ -71364,7 +71540,7 @@
     if (keys.length === 0) {
       return "v4:z";
     }
-    const uniqFp = [...new Set(keys.map((k) => fingerprint48FromKey(k)))].sort((a, b) => {
+    const uniqFp40 = [...new Set(keys.map((k) => fingerprint40FromKey(k)))].sort((a, b) => {
       if (a < b) {
         return -1;
       }
@@ -71373,18 +71549,63 @@
       }
       return 0;
     });
-    const n = uniqFp.length;
-    if (n > 65535) {
+    const n = uniqFp40.length;
+    if (n <= 255) {
+      const buf2 = new Uint8Array(2 + 5 * n);
+      buf2[0] = V4_SCHEMA_V2;
+      buf2[1] = n & 255;
+      for (let i = 0; i < n; i += 1) {
+        writeUint40BE(buf2, 2 + i * 5, uniqFp40[i]);
+      }
+      return `v4:${bytesToBase64Url(buf2)}`;
+    }
+    const uniqFp48 = [...new Set(keys.map((k) => fingerprint48FromKey(k)))].sort((a, b) => {
+      if (a < b) {
+        return -1;
+      }
+      if (a > b) {
+        return 1;
+      }
+      return 0;
+    });
+    const n48 = uniqFp48.length;
+    if (n48 > 65535) {
       return null;
     }
-    const buf = new Uint8Array(3 + 6 * n);
-    buf[0] = V4_SCHEMA_VERSION;
-    buf[1] = n >> 8 & 255;
-    buf[2] = n & 255;
-    for (let i = 0; i < n; i += 1) {
-      writeUint48BE(buf, 3 + i * 6, uniqFp[i]);
+    const buf = new Uint8Array(3 + 6 * n48);
+    buf[0] = V4_SCHEMA_V1;
+    buf[1] = n48 >> 8 & 255;
+    buf[2] = n48 & 255;
+    for (let i = 0; i < n48; i += 1) {
+      writeUint48BE(buf, 3 + i * 6, uniqFp48[i]);
     }
     return `v4:${bytesToBase64Url(buf)}`;
+  }
+  function serializeCompactCompletionV5(completedSet) {
+    const keys = [...completedSet instanceof Set ? completedSet : new Set(completedSet)].map((k) => String(k)).filter(Boolean);
+    if (keys.length === 0) {
+      return "v5:z";
+    }
+    const uniqFp24 = [...new Set(keys.map((k) => fingerprint24FromKey(k)))].sort((a, b) => {
+      if (a < b) {
+        return -1;
+      }
+      if (a > b) {
+        return 1;
+      }
+      return 0;
+    });
+    const n = uniqFp24.length;
+    if (n > 255) {
+      return null;
+    }
+    const buf = new Uint8Array(2 + 3 * n);
+    buf[0] = V5_SCHEMA_V1;
+    buf[1] = n & 255;
+    for (let i = 0; i < n; i += 1) {
+      writeUint24BE(buf, 2 + i * 3, uniqFp24[i]);
+    }
+    return `v5:${bytesToBase64Url(buf)}`;
   }
   function pickShortestCompletionPayload(completedSet, orderedEvents, maxLen) {
     const keys = [...completedSet instanceof Set ? completedSet : new Set(completedSet)];
@@ -71392,12 +71613,13 @@
     const compactV2 = serializeCompactCompletionV2(completedSet, orderedEvents);
     const compactV3 = serializeCompactCompletionV3(completedSet);
     const compactV4 = serializeCompactCompletionV4(completedSet);
-    const stable = [compactV4, compactV3].filter((p) => p && p.length <= maxLen);
+    const compactV5 = serializeCompactCompletionV5(completedSet);
+    const stable = [compactV5, compactV4, compactV3].filter((p) => p && p.length <= maxLen);
     stable.sort((a, b) => {
       if (a.length !== b.length) {
         return a.length - b.length;
       }
-      const rank = (p) => String(p).startsWith("v4:") ? 0 : 1;
+      const rank = (p) => String(p).startsWith("v5:") ? 0 : String(p).startsWith("v4:") ? 1 : 2;
       return rank(a) - rank(b);
     });
     if (stable.length) {
@@ -71881,7 +72103,7 @@
       const localRaw = this._readLocalCompletionRaw();
       const rawT = raw.trim();
       const localT = localRaw.trim();
-      if (!events.length && (rawT.startsWith("v2:") || rawT.startsWith("v3:") || rawT.startsWith("v4:") || localT.startsWith("v2:") || localT.startsWith("v3:") || localT.startsWith("v4:"))) {
+      if (!events.length && (rawT.startsWith("v2:") || rawT.startsWith("v3:") || rawT.startsWith("v4:") || rawT.startsWith("v5:") || localT.startsWith("v2:") || localT.startsWith("v3:") || localT.startsWith("v4:") || localT.startsWith("v5:"))) {
         return;
       }
       const incomingKeys = expandCompletionPayloadToKeys(raw, events);
@@ -77985,4 +78207,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.25","contentSha256_12":"051aab7beb75"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.25 (051aab7beb75) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.26","contentSha256_12":"8fbd5b5c68db"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.26 (8fbd5b5c68db) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}

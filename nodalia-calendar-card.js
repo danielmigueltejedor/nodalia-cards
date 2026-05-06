@@ -533,9 +533,11 @@ class NodaliaCalendarCard extends HTMLElement {
       (rawT.startsWith("v2:") ||
         rawT.startsWith("v3:") ||
         rawT.startsWith("v4:") ||
+        rawT.startsWith("v5:") ||
         localT.startsWith("v2:") ||
         localT.startsWith("v3:") ||
-        localT.startsWith("v4:"))
+        localT.startsWith("v4:") ||
+        localT.startsWith("v5:"))
     ) {
       return;
     }
