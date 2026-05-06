@@ -84,7 +84,7 @@
       };
       return map[langCode] || "es";
     }
-    function normalizeTextKey17(value) {
+    function normalizeTextKey18(value) {
       return String(value ?? "").trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
     }
     function getEntityDomain4(state) {
@@ -4945,7 +4945,7 @@
     }
     function translateWeatherCondition(hass, configLang, value) {
       const lang = resolveLanguage(hass, configLang);
-      const key = normalizeTextKey17(String(value || ""));
+      const key = normalizeTextKey18(String(value || ""));
       const cond = strings(lang).weatherCard.conditions;
       if (key && cond[key]) {
         return cond[key];
@@ -5062,7 +5062,7 @@
     }
     function translateAdvanceVacuumReportedState(hass, configLang, stateKey, rawFallback) {
       const lang = resolveLanguage(hass, configLang);
-      const k = normalizeTextKey17(stateKey);
+      const k = normalizeTextKey18(stateKey);
       const rs = strings(lang).advanceVacuum.reportedStates;
       if (rs[k]) {
         return rs[k];
@@ -5082,7 +5082,7 @@
         return "";
       }
       const lang = resolveLanguage(hass, configLang);
-      const key = normalizeTextKey17(raw);
+      const key = normalizeTextKey18(raw);
       const av = strings(lang).advanceVacuum;
       if (key === "off" && kind === "suction") {
         return av.offSuction;
@@ -5105,9 +5105,9 @@
       const unit = String(
         state.attributes?.unit_of_measurement || state.attributes?.native_unit_of_measurement || ""
       ).trim();
-      const key = normalizeTextKey17(rawState);
+      const key = normalizeTextKey18(rawState);
       const domain = getEntityDomain4(state);
-      const deviceClass = normalizeTextKey17(state.attributes?.device_class);
+      const deviceClass = normalizeTextKey18(state.attributes?.device_class);
       if (parseNumericValue2(rawState) !== null) {
         return unit ? formatNumericValueWithUnit2(rawState, unit, numberDecimals) : formatNumericValue2(rawState, numberDecimals);
       }
@@ -5265,7 +5265,7 @@
       resolveLanguage,
       effectiveHaLanguageCode,
       localeTag,
-      normalizeTextKey: normalizeTextKey17,
+      normalizeTextKey: normalizeTextKey18,
       normalizeHumidifierModeKey,
       strings,
       translateEntityState,
@@ -5277,7 +5277,7 @@
       translateAdvanceVacuumReportedState,
       translateAdvanceVacuumVacuumMode,
       translateFavState(langCode, key) {
-        const raw = normalizeTextKey17(key);
+        const raw = normalizeTextKey18(key);
         const fd = strings(langCode).favCard;
         const ed = strings(langCode).entityCard.states;
         switch (raw) {
@@ -15148,7 +15148,7 @@
     if (existing && typeof existing.shouldDarkenBubbleIconGlyph === "function") {
       return;
     }
-    function normalizeTextKey17(value) {
+    function normalizeTextKey18(value) {
       return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
     }
     function getEntityDomain4(state) {
@@ -15261,8 +15261,8 @@
         return false;
       }
       const domain = getEntityDomain4(state);
-      const dc = normalizeTextKey17(state.attributes?.device_class || "");
-      const unit = normalizeTextKey17(
+      const dc = normalizeTextKey18(state.attributes?.device_class || "");
+      const unit = normalizeTextKey18(
         String(state.attributes?.unit_of_measurement || state.attributes?.native_unit_of_measurement || "")
       );
       if (domain === "sensor") {
@@ -40630,7 +40630,7 @@
         }
 
         .graph-card__content--entering {
-          animation: graph-card-content-in calc(var(--graph-card-hover-duration) * 2.25) cubic-bezier(0.18, 0.9, 0.22, 1) both;
+          animation: graph-card-fade-up calc(var(--graph-card-hover-duration) * 2.25) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
         .graph-card__header {
@@ -40642,8 +40642,13 @@
         }
 
         .graph-card__content--entering .graph-card__header {
-          animation: graph-card-section-in calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.18, 0.9, 0.22, 1) both;
+          animation: graph-card-fade-up calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: 35ms;
+        }
+
+        .graph-card__icon--entering {
+          animation: graph-card-bubble-bloom calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation-delay: 40ms;
         }
 
         .graph-card__primary-row {
@@ -40744,7 +40749,7 @@
 
         .graph-card__content--entering > .graph-card__value,
         .graph-card__content--entering .graph-card__primary-row .graph-card__value {
-          animation: graph-card-section-in calc(var(--graph-card-hover-duration) * 2.2) cubic-bezier(0.18, 0.9, 0.22, 1) both;
+          animation: graph-card-fade-up calc(var(--graph-card-hover-duration) * 2.2) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: 75ms;
         }
 
@@ -40777,7 +40782,7 @@
 
         .graph-card__content--entering > .graph-card__legend,
         .graph-card__content--entering .graph-card__primary-row .graph-card__legend {
-          animation: graph-card-section-in calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.18, 0.9, 0.22, 1) both;
+          animation: graph-card-fade-up calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: 105ms;
         }
 
@@ -40857,7 +40862,7 @@
         }
 
         .graph-card__chart-wrap--entering {
-          animation: graph-card-chart-panel-in calc(var(--graph-card-hover-duration) * 2.25) cubic-bezier(0.18, 0.9, 0.22, 1.02) both;
+          animation: graph-card-item-rise calc(var(--graph-card-hover-duration) * 2.25) cubic-bezier(0.18, 0.9, 0.22, 1.08) both;
         }
 
         .graph-card__hover-points-layer {
@@ -41068,10 +41073,10 @@
           animation: graph-card-button-bounce var(--graph-card-button-bounce-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
-        @keyframes graph-card-content-in {
+        @keyframes graph-card-fade-up {
           0% {
             opacity: 0;
-            transform: translateY(12px) scale(0.985);
+            transform: translateY(12px) scale(0.97);
           }
           100% {
             opacity: 1;
@@ -41079,14 +41084,18 @@
           }
         }
 
-        @keyframes graph-card-section-in {
+        @keyframes graph-card-item-rise {
           0% {
             opacity: 0;
-            transform: translateY(9px);
+            transform: translateY(8px) scale(0.94);
+          }
+          62% {
+            opacity: 1;
+            transform: translateY(0) scale(1.018);
           }
           100% {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
           }
         }
 
@@ -41105,14 +41114,18 @@
           }
         }
 
-        @keyframes graph-card-chart-panel-in {
+        @keyframes graph-card-bubble-bloom {
           0% {
             opacity: 0;
-            transform: translateY(10px) scale(0.985);
+            transform: scale(0.92);
+          }
+          58% {
+            opacity: 1;
+            transform: scale(1.04);
           }
           100% {
             opacity: 1;
-            transform: translateY(0) scale(1);
+            transform: scale(1);
           }
         }
 
@@ -41258,7 +41271,7 @@
           ${config.show_header !== false ? `
                 <div class="graph-card__header">
                   ${config.show_icon !== false ? `
-                        <div class="graph-card__icon">
+                        <div class="graph-card__icon ${shouldAnimateEntrance ? "graph-card__icon--entering" : ""}">
                           <ha-icon icon="${escapeHtml7(icon)}"></ha-icon>
                           ${showUnavailableBadge ? `<span class="graph-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
                         </div>
@@ -71687,6 +71700,7 @@
   var CARD_TAG17 = "nodalia-calendar-card";
   var EDITOR_TAG17 = "nodalia-calendar-card-editor";
   var COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
+  var QUICK_REMINDER_STORAGE_KEY = "nodalia_calendar_quick_reminders_v1";
   var VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
   var DEFAULT_CONFIG17 = {
     title: "Calendario",
@@ -71698,6 +71712,7 @@
     refresh_interval: 300,
     show_completed: false,
     allow_complete: true,
+    weather_entity: "",
     shared_completed_events_entity: "",
     shared_completed_events_webhook: "",
     tint_auto: true,
@@ -71852,6 +71867,7 @@
     normalized.days_to_show = Math.min(62, Math.max(1, daysFromTimeRange(timeRange)));
     normalized.shared_completed_events_entity = String(normalized.shared_completed_events_entity ?? "").trim();
     normalized.shared_completed_events_webhook = String(normalized.shared_completed_events_webhook ?? "").trim();
+    normalized.weather_entity = String(normalized.weather_entity ?? "").trim();
     normalized.max_visible_events = Math.min(
       12,
       Math.max(1, Number(normalized.max_visible_events) || DEFAULT_CONFIG17.max_visible_events)
@@ -71887,6 +71903,44 @@
   }
   function clamp16(value, min, max) {
     return Math.min(Math.max(value, min), max);
+  }
+  function normalizeTextKey16(value) {
+    return String(value ?? "").trim().toLowerCase().replaceAll(" ", "_");
+  }
+  function weatherConditionIcon(value) {
+    switch (normalizeTextKey16(value)) {
+      case "clear_night":
+        return "mdi:weather-night";
+      case "cloudy":
+        return "mdi:weather-cloudy";
+      case "exceptional":
+        return "mdi:alert-circle-outline";
+      case "fog":
+        return "mdi:weather-fog";
+      case "hail":
+        return "mdi:weather-hail";
+      case "lightning":
+        return "mdi:weather-lightning";
+      case "lightning_rainy":
+        return "mdi:weather-lightning-rainy";
+      case "partlycloudy":
+        return "mdi:weather-partly-cloudy";
+      case "pouring":
+        return "mdi:weather-pouring";
+      case "rainy":
+        return "mdi:weather-rainy";
+      case "snowy":
+        return "mdi:weather-snowy";
+      case "snowy_rainy":
+        return "mdi:weather-snowy-rainy";
+      case "sunny":
+        return "mdi:weather-sunny";
+      case "windy":
+      case "windy_variant":
+        return "mdi:weather-windy";
+      default:
+        return "mdi:weather-partly-cloudy";
+    }
   }
   function resolveEditorColorValue12(value) {
     const rawValue = String(value ?? "").trim();
@@ -72001,6 +72055,7 @@
       this._config = normalizeConfig17(DEFAULT_CONFIG17);
       this._hass = null;
       this._events = [];
+      this._quickReminders = [];
       this._loading = false;
       this._error = "";
       this._refreshTimer = 0;
@@ -72070,6 +72125,7 @@
         this._renderIfChanged(true);
       }
       this._loadCompleted();
+      this._loadQuickReminders();
       if (!this._hadHass) {
         this._refreshEvents();
       }
@@ -72166,6 +72222,52 @@
         return window.localStorage.getItem(COMPLETION_STORAGE_KEY) || "";
       } catch (_error) {
         return "";
+      }
+    }
+    _readLocalQuickRemindersRaw() {
+      if (typeof window === "undefined" || !window.localStorage) {
+        return "";
+      }
+      try {
+        return window.localStorage.getItem(QUICK_REMINDER_STORAGE_KEY) || "";
+      } catch (_error) {
+        return "";
+      }
+    }
+    _loadQuickReminders() {
+      const raw = this._readLocalQuickRemindersRaw();
+      if (!raw) {
+        this._quickReminders = [];
+        return;
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) {
+          this._quickReminders = [];
+          return;
+        }
+        this._quickReminders = parsed.map((item) => {
+          const id = String(item?.id || "").trim();
+          const title = String(item?.title || "").trim();
+          const start = String(item?.start || "").trim();
+          const color = sanitizeCalendarTint(item?.color) || "";
+          const allDay = Boolean(item?.allDay);
+          if (!id || !title || !start) {
+            return null;
+          }
+          return { id, title, start, color, allDay };
+        }).filter(Boolean);
+      } catch (_error) {
+        this._quickReminders = [];
+      }
+    }
+    _saveQuickReminders() {
+      if (typeof window === "undefined" || !window.localStorage) {
+        return;
+      }
+      try {
+        window.localStorage.setItem(QUICK_REMINDER_STORAGE_KEY, JSON.stringify(this._quickReminders));
+      } catch (_error) {
       }
     }
     _syncCompletedPersistenceFromHass() {
@@ -72379,8 +72481,9 @@
       const start = eventDate(event.start);
       const timeLabel = eventIsAllDay(event) ? "Todo el dia" : start ? formatTimeLabel(start, locale) : "--:--";
       const summary = String(event.summary || event.message || "Evento sin titulo");
-      const subtitle = this._getEventSubtitleForDisplay(event._entity);
-      const tintRaw = sanitizeCalendarTint(this._getCalendarEntry(event._entity).tint);
+      const isQuickReminder = String(event._entity || "") === "__quick_reminder__";
+      const subtitle = isQuickReminder ? "Recordatorio rapido" : this._getEventSubtitleForDisplay(event._entity);
+      const tintRaw = isQuickReminder ? sanitizeCalendarTint(event?._quickReminderColor) : sanitizeCalendarTint(this._getCalendarEntry(event._entity).tint);
       const tintClass = tintRaw ? " calendar-event--tinted" : "";
       const tintStyle = tintRaw ? ` style="--cal-tint:${escapeHtml17(tintRaw)}"` : "";
       const compactClass = compact ? " calendar-event--compact" : "";
@@ -72632,7 +72735,9 @@
         return `${completionKey(event)}@${start}`;
       }).join("|");
       const completedSig = [...this._completed].sort().join("|");
+      const quickSig = (this._quickReminders || []).map((item) => `${item.id}|${item.title}|${item.start}|${item.color}|${item.allDay ? 1 : 0}`).join("|");
       const calendarSig = (config.calendars || []).map((c) => `${c.entity}${c.label}${c.tint}`).join("|");
+      const weatherSig = this._getWeatherForecastSignature();
       return [
         calendarSig,
         config.title,
@@ -72642,6 +72747,7 @@
         config.max_visible_events,
         config.show_completed,
         config.allow_complete,
+        config.weather_entity || "",
         config.shared_completed_events_entity || "",
         config.shared_completed_events_webhook || "",
         config.tint_auto,
@@ -72667,6 +72773,8 @@
         this._getLocale(),
         this._loading ? "1" : "0",
         this._error,
+        weatherSig,
+        quickSig,
         eventKeys,
         completedSig,
         this._expandedOpen ? "1" : "0",
@@ -72684,8 +72792,17 @@
     }
     async _refreshEvents() {
       const calendarIds = (this._config.calendars || []).map((c) => c.entity).filter(Boolean);
-      if (!this._hass || !calendarIds.length) {
+      if (!this._hass) {
         this._events = [];
+        this._loading = false;
+        this._error = "";
+        this._renderIfChanged(true);
+        return;
+      }
+      if (!calendarIds.length) {
+        const start = /* @__PURE__ */ new Date();
+        const end = new Date(start.getTime() + this._config.days_to_show * 24 * 60 * 60 * 1e3);
+        this._events = this._buildQuickReminderEvents(start, end);
         this._loading = false;
         this._error = "";
         this._renderIfChanged(true);
@@ -72716,6 +72833,7 @@
           }
           rows.forEach((item) => all.push({ ...item, _entity: entityId }));
         }
+        all.push(...this._buildQuickReminderEvents(start, end));
         all.sort((left, right) => {
           const a = eventDate(left?.start)?.getTime() || 0;
           const b = eventDate(right?.start)?.getTime() || 0;
@@ -72784,12 +72902,178 @@
         if (!groups.has(key)) {
           groups.set(key, {
             label: formatDateLabel(date, locale),
+            dayKey: key,
+            dayDate: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
             events: []
           });
         }
         groups.get(key).events.push(event);
       });
       return [...groups.values()];
+    }
+    _getWeatherEntityId() {
+      const id = String(this._config?.weather_entity || "").trim();
+      return id.startsWith("weather.") ? id : "";
+    }
+    _buildWeatherForecastByDay() {
+      const entityId = this._getWeatherEntityId();
+      if (!entityId || !this._hass?.states?.[entityId]) {
+        return /* @__PURE__ */ new Map();
+      }
+      const stateObj = this._hass.states[entityId];
+      const forecast = Array.isArray(stateObj.attributes?.forecast) ? stateObj.attributes.forecast : [];
+      const map = /* @__PURE__ */ new Map();
+      forecast.forEach((item) => {
+        if (!item || typeof item !== "object") {
+          return;
+        }
+        const d = eventDate({ dateTime: item.datetime, date: item.datetime });
+        if (!d) {
+          return;
+        }
+        const dayKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        if (map.has(dayKey)) {
+          return;
+        }
+        map.set(dayKey, {
+          condition: String(item.condition || "").trim(),
+          tempMax: Number.isFinite(Number(item.temperature)) ? Number(item.temperature) : null,
+          tempMin: Number.isFinite(Number(item.templow)) ? Number(item.templow) : null
+        });
+      });
+      return map;
+    }
+    _getWeatherForecastSignature() {
+      const entityId = this._getWeatherEntityId();
+      if (!entityId || !this._hass?.states?.[entityId]) {
+        return "";
+      }
+      const stateObj = this._hass.states[entityId];
+      const forecast = Array.isArray(stateObj.attributes?.forecast) ? stateObj.attributes.forecast : [];
+      const compact = forecast.slice(0, 40).map((item) => {
+        const dt = String(item?.datetime || "");
+        return `${dt}|${String(item?.condition || "")}|${String(item?.temperature ?? "")}|${String(item?.templow ?? "")}`;
+      }).join("");
+      return `${entityId}${String(stateObj.state || "")}${compact}`;
+    }
+    _buildQuickReminderEvents(rangeStart, rangeEnd) {
+      const startMs = rangeStart?.getTime?.() || 0;
+      const endMs = rangeEnd?.getTime?.() || Number.MAX_SAFE_INTEGER;
+      return (this._quickReminders || []).map((item) => {
+        const d = new Date(item.start);
+        if (Number.isNaN(d.getTime())) {
+          return null;
+        }
+        const ts = d.getTime();
+        if (ts < startMs || ts > endMs) {
+          return null;
+        }
+        if (item.allDay) {
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          return {
+            _entity: "__quick_reminder__",
+            _quickReminderId: item.id,
+            _quickReminderColor: item.color || "",
+            summary: item.title,
+            start: { date: `${yyyy}-${mm}-${dd}` },
+            end: { date: `${yyyy}-${mm}-${dd}` }
+          };
+        }
+        return {
+          _entity: "__quick_reminder__",
+          _quickReminderId: item.id,
+          _quickReminderColor: item.color || "",
+          summary: item.title,
+          start: { dateTime: d.toISOString() },
+          end: { dateTime: new Date(d.getTime() + 30 * 60 * 1e3).toISOString() }
+        };
+      }).filter(Boolean);
+    }
+    _createQuickReminderInteractive() {
+      if (typeof window === "undefined") {
+        return;
+      }
+      const title = String(window.prompt("Recordatorio: titulo", "") || "").trim();
+      if (!title) {
+        return;
+      }
+      const now = /* @__PURE__ */ new Date();
+      const pad = (value) => String(value).padStart(2, "0");
+      const defaultDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      const defaultTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      const dateRaw = String(window.prompt("Fecha (YYYY-MM-DD)", defaultDate) || "").trim();
+      if (!dateRaw) {
+        return;
+      }
+      const timeRaw = String(window.prompt("Hora (HH:mm) o 'all' para todo el dia", defaultTime) || "").trim();
+      if (!timeRaw) {
+        return;
+      }
+      const colorRaw = String(window.prompt("Color (hex opcional, ej #71c0ff)", "#71c0ff") || "").trim();
+      const color = sanitizeCalendarTint(colorRaw) || "#71c0ff";
+      const allDay = timeRaw.toLowerCase() === "all";
+      const start = allDay ? `${dateRaw}T12:00:00` : `${dateRaw}T${timeRaw}:00`;
+      const d = new Date(start);
+      if (Number.isNaN(d.getTime())) {
+        window.alert("Fecha u hora invalida.");
+        return;
+      }
+      this._quickReminders.push({
+        id: `qr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        title,
+        start: d.toISOString(),
+        color,
+        allDay
+      });
+      this._saveQuickReminders();
+      this._refreshEvents();
+    }
+    async _createNativeEventInteractive() {
+      if (!this._hass || typeof window === "undefined") {
+        return;
+      }
+      const calendarIds = (this._config.calendars || []).map((c) => String(c?.entity || "").trim()).filter(Boolean);
+      if (!calendarIds.length) {
+        window.alert("No hay calendarios configurados en la tarjeta.");
+        return;
+      }
+      const calendarId = String(
+        window.prompt(`Calendario destino:
+${calendarIds.join("\n")}`, calendarIds[0]) || ""
+      ).trim();
+      if (!calendarId) {
+        return;
+      }
+      const title = String(window.prompt("Evento HA: titulo", "") || "").trim();
+      if (!title) {
+        return;
+      }
+      const now = /* @__PURE__ */ new Date();
+      const pad = (value) => String(value).padStart(2, "0");
+      const defaultDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      const defaultStart = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      const defaultEnd = `${pad((now.getHours() + 1) % 24)}:${pad(now.getMinutes())}`;
+      const dateRaw = String(window.prompt("Fecha (YYYY-MM-DD)", defaultDate) || "").trim();
+      const startRaw = String(window.prompt("Hora inicio (HH:mm)", defaultStart) || "").trim();
+      const endRaw = String(window.prompt("Hora fin (HH:mm)", defaultEnd) || "").trim();
+      if (!dateRaw || !startRaw || !endRaw) {
+        return;
+      }
+      const start = `${dateRaw}T${startRaw}:00`;
+      const end = `${dateRaw}T${endRaw}:00`;
+      try {
+        await this._hass.callService("calendar", "create_event", {
+          entity_id: calendarId,
+          summary: title,
+          start_date_time: start,
+          end_date_time: end
+        });
+        this._refreshEvents();
+      } catch (_error) {
+        window.alert("No se pudo crear el evento en HA (revisa permisos/servicio).");
+      }
     }
     _render() {
       if (!this.shadowRoot) {
@@ -72821,6 +73105,7 @@
       const maxVisibleEvents = Math.max(1, Number(config.max_visible_events) || DEFAULT_CONFIG17.max_visible_events);
       const visibleEvents = this._events.filter((event) => this._shouldShowEventInList(event));
       const groups = this._groupEvents(visibleEvents);
+      const weatherByDay = this._buildWeatherForecastByDay();
       const hasEvents = visibleEvents.length > 0;
       const playEntrance = config.animations?.enabled !== false && !this._calendarEntrancePlayed && !this._loading;
       if (playEntrance) {
@@ -72876,7 +73161,37 @@
           padding:${styles.card.padding};
           position: relative;
           z-index: 1;
-          ${playEntrance ? `animation: calendar-card-in ${animationDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
+        }
+        .calendar-header--entering {
+          animation: calendar-card-fade-up calc(${animationDuration}ms * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+        .calendar-icon-bubble--entering {
+          animation: calendar-card-bubble-bloom calc(${animationDuration}ms * 0.92) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation-delay: 40ms;
+        }
+        .calendar-title--entering {
+          animation: calendar-card-fade-up calc(${animationDuration}ms * 0.92) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 70ms;
+        }
+        .calendar-chip--entering {
+          animation: calendar-card-fade-up calc(${animationDuration}ms * 0.94) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 110ms;
+        }
+        .calendar-chip--entering .calendar-chip__text {
+          animation: calendar-card-chip-pop calc(${animationDuration}ms * 0.58) cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
+          animation-delay: 130ms;
+        }
+        .calendar-events-scroll--entering {
+          animation: calendar-card-fade-up calc(${animationDuration}ms * 0.96) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 130ms;
+        }
+        .calendar-events-scroll--entering .calendar-day {
+          animation: calendar-card-item-rise calc(${animationDuration}ms * 0.74) cubic-bezier(0.18, 0.9, 0.22, 1.08) both;
+          animation-delay: calc(70ms + (var(--calendar-day-index, 0) * 40ms));
+        }
+        .calendar-events-scroll--entering .calendar-day__label {
+          animation: calendar-card-fade-up calc(${animationDuration}ms * 0.6) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: calc(84ms + (var(--calendar-day-index, 0) * 40ms));
         }
         .calendar-header {
           align-items:center;
@@ -72955,6 +73270,13 @@
           display:grid;
           gap:8px;
         }
+        .calendar-day__header {
+          align-items: center;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+          min-width: 0;
+        }
         .calendar-events-scroll {
           display:grid;
           gap:10px;
@@ -72970,7 +73292,27 @@
           font-size:11px;
           font-weight:700;
           letter-spacing:0.08em;
+          min-width: 0;
           text-transform:uppercase;
+        }
+        .calendar-day__weather {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--secondary-text-color);
+          display: inline-flex;
+          flex: 0 0 auto;
+          font-size: 10px;
+          font-weight: 700;
+          gap: 4px;
+          min-height: 22px;
+          padding: 0 8px;
+          white-space: nowrap;
+        }
+        .calendar-day__weather ha-icon {
+          --mdc-icon-size: 14px;
+          color: var(--primary-color);
         }
         .calendar-event {
           align-items:center;
@@ -73067,14 +73409,56 @@
           min-height:28px;
           padding:0 9px;
         }
-        @keyframes calendar-card-in {
+        @keyframes calendar-card-fade-up {
           0% {
             opacity: 0;
-            transform: translateY(10px) scale(0.988);
+            transform: translateY(12px) scale(0.97);
           }
           100% {
             opacity: 1;
             transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes calendar-card-item-rise {
+          0% {
+            opacity: 0;
+            transform: translateY(8px) scale(0.94);
+          }
+          62% {
+            opacity: 1;
+            transform: translateY(0) scale(1.018);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes calendar-card-chip-pop {
+          0% {
+            opacity: 0;
+            transform: translateY(-4px) scale(0.86);
+          }
+          70% {
+            opacity: 1;
+            transform: translateY(1px) scale(1.05);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes calendar-card-bubble-bloom {
+          0% {
+            opacity: 0;
+            transform: scale(0.92);
+          }
+          58% {
+            opacity: 1;
+            transform: scale(1.04);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
           }
         }
         .calendar-expanded {
@@ -73137,7 +73521,13 @@
           letter-spacing: -0.02em;
           line-height: 1.2;
           min-width: 0;
-          padding-right: 28px;
+          padding-right: 6px;
+        }
+        .calendar-expanded__toolbar-actions {
+          align-items: center;
+          display: inline-flex;
+          flex: 0 0 auto;
+          gap: 6px;
         }
         .calendar-expanded__close {
           align-items: center;
@@ -73154,9 +73544,6 @@
           line-height: 0;
           margin: 0;
           padding: 0;
-          position: absolute;
-          right: 0;
-          top: 0;
           width: 24px;
         }
         .calendar-expanded__close ha-icon {
@@ -73415,16 +73802,30 @@
       </style>
       <ha-card>
         <div class="calendar-card">
-          <div class="calendar-header">
-            <span class="calendar-icon-bubble"><ha-icon icon="${escapeHtml17(config.icon || DEFAULT_CONFIG17.icon)}"></ha-icon></span>
-            <div class="calendar-title">${escapeHtml17(config.title)}</div>
+          <div class="calendar-header ${playEntrance ? "calendar-header--entering" : ""}">
+            <span class="calendar-icon-bubble ${playEntrance ? "calendar-icon-bubble--entering" : ""}"><ha-icon icon="${escapeHtml17(config.icon || DEFAULT_CONFIG17.icon)}"></ha-icon></span>
+            <div class="calendar-title ${playEntrance ? "calendar-title--entering" : ""}">${escapeHtml17(config.title)}</div>
             <span class="calendar-header__spacer"></span>
-            <div class="calendar-chip">${escapeHtml17(timeRangeChipLabel(config.time_range || DEFAULT_CONFIG17.time_range))}</div>
+            <div class="calendar-chip ${playEntrance ? "calendar-chip--entering" : ""}"><span class="calendar-chip__text">${escapeHtml17(timeRangeChipLabel(config.time_range || DEFAULT_CONFIG17.time_range))}</span></div>
           </div>
-          ${this._loading ? `<div class="calendar-loading">Cargando eventos...</div>` : this._error ? `<div class="calendar-error">${escapeHtml17(this._error)}</div>` : !hasEvents ? `<div class="calendar-empty">No hay eventos en este rango.</div>` : `<div class="calendar-events-scroll">
-                      ${groups.map((group) => `
-                        <div class="calendar-day">
-                          <div class="calendar-day__label">${escapeHtml17(group.label)}</div>
+          ${this._loading ? `<div class="calendar-loading">Cargando eventos...</div>` : this._error ? `<div class="calendar-error">${escapeHtml17(this._error)}</div>` : !hasEvents ? `<div class="calendar-empty">No hay eventos en este rango.</div>` : `<div class="calendar-events-scroll ${playEntrance ? "calendar-events-scroll--entering" : ""}">
+                      ${groups.map((group, groupIndex) => `
+                        <div class="calendar-day" style="--calendar-day-index:${groupIndex};">
+                          <div class="calendar-day__header">
+                            <div class="calendar-day__label">${escapeHtml17(group.label)}</div>
+                            ${weatherByDay.has(group.dayKey) ? (() => {
+        const w = weatherByDay.get(group.dayKey);
+        const icon = weatherConditionIcon(w?.condition);
+        const minRaw = Number.isFinite(w?.tempMin) ? Math.round(w.tempMin) : null;
+        const maxRaw = Number.isFinite(w?.tempMax) ? Math.round(w.tempMax) : null;
+        if (minRaw === null && maxRaw === null) {
+          return "";
+        }
+        const minText = minRaw === null ? "—" : `${minRaw}°`;
+        const maxText = maxRaw === null ? "—" : `${maxRaw}°`;
+        return `<div class="calendar-day__weather"><ha-icon icon="${escapeHtml17(icon)}"></ha-icon><span>${escapeHtml17(minText)} / ${escapeHtml17(maxText)}</span></div>`;
+      })() : ""}
+                          </div>
                           ${group.events.map((event) => this._renderSingleEventHtml(event, config, locale)).join("")}
                         </div>
                       `).join("")}
@@ -73436,9 +73837,17 @@
         <div class="calendar-expanded__panel ${playExpandedPanelEntrance ? "calendar-expanded__panel--entrance" : ""}" role="dialog" aria-modal="true" aria-label="${escapeHtml17(config.title)}">
           <div class="calendar-expanded__toolbar">
             <div class="calendar-expanded__toolbar-title">${escapeHtml17(config.title)}</div>
-            <button type="button" class="calendar-expanded__close" data-action="close-expanded" aria-label="Cerrar">
-              <ha-icon icon="mdi:close"></ha-icon>
-            </button>
+            <div class="calendar-expanded__toolbar-actions">
+              <button type="button" class="calendar-expanded__close" data-action="add-native-event" aria-label="Crear evento HA">
+                <ha-icon icon="mdi:calendar-plus"></ha-icon>
+              </button>
+              <button type="button" class="calendar-expanded__close" data-action="add-quick-reminder" aria-label="Agregar recordatorio">
+                <ha-icon icon="mdi:plus"></ha-icon>
+              </button>
+              <button type="button" class="calendar-expanded__close" data-action="close-expanded" aria-label="Cerrar">
+                <ha-icon icon="mdi:close"></ha-icon>
+              </button>
+            </div>
           </div>
           <div class="calendar-expanded__body">
             ${this._loading ? `<div class="calendar-loading">Cargando eventos...</div>` : this._error ? `<div class="calendar-error">${escapeHtml17(this._error)}</div>` : !hasEvents ? `<div class="calendar-empty">No hay eventos en este rango.</div>` : this._renderExpandedBody(groups, config, locale)}
@@ -73510,6 +73919,24 @@
         event.stopPropagation();
         this._expandedMonthDayKey = "";
         this._renderIfChanged(true);
+        return;
+      }
+      const addReminder = path.find(
+        (node) => node instanceof HTMLElement && node.dataset?.action === "add-quick-reminder"
+      );
+      if (addReminder && this._expandedOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._createQuickReminderInteractive();
+        return;
+      }
+      const addNativeEvent = path.find(
+        (node) => node instanceof HTMLElement && node.dataset?.action === "add-native-event"
+      );
+      if (addNativeEvent && this._expandedOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+        void this._createNativeEventInteractive();
         return;
       }
       const monthDayOpen = path.find(
@@ -74492,6 +74919,22 @@
       })}
             ${this._renderTextField("Eventos visibles antes de scroll", "max_visible_events", config.max_visible_events, { type: "number" })}
             ${this._renderTextField("Refresco (segundos)", "refresh_interval", config.refresh_interval, { type: "number" })}
+            <div class="editor-field editor-field--full">
+              <span>${escapeHtml17(this._editorLabel("Entidad weather (prevision diaria, opcional)"))}</span>
+              <div
+                class="editor-control-host"
+                data-mounted-control="weather-entity"
+                data-field="weather_entity"
+                data-value="${escapeHtml17(String(config.weather_entity ?? ""))}"
+                data-domains="weather"
+                data-placeholder="weather.casa"
+              ></div>
+              <span class="editor-field__hint">${escapeHtml17(
+        this._editorLabel(
+          "Si se define, en la fila de cada dia se muestra icono + minima/maxima cuando haya forecast para esa fecha."
+        )
+      )}</span>
+            </div>
             ${this._renderTintAutoToggle(config.tint_auto !== false)}
             ${this._renderCheckboxField("Permitir marcar eventos como completados", "allow_complete", config.allow_complete === true)}
             ${this._renderCheckboxField("Mostrar eventos completados", "show_completed", config.show_completed === true)}
@@ -74615,7 +75058,7 @@
         </section>
       </div>
     `;
-      this.shadowRoot.querySelectorAll('[data-mounted-control="calendar-entity"], [data-mounted-control="input-text-entity"]').forEach((host) => {
+      this.shadowRoot.querySelectorAll('[data-mounted-control="calendar-entity"], [data-mounted-control="input-text-entity"], [data-mounted-control="weather-entity"]').forEach((host) => {
         this._mountCalendarEntityHost(host);
       });
     }
@@ -74991,18 +75434,18 @@
     node.dispatchEvent(event);
     return event;
   }
-  function normalizeTextKey16(value) {
+  function normalizeTextKey17(value) {
     return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
   }
   function isUnavailableState16(state) {
-    return normalizeTextKey16(state?.state) === "unavailable";
+    return normalizeTextKey17(state?.state) === "unavailable";
   }
   function humanizeModeLabel2(value, kind = "generic", hass = null, configLang = null) {
     const raw = String(value || "").trim();
     if (!raw) {
       return "";
     }
-    const key = normalizeTextKey16(raw);
+    const key = normalizeTextKey17(raw);
     const h = hass ?? (typeof window !== "undefined" ? window.NodaliaI18n?.resolveHass?.(null) : null);
     if (window.NodaliaI18n?.translateAdvanceVacuumVacuumMode) {
       return window.NodaliaI18n.translateAdvanceVacuumVacuumMode(h, configLang ?? "auto", raw, kind);
@@ -75289,7 +75732,7 @@
       }));
     }
     _runConfiguredCardTapAction(state = this._getState()) {
-      const action = normalizeTextKey16(this._config?.tap_action || "default");
+      const action = normalizeTextKey17(this._config?.tap_action || "default");
       switch (action) {
         case "none":
           break;
@@ -75306,7 +75749,7 @@
       }
     }
     _canRunConfiguredCardTapAction() {
-      const action = normalizeTextKey16(this._config?.tap_action || "default");
+      const action = normalizeTextKey17(this._config?.tap_action || "default");
       if (action === "none") {
         return false;
       }
@@ -75437,7 +75880,7 @@
       return state?.state ? String(state.state) : "";
     }
     _getReportedStateKey(state) {
-      return normalizeTextKey16(this._getReportedStateValue(state));
+      return normalizeTextKey17(this._getReportedStateValue(state));
     }
     _getVacuumName(state) {
       if (this._config?.name) {
@@ -75489,7 +75932,7 @@
       if (cleaningAreaLabel) {
         return `${trState("cleaning", "Limpiando")}: ${cleaningAreaLabel}`;
       }
-      const reportedKey = normalizeTextKey16(this._getReportedStateValue(state));
+      const reportedKey = normalizeTextKey17(this._getReportedStateValue(state));
       switch (reportedKey) {
         case "cleaning":
         case "segment_cleaning":
@@ -75543,7 +75986,7 @@
       if (!raw) {
         return "";
       }
-      const normalized = normalizeTextKey16(raw);
+      const normalized = normalizeTextKey17(raw);
       if (!normalized) {
         return raw;
       }
@@ -75600,7 +76043,7 @@
         attributes.cleaning_state,
         attributes.cleaning_progress,
         attributes.operation
-      ].filter(Boolean).map((value) => normalizeTextKey16(value)).join(" ");
+      ].filter(Boolean).map((value) => normalizeTextKey17(value)).join(" ");
     }
     _getActiveTaskTokens(state) {
       const attributes = state?.attributes || {};
@@ -75625,11 +76068,11 @@
         attributes.current_task,
         attributes.cleaning_state,
         attributes.operation
-      ].filter(Boolean).map((value) => normalizeTextKey16(value));
+      ].filter(Boolean).map((value) => normalizeTextKey17(value));
     }
     _matchesActivity(state, keywords) {
       const activityBlob = this._getActivityTextBlob(state);
-      return keywords.some((keyword) => activityBlob.includes(normalizeTextKey16(keyword)));
+      return keywords.some((keyword) => activityBlob.includes(normalizeTextKey17(keyword)));
     }
     _getBatteryLevel(state) {
       const directValue = Number(state?.attributes?.battery_level);
@@ -75780,8 +76223,8 @@
     _isModeHidden(kind, value) {
       const field = this._getModeVisibilityField(kind);
       const hiddenModes = Array.isArray(this._config?.[field]) ? this._config[field] : [];
-      const expectedKey = normalizeTextKey16(value);
-      return hiddenModes.some((item) => normalizeTextKey16(item) === expectedKey);
+      const expectedKey = normalizeTextKey17(value);
+      return hiddenModes.some((item) => normalizeTextKey17(item) === expectedKey);
     }
     _getSelectOptions(entityId) {
       const selectState = entityId ? this._hass?.states?.[entityId] : null;
@@ -75806,7 +76249,7 @@
       return candidates[0] || "";
     }
     _categorizeModeOption(value) {
-      const key = normalizeTextKey16(value);
+      const key = normalizeTextKey17(value);
       if (MOP_MODE_PATTERNS2.some((pattern) => key.includes(pattern))) {
         return "mop";
       }
@@ -75816,7 +76259,7 @@
       return "unknown";
     }
     _isSharedSmartMode(value) {
-      const key = normalizeTextKey16(value);
+      const key = normalizeTextKey17(value);
       return SHARED_SMART_MODE_PATTERNS2.some((pattern) => key.includes(pattern));
     }
     _getFanPresets(state) {
@@ -75902,7 +76345,7 @@
       <div class="vacuum-card__presets vacuum-card__mode-panel">
         ${descriptor.options.map((option) => `
             <button
-              class="vacuum-card__preset ${normalizeTextKey16(option) === normalizeTextKey16(activeModeDisplayValue) ? "vacuum-card__preset--active" : ""}"
+              class="vacuum-card__preset ${normalizeTextKey17(option) === normalizeTextKey17(activeModeDisplayValue) ? "vacuum-card__preset--active" : ""}"
               type="button"
               data-vacuum-action="${descriptor.service === "select" ? "select" : "fan"}"
               ${descriptor.service === "select" ? `data-target-entity="${escapeHtml18(descriptor.target)}"` : ""}
@@ -75970,7 +76413,7 @@
         if (!(button instanceof HTMLElement)) {
           return;
         }
-        const isActive = normalizeTextKey16(button.dataset.value || "") === normalizeTextKey16(value);
+        const isActive = normalizeTextKey17(button.dataset.value || "") === normalizeTextKey17(value);
         button.classList.toggle("vacuum-card__preset--active", isActive);
       });
     }
@@ -76182,11 +76625,11 @@
         "vaciando"
       ];
       const reportedKey = this._getReportedStateKey(state);
-      if (keywords.some((keyword) => reportedKey.includes(normalizeTextKey16(keyword)))) {
+      if (keywords.some((keyword) => reportedKey.includes(normalizeTextKey17(keyword)))) {
         return true;
       }
       const activeTokens = this._getActiveTaskTokens(state);
-      return keywords.some((keyword) => activeTokens.includes(normalizeTextKey16(keyword)));
+      return keywords.some((keyword) => activeTokens.includes(normalizeTextKey17(keyword)));
     }
     _isPaused(state) {
       return this._matchesActivity(state, [
@@ -76257,11 +76700,11 @@
       });
     }
     _findMatchingModeOption(options, value) {
-      const expectedKey = normalizeTextKey16(value);
+      const expectedKey = normalizeTextKey17(value);
       if (!expectedKey || !Array.isArray(options)) {
         return "";
       }
-      return options.find((option) => normalizeTextKey16(option) === expectedKey) || "";
+      return options.find((option) => normalizeTextKey17(option) === expectedKey) || "";
     }
     _findSharedSmartOption(options) {
       return Array.isArray(options) ? options.find((option) => this._isSharedSmartMode(option)) || "" : "";
@@ -76281,7 +76724,7 @@
         return remembered;
       }
       const normalizedOptions = descriptor.options.map((option) => ({
-        key: normalizeTextKey16(option),
+        key: normalizeTextKey17(option),
         value: option
       }));
       for (const candidate of this._getModeFallbackCandidates(kind)) {
@@ -76336,7 +76779,7 @@
         if (!descriptor?.current) {
           return;
         }
-        if (normalizeTextKey16(descriptor.current) === normalizeTextKey16(pendingValue)) {
+        if (normalizeTextKey17(descriptor.current) === normalizeTextKey17(pendingValue)) {
           didChange = this._clearPendingModeSelection(kind) || didChange;
         }
       });
@@ -76347,7 +76790,7 @@
       if (!pendingValue) {
         return currentValue;
       }
-      const matchedOption = Array.isArray(options) ? options.find((option) => normalizeTextKey16(option) === normalizeTextKey16(pendingValue)) : "";
+      const matchedOption = Array.isArray(options) ? options.find((option) => normalizeTextKey17(option) === normalizeTextKey17(pendingValue)) : "";
       return matchedOption || currentValue;
     }
     _rememberNonSmartModeSelection(kind, value) {
@@ -76387,7 +76830,7 @@
       }
       if (this._isSharedSmartMode(value)) {
         const sharedSmartOption = this._findSharedSmartOption(otherDescriptor.options);
-        if (sharedSmartOption && normalizeTextKey16(sharedSmartOption) !== normalizeTextKey16(otherDescriptor.current)) {
+        if (sharedSmartOption && normalizeTextKey17(sharedSmartOption) !== normalizeTextKey17(otherDescriptor.current)) {
           this._hass.callService("select", "select_option", {
             entity_id: otherDescriptor.target,
             option: sharedSmartOption
@@ -76399,7 +76842,7 @@
         return;
       }
       const fallbackOption = this._getModeFallbackOption(otherKind, otherDescriptor);
-      if (fallbackOption && normalizeTextKey16(fallbackOption) !== normalizeTextKey16(otherDescriptor.current)) {
+      if (fallbackOption && normalizeTextKey17(fallbackOption) !== normalizeTextKey17(otherDescriptor.current)) {
         this._hass.callService("select", "select_option", {
           entity_id: otherDescriptor.target,
           option: fallbackOption
@@ -76648,7 +77091,7 @@
         </div>
       ` : "";
       const showCopyBlock = !isCompactLayout || chips.length > 0;
-      const cardTapAction = normalizeTextKey16(config.tap_action || "default");
+      const cardTapAction = normalizeTextKey17(config.tap_action || "default");
       const canRunCardTapAction = this._canRunConfiguredCardTapAction();
       const iconButtonLabel = cardTapAction === "navigate" ? "Abrir vista del robot" : cardTapAction === "more_info" ? "Mostrar mas informacion" : this._isCleaning(state) ? "Pausar limpieza" : "Iniciar limpieza";
       this.shadowRoot.innerHTML = `
@@ -77525,7 +77968,7 @@
       return candidates[0] || "";
     }
     _categorizeModeOption(value) {
-      const key = normalizeTextKey16(value);
+      const key = normalizeTextKey17(value);
       if (MOP_MODE_PATTERNS2.some((pattern) => key.includes(pattern))) {
         return "mop";
       }
@@ -77535,7 +77978,7 @@
       return "unknown";
     }
     _isSharedSmartMode(value) {
-      const key = normalizeTextKey16(value);
+      const key = normalizeTextKey17(value);
       return SHARED_SMART_MODE_PATTERNS2.some((pattern) => key.includes(pattern));
     }
     _getEditorFanPresets() {
@@ -77565,15 +78008,15 @@
       return Array.isArray(this._config?.[field]) ? this._config[field].map((item) => String(item || "").trim()).filter(Boolean) : [];
     }
     _isModeVisible(field, value) {
-      const expectedKey = normalizeTextKey16(value);
-      return !this._getHiddenModeList(field).some((item) => normalizeTextKey16(item) === expectedKey);
+      const expectedKey = normalizeTextKey17(value);
+      return !this._getHiddenModeList(field).some((item) => normalizeTextKey17(item) === expectedKey);
     }
     _setModeVisibility(field, value, visible) {
       const rawValue = String(value || "").trim();
       if (!rawValue) {
         return;
       }
-      const nextValues = this._getHiddenModeList(field).filter((item) => normalizeTextKey16(item) !== normalizeTextKey16(rawValue));
+      const nextValues = this._getHiddenModeList(field).filter((item) => normalizeTextKey17(item) !== normalizeTextKey17(rawValue));
       if (!visible) {
         nextValues.push(rawValue);
       }
@@ -77585,7 +78028,7 @@
     }
     _renderModeVisibilityField(field, modeValue, kind) {
       const translatedLabel = humanizeModeLabel2(modeValue, kind, this._hass ?? this.hass, this._config?.language ?? "auto");
-      const showRawValue = normalizeTextKey16(translatedLabel) !== normalizeTextKey16(modeValue);
+      const showRawValue = normalizeTextKey17(translatedLabel) !== normalizeTextKey17(modeValue);
       const label = showRawValue ? `${translatedLabel} (${modeValue})` : translatedLabel;
       return `
       <label class="editor-toggle">
@@ -78289,4 +78732,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.28","contentSha256_12":"d83f5bfa3e46"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.28 (d83f5bfa3e46) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.29","contentSha256_12":"19397fa26e20"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.29 (19397fa26e20) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}

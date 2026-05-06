@@ -10,6 +10,16 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.29] - 2026-05-06
+
+Twenty-ninth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.29`** (tag **`v1.0.0-alpha.29`** optional).
+
+- **Calendar card:** popup ampliado con acciones rápidas para crear **recordatorios locales** (titulo, fecha/hora, color) y crear **eventos en calendarios nativos HA** sin salir del dashboard.
+- **Calendar card:** integración de recordatorios rápidos dentro de la misma lista/agrupación temporal de eventos.
+- **Calendar / Graph cards:** ajuste fino de animación de entrada para mantener consistencia visual tipo rebote con el resto de tarjetas.
+
+---
+
 ## [1.0.0-alpha.28] - 2026-05-06
 
 Twenty-eighth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.28`** (tag **`v1.0.0-alpha.28`** optional).

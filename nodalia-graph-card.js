@@ -2544,7 +2544,7 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__content--entering {
-          animation: graph-card-content-in calc(var(--graph-card-hover-duration) * 2.25) cubic-bezier(0.18, 0.9, 0.22, 1) both;
+          animation: graph-card-fade-up calc(var(--graph-card-hover-duration) * 2.25) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
         .graph-card__header {
@@ -2556,8 +2556,13 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__content--entering .graph-card__header {
-          animation: graph-card-section-in calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.18, 0.9, 0.22, 1) both;
+          animation: graph-card-fade-up calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: 35ms;
+        }
+
+        .graph-card__icon--entering {
+          animation: graph-card-bubble-bloom calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation-delay: 40ms;
         }
 
         .graph-card__primary-row {
@@ -2658,7 +2663,7 @@ class NodaliaGraphCard extends HTMLElement {
 
         .graph-card__content--entering > .graph-card__value,
         .graph-card__content--entering .graph-card__primary-row .graph-card__value {
-          animation: graph-card-section-in calc(var(--graph-card-hover-duration) * 2.2) cubic-bezier(0.18, 0.9, 0.22, 1) both;
+          animation: graph-card-fade-up calc(var(--graph-card-hover-duration) * 2.2) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: 75ms;
         }
 
@@ -2691,7 +2696,7 @@ class NodaliaGraphCard extends HTMLElement {
 
         .graph-card__content--entering > .graph-card__legend,
         .graph-card__content--entering .graph-card__primary-row .graph-card__legend {
-          animation: graph-card-section-in calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.18, 0.9, 0.22, 1) both;
+          animation: graph-card-fade-up calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: 105ms;
         }
 
@@ -2771,7 +2776,7 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__chart-wrap--entering {
-          animation: graph-card-chart-panel-in calc(var(--graph-card-hover-duration) * 2.25) cubic-bezier(0.18, 0.9, 0.22, 1.02) both;
+          animation: graph-card-item-rise calc(var(--graph-card-hover-duration) * 2.25) cubic-bezier(0.18, 0.9, 0.22, 1.08) both;
         }
 
         .graph-card__hover-points-layer {
@@ -2982,10 +2987,10 @@ class NodaliaGraphCard extends HTMLElement {
           animation: graph-card-button-bounce var(--graph-card-button-bounce-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
-        @keyframes graph-card-content-in {
+        @keyframes graph-card-fade-up {
           0% {
             opacity: 0;
-            transform: translateY(12px) scale(0.985);
+            transform: translateY(12px) scale(0.97);
           }
           100% {
             opacity: 1;
@@ -2993,14 +2998,18 @@ class NodaliaGraphCard extends HTMLElement {
           }
         }
 
-        @keyframes graph-card-section-in {
+        @keyframes graph-card-item-rise {
           0% {
             opacity: 0;
-            transform: translateY(9px);
+            transform: translateY(8px) scale(0.94);
+          }
+          62% {
+            opacity: 1;
+            transform: translateY(0) scale(1.018);
           }
           100% {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
           }
         }
 
@@ -3019,14 +3028,18 @@ class NodaliaGraphCard extends HTMLElement {
           }
         }
 
-        @keyframes graph-card-chart-panel-in {
+        @keyframes graph-card-bubble-bloom {
           0% {
             opacity: 0;
-            transform: translateY(10px) scale(0.985);
+            transform: scale(0.92);
+          }
+          58% {
+            opacity: 1;
+            transform: scale(1.04);
           }
           100% {
             opacity: 1;
-            transform: translateY(0) scale(1);
+            transform: scale(1);
           }
         }
 
@@ -3176,7 +3189,7 @@ class NodaliaGraphCard extends HTMLElement {
                   ${
                     config.show_icon !== false
                       ? `
-                        <div class="graph-card__icon">
+                        <div class="graph-card__icon ${shouldAnimateEntrance ? "graph-card__icon--entering" : ""}">
                           <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
                           ${showUnavailableBadge ? `<span class="graph-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
                         </div>
