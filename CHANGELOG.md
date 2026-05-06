@@ -10,6 +10,16 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.33] - 2026-05-06
+
+Thirty-third **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.33`** (tag **`v1.0.0-alpha.33`** optional).
+
+- **Calendar card — clima diario visible en más integraciones:** compatibilidad ampliada de campos de forecast (max/min) para mostrar icono y temperaturas en la cabecera de cada día con más proveedores.
+- **Calendar card — fallback visual:** cuando no hay min/max pero sí condición, se muestra el bloque meteorológico con icono y `— / —` en lugar de ocultarlo.
+- **Calendar card — rendimiento/memoria:** firma de render compacta basada en hash (menos churn de strings grandes) y protección `single-flight` en refresh para evitar solapes de cargas.
+
+---
+
 ## [1.0.0-alpha.32] - 2026-05-06
 
 Thirty-second **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.32`** (tag **`v1.0.0-alpha.32`** optional).

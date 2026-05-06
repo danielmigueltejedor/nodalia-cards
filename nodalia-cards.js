@@ -72110,6 +72110,8 @@
       this._viewVisibilityObserver = null;
       this._wasInViewport = false;
       this._weatherForecastByDay = /* @__PURE__ */ new Map();
+      this._refreshInFlight = false;
+      this._refreshQueued = false;
     }
     _onDocVisibility() {
       if (typeof document === "undefined" || document.visibilityState !== "visible") {
@@ -72762,57 +72764,70 @@
       const config = this._config;
       const styles = config.styles || DEFAULT_CONFIG17.styles;
       const visibleEvents = this._events.filter((event) => this._shouldShowEventInList(event));
-      const eventKeys = visibleEvents.map((event) => {
-        const start = eventDate(event?.start)?.getTime() || 0;
-        return `${completionKey(event)}@${start}`;
-      }).join("|");
-      const completedSig = [...this._completed].sort().join("|");
-      const quickSig = (this._quickReminders || []).map((item) => `${item.id}|${item.title}|${item.start}|${item.color}|${item.allDay ? 1 : 0}`).join("|");
-      const calendarSig = (config.calendars || []).map((c) => `${c.entity}${c.label}${c.tint}`).join("|");
-      const weatherSig = this._getWeatherForecastSignature();
-      return [
-        calendarSig,
-        config.title,
-        config.icon,
-        config.time_range || DEFAULT_CONFIG17.time_range,
-        config.days_to_show,
-        config.max_visible_events,
-        config.show_completed,
-        config.allow_complete,
-        config.weather_entity || "",
-        config.shared_completed_events_entity || "",
-        config.shared_completed_events_webhook || "",
-        config.tint_auto,
-        config.animations?.enabled,
-        config.animations?.content_duration,
-        styles.card?.background,
-        styles.card?.border,
-        styles.card?.border_radius,
-        styles.card?.box_shadow,
-        styles.card?.padding,
-        styles.card?.gap,
-        styles.title_size,
-        styles.event_size,
-        styles.chip_height,
-        styles.chip_font_size,
-        styles.chip_padding,
-        styles.chip_size,
-        styles.icon?.background,
-        styles.icon?.on_color,
-        styles.icon?.off_color,
-        styles.icon?.size,
-        styles.tint?.color,
-        this._getLocale(),
-        this._loading ? "1" : "0",
-        this._error,
-        weatherSig,
-        quickSig,
-        eventKeys,
-        completedSig,
-        this._expandedOpen ? "1" : "0",
-        this._expandedMonthDayKey || "",
-        [...this._completeExitKeys].sort().join("|")
-      ].join("");
+      let hash = 2166136261;
+      const mix = (value) => {
+        const text = value === null || value === void 0 ? "" : String(value);
+        for (let i = 0; i < text.length; i += 1) {
+          hash ^= text.charCodeAt(i);
+          hash = Math.imul(hash, 16777619) >>> 0;
+        }
+        hash = Math.imul(hash ^ 2654435769, 16777619) >>> 0;
+      };
+      (config.calendars || []).forEach((c) => {
+        mix(c?.entity || "");
+        mix(c?.label || "");
+        mix(c?.tint || "");
+      });
+      mix(config.title);
+      mix(config.icon);
+      mix(config.time_range || DEFAULT_CONFIG17.time_range);
+      mix(config.days_to_show);
+      mix(config.max_visible_events);
+      mix(config.show_completed ? 1 : 0);
+      mix(config.allow_complete ? 1 : 0);
+      mix(config.weather_entity || "");
+      mix(config.shared_completed_events_entity || "");
+      mix(config.shared_completed_events_webhook || "");
+      mix(config.tint_auto ? 1 : 0);
+      mix(config.animations?.enabled ? 1 : 0);
+      mix(config.animations?.content_duration);
+      mix(styles.card?.background);
+      mix(styles.card?.border);
+      mix(styles.card?.border_radius);
+      mix(styles.card?.box_shadow);
+      mix(styles.card?.padding);
+      mix(styles.card?.gap);
+      mix(styles.title_size);
+      mix(styles.event_size);
+      mix(styles.chip_height);
+      mix(styles.chip_font_size);
+      mix(styles.chip_padding);
+      mix(styles.chip_size);
+      mix(styles.icon?.background);
+      mix(styles.icon?.on_color);
+      mix(styles.icon?.off_color);
+      mix(styles.icon?.size);
+      mix(styles.tint?.color);
+      mix(this._getLocale());
+      mix(this._loading ? 1 : 0);
+      mix(this._error);
+      mix(this._getWeatherForecastSignature());
+      (this._quickReminders || []).forEach((item) => {
+        mix(item?.id || "");
+        mix(item?.title || "");
+        mix(item?.start || "");
+        mix(item?.color || "");
+        mix(item?.allDay ? 1 : 0);
+      });
+      visibleEvents.forEach((event) => {
+        mix(completionKey(event));
+        mix(eventDate(event?.start)?.getTime() || 0);
+      });
+      [...this._completed].sort().forEach((key) => mix(key));
+      mix(this._expandedOpen ? 1 : 0);
+      mix(this._expandedMonthDayKey || "");
+      [...this._completeExitKeys].sort().forEach((key) => mix(key));
+      return `r:${hash.toString(36)}`;
     }
     _renderIfChanged(force = false) {
       const next = this._getRenderSignature();
@@ -72823,72 +72838,86 @@
       this._render();
     }
     async _refreshEvents() {
+      if (this._refreshInFlight) {
+        this._refreshQueued = true;
+        return;
+      }
+      this._refreshInFlight = true;
+      this._refreshQueued = false;
       const calendarIds = (this._config.calendars || []).map((c) => c.entity).filter(Boolean);
-      if (!this._hass) {
-        this._events = [];
-        this._weatherForecastByDay = /* @__PURE__ */ new Map();
-        this._loading = false;
-        this._error = "";
-        this._renderIfChanged(true);
-        return;
-      }
-      if (!calendarIds.length) {
-        const start = /* @__PURE__ */ new Date();
-        const end = new Date(start.getTime() + this._config.days_to_show * 24 * 60 * 60 * 1e3);
-        this._events = this._buildQuickReminderEvents(start, end);
-        await this._refreshWeatherForecastByDay();
-        this._loading = false;
-        this._error = "";
-        this._renderIfChanged(true);
-        return;
-      }
-      this._loading = true;
-      this._error = "";
-      this._renderIfChanged(true);
-      const hass = this._hass;
       try {
-        const start = /* @__PURE__ */ new Date();
-        const end = new Date(start.getTime() + this._config.days_to_show * 24 * 60 * 60 * 1e3);
-        const all = [];
-        for (const entityId of calendarIds) {
-          const path = `calendars/${encodeURIComponent(entityId)}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
-          let rows = [];
-          try {
-            const raw = await hass.callApi("GET", path);
-            rows = normalizeCalendarFetchResult(raw);
-            if (!rows.length && !Array.isArray(raw)) {
-              const fallback = await this._fetchCalendarEventsViaRest(entityId, start, end);
-              if (fallback.length) {
-                rows = fallback;
-              }
-            }
-          } catch (_apiError) {
-            rows = await this._fetchCalendarEventsViaRest(entityId, start, end);
-          }
-          rows.forEach((item) => all.push({ ...item, _entity: entityId }));
+        if (!this._hass) {
+          this._events = [];
+          this._weatherForecastByDay = /* @__PURE__ */ new Map();
+          this._loading = false;
+          this._error = "";
+          this._renderIfChanged(true);
+          return;
         }
-        all.push(...this._buildQuickReminderEvents(start, end));
-        all.sort((left, right) => {
-          const a = eventDate(left?.start)?.getTime() || 0;
-          const b = eventDate(right?.start)?.getTime() || 0;
-          return a - b;
-        });
-        this._events = all;
-        await this._refreshWeatherForecastByDay();
-      } catch (_error) {
-        this._error = "No se pudieron cargar eventos del calendario.";
-      } finally {
-        this._loading = false;
-        if (this._localV2PendingDecode && this._events.length && !this._getSharedCompletedEntityId()) {
-          const raw = this._readLocalCompletionRaw();
-          this._completed = new Set(expandCompletionPayloadToKeys(raw, this._events));
-          this._localV2PendingDecode = false;
+        if (!calendarIds.length) {
+          const start = /* @__PURE__ */ new Date();
+          const end = new Date(start.getTime() + this._config.days_to_show * 24 * 60 * 60 * 1e3);
+          this._events = this._buildQuickReminderEvents(start, end);
+          await this._refreshWeatherForecastByDay();
+          this._loading = false;
+          this._error = "";
+          this._renderIfChanged(true);
+          return;
         }
-        if (this._getSharedCompletedEntityId()) {
-          this._syncCompletedPersistenceFromHass();
-        }
+        this._loading = true;
+        this._error = "";
         this._renderIfChanged(true);
-        this._scheduleRefresh();
+        const hass = this._hass;
+        try {
+          const start = /* @__PURE__ */ new Date();
+          const end = new Date(start.getTime() + this._config.days_to_show * 24 * 60 * 60 * 1e3);
+          const all = [];
+          for (const entityId of calendarIds) {
+            const path = `calendars/${encodeURIComponent(entityId)}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
+            let rows = [];
+            try {
+              const raw = await hass.callApi("GET", path);
+              rows = normalizeCalendarFetchResult(raw);
+              if (!rows.length && !Array.isArray(raw)) {
+                const fallback = await this._fetchCalendarEventsViaRest(entityId, start, end);
+                if (fallback.length) {
+                  rows = fallback;
+                }
+              }
+            } catch (_apiError) {
+              rows = await this._fetchCalendarEventsViaRest(entityId, start, end);
+            }
+            rows.forEach((item) => all.push({ ...item, _entity: entityId }));
+          }
+          all.push(...this._buildQuickReminderEvents(start, end));
+          all.sort((left, right) => {
+            const a = eventDate(left?.start)?.getTime() || 0;
+            const b = eventDate(right?.start)?.getTime() || 0;
+            return a - b;
+          });
+          this._events = all;
+          await this._refreshWeatherForecastByDay();
+        } catch (_error) {
+          this._error = "No se pudieron cargar eventos del calendario.";
+        } finally {
+          this._loading = false;
+          if (this._localV2PendingDecode && this._events.length && !this._getSharedCompletedEntityId()) {
+            const raw = this._readLocalCompletionRaw();
+            this._completed = new Set(expandCompletionPayloadToKeys(raw, this._events));
+            this._localV2PendingDecode = false;
+          }
+          if (this._getSharedCompletedEntityId()) {
+            this._syncCompletedPersistenceFromHass();
+          }
+          this._renderIfChanged(true);
+          this._scheduleRefresh();
+        }
+      } finally {
+        this._refreshInFlight = false;
+        if (this._refreshQueued) {
+          this._refreshQueued = false;
+          this._refreshEvents();
+        }
       }
     }
     _toggleCompleted(key) {
@@ -72963,10 +72992,16 @@
         if (map.has(dayKey)) {
           return;
         }
+        const maxCandidate = Number(
+          item.temperature ?? item.temperature_max ?? item.temp_max ?? item.native_temperature ?? item.native_temp
+        );
+        const minCandidate = Number(
+          item.templow ?? item.temperature_low ?? item.temp_low ?? item.native_templow ?? item.native_temp_low
+        );
         map.set(dayKey, {
           condition: String(item.condition || "").trim(),
-          tempMax: Number.isFinite(Number(item.temperature)) ? Number(item.temperature) : null,
-          tempMin: Number.isFinite(Number(item.templow)) ? Number(item.templow) : null
+          tempMax: Number.isFinite(maxCandidate) ? maxCandidate : null,
+          tempMin: Number.isFinite(minCandidate) ? minCandidate : null
         });
       });
       return map;
@@ -73014,8 +73049,24 @@
         return "";
       }
       const stateObj = this._hass.states[entityId];
-      const compact = [...this._buildWeatherForecastByDay().entries()].map(([key, item]) => `${key}|${String(item?.condition || "")}|${String(item?.tempMax ?? "")}|${String(item?.tempMin ?? "")}`).join("");
-      return `${entityId}${String(stateObj.state || "")}${compact}`;
+      let hash = 2166136261;
+      const mix = (value) => {
+        const text = value === null || value === void 0 ? "" : String(value);
+        for (let i = 0; i < text.length; i += 1) {
+          hash ^= text.charCodeAt(i);
+          hash = Math.imul(hash, 16777619) >>> 0;
+        }
+        hash = Math.imul(hash ^ 2654435769, 16777619) >>> 0;
+      };
+      mix(entityId);
+      mix(String(stateObj.state || ""));
+      [...this._buildWeatherForecastByDay().entries()].sort((left, right) => String(left[0]).localeCompare(String(right[0]))).forEach(([key, item]) => {
+        mix(key);
+        mix(item?.condition || "");
+        mix(item?.tempMax ?? "");
+        mix(item?.tempMin ?? "");
+      });
+      return `w:${hash.toString(36)}`;
     }
     _buildQuickReminderEvents(rangeStart, rangeEnd) {
       const startMs = rangeStart?.getTime?.() || 0;
@@ -74167,7 +74218,8 @@
         const icon = weatherConditionIcon(w?.condition);
         const minRaw = Number.isFinite(w?.tempMin) ? Math.round(w.tempMin) : null;
         const maxRaw = Number.isFinite(w?.tempMax) ? Math.round(w.tempMax) : null;
-        if (minRaw === null && maxRaw === null) {
+        const hasCondition = Boolean(String(w?.condition || "").trim());
+        if (minRaw === null && maxRaw === null && !hasCondition) {
           return "";
         }
         const minText = minRaw === null ? "—" : `${minRaw}°`;
@@ -79174,4 +79226,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.32","contentSha256_12":"d6e3cfac731c"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.32 (d6e3cfac731c) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.33","contentSha256_12":"72cd74b32d9c"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.33 (72cd74b32d9c) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
