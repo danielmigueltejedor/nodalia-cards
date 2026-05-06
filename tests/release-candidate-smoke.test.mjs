@@ -105,23 +105,60 @@ test("calendar expanded popup reuses daily weather badges", () => {
 
 test("calendar native event webhook sends sanitized service data", () => {
   const source = read("nodalia-calendar-card.js");
-  assert.match(source, /_buildNativeCalendarCreateEventWebhookBody\(payload, eventKind\)/);
+  const example = read("examples/calendar-native-event-webhook.yaml");
+  assert.match(source, /_buildNativeCalendarCreateEventWebhookBody\(servicePayload, eventKind, calendarEvent = null\)/);
   assert.match(source, /service: "calendar\.create_event"/);
   assert.match(source, /service_data: serviceData/);
+  assert.match(source, /calendar_event: eventData/);
+  assert.match(source, /type: "calendar\/event\/create"/);
+  assert.match(source, /ha_action: \{/);
+  assert.match(source, /action: "calendar\.create_event"/);
   assert.match(source, /value !== "" && value !== null && value !== undefined/);
-  assert.match(source, /_buildNativeCalendarCreateEventWebhookBody\(payload, "all_day"\)/);
-  assert.match(source, /_buildNativeCalendarCreateEventWebhookBody\(payload, "timed"\)/);
+  assert.match(source, /_buildNativeCalendarCreateEventWebhookBody\(payload, "all_day", calendarEventPayload\)/);
+  assert.match(source, /_buildNativeCalendarCreateEventWebhookBody\(payload, "timed", calendarEventPayload\)/);
+  assert.match(example, /event_kind == 'all_day'/);
+  assert.match(example, /event_kind == 'timed'/);
+  assert.doesNotMatch(example, /start_date:\s*""/);
+  assert.doesNotMatch(example, /start_date_time:\s*""/);
 });
 
 test("calendar composers reject past dates with inline popup errors", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /function dateInputIsBeforeToday\(value\)/);
   assert.match(source, /_setComposerError\(kind, message\)/);
-  assert.match(source, /_renderComposerError\("quick"\)/);
   assert.match(source, /_renderComposerError\("native"\)/);
   assert.match(source, /dateInputIsBeforeToday\(dateRaw\)/);
   assert.match(source, /La fecha no puede ser anterior a hoy\./);
   assert.match(source, /calendar-composer__error/);
+});
+
+test("calendar compact completion waits for calendar events before sync", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /function completionPayloadNeedsEvents\(raw\)/);
+  assert.match(source, /value\.startsWith\("v5:"\)/);
+  assert.match(source, /completionPayloadNeedsEvents\(raw\)/);
+  assert.match(source, /this\._syncCompletedAfterEventsLoaded\(\)/);
+  assert.match(source, /expandCompletionPayloadToKeys\(raw, events\)/);
+  assert.doesNotMatch(source, /_buildQuickReminderEvents/);
+  assert.doesNotMatch(source, /_submitQuickReminderComposer/);
+});
+
+test("calendar native composer supports rich HA event fields and details", () => {
+  const source = read("nodalia-calendar-card.js");
+  const example = read("examples/calendar-native-event-webhook.yaml");
+  assert.match(source, /data-native-field="description"/);
+  assert.match(source, /data-native-field="location"/);
+  assert.match(source, /data-native-field="repeat"/);
+  assert.match(source, /data-native-field="repeatKind"/);
+  assert.match(source, /data-native-field="rrule"/);
+  assert.match(source, /appendNodaliaEventMetadata/);
+  assert.match(source, /extractNodaliaEventColor/);
+  assert.match(source, /calendar\/event\/create/);
+  assert.match(source, /data-action="open-event-detail"/);
+  assert.match(source, /calendar-expanded__event-detail/);
+  assert.match(example, /description: "\{\{ d\.description \| default\(omit, true\) \}\}"/);
+  assert.match(example, /location: "\{\{ d\.location \| default\(omit, true\) \}\}"/);
+  assert.doesNotMatch(example, /rrule:/);
 });
 
 test("calendar editor signature only scans relevant entity domains", () => {
