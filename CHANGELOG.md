@@ -10,15 +10,17 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
-## [1.0.0-alpha.42] - 2026-05-06
+## [1.0.0-alpha.43] - 2026-05-06
 
-Forty-second **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.42`** (tag **`v1.0.0-alpha.42`** optional).
+Forty-third **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.43`** (tag **`v1.0.0-alpha.43`** optional).
 
 - **Calendar card — forecast HA moderno:** suscripción diaria persistente con `weather/subscribe_forecast`, alineada con Weather Card, para recibir días futuros y `templow` cuando `weather/get_forecasts` o atributos legacy no devuelven datos.
 - **Calendar card — forecast más robusto:** fallback por `weather.get_forecasts` con respuesta y lectura de tipos soportados (`daily`, `twice_daily`, `hourly`) agregados por día; ahora se prioriza el candidato con más días futuros y no se deja que una suscripción parcial de “solo hoy” pise la previsión semanal.
+- **Calendar card — webhook evento nativo:** el payload de creación añade `service_data` saneado para `calendar.create_event`, evitando enviar campos vacíos incompatibles como `start_date_time: ""` en eventos de todo el día.
+- **Calendar card — validación de fechas:** crear recordatorio al vuelo o evento nativo con fecha anterior a hoy muestra un error integrado en el popup y evita enviar el webhook/servicio.
 - **Calendar card — tiempo en popup ampliado:** la vista grande también muestra el chip de tiempo en columnas/días, celdas del mes y detalle de día cuando hay forecast disponible.
 - **Performance:** bundle minificado y editor de Calendar con firma de entidades filtrada a `calendar`, `input_text` y `weather` para reducir parseo/coste en instalaciones grandes.
-- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.42`**.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.43`**.
 
 ---
 

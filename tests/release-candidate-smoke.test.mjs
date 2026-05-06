@@ -103,6 +103,27 @@ test("calendar expanded popup reuses daily weather badges", () => {
   assert.match(source, /calendar-expanded__col-head/);
 });
 
+test("calendar native event webhook sends sanitized service data", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /_buildNativeCalendarCreateEventWebhookBody\(payload, eventKind\)/);
+  assert.match(source, /service: "calendar\.create_event"/);
+  assert.match(source, /service_data: serviceData/);
+  assert.match(source, /value !== "" && value !== null && value !== undefined/);
+  assert.match(source, /_buildNativeCalendarCreateEventWebhookBody\(payload, "all_day"\)/);
+  assert.match(source, /_buildNativeCalendarCreateEventWebhookBody\(payload, "timed"\)/);
+});
+
+test("calendar composers reject past dates with inline popup errors", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /function dateInputIsBeforeToday\(value\)/);
+  assert.match(source, /_setComposerError\(kind, message\)/);
+  assert.match(source, /_renderComposerError\("quick"\)/);
+  assert.match(source, /_renderComposerError\("native"\)/);
+  assert.match(source, /dateInputIsBeforeToday\(dateRaw\)/);
+  assert.match(source, /La fecha no puede ser anterior a hoy\./);
+  assert.match(source, /calendar-composer__error/);
+});
+
 test("calendar editor signature only scans relevant entity domains", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /editorFilteredStatesSignature/);

@@ -9,7 +9,7 @@ import {
 
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.42";
+const CARD_VERSION = "1.0.0-alpha.43";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 const QUICK_REMINDER_STORAGE_KEY = "nodalia_calendar_quick_reminders_v1";
 
@@ -561,6 +561,36 @@ function eventIsAllDay(event) {
   return Boolean(event?.start?.date && !event?.start?.dateTime);
 }
 
+function parseDateInputAsLocalDate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? "").trim());
+  if (!match) {
+    return null;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const parsed = new Date(year, month, day);
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+  return parsed;
+}
+
+function dateInputIsBeforeToday(value) {
+  const parsed = parseDateInputAsLocalDate(value);
+  if (!parsed) {
+    return false;
+  }
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return parsed.getTime() < today.getTime();
+}
+
 class NodaliaCalendarCard extends HTMLElement {
   static getStubConfig() {
     return deepClone(DEFAULT_CONFIG);
@@ -589,6 +619,8 @@ class NodaliaCalendarCard extends HTMLElement {
     this._expandedOpen = false;
     this._quickReminderComposerOpen = false;
     this._nativeEventComposerOpen = false;
+    this._quickComposerError = "";
+    this._nativeComposerError = "";
     this._nativeComposerCalendarValue = "";
     /** Month popup: `Y-M-D` (M 0–11) when a single-day view is open; empty string = full month grid */
     this._expandedMonthDayKey = "";
@@ -1586,6 +1618,8 @@ class NodaliaCalendarCard extends HTMLElement {
     this._completed.forEach(key => mix(key));
     mix(this._expandedOpen ? 1 : 0);
     mix(this._expandedMonthDayKey || "");
+    mix(this._quickComposerError || "");
+    mix(this._nativeComposerError || "");
     this._completeExitKeys.forEach(key => mix(key));
     return `r:${hash.toString(36)}`;
   }
@@ -2276,6 +2310,8 @@ class NodaliaCalendarCard extends HTMLElement {
 
   _openQuickReminderComposer() {
     this._nativeEventComposerOpen = false;
+    this._nativeComposerError = "";
+    this._quickComposerError = "";
     this._quickReminderComposerOpen = true;
     this._renderIfChanged(true);
   }
@@ -2285,11 +2321,14 @@ class NodaliaCalendarCard extends HTMLElement {
       return;
     }
     this._quickReminderComposerOpen = false;
+    this._quickComposerError = "";
     this._renderIfChanged(true);
   }
 
   _openNativeEventComposer() {
     this._quickReminderComposerOpen = false;
+    this._quickComposerError = "";
+    this._nativeComposerError = "";
     if (!this._nativeComposerCalendarValue) {
       this._nativeComposerCalendarValue = (this._config.calendars || [])
         .map(c => String(c?.entity || "").trim())
@@ -2304,7 +2343,42 @@ class NodaliaCalendarCard extends HTMLElement {
       return;
     }
     this._nativeEventComposerOpen = false;
+    this._nativeComposerError = "";
     this._renderIfChanged(true);
+  }
+
+  _setComposerError(kind, message) {
+    const text = String(message || "").trim();
+    const isNative = kind === "native";
+    if (isNative) {
+      this._nativeComposerError = text;
+    } else {
+      this._quickComposerError = text;
+    }
+    const selector = isNative ? "[data-native-error]" : "[data-quick-error]";
+    const node = this.shadowRoot?.querySelector(selector);
+    if (!(node instanceof HTMLElement)) {
+      return;
+    }
+    node.hidden = !text;
+    const label = node.querySelector("[data-error-text]");
+    if (label) {
+      label.textContent = text;
+    } else {
+      node.textContent = text;
+    }
+  }
+
+  _renderComposerError(kind) {
+    const isNative = kind === "native";
+    const message = isNative ? this._nativeComposerError : this._quickComposerError;
+    const marker = isNative ? "data-native-error" : "data-quick-error";
+    return `
+      <div class="calendar-composer__error" ${marker} role="alert" aria-live="polite" ${message ? "" : "hidden"}>
+        <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
+        <span data-error-text>${escapeHtml(message)}</span>
+      </div>
+    `;
   }
 
   async _postWebhookPayload(webhookId, body) {
@@ -2343,6 +2417,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (!this.shadowRoot) {
       return;
     }
+    this._setComposerError("quick", "");
     const title = String(
       this.shadowRoot.querySelector('[data-quick-field="title"]')?.value || "",
     ).trim();
@@ -2353,6 +2428,10 @@ class NodaliaCalendarCard extends HTMLElement {
       this.shadowRoot.querySelector('[data-quick-field="date"]')?.value || "",
     ).trim();
     if (!dateRaw) {
+      return;
+    }
+    if (dateInputIsBeforeToday(dateRaw)) {
+      this._setComposerError("quick", "La fecha no puede ser anterior a hoy.");
       return;
     }
     const allDay = Boolean(
@@ -2389,6 +2468,7 @@ class NodaliaCalendarCard extends HTMLElement {
         reminder,
       });
     }
+    this._quickComposerError = "";
     this._quickReminderComposerOpen = false;
     this._refreshEvents();
   }
@@ -2431,15 +2511,32 @@ class NodaliaCalendarCard extends HTMLElement {
             <button type="button" class="calendar-composer__btn" data-action="close-quick-composer">Cancelar</button>
             <button type="button" class="calendar-composer__btn calendar-composer__btn--primary" data-action="save-quick-composer">Guardar</button>
           </div>
+          ${this._renderComposerError("quick")}
         </div>
       </div>
     `;
+  }
+
+  _buildNativeCalendarCreateEventWebhookBody(payload, eventKind) {
+    const calendarId = String(payload?.entity_id || "").trim();
+    const serviceData = Object.fromEntries(
+      Object.entries(payload || {}).filter(([, value]) => value !== "" && value !== null && value !== undefined),
+    );
+    return {
+      type: "calendar_create_event",
+      event_kind: eventKind,
+      service: "calendar.create_event",
+      target: calendarId ? { entity_id: [calendarId] } : {},
+      data: serviceData,
+      service_data: serviceData,
+    };
   }
 
   async _submitNativeEventComposer() {
     if (!this._hass || !this.shadowRoot) {
       return;
     }
+    this._setComposerError("native", "");
     const pickerValue = this.shadowRoot.querySelector('[data-native-field="calendar"]')?.value;
     const calendarId = String(this._nativeComposerCalendarValue || pickerValue || "").trim();
     const title = String(
@@ -2460,6 +2557,10 @@ class NodaliaCalendarCard extends HTMLElement {
     if (!calendarId || !title || !dateRaw || (!allDay && (!startRaw || !endRaw))) {
       return;
     }
+    if (dateInputIsBeforeToday(dateRaw)) {
+      this._setComposerError("native", "La fecha no puede ser anterior a hoy.");
+      return;
+    }
     try {
       const nativeWebhookId = String(this._config?.native_event_webhook || "").trim();
       if (allDay) {
@@ -2476,10 +2577,10 @@ class NodaliaCalendarCard extends HTMLElement {
           end_date: endDate,
         };
         if (nativeWebhookId) {
-          const ok = await this._postWebhookPayload(nativeWebhookId, {
-            type: "calendar_create_event",
-            data: payload,
-          });
+          const ok = await this._postWebhookPayload(
+            nativeWebhookId,
+            this._buildNativeCalendarCreateEventWebhookBody(payload, "all_day"),
+          );
           if (!ok) {
             return;
           }
@@ -2508,10 +2609,10 @@ class NodaliaCalendarCard extends HTMLElement {
           end_date_time: Number.isNaN(endDateTime.getTime()) ? `${dateRaw}T${endRaw}:00` : formatLocalDateTime(endDateTime),
         };
         if (nativeWebhookId) {
-          const ok = await this._postWebhookPayload(nativeWebhookId, {
-            type: "calendar_create_event",
-            data: payload,
-          });
+          const ok = await this._postWebhookPayload(
+            nativeWebhookId,
+            this._buildNativeCalendarCreateEventWebhookBody(payload, "timed"),
+          );
           if (!ok) {
             return;
           }
@@ -2519,6 +2620,7 @@ class NodaliaCalendarCard extends HTMLElement {
           await this._hass.callService("calendar", "create_event", payload);
         }
       }
+      this._nativeComposerError = "";
       this._nativeEventComposerOpen = false;
       this._refreshEvents();
     } catch (_error) {
@@ -2578,6 +2680,7 @@ class NodaliaCalendarCard extends HTMLElement {
             <button type="button" class="calendar-composer__btn" data-action="close-native-composer">Cancelar</button>
             <button type="button" class="calendar-composer__btn calendar-composer__btn--primary" data-action="save-native-composer">Crear</button>
           </div>
+          ${this._renderComposerError("native")}
         </div>
       </div>
     `;
@@ -3222,6 +3325,27 @@ class NodaliaCalendarCard extends HTMLElement {
         .calendar-composer__check input:checked::before {
           transform: translateX(18px);
         }
+        .calendar-composer__error {
+          align-items: center;
+          background: color-mix(in srgb, var(--error-color, #db4437) 13%, transparent);
+          border: 1px solid color-mix(in srgb, var(--error-color, #db4437) 34%, transparent);
+          border-radius: 12px;
+          color: var(--error-color, #db4437);
+          display: flex;
+          font-size: 12px;
+          font-weight: 800;
+          gap: 8px;
+          line-height: 1.35;
+          padding: 9px 10px;
+        }
+        .calendar-composer__error[hidden] {
+          display: none;
+        }
+        .calendar-composer__error ha-icon {
+          flex: 0 0 auto;
+          height: 18px;
+          width: 18px;
+        }
         .calendar-composer__actions {
           display: flex;
           gap: 8px;
@@ -3662,11 +3786,13 @@ class NodaliaCalendarCard extends HTMLElement {
       event.stopPropagation();
       if (this._quickReminderComposerOpen) {
         this._quickReminderComposerOpen = false;
+        this._quickComposerError = "";
         this._renderIfChanged(true);
         return;
       }
       if (this._nativeEventComposerOpen) {
         this._nativeEventComposerOpen = false;
+        this._nativeComposerError = "";
         this._renderIfChanged(true);
         return;
       }
@@ -3721,6 +3847,8 @@ class NodaliaCalendarCard extends HTMLElement {
       this._expandedMonthDayKey = "";
       this._quickReminderComposerOpen = false;
       this._nativeEventComposerOpen = false;
+      this._quickComposerError = "";
+      this._nativeComposerError = "";
       this._expandedOpen = false;
       this._expandedOverlayEntrancePlayed = false;
       this._renderIfChanged(true);
@@ -3817,6 +3945,8 @@ class NodaliaCalendarCard extends HTMLElement {
     event.stopPropagation();
     this._expandedMonthDayKey = "";
     this._quickReminderComposerOpen = false;
+    this._quickComposerError = "";
+    this._nativeComposerError = "";
     this._expandedOpen = true;
     this._renderIfChanged(true);
   }
