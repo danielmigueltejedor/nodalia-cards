@@ -9,7 +9,7 @@ import {
 
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.35";
+const CARD_VERSION = "1.0.0-alpha.36";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 const QUICK_REMINDER_STORAGE_KEY = "nodalia_calendar_quick_reminders_v1";
 
@@ -1752,6 +1752,47 @@ class NodaliaCalendarCard extends HTMLElement {
     return this._weatherForecastByDay instanceof Map ? this._weatherForecastByDay : new Map();
   }
 
+  _getWeatherForDay(dayDate, weatherByDay) {
+    if (!(weatherByDay instanceof Map) || !(dayDate instanceof Date) || Number.isNaN(dayDate.getTime())) {
+      return null;
+    }
+    const y = dayDate.getFullYear();
+    const m = dayDate.getMonth();
+    const d = dayDate.getDate();
+    const keyLocal = `${y}-${m}-${d}`;
+    if (weatherByDay.has(keyLocal)) {
+      return weatherByDay.get(keyLocal);
+    }
+    // Fallback for integrations that expose zero-padded date-like keys.
+    const keyPadded = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    if (weatherByDay.has(keyPadded)) {
+      return weatherByDay.get(keyPadded);
+    }
+    // Last-resort fallback: nearest forecast day (within +/- 1 day).
+    let nearest = null;
+    let nearestDiff = Number.POSITIVE_INFINITY;
+    const targetTs = new Date(y, m, d).getTime();
+    for (const [k, value] of weatherByDay.entries()) {
+      const parsed = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(k));
+      if (!parsed) {
+        continue;
+      }
+      const ky = Number(parsed[1]);
+      const km = Number(parsed[2]);
+      const kd = Number(parsed[3]);
+      if (!Number.isFinite(ky) || !Number.isFinite(km) || !Number.isFinite(kd)) {
+        continue;
+      }
+      const rowTs = new Date(ky, Math.max(0, km - 1), kd).getTime();
+      const diff = Math.abs(rowTs - targetTs);
+      if (diff < nearestDiff) {
+        nearestDiff = diff;
+        nearest = value;
+      }
+    }
+    return nearestDiff <= 86400000 ? nearest : null;
+  }
+
   _getWeatherForecastSignature() {
     const entityId = this._getWeatherEntityId();
     if (!entityId || !this._hass?.states?.[entityId]) {
@@ -2556,6 +2597,10 @@ class NodaliaCalendarCard extends HTMLElement {
           transform: translate(-50%, -50%);
           width: min(96vw, 1100px);
         }
+        .calendar-expanded__panel--composer-open {
+          max-height: min(90vh, 920px);
+          min-height: min(76vh, 560px);
+        }
         .calendar-expanded__panel--entrance {
           animation: calendar-expanded-panel-in calc(${animationDuration}ms * 0.55) cubic-bezier(0.16, 0.84, 0.22, 1) both;
         }
@@ -2609,6 +2654,9 @@ class NodaliaCalendarCard extends HTMLElement {
           overscroll-behavior: contain;
           padding-right: 2px;
           touch-action: pan-y;
+        }
+        .calendar-expanded__panel--composer-open .calendar-expanded__body {
+          min-height: min(54vh, 420px);
         }
         .calendar-composer {
           inset: 0;
@@ -3035,23 +3083,22 @@ class NodaliaCalendarCard extends HTMLElement {
                         <div class="calendar-day" style="--calendar-day-index:${groupIndex};">
                           <div class="calendar-day__header">
                             <div class="calendar-day__label">${escapeHtml(group.label)}</div>
-                            ${
-                              weatherByDay.has(group.dayKey)
-                                ? (() => {
-                                    const w = weatherByDay.get(group.dayKey);
-                                    const icon = weatherConditionIcon(w?.condition);
-                                    const minRaw = Number.isFinite(w?.tempMin) ? Math.round(w.tempMin) : null;
-                                    const maxRaw = Number.isFinite(w?.tempMax) ? Math.round(w.tempMax) : null;
-                                    const hasCondition = Boolean(String(w?.condition || "").trim());
-                                    if (minRaw === null && maxRaw === null && !hasCondition) {
-                                      return "";
-                                    }
-                                    const minText = minRaw === null ? "—" : `${minRaw}°`;
-                                    const maxText = maxRaw === null ? "—" : `${maxRaw}°`;
-                                    return `<div class="calendar-day__weather"><ha-icon icon="${escapeHtml(icon)}"></ha-icon><span>${escapeHtml(minText)} / ${escapeHtml(maxText)}</span></div>`;
-                                  })()
-                                : ""
-                            }
+                            ${(() => {
+                              const w = this._getWeatherForDay(group.dayDate, weatherByDay);
+                              if (!w) {
+                                return "";
+                              }
+                              const icon = weatherConditionIcon(w?.condition);
+                              const minRaw = Number.isFinite(w?.tempMin) ? Math.round(w.tempMin) : null;
+                              const maxRaw = Number.isFinite(w?.tempMax) ? Math.round(w.tempMax) : null;
+                              const hasCondition = Boolean(String(w?.condition || "").trim());
+                              if (minRaw === null && maxRaw === null && !hasCondition) {
+                                return "";
+                              }
+                              const minText = minRaw === null ? "—" : `${minRaw}°`;
+                              const maxText = maxRaw === null ? "—" : `${maxRaw}°`;
+                              return `<div class="calendar-day__weather"><ha-icon icon="${escapeHtml(icon)}"></ha-icon><span>${escapeHtml(minText)} / ${escapeHtml(maxText)}</span></div>`;
+                            })()}
                           </div>
                           ${group.events.map(event => this._renderSingleEventHtml(event, config, locale)).join("")}
                         </div>
@@ -3062,7 +3109,7 @@ class NodaliaCalendarCard extends HTMLElement {
       </ha-card>
       <div class="calendar-expanded ${this._expandedOpen ? "is-open" : ""}" style="--calendar-expanded-accent:${accentColor};" aria-hidden="${this._expandedOpen ? "false" : "true"}">
         <div class="calendar-expanded__backdrop" data-action="expanded-backdrop"></div>
-        <div class="calendar-expanded__panel ${playExpandedPanelEntrance ? "calendar-expanded__panel--entrance" : ""}" role="dialog" aria-modal="true" aria-label="${escapeHtml(config.title)}">
+        <div class="calendar-expanded__panel ${playExpandedPanelEntrance ? "calendar-expanded__panel--entrance" : ""} ${this._quickReminderComposerOpen || this._nativeEventComposerOpen ? "calendar-expanded__panel--composer-open" : ""}" role="dialog" aria-modal="true" aria-label="${escapeHtml(config.title)}">
           <div class="calendar-expanded__toolbar">
             <div class="calendar-expanded__toolbar-title">${escapeHtml(config.title)}</div>
             <div class="calendar-expanded__toolbar-actions">

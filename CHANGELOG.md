@@ -10,6 +10,16 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.36] - 2026-05-06
+
+Thirty-sixth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.36`** (tag **`v1.0.0-alpha.36`** optional).
+
+- **Calendar card — weather visible en más casos reales:** emparejado día calendario ↔ forecast reforzado (claves locales/padded y fallback por proximidad de día) para evitar cabeceras sin clima cuando el proveedor devuelve formatos heterogéneos.
+- **Calendar card — popup composer sin recortes en estado vacío:** al abrir “nuevo recordatorio / nuevo evento” desde una vista sin eventos, el panel expandido eleva altura mínima y evita clipping para mostrar el formulario completo.
+- **Calendar card — esquinas/contorno del panel:** ajuste de layout del panel expandido al abrir composer para eliminar artefactos visuales (cortes y esquinas puntiagudas) en overlays.
+
+---
+
 ## [1.0.0-alpha.35] - 2026-05-06
 
 Thirty-fifth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.35`** (tag **`v1.0.0-alpha.35`** optional).
