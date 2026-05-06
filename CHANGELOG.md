@@ -10,6 +10,16 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.23] - 2026-05-06
+
+Twenty-third **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.23`** (tag **`v1.0.0-alpha.23`** optional).
+
+- **Persistencia sin permiso `input_text.set_value`:** **`NodaliaUtils.postHomeAssistantWebhook`** (`POST` JSON a `/api/webhook/<webhook_id>`). Opciones **`shared_completed_events_webhook`** (calendario) y **`shared_cleaning_session_webhook`** (Advance Vacuum): si están definidas, la escritura compartida usa el webhook en lugar del servicio (una automatización **Webhook** del administrador puede llamar a **`input_text.set_value`**). El **`webhook_id`** debe mantenerse secreto.
+- **Advance Vacuum:** **`_isServiceAllowed`** con allowlists vacías ya no usa fail-open (`strict_service_actions` implícito): coincide con el resto de tarjetas (**denegar** si no hay entradas). Por defecto **`security.strict_service_actions: false`** en **`DEFAULT_CONFIG`** mantiene el comportamiento permisivo anterior sin YAML extra.
+- **Calendar card — formato compacto `v2:` para completados:** módulo **`nodalia-calendar-completion-codec.js`**: prefijo cronológico (`v2:n{k}` = primeros *k* eventos en ventana), totales `v2:t` / vacío `v2:z`, trozos por día `dYYYYMMDD` + `t` (todo el día), `n{j}` (primeros *j* ese día) o `i1-3` (posiciones 1-based en ese día). Se elige la cadena más corta frente al JSON de claves largas; sigue existiendo compatibilidad con el array JSON legacy. Los índices dependen del orden de eventos cargados (si cambian citas, puede haber que revisar marcas).
+
+---
+
 ## [1.0.0-alpha.22] - 2026-05-06
 
 Twenty-second **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.22`** (tag **`v1.0.0-alpha.22`** optional).

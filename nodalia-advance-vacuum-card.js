@@ -16,6 +16,7 @@
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
+    "postHomeAssistantWebhook",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -137,6 +138,34 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
+   * Does not rely on the signed-in user's permission to call `input_text.set_value`;
+   * an automation triggered by the webhook runs with normal HA privileges.
+   * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
+   */
+  function postHomeAssistantWebhook(webhookId, body) {
+    const id = String(webhookId ?? "").trim();
+    if (!id || typeof fetch !== "function") {
+      return Promise.resolve(false);
+    }
+    const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
+    if (!origin) {
+      return Promise.resolve(false);
+    }
+    const url = `${origin}/api/webhook/${encodeURIComponent(id)}`;
+    const payload = body && typeof body === "object" ? body : {};
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "same-origin",
+    }).then(
+      res => res.ok,
+      () => false,
+    );
   }
 
   /**
@@ -382,6 +411,7 @@
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
+    postHomeAssistantWebhook,
   };
 
   if (typeof window !== "undefined") {
@@ -668,6 +698,7 @@ const DEFAULT_CONFIG = {
   max_zone_selections: 5,
   max_repeats: 3,
   shared_cleaning_session_entity: "",
+  shared_cleaning_session_webhook: "",
   suction_select_entity: "",
   mop_select_entity: "",
   mop_mode_select_entity: "",
@@ -682,6 +713,11 @@ const DEFAULT_CONFIG = {
   predefined_zones: [],
   icons: [],
   map_modes: [],
+  security: {
+    strict_service_actions: false,
+    allowed_services: [],
+    allowed_service_domains: [],
+  },
   haptics: {
     enabled: true,
     style: "medium",
@@ -1834,6 +1870,7 @@ function normalizeConfig(rawConfig) {
   config.custom_menu = mergeConfig(DEFAULT_CONFIG.custom_menu, config.custom_menu || {});
   config.custom_menu.items = normalizeCustomMenuItems(config.custom_menu.items);
   config.routines = normalizeRoutineItems(config.routines);
+  config.shared_cleaning_session_webhook = String(config.shared_cleaning_session_webhook ?? "").trim();
   return config;
 }
 
@@ -2557,12 +2594,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _persistSharedCleaningSession(session) {
+    const webhookId = String(this._config?.shared_cleaning_session_webhook ?? "").trim();
     const entityId = this._getSharedCleaningSessionEntityId();
-    if (!entityId) {
+    if (!webhookId && !entityId) {
       return;
     }
 
-    const maxLength = this._getSharedCleaningSessionMaxLength();
+    const maxLength = entityId ? this._getSharedCleaningSessionMaxLength() : 255;
     let serialized = this._serializeSharedCleaningSession(session);
 
     if (serialized.length > maxLength) {
@@ -2577,7 +2615,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     const serializedTrim = serialized.trim();
-    const currentValue = String(this._getSharedCleaningSessionState()?.state ?? "").trim();
+    const currentValue = entityId ? String(this._getSharedCleaningSessionState()?.state ?? "").trim() : "";
     if (
       serializedTrim === currentValue ||
       serializedTrim === this._lastSubmittedSharedCleaningSessionValue
@@ -2586,6 +2624,33 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
+
+    if (webhookId) {
+      const post =
+        typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.postHomeAssistantWebhook === "function"
+          ? window.NodaliaUtils.postHomeAssistantWebhook
+          : null;
+      if (!post) {
+        this._lastSubmittedSharedCleaningSessionValue = null;
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn(
+            "Nodalia Advance Vacuum Card: falta NodaliaUtils.postHomeAssistantWebhook (actualiza nodalia-cards / nodalia-utils).",
+          );
+        }
+        return;
+      }
+      void post(webhookId, { value: serializedTrim }).then(ok => {
+        if (!ok) {
+          this._lastSubmittedSharedCleaningSessionValue = null;
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn(
+              "Nodalia Advance Vacuum Card: webhook de persistencia rechazado o fallido; revisa el webhook_id y la automatización en HA.",
+            );
+          }
+        }
+      });
+      return;
+    }
 
     const pending = this._callNamedService("input_text.set_value", {
       entity_id: entityId,
@@ -2597,7 +2662,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         if (typeof console !== "undefined" && typeof console.warn === "function") {
           console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
           console.warn(
-            "Nodalia Advance Vacuum Card: usuarios no administradores necesitan permiso de control sobre el input_text del helper (shared_cleaning_session_entity) en Home Assistant.",
+            "Nodalia Advance Vacuum Card: usuarios no administradores necesitan permiso de control sobre el input_text del helper (shared_cleaning_session_entity) o configuran shared_cleaning_session_webhook.",
           );
         }
       });
@@ -2605,8 +2670,29 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _clearSharedCleaningSession() {
+    const webhookId = String(this._config?.shared_cleaning_session_webhook ?? "").trim();
     const entityId = this._getSharedCleaningSessionEntityId();
-    if (!entityId) {
+    if (!webhookId && !entityId) {
+      return;
+    }
+
+    if (webhookId) {
+      const post =
+        typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.postHomeAssistantWebhook === "function"
+          ? window.NodaliaUtils.postHomeAssistantWebhook
+          : null;
+      if (post) {
+        this._lastSubmittedSharedCleaningSessionValue = "";
+        void post(webhookId, { value: "" }).then(ok => {
+          if (!ok && typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn("Nodalia Advance Vacuum Card: webhook clear (sesión compartida) falló.");
+          }
+        });
+      } else if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn(
+          "Nodalia Advance Vacuum Card: falta NodaliaUtils.postHomeAssistantWebhook (actualiza nodalia-cards / nodalia-utils).",
+        );
+      }
       return;
     }
 
@@ -3371,6 +3457,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       },
       sharedSession: {
         entity: String(sharedSessionEntityId || ""),
+        webhook: String(this._config?.shared_cleaning_session_webhook || "").trim(),
         state: String(sharedSessionState?.state || ""),
         lastUpdated: String(sharedSessionState?.last_updated || ""),
       },
@@ -5306,7 +5393,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
       : [];
     if (!domains.length && !services.length) {
-      return security.strict_service_actions !== true;
+      return false;
     }
     return services.includes(normalizedService) || domains.includes(domain);
   }
@@ -8503,6 +8590,10 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
   _renderTextField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
+    const hintRaw = options.hint ? String(options.hint) : "";
+    const hintHtml = hintRaw
+      ? `<span class="editor-field__hint">${escapeHtml(this._editorLabel(hintRaw))}</span>`
+      : "";
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
@@ -8513,6 +8604,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
           value="${escapeHtml(value ?? "")}"
           placeholder="${escapeHtml(options.placeholder || "")}"
         />
+        ${hintHtml}
       </label>
     `;
   }
@@ -9004,6 +9096,12 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
                 ),
               )}</span>
             </div>
+            ${this._renderTextField("Webhook persistencia (ID, opcional)", "shared_cleaning_session_webhook", config.shared_cleaning_session_webhook || "", {
+              fullWidth: true,
+              placeholder: "nodalia_advance_vacuum_session",
+              hint:
+                "Si los usuarios no pueden llamar a input_text.set_value, usa el webhook_id de una automatización que escriba el mismo helper. POST /api/webhook/<id> con JSON {\"value\": \"...\"}.",
+            })}
           </div>
         </section>
 

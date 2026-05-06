@@ -1,6 +1,15 @@
+import {
+  eventDate,
+  completionKey,
+  expandCompletionPayloadToKeys,
+  pickShortestCompletionPayload,
+  canonicalCompletionKeysJson,
+  normalizeCompletionPayloadForCompare,
+} from "./nodalia-calendar-completion-codec.js";
+
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.22";
+const CARD_VERSION = "1.0.0-alpha.23";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 
 const VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
@@ -16,6 +25,7 @@ const DEFAULT_CONFIG = {
   show_completed: false,
   allow_complete: true,
   shared_completed_events_entity: "",
+  shared_completed_events_webhook: "",
   tint_auto: true,
   animations: {
     enabled: true,
@@ -177,6 +187,7 @@ function normalizeConfig(config) {
   normalized.time_range = timeRange;
   normalized.days_to_show = Math.min(62, Math.max(1, daysFromTimeRange(timeRange)));
   normalized.shared_completed_events_entity = String(normalized.shared_completed_events_entity ?? "").trim();
+  normalized.shared_completed_events_webhook = String(normalized.shared_completed_events_webhook ?? "").trim();
   normalized.max_visible_events = Math.min(
     12,
     Math.max(1, Number(normalized.max_visible_events) || DEFAULT_CONFIG.max_visible_events),
@@ -324,20 +335,6 @@ function formatTimeLabel(date, locale) {
   }).format(date);
 }
 
-/** All-day strings (YYYY-MM-DD): parse as local calendar date so WebKit/iOS match grouping with Chrome. */
-function parseCalendarDateOnlyLocal(raw) {
-  const s = String(raw ?? "").trim();
-  const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if (!dm) {
-    return null;
-  }
-  const y = Number(dm[1]);
-  const mo = Number(dm[2]) - 1;
-  const d = Number(dm[3]);
-  const local = new Date(y, mo, d, 12, 0, 0);
-  return Number.isFinite(local.getTime()) ? local : null;
-}
-
 function normalizeCalendarFetchResult(raw) {
   if (Array.isArray(raw)) {
     return raw;
@@ -348,64 +345,8 @@ function normalizeCalendarFetchResult(raw) {
   return [];
 }
 
-function eventDate(value) {
-  if (!value) {
-    return null;
-  }
-  if (typeof value === "string") {
-    const dayLocal = parseCalendarDateOnlyLocal(value);
-    if (dayLocal) {
-      return dayLocal;
-    }
-    const parsed = new Date(value);
-    return Number.isFinite(parsed.getTime()) ? parsed : null;
-  }
-  if (typeof value === "object") {
-    if (value.dateTime) {
-      const parsed = new Date(value.dateTime);
-      return Number.isFinite(parsed.getTime()) ? parsed : null;
-    }
-    if (value.date) {
-      const dayLocal = parseCalendarDateOnlyLocal(value.date);
-      if (dayLocal) {
-        return dayLocal;
-      }
-      const parsed = new Date(value.date);
-      return Number.isFinite(parsed.getTime()) ? parsed : null;
-    }
-    return null;
-  }
-  return null;
-}
-
 function eventIsAllDay(event) {
   return Boolean(event?.start?.date && !event?.start?.dateTime);
-}
-
-function completionKey(event) {
-  const source = String(event?._entity || "");
-  const uid = String(event?.uid || event?.id || "");
-  const start = eventDate(event?.start)?.toISOString() || "";
-  const summary = String(event?.summary || "");
-  return `${source}|${uid}|${start}|${summary}`;
-}
-
-/** Canoniza el JSON de claves de completados (helper input_text) para comparar aunque el orden o espacios difieran. */
-function normalizeCompletedKeysJsonString(raw) {
-  try {
-    const v = JSON.parse(String(raw ?? "[]"));
-    if (!Array.isArray(v)) {
-      return null;
-    }
-    return JSON.stringify(
-      v
-        .map(item => String(item))
-        .filter(Boolean)
-        .sort((a, b) => a.localeCompare(b, "en")),
-    );
-  } catch (_error) {
-    return null;
-  }
 }
 
 class NodaliaCalendarCard extends HTMLElement {
@@ -445,6 +386,8 @@ class NodaliaCalendarCard extends HTMLElement {
     this._pendingSharedCompletedPayload = null;
     this._lastSyncedSharedCompletedRaw = undefined;
     this._completedMergedOnce = false;
+    /** `localStorage` tiene `v2:` pero aún no hay `_events`; solo sin helper HA se re-expande al refrescar. */
+    this._localV2PendingDecode = false;
   }
 
   _onDocVisibility() {
@@ -513,9 +456,11 @@ class NodaliaCalendarCard extends HTMLElement {
 
   setConfig(config) {
     const prevHelper = String(this._config?.shared_completed_events_entity || "").trim();
+    const prevWebhook = String(this._config?.shared_completed_events_webhook || "").trim();
     this._config = normalizeConfig(config);
     const nextHelper = String(this._config.shared_completed_events_entity || "").trim();
-    if (prevHelper !== nextHelper) {
+    const nextWebhook = String(this._config.shared_completed_events_webhook || "").trim();
+    if (prevHelper !== nextHelper || prevWebhook !== nextWebhook) {
       this._completedMergedOnce = false;
       this._lastSyncedSharedCompletedRaw = undefined;
       this._lastSubmittedSharedCompletedValue = "";
@@ -552,16 +497,14 @@ class NodaliaCalendarCard extends HTMLElement {
     return Number.isFinite(max) && max > 0 ? max : 255;
   }
 
-  _readLocalCompletedKeysOnly() {
+  _readLocalCompletionRaw() {
     if (typeof window === "undefined" || !window.localStorage) {
-      return [];
+      return "";
     }
     try {
-      const raw = window.localStorage.getItem(COMPLETION_STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed.map(k => String(k)) : [];
+      return window.localStorage.getItem(COMPLETION_STORAGE_KEY) || "";
     } catch (_error) {
-      return [];
+      return "";
     }
   }
 
@@ -581,51 +524,55 @@ class NodaliaCalendarCard extends HTMLElement {
       return;
     }
 
-    let parsed = [];
-    try {
-      const v = JSON.parse(raw || "[]");
-      if (!Array.isArray(v)) {
-        return;
-      }
-      parsed = v.map(k => String(k));
-    } catch (_error) {
+    const events = this._events || [];
+    const localRaw = this._readLocalCompletionRaw();
+    if (
+      !events.length &&
+      (raw.trim().startsWith("v2:") || localRaw.trim().startsWith("v2:"))
+    ) {
       return;
     }
 
-    const incomingCanonical = normalizeCompletedKeysJsonString(JSON.stringify(parsed));
-    const localCanonical = normalizeCompletedKeysJsonString(
-      JSON.stringify([...this._completed].map(k => String(k)).sort((a, b) => a.localeCompare(b, "en"))),
-    );
+    const incomingKeys = expandCompletionPayloadToKeys(raw, events);
+    const incomingCanonical = canonicalCompletionKeysJson(incomingKeys);
+
+    const localKeys = expandCompletionPayloadToKeys(localRaw, events);
+    const localCanonical = canonicalCompletionKeysJson(localKeys);
+
+    const memoryCanonical = canonicalCompletionKeysJson([...this._completed]);
+
     if (
       this._pendingSharedCompletedPayload &&
-      incomingCanonical &&
       incomingCanonical !== this._pendingSharedCompletedPayload &&
+      incomingCanonical !== memoryCanonical &&
       incomingCanonical !== localCanonical
     ) {
       return;
     }
     if (
       this._pendingSharedCompletedPayload &&
-      incomingCanonical &&
       incomingCanonical === this._pendingSharedCompletedPayload
     ) {
       this._pendingSharedCompletedPayload = null;
     }
 
     this._lastSyncedSharedCompletedRaw = raw;
+    this._localV2PendingDecode = false;
 
     if (!this._completedMergedOnce) {
-      const local = this._readLocalCompletedKeysOnly();
-      this._completed = new Set([...local, ...parsed]);
+      this._completed = new Set([...localKeys, ...incomingKeys]);
       this._completedMergedOnce = true;
       this._saveCompleted();
       return;
     }
 
-    this._completed = new Set(parsed);
+    this._completed = new Set(incomingKeys);
     try {
       if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.setItem(COMPLETION_STORAGE_KEY, JSON.stringify(parsed));
+        const payloadLs =
+          pickShortestCompletionPayload(this._completed, events, 262144) ||
+          canonicalCompletionKeysJson([...this._completed]);
+        window.localStorage.setItem(COMPLETION_STORAGE_KEY, payloadLs);
       }
     } catch (_error) {
       // Ignore storage errors.
@@ -967,64 +914,108 @@ class NodaliaCalendarCard extends HTMLElement {
   }
 
   _loadCompleted() {
-    this._completed = new Set(this._readLocalCompletedKeysOnly());
+    const raw = this._readLocalCompletionRaw();
+    try {
+      const v = JSON.parse(raw);
+      if (Array.isArray(v)) {
+        this._completed = new Set(v.map(k => String(k)));
+        this._localV2PendingDecode = false;
+        return;
+      }
+    } catch (_error) {
+      // Legacy JSON or compact v2.
+    }
+    if (String(raw).trim().startsWith("v2:")) {
+      this._completed = new Set();
+      this._localV2PendingDecode = true;
+      return;
+    }
+    this._completed = new Set();
+    this._localV2PendingDecode = false;
   }
 
   _saveCompleted() {
-    const sortedKeys = [...this._completed].sort();
-    const payload = JSON.stringify(sortedKeys);
+    const events = this._events || [];
+    const canonicalExpanded = canonicalCompletionKeysJson([...this._completed]);
+
+    const payloadLs =
+      pickShortestCompletionPayload(this._completed, events, 262144) || canonicalExpanded;
 
     if (typeof window !== "undefined" && window.localStorage) {
       try {
-        window.localStorage.setItem(COMPLETION_STORAGE_KEY, payload);
+        window.localStorage.setItem(COMPLETION_STORAGE_KEY, payloadLs);
       } catch (_error) {
         // Ignore storage errors.
       }
     }
 
+    const webhookId = String(this._config?.shared_completed_events_webhook ?? "").trim();
     const entityId = this._getSharedCompletedEntityId();
-    if (!entityId || !this._hass?.callService) {
+
+    if (!webhookId && (!entityId || !this._hass?.callService)) {
       return;
     }
 
     const maxLen = this._getSharedCompletedMaxLength();
-    if (payload.length > maxLen) {
+    const payloadHa = pickShortestCompletionPayload(this._completed, events, maxLen);
+    if (!payloadHa) {
       if (typeof console !== "undefined" && typeof console.warn === "function") {
         console.warn(
-          "Nodalia Calendar Card: la lista de eventos completados no cabe en el input_text (aumenta max en el helper o marca menos eventos).",
+          "Nodalia Calendar Card: la lista de eventos completados no cabe en el input_text ni en formato compacto v2 (aumenta max en el helper o reduce eventos completados).",
         );
       }
       return;
     }
 
-    const currentState = String(this._hass.states?.[entityId]?.state ?? "").trim();
-    const canonicalPayload = normalizeCompletedKeysJsonString(payload);
-    const canonicalCurrent = normalizeCompletedKeysJsonString(currentState);
-    const canonicalLastSubmit = normalizeCompletedKeysJsonString(this._lastSubmittedSharedCompletedValue);
-    if (
-      canonicalPayload !== null &&
-      canonicalCurrent !== null &&
-      canonicalPayload === canonicalCurrent
-    ) {
+    const currentState =
+      entityId && this._hass?.states?.[entityId]
+        ? String(this._hass.states[entityId].state ?? "").trim()
+        : "";
+    const canonicalCurrent = normalizeCompletionPayloadForCompare(currentState, events);
+    const canonicalLastSubmit = normalizeCompletionPayloadForCompare(this._lastSubmittedSharedCompletedValue, events);
+    if (canonicalCurrent !== null && canonicalExpanded === canonicalCurrent) {
       return;
     }
-    if (
-      canonicalPayload !== null &&
-      canonicalLastSubmit !== null &&
-      canonicalPayload === canonicalLastSubmit
-    ) {
+    if (canonicalLastSubmit !== null && canonicalExpanded === canonicalLastSubmit) {
       return;
     }
 
-    this._lastSubmittedSharedCompletedValue = payload;
-    if (canonicalPayload !== null) {
-      this._pendingSharedCompletedPayload = canonicalPayload;
+    if (webhookId) {
+      const post =
+        typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.postHomeAssistantWebhook === "function"
+          ? window.NodaliaUtils.postHomeAssistantWebhook
+          : null;
+      if (!post) {
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn(
+            "Nodalia Calendar Card: falta NodaliaUtils.postHomeAssistantWebhook (actualiza nodalia-cards / nodalia-utils).",
+          );
+        }
+        return;
+      }
+      this._lastSubmittedSharedCompletedValue = payloadHa;
+      this._pendingSharedCompletedPayload = canonicalExpanded;
+      void post(webhookId, { value: payloadHa }).then(ok => {
+        if (!ok) {
+          this._lastSubmittedSharedCompletedValue = null;
+          this._pendingSharedCompletedPayload = null;
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn(
+              "Nodalia Calendar Card: webhook de persistencia rechazado o fallido; revisa el webhook_id y la automatización en HA.",
+            );
+          }
+        }
+      });
+      return;
     }
+
+    this._lastSubmittedSharedCompletedValue = payloadHa;
+    this._pendingSharedCompletedPayload = canonicalExpanded;
 
     try {
       const result = this._hass.callService("input_text", "set_value", {
         entity_id: entityId,
-        value: payload,
+        value: payloadHa,
       });
       if (result && typeof result.then === "function") {
         result.catch(err => {
@@ -1033,7 +1024,7 @@ class NodaliaCalendarCard extends HTMLElement {
           if (typeof console !== "undefined" && typeof console.warn === "function") {
             console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
             console.warn(
-              "Nodalia Calendar Card: si usas un usuario no administrador, concede permiso de control sobre la entidad input_text del helper (Ajustes → … → Control de entidades / permisos).",
+              "Nodalia Calendar Card: si usas un usuario no administrador, concede permiso de control sobre la entidad input_text del helper o configura shared_completed_events_webhook con una automatización webhook que llame a input_text.set_value.",
             );
           }
         });
@@ -1044,7 +1035,7 @@ class NodaliaCalendarCard extends HTMLElement {
       if (typeof console !== "undefined" && typeof console.warn === "function") {
         console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
         console.warn(
-          "Nodalia Calendar Card: si usas un usuario no administrador, concede permiso de control sobre la entidad input_text del helper.",
+          "Nodalia Calendar Card: si usas un usuario no administrador, concede permiso de control sobre la entidad input_text del helper o usa shared_completed_events_webhook.",
         );
       }
     }
@@ -1085,6 +1076,7 @@ class NodaliaCalendarCard extends HTMLElement {
       config.show_completed,
       config.allow_complete,
       config.shared_completed_events_entity || "",
+      config.shared_completed_events_webhook || "",
       config.tint_auto,
       config.animations?.enabled,
       config.animations?.content_duration,
@@ -1169,6 +1161,14 @@ class NodaliaCalendarCard extends HTMLElement {
       this._error = "No se pudieron cargar eventos del calendario.";
     } finally {
       this._loading = false;
+      if (this._localV2PendingDecode && this._events.length && !this._getSharedCompletedEntityId()) {
+        const raw = this._readLocalCompletionRaw();
+        this._completed = new Set(expandCompletionPayloadToKeys(raw, this._events));
+        this._localV2PendingDecode = false;
+      }
+      if (this._getSharedCompletedEntityId()) {
+        this._syncCompletedPersistenceFromHass();
+      }
       this._renderIfChanged(true);
       this._scheduleRefresh();
     }
@@ -2507,6 +2507,10 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || (inputType === "number" ? "number" : "string");
     const inputValue = value === undefined || value === null ? "" : String(value);
+    const hintRaw = options.hint ? String(options.hint) : "";
+    const hintHtml = hintRaw
+      ? `<span class="editor-field__hint">${escapeHtml(this._editorLabel(hintRaw))}</span>`
+      : "";
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
@@ -2517,6 +2521,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
           value="${escapeHtml(inputValue)}"
           ${placeholder}
         />
+        ${hintHtml}
       </label>
     `;
   }
@@ -3066,6 +3071,12 @@ class NodaliaCalendarCardEditor extends HTMLElement {
                 ),
               )}</span>
             </div>
+            ${this._renderTextField("Webhook persistencia (ID, opcional)", "shared_completed_events_webhook", config.shared_completed_events_webhook || "", {
+              fullWidth: true,
+              placeholder: "nodalia_calendar_completed",
+              hint:
+                "Si los usuarios no pueden llamar a input_text.set_value, pon aqui el webhook_id de una automatización que escriba el mismo helper. La tarjeta hace POST a /api/webhook/<id> con JSON {\"value\": \"...\"}.",
+            })}
           </div>
         </section>
 

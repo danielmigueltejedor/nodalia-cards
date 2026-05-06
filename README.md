@@ -3,7 +3,7 @@
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
 ![Latest stable](https://img.shields.io/badge/latest%20stable-0.6.1-2ea043)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
-![Alpha branch](https://img.shields.io/badge/alpha-1.0.0--alpha.22-orange)
+![Alpha branch](https://img.shields.io/badge/alpha-1.0.0--alpha.23-orange)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![GitHub](https://img.shields.io/badge/hosted%20on-GitHub-black?logo=github)
@@ -92,9 +92,11 @@ The **visual editors** in this bundle emit **lean YAML**: any option that still 
 
 Use each card’s **visual editor** to discover fields; the YAML will stay minimal when options stay at defaults.
 
+**Advance Vacuum** shared session persistence supports **`shared_cleaning_session_webhook`** the same way as the calendar (`POST` to `/api/webhook/<id>` with `{"value":"..."}`); pair it with a webhook automation that writes your **`shared_cleaning_session_entity`** helper.
+
 ### Calendar card (`custom:nodalia-calendar-card`)
 
-Shows merged events from one or more `calendar.*` entities, optional per-calendar **label** and **tint**, **time range** presets, and a **mark done** flow (browser `localStorage`, or shared via an **`input_text`** helper like Advance Vacuum’s cleaning session). Tap the card to open the **expanded** view (layout depends on the selected range). With **1 month** range, tap a **day** to focus that date (first event + colored dots / scroll for the rest).
+Shows merged events from one or more `calendar.*` entities, optional per-calendar **label** and **tint**, **time range** presets, and a **mark done** flow (browser `localStorage`, or shared via an **`input_text`** helper like Advance Vacuum’s cleaning session). If restricted Home Assistant users cannot call `input_text.set_value`, configure **`shared_completed_events_webhook`** with a **Webhook** automation (admin) that writes the same helper — see table below. Tap the card to open the **expanded** view (layout depends on the selected range). With **1 month** range, tap a **day** to focus that date (first event + colored dots / scroll for the rest).
 
 **Minimal YAML example**
 
@@ -118,6 +120,7 @@ calendars:
 | `allow_complete` | bool | `true` | Show “Mark done” on events |
 | `show_completed` | bool | `false` | Keep completed events visible in the list |
 | `shared_completed_events_entity` | string | *(empty)* | Optional `input_text.*` entity: stores completed-event keys as JSON so **phones, tablets and browsers** stay in sync (raise **`max`** on the helper if you hit the character limit) |
+| `shared_completed_events_webhook` | string | *(empty)* | Optional Home Assistant **`webhook_id`** (not the full URL). When set, the card **`POST`s** `{"value":"<json>"}` to `/api/webhook/<id>` instead of calling `input_text.set_value`, so users without entity permissions can still sync **if** an admin automation writes `trigger.json.value` to your helper. Treat the id as a **secret**. |
 | `tint_auto` | bool | `true` | Tint the card with the theme primary; set `false` and use `styles.tint.color` for a **manual** accent |
 | `animations` | object | see below | Entrance / motion tuning |
 | `animations.enabled` | bool | `true` | Card animations |
@@ -135,6 +138,26 @@ calendars:
 | `styles.event_size` | Event text size |
 | `styles.chip_height` / `chip_font_size` / `chip_padding` | Header range chip |
 | `styles.chip_size` | Legacy alias mapped to `chip_font_size` if present |
+
+**Completed tasks storage:** the calendar prefers an internal compact **`v2:`** string when it saves fewer characters than a JSON array (same logical keys). Grammar uses chronological **`n{k}`** within the loaded window plus optional **`dYYYYMMDD`** segments for per-day completion (`t`, `n{j}`, or `i1-2-3`). Legacy JSON arrays still load. If the event list in Home Assistant changes (new meetings, reschedules), indices can drift until you refresh — same caveat as any order-based shorthand.
+
+**Webhook automation example** (admin): use the same `webhook_id` string as `shared_completed_events_webhook` (calendar) or `shared_cleaning_session_webhook` (Advance Vacuum). Body is JSON `{"value": "..."}`; map it to `input_text.set_value` **data.value** (value may be either compact **`v2:`** or a JSON array).
+
+```yaml
+automation:
+  - alias: Nodalia calendar completed webhook
+    trigger:
+      - platform: webhook
+        webhook_id: nodalia_calendar_completed
+        allowed_methods:
+          - POST
+    action:
+      - service: input_text.set_value
+        target:
+          entity_id: input_text.nodalia_calendar_hechos
+        data:
+          value: "{{ trigger.json.value }}"
+```
 
 ---
 
@@ -161,7 +184,7 @@ Copy `nodalia-cards.js` into `config/www/` (or a subfolder) and add a resource u
 
 **Stable (`main`) — 0.6.1** includes **es, en, de, fr, it, nl** plus **pt, ru, el, zh** (simplified), and **ro** for the bundled cards and Lovelace visual editors (partial trees merge from English; coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
 
-**Prereleases:** active **`1.0.0-alpha.*`** line is now **`1.0.0-alpha.22`** on **`alpha`**. Recent **`1.0.0-beta.*`** cuts remain in **CHANGELOG**. **`0.6.1`** stays as the recommended stable line on **`main`** while polish continues toward **`1.0.0`** stable.
+**Prereleases:** active **`1.0.0-alpha.*`** line is now **`1.0.0-alpha.23`** on **`alpha`**. Recent **`1.0.0-beta.*`** cuts remain in **CHANGELOG**. **`0.6.1`** stays as the recommended stable line on **`main`** while polish continues toward **`1.0.0`** stable.
 
 ---
 

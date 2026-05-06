@@ -14746,7 +14746,8 @@
       "editorFilteredStatesSignature",
       "sanitizeActionUrl",
       "mountEntityPickerHost",
-      "mountIconPickerHost"
+      "mountIconPickerHost",
+      "postHomeAssistantWebhook"
     ];
     const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
     if (existing && REQUIRED_API_KEYS.every((key) => typeof existing[key] === "function")) {
@@ -14847,6 +14848,27 @@
     }
     function editorStatesSignature(hass, language) {
       return editorFilteredStatesSignature(hass, language, () => true);
+    }
+    function postHomeAssistantWebhook(webhookId, body) {
+      const id = String(webhookId ?? "").trim();
+      if (!id || typeof fetch !== "function") {
+        return Promise.resolve(false);
+      }
+      const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
+      if (!origin) {
+        return Promise.resolve(false);
+      }
+      const url = `${origin}/api/webhook/${encodeURIComponent(id)}`;
+      const payload = body && typeof body === "object" ? body : {};
+      return fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        credentials: "same-origin"
+      }).then(
+        (res) => res.ok,
+        () => false
+      );
     }
     function sanitizeActionUrl(value, options = {}) {
       const raw = String(value ?? "").trim();
@@ -15044,7 +15066,8 @@
       editorFilteredStatesSignature,
       sanitizeActionUrl,
       mountEntityPickerHost,
-      mountIconPickerHost
+      mountIconPickerHost,
+      postHomeAssistantWebhook
     };
     if (typeof window !== "undefined") {
       window.NodaliaUtils = api;
@@ -51538,6 +51561,7 @@
     max_zone_selections: 5,
     max_repeats: 3,
     shared_cleaning_session_entity: "",
+    shared_cleaning_session_webhook: "",
     suction_select_entity: "",
     mop_select_entity: "",
     mop_mode_select_entity: "",
@@ -51552,6 +51576,11 @@
     predefined_zones: [],
     icons: [],
     map_modes: [],
+    security: {
+      strict_service_actions: false,
+      allowed_services: [],
+      allowed_service_domains: []
+    },
     haptics: {
       enabled: true,
       style: "medium",
@@ -52440,6 +52469,7 @@
     config.custom_menu = mergeConfig11(DEFAULT_CONFIG11.custom_menu, config.custom_menu || {});
     config.custom_menu.items = normalizeCustomMenuItems(config.custom_menu.items);
     config.routines = normalizeRoutineItems(config.routines);
+    config.shared_cleaning_session_webhook = String(config.shared_cleaning_session_webhook ?? "").trim();
     return config;
   }
   var NodaliaAdvanceVacuumCard = class extends HTMLElement {
@@ -53052,11 +53082,12 @@
       return this._deserializeSharedCleaningSession(rawValue);
     }
     _persistSharedCleaningSession(session) {
+      const webhookId = String(this._config?.shared_cleaning_session_webhook ?? "").trim();
       const entityId = this._getSharedCleaningSessionEntityId();
-      if (!entityId) {
+      if (!webhookId && !entityId) {
         return;
       }
-      const maxLength = this._getSharedCleaningSessionMaxLength();
+      const maxLength = entityId ? this._getSharedCleaningSessionMaxLength() : 255;
       let serialized = this._serializeSharedCleaningSession(session);
       if (serialized.length > maxLength) {
         serialized = this._serializeSharedCleaningSession(session, { minimal: true });
@@ -53068,11 +53099,34 @@
         serialized = "";
       }
       const serializedTrim = serialized.trim();
-      const currentValue = String(this._getSharedCleaningSessionState()?.state ?? "").trim();
+      const currentValue = entityId ? String(this._getSharedCleaningSessionState()?.state ?? "").trim() : "";
       if (serializedTrim === currentValue || serializedTrim === this._lastSubmittedSharedCleaningSessionValue) {
         return;
       }
       this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
+      if (webhookId) {
+        const post = typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.postHomeAssistantWebhook === "function" ? window.NodaliaUtils.postHomeAssistantWebhook : null;
+        if (!post) {
+          this._lastSubmittedSharedCleaningSessionValue = null;
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn(
+              "Nodalia Advance Vacuum Card: falta NodaliaUtils.postHomeAssistantWebhook (actualiza nodalia-cards / nodalia-utils)."
+            );
+          }
+          return;
+        }
+        void post(webhookId, { value: serializedTrim }).then((ok) => {
+          if (!ok) {
+            this._lastSubmittedSharedCleaningSessionValue = null;
+            if (typeof console !== "undefined" && typeof console.warn === "function") {
+              console.warn(
+                "Nodalia Advance Vacuum Card: webhook de persistencia rechazado o fallido; revisa el webhook_id y la automatización en HA."
+              );
+            }
+          }
+        });
+        return;
+      }
       const pending = this._callNamedService("input_text.set_value", {
         entity_id: entityId,
         value: serializedTrim
@@ -53083,15 +53137,32 @@
           if (typeof console !== "undefined" && typeof console.warn === "function") {
             console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
             console.warn(
-              "Nodalia Advance Vacuum Card: usuarios no administradores necesitan permiso de control sobre el input_text del helper (shared_cleaning_session_entity) en Home Assistant."
+              "Nodalia Advance Vacuum Card: usuarios no administradores necesitan permiso de control sobre el input_text del helper (shared_cleaning_session_entity) o configuran shared_cleaning_session_webhook."
             );
           }
         });
       }
     }
     _clearSharedCleaningSession() {
+      const webhookId = String(this._config?.shared_cleaning_session_webhook ?? "").trim();
       const entityId = this._getSharedCleaningSessionEntityId();
-      if (!entityId) {
+      if (!webhookId && !entityId) {
+        return;
+      }
+      if (webhookId) {
+        const post = typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.postHomeAssistantWebhook === "function" ? window.NodaliaUtils.postHomeAssistantWebhook : null;
+        if (post) {
+          this._lastSubmittedSharedCleaningSessionValue = "";
+          void post(webhookId, { value: "" }).then((ok) => {
+            if (!ok && typeof console !== "undefined" && typeof console.warn === "function") {
+              console.warn("Nodalia Advance Vacuum Card: webhook clear (sesión compartida) falló.");
+            }
+          });
+        } else if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn(
+            "Nodalia Advance Vacuum Card: falta NodaliaUtils.postHomeAssistantWebhook (actualiza nodalia-cards / nodalia-utils)."
+          );
+        }
         return;
       }
       const currentValue = String(this._getSharedCleaningSessionState()?.state || "");
@@ -53669,6 +53740,7 @@
         },
         sharedSession: {
           entity: String(sharedSessionEntityId || ""),
+          webhook: String(this._config?.shared_cleaning_session_webhook || "").trim(),
           state: String(sharedSessionState?.state || ""),
           lastUpdated: String(sharedSessionState?.last_updated || "")
         },
@@ -55211,7 +55283,7 @@
       const domains = Array.isArray(security.allowed_service_domains) ? security.allowed_service_domains.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
       const services = Array.isArray(security.allowed_services) ? security.allowed_services.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
       if (!domains.length && !services.length) {
-        return security.strict_service_actions !== true;
+        return false;
       }
       return services.includes(normalizedService) || domains.includes(domain);
     }
@@ -57939,6 +58011,8 @@
     }
     _renderTextField(label, field, value, options = {}) {
       const tLabel = this._editorLabel(label);
+      const hintRaw = options.hint ? String(options.hint) : "";
+      const hintHtml = hintRaw ? `<span class="editor-field__hint">${escapeHtml11(this._editorLabel(hintRaw))}</span>` : "";
       return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml11(tLabel)}</span>
@@ -57949,6 +58023,7 @@
           value="${escapeHtml11(value ?? "")}"
           placeholder="${escapeHtml11(options.placeholder || "")}"
         />
+        ${hintHtml}
       </label>
     `;
     }
@@ -58402,6 +58477,11 @@
         )
       )}</span>
             </div>
+            ${this._renderTextField("Webhook persistencia (ID, opcional)", "shared_cleaning_session_webhook", config.shared_cleaning_session_webhook || "", {
+        fullWidth: true,
+        placeholder: "nodalia_advance_vacuum_session",
+        hint: 'Si los usuarios no pueden llamar a input_text.set_value, usa el webhook_id de una automatización que escriba el mismo helper. POST /api/webhook/<id> con JSON {"value": "..."}.'
+      })}
           </div>
         </section>
 
@@ -70861,6 +70941,267 @@
     preview: true
   });
 
+  // nodalia-calendar-completion-codec.js
+  function parseCalendarDateOnlyLocal(raw) {
+    const s = String(raw ?? "").trim();
+    const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!dm) {
+      return null;
+    }
+    const y = Number(dm[1]);
+    const mo = Number(dm[2]) - 1;
+    const d = Number(dm[3]);
+    const local = new Date(y, mo, d, 12, 0, 0);
+    return Number.isFinite(local.getTime()) ? local : null;
+  }
+  function eventDate(value) {
+    if (!value) {
+      return null;
+    }
+    if (typeof value === "string") {
+      const dayLocal = parseCalendarDateOnlyLocal(value);
+      if (dayLocal) {
+        return dayLocal;
+      }
+      const parsed = new Date(value);
+      return Number.isFinite(parsed.getTime()) ? parsed : null;
+    }
+    if (typeof value === "object") {
+      if (value.dateTime) {
+        const parsed = new Date(value.dateTime);
+        return Number.isFinite(parsed.getTime()) ? parsed : null;
+      }
+      if (value.date) {
+        const dayLocal = parseCalendarDateOnlyLocal(value.date);
+        if (dayLocal) {
+          return dayLocal;
+        }
+        const parsed = new Date(value.date);
+        return Number.isFinite(parsed.getTime()) ? parsed : null;
+      }
+      return null;
+    }
+    return null;
+  }
+  function completionKey(event) {
+    const source = String(event?._entity || "");
+    const uid = String(event?.uid || event?.id || "");
+    const start = eventDate(event?.start)?.toISOString() || "";
+    const summary = String(event?.summary || "");
+    return `${source}|${uid}|${start}|${summary}`;
+  }
+  function canonicalCompletionKeysJson(keys) {
+    return JSON.stringify(
+      [...new Set(keys.map((k) => String(k)))].filter(Boolean).sort((a, b) => a.localeCompare(b, "en"))
+    );
+  }
+  function eventDayKeyCompact(ev) {
+    const d = eventDate(ev?.start);
+    if (!d) {
+      return "";
+    }
+    const y = d.getFullYear();
+    const mo = String(d.getMonth() + 1).padStart(2, "0");
+    const da = String(d.getDate()).padStart(2, "0");
+    return `${y}${mo}${da}`;
+  }
+  function expandCompactDaySegment(seg, orderedEvents, keys) {
+    const s = String(seg ?? "").trim();
+    if (!s.startsWith("d") || s.length < 10) {
+      return;
+    }
+    const dayKey = s.slice(1, 9);
+    if (!/^\d{8}$/.test(dayKey)) {
+      return;
+    }
+    const rest = s.slice(9);
+    const fullDay = orderedEvents.filter((ev) => eventDayKeyCompact(ev) === dayKey);
+    if (rest === "t") {
+      fullDay.forEach((ev) => keys.add(completionKey(ev)));
+      return;
+    }
+    if (rest.startsWith("n")) {
+      const j = Number(rest.slice(1));
+      if (!Number.isFinite(j) || j <= 0) {
+        return;
+      }
+      for (let i = 0; i < Math.min(j, fullDay.length); i += 1) {
+        keys.add(completionKey(fullDay[i]));
+      }
+      return;
+    }
+    if (rest.startsWith("i")) {
+      const spec = rest.slice(1).trim();
+      if (!spec) {
+        return;
+      }
+      for (const part of spec.split("-")) {
+        const pos = Number(part.trim());
+        if (Number.isFinite(pos) && pos >= 1 && pos <= fullDay.length) {
+          keys.add(completionKey(fullDay[pos - 1]));
+        }
+      }
+    }
+  }
+  function decodeCompactCalendarCompletionV2(raw, orderedEvents) {
+    const list = Array.isArray(orderedEvents) ? orderedEvents : [];
+    const E = list.map((ev) => completionKey(ev));
+    const body = String(raw ?? "").trim().startsWith("v2:") ? String(raw).trim().slice(3) : String(raw ?? "").trim();
+    if (body === "z") {
+      return [];
+    }
+    if (body === "t") {
+      return [...E];
+    }
+    const keys = /* @__PURE__ */ new Set();
+    const parts = body.split("+").map((p) => p.trim()).filter(Boolean);
+    let idx = 0;
+    const first = parts[0] || "";
+    const nm = /^n(\d+)$/.exec(first);
+    if (nm) {
+      const k = Number(nm[1]);
+      if (Number.isFinite(k) && k > 0) {
+        for (let i = 0; i < Math.min(k, E.length); i += 1) {
+          keys.add(E[i]);
+        }
+      }
+      idx = 1;
+    }
+    for (; idx < parts.length; idx += 1) {
+      expandCompactDaySegment(parts[idx], list, keys);
+    }
+    return [...keys];
+  }
+  function expandCompletionPayloadToKeys(raw, orderedEvents) {
+    const s = String(raw ?? "").trim();
+    if (!s) {
+      return [];
+    }
+    if (s.startsWith("v2:")) {
+      return decodeCompactCalendarCompletionV2(s, orderedEvents);
+    }
+    try {
+      const v = JSON.parse(s);
+      if (!Array.isArray(v)) {
+        return [];
+      }
+      return v.map((item) => String(item)).filter(Boolean);
+    } catch (_error) {
+      return [];
+    }
+  }
+  function normalizeCompletionPayloadForCompare(raw, orderedEvents) {
+    const keys = expandCompletionPayloadToKeys(raw, orderedEvents);
+    if (!keys.length && String(raw ?? "").trim().startsWith("v2:") && !(orderedEvents || []).length) {
+      return null;
+    }
+    return canonicalCompletionKeysJson(keys);
+  }
+  function serializeCompactCompletionV2(completedSet, orderedEvents) {
+    const list = Array.isArray(orderedEvents) ? orderedEvents : [];
+    const E = list.map((ev) => completionKey(ev));
+    const n = E.length;
+    if (n === 0) {
+      return null;
+    }
+    const C = completedSet instanceof Set ? completedSet : new Set(completedSet);
+    const has = (id) => C.has(id);
+    if (C.size === 0) {
+      return "v2:z";
+    }
+    let allIn = true;
+    for (let i = 0; i < n; i += 1) {
+      if (!has(E[i])) {
+        allIn = false;
+        break;
+      }
+    }
+    if (allIn && C.size === n) {
+      return "v2:t";
+    }
+    let k = 0;
+    while (k < n && has(E[k])) {
+      k += 1;
+    }
+    const prefixKeys = new Set(E.slice(0, k));
+    const remainder = [...C].filter((key) => !prefixKeys.has(key));
+    if (remainder.length === 0) {
+      return `v2:n${k}`;
+    }
+    const byDay = /* @__PURE__ */ new Map();
+    for (const key of remainder) {
+      const ev = list.find((e) => completionKey(e) === key);
+      if (!ev) {
+        return null;
+      }
+      const dk = eventDayKeyCompact(ev);
+      if (!dk) {
+        return null;
+      }
+      if (!byDay.has(dk)) {
+        byDay.set(dk, []);
+      }
+      byDay.get(dk).push(key);
+    }
+    const sortedDays = [...byDay.keys()].sort((a, b) => a.localeCompare(b, "en"));
+    const daySegs = [];
+    for (const dk of sortedDays) {
+      const fullDay = list.filter((ev) => eventDayKeyCompact(ev) === dk);
+      const want = new Set(byDay.get(dk));
+      const positions = [];
+      for (let i = 0; i < fullDay.length; i += 1) {
+        if (want.has(completionKey(fullDay[i]))) {
+          positions.push(i + 1);
+        }
+      }
+      if (positions.length === 0) {
+        return null;
+      }
+      let seg;
+      if (positions.length === fullDay.length) {
+        seg = `d${dk}t`;
+      } else {
+        let j = 0;
+        while (j < positions.length && positions[j] === j + 1) {
+          j += 1;
+        }
+        if (j === positions.length) {
+          seg = `d${dk}n${j}`;
+        } else {
+          seg = `d${dk}i${positions.join("-")}`;
+        }
+      }
+      daySegs.push(seg);
+    }
+    const tail = daySegs.join("+");
+    if (k > 0) {
+      return `v2:n${k}+${tail}`;
+    }
+    return `v2:${tail}`;
+  }
+  function pickShortestCompletionPayload(completedSet, orderedEvents, maxLen) {
+    const keys = [...completedSet instanceof Set ? completedSet : new Set(completedSet)];
+    const jsonPayload = canonicalCompletionKeysJson(keys);
+    const compactPayload = serializeCompactCompletionV2(completedSet, orderedEvents);
+    const candidates = [];
+    if (compactPayload) {
+      candidates.push(compactPayload);
+    }
+    candidates.push(jsonPayload);
+    candidates.sort((a, b) => {
+      if (a.length !== b.length) {
+        return a.length - b.length;
+      }
+      return a.startsWith("v2:") ? -1 : 1;
+    });
+    for (const p of candidates) {
+      if (p.length <= maxLen) {
+        return p;
+      }
+    }
+    return null;
+  }
+
   // nodalia-calendar-card.js
   var CARD_TAG17 = "nodalia-calendar-card";
   var EDITOR_TAG17 = "nodalia-calendar-card-editor";
@@ -70877,6 +71218,7 @@
     show_completed: false,
     allow_complete: true,
     shared_completed_events_entity: "",
+    shared_completed_events_webhook: "",
     tint_auto: true,
     animations: {
       enabled: true,
@@ -71028,6 +71370,7 @@
     normalized.time_range = timeRange;
     normalized.days_to_show = Math.min(62, Math.max(1, daysFromTimeRange(timeRange)));
     normalized.shared_completed_events_entity = String(normalized.shared_completed_events_entity ?? "").trim();
+    normalized.shared_completed_events_webhook = String(normalized.shared_completed_events_webhook ?? "").trim();
     normalized.max_visible_events = Math.min(
       12,
       Math.max(1, Number(normalized.max_visible_events) || DEFAULT_CONFIG17.max_visible_events)
@@ -71152,18 +71495,6 @@
       minute: "2-digit"
     }).format(date);
   }
-  function parseCalendarDateOnlyLocal(raw) {
-    const s = String(raw ?? "").trim();
-    const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-    if (!dm) {
-      return null;
-    }
-    const y = Number(dm[1]);
-    const mo = Number(dm[2]) - 1;
-    const d = Number(dm[3]);
-    const local = new Date(y, mo, d, 12, 0, 0);
-    return Number.isFinite(local.getTime()) ? local : null;
-  }
   function normalizeCalendarFetchResult(raw) {
     if (Array.isArray(raw)) {
       return raw;
@@ -71173,57 +71504,8 @@
     }
     return [];
   }
-  function eventDate(value) {
-    if (!value) {
-      return null;
-    }
-    if (typeof value === "string") {
-      const dayLocal = parseCalendarDateOnlyLocal(value);
-      if (dayLocal) {
-        return dayLocal;
-      }
-      const parsed = new Date(value);
-      return Number.isFinite(parsed.getTime()) ? parsed : null;
-    }
-    if (typeof value === "object") {
-      if (value.dateTime) {
-        const parsed = new Date(value.dateTime);
-        return Number.isFinite(parsed.getTime()) ? parsed : null;
-      }
-      if (value.date) {
-        const dayLocal = parseCalendarDateOnlyLocal(value.date);
-        if (dayLocal) {
-          return dayLocal;
-        }
-        const parsed = new Date(value.date);
-        return Number.isFinite(parsed.getTime()) ? parsed : null;
-      }
-      return null;
-    }
-    return null;
-  }
   function eventIsAllDay(event) {
     return Boolean(event?.start?.date && !event?.start?.dateTime);
-  }
-  function completionKey(event) {
-    const source = String(event?._entity || "");
-    const uid = String(event?.uid || event?.id || "");
-    const start = eventDate(event?.start)?.toISOString() || "";
-    const summary = String(event?.summary || "");
-    return `${source}|${uid}|${start}|${summary}`;
-  }
-  function normalizeCompletedKeysJsonString(raw) {
-    try {
-      const v = JSON.parse(String(raw ?? "[]"));
-      if (!Array.isArray(v)) {
-        return null;
-      }
-      return JSON.stringify(
-        v.map((item) => String(item)).filter(Boolean).sort((a, b) => a.localeCompare(b, "en"))
-      );
-    } catch (_error) {
-      return null;
-    }
   }
   var NodaliaCalendarCard = class extends HTMLElement {
     static getStubConfig() {
@@ -71257,6 +71539,7 @@
       this._pendingSharedCompletedPayload = null;
       this._lastSyncedSharedCompletedRaw = void 0;
       this._completedMergedOnce = false;
+      this._localV2PendingDecode = false;
     }
     _onDocVisibility() {
       if (typeof document === "undefined" || document.visibilityState !== "visible") {
@@ -71319,9 +71602,11 @@
     }
     setConfig(config) {
       const prevHelper = String(this._config?.shared_completed_events_entity || "").trim();
+      const prevWebhook = String(this._config?.shared_completed_events_webhook || "").trim();
       this._config = normalizeConfig17(config);
       const nextHelper = String(this._config.shared_completed_events_entity || "").trim();
-      if (prevHelper !== nextHelper) {
+      const nextWebhook = String(this._config.shared_completed_events_webhook || "").trim();
+      if (prevHelper !== nextHelper || prevWebhook !== nextWebhook) {
         this._completedMergedOnce = false;
         this._lastSyncedSharedCompletedRaw = void 0;
         this._lastSubmittedSharedCompletedValue = "";
@@ -71354,16 +71639,14 @@
       const max = Number(this._hass.states[id].attributes?.max);
       return Number.isFinite(max) && max > 0 ? max : 255;
     }
-    _readLocalCompletedKeysOnly() {
+    _readLocalCompletionRaw() {
       if (typeof window === "undefined" || !window.localStorage) {
-        return [];
+        return "";
       }
       try {
-        const raw = window.localStorage.getItem(COMPLETION_STORAGE_KEY);
-        const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed) ? parsed.map((k) => String(k)) : [];
+        return window.localStorage.getItem(COMPLETION_STORAGE_KEY) || "";
       } catch (_error) {
-        return [];
+        return "";
       }
     }
     _syncCompletedPersistenceFromHass() {
@@ -71379,38 +71662,35 @@
       if (raw === this._lastSyncedSharedCompletedRaw) {
         return;
       }
-      let parsed = [];
-      try {
-        const v = JSON.parse(raw || "[]");
-        if (!Array.isArray(v)) {
-          return;
-        }
-        parsed = v.map((k) => String(k));
-      } catch (_error) {
+      const events = this._events || [];
+      const localRaw = this._readLocalCompletionRaw();
+      if (!events.length && (raw.trim().startsWith("v2:") || localRaw.trim().startsWith("v2:"))) {
         return;
       }
-      const incomingCanonical = normalizeCompletedKeysJsonString(JSON.stringify(parsed));
-      const localCanonical = normalizeCompletedKeysJsonString(
-        JSON.stringify([...this._completed].map((k) => String(k)).sort((a, b) => a.localeCompare(b, "en")))
-      );
-      if (this._pendingSharedCompletedPayload && incomingCanonical && incomingCanonical !== this._pendingSharedCompletedPayload && incomingCanonical !== localCanonical) {
+      const incomingKeys = expandCompletionPayloadToKeys(raw, events);
+      const incomingCanonical = canonicalCompletionKeysJson(incomingKeys);
+      const localKeys = expandCompletionPayloadToKeys(localRaw, events);
+      const localCanonical = canonicalCompletionKeysJson(localKeys);
+      const memoryCanonical = canonicalCompletionKeysJson([...this._completed]);
+      if (this._pendingSharedCompletedPayload && incomingCanonical !== this._pendingSharedCompletedPayload && incomingCanonical !== memoryCanonical && incomingCanonical !== localCanonical) {
         return;
       }
-      if (this._pendingSharedCompletedPayload && incomingCanonical && incomingCanonical === this._pendingSharedCompletedPayload) {
+      if (this._pendingSharedCompletedPayload && incomingCanonical === this._pendingSharedCompletedPayload) {
         this._pendingSharedCompletedPayload = null;
       }
       this._lastSyncedSharedCompletedRaw = raw;
+      this._localV2PendingDecode = false;
       if (!this._completedMergedOnce) {
-        const local = this._readLocalCompletedKeysOnly();
-        this._completed = /* @__PURE__ */ new Set([...local, ...parsed]);
+        this._completed = /* @__PURE__ */ new Set([...localKeys, ...incomingKeys]);
         this._completedMergedOnce = true;
         this._saveCompleted();
         return;
       }
-      this._completed = new Set(parsed);
+      this._completed = new Set(incomingKeys);
       try {
         if (typeof window !== "undefined" && window.localStorage) {
-          window.localStorage.setItem(COMPLETION_STORAGE_KEY, JSON.stringify(parsed));
+          const payloadLs = pickShortestCompletionPayload(this._completed, events, 262144) || canonicalCompletionKeysJson([...this._completed]);
+          window.localStorage.setItem(COMPLETION_STORAGE_KEY, payloadLs);
         }
       } catch (_error) {
       }
@@ -71705,48 +71985,89 @@
     `;
     }
     _loadCompleted() {
-      this._completed = new Set(this._readLocalCompletedKeysOnly());
+      const raw = this._readLocalCompletionRaw();
+      try {
+        const v = JSON.parse(raw);
+        if (Array.isArray(v)) {
+          this._completed = new Set(v.map((k) => String(k)));
+          this._localV2PendingDecode = false;
+          return;
+        }
+      } catch (_error) {
+      }
+      if (String(raw).trim().startsWith("v2:")) {
+        this._completed = /* @__PURE__ */ new Set();
+        this._localV2PendingDecode = true;
+        return;
+      }
+      this._completed = /* @__PURE__ */ new Set();
+      this._localV2PendingDecode = false;
     }
     _saveCompleted() {
-      const sortedKeys = [...this._completed].sort();
-      const payload = JSON.stringify(sortedKeys);
+      const events = this._events || [];
+      const canonicalExpanded = canonicalCompletionKeysJson([...this._completed]);
+      const payloadLs = pickShortestCompletionPayload(this._completed, events, 262144) || canonicalExpanded;
       if (typeof window !== "undefined" && window.localStorage) {
         try {
-          window.localStorage.setItem(COMPLETION_STORAGE_KEY, payload);
+          window.localStorage.setItem(COMPLETION_STORAGE_KEY, payloadLs);
         } catch (_error) {
         }
       }
+      const webhookId = String(this._config?.shared_completed_events_webhook ?? "").trim();
       const entityId = this._getSharedCompletedEntityId();
-      if (!entityId || !this._hass?.callService) {
+      if (!webhookId && (!entityId || !this._hass?.callService)) {
         return;
       }
       const maxLen = this._getSharedCompletedMaxLength();
-      if (payload.length > maxLen) {
+      const payloadHa = pickShortestCompletionPayload(this._completed, events, maxLen);
+      if (!payloadHa) {
         if (typeof console !== "undefined" && typeof console.warn === "function") {
           console.warn(
-            "Nodalia Calendar Card: la lista de eventos completados no cabe en el input_text (aumenta max en el helper o marca menos eventos)."
+            "Nodalia Calendar Card: la lista de eventos completados no cabe en el input_text ni en formato compacto v2 (aumenta max en el helper o reduce eventos completados)."
           );
         }
         return;
       }
-      const currentState = String(this._hass.states?.[entityId]?.state ?? "").trim();
-      const canonicalPayload = normalizeCompletedKeysJsonString(payload);
-      const canonicalCurrent = normalizeCompletedKeysJsonString(currentState);
-      const canonicalLastSubmit = normalizeCompletedKeysJsonString(this._lastSubmittedSharedCompletedValue);
-      if (canonicalPayload !== null && canonicalCurrent !== null && canonicalPayload === canonicalCurrent) {
+      const currentState = entityId && this._hass?.states?.[entityId] ? String(this._hass.states[entityId].state ?? "").trim() : "";
+      const canonicalCurrent = normalizeCompletionPayloadForCompare(currentState, events);
+      const canonicalLastSubmit = normalizeCompletionPayloadForCompare(this._lastSubmittedSharedCompletedValue, events);
+      if (canonicalCurrent !== null && canonicalExpanded === canonicalCurrent) {
         return;
       }
-      if (canonicalPayload !== null && canonicalLastSubmit !== null && canonicalPayload === canonicalLastSubmit) {
+      if (canonicalLastSubmit !== null && canonicalExpanded === canonicalLastSubmit) {
         return;
       }
-      this._lastSubmittedSharedCompletedValue = payload;
-      if (canonicalPayload !== null) {
-        this._pendingSharedCompletedPayload = canonicalPayload;
+      if (webhookId) {
+        const post = typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.postHomeAssistantWebhook === "function" ? window.NodaliaUtils.postHomeAssistantWebhook : null;
+        if (!post) {
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn(
+              "Nodalia Calendar Card: falta NodaliaUtils.postHomeAssistantWebhook (actualiza nodalia-cards / nodalia-utils)."
+            );
+          }
+          return;
+        }
+        this._lastSubmittedSharedCompletedValue = payloadHa;
+        this._pendingSharedCompletedPayload = canonicalExpanded;
+        void post(webhookId, { value: payloadHa }).then((ok) => {
+          if (!ok) {
+            this._lastSubmittedSharedCompletedValue = null;
+            this._pendingSharedCompletedPayload = null;
+            if (typeof console !== "undefined" && typeof console.warn === "function") {
+              console.warn(
+                "Nodalia Calendar Card: webhook de persistencia rechazado o fallido; revisa el webhook_id y la automatización en HA."
+              );
+            }
+          }
+        });
+        return;
       }
+      this._lastSubmittedSharedCompletedValue = payloadHa;
+      this._pendingSharedCompletedPayload = canonicalExpanded;
       try {
         const result = this._hass.callService("input_text", "set_value", {
           entity_id: entityId,
-          value: payload
+          value: payloadHa
         });
         if (result && typeof result.then === "function") {
           result.catch((err) => {
@@ -71755,7 +72076,7 @@
             if (typeof console !== "undefined" && typeof console.warn === "function") {
               console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
               console.warn(
-                "Nodalia Calendar Card: si usas un usuario no administrador, concede permiso de control sobre la entidad input_text del helper (Ajustes → … → Control de entidades / permisos)."
+                "Nodalia Calendar Card: si usas un usuario no administrador, concede permiso de control sobre la entidad input_text del helper o configura shared_completed_events_webhook con una automatización webhook que llame a input_text.set_value."
               );
             }
           });
@@ -71766,7 +72087,7 @@
         if (typeof console !== "undefined" && typeof console.warn === "function") {
           console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
           console.warn(
-            "Nodalia Calendar Card: si usas un usuario no administrador, concede permiso de control sobre la entidad input_text del helper."
+            "Nodalia Calendar Card: si usas un usuario no administrador, concede permiso de control sobre la entidad input_text del helper o usa shared_completed_events_webhook."
           );
         }
       }
@@ -71801,6 +72122,7 @@
         config.show_completed,
         config.allow_complete,
         config.shared_completed_events_entity || "",
+        config.shared_completed_events_webhook || "",
         config.tint_auto,
         config.animations?.enabled,
         config.animations?.content_duration,
@@ -71883,6 +72205,14 @@
         this._error = "No se pudieron cargar eventos del calendario.";
       } finally {
         this._loading = false;
+        if (this._localV2PendingDecode && this._events.length && !this._getSharedCompletedEntityId()) {
+          const raw = this._readLocalCompletionRaw();
+          this._completed = new Set(expandCompletionPayloadToKeys(raw, this._events));
+          this._localV2PendingDecode = false;
+        }
+        if (this._getSharedCompletedEntityId()) {
+          this._syncCompletedPersistenceFromHass();
+        }
         this._renderIfChanged(true);
         this._scheduleRefresh();
       }
@@ -73113,6 +73443,8 @@
       const placeholder = options.placeholder ? `placeholder="${escapeHtml17(options.placeholder)}"` : "";
       const valueType = options.valueType || (inputType === "number" ? "number" : "string");
       const inputValue = value === void 0 || value === null ? "" : String(value);
+      const hintRaw = options.hint ? String(options.hint) : "";
+      const hintHtml = hintRaw ? `<span class="editor-field__hint">${escapeHtml17(this._editorLabel(hintRaw))}</span>` : "";
       return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml17(tLabel)}</span>
@@ -73123,6 +73455,7 @@
           value="${escapeHtml17(inputValue)}"
           ${placeholder}
         />
+        ${hintHtml}
       </label>
     `;
     }
@@ -73658,6 +73991,11 @@
         )
       )}</span>
             </div>
+            ${this._renderTextField("Webhook persistencia (ID, opcional)", "shared_completed_events_webhook", config.shared_completed_events_webhook || "", {
+        fullWidth: true,
+        placeholder: "nodalia_calendar_completed",
+        hint: 'Si los usuarios no pueden llamar a input_text.set_value, pon aqui el webhook_id de una automatización que escriba el mismo helper. La tarjeta hace POST a /api/webhook/<id> con JSON {"value": "..."}.'
+      })}
           </div>
         </section>
 
@@ -77431,4 +77769,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.22","contentSha256_12":"48a383788e62"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.22 (48a383788e62) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.23","contentSha256_12":"57c28dbbb310"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.23 (57c28dbbb310) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
