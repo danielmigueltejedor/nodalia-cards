@@ -282,9 +282,26 @@ function weatherConditionIcon(value) {
 }
 
 function forecastDayKey(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const ms = value > 1e12 ? value : value * 1000;
+    const parsedNum = new Date(ms);
+    if (!Number.isNaN(parsedNum.getTime())) {
+      return `${parsedNum.getFullYear()}-${parsedNum.getMonth()}-${parsedNum.getDate()}`;
+    }
+  }
   const raw = String(value ?? "").trim();
   if (!raw) {
     return "";
+  }
+  if (/^\d{10,13}$/.test(raw)) {
+    const numeric = Number(raw);
+    if (Number.isFinite(numeric)) {
+      const ms = raw.length >= 13 ? numeric : numeric * 1000;
+      const parsedNum = new Date(ms);
+      if (!Number.isNaN(parsedNum.getTime())) {
+        return `${parsedNum.getFullYear()}-${parsedNum.getMonth()}-${parsedNum.getDate()}`;
+      }
+    }
   }
   const datePrefixMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
   if (datePrefixMatch) {
@@ -1483,12 +1500,38 @@ class NodaliaCalendarCard extends HTMLElement {
         item.templow ?? item.temperature_low ?? item.temp_low ?? item.native_templow ?? item.native_temp_low,
       );
       map.set(dayKey, {
-        condition: String(item.condition || "").trim(),
+        condition: String(item.condition ?? item.weather ?? "").trim(),
         tempMax: Number.isFinite(maxCandidate) ? maxCandidate : null,
         tempMin: Number.isFinite(minCandidate) ? minCandidate : null,
       });
     });
     return map;
+  }
+
+  _normalizeForecastRows(raw) {
+    if (Array.isArray(raw)) {
+      return raw.filter(item => item && typeof item === "object");
+    }
+    if (!raw || typeof raw !== "object") {
+      return [];
+    }
+    if (Array.isArray(raw.forecast)) {
+      return raw.forecast.filter(item => item && typeof item === "object");
+    }
+    if (Array.isArray(raw.daily)) {
+      return raw.daily.filter(item => item && typeof item === "object");
+    }
+    if (Array.isArray(raw.hourly)) {
+      return raw.hourly.filter(item => item && typeof item === "object");
+    }
+    const objectValues = Object.values(raw).filter(value => value && typeof value === "object");
+    const nestedArrays = objectValues.flatMap(value => this._normalizeForecastRows(value));
+    if (nestedArrays.length) {
+      return nestedArrays;
+    }
+    const looksLikeForecastPoint =
+      "datetime" in raw || "date" in raw || "temperature" in raw || "templow" in raw || "condition" in raw;
+    return looksLikeForecastPoint ? [raw] : [];
   }
 
   async _refreshWeatherForecastByDay() {
@@ -1515,14 +1558,39 @@ class NodaliaCalendarCard extends HTMLElement {
           response?.daily?.forecast,
           response?.daily,
         ];
-        const wsRows = wsCandidates.find(rows => Array.isArray(rows) && rows.length);
-        if (Array.isArray(wsRows)) forecastRows = wsRows;
+        for (const candidate of wsCandidates) {
+          const normalized = this._normalizeForecastRows(candidate);
+          if (normalized.length) {
+            forecastRows = normalized;
+            break;
+          }
+        }
       }
     } catch (_error) {
       // fallback below
     }
-    if (!forecastRows.length && Array.isArray(stateObj.attributes?.forecast)) {
-      forecastRows = stateObj.attributes.forecast;
+    if (!forecastRows.length) {
+      forecastRows = this._normalizeForecastRows(stateObj.attributes?.forecast);
+    }
+    if (!forecastRows.length) {
+      forecastRows = this._normalizeForecastRows(stateObj.attributes?.forecast_daily);
+    }
+    if (!forecastRows.length) {
+      forecastRows = this._normalizeForecastRows(stateObj.attributes?.daily_forecast);
+    }
+    if (!forecastRows.length && typeof this._hass?.callApi === "function") {
+      try {
+        const restDaily = await this._hass.callApi(
+          "GET",
+          `weather/forecast/${encodeURIComponent(entityId)}?type=daily`,
+        );
+        const restRows = this._normalizeForecastRows(restDaily);
+        if (restRows.length) {
+          forecastRows = restRows;
+        }
+      } catch (_error) {
+        // Keep silent, not all HA versions expose this endpoint.
+      }
     }
     this._weatherForecastByDay = this._buildForecastDayMap(forecastRows);
   }

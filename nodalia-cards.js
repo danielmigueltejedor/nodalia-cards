@@ -71951,9 +71951,26 @@
     }
   }
   function forecastDayKey(value) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      const ms = value > 1e12 ? value : value * 1e3;
+      const parsedNum = new Date(ms);
+      if (!Number.isNaN(parsedNum.getTime())) {
+        return `${parsedNum.getFullYear()}-${parsedNum.getMonth()}-${parsedNum.getDate()}`;
+      }
+    }
     const raw = String(value ?? "").trim();
     if (!raw) {
       return "";
+    }
+    if (/^\d{10,13}$/.test(raw)) {
+      const numeric = Number(raw);
+      if (Number.isFinite(numeric)) {
+        const ms = raw.length >= 13 ? numeric : numeric * 1e3;
+        const parsedNum = new Date(ms);
+        if (!Number.isNaN(parsedNum.getTime())) {
+          return `${parsedNum.getFullYear()}-${parsedNum.getMonth()}-${parsedNum.getDate()}`;
+        }
+      }
     }
     const datePrefixMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
     if (datePrefixMatch) {
@@ -72999,12 +73016,36 @@
           item.templow ?? item.temperature_low ?? item.temp_low ?? item.native_templow ?? item.native_temp_low
         );
         map.set(dayKey, {
-          condition: String(item.condition || "").trim(),
+          condition: String(item.condition ?? item.weather ?? "").trim(),
           tempMax: Number.isFinite(maxCandidate) ? maxCandidate : null,
           tempMin: Number.isFinite(minCandidate) ? minCandidate : null
         });
       });
       return map;
+    }
+    _normalizeForecastRows(raw) {
+      if (Array.isArray(raw)) {
+        return raw.filter((item) => item && typeof item === "object");
+      }
+      if (!raw || typeof raw !== "object") {
+        return [];
+      }
+      if (Array.isArray(raw.forecast)) {
+        return raw.forecast.filter((item) => item && typeof item === "object");
+      }
+      if (Array.isArray(raw.daily)) {
+        return raw.daily.filter((item) => item && typeof item === "object");
+      }
+      if (Array.isArray(raw.hourly)) {
+        return raw.hourly.filter((item) => item && typeof item === "object");
+      }
+      const objectValues = Object.values(raw).filter((value) => value && typeof value === "object");
+      const nestedArrays = objectValues.flatMap((value) => this._normalizeForecastRows(value));
+      if (nestedArrays.length) {
+        return nestedArrays;
+      }
+      const looksLikeForecastPoint = "datetime" in raw || "date" in raw || "temperature" in raw || "templow" in raw || "condition" in raw;
+      return looksLikeForecastPoint ? [raw] : [];
     }
     async _refreshWeatherForecastByDay() {
       const entityId = this._getWeatherEntityId();
@@ -73030,13 +73071,37 @@
             response?.daily?.forecast,
             response?.daily
           ];
-          const wsRows = wsCandidates.find((rows) => Array.isArray(rows) && rows.length);
-          if (Array.isArray(wsRows)) forecastRows = wsRows;
+          for (const candidate of wsCandidates) {
+            const normalized = this._normalizeForecastRows(candidate);
+            if (normalized.length) {
+              forecastRows = normalized;
+              break;
+            }
+          }
         }
       } catch (_error) {
       }
-      if (!forecastRows.length && Array.isArray(stateObj.attributes?.forecast)) {
-        forecastRows = stateObj.attributes.forecast;
+      if (!forecastRows.length) {
+        forecastRows = this._normalizeForecastRows(stateObj.attributes?.forecast);
+      }
+      if (!forecastRows.length) {
+        forecastRows = this._normalizeForecastRows(stateObj.attributes?.forecast_daily);
+      }
+      if (!forecastRows.length) {
+        forecastRows = this._normalizeForecastRows(stateObj.attributes?.daily_forecast);
+      }
+      if (!forecastRows.length && typeof this._hass?.callApi === "function") {
+        try {
+          const restDaily = await this._hass.callApi(
+            "GET",
+            `weather/forecast/${encodeURIComponent(entityId)}?type=daily`
+          );
+          const restRows = this._normalizeForecastRows(restDaily);
+          if (restRows.length) {
+            forecastRows = restRows;
+          }
+        } catch (_error) {
+        }
       }
       this._weatherForecastByDay = this._buildForecastDayMap(forecastRows);
     }
@@ -79226,4 +79291,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.33","contentSha256_12":"72cd74b32d9c"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.33 (72cd74b32d9c) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.34","contentSha256_12":"fdfa39d13ae8"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.34 (fdfa39d13ae8) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}

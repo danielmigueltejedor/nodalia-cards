@@ -10,6 +10,16 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.34] - 2026-05-06
+
+Thirty-fourth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.34`** (tag **`v1.0.0-alpha.34`** optional).
+
+- **Calendar card — forecast normalizado como weather-card:** la lectura de previsión diaria ahora unifica más variantes de payload (arrays, `forecast`, `daily`, `hourly`, estructuras anidadas y puntos sueltos) para reducir casos donde la cabecera diaria no mostraba clima.
+- **Calendar card — day-key robusto:** se admiten fechas en `datetime/date` tanto ISO como epoch (segundos o milisegundos), mejorando el emparejado día calendario ↔ día forecast.
+- **Calendar card — condición compatible:** fallback de condición (`condition`/`weather`) en el render de cabeceras diarias.
+
+---
+
 ## [1.0.0-alpha.33] - 2026-05-06
 
 Thirty-third **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.33`** (tag **`v1.0.0-alpha.33`** optional).
