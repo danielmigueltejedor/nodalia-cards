@@ -281,6 +281,27 @@ function weatherConditionIcon(value) {
   }
 }
 
+function forecastDayKey(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return "";
+  }
+  const datePrefixMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+  if (datePrefixMatch) {
+    const y = Number(datePrefixMatch[1]);
+    const m = Number(datePrefixMatch[2]) - 1;
+    const d = Number(datePrefixMatch[3]);
+    if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
+      return `${y}-${m}-${d}`;
+    }
+  }
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+  return `${parsed.getFullYear()}-${parsed.getMonth()}-${parsed.getDate()}`;
+}
+
 function resolveEditorColorValue(value) {
   const rawValue = String(value ?? "").trim();
   if (!rawValue || typeof document === "undefined") {
@@ -421,6 +442,7 @@ class NodaliaCalendarCard extends HTMLElement {
     /** Evita repetir la animación del panel expandido en cada re-render (p. ej. al marcar hecho). */
     this._expandedOverlayEntrancePlayed = false;
     this._expandedOpen = false;
+    this._quickReminderComposerOpen = false;
     /** Month popup: `Y-M-D` (M 0–11) when a single-day view is open; empty string = full month grid */
     this._expandedMonthDayKey = "";
     this._completeExitKeys = new Set();
@@ -1424,11 +1446,10 @@ class NodaliaCalendarCard extends HTMLElement {
       if (!item || typeof item !== "object") {
         return;
       }
-      const d = eventDate({ dateTime: item.datetime, date: item.datetime });
-      if (!d) {
+      const dayKey = forecastDayKey(item.datetime ?? item.date ?? "");
+      if (!dayKey) {
         return;
       }
-      const dayKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
       if (map.has(dayKey)) {
         return;
       }
@@ -1496,33 +1517,51 @@ class NodaliaCalendarCard extends HTMLElement {
       .filter(Boolean);
   }
 
-  _createQuickReminderInteractive() {
-    if (typeof window === "undefined") {
+  _openQuickReminderComposer() {
+    this._quickReminderComposerOpen = true;
+    this._renderIfChanged(true);
+  }
+
+  _closeQuickReminderComposer() {
+    if (!this._quickReminderComposerOpen) {
       return;
     }
-    const title = String(window.prompt("Recordatorio: titulo", "") || "").trim();
+    this._quickReminderComposerOpen = false;
+    this._renderIfChanged(true);
+  }
+
+  _submitQuickReminderComposer() {
+    if (!this.shadowRoot) {
+      return;
+    }
+    const title = String(
+      this.shadowRoot.querySelector('[data-quick-field="title"]')?.value || "",
+    ).trim();
     if (!title) {
       return;
     }
-    const now = new Date();
-    const pad = value => String(value).padStart(2, "0");
-    const defaultDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-    const defaultTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    const dateRaw = String(window.prompt("Fecha (YYYY-MM-DD)", defaultDate) || "").trim();
+    const dateRaw = String(
+      this.shadowRoot.querySelector('[data-quick-field="date"]')?.value || "",
+    ).trim();
     if (!dateRaw) {
       return;
     }
-    const timeRaw = String(window.prompt("Hora (HH:mm) o 'all' para todo el dia", defaultTime) || "").trim();
-    if (!timeRaw) {
+    const allDay = Boolean(
+      this.shadowRoot.querySelector('[data-quick-field="allDay"]')?.checked,
+    );
+    const timeRaw = String(
+      this.shadowRoot.querySelector('[data-quick-field="time"]')?.value || "",
+    ).trim();
+    const colorRaw = String(
+      this.shadowRoot.querySelector('[data-quick-field="color"]')?.value || "",
+    ).trim();
+    const color = sanitizeCalendarTint(colorRaw) || "#71c0ff";
+    if (!allDay && !timeRaw) {
       return;
     }
-    const colorRaw = String(window.prompt("Color (hex opcional, ej #71c0ff)", "#71c0ff") || "").trim();
-    const color = sanitizeCalendarTint(colorRaw) || "#71c0ff";
-    const allDay = timeRaw.toLowerCase() === "all";
     const start = allDay ? `${dateRaw}T12:00:00` : `${dateRaw}T${timeRaw}:00`;
     const d = new Date(start);
     if (Number.isNaN(d.getTime())) {
-      window.alert("Fecha u hora invalida.");
       return;
     }
     this._quickReminders.push({
@@ -1533,7 +1572,51 @@ class NodaliaCalendarCard extends HTMLElement {
       allDay,
     });
     this._saveQuickReminders();
+    this._quickReminderComposerOpen = false;
     this._refreshEvents();
+  }
+
+  _quickReminderComposerMarkup() {
+    const now = new Date();
+    const pad = value => String(value).padStart(2, "0");
+    const defaultDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const defaultTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    return `
+      <div class="calendar-composer ${this._quickReminderComposerOpen ? "is-open" : ""}">
+        <div class="calendar-composer__backdrop" data-action="close-quick-composer"></div>
+        <div class="calendar-composer__panel" role="dialog" aria-modal="true" aria-label="Nuevo recordatorio">
+          <div class="calendar-composer__title">Nuevo recordatorio</div>
+          <label class="calendar-composer__field">
+            <span>Titulo</span>
+            <input data-quick-field="title" type="text" placeholder="Ej. Recoger paquete" />
+          </label>
+          <div class="calendar-composer__row">
+            <label class="calendar-composer__field">
+              <span>Fecha</span>
+              <input data-quick-field="date" type="date" value="${escapeHtml(defaultDate)}" />
+            </label>
+            <label class="calendar-composer__field">
+              <span>Hora</span>
+              <input data-quick-field="time" type="time" value="${escapeHtml(defaultTime)}" />
+            </label>
+          </div>
+          <div class="calendar-composer__row">
+            <label class="calendar-composer__field">
+              <span>Color</span>
+              <input data-quick-field="color" type="color" value="#71c0ff" />
+            </label>
+            <label class="calendar-composer__check">
+              <input data-quick-field="allDay" type="checkbox" />
+              <span>Todo el dia</span>
+            </label>
+          </div>
+          <div class="calendar-composer__actions">
+            <button type="button" class="calendar-composer__btn" data-action="close-quick-composer">Cancelar</button>
+            <button type="button" class="calendar-composer__btn calendar-composer__btn--primary" data-action="save-quick-composer">Guardar</button>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   async _createNativeEventInteractive() {
@@ -2071,6 +2154,98 @@ class NodaliaCalendarCard extends HTMLElement {
           padding-right: 2px;
           touch-action: pan-y;
         }
+        .calendar-composer {
+          inset: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: absolute;
+          transition: opacity 180ms ease;
+          z-index: 3;
+        }
+        .calendar-composer.is-open {
+          opacity: 1;
+          pointer-events: auto;
+        }
+        .calendar-composer__backdrop {
+          -webkit-backdrop-filter: blur(8px);
+          backdrop-filter: blur(8px);
+          background: rgba(0, 0, 0, 0.28);
+          inset: 0;
+          position: absolute;
+        }
+        .calendar-composer__panel {
+          background: color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, rgba(255, 255, 255, 0.03));
+          border: 1px solid color-mix(in srgb, var(--calendar-expanded-accent) 30%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
+          border-radius: 16px;
+          box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28);
+          display: grid;
+          gap: 10px;
+          left: 50%;
+          max-width: min(94vw, 520px);
+          padding: 14px;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: min(94vw, 520px);
+        }
+        .calendar-composer__title {
+          font-size: ${styles.title_size};
+          font-weight: 800;
+          letter-spacing: -0.02em;
+        }
+        .calendar-composer__row {
+          display: grid;
+          gap: 10px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .calendar-composer__field {
+          display: grid;
+          gap: 6px;
+        }
+        .calendar-composer__field > span,
+        .calendar-composer__check > span {
+          font-size: 12px;
+          font-weight: 700;
+        }
+        .calendar-composer__field input {
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 12px;
+          color: var(--primary-text-color);
+          font: inherit;
+          min-height: 38px;
+          padding: 8px 10px;
+          width: 100%;
+        }
+        .calendar-composer__check {
+          align-items: center;
+          display: inline-flex;
+          gap: 8px;
+          margin-top: 22px;
+        }
+        .calendar-composer__actions {
+          display: flex;
+          gap: 8px;
+          justify-content: flex-end;
+        }
+        .calendar-composer__btn {
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+        .calendar-composer__btn--primary {
+          background: color-mix(in srgb, var(--calendar-expanded-accent) 22%, transparent);
+          border-color: color-mix(in srgb, var(--calendar-expanded-accent) 38%, var(--divider-color));
+        }
         @keyframes calendar-expanded-panel-in {
           0% {
             clip-path: inset(0 42% 58% 42% round 16px);
@@ -2387,6 +2562,7 @@ class NodaliaCalendarCard extends HTMLElement {
                     : this._renderExpandedBody(groups, config, locale)
             }
           </div>
+          ${this._quickReminderComposerMarkup()}
         </div>
       </div>
     `;
@@ -2399,6 +2575,11 @@ class NodaliaCalendarCard extends HTMLElement {
     if (event.key === "Escape") {
       event.preventDefault();
       event.stopPropagation();
+      if (this._quickReminderComposerOpen) {
+        this._quickReminderComposerOpen = false;
+        this._renderIfChanged(true);
+        return;
+      }
       if (this._expandedMonthDayKey) {
         this._expandedMonthDayKey = "";
         this._renderIfChanged(true);
@@ -2448,6 +2629,7 @@ class NodaliaCalendarCard extends HTMLElement {
       event.preventDefault();
       event.stopPropagation();
       this._expandedMonthDayKey = "";
+      this._quickReminderComposerOpen = false;
       this._expandedOpen = false;
       this._expandedOverlayEntrancePlayed = false;
       this._renderIfChanged(true);
@@ -2469,7 +2651,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (addReminder && this._expandedOpen) {
       event.preventDefault();
       event.stopPropagation();
-      this._createQuickReminderInteractive();
+      this._openQuickReminderComposer();
       return;
     }
     const addNativeEvent = path.find(
@@ -2479,6 +2661,24 @@ class NodaliaCalendarCard extends HTMLElement {
       event.preventDefault();
       event.stopPropagation();
       void this._createNativeEventInteractive();
+      return;
+    }
+    const closeQuickComposer = path.find(
+      node => node instanceof HTMLElement && node.dataset?.action === "close-quick-composer",
+    );
+    if (closeQuickComposer && this._expandedOpen) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._closeQuickReminderComposer();
+      return;
+    }
+    const saveQuickComposer = path.find(
+      node => node instanceof HTMLElement && node.dataset?.action === "save-quick-composer",
+    );
+    if (saveQuickComposer && this._expandedOpen) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._submitQuickReminderComposer();
       return;
     }
     const monthDayOpen = path.find(
@@ -2507,6 +2707,7 @@ class NodaliaCalendarCard extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
     this._expandedMonthDayKey = "";
+    this._quickReminderComposerOpen = false;
     this._expandedOpen = true;
     this._renderIfChanged(true);
   }

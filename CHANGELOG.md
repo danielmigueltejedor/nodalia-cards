@@ -10,6 +10,15 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.30] - 2026-05-06
+
+Thirtieth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.30`** (tag **`v1.0.0-alpha.30`** optional).
+
+- **Calendar card:** el flujo de agregar recordatorios rápidos deja de usar prompts del navegador y pasa a un sub-popup estilizado dentro del panel ampliado (misma estética de la tarjeta).
+- **Calendar card:** corrección del emparejado de previsión diaria (`weather_entity`) para evitar desajustes de día por timezone al leer `forecast.datetime`.
+
+---
+
 ## [1.0.0-alpha.29] - 2026-05-06
 
 Twenty-ninth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.29`** (tag **`v1.0.0-alpha.29`** optional).
