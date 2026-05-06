@@ -10,6 +10,16 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.31] - 2026-05-06
+
+Thirty-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.31`** (tag **`v1.0.0-alpha.31`** optional).
+
+- **Calendar card — composer unificado:** crear evento nativo de Home Assistant deja de usar prompts y pasa a un composer integrado (selector de calendario, título, fecha, horas y todo el día) con el mismo estilo del popup.
+- **Calendar card — polish visual composer:** selector de color circular, switch tipo toggle para “Todo el día” y fondo del composer con tinte del acento de la tarjeta para coherencia visual.
+- **Calendar card — weather forecast robusto:** prioridad a `weather/get_forecasts` (daily) con fallback a `state.attributes.forecast`, mejorando compatibilidad y visibilidad real del tiempo diario en cabeceras.
+
+---
+
 ## [1.0.0-alpha.30] - 2026-05-06
 
 Thirtieth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.30`** (tag **`v1.0.0-alpha.30`** optional).
