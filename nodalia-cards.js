@@ -14849,17 +14849,52 @@
     function editorStatesSignature(hass, language) {
       return editorFilteredStatesSignature(hass, language, () => true);
     }
-    function postHomeAssistantWebhook(webhookId, body) {
-      const id = String(webhookId ?? "").trim();
-      if (!id || typeof fetch !== "function") {
+    function normalizeHomeAssistantWebhookId(webhookId) {
+      const raw = String(webhookId ?? "").trim();
+      if (!raw) {
+        return "";
+      }
+      if (/^https?:\/\//i.test(raw)) {
+        try {
+          const u = new URL(raw);
+          const m = /\/api\/webhook\/([^/]+)/.exec(u.pathname);
+          return m ? decodeURIComponent(m[1]) : "";
+        } catch (_err) {
+          return "";
+        }
+      }
+      const pathSeg = raw.match(/(?:^|\/)api\/webhook\/([^/?#]+)/i);
+      if (pathSeg) {
+        return decodeURIComponent(pathSeg[1]);
+      }
+      return raw;
+    }
+    function postHomeAssistantWebhook(webhookId, body, hass) {
+      const id = normalizeHomeAssistantWebhookId(webhookId);
+      if (!id) {
+        return Promise.resolve(false);
+      }
+      const payload = body && typeof body === "object" ? body : {};
+      const path = `/api/webhook/${encodeURIComponent(id)}`;
+      const authFetch = hass?.auth?.fetchWithAuth;
+      if (typeof authFetch === "function") {
+        return authFetch(path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).then(
+          (res) => res.ok,
+          () => false
+        );
+      }
+      if (typeof fetch !== "function") {
         return Promise.resolve(false);
       }
       const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
       if (!origin) {
         return Promise.resolve(false);
       }
-      const url = `${origin}/api/webhook/${encodeURIComponent(id)}`;
-      const payload = body && typeof body === "object" ? body : {};
+      const url = `${origin}${path}`;
       return fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -53115,7 +53150,7 @@
           }
           return;
         }
-        void post(webhookId, { value: serializedTrim }).then((ok) => {
+        void post(webhookId, { value: serializedTrim }, this._hass).then((ok) => {
           if (!ok) {
             this._lastSubmittedSharedCleaningSessionValue = null;
             if (typeof console !== "undefined" && typeof console.warn === "function") {
@@ -53153,7 +53188,7 @@
         const post = typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.postHomeAssistantWebhook === "function" ? window.NodaliaUtils.postHomeAssistantWebhook : null;
         if (post) {
           this._lastSubmittedSharedCleaningSessionValue = "";
-          void post(webhookId, { value: "" }).then((ok) => {
+          void post(webhookId, { value: "" }, this._hass).then((ok) => {
             if (!ok && typeof console !== "undefined" && typeof console.warn === "function") {
               console.warn("Nodalia Advance Vacuum Card: webhook clear (sesión compartida) falló.");
             }
@@ -70942,6 +70977,32 @@
   });
 
   // nodalia-calendar-completion-codec.js
+  var BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  var V3_TOKEN_WIDTH = 11;
+  function fnv1a64Utf8(str) {
+    const bytes = typeof TextEncoder !== "undefined" ? new TextEncoder().encode(String(str)) : typeof Buffer !== "undefined" ? Buffer.from(String(str), "utf8") : new Uint8Array([...String(str)].map((c) => c.charCodeAt(0) & 255));
+    let h = 14695981039346656037n;
+    const p = 1099511628211n;
+    const mask = (1n << 64n) - 1n;
+    for (let i = 0; i < bytes.length; i += 1) {
+      h ^= BigInt(bytes[i]);
+      h = h * p & mask;
+    }
+    return h;
+  }
+  function uint64ToBase62Fixed(n, width) {
+    const mask = (1n << 64n) - 1n;
+    let v = BigInt(n) & mask;
+    let s = "";
+    for (let i = 0; i < width; i += 1) {
+      s = BASE62[Number(v % 62n)] + s;
+      v /= 62n;
+    }
+    return s;
+  }
+  function stableCompletionTokenFromKey(completionKeyStr) {
+    return uint64ToBase62Fixed(fnv1a64Utf8(String(completionKeyStr ?? "")), V3_TOKEN_WIDTH);
+  }
   function parseCalendarDateOnlyLocal(raw) {
     const s = String(raw ?? "").trim();
     const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
@@ -71043,6 +71104,29 @@
       }
     }
   }
+  function decodeCompactCalendarCompletionV3(raw, orderedEvents) {
+    const body = String(raw ?? "").trim().startsWith("v3:") ? String(raw).trim().slice(3) : String(raw ?? "").trim();
+    if (body === "z") {
+      return [];
+    }
+    const W = V3_TOKEN_WIDTH;
+    if (body.length === 0 || body.length % W !== 0) {
+      return [];
+    }
+    const tokenSet = /* @__PURE__ */ new Set();
+    for (let i = 0; i < body.length; i += W) {
+      tokenSet.add(body.slice(i, i + W));
+    }
+    const list = Array.isArray(orderedEvents) ? orderedEvents : [];
+    const keys = [];
+    for (const ev of list) {
+      const k = completionKey(ev);
+      if (tokenSet.has(stableCompletionTokenFromKey(k))) {
+        keys.push(k);
+      }
+    }
+    return keys;
+  }
   function decodeCompactCalendarCompletionV2(raw, orderedEvents) {
     const list = Array.isArray(orderedEvents) ? orderedEvents : [];
     const E = list.map((ev) => completionKey(ev));
@@ -71077,6 +71161,9 @@
     if (!s) {
       return [];
     }
+    if (s.startsWith("v3:")) {
+      return decodeCompactCalendarCompletionV3(s, orderedEvents);
+    }
     if (s.startsWith("v2:")) {
       return decodeCompactCalendarCompletionV2(s, orderedEvents);
     }
@@ -71092,7 +71179,8 @@
   }
   function normalizeCompletionPayloadForCompare(raw, orderedEvents) {
     const keys = expandCompletionPayloadToKeys(raw, orderedEvents);
-    if (!keys.length && String(raw ?? "").trim().startsWith("v2:") && !(orderedEvents || []).length) {
+    const head = String(raw ?? "").trim();
+    if (!keys.length && (head.startsWith("v2:") || head.startsWith("v3:")) && !(orderedEvents || []).length) {
       return null;
     }
     return canonicalCompletionKeysJson(keys);
@@ -71179,20 +71267,39 @@
     }
     return `v2:${tail}`;
   }
+  function serializeCompactCompletionV3(completedSet) {
+    const keys = [...completedSet instanceof Set ? completedSet : new Set(completedSet)].map((k) => String(k)).filter(Boolean).sort((a, b) => a.localeCompare(b, "en"));
+    if (keys.length === 0) {
+      return "v3:z";
+    }
+    const tokens = keys.map((k) => stableCompletionTokenFromKey(k)).sort((a, b) => a.localeCompare(b, "en"));
+    return `v3:${tokens.join("")}`;
+  }
   function pickShortestCompletionPayload(completedSet, orderedEvents, maxLen) {
     const keys = [...completedSet instanceof Set ? completedSet : new Set(completedSet)];
     const jsonPayload = canonicalCompletionKeysJson(keys);
-    const compactPayload = serializeCompactCompletionV2(completedSet, orderedEvents);
+    const compactV2 = serializeCompactCompletionV2(completedSet, orderedEvents);
+    const compactV3 = serializeCompactCompletionV3(completedSet);
     const candidates = [];
-    if (compactPayload) {
-      candidates.push(compactPayload);
+    if (compactV2) {
+      candidates.push(compactV2);
     }
+    candidates.push(compactV3);
     candidates.push(jsonPayload);
+    const rank = (p) => {
+      if (p.startsWith("v3:")) {
+        return 0;
+      }
+      if (p.startsWith("v2:")) {
+        return 1;
+      }
+      return 2;
+    };
     candidates.sort((a, b) => {
       if (a.length !== b.length) {
         return a.length - b.length;
       }
-      return a.startsWith("v2:") ? -1 : 1;
+      return rank(a) - rank(b);
     });
     for (const p of candidates) {
       if (p.length <= maxLen) {
@@ -72049,7 +72156,7 @@
         }
         this._lastSubmittedSharedCompletedValue = payloadHa;
         this._pendingSharedCompletedPayload = canonicalExpanded;
-        void post(webhookId, { value: payloadHa }).then((ok) => {
+        void post(webhookId, { value: payloadHa }, this._hass).then((ok) => {
           if (!ok) {
             this._lastSubmittedSharedCompletedValue = null;
             this._pendingSharedCompletedPayload = null;
@@ -73357,9 +73464,8 @@
         control.allowCustomEntity = true;
       } else if (customElements.get("ha-selector")) {
         control = document.createElement("ha-selector");
-        control.selector = {
-          entity: allowedDomains.length === 1 ? { domain: allowedDomains[0] } : {}
-        };
+        const entitySelector = allowedDomains.length === 1 ? { domain: allowedDomains[0] } : allowedDomains.length > 1 ? { domain: allowedDomains } : {};
+        control.selector = { entity: entitySelector };
       } else {
         control = document.createElement("input");
         control.type = "text";
@@ -77769,4 +77875,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.23","contentSha256_12":"57c28dbbb310"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.23 (57c28dbbb310) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.24","contentSha256_12":"ef172ac55439"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.24 (ef172ac55439) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}

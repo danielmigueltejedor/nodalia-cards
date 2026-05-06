@@ -141,22 +141,67 @@
   }
 
   /**
+   * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
+   */
+  function normalizeHomeAssistantWebhookId(webhookId) {
+    const raw = String(webhookId ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const u = new URL(raw);
+        const m = /\/api\/webhook\/([^/]+)/.exec(u.pathname);
+        return m ? decodeURIComponent(m[1]) : "";
+      } catch (_err) {
+        return "";
+      }
+    }
+    const pathSeg = raw.match(/(?:^|\/)api\/webhook\/([^/?#]+)/i);
+    if (pathSeg) {
+      return decodeURIComponent(pathSeg[1]);
+    }
+    return raw;
+  }
+
+  /**
    * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
    * Does not rely on the signed-in user's permission to call `input_text.set_value`;
    * an automation triggered by the webhook runs with normal HA privileges.
    * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
+   *
+   * Pass **`hass`** (third argument) so **`hass.auth.fetchWithAuth`** is used — raw `fetch`
+   * often returns **401** in the HA frontend because API routes expect the bearer/session
+   * from `fetchWithAuth`, not cookies alone.
    */
-  function postHomeAssistantWebhook(webhookId, body) {
-    const id = String(webhookId ?? "").trim();
-    if (!id || typeof fetch !== "function") {
+  function postHomeAssistantWebhook(webhookId, body, hass) {
+    const id = normalizeHomeAssistantWebhookId(webhookId);
+    if (!id) {
+      return Promise.resolve(false);
+    }
+    const payload = body && typeof body === "object" ? body : {};
+    const path = `/api/webhook/${encodeURIComponent(id)}`;
+
+    const authFetch = hass?.auth?.fetchWithAuth;
+    if (typeof authFetch === "function") {
+      return authFetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(
+        res => res.ok,
+        () => false,
+      );
+    }
+
+    if (typeof fetch !== "function") {
       return Promise.resolve(false);
     }
     const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
     if (!origin) {
       return Promise.resolve(false);
     }
-    const url = `${origin}/api/webhook/${encodeURIComponent(id)}`;
-    const payload = body && typeof body === "object" ? body : {};
+    const url = `${origin}${path}`;
     return fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2639,7 +2684,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         }
         return;
       }
-      void post(webhookId, { value: serializedTrim }).then(ok => {
+      void post(webhookId, { value: serializedTrim }, this._hass).then(ok => {
         if (!ok) {
           this._lastSubmittedSharedCleaningSessionValue = null;
           if (typeof console !== "undefined" && typeof console.warn === "function") {
@@ -2683,7 +2728,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           : null;
       if (post) {
         this._lastSubmittedSharedCleaningSessionValue = "";
-        void post(webhookId, { value: "" }).then(ok => {
+        void post(webhookId, { value: "" }, this._hass).then(ok => {
           if (!ok && typeof console !== "undefined" && typeof console.warn === "function") {
             console.warn("Nodalia Advance Vacuum Card: webhook clear (sesión compartida) falló.");
           }

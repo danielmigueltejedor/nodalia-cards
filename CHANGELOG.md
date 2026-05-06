@@ -10,6 +10,16 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.24] - 2026-05-06
+
+Twenty-fourth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.24`** (tag **`v1.0.0-alpha.24`** optional).
+
+- **`NodaliaUtils.postHomeAssistantWebhook`:** usa **`hass.auth.fetchWithAuth`** cuando se pasa **`hass`** (evita **401** desde Lovelace frente a **`fetch`** sin token); acepta **`webhook_id`** o URL/pegar **`/api/webhook/…`**; calendario y Advance Vacuum pasan **`this._hass`** en persistencia por webhook.
+- **Calendar card — codec completados `v3:`:** huellas **FNV-1a** (UTF-8) + **base62** por clave lógica; orden-independiente frente a **`v2:`**; **`pickShortestCompletionPayload`** compite **v2 / v3 / JSON**.
+- **Editor calendario (`ha-selector`):** varios dominios en **`data-domains`** usan **`entity: { domain: [...] }`** en lugar de **`{}`** (restricción alineada con Advance Vacuum).
+
+---
+
 ## [1.0.0-alpha.23] - 2026-05-06
 
 Twenty-third **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.23`** (tag **`v1.0.0-alpha.23`** optional).

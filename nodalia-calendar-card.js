@@ -9,7 +9,7 @@ import {
 
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.23";
+const CARD_VERSION = "1.0.0-alpha.24";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 
 const VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
@@ -995,7 +995,7 @@ class NodaliaCalendarCard extends HTMLElement {
       }
       this._lastSubmittedSharedCompletedValue = payloadHa;
       this._pendingSharedCompletedPayload = canonicalExpanded;
-      void post(webhookId, { value: payloadHa }).then(ok => {
+      void post(webhookId, { value: payloadHa }, this._hass).then(ok => {
         if (!ok) {
           this._lastSubmittedSharedCompletedValue = null;
           this._pendingSharedCompletedPayload = null;
@@ -2410,9 +2410,13 @@ class NodaliaCalendarCardEditor extends HTMLElement {
       control.allowCustomEntity = true;
     } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
-      control.selector = {
-        entity: allowedDomains.length === 1 ? { domain: allowedDomains[0] } : {},
-      };
+      const entitySelector =
+        allowedDomains.length === 1
+          ? { domain: allowedDomains[0] }
+          : allowedDomains.length > 1
+            ? { domain: allowedDomains }
+            : {};
+      control.selector = { entity: entitySelector };
     } else {
       control = document.createElement("input");
       control.type = "text";
