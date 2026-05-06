@@ -16,6 +16,7 @@
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
+    "postHomeAssistantWebhook",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -137,6 +138,79 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
+   */
+  function normalizeHomeAssistantWebhookId(webhookId) {
+    const raw = String(webhookId ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const u = new URL(raw);
+        const m = /\/api\/webhook\/([^/]+)/.exec(u.pathname);
+        return m ? decodeURIComponent(m[1]) : "";
+      } catch (_err) {
+        return "";
+      }
+    }
+    const pathSeg = raw.match(/(?:^|\/)api\/webhook\/([^/?#]+)/i);
+    if (pathSeg) {
+      return decodeURIComponent(pathSeg[1]);
+    }
+    return raw;
+  }
+
+  /**
+   * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
+   * Does not rely on the signed-in user's permission to call `input_text.set_value`;
+   * an automation triggered by the webhook runs with normal HA privileges.
+   * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
+   *
+   * Pass **`hass`** (third argument) so **`hass.auth.fetchWithAuth`** is used — raw `fetch`
+   * often returns **401** in the HA frontend because API routes expect the bearer/session
+   * from `fetchWithAuth`, not cookies alone.
+   */
+  function postHomeAssistantWebhook(webhookId, body, hass) {
+    const id = normalizeHomeAssistantWebhookId(webhookId);
+    if (!id) {
+      return Promise.resolve(false);
+    }
+    const payload = body && typeof body === "object" ? body : {};
+    const path = `/api/webhook/${encodeURIComponent(id)}`;
+
+    const authFetch = hass?.auth?.fetchWithAuth;
+    if (typeof authFetch === "function") {
+      return authFetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(
+        res => res.ok,
+        () => false,
+      );
+    }
+
+    if (typeof fetch !== "function") {
+      return Promise.resolve(false);
+    }
+    const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
+    if (!origin) {
+      return Promise.resolve(false);
+    }
+    const url = `${origin}${path}`;
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "same-origin",
+    }).then(
+      res => res.ok,
+      () => false,
+    );
   }
 
   /**
@@ -382,6 +456,7 @@
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
+    postHomeAssistantWebhook,
   };
 
   if (typeof window !== "undefined") {
@@ -409,6 +484,7 @@ const DEFAULT_CONFIG = {
   name: "",
   icon: "",
   tap_action: "more-info",
+  show_name: true,
   show_state: true,
   show_zone_badge: true,
   use_entity_picture: true,
@@ -1074,6 +1150,7 @@ class NodaliaPersonCard extends HTMLElement {
       zoneEntity: zoneState?.entity_id || "",
       zoneIcon: zoneState?.attributes?.icon || "",
       showState: this._config.show_state !== false,
+      showName: this._config.show_name !== false,
       showZoneBadge: this._config.show_zone_badge !== false,
       useEntityPicture: this._config.use_entity_picture !== false,
       useZoneIcon: this._config.use_zone_icon !== false,
@@ -1240,6 +1317,7 @@ class NodaliaPersonCard extends HTMLElement {
     const configuredRows = Number(this._config?.grid_options?.rows);
     const singleRowLayout = Number.isFinite(configuredRows) ? configuredRows <= 1 : true;
     const title = this._getTitle(state);
+    const showName = config.show_name !== false;
     const subtitle = config.show_state !== false ? this._translateState(state) : "";
     const desiredPicture = this._getPersonPicture(state);
     const pictureReady = !desiredPicture || this._ensurePersonPictureReady(desiredPicture);
@@ -1275,6 +1353,8 @@ class NodaliaPersonCard extends HTMLElement {
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const animateWithPicture = shouldAnimateEntrance && pictureReady;
+    const avatarCentered = !showName;
+    const showCopyBlock = showName || Boolean(subtitle);
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1334,6 +1414,11 @@ class NodaliaPersonCard extends HTMLElement {
           transition: transform 160ms ease;
           will-change: transform;
           z-index: 1;
+        }
+
+        .person-card--avatar-centered .person-card__content {
+          justify-content: center;
+          text-align: center;
         }
 
         .person-card__avatar-track {
@@ -1439,6 +1524,12 @@ class NodaliaPersonCard extends HTMLElement {
           flex: 1 1 auto;
           gap: ${singleRowLayout ? "4px" : "6px"};
           min-width: 0;
+        }
+
+        .person-card--avatar-centered .person-card__copy {
+          align-items: center;
+          justify-items: center;
+          text-align: center;
         }
 
         .person-card__copy--entering {
@@ -1574,7 +1665,7 @@ class NodaliaPersonCard extends HTMLElement {
         }
         `}
       </style>
-      <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""}">
+      <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""} ${avatarCentered ? "person-card--avatar-centered" : ""}">
         <div class="person-card__content ${animateWithPicture ? "person-card__content--entering" : ""}" ${canRunPrimaryAction ? 'data-person-action="primary"' : ""}>
           <div class="person-card__avatar-track">
             <div class="person-card__avatar ${animateWithPicture ? "person-card__avatar--entering" : ""}">
@@ -1590,10 +1681,12 @@ class NodaliaPersonCard extends HTMLElement {
             }
             </div>
           </div>
+          ${showCopyBlock ? `
           <div class="person-card__copy ${animateWithPicture ? "person-card__copy--entering" : ""}">
-            <div class="person-card__title">${escapeHtml(title)}</div>
+            ${showName ? `<div class="person-card__title">${escapeHtml(title)}</div>` : ""}
             ${subtitle ? `<div class="person-card__chips ${animateWithPicture ? "person-card__chips--entering" : ""}"><div class="person-card__state-chip">${escapeHtml(subtitle)}</div></div>` : ""}
           </div>
+          ` : ""}
         </div>
       </ha-card>
     `;
@@ -2393,6 +2486,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
               placeholder: "Ana",
               fullWidth: true,
             })}
+            ${this._renderCheckboxField("Mostrar nombre", "show_name", config.show_name !== false)}
             ${this._renderSelectField(
               "Acción al tocar",
               "tap_action",

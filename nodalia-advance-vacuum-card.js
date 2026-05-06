@@ -16,6 +16,7 @@
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
+    "postHomeAssistantWebhook",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -137,6 +138,79 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
+   */
+  function normalizeHomeAssistantWebhookId(webhookId) {
+    const raw = String(webhookId ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const u = new URL(raw);
+        const m = /\/api\/webhook\/([^/]+)/.exec(u.pathname);
+        return m ? decodeURIComponent(m[1]) : "";
+      } catch (_err) {
+        return "";
+      }
+    }
+    const pathSeg = raw.match(/(?:^|\/)api\/webhook\/([^/?#]+)/i);
+    if (pathSeg) {
+      return decodeURIComponent(pathSeg[1]);
+    }
+    return raw;
+  }
+
+  /**
+   * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
+   * Does not rely on the signed-in user's permission to call `input_text.set_value`;
+   * an automation triggered by the webhook runs with normal HA privileges.
+   * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
+   *
+   * Pass **`hass`** (third argument) so **`hass.auth.fetchWithAuth`** is used — raw `fetch`
+   * often returns **401** in the HA frontend because API routes expect the bearer/session
+   * from `fetchWithAuth`, not cookies alone.
+   */
+  function postHomeAssistantWebhook(webhookId, body, hass) {
+    const id = normalizeHomeAssistantWebhookId(webhookId);
+    if (!id) {
+      return Promise.resolve(false);
+    }
+    const payload = body && typeof body === "object" ? body : {};
+    const path = `/api/webhook/${encodeURIComponent(id)}`;
+
+    const authFetch = hass?.auth?.fetchWithAuth;
+    if (typeof authFetch === "function") {
+      return authFetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(
+        res => res.ok,
+        () => false,
+      );
+    }
+
+    if (typeof fetch !== "function") {
+      return Promise.resolve(false);
+    }
+    const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
+    if (!origin) {
+      return Promise.resolve(false);
+    }
+    const url = `${origin}${path}`;
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "same-origin",
+    }).then(
+      res => res.ok,
+      () => false,
+    );
   }
 
   /**
@@ -382,6 +456,7 @@
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
+    postHomeAssistantWebhook,
   };
 
   if (typeof window !== "undefined") {
@@ -393,7 +468,7 @@
 
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.13.6";
+const CARD_VERSION = "0.13.9";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -668,6 +743,7 @@ const DEFAULT_CONFIG = {
   max_zone_selections: 5,
   max_repeats: 3,
   shared_cleaning_session_entity: "",
+  shared_cleaning_session_webhook: "",
   suction_select_entity: "",
   mop_select_entity: "",
   mop_mode_select_entity: "",
@@ -682,6 +758,11 @@ const DEFAULT_CONFIG = {
   predefined_zones: [],
   icons: [],
   map_modes: [],
+  security: {
+    strict_service_actions: false,
+    allowed_services: [],
+    allowed_service_domains: [],
+  },
   haptics: {
     enabled: true,
     style: "medium",
@@ -1834,6 +1915,7 @@ function normalizeConfig(rawConfig) {
   config.custom_menu = mergeConfig(DEFAULT_CONFIG.custom_menu, config.custom_menu || {});
   config.custom_menu.items = normalizeCustomMenuItems(config.custom_menu.items);
   config.routines = normalizeRoutineItems(config.routines);
+  config.shared_cleaning_session_webhook = String(config.shared_cleaning_session_webhook ?? "").trim();
   return config;
 }
 
@@ -2449,6 +2531,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       pendingStartAt: normalizedSession.pendingStartAt,
       resumeRoomIdsAfterZone: normalizedSession.resumeRoomIdsAfterZone,
       resumeRepeatsAfterZone: normalizedSession.resumeRepeatsAfterZone,
+      modePanelPreset: normalizedSession.modePanelPreset,
+      utilityPanel: normalizedSession.utilityPanel,
     });
   }
 
@@ -2496,6 +2580,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (snapshot.resumeRepeatsAfterZone) {
       parts.push(`rq=${snapshot.resumeRepeatsAfterZone}`);
     }
+    if (snapshot.modePanelPreset) {
+      parts.push(`pp=${encodeURIComponent(snapshot.modePanelPreset)}`);
+    }
+    if (snapshot.utilityPanel) {
+      parts.push(`xu=${encodeURIComponent(snapshot.utilityPanel)}`);
+    }
 
     return parts.join("&");
   }
@@ -2532,6 +2622,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       pendingStartAt: Number(params.get("p") || 0),
       resumeRoomIdsAfterZone: decodeSharedSessionList(params.get("rr")),
       resumeRepeatsAfterZone: Number(params.get("rq") || 1),
+      modePanelPreset: params.get("pp") || "",
+      utilityPanel: params.get("xu") || "",
     });
   }
 
@@ -2547,12 +2639,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _persistSharedCleaningSession(session) {
+    const webhookId = String(this._config?.shared_cleaning_session_webhook ?? "").trim();
     const entityId = this._getSharedCleaningSessionEntityId();
-    if (!entityId) {
+    if (!webhookId && !entityId) {
       return;
     }
 
-    const maxLength = this._getSharedCleaningSessionMaxLength();
+    const maxLength = entityId ? this._getSharedCleaningSessionMaxLength() : 255;
     let serialized = this._serializeSharedCleaningSession(session);
 
     if (serialized.length > maxLength) {
@@ -2567,33 +2660,94 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     const serializedTrim = serialized.trim();
-    const currentValue = String(this._getSharedCleaningSessionState()?.state ?? "").trim();
-    if (serializedTrim === currentValue) {
+    const currentValue = entityId ? String(this._getSharedCleaningSessionState()?.state ?? "").trim() : "";
+    const hasEntityTarget = Boolean(entityId);
+    const hasWebhookTarget = Boolean(webhookId);
+    if (hasEntityTarget && serializedTrim === currentValue) {
+      return;
+    }
+    if (hasEntityTarget && serializedTrim === this._lastSubmittedSharedCleaningSessionValue) {
+      return;
+    }
+    if (
+      !hasEntityTarget &&
+      hasWebhookTarget &&
+      serializedTrim !== "" &&
+      serializedTrim === this._lastSubmittedSharedCleaningSessionValue
+    ) {
       return;
     }
 
-    const pending = this._callNamedService("input_text.set_value", {
+    this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
+
+    if (webhookId) {
+      const post =
+        typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.postHomeAssistantWebhook === "function"
+          ? window.NodaliaUtils.postHomeAssistantWebhook
+          : null;
+      if (!post) {
+        this._lastSubmittedSharedCleaningSessionValue = null;
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn(
+            "Nodalia Advance Vacuum Card: falta NodaliaUtils.postHomeAssistantWebhook (actualiza nodalia-cards / nodalia-utils).",
+          );
+        }
+        return;
+      }
+      void post(webhookId, { value: serializedTrim }, this._hass).then(ok => {
+        if (!ok) {
+          this._lastSubmittedSharedCleaningSessionValue = null;
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn(
+              "Nodalia Advance Vacuum Card: webhook de persistencia rechazado o fallido; revisa el webhook_id y la automatización en HA.",
+            );
+          }
+        }
+      });
+      return;
+    }
+
+    const pending = this._callInternalService("input_text.set_value", {
       entity_id: entityId,
       value: serializedTrim,
     });
     if (pending && typeof pending.then === "function") {
-      pending
-        .then(() => {
-          this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
-        })
-        .catch(err => {
-          if (typeof console !== "undefined" && typeof console.warn === "function") {
-            console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
-          }
-        });
-    } else {
-      this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
+      pending.catch(err => {
+        this._lastSubmittedSharedCleaningSessionValue = null;
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
+          console.warn(
+            "Nodalia Advance Vacuum Card: usuarios no administradores necesitan permiso de control sobre el input_text del helper (shared_cleaning_session_entity) o configuran shared_cleaning_session_webhook.",
+          );
+        }
+      });
     }
   }
 
   _clearSharedCleaningSession() {
+    const webhookId = String(this._config?.shared_cleaning_session_webhook ?? "").trim();
     const entityId = this._getSharedCleaningSessionEntityId();
-    if (!entityId) {
+    if (!webhookId && !entityId) {
+      return;
+    }
+
+    if (webhookId) {
+      const post =
+        typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.postHomeAssistantWebhook === "function"
+          ? window.NodaliaUtils.postHomeAssistantWebhook
+          : null;
+      if (post) {
+        this._lastSubmittedSharedCleaningSessionValue = "";
+        void post(webhookId, { value: "" }, this._hass).then(ok => {
+          if (!ok && typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn("Nodalia Advance Vacuum Card: webhook clear (sesión compartida) falló.");
+          }
+        });
+      } else if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn(
+          "Nodalia Advance Vacuum Card: falta NodaliaUtils.postHomeAssistantWebhook (actualiza nodalia-cards / nodalia-utils).",
+        );
+      }
       return;
     }
 
@@ -2606,7 +2760,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     this._lastSubmittedSharedCleaningSessionValue = "";
-    this._callNamedService("input_text.set_value", {
+    this._callInternalService("input_text.set_value", {
       entity_id: entityId,
       value: "",
     });
@@ -2643,6 +2797,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       .map(item => String(item || "").trim())
       .filter(Boolean);
     const resumeRepeatsAfterZone = clamp(Number(session.resumeRepeatsAfterZone || repeats || 1), 1, 9);
+    const modePanelPreset = String(session.modePanelPreset ?? "").trim().slice(0, 64);
+    const utilityPanel = String(session.utilityPanel ?? "").trim().slice(0, 64);
 
     if (
       !mode &&
@@ -2654,7 +2810,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       !manualZones.length &&
       !selectionUpdatedAt &&
       !pendingStartAt &&
-      !resumeRoomIdsAfterZone.length
+      !resumeRoomIdsAfterZone.length &&
+      !modePanelPreset &&
+      !utilityPanel
     ) {
       return null;
     }
@@ -2672,6 +2830,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       pendingStartAt,
       resumeRoomIdsAfterZone,
       resumeRepeatsAfterZone,
+      modePanelPreset,
+      utilityPanel,
     };
   }
 
@@ -2699,6 +2859,15 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._activeMode = persistedSession.activeMode;
     }
     this._repeats = clamp(Number(persistedSession.repeats || this._repeats || 1), 1, 9);
+    const presetPersist = String(persistedSession.modePanelPreset ?? "").trim().slice(0, 64);
+    if (presetPersist) {
+      this._activeModePanelPreset = presetPersist;
+      this._lastResolvedModePanelPreset = presetPersist;
+    }
+    const utilPersist = String(persistedSession.utilityPanel ?? "").trim().slice(0, 64);
+    if (utilPersist) {
+      this._activeUtilityPanel = utilPersist;
+    }
     return true;
   }
 
@@ -2766,6 +2935,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       pendingStartAt: this._pendingCleaningSessionStartAt,
       resumeRoomIdsAfterZone: this._pendingRoomCleaningResumeRoomIds,
       resumeRepeatsAfterZone: this._pendingRoomCleaningResumeRepeats,
+      modePanelPreset: String(this._activeModePanelPreset || "").trim().slice(0, 64),
+      utilityPanel: this._activeUtilityPanel ? String(this._activeUtilityPanel).trim().slice(0, 64) : "",
     });
   }
 
@@ -3101,7 +3272,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._markCleaningSessionPendingStart();
     this._persistCurrentCleaningSessionState("rooms");
 
-    Promise.resolve(this._callNamedService("vacuum.send_command", {
+    Promise.resolve(this._callInternalService("vacuum.send_command", {
       entity_id: this._config.entity,
       command: "app_segment_clean",
       params: [{
@@ -3343,6 +3514,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       },
       sharedSession: {
         entity: String(sharedSessionEntityId || ""),
+        webhook: String(this._config?.shared_cleaning_session_webhook || "").trim(),
         state: String(sharedSessionState?.state || ""),
         lastUpdated: String(sharedSessionState?.last_updated || ""),
       },
@@ -3609,7 +3781,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const domain = this._getEntityDomain(entityId);
     const serviceName = domain === "input_select" ? "input_select.select_option" : "select.select_option";
-    this._callNamedService(serviceName, {
+    this._callInternalService(serviceName, {
       entity_id: entityId,
       option: value,
     });
@@ -4539,6 +4711,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const selection = this._getModePanelPresetSelection(presetId, state);
     if (!selection) {
+      this._persistCurrentCleaningSessionState(this._activeMode, {
+        markSelectionChange: true,
+      });
       this._triggerHaptic("selection");
       this._render();
       return;
@@ -4565,6 +4740,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._setModeOption("mop_mode", selection.mopMode, state, { triggerHaptic: false });
     }
 
+    this._persistCurrentCleaningSessionState(this._activeMode, {
+      markSelectionChange: true,
+    });
     this._triggerHaptic("selection");
     this._render();
   }
@@ -5272,7 +5450,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
       : [];
     if (!domains.length && !services.length) {
-      return true;
+      return false;
     }
     return services.includes(normalizedService) || domains.includes(domain);
   }
@@ -5281,15 +5459,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (!this._hass || !service) {
       return;
     }
-
-    const svcLower = String(service).trim().toLowerCase();
-    const targetEntity = String(data?.entity_id || "").trim();
-    const persistenceBypass =
-      svcLower === "input_text.set_value" &&
-      targetEntity &&
-      targetEntity === this._getSharedCleaningSessionEntityId();
-
-    if (!persistenceBypass && !this._isServiceAllowed(service)) {
+    if (!this._isServiceAllowed(service)) {
       return;
     }
 
@@ -5298,6 +5468,21 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
+    return this._hass.callService(domain, serviceName, data, target || undefined);
+  }
+
+  /**
+   * Fixed, card-owned service calls that must not be blocked by strict allowlists.
+   * External/user-provided service actions still go through _callNamedService.
+   */
+  _callInternalService(service, data = {}, target = null) {
+    if (!this._hass || !service) {
+      return;
+    }
+    const [domain, serviceName] = String(service).split(".");
+    if (!domain || !serviceName) {
+      return;
+    }
     return this._hass.callService(domain, serviceName, data, target || undefined);
   }
 
@@ -5400,6 +5585,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   _toggleUtilityPanel(panelId) {
     this._activeUtilityPanel = this._activeUtilityPanel === panelId ? null : panelId;
+    this._persistCurrentCleaningSessionState(this._activeMode, {
+      markSelectionChange: true,
+    });
     this._triggerHaptic("selection");
     this._render();
   }
@@ -5494,7 +5682,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           this._persistCurrentCleaningSessionState("rooms", {
             markSelectionChange: true,
           });
-          await this._callNamedService("vacuum.send_command", {
+          await this._callInternalService("vacuum.send_command", {
             entity_id: this._config.entity,
             command: "app_segment_clean",
             params: [{
@@ -5542,7 +5730,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           await new Promise(resolve => window.setTimeout(resolve, 450));
         }
 
-        await this._callNamedService("vacuum.send_command", {
+        await this._callInternalService("vacuum.send_command", {
           entity_id: this._config.entity,
           command: "app_zoned_clean",
           params: selectedZones,
@@ -5568,7 +5756,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._activeCleaningSessionMode = "";
         this._clearCleaningSessionPendingStart();
         this._clearPersistedCleaningSession();
-        await this._callNamedService("roborock.set_vacuum_goto_position", {
+        await this._callInternalService("roborock.set_vacuum_goto_position", {
           entity_id: this._config.entity,
           x: Math.round(this._gotoPoint.x),
           y: Math.round(this._gotoPoint.y),
@@ -8466,6 +8654,10 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
   _renderTextField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
+    const hintRaw = options.hint ? String(options.hint) : "";
+    const hintHtml = hintRaw
+      ? `<span class="editor-field__hint">${escapeHtml(this._editorLabel(hintRaw))}</span>`
+      : "";
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
@@ -8476,6 +8668,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
           value="${escapeHtml(value ?? "")}"
           placeholder="${escapeHtml(options.placeholder || "")}"
         />
+        ${hintHtml}
       </label>
     `;
   }
@@ -8967,6 +9160,12 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
                 ),
               )}</span>
             </div>
+            ${this._renderTextField("Webhook persistencia (ID, opcional)", "shared_cleaning_session_webhook", config.shared_cleaning_session_webhook || "", {
+              fullWidth: true,
+              placeholder: "nodalia_advance_vacuum_session",
+              hint:
+                "Si los usuarios no pueden llamar a input_text.set_value, usa el webhook_id de una automatización que escriba el mismo helper. POST /api/webhook/<id> con JSON {\"value\": \"...\"}.",
+            })}
           </div>
         </section>
 

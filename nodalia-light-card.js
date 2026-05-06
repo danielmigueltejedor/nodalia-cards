@@ -16,6 +16,7 @@
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
+    "postHomeAssistantWebhook",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -137,6 +138,79 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
+   */
+  function normalizeHomeAssistantWebhookId(webhookId) {
+    const raw = String(webhookId ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const u = new URL(raw);
+        const m = /\/api\/webhook\/([^/]+)/.exec(u.pathname);
+        return m ? decodeURIComponent(m[1]) : "";
+      } catch (_err) {
+        return "";
+      }
+    }
+    const pathSeg = raw.match(/(?:^|\/)api\/webhook\/([^/?#]+)/i);
+    if (pathSeg) {
+      return decodeURIComponent(pathSeg[1]);
+    }
+    return raw;
+  }
+
+  /**
+   * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
+   * Does not rely on the signed-in user's permission to call `input_text.set_value`;
+   * an automation triggered by the webhook runs with normal HA privileges.
+   * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
+   *
+   * Pass **`hass`** (third argument) so **`hass.auth.fetchWithAuth`** is used — raw `fetch`
+   * often returns **401** in the HA frontend because API routes expect the bearer/session
+   * from `fetchWithAuth`, not cookies alone.
+   */
+  function postHomeAssistantWebhook(webhookId, body, hass) {
+    const id = normalizeHomeAssistantWebhookId(webhookId);
+    if (!id) {
+      return Promise.resolve(false);
+    }
+    const payload = body && typeof body === "object" ? body : {};
+    const path = `/api/webhook/${encodeURIComponent(id)}`;
+
+    const authFetch = hass?.auth?.fetchWithAuth;
+    if (typeof authFetch === "function") {
+      return authFetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(
+        res => res.ok,
+        () => false,
+      );
+    }
+
+    if (typeof fetch !== "function") {
+      return Promise.resolve(false);
+    }
+    const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
+    if (!origin) {
+      return Promise.resolve(false);
+    }
+    const url = `${origin}${path}`;
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "same-origin",
+    }).then(
+      res => res.ok,
+      () => false,
+    );
   }
 
   /**
@@ -382,6 +456,7 @@
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
+    postHomeAssistantWebhook,
   };
 
   if (typeof window !== "undefined") {
@@ -422,6 +497,7 @@ const DEFAULT_CONFIG = {
   name: "",
   icon: "",
   show_state: false,
+  state_position: "right",
   compact_layout_mode: "auto",
   show_brightness: true,
   show_slider_mode_buttons: true,
@@ -820,6 +896,8 @@ function kelvinToMired(value) {
 
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const normalizedStatePosition = String(config.state_position || "").toLowerCase();
+  config.state_position = normalizedStatePosition === "below" ? "below" : "right";
 
   if (!Array.isArray(config.quick_brightness) || !config.quick_brightness.length) {
     config.quick_brightness = deepClone(DEFAULT_CONFIG.quick_brightness);
@@ -1080,6 +1158,8 @@ class NodaliaLightCard extends HTMLElement {
       `c:${this._isCompactLayout ? 1 : 0}`,
       `mini:${this._shouldUseMiniLayout() ? 1 : 0}`,
       `cm:${String(this._activeControlMode || "")}`,
+      `ss:${this._config?.show_state === true ? 1 : 0}`,
+      `sp:${String(this._config?.state_position || "right")}`,
     ].join("|");
   }
 
@@ -2815,9 +2895,12 @@ class NodaliaLightCard extends HTMLElement {
       : 0;
     const brightnessSliderShellClass = shouldAnimateBrightnessFill ? " light-card__slider-shell--brightness-fill" : "";
 
+    const statePosition = config.state_position === "below" ? "below" : "right";
     if (!isMiniLayout && config.show_state === true) {
       stateChipMarkup = `<span class="light-card__chip light-card__chip--state">${escapeHtml(stateLabel)}</span>`;
     }
+    const stateChipHeaderMarkup = statePosition === "right" ? stateChipMarkup : "";
+    const stateChipBelowMarkup = statePosition === "below" ? stateChipMarkup : "";
 
     if (isOn && !isMiniLayout) {
       let activeValueChip = null;
@@ -2841,8 +2924,11 @@ class NodaliaLightCard extends HTMLElement {
       }
     }
 
-    const hasHeaderChips = Boolean(stateChipMarkup || activeValueChipMarkup);
-    const showCopyBlock = !isMiniLayout && (!isCompactLayout || hasHeaderChips);
+    const activeValueChipHeaderMarkup = statePosition === "right" ? activeValueChipMarkup : "";
+    const activeValueChipBelowMarkup = statePosition === "below" ? activeValueChipMarkup : "";
+    const hasHeaderChips = Boolean(stateChipHeaderMarkup || activeValueChipHeaderMarkup);
+    const hasBelowChips = Boolean(stateChipBelowMarkup || activeValueChipBelowMarkup);
+    const showCopyBlock = !isMiniLayout && (!isCompactLayout || hasHeaderChips || hasBelowChips);
     const sliderInnerMarkup = isOn && !isMiniLayout && availableControlModes.length > 0
       ? `
         ${
@@ -3298,7 +3384,7 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__copy {
           display: grid;
-          gap: 0;
+          gap: 6px;
           min-width: 0;
         }
 
@@ -3339,6 +3425,11 @@ class NodaliaLightCard extends HTMLElement {
           justify-content: flex-end;
           margin-left: auto;
           min-width: 0;
+        }
+
+        .light-card__chips--below {
+          justify-content: flex-start;
+          margin-left: 0;
         }
 
         .light-card--compact .light-card__chips {
@@ -4093,8 +4184,9 @@ class NodaliaLightCard extends HTMLElement {
                 <div class="light-card__copy">
                   <div class="light-card__copy-header">
                     ${isCompactLayout ? "" : `<div class="light-card__title">${escapeHtml(title)}</div>`}
-                    ${hasHeaderChips ? `<div class="light-card__chips">${stateChipMarkup}${activeValueChipMarkup}</div>` : ""}
+                    ${hasHeaderChips ? `<div class="light-card__chips">${stateChipHeaderMarkup}${activeValueChipHeaderMarkup}</div>` : ""}
                   </div>
+                  ${hasBelowChips ? `<div class="light-card__chips light-card__chips--below">${stateChipBelowMarkup}${activeValueChipBelowMarkup}</div>` : ""}
                 </div>
               `
               : ""}
@@ -4957,6 +5049,15 @@ class NodaliaLightCardEditor extends HTMLElement {
               ],
             )}
             ${this._renderCheckboxField("Mostrar burbuja de estado", "show_state", config.show_state === true)}
+            ${this._renderSelectField(
+              "Posicion del estado",
+              "state_position",
+              config.state_position || "right",
+              [
+                { value: "right", label: "A la derecha del nombre" },
+                { value: "below", label: "Debajo del nombre" },
+              ],
+            )}
             ${this._renderCheckboxField("Mostrar brillo", "show_brightness", config.show_brightness !== false)}
             ${this._renderCheckboxField("Botones de modo junto al slider", "show_slider_mode_buttons", config.show_slider_mode_buttons !== false)}
             ${this._renderCheckboxField("Presets de brillo", "show_quick_brightness", config.show_quick_brightness !== false)}

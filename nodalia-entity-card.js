@@ -16,6 +16,7 @@
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
+    "postHomeAssistantWebhook",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -137,6 +138,79 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
+   */
+  function normalizeHomeAssistantWebhookId(webhookId) {
+    const raw = String(webhookId ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const u = new URL(raw);
+        const m = /\/api\/webhook\/([^/]+)/.exec(u.pathname);
+        return m ? decodeURIComponent(m[1]) : "";
+      } catch (_err) {
+        return "";
+      }
+    }
+    const pathSeg = raw.match(/(?:^|\/)api\/webhook\/([^/?#]+)/i);
+    if (pathSeg) {
+      return decodeURIComponent(pathSeg[1]);
+    }
+    return raw;
+  }
+
+  /**
+   * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
+   * Does not rely on the signed-in user's permission to call `input_text.set_value`;
+   * an automation triggered by the webhook runs with normal HA privileges.
+   * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
+   *
+   * Pass **`hass`** (third argument) so **`hass.auth.fetchWithAuth`** is used — raw `fetch`
+   * often returns **401** in the HA frontend because API routes expect the bearer/session
+   * from `fetchWithAuth`, not cookies alone.
+   */
+  function postHomeAssistantWebhook(webhookId, body, hass) {
+    const id = normalizeHomeAssistantWebhookId(webhookId);
+    if (!id) {
+      return Promise.resolve(false);
+    }
+    const payload = body && typeof body === "object" ? body : {};
+    const path = `/api/webhook/${encodeURIComponent(id)}`;
+
+    const authFetch = hass?.auth?.fetchWithAuth;
+    if (typeof authFetch === "function") {
+      return authFetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(
+        res => res.ok,
+        () => false,
+      );
+    }
+
+    if (typeof fetch !== "function") {
+      return Promise.resolve(false);
+    }
+    const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
+    if (!origin) {
+      return Promise.resolve(false);
+    }
+    const url = `${origin}${path}`;
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "same-origin",
+    }).then(
+      res => res.ok,
+      () => false,
+    );
   }
 
   /**
@@ -382,6 +456,7 @@
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
+    postHomeAssistantWebhook,
   };
 
   if (typeof window !== "undefined") {
@@ -420,6 +495,7 @@ const DEFAULT_CONFIG = {
   tap_new_tab: false,
   show_state: true,
   state_chip_on_title_row: false,
+  state_position: "below",
   primary_attribute: "",
   secondary_attribute: "",
   show_primary_chip: true,
@@ -471,6 +547,7 @@ const STUB_CONFIG = {
   tap_action: "auto",
   show_state: true,
   state_chip_on_title_row: false,
+  state_position: "below",
   quick_actions: [
     {
       icon: "mdi:power",
@@ -914,6 +991,12 @@ function getDynamicEntityIcon(state) {
 
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const normalizedStatePosition = String(config.state_position || "").toLowerCase();
+  if (normalizedStatePosition === "right" || normalizedStatePosition === "below") {
+    config.state_position = normalizedStatePosition;
+  } else {
+    config.state_position = config.state_chip_on_title_row === true ? "right" : "below";
+  }
 
   config.quick_actions = Array.isArray(config.quick_actions)
     ? config.quick_actions
@@ -1573,6 +1656,7 @@ class NodaliaEntityCard extends HTMLElement {
     const showUnavailableBadge = isUnavailableState(state);
     const stateLabel = config.show_state ? this._translateStateValue(state) : null;
     const stateChip = this._renderChip(stateLabel, "state");
+    const statePosition = config.state_position === "right" ? "right" : "below";
     const primaryValue = config.show_primary_chip !== false
       ? this._formatAttributeValue(state, config.primary_attribute)
       : null;
@@ -1580,7 +1664,7 @@ class NodaliaEntityCard extends HTMLElement {
       ? this._formatAttributeValue(state, config.secondary_attribute)
       : null;
     const showTitle = !isCompactLayout;
-    const placeStateChipOnTitleRow = config.state_chip_on_title_row === true && Boolean(stateChip) && showTitle;
+    const placeStateChipOnTitleRow = statePosition === "right" && Boolean(stateChip);
     const chips = [
       placeStateChipOnTitleRow ? "" : stateChip,
       this._renderChip(primaryValue, "value"),
@@ -3140,7 +3224,15 @@ class NodaliaEntityCardEditor extends HTMLElement {
               ],
             )}
             ${this._renderCheckboxField("Mostrar estado", "show_state", config.show_state !== false)}
-            ${this._renderCheckboxField("Estado a la derecha del nombre", "state_chip_on_title_row", config.state_chip_on_title_row === true)}
+            ${this._renderSelectField(
+              "Posicion del estado",
+              "state_position",
+              config.state_position || (config.state_chip_on_title_row === true ? "right" : "below"),
+              [
+                { value: "below", label: "Debajo del nombre" },
+                { value: "right", label: "A la derecha del nombre" },
+              ],
+            )}
             ${this._renderTextField("Decimales en estado y chips", "number_decimals", config.number_decimals, {
               placeholder: "2",
               type: "number",

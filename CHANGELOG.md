@@ -10,6 +10,157 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.34] - 2026-05-06
+
+Thirty-fourth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.34`** (tag **`v1.0.0-alpha.34`** optional).
+
+- **Calendar card — forecast normalizado como weather-card:** la lectura de previsión diaria ahora unifica más variantes de payload (arrays, `forecast`, `daily`, `hourly`, estructuras anidadas y puntos sueltos) para reducir casos donde la cabecera diaria no mostraba clima.
+- **Calendar card — day-key robusto:** se admiten fechas en `datetime/date` tanto ISO como epoch (segundos o milisegundos), mejorando el emparejado día calendario ↔ día forecast.
+- **Calendar card — condición compatible:** fallback de condición (`condition`/`weather`) en el render de cabeceras diarias.
+
+---
+
+## [1.0.0-alpha.33] - 2026-05-06
+
+Thirty-third **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.33`** (tag **`v1.0.0-alpha.33`** optional).
+
+- **Calendar card — clima diario visible en más integraciones:** compatibilidad ampliada de campos de forecast (max/min) para mostrar icono y temperaturas en la cabecera de cada día con más proveedores.
+- **Calendar card — fallback visual:** cuando no hay min/max pero sí condición, se muestra el bloque meteorológico con icono y `— / —` en lugar de ocultarlo.
+- **Calendar card — rendimiento/memoria:** firma de render compacta basada en hash (menos churn de strings grandes) y protección `single-flight` en refresh para evitar solapes de cargas.
+
+---
+
+## [1.0.0-alpha.32] - 2026-05-06
+
+Thirty-second **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.32`** (tag **`v1.0.0-alpha.32`** optional).
+
+- **Calendar card — selector nativo HA en composer:** el alta de eventos nativos dentro del popup usa control nativo (`ha-selector` de entidad `calendar`) en lugar de `select` HTML, manteniendo fallback de compatibilidad.
+- **Calendar card — forecast diario más tolerante:** lectura de `weather/get_forecasts` ampliada para contemplar variantes de estructura de respuesta y fallback a atributos de estado cuando aplica.
+- **Advance Vacuum — persistencia webhook-only:** la deduplicación de sesión compartida separa rama webhook sin entidad para no bloquear retransmisión de sesión vacía en casos límite.
+- **Tests:** nuevo test de regresión para persistencia webhook-only en Advance Vacuum.
+
+---
+
+## [1.0.0-alpha.31] - 2026-05-06
+
+Thirty-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.31`** (tag **`v1.0.0-alpha.31`** optional).
+
+- **Calendar card — composer unificado:** crear evento nativo de Home Assistant deja de usar prompts y pasa a un composer integrado (selector de calendario, título, fecha, horas y todo el día) con el mismo estilo del popup.
+- **Calendar card — polish visual composer:** selector de color circular, switch tipo toggle para “Todo el día” y fondo del composer con tinte del acento de la tarjeta para coherencia visual.
+- **Calendar card — weather forecast robusto:** prioridad a `weather/get_forecasts` (daily) con fallback a `state.attributes.forecast`, mejorando compatibilidad y visibilidad real del tiempo diario en cabeceras.
+
+---
+
+## [1.0.0-alpha.30] - 2026-05-06
+
+Thirtieth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.30`** (tag **`v1.0.0-alpha.30`** optional).
+
+- **Calendar card:** el flujo de agregar recordatorios rápidos deja de usar prompts del navegador y pasa a un sub-popup estilizado dentro del panel ampliado (misma estética de la tarjeta).
+- **Calendar card:** corrección del emparejado de previsión diaria (`weather_entity`) para evitar desajustes de día por timezone al leer `forecast.datetime`.
+
+---
+
+## [1.0.0-alpha.29] - 2026-05-06
+
+Twenty-ninth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.29`** (tag **`v1.0.0-alpha.29`** optional).
+
+- **Calendar card:** popup ampliado con acciones rápidas para crear **recordatorios locales** (titulo, fecha/hora, color) y crear **eventos en calendarios nativos HA** sin salir del dashboard.
+- **Calendar card:** integración de recordatorios rápidos dentro de la misma lista/agrupación temporal de eventos.
+- **Calendar / Graph cards:** ajuste fino de animación de entrada para mantener consistencia visual tipo rebote con el resto de tarjetas.
+
+---
+
+## [1.0.0-alpha.28] - 2026-05-06
+
+Twenty-eighth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.28`** (tag **`v1.0.0-alpha.28`** optional).
+
+- **Calendar / Graph cards:** la animación de entrada se rearma al volver a mostrar la vista aunque HA mantenga la tarjeta montada (detección por visibilidad en viewport con `IntersectionObserver`).
+- **Advance Vacuum:** restauración de sesión corregida para `utilityPanel` (solo se aplica si hay valor persistido, coherente con `modePanelPreset`; evita reset espurio a `null`).
+
+---
+
+## [1.0.0-alpha.27] - 2026-05-06
+
+Twenty-seventh **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.27`** (tag **`v1.0.0-alpha.27`** optional).
+
+- **Calendar card:** la animación de entrada vuelve a dispararse al reentrar al dashboard (reset en attach/detach).
+- **Person card:** con **`show_name: false`** el bloque de texto se oculta por completo para centrar de verdad el avatar sin huecos.
+- **Light / Entity cards:** corrección de regresión en posición del estado (**derecha** / **debajo**), respetando explícitamente el ajuste seleccionado.
+
+---
+
+## [1.0.0-alpha.26] - 2026-05-06
+
+Twenty-sixth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.26`** (tag **`v1.0.0-alpha.26`** optional).
+
+- **Calendar card — codec completados `v5:`:** huellas **24-bit** + binario Base64URL (`v5:`); hasta **~62** marcados en **255** caracteres; **`pickShortestCompletionPayload`** compite **`v5:`** / **`v4:`** / **`v3:`** (el más corto que quepa).
+- **Calendar card — `v4:` más denso:** huellas **40-bit** y recuento **`uint8`** (esquema binario `0x02`); se sigue leyendo el formato anterior **48-bit** / `uint16` (`0x01`).
+- **Advance Vacuum:** separación de llamadas internas y externas en modo estricto (`_callInternalService` para servicios fijos de la tarjeta como `vacuum.send_command`, `select.select_option`, `input_text.set_value`, `roborock.set_vacuum_goto_position`), manteniendo la allowlist para acciones definidas por el usuario.
+- **Light card:** opción **`state_position`** (`right` / `below`) para colocar el estado a la derecha del nombre o debajo.
+- **Person card:** opción **`show_name`** para ocultar el nombre; al ocultarlo, el avatar se centra en la tarjeta.
+
+---
+
+## [1.0.0-alpha.25] - 2026-05-06
+
+Twenty-fifth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.25`** (tag **`v1.0.0-alpha.25`** optional).
+
+- **Calendar card — persistencia completados:** codec **`v4:`** (huellas FNV-1a 48-bit + binario Base64URL, orden-independiente); **`pickShortestCompletionPayload`** elige el **más corto** entre **`v4:`** y **`v3:`** si ambos caben; **`v2:`** / JSON solo si los estables no caben.
+
+---
+
+## [1.0.0-alpha.24] - 2026-05-06
+
+Twenty-fourth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.24`** (tag **`v1.0.0-alpha.24`** optional).
+
+- **`NodaliaUtils.postHomeAssistantWebhook`:** usa **`hass.auth.fetchWithAuth`** cuando se pasa **`hass`** (evita **401** desde Lovelace frente a **`fetch`** sin token); acepta **`webhook_id`** o URL/pegar **`/api/webhook/…`**; calendario y Advance Vacuum pasan **`this._hass`** en persistencia por webhook.
+- **Calendar card — codec completados `v3:`:** huellas **FNV-1a** (UTF-8) + **base62** por clave lógica; orden-independiente frente a **`v2:`**; **`pickShortestCompletionPayload`** compite **v2 / v3 / JSON**.
+- **Editor calendario (`ha-selector`):** varios dominios en **`data-domains`** usan **`entity: { domain: [...] }`** en lugar de **`{}`** (restricción alineada con Advance Vacuum).
+
+---
+
+## [1.0.0-alpha.23] - 2026-05-06
+
+Twenty-third **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.23`** (tag **`v1.0.0-alpha.23`** optional).
+
+- **Persistencia sin permiso `input_text.set_value`:** **`NodaliaUtils.postHomeAssistantWebhook`** (`POST` JSON a `/api/webhook/<webhook_id>`). Opciones **`shared_completed_events_webhook`** (calendario) y **`shared_cleaning_session_webhook`** (Advance Vacuum): si están definidas, la escritura compartida usa el webhook en lugar del servicio (una automatización **Webhook** del administrador puede llamar a **`input_text.set_value`**). El **`webhook_id`** debe mantenerse secreto.
+- **Advance Vacuum:** **`_isServiceAllowed`** con allowlists vacías ya no usa fail-open (`strict_service_actions` implícito): coincide con el resto de tarjetas (**denegar** si no hay entradas). Por defecto **`security.strict_service_actions: false`** en **`DEFAULT_CONFIG`** mantiene el comportamiento permisivo anterior sin YAML extra.
+- **Calendar card — formato compacto `v2:` para completados:** módulo **`nodalia-calendar-completion-codec.js`**: prefijo cronológico (`v2:n{k}` = primeros *k* eventos en ventana), totales `v2:t` / vacío `v2:z`, trozos por día `dYYYYMMDD` + `t` (todo el día), `n{j}` (primeros *j* ese día) o `i1-3` (posiciones 1-based en ese día). Se elige la cadena más corta frente al JSON de claves largas; sigue existiendo compatibilidad con el array JSON legacy. Los índices dependen del orden de eventos cargados (si cambian citas, puede haber que revisar marcas).
+
+---
+
+## [1.0.0-alpha.22] - 2026-05-06
+
+Twenty-second **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.22`** (tag **`v1.0.0-alpha.22`** optional).
+
+- **Calendar card:** persistencia en **`input_text`**: se ignoraban actualizaciones websocket **anticipadas** con el valor **viejo** del helper justo después de marcar completado; `_syncCompletedPersistenceFromHass` volvía a pisar **`_completed`** antes de que **`set_value`** reflejara en HA. Ahora hay **`_pendingSharedCompletedPayload`** (forma canónica del JSON) y no se aplica un estado remoto obsoleto mientras el pendiente no coincide; comparación canónica entre estado HA y payload local.
+- **Advance Vacuum (`0.13.9`):** segundo **`console.warn`** si **`set_value`** falla (p. ej. usuario sin permiso sobre el **`input_text`**).
+
+---
+
+## [1.0.0-alpha.21] - 2026-05-06
+
+Twenty-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.21`** (tag **`v1.0.0-alpha.21`** optional).
+
+- **Advance Vacuum (`0.13.8`):** persistencia **`input_text`** — vuelve la deduplicación con **`_lastSubmittedSharedCleaningSessionValue`** antes del servicio y **`null`** en **`catch`** para no spamear **`set_value`** mientras HA sincroniza y permitir reintento si falla. **`security.strict_service_actions`** explícito **`true`** con listas vacías ya **no** abre todo el mundo: sin entradas en la allowlist se deniega ( **`fail-closed`** ); la persistencia al helper sigue usando el bypass dedicado.
+- **Calendar card:** mismo patrón optimista + **`catch`** en **`_saveCompleted`** para el helper de completados.
+
+---
+
+## [1.0.0-alpha.20] - 2026-05-06
+
+Twentieth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.20`** (tag **`v1.0.0-alpha.20`** optional).
+
+---
+
+## [1.0.0-beta.2] - 2026-05-06
+
+Second **`beta`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-beta.2`** (tag **`v1.0.0-beta.2`** optional).
+
+- **Advance Vacuum (`0.13.7`):** la sesión compartida en **`input_text`** incluye ahora la «vista» de la tarjeta: **preset del panel de modos** (aspirado/fregado, `pp=` en el helper) y **panel lateral utilidades** abierto (`modes` / `dock`, `xu=`). Cambiar pestañas de modo o abrir/cerrar esos paneles llama a **`set_value`** como el resto de selecciones.
+
+---
+
 ## [1.0.0-beta.1] - 2026-05-06
 
 First **`beta`** on the **`1.0.0`** line (**branch `beta`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-beta.1`** (Git tag **`v1.0.0-beta.1`** recommended for HACS/GitHub Releases).

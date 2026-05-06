@@ -16,6 +16,7 @@
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
+    "postHomeAssistantWebhook",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -137,6 +138,79 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
+   */
+  function normalizeHomeAssistantWebhookId(webhookId) {
+    const raw = String(webhookId ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const u = new URL(raw);
+        const m = /\/api\/webhook\/([^/]+)/.exec(u.pathname);
+        return m ? decodeURIComponent(m[1]) : "";
+      } catch (_err) {
+        return "";
+      }
+    }
+    const pathSeg = raw.match(/(?:^|\/)api\/webhook\/([^/?#]+)/i);
+    if (pathSeg) {
+      return decodeURIComponent(pathSeg[1]);
+    }
+    return raw;
+  }
+
+  /**
+   * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
+   * Does not rely on the signed-in user's permission to call `input_text.set_value`;
+   * an automation triggered by the webhook runs with normal HA privileges.
+   * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
+   *
+   * Pass **`hass`** (third argument) so **`hass.auth.fetchWithAuth`** is used — raw `fetch`
+   * often returns **401** in the HA frontend because API routes expect the bearer/session
+   * from `fetchWithAuth`, not cookies alone.
+   */
+  function postHomeAssistantWebhook(webhookId, body, hass) {
+    const id = normalizeHomeAssistantWebhookId(webhookId);
+    if (!id) {
+      return Promise.resolve(false);
+    }
+    const payload = body && typeof body === "object" ? body : {};
+    const path = `/api/webhook/${encodeURIComponent(id)}`;
+
+    const authFetch = hass?.auth?.fetchWithAuth;
+    if (typeof authFetch === "function") {
+      return authFetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(
+        res => res.ok,
+        () => false,
+      );
+    }
+
+    if (typeof fetch !== "function") {
+      return Promise.resolve(false);
+    }
+    const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
+    if (!origin) {
+      return Promise.resolve(false);
+    }
+    const url = `${origin}${path}`;
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "same-origin",
+    }).then(
+      res => res.ok,
+      () => false,
+    );
   }
 
   /**
@@ -382,6 +456,7 @@
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
+    postHomeAssistantWebhook,
   };
 
   if (typeof window !== "undefined") {
@@ -1031,6 +1106,8 @@ class NodaliaGraphCard extends HTMLElement {
     this._touchPressState = null;
     this._touchHoverActive = false;
     this._suppressClickUntil = 0;
+    this._viewVisibilityObserver = null;
+    this._wasInViewport = false;
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
     this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
@@ -1066,6 +1143,7 @@ class NodaliaGraphCard extends HTMLElement {
   disconnectedCallback() {
     this._historyAbortController?.abort();
     this._historyAbortController = null;
+    this._detachViewVisibilityObserver();
     this.removeEventListener("pointerout", this._onHostPointerOut);
     this.removeEventListener("mouseout", this._onHostPointerOut);
     this._detachDocumentHoverWatch();
@@ -1084,6 +1162,7 @@ class NodaliaGraphCard extends HTMLElement {
     this._clearTouchPressTimer();
     this._touchPressState = null;
     this._touchHoverActive = false;
+    this._wasInViewport = false;
   }
 
   _onHoverMediaChange(event) {
@@ -1097,9 +1176,44 @@ class NodaliaGraphCard extends HTMLElement {
     this._animateContentOnNextRender = true;
     this._animateChartOnNextRender = true;
     this._lastRenderSignature = "";
+    this._attachViewVisibilityObserver();
     if (this._hass && this._config) {
       this._render();
     }
+  }
+
+  _attachViewVisibilityObserver() {
+    if (this._viewVisibilityObserver || typeof IntersectionObserver !== "function") {
+      return;
+    }
+    this._viewVisibilityObserver = new IntersectionObserver(
+      entries => {
+        const visible = entries.some(entry => entry.isIntersecting && entry.intersectionRatio > 0);
+        if (visible === this._wasInViewport) {
+          return;
+        }
+        this._wasInViewport = visible;
+        if (!visible) {
+          return;
+        }
+        this._animateContentOnNextRender = true;
+        this._animateChartOnNextRender = true;
+        this._lastRenderSignature = "";
+        if (this._hass && this._config) {
+          this._render();
+        }
+      },
+      { threshold: [0, 0.01] },
+    );
+    this._viewVisibilityObserver.observe(this);
+  }
+
+  _detachViewVisibilityObserver() {
+    if (!this._viewVisibilityObserver) {
+      return;
+    }
+    this._viewVisibilityObserver.disconnect();
+    this._viewVisibilityObserver = null;
   }
 
   setConfig(config) {
@@ -2430,7 +2544,7 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__content--entering {
-          animation: graph-card-content-in calc(var(--graph-card-hover-duration) * 2.25) cubic-bezier(0.18, 0.9, 0.22, 1) both;
+          animation: graph-card-fade-up calc(var(--graph-card-hover-duration) * 2.25) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
         .graph-card__header {
@@ -2442,8 +2556,13 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__content--entering .graph-card__header {
-          animation: graph-card-section-in calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.18, 0.9, 0.22, 1) both;
+          animation: graph-card-fade-up calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: 35ms;
+        }
+
+        .graph-card__icon--entering {
+          animation: graph-card-bubble-bloom calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation-delay: 40ms;
         }
 
         .graph-card__primary-row {
@@ -2544,7 +2663,7 @@ class NodaliaGraphCard extends HTMLElement {
 
         .graph-card__content--entering > .graph-card__value,
         .graph-card__content--entering .graph-card__primary-row .graph-card__value {
-          animation: graph-card-section-in calc(var(--graph-card-hover-duration) * 2.2) cubic-bezier(0.18, 0.9, 0.22, 1) both;
+          animation: graph-card-fade-up calc(var(--graph-card-hover-duration) * 2.2) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: 75ms;
         }
 
@@ -2577,7 +2696,7 @@ class NodaliaGraphCard extends HTMLElement {
 
         .graph-card__content--entering > .graph-card__legend,
         .graph-card__content--entering .graph-card__primary-row .graph-card__legend {
-          animation: graph-card-section-in calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.18, 0.9, 0.22, 1) both;
+          animation: graph-card-fade-up calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: 105ms;
         }
 
@@ -2657,7 +2776,7 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__chart-wrap--entering {
-          animation: graph-card-chart-panel-in calc(var(--graph-card-hover-duration) * 2.25) cubic-bezier(0.18, 0.9, 0.22, 1.02) both;
+          animation: graph-card-item-rise calc(var(--graph-card-hover-duration) * 2.25) cubic-bezier(0.18, 0.9, 0.22, 1.08) both;
         }
 
         .graph-card__hover-points-layer {
@@ -2868,10 +2987,10 @@ class NodaliaGraphCard extends HTMLElement {
           animation: graph-card-button-bounce var(--graph-card-button-bounce-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
-        @keyframes graph-card-content-in {
+        @keyframes graph-card-fade-up {
           0% {
             opacity: 0;
-            transform: translateY(12px) scale(0.985);
+            transform: translateY(12px) scale(0.97);
           }
           100% {
             opacity: 1;
@@ -2879,14 +2998,18 @@ class NodaliaGraphCard extends HTMLElement {
           }
         }
 
-        @keyframes graph-card-section-in {
+        @keyframes graph-card-item-rise {
           0% {
             opacity: 0;
-            transform: translateY(9px);
+            transform: translateY(8px) scale(0.94);
+          }
+          62% {
+            opacity: 1;
+            transform: translateY(0) scale(1.018);
           }
           100% {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
           }
         }
 
@@ -2905,14 +3028,18 @@ class NodaliaGraphCard extends HTMLElement {
           }
         }
 
-        @keyframes graph-card-chart-panel-in {
+        @keyframes graph-card-bubble-bloom {
           0% {
             opacity: 0;
-            transform: translateY(10px) scale(0.985);
+            transform: scale(0.92);
+          }
+          58% {
+            opacity: 1;
+            transform: scale(1.04);
           }
           100% {
             opacity: 1;
-            transform: translateY(0) scale(1);
+            transform: scale(1);
           }
         }
 
@@ -3062,7 +3189,7 @@ class NodaliaGraphCard extends HTMLElement {
                   ${
                     config.show_icon !== false
                       ? `
-                        <div class="graph-card__icon">
+                        <div class="graph-card__icon ${shouldAnimateEntrance ? "graph-card__icon--entering" : ""}">
                           <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
                           ${showUnavailableBadge ? `<span class="graph-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
                         </div>

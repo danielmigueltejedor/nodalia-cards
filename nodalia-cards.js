@@ -84,7 +84,7 @@
       };
       return map[langCode] || "es";
     }
-    function normalizeTextKey17(value) {
+    function normalizeTextKey18(value) {
       return String(value ?? "").trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
     }
     function getEntityDomain4(state) {
@@ -4945,7 +4945,7 @@
     }
     function translateWeatherCondition(hass, configLang, value) {
       const lang = resolveLanguage(hass, configLang);
-      const key = normalizeTextKey17(String(value || ""));
+      const key = normalizeTextKey18(String(value || ""));
       const cond = strings(lang).weatherCard.conditions;
       if (key && cond[key]) {
         return cond[key];
@@ -5062,7 +5062,7 @@
     }
     function translateAdvanceVacuumReportedState(hass, configLang, stateKey, rawFallback) {
       const lang = resolveLanguage(hass, configLang);
-      const k = normalizeTextKey17(stateKey);
+      const k = normalizeTextKey18(stateKey);
       const rs = strings(lang).advanceVacuum.reportedStates;
       if (rs[k]) {
         return rs[k];
@@ -5082,7 +5082,7 @@
         return "";
       }
       const lang = resolveLanguage(hass, configLang);
-      const key = normalizeTextKey17(raw);
+      const key = normalizeTextKey18(raw);
       const av = strings(lang).advanceVacuum;
       if (key === "off" && kind === "suction") {
         return av.offSuction;
@@ -5105,9 +5105,9 @@
       const unit = String(
         state.attributes?.unit_of_measurement || state.attributes?.native_unit_of_measurement || ""
       ).trim();
-      const key = normalizeTextKey17(rawState);
+      const key = normalizeTextKey18(rawState);
       const domain = getEntityDomain4(state);
-      const deviceClass = normalizeTextKey17(state.attributes?.device_class);
+      const deviceClass = normalizeTextKey18(state.attributes?.device_class);
       if (parseNumericValue2(rawState) !== null) {
         return unit ? formatNumericValueWithUnit2(rawState, unit, numberDecimals) : formatNumericValue2(rawState, numberDecimals);
       }
@@ -5265,7 +5265,7 @@
       resolveLanguage,
       effectiveHaLanguageCode,
       localeTag,
-      normalizeTextKey: normalizeTextKey17,
+      normalizeTextKey: normalizeTextKey18,
       normalizeHumidifierModeKey,
       strings,
       translateEntityState,
@@ -5277,7 +5277,7 @@
       translateAdvanceVacuumReportedState,
       translateAdvanceVacuumVacuumMode,
       translateFavState(langCode, key) {
-        const raw = normalizeTextKey17(key);
+        const raw = normalizeTextKey18(key);
         const fd = strings(langCode).favCard;
         const ed = strings(langCode).entityCard.states;
         switch (raw) {
@@ -14746,7 +14746,8 @@
       "editorFilteredStatesSignature",
       "sanitizeActionUrl",
       "mountEntityPickerHost",
-      "mountIconPickerHost"
+      "mountIconPickerHost",
+      "postHomeAssistantWebhook"
     ];
     const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
     if (existing && REQUIRED_API_KEYS.every((key) => typeof existing[key] === "function")) {
@@ -14847,6 +14848,62 @@
     }
     function editorStatesSignature(hass, language) {
       return editorFilteredStatesSignature(hass, language, () => true);
+    }
+    function normalizeHomeAssistantWebhookId(webhookId) {
+      const raw = String(webhookId ?? "").trim();
+      if (!raw) {
+        return "";
+      }
+      if (/^https?:\/\//i.test(raw)) {
+        try {
+          const u = new URL(raw);
+          const m = /\/api\/webhook\/([^/]+)/.exec(u.pathname);
+          return m ? decodeURIComponent(m[1]) : "";
+        } catch (_err) {
+          return "";
+        }
+      }
+      const pathSeg = raw.match(/(?:^|\/)api\/webhook\/([^/?#]+)/i);
+      if (pathSeg) {
+        return decodeURIComponent(pathSeg[1]);
+      }
+      return raw;
+    }
+    function postHomeAssistantWebhook(webhookId, body, hass) {
+      const id = normalizeHomeAssistantWebhookId(webhookId);
+      if (!id) {
+        return Promise.resolve(false);
+      }
+      const payload = body && typeof body === "object" ? body : {};
+      const path = `/api/webhook/${encodeURIComponent(id)}`;
+      const authFetch = hass?.auth?.fetchWithAuth;
+      if (typeof authFetch === "function") {
+        return authFetch(path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).then(
+          (res) => res.ok,
+          () => false
+        );
+      }
+      if (typeof fetch !== "function") {
+        return Promise.resolve(false);
+      }
+      const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
+      if (!origin) {
+        return Promise.resolve(false);
+      }
+      const url = `${origin}${path}`;
+      return fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        credentials: "same-origin"
+      }).then(
+        (res) => res.ok,
+        () => false
+      );
     }
     function sanitizeActionUrl(value, options = {}) {
       const raw = String(value ?? "").trim();
@@ -15044,7 +15101,8 @@
       editorFilteredStatesSignature,
       sanitizeActionUrl,
       mountEntityPickerHost,
-      mountIconPickerHost
+      mountIconPickerHost,
+      postHomeAssistantWebhook
     };
     if (typeof window !== "undefined") {
       window.NodaliaUtils = api;
@@ -15090,7 +15148,7 @@
     if (existing && typeof existing.shouldDarkenBubbleIconGlyph === "function") {
       return;
     }
-    function normalizeTextKey17(value) {
+    function normalizeTextKey18(value) {
       return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
     }
     function getEntityDomain4(state) {
@@ -15203,8 +15261,8 @@
         return false;
       }
       const domain = getEntityDomain4(state);
-      const dc = normalizeTextKey17(state.attributes?.device_class || "");
-      const unit = normalizeTextKey17(
+      const dc = normalizeTextKey18(state.attributes?.device_class || "");
+      const unit = normalizeTextKey18(
         String(state.attributes?.unit_of_measurement || state.attributes?.native_unit_of_measurement || "")
       );
       if (domain === "sensor") {
@@ -25860,6 +25918,7 @@
     name: "",
     icon: "",
     show_state: false,
+    state_position: "right",
     compact_layout_mode: "auto",
     show_brightness: true,
     show_slider_mode_buttons: true,
@@ -26165,6 +26224,8 @@
   }
   function normalizeConfig3(rawConfig) {
     const config = mergeConfig3(DEFAULT_CONFIG3, rawConfig || {});
+    const normalizedStatePosition = String(config.state_position || "").toLowerCase();
+    config.state_position = normalizedStatePosition === "below" ? "below" : "right";
     if (!Array.isArray(config.quick_brightness) || !config.quick_brightness.length) {
       config.quick_brightness = deepClone3(DEFAULT_CONFIG3.quick_brightness);
     }
@@ -26386,7 +26447,9 @@
         `sf:${Number(attrs.supported_features ?? -1)}`,
         `c:${this._isCompactLayout ? 1 : 0}`,
         `mini:${this._shouldUseMiniLayout() ? 1 : 0}`,
-        `cm:${String(this._activeControlMode || "")}`
+        `cm:${String(this._activeControlMode || "")}`,
+        `ss:${this._config?.show_state === true ? 1 : 0}`,
+        `sp:${String(this._config?.state_position || "right")}`
       ].join("|");
     }
     _getConfiguredGridColumns() {
@@ -27753,9 +27816,12 @@
       const shouldAnimateBrightnessFill = animations.enabled && powerAnimationState === "powering-up" && isOn && supportsBrightness && !isMiniLayout;
       const brightnessFillDuration = shouldAnimateBrightnessFill ? clamp3(Math.round(animations.controlsDuration * 0.82), 220, 1100) : 0;
       const brightnessSliderShellClass = shouldAnimateBrightnessFill ? " light-card__slider-shell--brightness-fill" : "";
+      const statePosition = config.state_position === "below" ? "below" : "right";
       if (!isMiniLayout && config.show_state === true) {
         stateChipMarkup = `<span class="light-card__chip light-card__chip--state">${escapeHtml3(stateLabel)}</span>`;
       }
+      const stateChipHeaderMarkup = statePosition === "right" ? stateChipMarkup : "";
+      const stateChipBelowMarkup = statePosition === "below" ? stateChipMarkup : "";
       if (isOn && !isMiniLayout) {
         let activeValueChip = null;
         if (displayedControlMode === "temperature" && config.show_temperature_controls !== false && supportsColorTemperature) {
@@ -27775,8 +27841,11 @@
         `;
         }
       }
-      const hasHeaderChips = Boolean(stateChipMarkup || activeValueChipMarkup);
-      const showCopyBlock = !isMiniLayout && (!isCompactLayout || hasHeaderChips);
+      const activeValueChipHeaderMarkup = statePosition === "right" ? activeValueChipMarkup : "";
+      const activeValueChipBelowMarkup = statePosition === "below" ? activeValueChipMarkup : "";
+      const hasHeaderChips = Boolean(stateChipHeaderMarkup || activeValueChipHeaderMarkup);
+      const hasBelowChips = Boolean(stateChipBelowMarkup || activeValueChipBelowMarkup);
+      const showCopyBlock = !isMiniLayout && (!isCompactLayout || hasHeaderChips || hasBelowChips);
       const sliderInnerMarkup = isOn && !isMiniLayout && availableControlModes.length > 0 ? `
         ${displayedControlMode === "temperature" ? `
               <div class="light-card__slider-wrap">
@@ -28162,7 +28231,7 @@
 
         .light-card__copy {
           display: grid;
-          gap: 0;
+          gap: 6px;
           min-width: 0;
         }
 
@@ -28203,6 +28272,11 @@
           justify-content: flex-end;
           margin-left: auto;
           min-width: 0;
+        }
+
+        .light-card__chips--below {
+          justify-content: flex-start;
+          margin-left: 0;
         }
 
         .light-card--compact .light-card__chips {
@@ -28956,8 +29030,9 @@
                 <div class="light-card__copy">
                   <div class="light-card__copy-header">
                     ${isCompactLayout ? "" : `<div class="light-card__title">${escapeHtml3(title)}</div>`}
-                    ${hasHeaderChips ? `<div class="light-card__chips">${stateChipMarkup}${activeValueChipMarkup}</div>` : ""}
+                    ${hasHeaderChips ? `<div class="light-card__chips">${stateChipHeaderMarkup}${activeValueChipHeaderMarkup}</div>` : ""}
                   </div>
+                  ${hasBelowChips ? `<div class="light-card__chips light-card__chips--below">${stateChipBelowMarkup}${activeValueChipBelowMarkup}</div>` : ""}
                 </div>
               ` : ""}
           </div>
@@ -29693,6 +29768,15 @@
         ]
       )}
             ${this._renderCheckboxField("Mostrar burbuja de estado", "show_state", config.show_state === true)}
+            ${this._renderSelectField(
+        "Posicion del estado",
+        "state_position",
+        config.state_position || "right",
+        [
+          { value: "right", label: "A la derecha del nombre" },
+          { value: "below", label: "Debajo del nombre" }
+        ]
+      )}
             ${this._renderCheckboxField("Mostrar brillo", "show_brightness", config.show_brightness !== false)}
             ${this._renderCheckboxField("Botones de modo junto al slider", "show_slider_mode_buttons", config.show_slider_mode_buttons !== false)}
             ${this._renderCheckboxField("Presets de brillo", "show_quick_brightness", config.show_quick_brightness !== false)}
@@ -39367,6 +39451,8 @@
       this._touchPressState = null;
       this._touchHoverActive = false;
       this._suppressClickUntil = 0;
+      this._viewVisibilityObserver = null;
+      this._wasInViewport = false;
       this._onShadowClick = this._onShadowClick.bind(this);
       this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
       this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
@@ -39397,6 +39483,7 @@
     disconnectedCallback() {
       this._historyAbortController?.abort();
       this._historyAbortController = null;
+      this._detachViewVisibilityObserver();
       this.removeEventListener("pointerout", this._onHostPointerOut);
       this.removeEventListener("mouseout", this._onHostPointerOut);
       this._detachDocumentHoverWatch();
@@ -39415,6 +39502,7 @@
       this._clearTouchPressTimer();
       this._touchPressState = null;
       this._touchHoverActive = false;
+      this._wasInViewport = false;
     }
     _onHoverMediaChange(event) {
       this._hoverSupported = Boolean(event?.matches);
@@ -39426,9 +39514,42 @@
       this._animateContentOnNextRender = true;
       this._animateChartOnNextRender = true;
       this._lastRenderSignature = "";
+      this._attachViewVisibilityObserver();
       if (this._hass && this._config) {
         this._render();
       }
+    }
+    _attachViewVisibilityObserver() {
+      if (this._viewVisibilityObserver || typeof IntersectionObserver !== "function") {
+        return;
+      }
+      this._viewVisibilityObserver = new IntersectionObserver(
+        (entries) => {
+          const visible = entries.some((entry) => entry.isIntersecting && entry.intersectionRatio > 0);
+          if (visible === this._wasInViewport) {
+            return;
+          }
+          this._wasInViewport = visible;
+          if (!visible) {
+            return;
+          }
+          this._animateContentOnNextRender = true;
+          this._animateChartOnNextRender = true;
+          this._lastRenderSignature = "";
+          if (this._hass && this._config) {
+            this._render();
+          }
+        },
+        { threshold: [0, 0.01] }
+      );
+      this._viewVisibilityObserver.observe(this);
+    }
+    _detachViewVisibilityObserver() {
+      if (!this._viewVisibilityObserver) {
+        return;
+      }
+      this._viewVisibilityObserver.disconnect();
+      this._viewVisibilityObserver = null;
     }
     setConfig(config) {
       this._config = normalizeConfig7(config || {});
@@ -40509,7 +40630,7 @@
         }
 
         .graph-card__content--entering {
-          animation: graph-card-content-in calc(var(--graph-card-hover-duration) * 2.25) cubic-bezier(0.18, 0.9, 0.22, 1) both;
+          animation: graph-card-fade-up calc(var(--graph-card-hover-duration) * 2.25) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
         .graph-card__header {
@@ -40521,8 +40642,13 @@
         }
 
         .graph-card__content--entering .graph-card__header {
-          animation: graph-card-section-in calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.18, 0.9, 0.22, 1) both;
+          animation: graph-card-fade-up calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: 35ms;
+        }
+
+        .graph-card__icon--entering {
+          animation: graph-card-bubble-bloom calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation-delay: 40ms;
         }
 
         .graph-card__primary-row {
@@ -40623,7 +40749,7 @@
 
         .graph-card__content--entering > .graph-card__value,
         .graph-card__content--entering .graph-card__primary-row .graph-card__value {
-          animation: graph-card-section-in calc(var(--graph-card-hover-duration) * 2.2) cubic-bezier(0.18, 0.9, 0.22, 1) both;
+          animation: graph-card-fade-up calc(var(--graph-card-hover-duration) * 2.2) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: 75ms;
         }
 
@@ -40656,7 +40782,7 @@
 
         .graph-card__content--entering > .graph-card__legend,
         .graph-card__content--entering .graph-card__primary-row .graph-card__legend {
-          animation: graph-card-section-in calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.18, 0.9, 0.22, 1) both;
+          animation: graph-card-fade-up calc(var(--graph-card-hover-duration) * 2.1) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: 105ms;
         }
 
@@ -40736,7 +40862,7 @@
         }
 
         .graph-card__chart-wrap--entering {
-          animation: graph-card-chart-panel-in calc(var(--graph-card-hover-duration) * 2.25) cubic-bezier(0.18, 0.9, 0.22, 1.02) both;
+          animation: graph-card-item-rise calc(var(--graph-card-hover-duration) * 2.25) cubic-bezier(0.18, 0.9, 0.22, 1.08) both;
         }
 
         .graph-card__hover-points-layer {
@@ -40947,10 +41073,10 @@
           animation: graph-card-button-bounce var(--graph-card-button-bounce-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
-        @keyframes graph-card-content-in {
+        @keyframes graph-card-fade-up {
           0% {
             opacity: 0;
-            transform: translateY(12px) scale(0.985);
+            transform: translateY(12px) scale(0.97);
           }
           100% {
             opacity: 1;
@@ -40958,14 +41084,18 @@
           }
         }
 
-        @keyframes graph-card-section-in {
+        @keyframes graph-card-item-rise {
           0% {
             opacity: 0;
-            transform: translateY(9px);
+            transform: translateY(8px) scale(0.94);
+          }
+          62% {
+            opacity: 1;
+            transform: translateY(0) scale(1.018);
           }
           100% {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
           }
         }
 
@@ -40984,14 +41114,18 @@
           }
         }
 
-        @keyframes graph-card-chart-panel-in {
+        @keyframes graph-card-bubble-bloom {
           0% {
             opacity: 0;
-            transform: translateY(10px) scale(0.985);
+            transform: scale(0.92);
+          }
+          58% {
+            opacity: 1;
+            transform: scale(1.04);
           }
           100% {
             opacity: 1;
-            transform: translateY(0) scale(1);
+            transform: scale(1);
           }
         }
 
@@ -41137,7 +41271,7 @@
           ${config.show_header !== false ? `
                 <div class="graph-card__header">
                   ${config.show_icon !== false ? `
-                        <div class="graph-card__icon">
+                        <div class="graph-card__icon ${shouldAnimateEntrance ? "graph-card__icon--entering" : ""}">
                           <ha-icon icon="${escapeHtml7(icon)}"></ha-icon>
                           ${showUnavailableBadge ? `<span class="graph-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
                         </div>
@@ -51538,6 +51672,7 @@
     max_zone_selections: 5,
     max_repeats: 3,
     shared_cleaning_session_entity: "",
+    shared_cleaning_session_webhook: "",
     suction_select_entity: "",
     mop_select_entity: "",
     mop_mode_select_entity: "",
@@ -51552,6 +51687,11 @@
     predefined_zones: [],
     icons: [],
     map_modes: [],
+    security: {
+      strict_service_actions: false,
+      allowed_services: [],
+      allowed_service_domains: []
+    },
     haptics: {
       enabled: true,
       style: "medium",
@@ -52440,6 +52580,7 @@
     config.custom_menu = mergeConfig11(DEFAULT_CONFIG11.custom_menu, config.custom_menu || {});
     config.custom_menu.items = normalizeCustomMenuItems(config.custom_menu.items);
     config.routines = normalizeRoutineItems(config.routines);
+    config.shared_cleaning_session_webhook = String(config.shared_cleaning_session_webhook ?? "").trim();
     return config;
   }
   var NodaliaAdvanceVacuumCard = class extends HTMLElement {
@@ -52954,7 +53095,9 @@
         selectionUpdatedAt: normalizedSession.selectionUpdatedAt,
         pendingStartAt: normalizedSession.pendingStartAt,
         resumeRoomIdsAfterZone: normalizedSession.resumeRoomIdsAfterZone,
-        resumeRepeatsAfterZone: normalizedSession.resumeRepeatsAfterZone
+        resumeRepeatsAfterZone: normalizedSession.resumeRepeatsAfterZone,
+        modePanelPreset: normalizedSession.modePanelPreset,
+        utilityPanel: normalizedSession.utilityPanel
       });
     }
     _serializeSharedCleaningSession(session, options = {}) {
@@ -52999,6 +53142,12 @@
       if (snapshot.resumeRepeatsAfterZone) {
         parts.push(`rq=${snapshot.resumeRepeatsAfterZone}`);
       }
+      if (snapshot.modePanelPreset) {
+        parts.push(`pp=${encodeURIComponent(snapshot.modePanelPreset)}`);
+      }
+      if (snapshot.utilityPanel) {
+        parts.push(`xu=${encodeURIComponent(snapshot.utilityPanel)}`);
+      }
       return parts.join("&");
     }
     _deserializeSharedCleaningSession(rawValue) {
@@ -53029,7 +53178,9 @@
         selectionUpdatedAt: Number(params.get("su") || 0),
         pendingStartAt: Number(params.get("p") || 0),
         resumeRoomIdsAfterZone: decodeSharedSessionList(params.get("rr")),
-        resumeRepeatsAfterZone: Number(params.get("rq") || 1)
+        resumeRepeatsAfterZone: Number(params.get("rq") || 1),
+        modePanelPreset: params.get("pp") || "",
+        utilityPanel: params.get("xu") || ""
       });
     }
     _readSharedCleaningSession() {
@@ -53042,11 +53193,12 @@
       return this._deserializeSharedCleaningSession(rawValue);
     }
     _persistSharedCleaningSession(session) {
+      const webhookId = String(this._config?.shared_cleaning_session_webhook ?? "").trim();
       const entityId = this._getSharedCleaningSessionEntityId();
-      if (!entityId) {
+      if (!webhookId && !entityId) {
         return;
       }
-      const maxLength = this._getSharedCleaningSessionMaxLength();
+      const maxLength = entityId ? this._getSharedCleaningSessionMaxLength() : 255;
       let serialized = this._serializeSharedCleaningSession(session);
       if (serialized.length > maxLength) {
         serialized = this._serializeSharedCleaningSession(session, { minimal: true });
@@ -53058,29 +53210,78 @@
         serialized = "";
       }
       const serializedTrim = serialized.trim();
-      const currentValue = String(this._getSharedCleaningSessionState()?.state ?? "").trim();
-      if (serializedTrim === currentValue) {
+      const currentValue = entityId ? String(this._getSharedCleaningSessionState()?.state ?? "").trim() : "";
+      const hasEntityTarget = Boolean(entityId);
+      const hasWebhookTarget = Boolean(webhookId);
+      if (hasEntityTarget && serializedTrim === currentValue) {
         return;
       }
-      const pending = this._callNamedService("input_text.set_value", {
+      if (hasEntityTarget && serializedTrim === this._lastSubmittedSharedCleaningSessionValue) {
+        return;
+      }
+      if (!hasEntityTarget && hasWebhookTarget && serializedTrim !== "" && serializedTrim === this._lastSubmittedSharedCleaningSessionValue) {
+        return;
+      }
+      this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
+      if (webhookId) {
+        const post = typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.postHomeAssistantWebhook === "function" ? window.NodaliaUtils.postHomeAssistantWebhook : null;
+        if (!post) {
+          this._lastSubmittedSharedCleaningSessionValue = null;
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn(
+              "Nodalia Advance Vacuum Card: falta NodaliaUtils.postHomeAssistantWebhook (actualiza nodalia-cards / nodalia-utils)."
+            );
+          }
+          return;
+        }
+        void post(webhookId, { value: serializedTrim }, this._hass).then((ok) => {
+          if (!ok) {
+            this._lastSubmittedSharedCleaningSessionValue = null;
+            if (typeof console !== "undefined" && typeof console.warn === "function") {
+              console.warn(
+                "Nodalia Advance Vacuum Card: webhook de persistencia rechazado o fallido; revisa el webhook_id y la automatización en HA."
+              );
+            }
+          }
+        });
+        return;
+      }
+      const pending = this._callInternalService("input_text.set_value", {
         entity_id: entityId,
         value: serializedTrim
       });
       if (pending && typeof pending.then === "function") {
-        pending.then(() => {
-          this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
-        }).catch((err) => {
+        pending.catch((err) => {
+          this._lastSubmittedSharedCleaningSessionValue = null;
           if (typeof console !== "undefined" && typeof console.warn === "function") {
             console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
+            console.warn(
+              "Nodalia Advance Vacuum Card: usuarios no administradores necesitan permiso de control sobre el input_text del helper (shared_cleaning_session_entity) o configuran shared_cleaning_session_webhook."
+            );
           }
         });
-      } else {
-        this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
       }
     }
     _clearSharedCleaningSession() {
+      const webhookId = String(this._config?.shared_cleaning_session_webhook ?? "").trim();
       const entityId = this._getSharedCleaningSessionEntityId();
-      if (!entityId) {
+      if (!webhookId && !entityId) {
+        return;
+      }
+      if (webhookId) {
+        const post = typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.postHomeAssistantWebhook === "function" ? window.NodaliaUtils.postHomeAssistantWebhook : null;
+        if (post) {
+          this._lastSubmittedSharedCleaningSessionValue = "";
+          void post(webhookId, { value: "" }, this._hass).then((ok) => {
+            if (!ok && typeof console !== "undefined" && typeof console.warn === "function") {
+              console.warn("Nodalia Advance Vacuum Card: webhook clear (sesión compartida) falló.");
+            }
+          });
+        } else if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn(
+            "Nodalia Advance Vacuum Card: falta NodaliaUtils.postHomeAssistantWebhook (actualiza nodalia-cards / nodalia-utils)."
+          );
+        }
         return;
       }
       const currentValue = String(this._getSharedCleaningSessionState()?.state || "");
@@ -53088,7 +53289,7 @@
         return;
       }
       this._lastSubmittedSharedCleaningSessionValue = "";
-      this._callNamedService("input_text.set_value", {
+      this._callInternalService("input_text.set_value", {
         entity_id: entityId,
         value: ""
       });
@@ -53109,7 +53310,9 @@
       const pendingStartAt = Number(session.pendingStartAt || 0);
       const resumeRoomIdsAfterZone = arrayFromMaybe2(session.resumeRoomIdsAfterZone).map((item) => String(item || "").trim()).filter(Boolean);
       const resumeRepeatsAfterZone = clamp11(Number(session.resumeRepeatsAfterZone || repeats || 1), 1, 9);
-      if (!mode && !activeMode && !activeRoomIds.length && !activeZones.length && !selectedRoomIds.length && !selectedPredefinedZoneIds.length && !manualZones.length && !selectionUpdatedAt && !pendingStartAt && !resumeRoomIdsAfterZone.length) {
+      const modePanelPreset = String(session.modePanelPreset ?? "").trim().slice(0, 64);
+      const utilityPanel = String(session.utilityPanel ?? "").trim().slice(0, 64);
+      if (!mode && !activeMode && !activeRoomIds.length && !activeZones.length && !selectedRoomIds.length && !selectedPredefinedZoneIds.length && !manualZones.length && !selectionUpdatedAt && !pendingStartAt && !resumeRoomIdsAfterZone.length && !modePanelPreset && !utilityPanel) {
         return null;
       }
       return {
@@ -53124,7 +53327,9 @@
         selectionUpdatedAt,
         pendingStartAt,
         resumeRoomIdsAfterZone,
-        resumeRepeatsAfterZone
+        resumeRepeatsAfterZone,
+        modePanelPreset,
+        utilityPanel
       };
     }
     _restorePersistedCleaningSessionState() {
@@ -53148,6 +53353,15 @@
         this._activeMode = persistedSession.activeMode;
       }
       this._repeats = clamp11(Number(persistedSession.repeats || this._repeats || 1), 1, 9);
+      const presetPersist = String(persistedSession.modePanelPreset ?? "").trim().slice(0, 64);
+      if (presetPersist) {
+        this._activeModePanelPreset = presetPersist;
+        this._lastResolvedModePanelPreset = presetPersist;
+      }
+      const utilPersist = String(persistedSession.utilityPanel ?? "").trim().slice(0, 64);
+      if (utilPersist) {
+        this._activeUtilityPanel = utilPersist;
+      }
       return true;
     }
     _ensurePersistedCleaningSessionStateLoaded() {
@@ -53199,7 +53413,9 @@
         selectionUpdatedAt: nextSelectionUpdatedAt,
         pendingStartAt: this._pendingCleaningSessionStartAt,
         resumeRoomIdsAfterZone: this._pendingRoomCleaningResumeRoomIds,
-        resumeRepeatsAfterZone: this._pendingRoomCleaningResumeRepeats
+        resumeRepeatsAfterZone: this._pendingRoomCleaningResumeRepeats,
+        modePanelPreset: String(this._activeModePanelPreset || "").trim().slice(0, 64),
+        utilityPanel: this._activeUtilityPanel ? String(this._activeUtilityPanel).trim().slice(0, 64) : ""
       });
     }
     _setPendingRoomCleaningResume(roomIds = [], repeats = this._repeats) {
@@ -53451,7 +53667,7 @@
       this._activeCleaningSessionMode = "rooms";
       this._markCleaningSessionPendingStart();
       this._persistCurrentCleaningSessionState("rooms");
-      Promise.resolve(this._callNamedService("vacuum.send_command", {
+      Promise.resolve(this._callInternalService("vacuum.send_command", {
         entity_id: this._config.entity,
         command: "app_segment_clean",
         params: [{
@@ -53645,6 +53861,7 @@
         },
         sharedSession: {
           entity: String(sharedSessionEntityId || ""),
+          webhook: String(this._config?.shared_cleaning_session_webhook || "").trim(),
           state: String(sharedSessionState?.state || ""),
           lastUpdated: String(sharedSessionState?.last_updated || "")
         },
@@ -53851,7 +54068,7 @@
       }
       const domain = this._getEntityDomain(entityId);
       const serviceName = domain === "input_select" ? "input_select.select_option" : "select.select_option";
-      this._callNamedService(serviceName, {
+      this._callInternalService(serviceName, {
         entity_id: entityId,
         option: value
       });
@@ -54574,6 +54791,9 @@
       this._lastResolvedModePanelPreset = presetId;
       const selection = this._getModePanelPresetSelection(presetId, state);
       if (!selection) {
+        this._persistCurrentCleaningSessionState(this._activeMode, {
+          markSelectionChange: true
+        });
         this._triggerHaptic("selection");
         this._render();
         return;
@@ -54587,6 +54807,9 @@
       if (selection.mopMode && normalizeTextKey10(selection.mopMode) !== normalizeTextKey10(this._getMopModeDescriptor(state)?.current)) {
         this._setModeOption("mop_mode", selection.mopMode, state, { triggerHaptic: false });
       }
+      this._persistCurrentCleaningSessionState(this._activeMode, {
+        markSelectionChange: true
+      });
       this._triggerHaptic("selection");
       this._render();
     }
@@ -55181,7 +55404,7 @@
       const domains = Array.isArray(security.allowed_service_domains) ? security.allowed_service_domains.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
       const services = Array.isArray(security.allowed_services) ? security.allowed_services.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
       if (!domains.length && !services.length) {
-        return true;
+        return false;
       }
       return services.includes(normalizedService) || domains.includes(domain);
     }
@@ -55189,10 +55412,21 @@
       if (!this._hass || !service) {
         return;
       }
-      const svcLower = String(service).trim().toLowerCase();
-      const targetEntity = String(data?.entity_id || "").trim();
-      const persistenceBypass = svcLower === "input_text.set_value" && targetEntity && targetEntity === this._getSharedCleaningSessionEntityId();
-      if (!persistenceBypass && !this._isServiceAllowed(service)) {
+      if (!this._isServiceAllowed(service)) {
+        return;
+      }
+      const [domain, serviceName] = String(service).split(".");
+      if (!domain || !serviceName) {
+        return;
+      }
+      return this._hass.callService(domain, serviceName, data, target || void 0);
+    }
+    /**
+     * Fixed, card-owned service calls that must not be blocked by strict allowlists.
+     * External/user-provided service actions still go through _callNamedService.
+     */
+    _callInternalService(service, data = {}, target = null) {
+      if (!this._hass || !service) {
         return;
       }
       const [domain, serviceName] = String(service).split(".");
@@ -55281,6 +55515,9 @@
     }
     _toggleUtilityPanel(panelId) {
       this._activeUtilityPanel = this._activeUtilityPanel === panelId ? null : panelId;
+      this._persistCurrentCleaningSessionState(this._activeMode, {
+        markSelectionChange: true
+      });
       this._triggerHaptic("selection");
       this._render();
     }
@@ -55361,7 +55598,7 @@
             this._persistCurrentCleaningSessionState("rooms", {
               markSelectionChange: true
             });
-            await this._callNamedService("vacuum.send_command", {
+            await this._callInternalService("vacuum.send_command", {
               entity_id: this._config.entity,
               command: "app_segment_clean",
               params: [{
@@ -55401,7 +55638,7 @@
             await this._callVacuumService("pause");
             await new Promise((resolve) => window.setTimeout(resolve, 450));
           }
-          await this._callNamedService("vacuum.send_command", {
+          await this._callInternalService("vacuum.send_command", {
             entity_id: this._config.entity,
             command: "app_zoned_clean",
             params: selectedZones
@@ -55426,7 +55663,7 @@
           this._activeCleaningSessionMode = "";
           this._clearCleaningSessionPendingStart();
           this._clearPersistedCleaningSession();
-          await this._callNamedService("roborock.set_vacuum_goto_position", {
+          await this._callInternalService("roborock.set_vacuum_goto_position", {
             entity_id: this._config.entity,
             x: Math.round(this._gotoPoint.x),
             y: Math.round(this._gotoPoint.y)
@@ -57906,6 +58143,8 @@
     }
     _renderTextField(label, field, value, options = {}) {
       const tLabel = this._editorLabel(label);
+      const hintRaw = options.hint ? String(options.hint) : "";
+      const hintHtml = hintRaw ? `<span class="editor-field__hint">${escapeHtml11(this._editorLabel(hintRaw))}</span>` : "";
       return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml11(tLabel)}</span>
@@ -57916,6 +58155,7 @@
           value="${escapeHtml11(value ?? "")}"
           placeholder="${escapeHtml11(options.placeholder || "")}"
         />
+        ${hintHtml}
       </label>
     `;
     }
@@ -58369,6 +58609,11 @@
         )
       )}</span>
             </div>
+            ${this._renderTextField("Webhook persistencia (ID, opcional)", "shared_cleaning_session_webhook", config.shared_cleaning_session_webhook || "", {
+        fullWidth: true,
+        placeholder: "nodalia_advance_vacuum_session",
+        hint: 'Si los usuarios no pueden llamar a input_text.set_value, usa el webhook_id de una automatización que escriba el mismo helper. POST /api/webhook/<id> con JSON {"value": "..."}.'
+      })}
           </div>
         </section>
 
@@ -58595,6 +58840,7 @@
     tap_new_tab: false,
     show_state: true,
     state_chip_on_title_row: false,
+    state_position: "below",
     primary_attribute: "",
     secondary_attribute: "",
     show_primary_chip: true,
@@ -58645,6 +58891,7 @@
     tap_action: "auto",
     show_state: true,
     state_chip_on_title_row: false,
+    state_position: "below",
     quick_actions: [
       {
         icon: "mdi:power",
@@ -58992,6 +59239,12 @@
   }
   function normalizeConfig12(rawConfig) {
     const config = mergeConfig12(DEFAULT_CONFIG12, rawConfig || {});
+    const normalizedStatePosition = String(config.state_position || "").toLowerCase();
+    if (normalizedStatePosition === "right" || normalizedStatePosition === "below") {
+      config.state_position = normalizedStatePosition;
+    } else {
+      config.state_position = config.state_chip_on_title_row === true ? "right" : "below";
+    }
     config.quick_actions = Array.isArray(config.quick_actions) ? config.quick_actions.filter((action) => isObject12(action)).map((action) => ({
       icon: action.icon || "mdi:flash",
       type: action.type || "toggle",
@@ -59529,10 +59782,11 @@
       const showUnavailableBadge = isUnavailableState11(state);
       const stateLabel = config.show_state ? this._translateStateValue(state) : null;
       const stateChip = this._renderChip(stateLabel, "state");
+      const statePosition = config.state_position === "right" ? "right" : "below";
       const primaryValue = config.show_primary_chip !== false ? this._formatAttributeValue(state, config.primary_attribute) : null;
       const secondaryValue = config.show_secondary_chip !== false ? this._formatAttributeValue(state, config.secondary_attribute) : null;
       const showTitle = !isCompactLayout;
-      const placeStateChipOnTitleRow = config.state_chip_on_title_row === true && Boolean(stateChip) && showTitle;
+      const placeStateChipOnTitleRow = statePosition === "right" && Boolean(stateChip);
       const chips = [
         placeStateChipOnTitleRow ? "" : stateChip,
         this._renderChip(primaryValue, "value"),
@@ -60918,7 +61172,15 @@
         ]
       )}
             ${this._renderCheckboxField("Mostrar estado", "show_state", config.show_state !== false)}
-            ${this._renderCheckboxField("Estado a la derecha del nombre", "state_chip_on_title_row", config.state_chip_on_title_row === true)}
+            ${this._renderSelectField(
+        "Posicion del estado",
+        "state_position",
+        config.state_position || (config.state_chip_on_title_row === true ? "right" : "below"),
+        [
+          { value: "below", label: "Debajo del nombre" },
+          { value: "right", label: "A la derecha del nombre" }
+        ]
+      )}
             ${this._renderTextField("Decimales en estado y chips", "number_decimals", config.number_decimals, {
         placeholder: "2",
         type: "number"
@@ -65501,6 +65763,7 @@
     name: "",
     icon: "",
     tap_action: "more-info",
+    show_name: true,
     show_state: true,
     show_zone_badge: true,
     use_entity_picture: true,
@@ -66038,6 +66301,7 @@
         zoneEntity: zoneState?.entity_id || "",
         zoneIcon: zoneState?.attributes?.icon || "",
         showState: this._config.show_state !== false,
+        showName: this._config.show_name !== false,
         showZoneBadge: this._config.show_zone_badge !== false,
         useEntityPicture: this._config.use_entity_picture !== false,
         useZoneIcon: this._config.use_zone_icon !== false,
@@ -66177,6 +66441,7 @@
       const configuredRows = Number(this._config?.grid_options?.rows);
       const singleRowLayout = Number.isFinite(configuredRows) ? configuredRows <= 1 : true;
       const title = this._getTitle(state);
+      const showName = config.show_name !== false;
       const subtitle = config.show_state !== false ? this._translateState(state) : "";
       const desiredPicture = this._getPersonPicture(state);
       const pictureReady = !desiredPicture || this._ensurePersonPictureReady(desiredPicture);
@@ -66206,6 +66471,8 @@
       const animations = this._getAnimationSettings();
       const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
       const animateWithPicture = shouldAnimateEntrance && pictureReady;
+      const avatarCentered = !showName;
+      const showCopyBlock = showName || Boolean(subtitle);
       this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -66262,6 +66529,11 @@
           transition: transform 160ms ease;
           will-change: transform;
           z-index: 1;
+        }
+
+        .person-card--avatar-centered .person-card__content {
+          justify-content: center;
+          text-align: center;
         }
 
         .person-card__avatar-track {
@@ -66367,6 +66639,12 @@
           flex: 1 1 auto;
           gap: ${singleRowLayout ? "4px" : "6px"};
           min-width: 0;
+        }
+
+        .person-card--avatar-centered .person-card__copy {
+          align-items: center;
+          justify-items: center;
+          text-align: center;
         }
 
         .person-card__copy--entering {
@@ -66502,7 +66780,7 @@
         }
         `}
       </style>
-      <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""}">
+      <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""} ${avatarCentered ? "person-card--avatar-centered" : ""}">
         <div class="person-card__content ${animateWithPicture ? "person-card__content--entering" : ""}" ${canRunPrimaryAction ? 'data-person-action="primary"' : ""}>
           <div class="person-card__avatar-track">
             <div class="person-card__avatar ${animateWithPicture ? "person-card__avatar--entering" : ""}">
@@ -66510,10 +66788,12 @@
             ${badge ? `<span class="person-card__badge" style="--badge-color:${escapeHtml15(badge.color)};"><ha-icon icon="${escapeHtml15(badge.icon)}"></ha-icon></span>` : ""}
             </div>
           </div>
+          ${showCopyBlock ? `
           <div class="person-card__copy ${animateWithPicture ? "person-card__copy--entering" : ""}">
-            <div class="person-card__title">${escapeHtml15(title)}</div>
+            ${showName ? `<div class="person-card__title">${escapeHtml15(title)}</div>` : ""}
             ${subtitle ? `<div class="person-card__chips ${animateWithPicture ? "person-card__chips--entering" : ""}"><div class="person-card__state-chip">${escapeHtml15(subtitle)}</div></div>` : ""}
           </div>
+          ` : ""}
         </div>
       </ha-card>
     `;
@@ -67183,6 +67463,7 @@
         placeholder: "Ana",
         fullWidth: true
       })}
+            ${this._renderCheckboxField("Mostrar nombre", "show_name", config.show_name !== false)}
             ${this._renderSelectField(
         "Acción al tocar",
         "tap_action",
@@ -70828,10 +71109,606 @@
     preview: true
   });
 
+  // nodalia-calendar-completion-codec.js
+  var BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  var V3_TOKEN_WIDTH = 11;
+  var UINT24_MASK = (1n << 24n) - 1n;
+  var UINT40_MASK = (1n << 40n) - 1n;
+  var UINT48_MASK = (1n << 48n) - 1n;
+  var V4_SCHEMA_V1 = 1;
+  var V4_SCHEMA_V2 = 2;
+  var V5_SCHEMA_V1 = 1;
+  function fnv1a64Utf8(str) {
+    const bytes = typeof TextEncoder !== "undefined" ? new TextEncoder().encode(String(str)) : typeof Buffer !== "undefined" ? Buffer.from(String(str), "utf8") : new Uint8Array([...String(str)].map((c) => c.charCodeAt(0) & 255));
+    let h = 14695981039346656037n;
+    const p = 1099511628211n;
+    const mask = (1n << 64n) - 1n;
+    for (let i = 0; i < bytes.length; i += 1) {
+      h ^= BigInt(bytes[i]);
+      h = h * p & mask;
+    }
+    return h;
+  }
+  function uint64ToBase62Fixed(n, width) {
+    const mask = (1n << 64n) - 1n;
+    let v = BigInt(n) & mask;
+    let s = "";
+    for (let i = 0; i < width; i += 1) {
+      s = BASE62[Number(v % 62n)] + s;
+      v /= 62n;
+    }
+    return s;
+  }
+  function stableCompletionTokenFromKey(completionKeyStr) {
+    return uint64ToBase62Fixed(fnv1a64Utf8(String(completionKeyStr ?? "")), V3_TOKEN_WIDTH);
+  }
+  function fingerprint48FromKey(completionKeyStr) {
+    return fnv1a64Utf8(String(completionKeyStr ?? "")) & UINT48_MASK;
+  }
+  function fingerprint40FromKey(completionKeyStr) {
+    return fnv1a64Utf8(String(completionKeyStr ?? "")) & UINT40_MASK;
+  }
+  function fingerprint24FromKey(completionKeyStr) {
+    return fnv1a64Utf8(String(completionKeyStr ?? "")) & UINT24_MASK;
+  }
+  function writeUint40BE(arr, offset, valueBig) {
+    let v = BigInt(valueBig) & UINT40_MASK;
+    for (let i = 4; i >= 0; i -= 1) {
+      arr[offset + i] = Number(v & 0xffn);
+      v >>= 8n;
+    }
+  }
+  function readUint40BE(arr, offset) {
+    let v = 0n;
+    for (let i = 0; i < 5; i += 1) {
+      v = v << 8n | BigInt(arr[offset + i]);
+    }
+    return v & UINT40_MASK;
+  }
+  function writeUint24BE(arr, offset, valueBig) {
+    let v = BigInt(valueBig) & UINT24_MASK;
+    arr[offset + 2] = Number(v & 0xffn);
+    v >>= 8n;
+    arr[offset + 1] = Number(v & 0xffn);
+    v >>= 8n;
+    arr[offset] = Number(v & 0xffn);
+  }
+  function readUint24BE(arr, offset) {
+    let v = 0n;
+    for (let i = 0; i < 3; i += 1) {
+      v = v << 8n | BigInt(arr[offset + i]);
+    }
+    return v & UINT24_MASK;
+  }
+  function writeUint48BE(arr, offset, valueBig) {
+    let v = BigInt(valueBig) & UINT48_MASK;
+    for (let i = 5; i >= 0; i -= 1) {
+      arr[offset + i] = Number(v & 0xffn);
+      v >>= 8n;
+    }
+  }
+  function readUint48BE(arr, offset) {
+    let v = 0n;
+    for (let i = 0; i < 6; i += 1) {
+      v = v << 8n | BigInt(arr[offset + i]);
+    }
+    return v & UINT48_MASK;
+  }
+  function bytesToBase64Url(bytes) {
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 1) {
+      bin += String.fromCharCode(bytes[i]);
+    }
+    const b64 = typeof btoa !== "undefined" ? btoa(bin) : typeof Buffer !== "undefined" ? Buffer.from(bytes).toString("base64") : "";
+    return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function base64UrlToBytes(s) {
+    let b64 = String(s).replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4) {
+      b64 += "=";
+    }
+    const bin = typeof atob !== "undefined" ? atob(b64) : typeof Buffer !== "undefined" ? Buffer.from(b64, "base64").toString("binary") : "";
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i += 1) {
+      out[i] = bin.charCodeAt(i) & 255;
+    }
+    return out;
+  }
+  function parseCalendarDateOnlyLocal(raw) {
+    const s = String(raw ?? "").trim();
+    const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!dm) {
+      return null;
+    }
+    const y = Number(dm[1]);
+    const mo = Number(dm[2]) - 1;
+    const d = Number(dm[3]);
+    const local = new Date(y, mo, d, 12, 0, 0);
+    return Number.isFinite(local.getTime()) ? local : null;
+  }
+  function eventDate(value) {
+    if (!value) {
+      return null;
+    }
+    if (typeof value === "string") {
+      const dayLocal = parseCalendarDateOnlyLocal(value);
+      if (dayLocal) {
+        return dayLocal;
+      }
+      const parsed = new Date(value);
+      return Number.isFinite(parsed.getTime()) ? parsed : null;
+    }
+    if (typeof value === "object") {
+      if (value.dateTime) {
+        const parsed = new Date(value.dateTime);
+        return Number.isFinite(parsed.getTime()) ? parsed : null;
+      }
+      if (value.date) {
+        const dayLocal = parseCalendarDateOnlyLocal(value.date);
+        if (dayLocal) {
+          return dayLocal;
+        }
+        const parsed = new Date(value.date);
+        return Number.isFinite(parsed.getTime()) ? parsed : null;
+      }
+      return null;
+    }
+    return null;
+  }
+  function completionKey(event) {
+    const source = String(event?._entity || "");
+    const uid = String(event?.uid || event?.id || "");
+    const start = eventDate(event?.start)?.toISOString() || "";
+    const summary = String(event?.summary || "");
+    return `${source}|${uid}|${start}|${summary}`;
+  }
+  function canonicalCompletionKeysJson(keys) {
+    return JSON.stringify(
+      [...new Set(keys.map((k) => String(k)))].filter(Boolean).sort((a, b) => a.localeCompare(b, "en"))
+    );
+  }
+  function eventDayKeyCompact(ev) {
+    const d = eventDate(ev?.start);
+    if (!d) {
+      return "";
+    }
+    const y = d.getFullYear();
+    const mo = String(d.getMonth() + 1).padStart(2, "0");
+    const da = String(d.getDate()).padStart(2, "0");
+    return `${y}${mo}${da}`;
+  }
+  function expandCompactDaySegment(seg, orderedEvents, keys) {
+    const s = String(seg ?? "").trim();
+    if (!s.startsWith("d") || s.length < 10) {
+      return;
+    }
+    const dayKey = s.slice(1, 9);
+    if (!/^\d{8}$/.test(dayKey)) {
+      return;
+    }
+    const rest = s.slice(9);
+    const fullDay = orderedEvents.filter((ev) => eventDayKeyCompact(ev) === dayKey);
+    if (rest === "t") {
+      fullDay.forEach((ev) => keys.add(completionKey(ev)));
+      return;
+    }
+    if (rest.startsWith("n")) {
+      const j = Number(rest.slice(1));
+      if (!Number.isFinite(j) || j <= 0) {
+        return;
+      }
+      for (let i = 0; i < Math.min(j, fullDay.length); i += 1) {
+        keys.add(completionKey(fullDay[i]));
+      }
+      return;
+    }
+    if (rest.startsWith("i")) {
+      const spec = rest.slice(1).trim();
+      if (!spec) {
+        return;
+      }
+      for (const part of spec.split("-")) {
+        const pos = Number(part.trim());
+        if (Number.isFinite(pos) && pos >= 1 && pos <= fullDay.length) {
+          keys.add(completionKey(fullDay[pos - 1]));
+        }
+      }
+    }
+  }
+  function decodeCompactCalendarCompletionV4(raw, orderedEvents) {
+    const head = String(raw ?? "").trim();
+    if (head === "v4:z") {
+      return [];
+    }
+    if (!head.startsWith("v4:")) {
+      return [];
+    }
+    const body = head.slice(3);
+    if (body === "z") {
+      return [];
+    }
+    let bytes;
+    try {
+      bytes = base64UrlToBytes(body);
+    } catch (_err) {
+      return [];
+    }
+    if (bytes.length < 2) {
+      return [];
+    }
+    const schema = bytes[0];
+    if (schema === V4_SCHEMA_V2) {
+      const n = bytes[1];
+      if (n === 0 || bytes.length !== 2 + 5 * n) {
+        return [];
+      }
+      const fpWanted = /* @__PURE__ */ new Set();
+      for (let i = 0; i < n; i += 1) {
+        fpWanted.add(readUint40BE(bytes, 2 + i * 5));
+      }
+      const list = Array.isArray(orderedEvents) ? orderedEvents : [];
+      const keys = [];
+      for (const ev of list) {
+        const k = completionKey(ev);
+        if (fpWanted.has(fingerprint40FromKey(k))) {
+          keys.push(k);
+        }
+      }
+      return keys;
+    }
+    if (schema === V4_SCHEMA_V1) {
+      if (bytes.length < 3) {
+        return [];
+      }
+      const n = bytes[1] << 8 | bytes[2];
+      if (n === 0 || bytes.length !== 3 + 6 * n) {
+        return [];
+      }
+      const fpWanted = /* @__PURE__ */ new Set();
+      for (let i = 0; i < n; i += 1) {
+        fpWanted.add(readUint48BE(bytes, 3 + i * 6));
+      }
+      const list = Array.isArray(orderedEvents) ? orderedEvents : [];
+      const keys = [];
+      for (const ev of list) {
+        const k = completionKey(ev);
+        if (fpWanted.has(fingerprint48FromKey(k))) {
+          keys.push(k);
+        }
+      }
+      return keys;
+    }
+    return [];
+  }
+  function decodeCompactCalendarCompletionV5(raw, orderedEvents) {
+    const head = String(raw ?? "").trim();
+    if (head === "v5:z") {
+      return [];
+    }
+    if (!head.startsWith("v5:")) {
+      return [];
+    }
+    const body = head.slice(3);
+    if (body === "z") {
+      return [];
+    }
+    let bytes;
+    try {
+      bytes = base64UrlToBytes(body);
+    } catch (_err) {
+      return [];
+    }
+    if (bytes.length < 2) {
+      return [];
+    }
+    const schema = bytes[0];
+    if (schema !== V5_SCHEMA_V1) {
+      return [];
+    }
+    const n = bytes[1];
+    if (n === 0 || bytes.length !== 2 + 3 * n) {
+      return [];
+    }
+    const fpWanted = /* @__PURE__ */ new Set();
+    for (let i = 0; i < n; i += 1) {
+      fpWanted.add(readUint24BE(bytes, 2 + i * 3));
+    }
+    const list = Array.isArray(orderedEvents) ? orderedEvents : [];
+    const keys = [];
+    for (const ev of list) {
+      const k = completionKey(ev);
+      if (fpWanted.has(fingerprint24FromKey(k))) {
+        keys.push(k);
+      }
+    }
+    return keys;
+  }
+  function decodeCompactCalendarCompletionV3(raw, orderedEvents) {
+    const body = String(raw ?? "").trim().startsWith("v3:") ? String(raw).trim().slice(3) : String(raw ?? "").trim();
+    if (body === "z") {
+      return [];
+    }
+    const W = V3_TOKEN_WIDTH;
+    if (body.length === 0 || body.length % W !== 0) {
+      return [];
+    }
+    const tokenSet = /* @__PURE__ */ new Set();
+    for (let i = 0; i < body.length; i += W) {
+      tokenSet.add(body.slice(i, i + W));
+    }
+    const list = Array.isArray(orderedEvents) ? orderedEvents : [];
+    const keys = [];
+    for (const ev of list) {
+      const k = completionKey(ev);
+      if (tokenSet.has(stableCompletionTokenFromKey(k))) {
+        keys.push(k);
+      }
+    }
+    return keys;
+  }
+  function decodeCompactCalendarCompletionV2(raw, orderedEvents) {
+    const list = Array.isArray(orderedEvents) ? orderedEvents : [];
+    const E = list.map((ev) => completionKey(ev));
+    const body = String(raw ?? "").trim().startsWith("v2:") ? String(raw).trim().slice(3) : String(raw ?? "").trim();
+    if (body === "z") {
+      return [];
+    }
+    if (body === "t") {
+      return [...E];
+    }
+    const keys = /* @__PURE__ */ new Set();
+    const parts = body.split("+").map((p) => p.trim()).filter(Boolean);
+    let idx = 0;
+    const first = parts[0] || "";
+    const nm = /^n(\d+)$/.exec(first);
+    if (nm) {
+      const k = Number(nm[1]);
+      if (Number.isFinite(k) && k > 0) {
+        for (let i = 0; i < Math.min(k, E.length); i += 1) {
+          keys.add(E[i]);
+        }
+      }
+      idx = 1;
+    }
+    for (; idx < parts.length; idx += 1) {
+      expandCompactDaySegment(parts[idx], list, keys);
+    }
+    return [...keys];
+  }
+  function expandCompletionPayloadToKeys(raw, orderedEvents) {
+    const s = String(raw ?? "").trim();
+    if (!s) {
+      return [];
+    }
+    if (s.startsWith("v5:")) {
+      return decodeCompactCalendarCompletionV5(s, orderedEvents);
+    }
+    if (s.startsWith("v4:")) {
+      return decodeCompactCalendarCompletionV4(s, orderedEvents);
+    }
+    if (s.startsWith("v3:")) {
+      return decodeCompactCalendarCompletionV3(s, orderedEvents);
+    }
+    if (s.startsWith("v2:")) {
+      return decodeCompactCalendarCompletionV2(s, orderedEvents);
+    }
+    try {
+      const v = JSON.parse(s);
+      if (!Array.isArray(v)) {
+        return [];
+      }
+      return v.map((item) => String(item)).filter(Boolean);
+    } catch (_error) {
+      return [];
+    }
+  }
+  function normalizeCompletionPayloadForCompare(raw, orderedEvents) {
+    const keys = expandCompletionPayloadToKeys(raw, orderedEvents);
+    const head = String(raw ?? "").trim();
+    if (!keys.length && (head.startsWith("v2:") || head.startsWith("v3:") || head.startsWith("v4:") || head.startsWith("v5:")) && !(orderedEvents || []).length) {
+      return null;
+    }
+    return canonicalCompletionKeysJson(keys);
+  }
+  function serializeCompactCompletionV2(completedSet, orderedEvents) {
+    const list = Array.isArray(orderedEvents) ? orderedEvents : [];
+    const E = list.map((ev) => completionKey(ev));
+    const n = E.length;
+    if (n === 0) {
+      return null;
+    }
+    const C = completedSet instanceof Set ? completedSet : new Set(completedSet);
+    const has = (id) => C.has(id);
+    if (C.size === 0) {
+      return "v2:z";
+    }
+    let allIn = true;
+    for (let i = 0; i < n; i += 1) {
+      if (!has(E[i])) {
+        allIn = false;
+        break;
+      }
+    }
+    if (allIn && C.size === n) {
+      return "v2:t";
+    }
+    let k = 0;
+    while (k < n && has(E[k])) {
+      k += 1;
+    }
+    const prefixKeys = new Set(E.slice(0, k));
+    const remainder = [...C].filter((key) => !prefixKeys.has(key));
+    if (remainder.length === 0) {
+      return `v2:n${k}`;
+    }
+    const byDay = /* @__PURE__ */ new Map();
+    for (const key of remainder) {
+      const ev = list.find((e) => completionKey(e) === key);
+      if (!ev) {
+        return null;
+      }
+      const dk = eventDayKeyCompact(ev);
+      if (!dk) {
+        return null;
+      }
+      if (!byDay.has(dk)) {
+        byDay.set(dk, []);
+      }
+      byDay.get(dk).push(key);
+    }
+    const sortedDays = [...byDay.keys()].sort((a, b) => a.localeCompare(b, "en"));
+    const daySegs = [];
+    for (const dk of sortedDays) {
+      const fullDay = list.filter((ev) => eventDayKeyCompact(ev) === dk);
+      const want = new Set(byDay.get(dk));
+      const positions = [];
+      for (let i = 0; i < fullDay.length; i += 1) {
+        if (want.has(completionKey(fullDay[i]))) {
+          positions.push(i + 1);
+        }
+      }
+      if (positions.length === 0) {
+        return null;
+      }
+      let seg;
+      if (positions.length === fullDay.length) {
+        seg = `d${dk}t`;
+      } else {
+        let j = 0;
+        while (j < positions.length && positions[j] === j + 1) {
+          j += 1;
+        }
+        if (j === positions.length) {
+          seg = `d${dk}n${j}`;
+        } else {
+          seg = `d${dk}i${positions.join("-")}`;
+        }
+      }
+      daySegs.push(seg);
+    }
+    const tail = daySegs.join("+");
+    if (k > 0) {
+      return `v2:n${k}+${tail}`;
+    }
+    return `v2:${tail}`;
+  }
+  function serializeCompactCompletionV3(completedSet) {
+    const keys = [...completedSet instanceof Set ? completedSet : new Set(completedSet)].map((k) => String(k)).filter(Boolean).sort((a, b) => a.localeCompare(b, "en"));
+    if (keys.length === 0) {
+      return "v3:z";
+    }
+    const tokens = keys.map((k) => stableCompletionTokenFromKey(k)).sort((a, b) => a.localeCompare(b, "en"));
+    return `v3:${tokens.join("")}`;
+  }
+  function serializeCompactCompletionV4(completedSet) {
+    const keys = [...completedSet instanceof Set ? completedSet : new Set(completedSet)].map((k) => String(k)).filter(Boolean);
+    if (keys.length === 0) {
+      return "v4:z";
+    }
+    const uniqFp40 = [...new Set(keys.map((k) => fingerprint40FromKey(k)))].sort((a, b) => {
+      if (a < b) {
+        return -1;
+      }
+      if (a > b) {
+        return 1;
+      }
+      return 0;
+    });
+    const n = uniqFp40.length;
+    if (n <= 255) {
+      const buf2 = new Uint8Array(2 + 5 * n);
+      buf2[0] = V4_SCHEMA_V2;
+      buf2[1] = n & 255;
+      for (let i = 0; i < n; i += 1) {
+        writeUint40BE(buf2, 2 + i * 5, uniqFp40[i]);
+      }
+      return `v4:${bytesToBase64Url(buf2)}`;
+    }
+    const uniqFp48 = [...new Set(keys.map((k) => fingerprint48FromKey(k)))].sort((a, b) => {
+      if (a < b) {
+        return -1;
+      }
+      if (a > b) {
+        return 1;
+      }
+      return 0;
+    });
+    const n48 = uniqFp48.length;
+    if (n48 > 65535) {
+      return null;
+    }
+    const buf = new Uint8Array(3 + 6 * n48);
+    buf[0] = V4_SCHEMA_V1;
+    buf[1] = n48 >> 8 & 255;
+    buf[2] = n48 & 255;
+    for (let i = 0; i < n48; i += 1) {
+      writeUint48BE(buf, 3 + i * 6, uniqFp48[i]);
+    }
+    return `v4:${bytesToBase64Url(buf)}`;
+  }
+  function serializeCompactCompletionV5(completedSet) {
+    const keys = [...completedSet instanceof Set ? completedSet : new Set(completedSet)].map((k) => String(k)).filter(Boolean);
+    if (keys.length === 0) {
+      return "v5:z";
+    }
+    const uniqFp24 = [...new Set(keys.map((k) => fingerprint24FromKey(k)))].sort((a, b) => {
+      if (a < b) {
+        return -1;
+      }
+      if (a > b) {
+        return 1;
+      }
+      return 0;
+    });
+    const n = uniqFp24.length;
+    if (n > 255) {
+      return null;
+    }
+    const buf = new Uint8Array(2 + 3 * n);
+    buf[0] = V5_SCHEMA_V1;
+    buf[1] = n & 255;
+    for (let i = 0; i < n; i += 1) {
+      writeUint24BE(buf, 2 + i * 3, uniqFp24[i]);
+    }
+    return `v5:${bytesToBase64Url(buf)}`;
+  }
+  function pickShortestCompletionPayload(completedSet, orderedEvents, maxLen) {
+    const keys = [...completedSet instanceof Set ? completedSet : new Set(completedSet)];
+    const jsonPayload = canonicalCompletionKeysJson(keys);
+    const compactV2 = serializeCompactCompletionV2(completedSet, orderedEvents);
+    const compactV3 = serializeCompactCompletionV3(completedSet);
+    const compactV4 = serializeCompactCompletionV4(completedSet);
+    const compactV5 = serializeCompactCompletionV5(completedSet);
+    const stable = [compactV5, compactV4, compactV3].filter((p) => p && p.length <= maxLen);
+    stable.sort((a, b) => {
+      if (a.length !== b.length) {
+        return a.length - b.length;
+      }
+      const rank = (p) => String(p).startsWith("v5:") ? 0 : String(p).startsWith("v4:") ? 1 : 2;
+      return rank(a) - rank(b);
+    });
+    if (stable.length) {
+      return stable[0];
+    }
+    const fallbacks = [];
+    if (compactV2) {
+      fallbacks.push(compactV2);
+    }
+    fallbacks.push(jsonPayload);
+    fallbacks.sort((a, b) => a.length - b.length);
+    for (const p of fallbacks) {
+      if (p.length <= maxLen) {
+        return p;
+      }
+    }
+    return null;
+  }
+
   // nodalia-calendar-card.js
   var CARD_TAG17 = "nodalia-calendar-card";
   var EDITOR_TAG17 = "nodalia-calendar-card-editor";
   var COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
+  var QUICK_REMINDER_STORAGE_KEY = "nodalia_calendar_quick_reminders_v1";
   var VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
   var DEFAULT_CONFIG17 = {
     title: "Calendario",
@@ -70843,7 +71720,9 @@
     refresh_interval: 300,
     show_completed: false,
     allow_complete: true,
+    weather_entity: "",
     shared_completed_events_entity: "",
+    shared_completed_events_webhook: "",
     tint_auto: true,
     animations: {
       enabled: true,
@@ -70995,6 +71874,8 @@
     normalized.time_range = timeRange;
     normalized.days_to_show = Math.min(62, Math.max(1, daysFromTimeRange(timeRange)));
     normalized.shared_completed_events_entity = String(normalized.shared_completed_events_entity ?? "").trim();
+    normalized.shared_completed_events_webhook = String(normalized.shared_completed_events_webhook ?? "").trim();
+    normalized.weather_entity = String(normalized.weather_entity ?? "").trim();
     normalized.max_visible_events = Math.min(
       12,
       Math.max(1, Number(normalized.max_visible_events) || DEFAULT_CONFIG17.max_visible_events)
@@ -71030,6 +71911,81 @@
   }
   function clamp16(value, min, max) {
     return Math.min(Math.max(value, min), max);
+  }
+  function normalizeTextKey16(value) {
+    return String(value ?? "").trim().toLowerCase().replaceAll(" ", "_");
+  }
+  function weatherConditionIcon(value) {
+    switch (normalizeTextKey16(value)) {
+      case "clear_night":
+        return "mdi:weather-night";
+      case "cloudy":
+        return "mdi:weather-cloudy";
+      case "exceptional":
+        return "mdi:alert-circle-outline";
+      case "fog":
+        return "mdi:weather-fog";
+      case "hail":
+        return "mdi:weather-hail";
+      case "lightning":
+        return "mdi:weather-lightning";
+      case "lightning_rainy":
+        return "mdi:weather-lightning-rainy";
+      case "partlycloudy":
+        return "mdi:weather-partly-cloudy";
+      case "pouring":
+        return "mdi:weather-pouring";
+      case "rainy":
+        return "mdi:weather-rainy";
+      case "snowy":
+        return "mdi:weather-snowy";
+      case "snowy_rainy":
+        return "mdi:weather-snowy-rainy";
+      case "sunny":
+        return "mdi:weather-sunny";
+      case "windy":
+      case "windy_variant":
+        return "mdi:weather-windy";
+      default:
+        return "mdi:weather-partly-cloudy";
+    }
+  }
+  function forecastDayKey(value) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      const ms = value > 1e12 ? value : value * 1e3;
+      const parsedNum = new Date(ms);
+      if (!Number.isNaN(parsedNum.getTime())) {
+        return `${parsedNum.getFullYear()}-${parsedNum.getMonth()}-${parsedNum.getDate()}`;
+      }
+    }
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/^\d{10,13}$/.test(raw)) {
+      const numeric = Number(raw);
+      if (Number.isFinite(numeric)) {
+        const ms = raw.length >= 13 ? numeric : numeric * 1e3;
+        const parsedNum = new Date(ms);
+        if (!Number.isNaN(parsedNum.getTime())) {
+          return `${parsedNum.getFullYear()}-${parsedNum.getMonth()}-${parsedNum.getDate()}`;
+        }
+      }
+    }
+    const datePrefixMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+    if (datePrefixMatch) {
+      const y = Number(datePrefixMatch[1]);
+      const m = Number(datePrefixMatch[2]) - 1;
+      const d = Number(datePrefixMatch[3]);
+      if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
+        return `${y}-${m}-${d}`;
+      }
+    }
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) {
+      return "";
+    }
+    return `${parsed.getFullYear()}-${parsed.getMonth()}-${parsed.getDate()}`;
   }
   function resolveEditorColorValue12(value) {
     const rawValue = String(value ?? "").trim();
@@ -71119,18 +72075,6 @@
       minute: "2-digit"
     }).format(date);
   }
-  function parseCalendarDateOnlyLocal(raw) {
-    const s = String(raw ?? "").trim();
-    const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-    if (!dm) {
-      return null;
-    }
-    const y = Number(dm[1]);
-    const mo = Number(dm[2]) - 1;
-    const d = Number(dm[3]);
-    const local = new Date(y, mo, d, 12, 0, 0);
-    return Number.isFinite(local.getTime()) ? local : null;
-  }
   function normalizeCalendarFetchResult(raw) {
     if (Array.isArray(raw)) {
       return raw;
@@ -71140,44 +72084,8 @@
     }
     return [];
   }
-  function eventDate(value) {
-    if (!value) {
-      return null;
-    }
-    if (typeof value === "string") {
-      const dayLocal = parseCalendarDateOnlyLocal(value);
-      if (dayLocal) {
-        return dayLocal;
-      }
-      const parsed = new Date(value);
-      return Number.isFinite(parsed.getTime()) ? parsed : null;
-    }
-    if (typeof value === "object") {
-      if (value.dateTime) {
-        const parsed = new Date(value.dateTime);
-        return Number.isFinite(parsed.getTime()) ? parsed : null;
-      }
-      if (value.date) {
-        const dayLocal = parseCalendarDateOnlyLocal(value.date);
-        if (dayLocal) {
-          return dayLocal;
-        }
-        const parsed = new Date(value.date);
-        return Number.isFinite(parsed.getTime()) ? parsed : null;
-      }
-      return null;
-    }
-    return null;
-  }
   function eventIsAllDay(event) {
     return Boolean(event?.start?.date && !event?.start?.dateTime);
-  }
-  function completionKey(event) {
-    const source = String(event?._entity || "");
-    const uid = String(event?.uid || event?.id || "");
-    const start = eventDate(event?.start)?.toISOString() || "";
-    const summary = String(event?.summary || "");
-    return `${source}|${uid}|${start}|${summary}`;
   }
   var NodaliaCalendarCard = class extends HTMLElement {
     static getStubConfig() {
@@ -71192,6 +72100,7 @@
       this._config = normalizeConfig17(DEFAULT_CONFIG17);
       this._hass = null;
       this._events = [];
+      this._quickReminders = [];
       this._loading = false;
       this._error = "";
       this._refreshTimer = 0;
@@ -71201,6 +72110,9 @@
       this._calendarEntrancePlayed = false;
       this._expandedOverlayEntrancePlayed = false;
       this._expandedOpen = false;
+      this._quickReminderComposerOpen = false;
+      this._nativeEventComposerOpen = false;
+      this._nativeComposerCalendarValue = "";
       this._expandedMonthDayKey = "";
       this._completeExitKeys = /* @__PURE__ */ new Set();
       this._completeExitTimers = /* @__PURE__ */ new Map();
@@ -71208,8 +72120,15 @@
       this._onShadowKeydown = this._onShadowKeydown.bind(this);
       this._onDocVisibility = this._onDocVisibility.bind(this);
       this._lastSubmittedSharedCompletedValue = "";
+      this._pendingSharedCompletedPayload = null;
       this._lastSyncedSharedCompletedRaw = void 0;
       this._completedMergedOnce = false;
+      this._localV2PendingDecode = false;
+      this._viewVisibilityObserver = null;
+      this._wasInViewport = false;
+      this._weatherForecastByDay = /* @__PURE__ */ new Map();
+      this._refreshInFlight = false;
+      this._refreshQueued = false;
     }
     _onDocVisibility() {
       if (typeof document === "undefined" || document.visibilityState !== "visible") {
@@ -71251,7 +72170,13 @@
       if (typeof document !== "undefined") {
         document.addEventListener("visibilitychange", this._onDocVisibility);
       }
+      this._attachViewVisibilityObserver();
+      this._calendarEntrancePlayed = false;
+      if (this._hadHass) {
+        this._renderIfChanged(true);
+      }
       this._loadCompleted();
+      this._loadQuickReminders();
       if (!this._hadHass) {
         this._refreshEvents();
       }
@@ -71260,6 +72185,7 @@
       if (typeof document !== "undefined") {
         document.removeEventListener("visibilitychange", this._onDocVisibility);
       }
+      this._detachViewVisibilityObserver();
       this.shadowRoot?.removeEventListener("click", this._onShadowClick);
       this.shadowRoot?.removeEventListener("keydown", this._onShadowKeydown);
       if (this._refreshTimer) {
@@ -71269,15 +72195,48 @@
       this._completeExitTimers.forEach((tid) => window.clearTimeout(tid));
       this._completeExitTimers.clear();
       this._completeExitKeys.clear();
+      this._calendarEntrancePlayed = false;
+      this._wasInViewport = false;
+    }
+    _attachViewVisibilityObserver() {
+      if (this._viewVisibilityObserver || typeof IntersectionObserver !== "function") {
+        return;
+      }
+      this._viewVisibilityObserver = new IntersectionObserver(
+        (entries) => {
+          const visible = entries.some((entry) => entry.isIntersecting && entry.intersectionRatio > 0);
+          if (visible === this._wasInViewport) {
+            return;
+          }
+          this._wasInViewport = visible;
+          if (!visible) {
+            return;
+          }
+          this._calendarEntrancePlayed = false;
+          this._renderIfChanged(true);
+        },
+        { threshold: [0, 0.01] }
+      );
+      this._viewVisibilityObserver.observe(this);
+    }
+    _detachViewVisibilityObserver() {
+      if (!this._viewVisibilityObserver) {
+        return;
+      }
+      this._viewVisibilityObserver.disconnect();
+      this._viewVisibilityObserver = null;
     }
     setConfig(config) {
       const prevHelper = String(this._config?.shared_completed_events_entity || "").trim();
+      const prevWebhook = String(this._config?.shared_completed_events_webhook || "").trim();
       this._config = normalizeConfig17(config);
       const nextHelper = String(this._config.shared_completed_events_entity || "").trim();
-      if (prevHelper !== nextHelper) {
+      const nextWebhook = String(this._config.shared_completed_events_webhook || "").trim();
+      if (prevHelper !== nextHelper || prevWebhook !== nextWebhook) {
         this._completedMergedOnce = false;
         this._lastSyncedSharedCompletedRaw = void 0;
         this._lastSubmittedSharedCompletedValue = "";
+        this._pendingSharedCompletedPayload = null;
       }
       this._loadCompleted();
       if (this._hass && this._getSharedCompletedEntityId()) {
@@ -71306,16 +72265,60 @@
       const max = Number(this._hass.states[id].attributes?.max);
       return Number.isFinite(max) && max > 0 ? max : 255;
     }
-    _readLocalCompletedKeysOnly() {
+    _readLocalCompletionRaw() {
       if (typeof window === "undefined" || !window.localStorage) {
-        return [];
+        return "";
       }
       try {
-        const raw = window.localStorage.getItem(COMPLETION_STORAGE_KEY);
-        const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed) ? parsed.map((k) => String(k)) : [];
+        return window.localStorage.getItem(COMPLETION_STORAGE_KEY) || "";
       } catch (_error) {
-        return [];
+        return "";
+      }
+    }
+    _readLocalQuickRemindersRaw() {
+      if (typeof window === "undefined" || !window.localStorage) {
+        return "";
+      }
+      try {
+        return window.localStorage.getItem(QUICK_REMINDER_STORAGE_KEY) || "";
+      } catch (_error) {
+        return "";
+      }
+    }
+    _loadQuickReminders() {
+      const raw = this._readLocalQuickRemindersRaw();
+      if (!raw) {
+        this._quickReminders = [];
+        return;
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) {
+          this._quickReminders = [];
+          return;
+        }
+        this._quickReminders = parsed.map((item) => {
+          const id = String(item?.id || "").trim();
+          const title = String(item?.title || "").trim();
+          const start = String(item?.start || "").trim();
+          const color = sanitizeCalendarTint(item?.color) || "";
+          const allDay = Boolean(item?.allDay);
+          if (!id || !title || !start) {
+            return null;
+          }
+          return { id, title, start, color, allDay };
+        }).filter(Boolean);
+      } catch (_error) {
+        this._quickReminders = [];
+      }
+    }
+    _saveQuickReminders() {
+      if (typeof window === "undefined" || !window.localStorage) {
+        return;
+      }
+      try {
+        window.localStorage.setItem(QUICK_REMINDER_STORAGE_KEY, JSON.stringify(this._quickReminders));
+      } catch (_error) {
       }
     }
     _syncCompletedPersistenceFromHass() {
@@ -71331,28 +72334,37 @@
       if (raw === this._lastSyncedSharedCompletedRaw) {
         return;
       }
-      let parsed = [];
-      try {
-        const v = JSON.parse(raw || "[]");
-        if (!Array.isArray(v)) {
-          return;
-        }
-        parsed = v.map((k) => String(k));
-      } catch (_error) {
+      const events = this._events || [];
+      const localRaw = this._readLocalCompletionRaw();
+      const rawT = raw.trim();
+      const localT = localRaw.trim();
+      if (!events.length && (rawT.startsWith("v2:") || rawT.startsWith("v3:") || rawT.startsWith("v4:") || rawT.startsWith("v5:") || localT.startsWith("v2:") || localT.startsWith("v3:") || localT.startsWith("v4:") || localT.startsWith("v5:"))) {
         return;
       }
+      const incomingKeys = expandCompletionPayloadToKeys(raw, events);
+      const incomingCanonical = canonicalCompletionKeysJson(incomingKeys);
+      const localKeys = expandCompletionPayloadToKeys(localRaw, events);
+      const localCanonical = canonicalCompletionKeysJson(localKeys);
+      const memoryCanonical = canonicalCompletionKeysJson([...this._completed]);
+      if (this._pendingSharedCompletedPayload && incomingCanonical !== this._pendingSharedCompletedPayload && incomingCanonical !== memoryCanonical && incomingCanonical !== localCanonical) {
+        return;
+      }
+      if (this._pendingSharedCompletedPayload && incomingCanonical === this._pendingSharedCompletedPayload) {
+        this._pendingSharedCompletedPayload = null;
+      }
       this._lastSyncedSharedCompletedRaw = raw;
+      this._localV2PendingDecode = false;
       if (!this._completedMergedOnce) {
-        const local = this._readLocalCompletedKeysOnly();
-        this._completed = /* @__PURE__ */ new Set([...local, ...parsed]);
+        this._completed = /* @__PURE__ */ new Set([...localKeys, ...incomingKeys]);
         this._completedMergedOnce = true;
         this._saveCompleted();
         return;
       }
-      this._completed = new Set(parsed);
+      this._completed = new Set(incomingKeys);
       try {
         if (typeof window !== "undefined" && window.localStorage) {
-          window.localStorage.setItem(COMPLETION_STORAGE_KEY, JSON.stringify(parsed));
+          const payloadLs = pickShortestCompletionPayload(this._completed, events, 262144) || canonicalCompletionKeysJson([...this._completed]);
+          window.localStorage.setItem(COMPLETION_STORAGE_KEY, payloadLs);
         }
       } catch (_error) {
       }
@@ -71520,8 +72532,9 @@
       const start = eventDate(event.start);
       const timeLabel = eventIsAllDay(event) ? "Todo el dia" : start ? formatTimeLabel(start, locale) : "--:--";
       const summary = String(event.summary || event.message || "Evento sin titulo");
-      const subtitle = this._getEventSubtitleForDisplay(event._entity);
-      const tintRaw = sanitizeCalendarTint(this._getCalendarEntry(event._entity).tint);
+      const isQuickReminder = String(event._entity || "") === "__quick_reminder__";
+      const subtitle = isQuickReminder ? "Recordatorio rapido" : this._getEventSubtitleForDisplay(event._entity);
+      const tintRaw = isQuickReminder ? sanitizeCalendarTint(event?._quickReminderColor) : sanitizeCalendarTint(this._getCalendarEntry(event._entity).tint);
       const tintClass = tintRaw ? " calendar-event--tinted" : "";
       const tintStyle = tintRaw ? ` style="--cal-tint:${escapeHtml17(tintRaw)}"` : "";
       const compactClass = compact ? " calendar-event--compact" : "";
@@ -71647,53 +72660,110 @@
     `;
     }
     _loadCompleted() {
-      this._completed = new Set(this._readLocalCompletedKeysOnly());
+      const raw = this._readLocalCompletionRaw();
+      try {
+        const v = JSON.parse(raw);
+        if (Array.isArray(v)) {
+          this._completed = new Set(v.map((k) => String(k)));
+          this._localV2PendingDecode = false;
+          return;
+        }
+      } catch (_error) {
+      }
+      if (String(raw).trim().startsWith("v2:")) {
+        this._completed = /* @__PURE__ */ new Set();
+        this._localV2PendingDecode = true;
+        return;
+      }
+      this._completed = /* @__PURE__ */ new Set();
+      this._localV2PendingDecode = false;
     }
     _saveCompleted() {
-      const sortedKeys = [...this._completed].sort();
-      const payload = JSON.stringify(sortedKeys);
+      const events = this._events || [];
+      const canonicalExpanded = canonicalCompletionKeysJson([...this._completed]);
+      const payloadLs = pickShortestCompletionPayload(this._completed, events, 262144) || canonicalExpanded;
       if (typeof window !== "undefined" && window.localStorage) {
         try {
-          window.localStorage.setItem(COMPLETION_STORAGE_KEY, payload);
+          window.localStorage.setItem(COMPLETION_STORAGE_KEY, payloadLs);
         } catch (_error) {
         }
       }
+      const webhookId = String(this._config?.shared_completed_events_webhook ?? "").trim();
       const entityId = this._getSharedCompletedEntityId();
-      if (!entityId || !this._hass?.callService) {
+      if (!webhookId && (!entityId || !this._hass?.callService)) {
         return;
       }
       const maxLen = this._getSharedCompletedMaxLength();
-      if (payload.length > maxLen) {
+      const payloadHa = pickShortestCompletionPayload(this._completed, events, maxLen);
+      if (!payloadHa) {
         if (typeof console !== "undefined" && typeof console.warn === "function") {
           console.warn(
-            "Nodalia Calendar Card: la lista de eventos completados no cabe en el input_text (aumenta max en el helper o marca menos eventos)."
+            "Nodalia Calendar Card: la lista de eventos completados no cabe en el input_text ni en formatos compactos v4/v3/v2 (aumenta max en el helper o reduce eventos completados)."
           );
         }
         return;
       }
-      const currentState = String(this._hass.states?.[entityId]?.state ?? "").trim();
-      if (payload === currentState) {
+      const currentState = entityId && this._hass?.states?.[entityId] ? String(this._hass.states[entityId].state ?? "").trim() : "";
+      const canonicalCurrent = normalizeCompletionPayloadForCompare(currentState, events);
+      const canonicalLastSubmit = normalizeCompletionPayloadForCompare(this._lastSubmittedSharedCompletedValue, events);
+      if (canonicalCurrent !== null && canonicalExpanded === canonicalCurrent) {
         return;
       }
+      if (canonicalLastSubmit !== null && canonicalExpanded === canonicalLastSubmit) {
+        return;
+      }
+      if (webhookId) {
+        const post = typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.postHomeAssistantWebhook === "function" ? window.NodaliaUtils.postHomeAssistantWebhook : null;
+        if (!post) {
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn(
+              "Nodalia Calendar Card: falta NodaliaUtils.postHomeAssistantWebhook (actualiza nodalia-cards / nodalia-utils)."
+            );
+          }
+          return;
+        }
+        this._lastSubmittedSharedCompletedValue = payloadHa;
+        this._pendingSharedCompletedPayload = canonicalExpanded;
+        void post(webhookId, { value: payloadHa }, this._hass).then((ok) => {
+          if (!ok) {
+            this._lastSubmittedSharedCompletedValue = null;
+            this._pendingSharedCompletedPayload = null;
+            if (typeof console !== "undefined" && typeof console.warn === "function") {
+              console.warn(
+                "Nodalia Calendar Card: webhook de persistencia rechazado o fallido; revisa el webhook_id y la automatización en HA."
+              );
+            }
+          }
+        });
+        return;
+      }
+      this._lastSubmittedSharedCompletedValue = payloadHa;
+      this._pendingSharedCompletedPayload = canonicalExpanded;
       try {
         const result = this._hass.callService("input_text", "set_value", {
           entity_id: entityId,
-          value: payload
+          value: payloadHa
         });
         if (result && typeof result.then === "function") {
-          result.then(() => {
-            this._lastSubmittedSharedCompletedValue = payload;
-          }).catch((err) => {
+          result.catch((err) => {
+            this._lastSubmittedSharedCompletedValue = null;
+            this._pendingSharedCompletedPayload = null;
             if (typeof console !== "undefined" && typeof console.warn === "function") {
               console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
+              console.warn(
+                "Nodalia Calendar Card: si usas un usuario no administrador, concede permiso de control sobre la entidad input_text del helper o configura shared_completed_events_webhook con una automatización webhook que llame a input_text.set_value."
+              );
             }
           });
-        } else {
-          this._lastSubmittedSharedCompletedValue = payload;
         }
       } catch (err) {
+        this._lastSubmittedSharedCompletedValue = null;
+        this._pendingSharedCompletedPayload = null;
         if (typeof console !== "undefined" && typeof console.warn === "function") {
           console.warn("Nodalia Calendar Card: input_text.set_value failed", err);
+          console.warn(
+            "Nodalia Calendar Card: si usas un usuario no administrador, concede permiso de control sobre la entidad input_text del helper o usa shared_completed_events_webhook."
+          );
         }
       }
     }
@@ -71711,51 +72781,70 @@
       const config = this._config;
       const styles = config.styles || DEFAULT_CONFIG17.styles;
       const visibleEvents = this._events.filter((event) => this._shouldShowEventInList(event));
-      const eventKeys = visibleEvents.map((event) => {
-        const start = eventDate(event?.start)?.getTime() || 0;
-        return `${completionKey(event)}@${start}`;
-      }).join("|");
-      const completedSig = [...this._completed].sort().join("|");
-      const calendarSig = (config.calendars || []).map((c) => `${c.entity}${c.label}${c.tint}`).join("|");
-      return [
-        calendarSig,
-        config.title,
-        config.icon,
-        config.time_range || DEFAULT_CONFIG17.time_range,
-        config.days_to_show,
-        config.max_visible_events,
-        config.show_completed,
-        config.allow_complete,
-        config.shared_completed_events_entity || "",
-        config.tint_auto,
-        config.animations?.enabled,
-        config.animations?.content_duration,
-        styles.card?.background,
-        styles.card?.border,
-        styles.card?.border_radius,
-        styles.card?.box_shadow,
-        styles.card?.padding,
-        styles.card?.gap,
-        styles.title_size,
-        styles.event_size,
-        styles.chip_height,
-        styles.chip_font_size,
-        styles.chip_padding,
-        styles.chip_size,
-        styles.icon?.background,
-        styles.icon?.on_color,
-        styles.icon?.off_color,
-        styles.icon?.size,
-        styles.tint?.color,
-        this._getLocale(),
-        this._loading ? "1" : "0",
-        this._error,
-        eventKeys,
-        completedSig,
-        this._expandedOpen ? "1" : "0",
-        this._expandedMonthDayKey || "",
-        [...this._completeExitKeys].sort().join("|")
-      ].join("");
+      let hash = 2166136261;
+      const mix = (value) => {
+        const text = value === null || value === void 0 ? "" : String(value);
+        for (let i = 0; i < text.length; i += 1) {
+          hash ^= text.charCodeAt(i);
+          hash = Math.imul(hash, 16777619) >>> 0;
+        }
+        hash = Math.imul(hash ^ 2654435769, 16777619) >>> 0;
+      };
+      (config.calendars || []).forEach((c) => {
+        mix(c?.entity || "");
+        mix(c?.label || "");
+        mix(c?.tint || "");
+      });
+      mix(config.title);
+      mix(config.icon);
+      mix(config.time_range || DEFAULT_CONFIG17.time_range);
+      mix(config.days_to_show);
+      mix(config.max_visible_events);
+      mix(config.show_completed ? 1 : 0);
+      mix(config.allow_complete ? 1 : 0);
+      mix(config.weather_entity || "");
+      mix(config.shared_completed_events_entity || "");
+      mix(config.shared_completed_events_webhook || "");
+      mix(config.tint_auto ? 1 : 0);
+      mix(config.animations?.enabled ? 1 : 0);
+      mix(config.animations?.content_duration);
+      mix(styles.card?.background);
+      mix(styles.card?.border);
+      mix(styles.card?.border_radius);
+      mix(styles.card?.box_shadow);
+      mix(styles.card?.padding);
+      mix(styles.card?.gap);
+      mix(styles.title_size);
+      mix(styles.event_size);
+      mix(styles.chip_height);
+      mix(styles.chip_font_size);
+      mix(styles.chip_padding);
+      mix(styles.chip_size);
+      mix(styles.icon?.background);
+      mix(styles.icon?.on_color);
+      mix(styles.icon?.off_color);
+      mix(styles.icon?.size);
+      mix(styles.tint?.color);
+      mix(this._getLocale());
+      mix(this._loading ? 1 : 0);
+      mix(this._error);
+      mix(this._getWeatherForecastSignature());
+      (this._quickReminders || []).forEach((item) => {
+        mix(item?.id || "");
+        mix(item?.title || "");
+        mix(item?.start || "");
+        mix(item?.color || "");
+        mix(item?.allDay ? 1 : 0);
+      });
+      visibleEvents.forEach((event) => {
+        mix(completionKey(event));
+        mix(eventDate(event?.start)?.getTime() || 0);
+      });
+      [...this._completed].sort().forEach((key) => mix(key));
+      mix(this._expandedOpen ? 1 : 0);
+      mix(this._expandedMonthDayKey || "");
+      [...this._completeExitKeys].sort().forEach((key) => mix(key));
+      return `r:${hash.toString(36)}`;
     }
     _renderIfChanged(force = false) {
       const next = this._getRenderSignature();
@@ -71766,51 +72855,86 @@
       this._render();
     }
     async _refreshEvents() {
-      const calendarIds = (this._config.calendars || []).map((c) => c.entity).filter(Boolean);
-      if (!this._hass || !calendarIds.length) {
-        this._events = [];
-        this._loading = false;
-        this._error = "";
-        this._renderIfChanged(true);
+      if (this._refreshInFlight) {
+        this._refreshQueued = true;
         return;
       }
-      this._loading = true;
-      this._error = "";
-      this._renderIfChanged(true);
-      const hass = this._hass;
+      this._refreshInFlight = true;
+      this._refreshQueued = false;
+      const calendarIds = (this._config.calendars || []).map((c) => c.entity).filter(Boolean);
       try {
-        const start = /* @__PURE__ */ new Date();
-        const end = new Date(start.getTime() + this._config.days_to_show * 24 * 60 * 60 * 1e3);
-        const all = [];
-        for (const entityId of calendarIds) {
-          const path = `calendars/${encodeURIComponent(entityId)}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
-          let rows = [];
-          try {
-            const raw = await hass.callApi("GET", path);
-            rows = normalizeCalendarFetchResult(raw);
-            if (!Array.isArray(raw)) {
-              const fallback = await this._fetchCalendarEventsViaRest(entityId, start, end);
-              if (fallback.length) {
-                rows = fallback;
-              }
-            }
-          } catch (_apiError) {
-            rows = await this._fetchCalendarEventsViaRest(entityId, start, end);
-          }
-          rows.forEach((item) => all.push({ ...item, _entity: entityId }));
+        if (!this._hass) {
+          this._events = [];
+          this._weatherForecastByDay = /* @__PURE__ */ new Map();
+          this._loading = false;
+          this._error = "";
+          this._renderIfChanged(true);
+          return;
         }
-        all.sort((left, right) => {
-          const a = eventDate(left?.start)?.getTime() || 0;
-          const b = eventDate(right?.start)?.getTime() || 0;
-          return a - b;
-        });
-        this._events = all;
-      } catch (_error) {
-        this._error = "No se pudieron cargar eventos del calendario.";
-      } finally {
-        this._loading = false;
+        if (!calendarIds.length) {
+          const start = /* @__PURE__ */ new Date();
+          const end = new Date(start.getTime() + this._config.days_to_show * 24 * 60 * 60 * 1e3);
+          this._events = this._buildQuickReminderEvents(start, end);
+          await this._refreshWeatherForecastByDay();
+          this._loading = false;
+          this._error = "";
+          this._renderIfChanged(true);
+          return;
+        }
+        this._loading = true;
+        this._error = "";
         this._renderIfChanged(true);
-        this._scheduleRefresh();
+        const hass = this._hass;
+        try {
+          const start = /* @__PURE__ */ new Date();
+          const end = new Date(start.getTime() + this._config.days_to_show * 24 * 60 * 60 * 1e3);
+          const all = [];
+          for (const entityId of calendarIds) {
+            const path = `calendars/${encodeURIComponent(entityId)}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
+            let rows = [];
+            try {
+              const raw = await hass.callApi("GET", path);
+              rows = normalizeCalendarFetchResult(raw);
+              if (!rows.length && !Array.isArray(raw)) {
+                const fallback = await this._fetchCalendarEventsViaRest(entityId, start, end);
+                if (fallback.length) {
+                  rows = fallback;
+                }
+              }
+            } catch (_apiError) {
+              rows = await this._fetchCalendarEventsViaRest(entityId, start, end);
+            }
+            rows.forEach((item) => all.push({ ...item, _entity: entityId }));
+          }
+          all.push(...this._buildQuickReminderEvents(start, end));
+          all.sort((left, right) => {
+            const a = eventDate(left?.start)?.getTime() || 0;
+            const b = eventDate(right?.start)?.getTime() || 0;
+            return a - b;
+          });
+          this._events = all;
+          await this._refreshWeatherForecastByDay();
+        } catch (_error) {
+          this._error = "No se pudieron cargar eventos del calendario.";
+        } finally {
+          this._loading = false;
+          if (this._localV2PendingDecode && this._events.length && !this._getSharedCompletedEntityId()) {
+            const raw = this._readLocalCompletionRaw();
+            this._completed = new Set(expandCompletionPayloadToKeys(raw, this._events));
+            this._localV2PendingDecode = false;
+          }
+          if (this._getSharedCompletedEntityId()) {
+            this._syncCompletedPersistenceFromHass();
+          }
+          this._renderIfChanged(true);
+          this._scheduleRefresh();
+        }
+      } finally {
+        this._refreshInFlight = false;
+        if (this._refreshQueued) {
+          this._refreshQueued = false;
+          this._refreshEvents();
+        }
       }
     }
     _toggleCompleted(key) {
@@ -71859,12 +72983,403 @@
         if (!groups.has(key)) {
           groups.set(key, {
             label: formatDateLabel(date, locale),
+            dayKey: key,
+            dayDate: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
             events: []
           });
         }
         groups.get(key).events.push(event);
       });
       return [...groups.values()];
+    }
+    _getWeatherEntityId() {
+      const id = String(this._config?.weather_entity || "").trim();
+      return id.startsWith("weather.") ? id : "";
+    }
+    _buildForecastDayMap(forecastRows) {
+      const map = /* @__PURE__ */ new Map();
+      (Array.isArray(forecastRows) ? forecastRows : []).forEach((item) => {
+        if (!item || typeof item !== "object") {
+          return;
+        }
+        const dayKey = forecastDayKey(item.datetime ?? item.date ?? "");
+        if (!dayKey) {
+          return;
+        }
+        if (map.has(dayKey)) {
+          return;
+        }
+        const maxCandidate = Number(
+          item.temperature ?? item.temperature_max ?? item.temp_max ?? item.native_temperature ?? item.native_temp
+        );
+        const minCandidate = Number(
+          item.templow ?? item.temperature_low ?? item.temp_low ?? item.native_templow ?? item.native_temp_low
+        );
+        map.set(dayKey, {
+          condition: String(item.condition ?? item.weather ?? "").trim(),
+          tempMax: Number.isFinite(maxCandidate) ? maxCandidate : null,
+          tempMin: Number.isFinite(minCandidate) ? minCandidate : null
+        });
+      });
+      return map;
+    }
+    _normalizeForecastRows(raw) {
+      if (Array.isArray(raw)) {
+        return raw.filter((item) => item && typeof item === "object");
+      }
+      if (!raw || typeof raw !== "object") {
+        return [];
+      }
+      if (Array.isArray(raw.forecast)) {
+        return raw.forecast.filter((item) => item && typeof item === "object");
+      }
+      if (Array.isArray(raw.daily)) {
+        return raw.daily.filter((item) => item && typeof item === "object");
+      }
+      if (Array.isArray(raw.hourly)) {
+        return raw.hourly.filter((item) => item && typeof item === "object");
+      }
+      const objectValues = Object.values(raw).filter((value) => value && typeof value === "object");
+      const nestedArrays = objectValues.flatMap((value) => this._normalizeForecastRows(value));
+      if (nestedArrays.length) {
+        return nestedArrays;
+      }
+      const looksLikeForecastPoint = "datetime" in raw || "date" in raw || "temperature" in raw || "templow" in raw || "condition" in raw;
+      return looksLikeForecastPoint ? [raw] : [];
+    }
+    async _refreshWeatherForecastByDay() {
+      const entityId = this._getWeatherEntityId();
+      if (!entityId || !this._hass?.states?.[entityId]) {
+        this._weatherForecastByDay = /* @__PURE__ */ new Map();
+        return;
+      }
+      const stateObj = this._hass.states[entityId];
+      let forecastRows = [];
+      try {
+        if (typeof this._hass.callWS === "function") {
+          const response = await this._hass.callWS({
+            type: "weather/get_forecasts",
+            entity_ids: [entityId],
+            forecast_type: "daily"
+          });
+          const wsEntity = response?.[entityId] || response;
+          const wsCandidates = [
+            wsEntity?.forecast,
+            wsEntity?.daily?.forecast,
+            wsEntity?.daily,
+            response?.forecast,
+            response?.daily?.forecast,
+            response?.daily
+          ];
+          for (const candidate of wsCandidates) {
+            const normalized = this._normalizeForecastRows(candidate);
+            if (normalized.length) {
+              forecastRows = normalized;
+              break;
+            }
+          }
+        }
+      } catch (_error) {
+      }
+      if (!forecastRows.length) {
+        forecastRows = this._normalizeForecastRows(stateObj.attributes?.forecast);
+      }
+      if (!forecastRows.length) {
+        forecastRows = this._normalizeForecastRows(stateObj.attributes?.forecast_daily);
+      }
+      if (!forecastRows.length) {
+        forecastRows = this._normalizeForecastRows(stateObj.attributes?.daily_forecast);
+      }
+      if (!forecastRows.length && typeof this._hass?.callApi === "function") {
+        try {
+          const restDaily = await this._hass.callApi(
+            "GET",
+            `weather/forecast/${encodeURIComponent(entityId)}?type=daily`
+          );
+          const restRows = this._normalizeForecastRows(restDaily);
+          if (restRows.length) {
+            forecastRows = restRows;
+          }
+        } catch (_error) {
+        }
+      }
+      this._weatherForecastByDay = this._buildForecastDayMap(forecastRows);
+    }
+    _buildWeatherForecastByDay() {
+      return this._weatherForecastByDay instanceof Map ? this._weatherForecastByDay : /* @__PURE__ */ new Map();
+    }
+    _getWeatherForecastSignature() {
+      const entityId = this._getWeatherEntityId();
+      if (!entityId || !this._hass?.states?.[entityId]) {
+        return "";
+      }
+      const stateObj = this._hass.states[entityId];
+      let hash = 2166136261;
+      const mix = (value) => {
+        const text = value === null || value === void 0 ? "" : String(value);
+        for (let i = 0; i < text.length; i += 1) {
+          hash ^= text.charCodeAt(i);
+          hash = Math.imul(hash, 16777619) >>> 0;
+        }
+        hash = Math.imul(hash ^ 2654435769, 16777619) >>> 0;
+      };
+      mix(entityId);
+      mix(String(stateObj.state || ""));
+      [...this._buildWeatherForecastByDay().entries()].sort((left, right) => String(left[0]).localeCompare(String(right[0]))).forEach(([key, item]) => {
+        mix(key);
+        mix(item?.condition || "");
+        mix(item?.tempMax ?? "");
+        mix(item?.tempMin ?? "");
+      });
+      return `w:${hash.toString(36)}`;
+    }
+    _buildQuickReminderEvents(rangeStart, rangeEnd) {
+      const startMs = rangeStart?.getTime?.() || 0;
+      const endMs = rangeEnd?.getTime?.() || Number.MAX_SAFE_INTEGER;
+      return (this._quickReminders || []).map((item) => {
+        const d = new Date(item.start);
+        if (Number.isNaN(d.getTime())) {
+          return null;
+        }
+        const ts = d.getTime();
+        if (ts < startMs || ts > endMs) {
+          return null;
+        }
+        if (item.allDay) {
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          return {
+            _entity: "__quick_reminder__",
+            _quickReminderId: item.id,
+            _quickReminderColor: item.color || "",
+            summary: item.title,
+            start: { date: `${yyyy}-${mm}-${dd}` },
+            end: { date: `${yyyy}-${mm}-${dd}` }
+          };
+        }
+        return {
+          _entity: "__quick_reminder__",
+          _quickReminderId: item.id,
+          _quickReminderColor: item.color || "",
+          summary: item.title,
+          start: { dateTime: d.toISOString() },
+          end: { dateTime: new Date(d.getTime() + 30 * 60 * 1e3).toISOString() }
+        };
+      }).filter(Boolean);
+    }
+    _openQuickReminderComposer() {
+      this._nativeEventComposerOpen = false;
+      this._quickReminderComposerOpen = true;
+      this._renderIfChanged(true);
+    }
+    _closeQuickReminderComposer() {
+      if (!this._quickReminderComposerOpen) {
+        return;
+      }
+      this._quickReminderComposerOpen = false;
+      this._renderIfChanged(true);
+    }
+    _openNativeEventComposer() {
+      this._quickReminderComposerOpen = false;
+      if (!this._nativeComposerCalendarValue) {
+        this._nativeComposerCalendarValue = (this._config.calendars || []).map((c) => String(c?.entity || "").trim()).find(Boolean) || "";
+      }
+      this._nativeEventComposerOpen = true;
+      this._renderIfChanged(true);
+    }
+    _closeNativeEventComposer() {
+      if (!this._nativeEventComposerOpen) {
+        return;
+      }
+      this._nativeEventComposerOpen = false;
+      this._renderIfChanged(true);
+    }
+    _submitQuickReminderComposer() {
+      if (!this.shadowRoot) {
+        return;
+      }
+      const title = String(
+        this.shadowRoot.querySelector('[data-quick-field="title"]')?.value || ""
+      ).trim();
+      if (!title) {
+        return;
+      }
+      const dateRaw = String(
+        this.shadowRoot.querySelector('[data-quick-field="date"]')?.value || ""
+      ).trim();
+      if (!dateRaw) {
+        return;
+      }
+      const allDay = Boolean(
+        this.shadowRoot.querySelector('[data-quick-field="allDay"]')?.checked
+      );
+      const timeRaw = String(
+        this.shadowRoot.querySelector('[data-quick-field="time"]')?.value || ""
+      ).trim();
+      const colorRaw = String(
+        this.shadowRoot.querySelector('[data-quick-field="color"]')?.value || ""
+      ).trim();
+      const color = sanitizeCalendarTint(colorRaw) || "#71c0ff";
+      if (!allDay && !timeRaw) {
+        return;
+      }
+      const start = allDay ? `${dateRaw}T12:00:00` : `${dateRaw}T${timeRaw}:00`;
+      const d = new Date(start);
+      if (Number.isNaN(d.getTime())) {
+        return;
+      }
+      this._quickReminders.push({
+        id: `qr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        title,
+        start: d.toISOString(),
+        color,
+        allDay
+      });
+      this._saveQuickReminders();
+      this._quickReminderComposerOpen = false;
+      this._refreshEvents();
+    }
+    _quickReminderComposerMarkup() {
+      const now = /* @__PURE__ */ new Date();
+      const pad = (value) => String(value).padStart(2, "0");
+      const defaultDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      const defaultTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      return `
+      <div class="calendar-composer ${this._quickReminderComposerOpen ? "is-open" : ""}">
+        <div class="calendar-composer__backdrop" data-action="close-quick-composer"></div>
+        <div class="calendar-composer__panel" role="dialog" aria-modal="true" aria-label="Nuevo recordatorio">
+          <div class="calendar-composer__title">Nuevo recordatorio</div>
+          <label class="calendar-composer__field">
+            <span>Titulo</span>
+            <input data-quick-field="title" type="text" placeholder="Ej. Recoger paquete" />
+          </label>
+          <div class="calendar-composer__row">
+            <label class="calendar-composer__field">
+              <span>Fecha</span>
+              <input data-quick-field="date" type="date" value="${escapeHtml17(defaultDate)}" />
+            </label>
+            <label class="calendar-composer__field">
+              <span>Hora</span>
+              <input data-quick-field="time" type="time" value="${escapeHtml17(defaultTime)}" />
+            </label>
+          </div>
+          <div class="calendar-composer__row">
+            <label class="calendar-composer__field">
+              <span>Color</span>
+              <input data-quick-field="color" type="color" value="#71c0ff" />
+            </label>
+            <label class="calendar-composer__check">
+              <input data-quick-field="allDay" type="checkbox" />
+              <span>Todo el dia</span>
+            </label>
+          </div>
+          <div class="calendar-composer__actions">
+            <button type="button" class="calendar-composer__btn" data-action="close-quick-composer">Cancelar</button>
+            <button type="button" class="calendar-composer__btn calendar-composer__btn--primary" data-action="save-quick-composer">Guardar</button>
+          </div>
+        </div>
+      </div>
+    `;
+    }
+    async _submitNativeEventComposer() {
+      if (!this._hass || !this.shadowRoot) {
+        return;
+      }
+      const pickerValue = this.shadowRoot.querySelector('[data-native-field="calendar"]')?.value;
+      const calendarId = String(this._nativeComposerCalendarValue || pickerValue || "").trim();
+      const title = String(
+        this.shadowRoot.querySelector('[data-native-field="title"]')?.value || ""
+      ).trim();
+      const dateRaw = String(
+        this.shadowRoot.querySelector('[data-native-field="date"]')?.value || ""
+      ).trim();
+      const allDay = Boolean(
+        this.shadowRoot.querySelector('[data-native-field="allDay"]')?.checked
+      );
+      const startRaw = String(
+        this.shadowRoot.querySelector('[data-native-field="start"]')?.value || ""
+      ).trim();
+      const endRaw = String(
+        this.shadowRoot.querySelector('[data-native-field="end"]')?.value || ""
+      ).trim();
+      if (!calendarId || !title || !dateRaw || !allDay && (!startRaw || !endRaw)) {
+        return;
+      }
+      try {
+        if (allDay) {
+          await this._hass.callService("calendar", "create_event", {
+            entity_id: calendarId,
+            summary: title,
+            start_date: dateRaw,
+            end_date: dateRaw
+          });
+        } else {
+          await this._hass.callService("calendar", "create_event", {
+            entity_id: calendarId,
+            summary: title,
+            start_date_time: `${dateRaw}T${startRaw}:00`,
+            end_date_time: `${dateRaw}T${endRaw}:00`
+          });
+        }
+        this._nativeEventComposerOpen = false;
+        this._refreshEvents();
+      } catch (_error) {
+      }
+    }
+    _nativeEventComposerMarkup() {
+      if (!this._nativeEventComposerOpen) {
+        return "";
+      }
+      const calendarIds = (this._config.calendars || []).map((c) => String(c?.entity || "").trim()).filter(Boolean);
+      if (!calendarIds.length) {
+        return "";
+      }
+      const now = /* @__PURE__ */ new Date();
+      const pad = (value) => String(value).padStart(2, "0");
+      const defaultDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      const defaultStart = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      const defaultEnd = `${pad((now.getHours() + 1) % 24)}:${pad(now.getMinutes())}`;
+      return `
+      <div class="calendar-composer ${this._nativeEventComposerOpen ? "is-open" : ""}">
+        <div class="calendar-composer__backdrop" data-action="close-native-composer"></div>
+        <div class="calendar-composer__panel" role="dialog" aria-modal="true" aria-label="Nuevo evento de calendario">
+          <div class="calendar-composer__title">Nuevo evento</div>
+          <label class="calendar-composer__field">
+            <span>Calendario</span>
+            <div data-native-calendar-host></div>
+          </label>
+          <label class="calendar-composer__field">
+            <span>Titulo</span>
+            <input data-native-field="title" type="text" placeholder="Ej. Cita medica" />
+          </label>
+          <div class="calendar-composer__row">
+            <label class="calendar-composer__field">
+              <span>Fecha</span>
+              <input data-native-field="date" type="date" value="${escapeHtml17(defaultDate)}" />
+            </label>
+            <label class="calendar-composer__check">
+              <input data-native-field="allDay" type="checkbox" />
+              <span>Todo el dia</span>
+            </label>
+          </div>
+          <div class="calendar-composer__row">
+            <label class="calendar-composer__field">
+              <span>Inicio</span>
+              <input data-native-field="start" type="time" value="${escapeHtml17(defaultStart)}" />
+            </label>
+            <label class="calendar-composer__field">
+              <span>Fin</span>
+              <input data-native-field="end" type="time" value="${escapeHtml17(defaultEnd)}" />
+            </label>
+          </div>
+          <div class="calendar-composer__actions">
+            <button type="button" class="calendar-composer__btn" data-action="close-native-composer">Cancelar</button>
+            <button type="button" class="calendar-composer__btn calendar-composer__btn--primary" data-action="save-native-composer">Crear</button>
+          </div>
+        </div>
+      </div>
+    `;
     }
     _render() {
       if (!this.shadowRoot) {
@@ -71896,6 +73411,7 @@
       const maxVisibleEvents = Math.max(1, Number(config.max_visible_events) || DEFAULT_CONFIG17.max_visible_events);
       const visibleEvents = this._events.filter((event) => this._shouldShowEventInList(event));
       const groups = this._groupEvents(visibleEvents);
+      const weatherByDay = this._buildWeatherForecastByDay();
       const hasEvents = visibleEvents.length > 0;
       const playEntrance = config.animations?.enabled !== false && !this._calendarEntrancePlayed && !this._loading;
       if (playEntrance) {
@@ -71951,7 +73467,37 @@
           padding:${styles.card.padding};
           position: relative;
           z-index: 1;
-          ${playEntrance ? `animation: calendar-card-in ${animationDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
+        }
+        .calendar-header--entering {
+          animation: calendar-card-fade-up calc(${animationDuration}ms * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+        .calendar-icon-bubble--entering {
+          animation: calendar-card-bubble-bloom calc(${animationDuration}ms * 0.92) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation-delay: 40ms;
+        }
+        .calendar-title--entering {
+          animation: calendar-card-fade-up calc(${animationDuration}ms * 0.92) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 70ms;
+        }
+        .calendar-chip--entering {
+          animation: calendar-card-fade-up calc(${animationDuration}ms * 0.94) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 110ms;
+        }
+        .calendar-chip--entering .calendar-chip__text {
+          animation: calendar-card-chip-pop calc(${animationDuration}ms * 0.58) cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
+          animation-delay: 130ms;
+        }
+        .calendar-events-scroll--entering {
+          animation: calendar-card-fade-up calc(${animationDuration}ms * 0.96) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 130ms;
+        }
+        .calendar-events-scroll--entering .calendar-day {
+          animation: calendar-card-item-rise calc(${animationDuration}ms * 0.74) cubic-bezier(0.18, 0.9, 0.22, 1.08) both;
+          animation-delay: calc(70ms + (var(--calendar-day-index, 0) * 40ms));
+        }
+        .calendar-events-scroll--entering .calendar-day__label {
+          animation: calendar-card-fade-up calc(${animationDuration}ms * 0.6) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: calc(84ms + (var(--calendar-day-index, 0) * 40ms));
         }
         .calendar-header {
           align-items:center;
@@ -72030,6 +73576,13 @@
           display:grid;
           gap:8px;
         }
+        .calendar-day__header {
+          align-items: center;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+          min-width: 0;
+        }
         .calendar-events-scroll {
           display:grid;
           gap:10px;
@@ -72045,7 +73598,27 @@
           font-size:11px;
           font-weight:700;
           letter-spacing:0.08em;
+          min-width: 0;
           text-transform:uppercase;
+        }
+        .calendar-day__weather {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--secondary-text-color);
+          display: inline-flex;
+          flex: 0 0 auto;
+          font-size: 10px;
+          font-weight: 700;
+          gap: 4px;
+          min-height: 22px;
+          padding: 0 8px;
+          white-space: nowrap;
+        }
+        .calendar-day__weather ha-icon {
+          --mdc-icon-size: 14px;
+          color: var(--primary-color);
         }
         .calendar-event {
           align-items:center;
@@ -72142,14 +73715,56 @@
           min-height:28px;
           padding:0 9px;
         }
-        @keyframes calendar-card-in {
+        @keyframes calendar-card-fade-up {
           0% {
             opacity: 0;
-            transform: translateY(10px) scale(0.988);
+            transform: translateY(12px) scale(0.97);
           }
           100% {
             opacity: 1;
             transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes calendar-card-item-rise {
+          0% {
+            opacity: 0;
+            transform: translateY(8px) scale(0.94);
+          }
+          62% {
+            opacity: 1;
+            transform: translateY(0) scale(1.018);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes calendar-card-chip-pop {
+          0% {
+            opacity: 0;
+            transform: translateY(-4px) scale(0.86);
+          }
+          70% {
+            opacity: 1;
+            transform: translateY(1px) scale(1.05);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes calendar-card-bubble-bloom {
+          0% {
+            opacity: 0;
+            transform: scale(0.92);
+          }
+          58% {
+            opacity: 1;
+            transform: scale(1.04);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
           }
         }
         .calendar-expanded {
@@ -72212,7 +73827,13 @@
           letter-spacing: -0.02em;
           line-height: 1.2;
           min-width: 0;
-          padding-right: 28px;
+          padding-right: 6px;
+        }
+        .calendar-expanded__toolbar-actions {
+          align-items: center;
+          display: inline-flex;
+          flex: 0 0 auto;
+          gap: 6px;
         }
         .calendar-expanded__close {
           align-items: center;
@@ -72229,9 +73850,6 @@
           line-height: 0;
           margin: 0;
           padding: 0;
-          position: absolute;
-          right: 0;
-          top: 0;
           width: 24px;
         }
         .calendar-expanded__close ha-icon {
@@ -72243,6 +73861,165 @@
           overscroll-behavior: contain;
           padding-right: 2px;
           touch-action: pan-y;
+        }
+        .calendar-composer {
+          inset: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: absolute;
+          transition: opacity 180ms ease;
+          z-index: 3;
+        }
+        .calendar-composer.is-open {
+          opacity: 1;
+          pointer-events: auto;
+        }
+        .calendar-composer__backdrop {
+          -webkit-backdrop-filter: blur(8px);
+          backdrop-filter: blur(8px);
+          background: rgba(0, 0, 0, 0.28);
+          inset: 0;
+          position: absolute;
+        }
+        .calendar-composer__panel {
+          background:
+            linear-gradient(180deg, color-mix(in srgb, var(--calendar-expanded-accent) 14%, rgba(255, 255, 255, 0.06)), rgba(255, 255, 255, 0.02)),
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, rgba(255, 255, 255, 0.03));
+          border: 1px solid color-mix(in srgb, var(--calendar-expanded-accent) 30%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
+          border-radius: 16px;
+          box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28);
+          display: grid;
+          gap: 10px;
+          left: 50%;
+          max-width: min(94vw, 520px);
+          padding: 14px;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: min(94vw, 520px);
+        }
+        .calendar-composer__title {
+          font-size: ${styles.title_size};
+          font-weight: 800;
+          letter-spacing: -0.02em;
+        }
+        .calendar-composer__row {
+          display: grid;
+          gap: 10px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .calendar-composer__field {
+          display: grid;
+          gap: 6px;
+        }
+        .calendar-composer__field > span,
+        .calendar-composer__check > span {
+          font-size: 12px;
+          font-weight: 700;
+        }
+        .calendar-composer__field input {
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 12px;
+          color: var(--primary-text-color);
+          font: inherit;
+          min-height: 38px;
+          padding: 8px 10px;
+          width: 100%;
+        }
+        .calendar-composer__field select {
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 12px;
+          color: var(--primary-text-color);
+          font: inherit;
+          min-height: 38px;
+          padding: 8px 10px;
+          width: 100%;
+        }
+        .calendar-composer__field input[type="color"] {
+          -webkit-appearance: none;
+          appearance: none;
+          background: transparent;
+          border-radius: 999px;
+          cursor: pointer;
+          height: 40px;
+          min-height: 40px;
+          padding: 0;
+          width: 40px;
+        }
+        .calendar-composer__field input[type="color"]::-webkit-color-swatch-wrapper {
+          padding: 0;
+        }
+        .calendar-composer__field input[type="color"]::-webkit-color-swatch {
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+          border-radius: 999px;
+        }
+        .calendar-composer__field input[type="color"]::-moz-color-swatch {
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+          border-radius: 999px;
+        }
+        .calendar-composer__check {
+          align-items: center;
+          display: inline-grid;
+          gap: 8px;
+          grid-template-columns: auto minmax(0, 1fr);
+          margin-top: 22px;
+        }
+        .calendar-composer__check input {
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 999px;
+          cursor: pointer;
+          height: 22px;
+          margin: 0;
+          position: relative;
+          transition: background 160ms ease, border-color 160ms ease;
+          width: 40px;
+        }
+        .calendar-composer__check input::before {
+          background: rgba(255, 255, 255, 0.92);
+          border-radius: 999px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+          content: "";
+          height: 18px;
+          left: 1px;
+          position: absolute;
+          top: 1px;
+          transition: transform 160ms ease;
+          width: 18px;
+        }
+        .calendar-composer__check input:checked {
+          background: var(--calendar-expanded-accent);
+          border-color: var(--calendar-expanded-accent);
+        }
+        .calendar-composer__check input:checked::before {
+          transform: translateX(18px);
+        }
+        .calendar-composer__actions {
+          display: flex;
+          gap: 8px;
+          justify-content: flex-end;
+        }
+        .calendar-composer__btn {
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+        .calendar-composer__btn--primary {
+          background: color-mix(in srgb, var(--calendar-expanded-accent) 22%, transparent);
+          border-color: color-mix(in srgb, var(--calendar-expanded-accent) 38%, var(--divider-color));
         }
         @keyframes calendar-expanded-panel-in {
           0% {
@@ -72490,16 +74267,31 @@
       </style>
       <ha-card>
         <div class="calendar-card">
-          <div class="calendar-header">
-            <span class="calendar-icon-bubble"><ha-icon icon="${escapeHtml17(config.icon || DEFAULT_CONFIG17.icon)}"></ha-icon></span>
-            <div class="calendar-title">${escapeHtml17(config.title)}</div>
+          <div class="calendar-header ${playEntrance ? "calendar-header--entering" : ""}">
+            <span class="calendar-icon-bubble ${playEntrance ? "calendar-icon-bubble--entering" : ""}"><ha-icon icon="${escapeHtml17(config.icon || DEFAULT_CONFIG17.icon)}"></ha-icon></span>
+            <div class="calendar-title ${playEntrance ? "calendar-title--entering" : ""}">${escapeHtml17(config.title)}</div>
             <span class="calendar-header__spacer"></span>
-            <div class="calendar-chip">${escapeHtml17(timeRangeChipLabel(config.time_range || DEFAULT_CONFIG17.time_range))}</div>
+            <div class="calendar-chip ${playEntrance ? "calendar-chip--entering" : ""}"><span class="calendar-chip__text">${escapeHtml17(timeRangeChipLabel(config.time_range || DEFAULT_CONFIG17.time_range))}</span></div>
           </div>
-          ${this._loading ? `<div class="calendar-loading">Cargando eventos...</div>` : this._error ? `<div class="calendar-error">${escapeHtml17(this._error)}</div>` : !hasEvents ? `<div class="calendar-empty">No hay eventos en este rango.</div>` : `<div class="calendar-events-scroll">
-                      ${groups.map((group) => `
-                        <div class="calendar-day">
-                          <div class="calendar-day__label">${escapeHtml17(group.label)}</div>
+          ${this._loading ? `<div class="calendar-loading">Cargando eventos...</div>` : this._error ? `<div class="calendar-error">${escapeHtml17(this._error)}</div>` : !hasEvents ? `<div class="calendar-empty">No hay eventos en este rango.</div>` : `<div class="calendar-events-scroll ${playEntrance ? "calendar-events-scroll--entering" : ""}">
+                      ${groups.map((group, groupIndex) => `
+                        <div class="calendar-day" style="--calendar-day-index:${groupIndex};">
+                          <div class="calendar-day__header">
+                            <div class="calendar-day__label">${escapeHtml17(group.label)}</div>
+                            ${weatherByDay.has(group.dayKey) ? (() => {
+        const w = weatherByDay.get(group.dayKey);
+        const icon = weatherConditionIcon(w?.condition);
+        const minRaw = Number.isFinite(w?.tempMin) ? Math.round(w.tempMin) : null;
+        const maxRaw = Number.isFinite(w?.tempMax) ? Math.round(w.tempMax) : null;
+        const hasCondition = Boolean(String(w?.condition || "").trim());
+        if (minRaw === null && maxRaw === null && !hasCondition) {
+          return "";
+        }
+        const minText = minRaw === null ? "—" : `${minRaw}°`;
+        const maxText = maxRaw === null ? "—" : `${maxRaw}°`;
+        return `<div class="calendar-day__weather"><ha-icon icon="${escapeHtml17(icon)}"></ha-icon><span>${escapeHtml17(minText)} / ${escapeHtml17(maxText)}</span></div>`;
+      })() : ""}
+                          </div>
                           ${group.events.map((event) => this._renderSingleEventHtml(event, config, locale)).join("")}
                         </div>
                       `).join("")}
@@ -72511,16 +74303,68 @@
         <div class="calendar-expanded__panel ${playExpandedPanelEntrance ? "calendar-expanded__panel--entrance" : ""}" role="dialog" aria-modal="true" aria-label="${escapeHtml17(config.title)}">
           <div class="calendar-expanded__toolbar">
             <div class="calendar-expanded__toolbar-title">${escapeHtml17(config.title)}</div>
-            <button type="button" class="calendar-expanded__close" data-action="close-expanded" aria-label="Cerrar">
-              <ha-icon icon="mdi:close"></ha-icon>
-            </button>
+            <div class="calendar-expanded__toolbar-actions">
+              <button type="button" class="calendar-expanded__close" data-action="add-native-event" aria-label="Crear evento HA">
+                <ha-icon icon="mdi:calendar-plus"></ha-icon>
+              </button>
+              <button type="button" class="calendar-expanded__close" data-action="add-quick-reminder" aria-label="Agregar recordatorio">
+                <ha-icon icon="mdi:plus"></ha-icon>
+              </button>
+              <button type="button" class="calendar-expanded__close" data-action="close-expanded" aria-label="Cerrar">
+                <ha-icon icon="mdi:close"></ha-icon>
+              </button>
+            </div>
           </div>
           <div class="calendar-expanded__body">
             ${this._loading ? `<div class="calendar-loading">Cargando eventos...</div>` : this._error ? `<div class="calendar-error">${escapeHtml17(this._error)}</div>` : !hasEvents ? `<div class="calendar-empty">No hay eventos en este rango.</div>` : this._renderExpandedBody(groups, config, locale)}
           </div>
+          ${this._quickReminderComposerMarkup()}
+          ${this._nativeEventComposerMarkup()}
         </div>
       </div>
     `;
+      this._mountNativeCalendarControl();
+    }
+    _mountNativeCalendarControl() {
+      if (!this._nativeEventComposerOpen || !this.shadowRoot) {
+        return;
+      }
+      const host = this.shadowRoot.querySelector("[data-native-calendar-host]");
+      if (!(host instanceof HTMLElement)) {
+        return;
+      }
+      const nextValue = this._nativeComposerCalendarValue || "";
+      let control = null;
+      if (customElements.get("ha-selector")) {
+        control = document.createElement("ha-selector");
+        control.selector = { entity: { domain: "calendar" } };
+        control.addEventListener("value-changed", (event) => {
+          this._nativeComposerCalendarValue = String(event?.detail?.value || "").trim();
+        });
+      } else if (customElements.get("ha-entity-picker")) {
+        control = document.createElement("ha-entity-picker");
+        control.includeDomains = ["calendar"];
+        control.allowCustomEntity = false;
+        control.entityFilter = (stateObj) => String(stateObj?.entity_id || "").startsWith("calendar.");
+        control.addEventListener("value-changed", (event) => {
+          this._nativeComposerCalendarValue = String(event?.detail?.value || "").trim();
+        });
+      } else {
+        control = document.createElement("input");
+        control.type = "text";
+        control.placeholder = "calendar.ejemplo";
+        control.addEventListener("change", () => {
+          this._nativeComposerCalendarValue = String(control.value || "").trim();
+        });
+      }
+      control.dataset.nativeField = "calendar";
+      if ("hass" in control) {
+        control.hass = this._hass;
+      }
+      if ("value" in control) {
+        control.value = nextValue;
+      }
+      host.replaceChildren(control);
     }
     _onShadowKeydown(event) {
       if (!this._expandedOpen) {
@@ -72529,6 +74373,16 @@
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
+        if (this._quickReminderComposerOpen) {
+          this._quickReminderComposerOpen = false;
+          this._renderIfChanged(true);
+          return;
+        }
+        if (this._nativeEventComposerOpen) {
+          this._nativeEventComposerOpen = false;
+          this._renderIfChanged(true);
+          return;
+        }
         if (this._expandedMonthDayKey) {
           this._expandedMonthDayKey = "";
           this._renderIfChanged(true);
@@ -72572,6 +74426,8 @@
         event.preventDefault();
         event.stopPropagation();
         this._expandedMonthDayKey = "";
+        this._quickReminderComposerOpen = false;
+        this._nativeEventComposerOpen = false;
         this._expandedOpen = false;
         this._expandedOverlayEntrancePlayed = false;
         this._renderIfChanged(true);
@@ -72585,6 +74441,60 @@
         event.stopPropagation();
         this._expandedMonthDayKey = "";
         this._renderIfChanged(true);
+        return;
+      }
+      const addReminder = path.find(
+        (node) => node instanceof HTMLElement && node.dataset?.action === "add-quick-reminder"
+      );
+      if (addReminder && this._expandedOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._openQuickReminderComposer();
+        return;
+      }
+      const addNativeEvent = path.find(
+        (node) => node instanceof HTMLElement && node.dataset?.action === "add-native-event"
+      );
+      if (addNativeEvent && this._expandedOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._openNativeEventComposer();
+        return;
+      }
+      const closeQuickComposer = path.find(
+        (node) => node instanceof HTMLElement && node.dataset?.action === "close-quick-composer"
+      );
+      if (closeQuickComposer && this._expandedOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._closeQuickReminderComposer();
+        return;
+      }
+      const saveQuickComposer = path.find(
+        (node) => node instanceof HTMLElement && node.dataset?.action === "save-quick-composer"
+      );
+      if (saveQuickComposer && this._expandedOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._submitQuickReminderComposer();
+        return;
+      }
+      const closeNativeComposer = path.find(
+        (node) => node instanceof HTMLElement && node.dataset?.action === "close-native-composer"
+      );
+      if (closeNativeComposer && this._expandedOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._closeNativeEventComposer();
+        return;
+      }
+      const saveNativeComposer = path.find(
+        (node) => node instanceof HTMLElement && node.dataset?.action === "save-native-composer"
+      );
+      if (saveNativeComposer && this._expandedOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+        void this._submitNativeEventComposer();
         return;
       }
       const monthDayOpen = path.find(
@@ -72610,6 +74520,7 @@
       event.preventDefault();
       event.stopPropagation();
       this._expandedMonthDayKey = "";
+      this._quickReminderComposerOpen = false;
       this._expandedOpen = true;
       this._renderIfChanged(true);
     }
@@ -72953,9 +74864,8 @@
         control.allowCustomEntity = true;
       } else if (customElements.get("ha-selector")) {
         control = document.createElement("ha-selector");
-        control.selector = {
-          entity: allowedDomains.length === 1 ? { domain: allowedDomains[0] } : {}
-        };
+        const entitySelector = allowedDomains.length === 1 ? { domain: allowedDomains[0] } : allowedDomains.length > 1 ? { domain: allowedDomains } : {};
+        control.selector = { entity: entitySelector };
       } else {
         control = document.createElement("input");
         control.type = "text";
@@ -73039,6 +74949,8 @@
       const placeholder = options.placeholder ? `placeholder="${escapeHtml17(options.placeholder)}"` : "";
       const valueType = options.valueType || (inputType === "number" ? "number" : "string");
       const inputValue = value === void 0 || value === null ? "" : String(value);
+      const hintRaw = options.hint ? String(options.hint) : "";
+      const hintHtml = hintRaw ? `<span class="editor-field__hint">${escapeHtml17(this._editorLabel(hintRaw))}</span>` : "";
       return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml17(tLabel)}</span>
@@ -73049,6 +74961,7 @@
           value="${escapeHtml17(inputValue)}"
           ${placeholder}
         />
+        ${hintHtml}
       </label>
     `;
     }
@@ -73565,6 +75478,22 @@
       })}
             ${this._renderTextField("Eventos visibles antes de scroll", "max_visible_events", config.max_visible_events, { type: "number" })}
             ${this._renderTextField("Refresco (segundos)", "refresh_interval", config.refresh_interval, { type: "number" })}
+            <div class="editor-field editor-field--full">
+              <span>${escapeHtml17(this._editorLabel("Entidad weather (prevision diaria, opcional)"))}</span>
+              <div
+                class="editor-control-host"
+                data-mounted-control="weather-entity"
+                data-field="weather_entity"
+                data-value="${escapeHtml17(String(config.weather_entity ?? ""))}"
+                data-domains="weather"
+                data-placeholder="weather.casa"
+              ></div>
+              <span class="editor-field__hint">${escapeHtml17(
+        this._editorLabel(
+          "Si se define, en la fila de cada dia se muestra icono + minima/maxima cuando haya forecast para esa fecha."
+        )
+      )}</span>
+            </div>
             ${this._renderTintAutoToggle(config.tint_auto !== false)}
             ${this._renderCheckboxField("Permitir marcar eventos como completados", "allow_complete", config.allow_complete === true)}
             ${this._renderCheckboxField("Mostrar eventos completados", "show_completed", config.show_completed === true)}
@@ -73584,6 +75513,11 @@
         )
       )}</span>
             </div>
+            ${this._renderTextField("Webhook persistencia (ID, opcional)", "shared_completed_events_webhook", config.shared_completed_events_webhook || "", {
+        fullWidth: true,
+        placeholder: "nodalia_calendar_completed",
+        hint: 'Si los usuarios no pueden llamar a input_text.set_value, pon aqui el webhook_id de una automatización que escriba el mismo helper. La tarjeta hace POST a /api/webhook/<id> con JSON {"value": "..."}.'
+      })}
           </div>
         </section>
 
@@ -73683,7 +75617,7 @@
         </section>
       </div>
     `;
-      this.shadowRoot.querySelectorAll('[data-mounted-control="calendar-entity"], [data-mounted-control="input-text-entity"]').forEach((host) => {
+      this.shadowRoot.querySelectorAll('[data-mounted-control="calendar-entity"], [data-mounted-control="input-text-entity"], [data-mounted-control="weather-entity"]').forEach((host) => {
         this._mountCalendarEntityHost(host);
       });
     }
@@ -74059,18 +75993,18 @@
     node.dispatchEvent(event);
     return event;
   }
-  function normalizeTextKey16(value) {
+  function normalizeTextKey17(value) {
     return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
   }
   function isUnavailableState16(state) {
-    return normalizeTextKey16(state?.state) === "unavailable";
+    return normalizeTextKey17(state?.state) === "unavailable";
   }
   function humanizeModeLabel2(value, kind = "generic", hass = null, configLang = null) {
     const raw = String(value || "").trim();
     if (!raw) {
       return "";
     }
-    const key = normalizeTextKey16(raw);
+    const key = normalizeTextKey17(raw);
     const h = hass ?? (typeof window !== "undefined" ? window.NodaliaI18n?.resolveHass?.(null) : null);
     if (window.NodaliaI18n?.translateAdvanceVacuumVacuumMode) {
       return window.NodaliaI18n.translateAdvanceVacuumVacuumMode(h, configLang ?? "auto", raw, kind);
@@ -74357,7 +76291,7 @@
       }));
     }
     _runConfiguredCardTapAction(state = this._getState()) {
-      const action = normalizeTextKey16(this._config?.tap_action || "default");
+      const action = normalizeTextKey17(this._config?.tap_action || "default");
       switch (action) {
         case "none":
           break;
@@ -74374,7 +76308,7 @@
       }
     }
     _canRunConfiguredCardTapAction() {
-      const action = normalizeTextKey16(this._config?.tap_action || "default");
+      const action = normalizeTextKey17(this._config?.tap_action || "default");
       if (action === "none") {
         return false;
       }
@@ -74505,7 +76439,7 @@
       return state?.state ? String(state.state) : "";
     }
     _getReportedStateKey(state) {
-      return normalizeTextKey16(this._getReportedStateValue(state));
+      return normalizeTextKey17(this._getReportedStateValue(state));
     }
     _getVacuumName(state) {
       if (this._config?.name) {
@@ -74557,7 +76491,7 @@
       if (cleaningAreaLabel) {
         return `${trState("cleaning", "Limpiando")}: ${cleaningAreaLabel}`;
       }
-      const reportedKey = normalizeTextKey16(this._getReportedStateValue(state));
+      const reportedKey = normalizeTextKey17(this._getReportedStateValue(state));
       switch (reportedKey) {
         case "cleaning":
         case "segment_cleaning":
@@ -74611,7 +76545,7 @@
       if (!raw) {
         return "";
       }
-      const normalized = normalizeTextKey16(raw);
+      const normalized = normalizeTextKey17(raw);
       if (!normalized) {
         return raw;
       }
@@ -74668,7 +76602,7 @@
         attributes.cleaning_state,
         attributes.cleaning_progress,
         attributes.operation
-      ].filter(Boolean).map((value) => normalizeTextKey16(value)).join(" ");
+      ].filter(Boolean).map((value) => normalizeTextKey17(value)).join(" ");
     }
     _getActiveTaskTokens(state) {
       const attributes = state?.attributes || {};
@@ -74693,11 +76627,11 @@
         attributes.current_task,
         attributes.cleaning_state,
         attributes.operation
-      ].filter(Boolean).map((value) => normalizeTextKey16(value));
+      ].filter(Boolean).map((value) => normalizeTextKey17(value));
     }
     _matchesActivity(state, keywords) {
       const activityBlob = this._getActivityTextBlob(state);
-      return keywords.some((keyword) => activityBlob.includes(normalizeTextKey16(keyword)));
+      return keywords.some((keyword) => activityBlob.includes(normalizeTextKey17(keyword)));
     }
     _getBatteryLevel(state) {
       const directValue = Number(state?.attributes?.battery_level);
@@ -74848,8 +76782,8 @@
     _isModeHidden(kind, value) {
       const field = this._getModeVisibilityField(kind);
       const hiddenModes = Array.isArray(this._config?.[field]) ? this._config[field] : [];
-      const expectedKey = normalizeTextKey16(value);
-      return hiddenModes.some((item) => normalizeTextKey16(item) === expectedKey);
+      const expectedKey = normalizeTextKey17(value);
+      return hiddenModes.some((item) => normalizeTextKey17(item) === expectedKey);
     }
     _getSelectOptions(entityId) {
       const selectState = entityId ? this._hass?.states?.[entityId] : null;
@@ -74874,7 +76808,7 @@
       return candidates[0] || "";
     }
     _categorizeModeOption(value) {
-      const key = normalizeTextKey16(value);
+      const key = normalizeTextKey17(value);
       if (MOP_MODE_PATTERNS2.some((pattern) => key.includes(pattern))) {
         return "mop";
       }
@@ -74884,7 +76818,7 @@
       return "unknown";
     }
     _isSharedSmartMode(value) {
-      const key = normalizeTextKey16(value);
+      const key = normalizeTextKey17(value);
       return SHARED_SMART_MODE_PATTERNS2.some((pattern) => key.includes(pattern));
     }
     _getFanPresets(state) {
@@ -74970,7 +76904,7 @@
       <div class="vacuum-card__presets vacuum-card__mode-panel">
         ${descriptor.options.map((option) => `
             <button
-              class="vacuum-card__preset ${normalizeTextKey16(option) === normalizeTextKey16(activeModeDisplayValue) ? "vacuum-card__preset--active" : ""}"
+              class="vacuum-card__preset ${normalizeTextKey17(option) === normalizeTextKey17(activeModeDisplayValue) ? "vacuum-card__preset--active" : ""}"
               type="button"
               data-vacuum-action="${descriptor.service === "select" ? "select" : "fan"}"
               ${descriptor.service === "select" ? `data-target-entity="${escapeHtml18(descriptor.target)}"` : ""}
@@ -75038,7 +76972,7 @@
         if (!(button instanceof HTMLElement)) {
           return;
         }
-        const isActive = normalizeTextKey16(button.dataset.value || "") === normalizeTextKey16(value);
+        const isActive = normalizeTextKey17(button.dataset.value || "") === normalizeTextKey17(value);
         button.classList.toggle("vacuum-card__preset--active", isActive);
       });
     }
@@ -75250,11 +77184,11 @@
         "vaciando"
       ];
       const reportedKey = this._getReportedStateKey(state);
-      if (keywords.some((keyword) => reportedKey.includes(normalizeTextKey16(keyword)))) {
+      if (keywords.some((keyword) => reportedKey.includes(normalizeTextKey17(keyword)))) {
         return true;
       }
       const activeTokens = this._getActiveTaskTokens(state);
-      return keywords.some((keyword) => activeTokens.includes(normalizeTextKey16(keyword)));
+      return keywords.some((keyword) => activeTokens.includes(normalizeTextKey17(keyword)));
     }
     _isPaused(state) {
       return this._matchesActivity(state, [
@@ -75325,11 +77259,11 @@
       });
     }
     _findMatchingModeOption(options, value) {
-      const expectedKey = normalizeTextKey16(value);
+      const expectedKey = normalizeTextKey17(value);
       if (!expectedKey || !Array.isArray(options)) {
         return "";
       }
-      return options.find((option) => normalizeTextKey16(option) === expectedKey) || "";
+      return options.find((option) => normalizeTextKey17(option) === expectedKey) || "";
     }
     _findSharedSmartOption(options) {
       return Array.isArray(options) ? options.find((option) => this._isSharedSmartMode(option)) || "" : "";
@@ -75349,7 +77283,7 @@
         return remembered;
       }
       const normalizedOptions = descriptor.options.map((option) => ({
-        key: normalizeTextKey16(option),
+        key: normalizeTextKey17(option),
         value: option
       }));
       for (const candidate of this._getModeFallbackCandidates(kind)) {
@@ -75404,7 +77338,7 @@
         if (!descriptor?.current) {
           return;
         }
-        if (normalizeTextKey16(descriptor.current) === normalizeTextKey16(pendingValue)) {
+        if (normalizeTextKey17(descriptor.current) === normalizeTextKey17(pendingValue)) {
           didChange = this._clearPendingModeSelection(kind) || didChange;
         }
       });
@@ -75415,7 +77349,7 @@
       if (!pendingValue) {
         return currentValue;
       }
-      const matchedOption = Array.isArray(options) ? options.find((option) => normalizeTextKey16(option) === normalizeTextKey16(pendingValue)) : "";
+      const matchedOption = Array.isArray(options) ? options.find((option) => normalizeTextKey17(option) === normalizeTextKey17(pendingValue)) : "";
       return matchedOption || currentValue;
     }
     _rememberNonSmartModeSelection(kind, value) {
@@ -75455,7 +77389,7 @@
       }
       if (this._isSharedSmartMode(value)) {
         const sharedSmartOption = this._findSharedSmartOption(otherDescriptor.options);
-        if (sharedSmartOption && normalizeTextKey16(sharedSmartOption) !== normalizeTextKey16(otherDescriptor.current)) {
+        if (sharedSmartOption && normalizeTextKey17(sharedSmartOption) !== normalizeTextKey17(otherDescriptor.current)) {
           this._hass.callService("select", "select_option", {
             entity_id: otherDescriptor.target,
             option: sharedSmartOption
@@ -75467,7 +77401,7 @@
         return;
       }
       const fallbackOption = this._getModeFallbackOption(otherKind, otherDescriptor);
-      if (fallbackOption && normalizeTextKey16(fallbackOption) !== normalizeTextKey16(otherDescriptor.current)) {
+      if (fallbackOption && normalizeTextKey17(fallbackOption) !== normalizeTextKey17(otherDescriptor.current)) {
         this._hass.callService("select", "select_option", {
           entity_id: otherDescriptor.target,
           option: fallbackOption
@@ -75716,7 +77650,7 @@
         </div>
       ` : "";
       const showCopyBlock = !isCompactLayout || chips.length > 0;
-      const cardTapAction = normalizeTextKey16(config.tap_action || "default");
+      const cardTapAction = normalizeTextKey17(config.tap_action || "default");
       const canRunCardTapAction = this._canRunConfiguredCardTapAction();
       const iconButtonLabel = cardTapAction === "navigate" ? "Abrir vista del robot" : cardTapAction === "more_info" ? "Mostrar mas informacion" : this._isCleaning(state) ? "Pausar limpieza" : "Iniciar limpieza";
       this.shadowRoot.innerHTML = `
@@ -76593,7 +78527,7 @@
       return candidates[0] || "";
     }
     _categorizeModeOption(value) {
-      const key = normalizeTextKey16(value);
+      const key = normalizeTextKey17(value);
       if (MOP_MODE_PATTERNS2.some((pattern) => key.includes(pattern))) {
         return "mop";
       }
@@ -76603,7 +78537,7 @@
       return "unknown";
     }
     _isSharedSmartMode(value) {
-      const key = normalizeTextKey16(value);
+      const key = normalizeTextKey17(value);
       return SHARED_SMART_MODE_PATTERNS2.some((pattern) => key.includes(pattern));
     }
     _getEditorFanPresets() {
@@ -76633,15 +78567,15 @@
       return Array.isArray(this._config?.[field]) ? this._config[field].map((item) => String(item || "").trim()).filter(Boolean) : [];
     }
     _isModeVisible(field, value) {
-      const expectedKey = normalizeTextKey16(value);
-      return !this._getHiddenModeList(field).some((item) => normalizeTextKey16(item) === expectedKey);
+      const expectedKey = normalizeTextKey17(value);
+      return !this._getHiddenModeList(field).some((item) => normalizeTextKey17(item) === expectedKey);
     }
     _setModeVisibility(field, value, visible) {
       const rawValue = String(value || "").trim();
       if (!rawValue) {
         return;
       }
-      const nextValues = this._getHiddenModeList(field).filter((item) => normalizeTextKey16(item) !== normalizeTextKey16(rawValue));
+      const nextValues = this._getHiddenModeList(field).filter((item) => normalizeTextKey17(item) !== normalizeTextKey17(rawValue));
       if (!visible) {
         nextValues.push(rawValue);
       }
@@ -76653,7 +78587,7 @@
     }
     _renderModeVisibilityField(field, modeValue, kind) {
       const translatedLabel = humanizeModeLabel2(modeValue, kind, this._hass ?? this.hass, this._config?.language ?? "auto");
-      const showRawValue = normalizeTextKey16(translatedLabel) !== normalizeTextKey16(modeValue);
+      const showRawValue = normalizeTextKey17(translatedLabel) !== normalizeTextKey17(modeValue);
       const label = showRawValue ? `${translatedLabel} (${modeValue})` : translatedLabel;
       return `
       <label class="editor-toggle">
@@ -77357,4 +79291,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-beta.1","contentSha256_12":"28f1c5288c32"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-beta.1 (28f1c5288c32) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.0.0-alpha.34","contentSha256_12":"fdfa39d13ae8"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.0.0-alpha.34 (fdfa39d13ae8) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
