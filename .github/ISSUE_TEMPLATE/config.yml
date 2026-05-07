@@ -1,9 +1,13 @@
 blank_issues_enabled: false
 
 contact_links:
-  - name: 💬 General discussion
+  - name: 💬 Discussions
     url: https://github.com/danielmigueltejedor/nodalia-cards/discussions
-    about: Ask general questions, share ideas or discuss Nodalia Cards.
+    about: Ask questions, share ideas or discuss Nodalia Cards.
+
+  - name: 🧪 Alpha / Beta feedback
+    url: https://github.com/danielmigueltejedor/nodalia-cards/discussions/categories/alpha-beta-feedback
+    about: Share feedback about alpha or beta builds.
 
   - name: 📚 Documentation
     url: https://github.com/danielmigueltejedor/nodalia-cards#readme
