@@ -14,6 +14,7 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 Forty-eighth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.48`** (tag **`v1.0.0-alpha.48`** optional).
 
+- **Notifications card — escala Entity Card:** reduce iconos, texto y alturas para alinearse con `nodalia-entity-card`, y usa chips/burbujas compactas para fuente, severidad y acciones.
 - **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.48`**.
 
 ---

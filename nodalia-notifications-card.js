@@ -1460,9 +1460,9 @@ class NodaliaNotificationsCard extends HTMLElement {
             </button>
           </div>
           ${item.message ? `<div class="notification-item__message">${escapeHtml(item.message)}</div>` : ""}
-          <div class="notification-item__meta">
-            ${item.source ? `<span>${escapeHtml(item.source)}</span>` : ""}
-            <span>${escapeHtml(this._severityLabel(item.severity))}</span>
+          <div class="notification-item__chips">
+            ${item.source ? `<span class="notification-item__chip notification-item__chip--value">${escapeHtml(item.source)}</span>` : ""}
+            <span class="notification-item__chip notification-item__chip--state">${escapeHtml(this._severityLabel(item.severity))}</span>
           </div>
           ${
             action
@@ -1550,9 +1550,9 @@ class NodaliaNotificationsCard extends HTMLElement {
         }
         .notifications-surface--empty {
           background:
-            linear-gradient(90deg, rgba(168, 235, 176, 0.78), rgba(238, 255, 239, 0.96) 58%, rgba(255, 255, 255, 0.98)),
-            color-mix(in srgb, var(--success-color, #43a047) 8%, var(--ha-card-background, #fff));
-          border: 1px solid color-mix(in srgb, var(--success-color, #43a047) 28%, rgba(255, 255, 255, 0.58));
+            linear-gradient(135deg, color-mix(in srgb, var(--success-color, #43a047) 18%, ${styles.card.background}) 0%, color-mix(in srgb, var(--success-color, #43a047) 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%),
+            ${styles.card.background};
+          border: 1px solid color-mix(in srgb, var(--success-color, #43a047) 30%, var(--divider-color));
           box-shadow:
             0 10px 24px rgba(67, 160, 71, 0.13),
             var(--ha-card-box-shadow, 0 2px 8px rgba(0, 0, 0, 0.12));
@@ -1560,35 +1560,38 @@ class NodaliaNotificationsCard extends HTMLElement {
         .notifications-empty-inline {
           align-items: center;
           display: grid;
-          gap: 18px;
+          gap: 12px;
           grid-template-columns: auto minmax(0, 1fr);
-          min-height: 84px;
-          padding: 16px 26px;
+          min-height: 64px;
+          padding: 10px 14px;
         }
         .notifications-empty-inline__icon {
           align-items: center;
-          background: color-mix(in srgb, var(--success-color, #43a047) 15%, rgba(255, 255, 255, 0.58));
-          border: 1px solid color-mix(in srgb, var(--success-color, #43a047) 24%, transparent);
+          background: color-mix(in srgb, var(--success-color, #43a047) 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           color: color-mix(in srgb, var(--success-color, #43a047) 78%, var(--primary-text-color));
           display: inline-flex;
-          height: 52px;
+          height: 44px;
           justify-content: center;
-          width: 52px;
+          width: 44px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.12);
         }
         .notifications-empty-inline__icon ha-icon {
-          --mdc-icon-size: 26px;
+          --mdc-icon-size: 20px;
         }
         .notifications-empty-inline__text {
-          font-size: clamp(17px, 2vw, 22px);
-          font-weight: 800;
-          line-height: 1.22;
+          font-size: clamp(13px, 1.35vw, 15px);
+          font-weight: 700;
+          line-height: 1.15;
           overflow-wrap: anywhere;
         }
         .notifications-stack {
           display: grid;
           isolation: isolate;
-          padding-bottom: ${shouldStack && !this._expanded ? "22px" : "0"};
+          padding-bottom: ${shouldStack && !this._expanded ? "16px" : "0"};
           position: relative;
         }
         .notifications-stack-toggle,
@@ -1605,12 +1608,12 @@ class NodaliaNotificationsCard extends HTMLElement {
           font: inherit;
           justify-content: center;
           margin: 0;
-          min-height: 34px;
-          padding: 0 12px;
+          min-height: 24px;
+          padding: 0 9px;
         }
         .notifications-list {
           display: grid;
-          gap: 9px;
+          gap: 8px;
           position: relative;
           z-index: 3;
         }
@@ -1623,14 +1626,14 @@ class NodaliaNotificationsCard extends HTMLElement {
           border: 1px solid color-mix(in srgb, var(--notification-accent) 26%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
           border-radius: ${styles.item_radius};
           box-shadow:
-            0 12px 26px color-mix(in srgb, var(--notification-accent) 12%, transparent),
+            0 10px 24px color-mix(in srgb, var(--notification-accent) 12%, transparent),
             var(--ha-card-box-shadow, 0 2px 8px rgba(0, 0, 0, 0.12));
           display: grid;
-          gap: 14px;
+          gap: 10px;
           grid-template-columns: auto minmax(0, 1fr);
           min-width: 0;
-          min-height: 88px;
-          padding: 16px 18px;
+          min-height: 64px;
+          padding: 10px 12px;
           position: relative;
           z-index: 4;
         }
@@ -1648,87 +1651,110 @@ class NodaliaNotificationsCard extends HTMLElement {
           background: color-mix(in srgb, var(--notification-accent) 16%, transparent);
           border: 1px solid color-mix(in srgb, var(--notification-accent) 22%, transparent);
           border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.12);
           color: var(--notification-accent);
           display: inline-flex;
-          height: 48px;
+          height: 44px;
           justify-content: center;
-          width: 48px;
+          width: 44px;
         }
         .notification-item__icon ha-icon {
-          --mdc-icon-size: 24px;
+          --mdc-icon-size: 20px;
         }
         .notification-item__body {
           display: grid;
-          gap: 4px;
+          gap: 5px;
           min-width: 0;
         }
         .notification-item__title-row {
           align-items: center;
           display: grid;
-          gap: 8px;
+          gap: 6px;
           grid-template-columns: minmax(0, 1fr) auto;
         }
         .notification-item__title {
-          font-size: clamp(16px, 1.7vw, 20px);
-          font-weight: 800;
-          line-height: 1.2;
+          font-size: clamp(12px, 1.25vw, 14px);
+          font-weight: 700;
+          line-height: 1.15;
           overflow-wrap: anywhere;
         }
         .notification-item__dismiss {
-          height: 26px;
-          min-height: 26px;
+          height: 24px;
+          min-height: 24px;
           padding: 0;
-          width: 26px;
+          width: 24px;
         }
         .notification-item__dismiss ha-icon {
           --mdc-icon-size: 14px;
         }
         .notification-item__message {
           color: var(--primary-text-color);
-          font-size: 13px;
-          line-height: 1.32;
+          font-size: 12px;
+          line-height: 1.25;
           overflow-wrap: anywhere;
         }
-        .notification-item__meta {
-          color: var(--secondary-text-color);
+        .notification-item__chips {
+          align-items: center;
           display: flex;
           flex-wrap: wrap;
-          font-size: 11px;
-          font-weight: 700;
           gap: 6px;
-          text-transform: uppercase;
+          min-width: 0;
+        }
+        .notification-item__chip {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 999px;
+          color: var(--secondary-text-color);
+          display: inline-flex;
+          flex: 0 1 auto;
+          font-size: 10.5px;
+          font-weight: 600;
+          line-height: 1;
+          min-height: 22px;
+          max-width: 100%;
+          min-width: 0;
+          overflow: hidden;
+          padding: 0 8px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .notification-item__chip--state {
+          color: var(--primary-text-color);
         }
         .notification-item__actions {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
-          padding-top: 3px;
+          gap: 6px;
+          padding-top: 1px;
         }
         .notification-item__action {
-          background: color-mix(in srgb, var(--notification-accent) 18%, transparent);
-          border-color: color-mix(in srgb, var(--notification-accent) 32%, transparent);
+          background: color-mix(in srgb, var(--notification-accent) 14%, transparent);
+          border-color: color-mix(in srgb, var(--notification-accent) 24%, transparent);
           color: var(--primary-text-color);
-          font-size: 12px;
-          font-weight: 800;
+          font-size: 11px;
+          font-weight: 700;
         }
         .notification-stack-card {
           background: color-mix(in srgb, var(--ha-card-background, #fff) 88%, var(--primary-text-color));
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 9%, transparent);
           border-radius: ${styles.item_radius};
-          bottom: calc(var(--stack-index) * 8px);
+          bottom: calc(var(--stack-index) * 6px);
           box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
-          height: 54px;
-          left: calc(10px + var(--stack-index) * 8px);
+          height: 40px;
+          left: calc(8px + var(--stack-index) * 7px);
           opacity: calc(0.78 - var(--stack-index) * 0.14);
           position: absolute;
-          right: calc(10px + var(--stack-index) * 8px);
+          right: calc(8px + var(--stack-index) * 7px);
           z-index: calc(3 - var(--stack-index));
         }
         .notifications-footer {
           align-items: center;
           display: flex;
           justify-content: center;
-          margin-top: -8px;
+          margin-top: -7px;
           position: relative;
           z-index: 8;
         }
@@ -1737,14 +1763,14 @@ class NodaliaNotificationsCard extends HTMLElement {
           border-color: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
           box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
           gap: 4px;
-          font-size: 12px;
-          font-weight: 800;
-          height: 32px;
-          min-height: 32px;
-          padding: 0 10px;
+          font-size: 11px;
+          font-weight: 700;
+          height: 28px;
+          min-height: 28px;
+          padding: 0 9px;
         }
         .notifications-stack-toggle ha-icon {
-          --mdc-icon-size: 18px;
+          --mdc-icon-size: 16px;
         }
       </style>
       <ha-card>

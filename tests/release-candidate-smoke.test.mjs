@@ -192,6 +192,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /notifications-surface--empty/);
   assert.match(source, /notifications-empty-inline/);
   assert.match(source, /notification-stack-card/);
+  assert.match(source, /notification-item__chip/);
   assert.match(source, /fan\.turn_on/);
   assert.match(source, /calendars\/\$\{encodeURIComponent\(entityId\)\}/);
   assert.match(source, /editorFilteredStatesSignature/);
