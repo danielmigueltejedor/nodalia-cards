@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-alpha.53";
+const CARD_VERSION = "1.0.0-alpha.54";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -499,6 +499,9 @@ const DEFAULT_CONFIG = {
   window_entities: [],
   temperature_entities: [],
   humidity_entities: [],
+  battery_entities: [],
+  humidifier_fill_entities: [],
+  ink_entities: [],
   custom_notifications: [],
   thresholds: {
     hot_temperature: 27,
@@ -507,8 +510,21 @@ const DEFAULT_CONFIG = {
     humidity_low: 30,
     rain_probability: 50,
     rain_lookahead_hours: 6,
+    battery_low: 20,
+    humidifier_fill_low: 20,
+    ink_low: 15,
   },
   smart_recommendations: true,
+  smart_notifications: {
+    hot: { title: "", message: "", tint_color: "", url: "", action_label: "" },
+    cold: { title: "", message: "", tint_color: "", url: "", action_label: "" },
+    humidity_high: { title: "", message: "", tint_color: "", url: "", action_label: "" },
+    humidity_low: { title: "", message: "", tint_color: "", url: "", action_label: "" },
+    rain: { title: "", message: "", tint_color: "", url: "", action_label: "" },
+    battery_low: { title: "", message: "", tint_color: "", url: "", action_label: "" },
+    humidifier_fill_low: { title: "", message: "", tint_color: "", url: "", action_label: "" },
+    ink_low: { title: "", message: "", tint_color: "", url: "", action_label: "" },
+  },
   mobile_notifications: {
     enabled: false,
     services: [],
@@ -660,6 +676,26 @@ function normalizeNotifyServices(value) {
     .filter(item => item.startsWith("notify.") && item.length > "notify.".length);
 }
 
+function normalizeSmartNotificationOptions(value) {
+  const row = isObject(value) ? value : {};
+  return {
+    title: String(row.title || "").trim(),
+    message: String(row.message || "").trim(),
+    tint_color: String(row.tint_color || "").trim(),
+    url: String(row.url || "").trim(),
+    action_label: String(row.action_label || "").trim(),
+  };
+}
+
+function normalizeSmartNotifications(value) {
+  const rows = isObject(value) ? value : {};
+  const out = {};
+  Object.keys(DEFAULT_CONFIG.smart_notifications).forEach(key => {
+    out[key] = normalizeSmartNotificationOptions(rows[key]);
+  });
+  return out;
+}
+
 function normalizeCustomNotifications(value) {
   return (Array.isArray(value) ? value : [])
     .map(item => {
@@ -682,6 +718,7 @@ function normalizeCustomNotifications(value) {
           : row.service_data
             ? JSON.stringify(row.service_data)
             : "",
+        url: String(row.url || "").trim(),
       };
     })
     .filter(item => {
@@ -701,6 +738,9 @@ function normalizeConfig(rawConfig = {}) {
   config.window_entities = normalizeEntityList(config.window_entities, ["binary_sensor"]);
   config.temperature_entities = normalizeEntityList(config.temperature_entities, ["sensor"]);
   config.humidity_entities = normalizeEntityList(config.humidity_entities, ["sensor"]);
+  config.battery_entities = normalizeEntityList(config.battery_entities, ["sensor"]);
+  config.humidifier_fill_entities = normalizeEntityList(config.humidifier_fill_entities, ["sensor"]);
+  config.ink_entities = normalizeEntityList(config.ink_entities, ["sensor"]);
   config.custom_notifications = normalizeCustomNotifications(config.custom_notifications);
   config.max_visible = Math.max(1, Math.min(8, Number(config.max_visible) || 1));
   config.refresh_interval = Math.max(30, Math.min(3600, Number(config.refresh_interval) || 300));
@@ -715,7 +755,11 @@ function normalizeConfig(rawConfig = {}) {
     humidity_low: finiteNumber(config.thresholds?.humidity_low, DEFAULT_CONFIG.thresholds.humidity_low),
     rain_probability: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.rain_probability, DEFAULT_CONFIG.thresholds.rain_probability))),
     rain_lookahead_hours: Math.max(1, Math.min(24, finiteNumber(config.thresholds?.rain_lookahead_hours, DEFAULT_CONFIG.thresholds.rain_lookahead_hours))),
+    battery_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.battery_low, DEFAULT_CONFIG.thresholds.battery_low))),
+    humidifier_fill_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.humidifier_fill_low, DEFAULT_CONFIG.thresholds.humidifier_fill_low))),
+    ink_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.ink_low, DEFAULT_CONFIG.thresholds.ink_low))),
   };
+  config.smart_notifications = normalizeSmartNotifications(config.smart_notifications);
   config.mobile_notifications = mergeDeep(DEFAULT_CONFIG.mobile_notifications, config.mobile_notifications || {});
   config.mobile_notifications.enabled = config.mobile_notifications.enabled === true;
   config.mobile_notifications.services = normalizeNotifyServices(config.mobile_notifications.services);
@@ -874,6 +918,18 @@ function getEditorColorFallbackValue(field) {
     return "var(--primary-color)";
   }
   return "#71c0ff";
+}
+
+function shouldDarkenNotificationIconGlyph(state, accentColor) {
+  const contrast = typeof window !== "undefined" ? window.NodaliaBubbleContrast : null;
+  if (contrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor)) {
+    return true;
+  }
+  const hue = contrast?.parseCssColorHue?.(accentColor);
+  if (hue === null || hue === undefined || Number.isNaN(hue)) {
+    return false;
+  }
+  return (hue >= 35 && hue <= 165) || (hue >= 300 || hue <= 20);
 }
 
 function fireEvent(node, type, detail = {}, options = {}) {
@@ -1178,7 +1234,9 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._lastNotifications = [];
     this._animateContentOnNextRender = true;
+    this._viewportResizeTimer = 0;
     this._onClick = this._onClick.bind(this);
+    this._onViewportResize = this._onViewportResize.bind(this);
     this.shadowRoot.addEventListener("click", this._onClick);
   }
 
@@ -1190,9 +1248,17 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._renderIfChanged(true);
     this._refreshCalendarEventsSoon(0);
     this._refreshWeatherForecastsSoon(0);
+    window.addEventListener("resize", this._onViewportResize, { passive: true });
+    window.addEventListener("orientationchange", this._onViewportResize, { passive: true });
   }
 
   disconnectedCallback() {
+    window.removeEventListener("resize", this._onViewportResize);
+    window.removeEventListener("orientationchange", this._onViewportResize);
+    if (this._viewportResizeTimer) {
+      window.clearTimeout(this._viewportResizeTimer);
+      this._viewportResizeTimer = 0;
+    }
     if (this._calendarRefreshTimer) {
       window.clearTimeout(this._calendarRefreshTimer);
       this._calendarRefreshTimer = 0;
@@ -1205,6 +1271,18 @@ class NodaliaNotificationsCard extends HTMLElement {
       window.clearTimeout(this._mobileNotifyTimer);
       this._mobileNotifyTimer = 0;
     }
+  }
+
+  _onViewportResize() {
+    if (this._viewportResizeTimer) {
+      window.clearTimeout(this._viewportResizeTimer);
+    }
+    this._viewportResizeTimer = window.setTimeout(() => {
+      this._viewportResizeTimer = 0;
+      this._lastRenderSignature = "";
+      this._renderIfChanged(true);
+      fireEvent(this, "iron-resize", {});
+    }, 160);
   }
 
   setConfig(config) {
@@ -1669,6 +1747,7 @@ class NodaliaNotificationsCard extends HTMLElement {
 
     this._buildComfortNotifications(add);
     this._buildWeatherNotifications(add);
+    this._buildLevelNotifications(add);
     this._buildCustomNotifications(add);
 
     return items.sort((left, right) => {
@@ -1710,8 +1789,8 @@ class NodaliaNotificationsCard extends HTMLElement {
       const fanName = friendlyName(this._hass, hottest.fanTarget);
       add({
         id: `comfort:hot:${hottest.entityId}:${hottest.fanTarget}:${Math.floor(hottest.value)}`,
-        title: this._text("titles.hot", "Hace calor"),
-        message: this._text("messages.hot", "{source} marca {value}. Puedes encender {fan}.", {
+        title: this._smartTitle("hot", "titles.hot", "Hace calor"),
+        message: this._smartMessage("hot", "messages.hot", "{source} marca {value}. Puedes encender {fan}.", {
           source: sourceName,
           value: formatNumber(hottest.value, hottest.unit),
           fan: fanName,
@@ -1719,22 +1798,27 @@ class NodaliaNotificationsCard extends HTMLElement {
         icon: "mdi:fan",
         severity: "warning",
         source: sourceName,
+        entity: hottest.entityId,
+        tintColor: this._smartTint("hot"),
         createdAt: Date.parse(hottest.state.last_changed || "") || Date.now(),
-        action: { label: this._text("actions.turnOnFan", "Encender ventilador"), type: "service", service: "fan.turn_on", entity: hottest.fanTarget, internal: true },
+        action: this._smartAction("hot", { label: this._text("actions.turnOnFan", "Encender ventilador"), type: "service", service: "fan.turn_on", entity: hottest.fanTarget, internal: true }),
       });
     } else if (hottest && hottest.value <= this._config.thresholds.cold_temperature) {
       const sourceName = friendlyName(this._hass, hottest.entityId);
       add({
         id: `comfort:cold:${hottest.entityId}:${Math.floor(hottest.value)}`,
-        title: this._text("titles.cold", "Temperatura baja"),
-        message: this._text("messages.sensorValue", "{source} marca {value}.", {
+        title: this._smartTitle("cold", "titles.cold", "Temperatura baja"),
+        message: this._smartMessage("cold", "messages.sensorValue", "{source} marca {value}.", {
           source: sourceName,
           value: formatNumber(hottest.value, hottest.unit),
         }),
         icon: "mdi:thermometer-low",
         severity: "info",
         source: sourceName,
+        entity: hottest.entityId,
+        tintColor: this._smartTint("cold"),
         createdAt: Date.parse(hottest.state.last_changed || "") || Date.now(),
+        action: this._smartAction("cold", null),
       });
     }
 
@@ -1747,18 +1831,21 @@ class NodaliaNotificationsCard extends HTMLElement {
       if (value >= this._config.thresholds.humidity_high || value <= this._config.thresholds.humidity_low) {
         const high = value >= this._config.thresholds.humidity_high;
         const sourceName = friendlyName(this._hass, entityId);
+        const smartKind = high ? "humidity_high" : "humidity_low";
         add({
           id: `humidity:${entityId}:${high ? "high" : "low"}:${Math.round(value)}`,
-          title: high ? this._text("titles.humidityHigh", "Humedad alta") : this._text("titles.humidityLow", "Humedad baja"),
-          message: this._text("messages.sensorValue", "{source} marca {value}.", {
+          title: high ? this._smartTitle(smartKind, "titles.humidityHigh", "Humedad alta") : this._smartTitle(smartKind, "titles.humidityLow", "Humedad baja"),
+          message: this._smartMessage(smartKind, "messages.sensorValue", "{source} marca {value}.", {
             source: sourceName,
             value: formatNumber(value, state.attributes?.unit_of_measurement || "%"),
           }),
           icon: high ? "mdi:water-percent-alert" : "mdi:water-percent",
           severity: high ? "warning" : "info",
           source: sourceName,
+          entity: entityId,
+          tintColor: this._smartTint(smartKind),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId },
+          action: this._smartAction(smartKind, { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId }),
         });
       }
     });
@@ -1780,6 +1867,44 @@ class NodaliaNotificationsCard extends HTMLElement {
       return tokenMatch;
     }
     return offFans.length === 1 ? offFans[0] : null;
+  }
+
+  _formatTemplate(template, values = {}) {
+    return String(template || "").replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key) => {
+      const value = values?.[key];
+      return value === undefined || value === null ? "" : String(value);
+    });
+  }
+
+  _smartConfig(kind) {
+    return this._config.smart_notifications?.[kind] || {};
+  }
+
+  _smartTitle(kind, path, fallback, values = {}) {
+    const configured = this._smartConfig(kind).title;
+    return configured ? this._formatTemplate(configured, values) : this._text(path, fallback, values);
+  }
+
+  _smartMessage(kind, path, fallback, values = {}) {
+    const configured = this._smartConfig(kind).message;
+    return configured ? this._formatTemplate(configured, values) : this._text(path, fallback, values);
+  }
+
+  _smartTint(kind) {
+    return this._smartConfig(kind).tint_color || "";
+  }
+
+  _smartAction(kind, fallbackAction = null, fallbackUrlLabel = "") {
+    const config = this._smartConfig(kind);
+    const url = window.NodaliaUtils?.sanitizeActionUrl?.(config.url, { allowRelative: true }) || "";
+    if (url) {
+      return {
+        label: config.action_label || fallbackUrlLabel || this._text("actions.open", "Abrir"),
+        type: "url",
+        url,
+      };
+    }
+    return fallbackAction;
   }
 
   _buildWeatherNotifications(add) {
@@ -1808,16 +1933,91 @@ class NodaliaNotificationsCard extends HTMLElement {
       const sourceName = friendlyName(this._hass, entityId);
       add({
         id: `weather:rain:${entityId}:${rainy.date.toISOString().slice(0, 13)}`,
-        title: this._text("titles.rainSoon", "Lluvia proxima"),
-        message: this._text("messages.rainSoon", "{source} preve lluvia sobre {time}. Si tienes ropa tendida, conviene revisarla.", {
+        title: this._smartTitle("rain", "titles.rainSoon", "Lluvia proxima"),
+        message: this._smartMessage("rain", "messages.rainSoon", "{source} preve lluvia sobre {time}. Si tienes ropa tendida, conviene revisarla.", {
           source: sourceName,
           time: formatTime(rainy.date),
         }),
         icon: "mdi:weather-pouring",
         severity: "warning",
         source: sourceName,
+        entity: entityId,
+        tintColor: this._smartTint("rain"),
         createdAt: rainy.date.getTime(),
-        action: { label: this._text("actions.viewWeather", "Ver tiempo"), type: "more-info", entity: entityId },
+        action: this._smartAction("rain", { label: this._text("actions.viewWeather", "Ver tiempo"), type: "more-info", entity: entityId }),
+      });
+    });
+  }
+
+  _buildLevelNotifications(add) {
+    if (!this._config.smart_recommendations || !this._hass) {
+      return;
+    }
+    const groups = [
+      {
+        entities: this._config.battery_entities,
+        icon: "mdi:battery-alert-variant-outline",
+        kind: "battery_low",
+        titleKey: "titles.batteryLow",
+        titleFallback: "Bateria baja",
+        messageKey: "messages.lowLevel",
+        messageFallback: "{source} queda en {value}.",
+        threshold: this._config.thresholds.battery_low,
+        urlLabel: this._text("actions.buyBattery", "Comprar pila"),
+      },
+      {
+        entities: this._config.humidifier_fill_entities,
+        icon: "mdi:air-humidifier",
+        kind: "humidifier_fill_low",
+        titleKey: "titles.humidifierFillLow",
+        titleFallback: "Deposito bajo",
+        messageKey: "messages.lowLevel",
+        messageFallback: "{source} queda en {value}.",
+        threshold: this._config.thresholds.humidifier_fill_low,
+        urlLabel: this._text("actions.open", "Abrir"),
+      },
+      {
+        entities: this._config.ink_entities,
+        icon: "mdi:printer-alert",
+        kind: "ink_low",
+        titleKey: "titles.inkLow",
+        titleFallback: "Tinta baja",
+        messageKey: "messages.lowLevel",
+        messageFallback: "{source} queda en {value}.",
+        threshold: this._config.thresholds.ink_low,
+        urlLabel: this._text("actions.buyInk", "Comprar tinta"),
+      },
+    ];
+    groups.forEach(group => {
+      group.entities.forEach(entityId => {
+        const state = this._hass.states?.[entityId];
+        const value = numericState(state);
+        if (!state || value === null || value > group.threshold) {
+          return;
+        }
+        const sourceName = friendlyName(this._hass, entityId);
+        const unit = state.attributes?.unit_of_measurement || "%";
+        const formattedValue = formatNumber(value, unit);
+        add({
+          id: `${group.kind}:${entityId}:${Math.round(value)}`,
+          title: this._smartTitle(group.kind, group.titleKey, group.titleFallback, {
+            source: sourceName,
+            threshold: formatNumber(group.threshold, unit),
+            value: formattedValue,
+          }),
+          message: this._smartMessage(group.kind, group.messageKey, group.messageFallback, {
+            source: sourceName,
+            threshold: formatNumber(group.threshold, unit),
+            value: formattedValue,
+          }),
+          icon: group.icon,
+          severity: "warning",
+          source: sourceName,
+          entity: entityId,
+          tintColor: this._smartTint(group.kind),
+          createdAt: Date.parse(state.last_changed || "") || Date.now(),
+          action: this._smartAction(group.kind, { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId }, group.urlLabel),
+        });
       });
     });
   }
@@ -1832,7 +2032,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       }
       const entityName = item.entity ? friendlyName(this._hass, item.entity) : "";
       add({
-        id: `custom:${index}:${notificationHash(`${item.title}|${item.message}|${item.entity}|${item.condition}|${item.value}`)}`,
+        id: `custom:${index}:${notificationHash(`${item.title}|${item.message}|${item.entity}|${item.condition}|${item.value}|${item.url}`)}`,
         title: item.title || entityName || this._text("titles.customFallback", "Notificacion"),
         message: item.message || entityName,
         icon: item.icon || "mdi:bell-outline",
@@ -1890,6 +2090,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       entity: item.entity,
       service: item.service,
       serviceData: parseServiceData(item.service_data),
+      url: item.url,
     };
   }
 
@@ -1974,6 +2175,9 @@ class NodaliaNotificationsCard extends HTMLElement {
       ...this._config.window_entities,
       ...this._config.temperature_entities,
       ...this._config.humidity_entities,
+      ...this._config.battery_entities,
+      ...this._config.humidifier_fill_entities,
+      ...this._config.ink_entities,
       ...this._config.custom_notifications.map(item => item.entity).filter(Boolean),
     ];
     parts.push(this._config.language || "auto");
@@ -2103,6 +2307,13 @@ class NodaliaNotificationsCard extends HTMLElement {
       fireEvent(this, "hass-more-info", { entityId: action.entity });
       return;
     }
+    if (action.type === "url" && action.url) {
+      const url = window.NodaliaUtils?.sanitizeActionUrl?.(action.url, { allowRelative: true }) || "";
+      if (url && typeof window !== "undefined") {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+      return;
+    }
     if (action.type === "toggle" && action.entity && typeof this._hass.callService === "function") {
       const data = { entity_id: action.entity };
       if (action.internal === true) {
@@ -2183,13 +2394,30 @@ class NodaliaNotificationsCard extends HTMLElement {
     return chips;
   }
 
+  _severityAccent(severity) {
+    switch (severity) {
+      case "critical":
+        return "var(--error-color, #db4437)";
+      case "warning":
+        return "var(--warning-color, #f59e0b)";
+      case "success":
+        return "var(--success-color, #43a047)";
+      default:
+        return sanitizeCssRuntimeValue(this._config.styles.accent, DEFAULT_CONFIG.styles.accent);
+    }
+  }
+
   _renderNotification(item, options = {}) {
     const action = item.action;
     const primary = options.primary === true;
     const tint = item.tintColor ? sanitizeCssRuntimeValue(item.tintColor, "") : "";
     const chips = this._notificationChips(item);
+    const accent = tint || this._severityAccent(item.severity);
+    const stateForIcon = this._hass?.states?.[item.entity || action?.entity];
+    const darkenIcon = shouldDarkenNotificationIconGlyph(stateForIcon, accent);
+    const iconColor = darkenIcon ? `color-mix(in srgb, var(--primary-text-color) 60%, ${accent})` : "var(--notification-accent)";
     return `
-      <article class="notification-item notification-item--${escapeHtml(item.severity)} ${primary ? "notification-item--primary" : ""}"${tint ? ` style="--notification-accent:${escapeHtml(tint)}"` : ""}>
+      <article class="notification-item notification-item--${escapeHtml(item.severity)} ${primary ? "notification-item--primary" : ""}" style="${tint ? `--notification-accent:${escapeHtml(tint)};` : ""}--notification-icon-color:${escapeHtml(iconColor)};">
         <div class="notification-item__icon">
           <ha-icon icon="${escapeHtml(item.icon)}"></ha-icon>
         </div>
@@ -2354,6 +2582,8 @@ class NodaliaNotificationsCard extends HTMLElement {
           overflow-wrap: anywhere;
         }
         .notifications-stack {
+          align-content: start;
+          align-items: start;
           display: grid;
           isolation: isolate;
           padding-bottom: ${shouldStack && !this._expanded ? "16px" : "0"};
@@ -2377,6 +2607,8 @@ class NodaliaNotificationsCard extends HTMLElement {
           padding: 0 9px;
         }
         .notifications-list {
+          align-content: start;
+          align-items: start;
           display: grid;
           gap: 8px;
           position: relative;
@@ -2385,6 +2617,7 @@ class NodaliaNotificationsCard extends HTMLElement {
         .notification-item {
           --notification-accent: ${styles.accent};
           align-items: start;
+          align-self: start;
           background:
             linear-gradient(135deg, color-mix(in srgb, var(--notification-accent) 18%, ${styles.card.background}) 0%, color-mix(in srgb, var(--notification-accent) 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%),
             ${styles.card.background};
@@ -2440,7 +2673,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           box-shadow:
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
             0 10px 24px rgba(0, 0, 0, 0.12);
-          color: var(--notification-accent);
+          color: var(--notification-icon-color, var(--notification-accent));
           display: inline-flex;
           height: 44px;
           justify-content: center;
@@ -2450,6 +2683,7 @@ class NodaliaNotificationsCard extends HTMLElement {
         }
         .notification-item__icon ha-icon {
           --mdc-icon-size: 20px;
+          color: var(--notification-icon-color, var(--notification-accent));
         }
         .notification-item__body {
           display: grid;
@@ -2656,6 +2890,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     this._config = normalizeConfig({});
     this._hass = null;
     this._showStyleSection = false;
+    this._showSmartSection = false;
     this._showCustomSection = true;
     this._showAnimationSection = false;
     this._pendingEditorControlTags = new Set();
@@ -2810,6 +3045,9 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         return ["binary_sensor"];
       case "temperature_entities":
       case "humidity_entities":
+      case "battery_entities":
+      case "humidifier_fill_entities":
+      case "ink_entities":
         return ["sensor"];
       default:
         return [];
@@ -2916,6 +3154,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       event.stopPropagation();
       if (toggle.dataset.editorToggle === "styles") {
         this._showStyleSection = !this._showStyleSection;
+      } else if (toggle.dataset.editorToggle === "smart") {
+        this._showSmartSection = !this._showSmartSection;
       } else if (toggle.dataset.editorToggle === "custom") {
         this._showCustomSection = !this._showCustomSection;
       } else if (toggle.dataset.editorToggle === "animations") {
@@ -3047,12 +3287,16 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
-    const color = getEditorColorModel(value, options.fallbackValue || getEditorColorFallbackValue(field));
+    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+    const currentValue = value === undefined || value === null || value === ""
+      ? fallbackValue
+      : String(value);
+    const color = getEditorColorModel(currentValue, fallbackValue);
     return `
-      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(label)}</span>
-        <span class="editor-color-field">
-          <span class="editor-color-picker" style="--editor-swatch:${escapeHtml(color.hex)}">
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="${escapeHtml("Color personalizado")}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
@@ -3061,11 +3305,10 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
               value="${escapeHtml(color.hex)}"
               aria-label="${escapeHtml(label)}"
             />
-            <span class="editor-color-swatch" aria-hidden="true"></span>
-          </span>
-          <span class="editor-color-value">${escapeHtml(color.label)}</span>
-        </span>
-      </label>
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};" aria-hidden="true"></span>
+          </label>
+        </div>
+      </div>
     `;
   }
 
@@ -3175,6 +3418,36 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     }
   }
 
+  _renderSmartNotificationOptions(config) {
+    const rows = [
+      ["hot", "Calor", "Hace calor", "{source} marca {value}. Puedes encender {fan}."],
+      ["cold", "Frio", "Temperatura baja", "{source} marca {value}."],
+      ["humidity_high", "Humedad alta", "Humedad alta", "{source} marca {value}."],
+      ["humidity_low", "Humedad baja", "Humedad baja", "{source} marca {value}."],
+      ["rain", "Lluvia", "Lluvia proxima", "{source} preve lluvia sobre {time}."],
+      ["battery_low", "Bateria baja", "Bateria baja", "{source} queda en {value}."],
+      ["humidifier_fill_low", "Deposito bajo", "Deposito bajo", "{source} queda en {value}."],
+      ["ink_low", "Tinta baja", "Tinta baja", "{source} queda en {value}."],
+    ];
+    return rows.map(([key, label, titlePlaceholder, messagePlaceholder]) => {
+      const item = config.smart_notifications?.[key] || {};
+      return `
+        <div class="editor-action">
+          <div class="editor-action__header">
+            <div class="editor-action__title">${escapeHtml(label)}</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderTextField("Titulo personalizado", `smart_notifications.${key}.title`, item.title, { placeholder: titlePlaceholder })}
+            ${this._renderColorField("Color tintado", `smart_notifications.${key}.tint_color`, item.tint_color)}
+            ${this._renderTextareaField("Mensaje personalizado", `smart_notifications.${key}.message`, item.message, { placeholder: messagePlaceholder })}
+            ${this._renderTextField("URL accion opcional", `smart_notifications.${key}.url`, item.url, { placeholder: "https://...", fullWidth: true })}
+            ${this._renderTextField("Etiqueta URL", `smart_notifications.${key}.action_label`, item.action_label, { placeholder: "Comprar / Abrir", fullWidth: true })}
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
   _renderCustomNotifications(config) {
     if (!config.custom_notifications.length) {
       return `<div class="editor-empty">Todavia no hay notificaciones personalizadas.</div>`;
@@ -3217,10 +3490,19 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           ${this._renderSelectField("Accion", `custom_notifications.${index}.action_type`, item.action_type, [
             { value: "none", label: "Sin accion" },
             { value: "more-info", label: "Mas informacion" },
+            { value: "url", label: "Abrir URL" },
             { value: "toggle", label: "Alternar entidad" },
             { value: "service", label: "Llamar servicio" },
           ])}
           ${this._renderTextField("Etiqueta accion", `custom_notifications.${index}.action_label`, item.action_label, { placeholder: "Ejecutar" })}
+          ${
+            item.action_type === "url"
+              ? this._renderTextField("URL", `custom_notifications.${index}.url`, item.url, {
+                  placeholder: "https://...",
+                  fullWidth: true,
+                })
+              : ""
+          }
           ${
             item.action_type === "service"
               ? `
@@ -3498,11 +3780,9 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Titulo y mensaje cuando no hay nada pendiente.</div>
+            <div class="editor-section__hint">Mensaje cuando no hay nada pendiente y comportamiento basico.</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("Titulo", "title", config.title)}
-            ${this._renderTextField("Titulo sin notificaciones", "empty_title", config.empty_title)}
             ${this._renderTextField("Mensaje sin notificaciones", "empty_message", config.empty_message, { fullWidth: true })}
             ${this._renderTextField("Maximo visible plegado", "max_visible", config.max_visible, { type: "number", valueType: "number" })}
             ${this._renderTextField("Refresco calendario (s)", "refresh_interval", config.refresh_interval, { type: "number", valueType: "number" })}
@@ -3524,6 +3804,9 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
             ${this._renderEntityListField("Ventanas", "window_entities", config.window_entities, { placeholder: "binary_sensor.ventana" })}
             ${this._renderEntityListField("Temperatura", "temperature_entities", config.temperature_entities, { placeholder: "sensor.temperatura" })}
             ${this._renderEntityListField("Humedad", "humidity_entities", config.humidity_entities, { placeholder: "sensor.humedad" })}
+            ${this._renderEntityListField("Bateria", "battery_entities", config.battery_entities, { placeholder: "sensor.pila_mando" })}
+            ${this._renderEntityListField("Deposito humidificador", "humidifier_fill_entities", config.humidifier_fill_entities, { placeholder: "sensor.humidificador_deposito" })}
+            ${this._renderEntityListField("Tinta", "ink_entities", config.ink_entities, { placeholder: "sensor.impresora_tinta_negra" })}
           </div>
         </section>
         <section class="editor-section">
@@ -3538,6 +3821,9 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
             ${this._renderTextField("Humedad baja", "thresholds.humidity_low", config.thresholds.humidity_low, { type: "number", valueType: "number" })}
             ${this._renderTextField("Probabilidad lluvia (%)", "thresholds.rain_probability", config.thresholds.rain_probability, { type: "number", valueType: "number" })}
             ${this._renderTextField("Horas lluvia", "thresholds.rain_lookahead_hours", config.thresholds.rain_lookahead_hours, { type: "number", valueType: "number" })}
+            ${this._renderTextField("Bateria baja (%)", "thresholds.battery_low", config.thresholds.battery_low, { type: "number", valueType: "number" })}
+            ${this._renderTextField("Deposito bajo (%)", "thresholds.humidifier_fill_low", config.thresholds.humidifier_fill_low, { type: "number", valueType: "number" })}
+            ${this._renderTextField("Tinta baja (%)", "thresholds.ink_low", config.thresholds.ink_low, { type: "number", valueType: "number" })}
           </div>
         </section>
         <section class="editor-section">
@@ -3571,6 +3857,24 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                 : ""
             }
           </div>
+        </section>
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Avisos inteligentes</div>
+            <div class="editor-section__hint">Personaliza texto, color y enlaces de compra/apertura. Variables disponibles: {source}, {value}, {threshold}, {fan}, {time}.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="smart"
+                aria-expanded="${this._showSmartSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showSmartSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showSmartSection ? "Ocultar" : "Mostrar"}</span>
+              </button>
+            </div>
+          </div>
+          ${this._showSmartSection ? this._renderSmartNotificationOptions(config) : ""}
         </section>
         <section class="editor-section">
           <div class="editor-section__header">

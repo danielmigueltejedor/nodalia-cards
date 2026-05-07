@@ -10,6 +10,17 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.54] - 2026-05-07
+
+Fifty-fourth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.54`** (tag **`v1.0.0-alpha.54`** optional).
+
+- **Notifications card — editor y legibilidad:** el selector de color vuelve al patrón del resto de tarjetas, se retiran controles de título que no se renderizan y los iconos aplican contraste tipo `NodaliaBubbleContrast` para tintes claros/amarillos.
+- **Notifications card — avisos inteligentes configurables:** mensajes, títulos, colores y URL opcional por tipo de aviso (`calor`, `humedad`, `lluvia`, `bateria`, `deposito`, `tinta`), con nuevas entidades inteligentes para batería, depósito de humidificador y tinta.
+- **Notifications card — móvil:** las tarjetas dejan de estirarse al volver de horizontal a vertical con alineación superior y reflow en `resize/orientationchange`.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.54`**.
+
+---
+
 ## [1.0.0-alpha.53] - 2026-05-07
 
 Fifty-third **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.53`** (tag **`v1.0.0-alpha.53`** optional).

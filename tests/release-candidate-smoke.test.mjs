@@ -205,6 +205,13 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /window_entities/);
   assert.match(source, /temperature_entities/);
   assert.match(source, /humidity_entities/);
+  assert.match(source, /battery_entities/);
+  assert.match(source, /humidifier_fill_entities/);
+  assert.match(source, /ink_entities/);
+  assert.match(source, /smart_notifications/);
+  assert.match(source, /battery_low/);
+  assert.match(source, /humidifier_fill_low/);
+  assert.match(source, /ink_low/);
   assert.match(source, /dismissed_entity/);
   assert.match(source, /mobile_notifications/);
   assert.match(source, /weather\/get_forecasts/);
@@ -213,6 +220,13 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /function entityAreaKey/);
   assert.match(source, /_getFanTargetForSource/);
   assert.match(source, /_buildWeatherNotifications/);
+  assert.match(source, /_buildLevelNotifications/);
+  assert.match(source, /shouldDarkenNotificationIconGlyph/);
+  assert.match(source, /_smartMessage/);
+  assert.match(source, /_smartAction/);
+  assert.match(source, /window\.open\(url, "_blank", "noopener,noreferrer"\)/);
+  assert.match(source, /orientationchange/);
+  assert.match(source, /align-content: start/);
   assert.match(source, /_syncSharedDismissedFromHass/);
   assert.match(source, /_queueMobileNotifications/);
   assert.match(source, /notify\./);
@@ -239,6 +253,8 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /if \(this\._weatherRefreshTimer && delay === null\)/);
   assert.match(source, /translateNotificationsUi/);
   assert.match(i18n, /rainSoon/);
+  assert.match(i18n, /batteryLow/);
+  assert.match(i18n, /inkLow/);
   assert.match(i18n, /viewWeather/);
   assert.match(source, /_callNamedService\(serviceValue, data = \{\}, target = null\)/);
   assert.match(source, /_callInternalService\(serviceValue, data = \{\}, target = null\)/);
