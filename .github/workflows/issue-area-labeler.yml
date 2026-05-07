@@ -22,6 +22,8 @@ jobs:
             const body = issue.body || "";
 
             const mappings = [
+              ["Installation / HACS", "area: onboarding"],
+              ["Configuration / YAML", "area: docs"],
               ["Navigation Bar", "area: navigation"],
               ["Media Player", "area: media-player"],
               ["Light Card", "area: light"],
