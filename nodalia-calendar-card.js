@@ -9,7 +9,7 @@ import {
 
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.50";
+const CARD_VERSION = "1.0.0-alpha.51";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 
@@ -3173,11 +3173,17 @@ class NodaliaCalendarCard extends HTMLElement {
         }
         .calendar-event__delete {
           color: color-mix(in srgb, var(--error-color, #db4437) 74%, var(--secondary-text-color));
+          height: 28px;
+          justify-content: center;
           min-width: 28px;
           padding: 0;
+          width: 28px;
         }
         .calendar-event__delete ha-icon {
           --mdc-icon-size: 16px;
+          display: block;
+          flex: 0 0 auto;
+          margin: 0;
         }
         @keyframes calendar-card-fade-up {
           0% {
@@ -3791,12 +3797,15 @@ class NodaliaCalendarCard extends HTMLElement {
         }
         .calendar-expanded__event-delete {
           color: color-mix(in srgb, var(--error-color, #db4437) 76%, var(--primary-text-color));
+          justify-content: center;
           margin-left: auto;
           padding: 0 12px;
         }
         .calendar-expanded__day-back ha-icon,
         .calendar-expanded__event-delete ha-icon {
           --mdc-icon-size: 20px;
+          display: block;
+          flex: 0 0 auto;
         }
         .calendar-expanded__day-back ha-icon {
           margin-left: -2px;

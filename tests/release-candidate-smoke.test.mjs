@@ -159,6 +159,8 @@ test("calendar native composer supports rich HA event fields and details", () =>
   assert.match(source, /calendar\/event\/delete/);
   assert.match(source, /data-action="delete-event"/);
   assert.match(source, /allow_delete/);
+  assert.match(source, /\.calendar-event__delete[\s\S]*justify-content: center/);
+  assert.match(source, /\.calendar-event__delete[\s\S]*width: 28px/);
   assert.match(source, /data-action="open-event-detail"/);
   assert.match(source, /calendar-expanded__event-detail/);
   assert.match(example, /description: "\{\{ d\.description \| default\(omit, true\) \}\}"/);
@@ -188,6 +190,7 @@ test("climate card is registered and shipped in the HACS bundle", () => {
 
 test("notifications card is bundled and supports smart dismissible notifications", () => {
   const source = read("nodalia-notifications-card.js");
+  const i18n = read("nodalia-i18n.js");
   const build = read("scripts/build-bundle.mjs");
   const pkg = read("package.json");
   const readme = read("README.md");
@@ -210,17 +213,40 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /notification-stack-card/);
   assert.match(source, /notification-item__chip/);
   assert.match(source, /data-list-field/);
+  assert.match(source, /tint_color/);
+  assert.match(source, /animations\.enabled/);
+  assert.match(source, /data-editor-toggle="animations"/);
+  assert.match(source, /editor-section__toggle-button/);
+  assert.match(source, /type="color"/);
+  assert.match(source, /notifications-card--animated/);
   assert.match(source, /includeDomains/);
+  assert.match(source, /if \(this\._calendarRefreshTimer && delay === null\)/);
+  assert.match(source, /translateNotificationsUi/);
+  assert.match(source, /_callNamedService\(serviceValue, data = \{\}, target = null\)/);
+  assert.match(source, /_callInternalService\(serviceValue, data = \{\}, target = null\)/);
   assert.match(source, /fan\.turn_on/);
   assert.match(source, /calendars\/\$\{encodeURIComponent\(entityId\)\}/);
   assert.match(source, /editorFilteredStatesSignature/);
   assert.match(source, /sanitizeCssRuntimeValue/);
+  assert.match(i18n, /notificationsCard/);
+  assert.match(i18n, /function translateNotificationsUi/);
   assert.match(build, /nodalia-notifications-card\.js/);
   assert.match(pkg, /"nodalia-notifications-card\.js"/);
+  assert.match(pkg, /"nodalia-cards\.bundle\.js"/);
+  assert.match(pkg, /"nodalia-cards\.manifest\.js"/);
   assert.match(readme, /custom:nodalia-notifications-card/);
 });
 
 test("bundle build minifies production output", () => {
   const source = read("scripts/build-bundle.mjs");
   assert.match(source, /minify:\s*true/);
+});
+
+test("bundle loader imports hashed bundle through manifest", () => {
+  const source = read("scripts/build-bundle.mjs");
+  assert.match(source, /nodalia-cards\.bundle\.js/);
+  assert.match(source, /nodalia-cards\.manifest\.js/);
+  assert.match(source, /manifestUrl\.searchParams\.set\("t", String\(Date\.now\(\)\)\)/);
+  assert.match(source, /bundleUrl\.searchParams\.set\("v", manifest\.contentSha256_12/);
+  assert.match(source, /window\.__NODALIA_LOADER__/);
 });

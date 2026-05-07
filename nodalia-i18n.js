@@ -554,6 +554,56 @@
       graphCard: {
         emptyHistory: "Sin historial disponible",
       },
+      notificationsCard: {
+        fallbackEvent: "Evento",
+        allDay: "Todo el dia",
+        titles: {
+          calendarSoon: "Evento pronto",
+          calendarToday: "Evento pendiente hoy",
+          calendarUnavailable: "Calendario no disponible",
+          vacuumAttention: "Robot necesita atencion",
+          vacuumPaused: "Robot pausado",
+          cleaningStarted: "Limpieza iniciada",
+          returningDock: "Robot volviendo a base",
+          motionDetected: "Movimiento detectado",
+          doorOpen: "Puerta abierta",
+          windowOpen: "Ventana abierta",
+          hot: "Hace calor",
+          cold: "Temperatura baja",
+          humidityHigh: "Humedad alta",
+          humidityLow: "Humedad baja",
+          customFallback: "Notificacion",
+        },
+        messages: {
+          vacuumAttention: "{name} esta en estado {state}.",
+          vacuumPaused: "{name} esta pausado o esperando.",
+          vacuumState: "{name}: {state}.",
+          hot: "{source} marca {value}. Puedes encender {fan}.",
+          sensorValue: "{source} marca {value}.",
+        },
+        actions: {
+          openCalendar: "Abrir calendario",
+          viewRobot: "Ver robot",
+          continue: "Continuar",
+          viewSensor: "Ver sensor",
+          turnOnFan: "Encender ventilador",
+          run: "Ejecutar",
+          toggle: "Alternar",
+          open: "Abrir",
+          less: "Menos",
+        },
+        severity: {
+          critical: "Critica",
+          warning: "Aviso",
+          success: "OK",
+          info: "Info",
+        },
+        aria: {
+          dismiss: "Borrar notificacion",
+          showLess: "Mostrar menos",
+          showAll: "Mostrar todas las notificaciones",
+        },
+      },
       favCard: {
         disarmedF: "Desarmada",
         armed_home: "En casa",
@@ -987,6 +1037,56 @@
       },
       graphCard: {
         emptyHistory: "No history available",
+      },
+      notificationsCard: {
+        fallbackEvent: "Event",
+        allDay: "All day",
+        titles: {
+          calendarSoon: "Event soon",
+          calendarToday: "Event due today",
+          calendarUnavailable: "Calendar unavailable",
+          vacuumAttention: "Robot needs attention",
+          vacuumPaused: "Robot paused",
+          cleaningStarted: "Cleaning started",
+          returningDock: "Robot returning to dock",
+          motionDetected: "Motion detected",
+          doorOpen: "Door open",
+          windowOpen: "Window open",
+          hot: "It is hot",
+          cold: "Low temperature",
+          humidityHigh: "High humidity",
+          humidityLow: "Low humidity",
+          customFallback: "Notification",
+        },
+        messages: {
+          vacuumAttention: "{name} is in state {state}.",
+          vacuumPaused: "{name} is paused or waiting.",
+          vacuumState: "{name}: {state}.",
+          hot: "{source} reads {value}. You can turn on {fan}.",
+          sensorValue: "{source} reads {value}.",
+        },
+        actions: {
+          openCalendar: "Open calendar",
+          viewRobot: "View robot",
+          continue: "Continue",
+          viewSensor: "View sensor",
+          turnOnFan: "Turn on fan",
+          run: "Run",
+          toggle: "Toggle",
+          open: "Open",
+          less: "Less",
+        },
+        severity: {
+          critical: "Critical",
+          warning: "Warning",
+          success: "OK",
+          info: "Info",
+        },
+        aria: {
+          dismiss: "Dismiss notification",
+          showLess: "Show less",
+          showAll: "Show all notifications",
+        },
       },
       favCard: {
         disarmedF: "Disarmed",
@@ -5029,6 +5129,20 @@
     return strings(lang).graphCard.emptyHistory;
   }
 
+  function translateNotificationsUi(hass, configLang, path, fallback = "", values = {}) {
+    const lang = resolveLanguage(hass, configLang);
+    const dict = strings(lang).notificationsCard || strings("en").notificationsCard || {};
+    const raw = String(path || "")
+      .split(".")
+      .filter(Boolean)
+      .reduce((cursor, key) => cursor?.[key], dict);
+    const template = typeof raw === "string" ? raw : String(fallback || "");
+    return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key) => {
+      const value = values?.[key];
+      return value === undefined || value === null ? "" : String(value);
+    });
+  }
+
   function translateHumidifierMode(hass, configLang, value) {
     const lang = resolveLanguage(hass, configLang);
     const key = normalizeHumidifierModeKey(value);
@@ -5362,6 +5476,7 @@
     translateWeatherCondition,
     translateWeatherForecastUi,
     translateGraphEmptyHistory,
+    translateNotificationsUi,
     translateHumidifierMode,
     translateMeteoalarmTerm,
     translateAdvanceVacuumReportedState,

@@ -10,12 +10,25 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.51] - 2026-05-07
+
+Fifty-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.51`** (tag **`v1.0.0-alpha.51`** optional).
+
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.51`**.
+
+---
+
 ## [1.0.0-alpha.50] - 2026-05-07
 
 Fiftieth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.50`** (tag **`v1.0.0-alpha.50`** optional).
 
 - **Notifications card — tintado Entity Card:** el estado sin avisos y las tarjetas activas usan la misma superficie tintada/pseudo-capas que `nodalia-entity-card`, evitando bordes/sombras recortadas en el estado vacío.
 - **Notifications card — editor visual compacto:** las conexiones inteligentes cambian de textarea a selectores nativos de entidad filtrados por dominio, con filas compactas para añadir/quitar entidades.
+- **Notifications card — editor visual ampliado:** los selectores nativos de icono ocupan fila completa, los desplegables de secciones usan el mismo boton con chevron del resto de tarjetas, se añaden animaciones configurables y selectores de color para tintado global y por notificacion personalizada.
+- **Notifications card — estabilidad de calendario:** el refresco de eventos ya no se reprograma indefinidamente con cada actualización de `hass`, evitando que instalaciones con muchos cambios de estado bloqueen la consulta.
+- **Notifications card — i18n y seguridad:** los avisos inteligentes usan `NodaliaI18n` y las acciones de servicio personalizadas incorporan `security.strict_service_actions` con allowlist de servicios/dominios, manteniendo bypass solo para acciones internas de la tarjeta.
+- **Bundle loader:** `nodalia-cards.js` pasa a ser un loader cache-busting que lee `nodalia-cards.manifest.js` e importa `nodalia-cards.bundle.js?v=<hash>`, reduciendo cargas antiguas tras redescargar desde HACS.
+- **Calendar card — papelera centrada:** el botón icon-only para borrar eventos nativos usa tamaño cuadrado y centrado explícito para evitar que el icono quede desplazado.
 - **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.50`**.
 
 ---

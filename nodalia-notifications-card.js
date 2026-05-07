@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-alpha.50";
+const CARD_VERSION = "1.0.0-alpha.51";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -482,6 +482,7 @@ const HAPTIC_PATTERNS = {
 
 const DEFAULT_CONFIG = {
   title: "Notificaciones",
+  language: "auto",
   icon: "mdi:bell-badge-outline",
   empty_title: "Todo tranquilo",
   empty_message: "No tienes ninguna alerta actualmente",
@@ -505,10 +506,20 @@ const DEFAULT_CONFIG = {
     humidity_low: 30,
   },
   smart_recommendations: true,
+  security: {
+    strict_service_actions: false,
+    allowed_services: [],
+    allowed_service_domains: [],
+  },
   haptics: {
     enabled: true,
     style: "medium",
     fallback_vibrate: false,
+  },
+  animations: {
+    enabled: true,
+    content_duration: 420,
+    button_bounce_duration: 320,
   },
   styles: {
     card: {
@@ -617,6 +628,24 @@ function normalizeEntityList(value, domains = []) {
     });
 }
 
+function normalizeStringList(value) {
+  const rows = Array.isArray(value)
+    ? value
+    : String(value || "")
+        .split(/[\n,]/)
+        .map(item => item.trim());
+  const seen = new Set();
+  return rows
+    .map(item => String(item || "").trim().toLowerCase())
+    .filter(item => {
+      if (!item || seen.has(item)) {
+        return false;
+      }
+      seen.add(item);
+      return true;
+    });
+}
+
 function normalizeCustomNotifications(value) {
   return (Array.isArray(value) ? value : [])
     .map(item => {
@@ -625,6 +654,7 @@ function normalizeCustomNotifications(value) {
         title: String(row.title || "").trim(),
         message: String(row.message || "").trim(),
         icon: String(row.icon || "mdi:bell-outline").trim(),
+        tint_color: String(row.tint_color || "").trim(),
         severity: normalizeSeverity(row.severity || "info"),
         entity: String(row.entity || "").trim(),
         attribute: String(row.attribute || "").trim(),
@@ -659,13 +689,22 @@ function normalizeConfig(rawConfig = {}) {
   config.refresh_interval = Math.max(30, Math.min(3600, Number(config.refresh_interval) || 300));
   config.storage_key = String(config.storage_key || STORAGE_KEY).trim() || STORAGE_KEY;
   config.smart_recommendations = config.smart_recommendations !== false;
+  config.language = String(config.language || "auto").trim() || "auto";
   config.thresholds = {
     hot_temperature: finiteNumber(config.thresholds?.hot_temperature, DEFAULT_CONFIG.thresholds.hot_temperature),
     cold_temperature: finiteNumber(config.thresholds?.cold_temperature, DEFAULT_CONFIG.thresholds.cold_temperature),
     humidity_high: finiteNumber(config.thresholds?.humidity_high, DEFAULT_CONFIG.thresholds.humidity_high),
     humidity_low: finiteNumber(config.thresholds?.humidity_low, DEFAULT_CONFIG.thresholds.humidity_low),
   };
+  config.security = mergeDeep(DEFAULT_CONFIG.security, config.security || {});
+  config.security.strict_service_actions = config.security.strict_service_actions === true;
+  config.security.allowed_services = normalizeStringList(config.security.allowed_services);
+  config.security.allowed_service_domains = normalizeStringList(config.security.allowed_service_domains);
   config.haptics = mergeDeep(DEFAULT_CONFIG.haptics, config.haptics || {});
+  config.animations = mergeDeep(DEFAULT_CONFIG.animations, config.animations || {});
+  config.animations.enabled = config.animations.enabled !== false;
+  config.animations.content_duration = Math.max(120, Math.min(1800, Number(config.animations.content_duration) || DEFAULT_CONFIG.animations.content_duration));
+  config.animations.button_bounce_duration = Math.max(120, Math.min(1200, Number(config.animations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration));
   config.styles = mergeDeep(DEFAULT_CONFIG.styles, config.styles || {});
   return config;
 }
@@ -673,6 +712,10 @@ function normalizeConfig(rawConfig = {}) {
 function finiteNumber(value, fallback) {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
 }
 
 function escapeHtml(value) {
@@ -700,6 +743,95 @@ function sanitizeCssRuntimeValue(value, fallback) {
     return fallback;
   }
   return raw;
+}
+
+function formatEditorHexChannel(value) {
+  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+}
+
+function formatEditorColorFromHex(hex, alpha = 1) {
+  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+    return String(hex ?? "");
+  }
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+  const safeAlpha = clamp(Number(alpha), 0, 1);
+  if (safeAlpha >= 0.999) {
+    return `#${normalizedHex}`;
+  }
+  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+}
+
+function parseEditorColorChannels(value) {
+  const raw = String(value ?? "").trim();
+  const hexMatch = raw.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hexMatch) {
+    const hex = hexMatch[1].length === 3
+      ? hexMatch[1].split("").map(channel => `${channel}${channel}`).join("")
+      : hexMatch[1];
+    return {
+      alpha: 1,
+      blue: Number.parseInt(hex.slice(4, 6), 16),
+      green: Number.parseInt(hex.slice(2, 4), 16),
+      red: Number.parseInt(hex.slice(0, 2), 16),
+    };
+  }
+  const rgbMatch = raw.match(/^rgba?\(([^)]+)\)$/i);
+  if (!rgbMatch) {
+    return null;
+  }
+  const channels = rgbMatch[1]
+    .split(",")
+    .map(channel => Number(String(channel).trim().replace("%", "")));
+  if (channels.length < 3 || channels.slice(0, 3).some(channel => !Number.isFinite(channel))) {
+    return null;
+  }
+  return {
+    alpha: channels.length > 3 && Number.isFinite(channels[3]) ? clamp(channels[3], 0, 1) : 1,
+    blue: clamp(channels[2], 0, 255),
+    green: clamp(channels[1], 0, 255),
+    red: clamp(channels[0], 0, 255),
+  };
+}
+
+function resolveEditorColorValue(value) {
+  const resolver = typeof window !== "undefined" ? window.NodaliaBubbleContrast?.resolveEditorColorValue : null;
+  return typeof resolver === "function" ? resolver(value) : String(value ?? "").trim();
+}
+
+function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const parsed = parseEditorColorChannels(resolvedValue)
+    || parseEditorColorChannels(sourceValue)
+    || parseEditorColorChannels(resolveEditorColorValue(fallbackValue))
+    || { alpha: 1, blue: 255, green: 192, red: 113 };
+  const red = clamp(Math.round(parsed.red), 0, 255);
+  const green = clamp(Math.round(parsed.green), 0, 255);
+  const blue = clamp(Math.round(parsed.blue), 0, 255);
+  const alpha = clamp(Number(parsed.alpha), 0, 1);
+  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+  return {
+    alpha,
+    hex,
+    label: sourceValue,
+    resolved: resolvedValue,
+    source: sourceValue,
+    value: formatEditorColorFromHex(hex, alpha),
+  };
+}
+
+function getEditorColorFallbackValue(field) {
+  const normalizedField = String(field ?? "");
+  if (normalizedField.endsWith("background")) {
+    return normalizedField.includes(".card.") ? "var(--ha-card-background)" : "color-mix(in srgb, var(--primary-color) 18%, transparent)";
+  }
+  if (normalizedField.endsWith("icon.color") || normalizedField.endsWith("accent") || normalizedField.endsWith("tint_color")) {
+    return "var(--primary-color)";
+  }
+  return "#71c0ff";
 }
 
 function fireEvent(node, type, detail = {}, options = {}) {
@@ -895,12 +1027,14 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._lastCalendarRefresh = 0;
     this._lastRenderSignature = "";
     this._lastNotifications = [];
+    this._animateContentOnNextRender = true;
     this._onClick = this._onClick.bind(this);
     this.shadowRoot.addEventListener("click", this._onClick);
   }
 
   connectedCallback() {
     this._loadDismissed();
+    this._animateContentOnNextRender = true;
     this._renderIfChanged(true);
     this._refreshCalendarEventsSoon(0);
   }
@@ -915,6 +1049,7 @@ class NodaliaNotificationsCard extends HTMLElement {
   setConfig(config) {
     this._config = normalizeConfig(config || {});
     this._expanded = false;
+    this._animateContentOnNextRender = true;
     this._loadDismissed();
     this._lastRenderSignature = "";
     this._renderIfChanged(true);
@@ -985,6 +1120,9 @@ class NodaliaNotificationsCard extends HTMLElement {
 
   _refreshCalendarEventsSoon(delay = null) {
     if (!this.isConnected || !this._hass || !this._config.calendar_entities.length) {
+      return;
+    }
+    if (this._calendarRefreshTimer && delay === null) {
       return;
     }
     const intervalMs = this._config.refresh_interval * 1000;
@@ -1067,20 +1205,20 @@ class NodaliaNotificationsCard extends HTMLElement {
       if (!start || !isSameLocalDay(start, now) || (end && end.getTime() < now.getTime())) {
         return;
       }
-      const summary = String(event.summary || event.title || "Evento").trim();
+      const summary = String(event.summary || event.title || this._text("fallbackEvent", "Evento")).trim();
       const allDay = String(event.start?.date || "").length > 0 || (typeof event.start === "string" && event.start.length <= 10);
-      const timeText = allDay ? "Todo el dia" : formatTime(start);
+      const timeText = allDay ? this._text("allDay", "Todo el dia") : formatTime(start);
       const startsSoon = !allDay && start.getTime() - now.getTime() <= 90 * 60 * 1000 && start.getTime() >= now.getTime();
       add({
         id: `calendar:${event._entity}:${notificationHash(`${summary}|${start.toISOString()}`)}`,
-        title: startsSoon ? "Evento pronto" : "Evento pendiente hoy",
+        title: startsSoon ? this._text("titles.calendarSoon", "Evento pronto") : this._text("titles.calendarToday", "Evento pendiente hoy"),
         message: `${timeText} · ${summary}`,
         icon: "mdi:calendar-clock",
         severity: startsSoon ? "warning" : "info",
         source: friendlyName(hass, event._entity),
         createdAt: start.getTime(),
         action: {
-          label: "Abrir calendario",
+          label: this._text("actions.openCalendar", "Abrir calendario"),
           type: "more-info",
           entity: event._entity,
         },
@@ -1090,7 +1228,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (this._calendarError) {
       add({
         id: `calendar:error:${notificationHash(this._calendarError)}`,
-        title: "Calendario no disponible",
+        title: this._text("titles.calendarUnavailable", "Calendario no disponible"),
         message: this._calendarError,
         icon: "mdi:calendar-alert",
         severity: "warning",
@@ -1108,35 +1246,35 @@ class NodaliaNotificationsCard extends HTMLElement {
       if (["error", "unavailable"].includes(value)) {
         add({
           id: `vacuum:${entityId}:${value}`,
-          title: "Robot necesita atencion",
-          message: `${name} esta en estado ${state.state}.`,
+          title: this._text("titles.vacuumAttention", "Robot necesita atencion"),
+          message: this._text("messages.vacuumAttention", "{name} esta en estado {state}.", { name, state: state.state }),
           icon: "mdi:robot-vacuum-alert",
           severity: "critical",
           source: name,
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: { label: "Ver robot", type: "more-info", entity: entityId },
+          action: { label: this._text("actions.viewRobot", "Ver robot"), type: "more-info", entity: entityId },
         });
       } else if (["paused", "idle"].includes(value)) {
         add({
           id: `vacuum:${entityId}:${value}`,
-          title: "Robot pausado",
-          message: `${name} esta pausado o esperando.`,
+          title: this._text("titles.vacuumPaused", "Robot pausado"),
+          message: this._text("messages.vacuumPaused", "{name} esta pausado o esperando.", { name }),
           icon: "mdi:pause-circle-outline",
           severity: "warning",
           source: name,
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: { label: "Continuar", type: "service", service: "vacuum.start", entity: entityId },
+          action: { label: this._text("actions.continue", "Continuar"), type: "service", service: "vacuum.start", entity: entityId, internal: true },
         });
       } else if (["cleaning", "returning"].includes(value)) {
         add({
           id: `vacuum:${entityId}:${value}`,
-          title: value === "cleaning" ? "Limpieza iniciada" : "Robot volviendo a base",
-          message: `${name}: ${state.state}.`,
+          title: value === "cleaning" ? this._text("titles.cleaningStarted", "Limpieza iniciada") : this._text("titles.returningDock", "Robot volviendo a base"),
+          message: this._text("messages.vacuumState", "{name}: {state}.", { name, state: state.state }),
           icon: value === "cleaning" ? "mdi:robot-vacuum" : "mdi:home-import-outline",
           severity: "info",
           source: name,
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: { label: "Ver robot", type: "more-info", entity: entityId },
+          action: { label: this._text("actions.viewRobot", "Ver robot"), type: "more-info", entity: entityId },
         });
       }
     });
@@ -1146,33 +1284,33 @@ class NodaliaNotificationsCard extends HTMLElement {
       if (stateIsOn(state)) {
         add({
           id: `motion:${entityId}:${state.state}`,
-          title: "Movimiento detectado",
+          title: this._text("titles.motionDetected", "Movimiento detectado"),
           message: friendlyName(hass, entityId),
           icon: "mdi:motion-sensor",
           severity: "info",
           source: friendlyName(hass, entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: { label: "Ver sensor", type: "more-info", entity: entityId },
+          action: { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId },
         });
       }
     });
 
     [
-      ["door", this._config.door_entities, "Puerta abierta", "mdi:door-open"],
-      ["window", this._config.window_entities, "Ventana abierta", "mdi:window-open-variant"],
-    ].forEach(([kind, entities, title, icon]) => {
+      ["door", this._config.door_entities, "titles.doorOpen", "Puerta abierta", "mdi:door-open"],
+      ["window", this._config.window_entities, "titles.windowOpen", "Ventana abierta", "mdi:window-open-variant"],
+    ].forEach(([kind, entities, titleKey, fallbackTitle, icon]) => {
       entities.forEach(entityId => {
         const state = hass?.states?.[entityId];
         if (stateIsOn(state)) {
           add({
             id: `${kind}:${entityId}:${state.state}`,
-            title,
+            title: this._text(titleKey, fallbackTitle),
             message: friendlyName(hass, entityId),
             icon,
             severity: "warning",
             source: friendlyName(hass, entityId),
             createdAt: Date.parse(state.last_changed || "") || Date.now(),
-            action: { label: "Ver sensor", type: "more-info", entity: entityId },
+            action: { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId },
           });
         }
       });
@@ -1212,24 +1350,34 @@ class NodaliaNotificationsCard extends HTMLElement {
     ].filter(item => item.state && item.value !== null);
     const hottest = tempSources.sort((left, right) => right.value - left.value)[0];
     if (hottest && hottest.value >= this._config.thresholds.hot_temperature && fanTarget) {
+      const sourceName = friendlyName(this._hass, hottest.entityId);
+      const fanName = friendlyName(this._hass, fanTarget);
       add({
         id: `comfort:hot:${hottest.entityId}:${fanTarget}:${Math.floor(hottest.value)}`,
-        title: "Hace calor",
-        message: `${friendlyName(this._hass, hottest.entityId)} marca ${formatNumber(hottest.value, hottest.unit)}. Puedes encender ${friendlyName(this._hass, fanTarget)}.`,
+        title: this._text("titles.hot", "Hace calor"),
+        message: this._text("messages.hot", "{source} marca {value}. Puedes encender {fan}.", {
+          source: sourceName,
+          value: formatNumber(hottest.value, hottest.unit),
+          fan: fanName,
+        }),
         icon: "mdi:fan",
         severity: "warning",
-        source: friendlyName(this._hass, hottest.entityId),
+        source: sourceName,
         createdAt: Date.parse(hottest.state.last_changed || "") || Date.now(),
-        action: { label: "Encender ventilador", type: "service", service: "fan.turn_on", entity: fanTarget },
+        action: { label: this._text("actions.turnOnFan", "Encender ventilador"), type: "service", service: "fan.turn_on", entity: fanTarget, internal: true },
       });
     } else if (hottest && hottest.value <= this._config.thresholds.cold_temperature) {
+      const sourceName = friendlyName(this._hass, hottest.entityId);
       add({
         id: `comfort:cold:${hottest.entityId}:${Math.floor(hottest.value)}`,
-        title: "Temperatura baja",
-        message: `${friendlyName(this._hass, hottest.entityId)} marca ${formatNumber(hottest.value, hottest.unit)}.`,
+        title: this._text("titles.cold", "Temperatura baja"),
+        message: this._text("messages.sensorValue", "{source} marca {value}.", {
+          source: sourceName,
+          value: formatNumber(hottest.value, hottest.unit),
+        }),
         icon: "mdi:thermometer-low",
         severity: "info",
-        source: friendlyName(this._hass, hottest.entityId),
+        source: sourceName,
         createdAt: Date.parse(hottest.state.last_changed || "") || Date.now(),
       });
     }
@@ -1241,15 +1389,20 @@ class NodaliaNotificationsCard extends HTMLElement {
         return;
       }
       if (value >= this._config.thresholds.humidity_high || value <= this._config.thresholds.humidity_low) {
+        const high = value >= this._config.thresholds.humidity_high;
+        const sourceName = friendlyName(this._hass, entityId);
         add({
-          id: `humidity:${entityId}:${value >= this._config.thresholds.humidity_high ? "high" : "low"}:${Math.round(value)}`,
-          title: value >= this._config.thresholds.humidity_high ? "Humedad alta" : "Humedad baja",
-          message: `${friendlyName(this._hass, entityId)} marca ${formatNumber(value, state.attributes?.unit_of_measurement || "%")}.`,
-          icon: value >= this._config.thresholds.humidity_high ? "mdi:water-percent-alert" : "mdi:water-percent",
-          severity: value >= this._config.thresholds.humidity_high ? "warning" : "info",
-          source: friendlyName(this._hass, entityId),
+          id: `humidity:${entityId}:${high ? "high" : "low"}:${Math.round(value)}`,
+          title: high ? this._text("titles.humidityHigh", "Humedad alta") : this._text("titles.humidityLow", "Humedad baja"),
+          message: this._text("messages.sensorValue", "{source} marca {value}.", {
+            source: sourceName,
+            value: formatNumber(value, state.attributes?.unit_of_measurement || "%"),
+          }),
+          icon: high ? "mdi:water-percent-alert" : "mdi:water-percent",
+          severity: high ? "warning" : "info",
+          source: sourceName,
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: { label: "Ver sensor", type: "more-info", entity: entityId },
+          action: { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId },
         });
       }
     });
@@ -1263,9 +1416,10 @@ class NodaliaNotificationsCard extends HTMLElement {
       const entityName = item.entity ? friendlyName(this._hass, item.entity) : "";
       add({
         id: `custom:${index}:${notificationHash(`${item.title}|${item.message}|${item.entity}|${item.condition}|${item.value}`)}`,
-        title: item.title || entityName || "Notificacion",
+        title: item.title || entityName || this._text("titles.customFallback", "Notificacion"),
         message: item.message || entityName,
         icon: item.icon || "mdi:bell-outline",
+        tintColor: item.tint_color || "",
         severity: item.severity || "info",
         source: entityName,
         createdAt: item.entity ? Date.parse(this._hass?.states?.[item.entity]?.last_changed || "") || Date.now() : Date.now(),
@@ -1314,7 +1468,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       return null;
     }
     return {
-      label: item.action_label || (type === "service" ? "Ejecutar" : type === "toggle" ? "Alternar" : "Abrir"),
+      label: item.action_label || (type === "service" ? this._text("actions.run", "Ejecutar") : type === "toggle" ? this._text("actions.toggle", "Alternar") : this._text("actions.open", "Abrir")),
       type,
       entity: item.entity,
       service: item.service,
@@ -1350,6 +1504,10 @@ class NodaliaNotificationsCard extends HTMLElement {
       ...this._config.humidity_entities,
       ...this._config.custom_notifications.map(item => item.entity).filter(Boolean),
     ];
+    parts.push(this._config.language || "auto");
+    parts.push(
+      (typeof window !== "undefined" && window.NodaliaI18n?.resolveLanguage?.(hass, this._config.language || "auto")) || "",
+    );
     tracked.forEach(entityId => {
       const state = hass?.states?.[entityId];
       parts.push(`${entityId}:${state?.state || ""}:${state?.last_changed || ""}:${JSON.stringify(state?.attributes || {})}`);
@@ -1381,6 +1539,50 @@ class NodaliaNotificationsCard extends HTMLElement {
     }
   }
 
+  _getAnimationSettings() {
+    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+    return {
+      enabled: configuredAnimations.enabled !== false,
+      contentDuration: clamp(
+        Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration,
+        120,
+        1800,
+      ),
+      buttonBounceDuration: clamp(
+        Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+        120,
+        1200,
+      ),
+    };
+  }
+
+  _triggerPressAnimation(element) {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+    element.classList.remove("is-pressing");
+    element.getBoundingClientRect();
+    element.classList.add("is-pressing");
+    window.setTimeout(() => {
+      element.classList.remove("is-pressing");
+    }, animations.buttonBounceDuration + 40);
+  }
+
+  _text(path, fallback = "", values = {}) {
+    const i18n = typeof window !== "undefined" ? window.NodaliaI18n : null;
+    if (typeof i18n?.translateNotificationsUi === "function") {
+      return i18n.translateNotificationsUi(this._hass, this._config?.language ?? "auto", path, fallback, values);
+    }
+    return String(fallback || "").replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key) => {
+      const value = values?.[key];
+      return value === undefined || value === null ? "" : String(value);
+    });
+  }
+
   _onClick(event) {
     const button = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.action);
     if (!button) {
@@ -1388,6 +1590,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     }
     event.preventDefault();
     event.stopPropagation();
+    this._triggerPressAnimation(button);
     const action = button.dataset.action;
     if (action === "toggle-stack") {
       this._expanded = !this._expanded;
@@ -1429,33 +1632,84 @@ class NodaliaNotificationsCard extends HTMLElement {
       return;
     }
     if (action.type === "toggle" && action.entity && typeof this._hass.callService === "function") {
-      await this._hass.callService("homeassistant", "toggle", { entity_id: action.entity });
+      const data = { entity_id: action.entity };
+      if (action.internal === true) {
+        await this._callInternalService("homeassistant.toggle", data);
+      } else {
+        await this._callNamedService("homeassistant.toggle", data);
+      }
       return;
     }
     if (action.type === "service" && action.service && typeof this._hass.callService === "function") {
-      const [domain, service] = String(action.service).split(".");
-      if (!domain || !service) {
-        return;
-      }
-      await this._hass.callService(domain, service, {
+      const data = {
         ...(action.serviceData || {}),
         ...(action.entity ? { entity_id: action.entity } : {}),
-      });
+      };
+      if (action.internal === true) {
+        await this._callInternalService(action.service, data);
+      } else {
+        await this._callNamedService(action.service, data);
+      }
     }
+  }
+
+  _isServiceAllowed(serviceValue) {
+    const security = this._config?.security || {};
+    if (security.strict_service_actions !== true) {
+      return true;
+    }
+    const normalizedService = String(serviceValue || "").trim().toLowerCase();
+    if (!normalizedService || !normalizedService.includes(".")) {
+      return false;
+    }
+    const [domain] = normalizedService.split(".");
+    const domains = Array.isArray(security.allowed_service_domains)
+      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const services = Array.isArray(security.allowed_services)
+      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    if (!domains.length && !services.length) {
+      return false;
+    }
+    return services.includes(normalizedService) || domains.includes(domain);
+  }
+
+  _callNamedService(serviceValue, data = {}, target = null) {
+    if (!this._hass || typeof this._hass.callService !== "function" || !this._isServiceAllowed(serviceValue)) {
+      return Promise.resolve();
+    }
+    const [domain, service] = String(serviceValue || "").split(".");
+    if (!domain || !service) {
+      return Promise.resolve();
+    }
+    return this._hass.callService(domain, service, data, target || undefined);
+  }
+
+  _callInternalService(serviceValue, data = {}, target = null) {
+    if (!this._hass || typeof this._hass.callService !== "function") {
+      return Promise.resolve();
+    }
+    const [domain, service] = String(serviceValue || "").split(".");
+    if (!domain || !service) {
+      return Promise.resolve();
+    }
+    return this._hass.callService(domain, service, data, target || undefined);
   }
 
   _renderNotification(item, options = {}) {
     const action = item.action;
     const primary = options.primary === true;
+    const tint = item.tintColor ? sanitizeCssRuntimeValue(item.tintColor, "") : "";
     return `
-      <article class="notification-item notification-item--${escapeHtml(item.severity)} ${primary ? "notification-item--primary" : ""}">
+      <article class="notification-item notification-item--${escapeHtml(item.severity)} ${primary ? "notification-item--primary" : ""}"${tint ? ` style="--notification-accent:${escapeHtml(tint)}"` : ""}>
         <div class="notification-item__icon">
           <ha-icon icon="${escapeHtml(item.icon)}"></ha-icon>
         </div>
         <div class="notification-item__body">
           <div class="notification-item__title-row">
             <div class="notification-item__title">${escapeHtml(item.title)}</div>
-            <button type="button" class="notification-item__dismiss" data-action="dismiss" data-id="${escapeHtml(item.id)}" aria-label="Borrar notificacion">
+            <button type="button" class="notification-item__dismiss" data-action="dismiss" data-id="${escapeHtml(item.id)}" aria-label="${escapeHtml(this._text("aria.dismiss", "Borrar notificacion"))}">
               <ha-icon icon="mdi:close"></ha-icon>
             </button>
           </div>
@@ -1469,7 +1723,7 @@ class NodaliaNotificationsCard extends HTMLElement {
               ? `
                 <div class="notification-item__actions">
                   <button type="button" class="notification-item__action" data-action="run-notification" data-id="${escapeHtml(item.id)}">
-                    ${escapeHtml(action.label || "Abrir")}
+                    ${escapeHtml(action.label || this._text("actions.open", "Abrir"))}
                   </button>
                 </div>
               `
@@ -1483,13 +1737,13 @@ class NodaliaNotificationsCard extends HTMLElement {
   _severityLabel(severity) {
     switch (severity) {
       case "critical":
-        return "Critica";
+        return this._text("severity.critical", "Critica");
       case "warning":
-        return "Aviso";
+        return this._text("severity.warning", "Aviso");
       case "success":
-        return "OK";
+        return this._text("severity.success", "OK");
       default:
-        return "Info";
+        return this._text("severity.info", "Info");
     }
   }
 
@@ -1522,6 +1776,8 @@ class NodaliaNotificationsCard extends HTMLElement {
     const visible = this._expanded ? notifications : notifications.slice(0, config.max_visible);
     const hasNotifications = notifications.length > 0;
     const emptyText = String(config.empty_message || config.empty_title || DEFAULT_CONFIG.empty_message).trim();
+    const animations = this._getAnimationSettings();
+    const animateEntrance = animations.enabled && this._animateContentOnNextRender;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1820,8 +2076,45 @@ class NodaliaNotificationsCard extends HTMLElement {
         .notifications-stack-toggle ha-icon {
           --mdc-icon-size: 16px;
         }
+        .notifications-card--animated.notifications-card--enter .notifications-empty-inline,
+        .notifications-card--animated.notifications-card--enter .notification-item,
+        .notifications-card--animated.notifications-card--enter .notification-stack-card {
+          animation: notifications-content-enter var(--notifications-content-duration, 420ms) cubic-bezier(0.22, 0.82, 0.28, 1) both;
+        }
+        .notifications-card--animated.notifications-card--enter .notification-stack-card {
+          animation-delay: calc(var(--stack-index, 1) * 45ms);
+        }
+        .notifications-card--animated .notifications-stack-toggle.is-pressing,
+        .notifications-card--animated .notification-item__dismiss.is-pressing,
+        .notifications-card--animated .notification-item__action.is-pressing {
+          animation: notifications-button-bounce var(--notifications-button-bounce-duration, 320ms) cubic-bezier(0.2, 0.9, 0.25, 1.35) both;
+        }
+        @keyframes notifications-content-enter {
+          0% {
+            opacity: 0;
+            transform: translateY(10px) scale(0.985);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes notifications-button-bounce {
+          0% {
+            transform: scale(1);
+          }
+          45% {
+            transform: scale(0.94);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
       </style>
-      <ha-card class="notifications-card ${hasNotifications ? "notifications-card--list" : "notifications-card--empty"}">
+      <ha-card
+        class="notifications-card ${hasNotifications ? "notifications-card--list" : "notifications-card--empty"} ${animations.enabled ? "notifications-card--animated" : ""} ${animateEntrance ? "notifications-card--enter" : ""}"
+        style="--notifications-content-duration:${animations.enabled ? animations.contentDuration : 0}ms; --notifications-button-bounce-duration:${animations.enabled ? animations.buttonBounceDuration : 0}ms;"
+      >
           ${
             hasNotifications
               ? `
@@ -1841,9 +2134,9 @@ class NodaliaNotificationsCard extends HTMLElement {
                     shouldStack
                       ? `
                         <div class="notifications-footer">
-                          <button type="button" class="notifications-stack-toggle" data-action="toggle-stack" aria-expanded="${this._expanded ? "true" : "false"}" aria-label="${this._expanded ? "Mostrar menos" : "Mostrar todas las notificaciones"}">
+                          <button type="button" class="notifications-stack-toggle" data-action="toggle-stack" aria-expanded="${this._expanded ? "true" : "false"}" aria-label="${escapeHtml(this._expanded ? this._text("aria.showLess", "Mostrar menos") : this._text("aria.showAll", "Mostrar todas las notificaciones"))}">
                             <ha-icon icon="${this._expanded ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                            <span>${this._expanded ? "Menos" : hiddenCount}</span>
+                            <span>${this._expanded ? escapeHtml(this._text("actions.less", "Menos")) : hiddenCount}</span>
                           </button>
                         </div>
                       `
@@ -1862,6 +2155,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           }
       </ha-card>
     `;
+    this._animateContentOnNextRender = false;
   }
 }
 
@@ -1877,6 +2171,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     this._hass = null;
     this._showStyleSection = false;
     this._showCustomSection = true;
+    this._showAnimationSection = false;
     this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
@@ -2000,8 +2295,14 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     if (type === "number") {
       return input.value === "" ? "" : Number(input.value);
     }
+    if (type === "color") {
+      return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+    }
     if (type === "entity-list") {
       return normalizeEntityList(input.value);
+    }
+    if (type === "csv") {
+      return normalizeStringList(input.value);
     }
     return input.value;
   }
@@ -2130,6 +2431,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         this._showStyleSection = !this._showStyleSection;
       } else if (toggle.dataset.editorToggle === "custom") {
         this._showCustomSection = !this._showCustomSection;
+      } else if (toggle.dataset.editorToggle === "animations") {
+        this._showAnimationSection = !this._showAnimationSection;
       }
       this._render();
       return;
@@ -2241,8 +2544,9 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
+    const fullWidth = options.fullWidth !== false;
     return `
-      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+      <div class="editor-field ${fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(label)}</span>
         <div
           class="editor-control-host"
@@ -2252,6 +2556,29 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           data-placeholder="${escapeHtml(options.placeholder || "mdi:bell-outline")}"
         ></div>
       </div>
+    `;
+  }
+
+  _renderColorField(label, field, value, options = {}) {
+    const color = getEditorColorModel(value, options.fallbackValue || getEditorColorFallbackValue(field));
+    return `
+      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(label)}</span>
+        <span class="editor-color-field">
+          <span class="editor-color-picker" style="--editor-swatch:${escapeHtml(color.hex)}">
+            <input
+              type="color"
+              data-field="${escapeHtml(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml(color.alpha)}"
+              value="${escapeHtml(color.hex)}"
+              aria-label="${escapeHtml(label)}"
+            />
+            <span class="editor-color-swatch" aria-hidden="true"></span>
+          </span>
+          <span class="editor-color-value">${escapeHtml(color.label)}</span>
+        </span>
+      </label>
     `;
   }
 
@@ -2385,6 +2712,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
             { value: "warning", label: "Aviso" },
             { value: "critical", label: "Critica" },
           ])}
+          ${this._renderColorField("Color tintado personalizado", `custom_notifications.${index}.tint_color`, item.tint_color, { fullWidth: true })}
           ${this._renderEntityPickerField("Entidad opcional", `custom_notifications.${index}.entity`, item.entity, { fullWidth: true })}
           ${this._renderTextField("Atributo opcional", `custom_notifications.${index}.attribute`, item.attribute, { placeholder: "temperature" })}
           ${this._renderSelectField("Condicion", `custom_notifications.${index}.condition`, item.condition, [
@@ -2549,6 +2877,51 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           display: block;
           width: 100%;
         }
+        .editor-color-field {
+          align-items: center;
+          display: flex;
+          gap: 10px;
+          min-height: 38px;
+        }
+        .editor-color-picker {
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 34px;
+          overflow: hidden;
+          padding: 4px;
+          position: relative;
+          width: 46px;
+        }
+        .editor-color-picker input {
+          cursor: pointer;
+          height: 100%;
+          inset: 0;
+          opacity: 0;
+          padding: 0;
+          position: absolute;
+          width: 100%;
+        }
+        .editor-color-swatch {
+          background: var(--editor-swatch);
+          border-radius: 999px;
+          display: block;
+          height: 100%;
+          width: 100%;
+        }
+        .editor-color-value {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          font-weight: 650;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
         .editor-entity-list {
           display: grid;
           gap: 8px;
@@ -2597,11 +2970,18 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           border-radius: 999px;
           color: var(--primary-text-color);
           cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
           font: inherit;
           font-size: 12px;
           font-weight: 750;
+          justify-content: center;
           min-height: 34px;
           padding: 0 12px;
+        }
+        .editor-section__toggle-button ha-icon {
+          --mdc-icon-size: 16px;
         }
         .editor-action {
           background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
@@ -2678,34 +3058,112 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
             <div class="editor-section__hint">Crea avisos propios con condiciones por entidad, atributo y accion opcional.</div>
             <div class="editor-section__actions">
               <button type="button" data-editor-action="add-custom">Anadir notificacion</button>
-              <button type="button" data-editor-toggle="custom">${this._showCustomSection ? "Ocultar" : "Mostrar"}</button>
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="custom"
+                aria-expanded="${this._showCustomSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showCustomSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showCustomSection ? "Ocultar" : "Mostrar"}</span>
+              </button>
             </div>
           </div>
           ${this._showCustomSection ? this._renderCustomNotifications(config) : ""}
         </section>
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
+            <div class="editor-section__title">Animaciones</div>
+            <div class="editor-section__hint">Controla la entrada de contenido y el rebote de los botones de la tarjeta.</div>
             <div class="editor-section__actions">
-              <button type="button" data-editor-toggle="styles">${this._showStyleSection ? "Ocultar" : "Mostrar"}</button>
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="animations"
+                aria-expanded="${this._showAnimationSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showAnimationSection ? "Ocultar" : "Mostrar"}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showAnimationSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations?.enabled !== false)}
+                  ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", config.animations?.content_duration, { type: "number", valueType: "number" })}
+                  ${this._renderTextField("Rebote botones (ms)", "animations.button_bounce_duration", config.animations?.button_bounce_duration, { type: "number", valueType: "number" })}
+                </div>
+              `
+              : ""
+          }
+        </section>
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Seguridad</div>
+            <div class="editor-section__hint">Controla si las acciones de servicio personalizadas pasan por una allowlist estricta.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderCheckboxField(
+              "Seguridad de servicios (modo estricto)",
+              "security.strict_service_actions",
+              config.security?.strict_service_actions === true,
+            )}
+            ${
+              config.security?.strict_service_actions === true
+                ? this._renderTextField(
+                    "Servicios permitidos",
+                    "security.allowed_services",
+                    Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+                    { placeholder: "light.turn_on, script.turn_on", valueType: "csv", fullWidth: true },
+                  )
+                : ""
+            }
+            ${
+              config.security?.strict_service_actions === true
+                ? this._renderTextField(
+                    "Dominios permitidos",
+                    "security.allowed_service_domains",
+                    Array.isArray(config.security?.allowed_service_domains) ? config.security.allowed_service_domains.join(", ") : "",
+                    { placeholder: "light, script", valueType: "csv", fullWidth: true },
+                  )
+                : ""
+            }
+          </div>
+        </section>
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Estilos</div>
+            <div class="editor-section__hint">Ajusta superficies, tintado visual y radios sin salir del editor visual.</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="styles"
+                aria-expanded="${this._showStyleSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${this._showStyleSection ? "Ocultar" : "Mostrar"}</span>
+              </button>
             </div>
           </div>
           ${
             this._showStyleSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderTextField("Fondo tarjeta", "styles.card.background", config.styles.card.background)}
+                  ${this._renderColorField("Fondo tarjeta", "styles.card.background", config.styles.card.background)}
                   ${this._renderTextField("Borde tarjeta", "styles.card.border", config.styles.card.border)}
                   ${this._renderTextField("Radio tarjeta", "styles.card.border_radius", config.styles.card.border_radius)}
                   ${this._renderTextField("Sombra", "styles.card.box_shadow", config.styles.card.box_shadow)}
                   ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
                   ${this._renderTextField("Gap", "styles.card.gap", config.styles.card.gap)}
-                  ${this._renderTextField("Fondo icono", "styles.icon.background", config.styles.icon.background)}
-                  ${this._renderTextField("Color icono", "styles.icon.color", config.styles.icon.color)}
+                  ${this._renderColorField("Fondo icono", "styles.icon.background", config.styles.icon.background)}
+                  ${this._renderColorField("Color icono", "styles.icon.color", config.styles.icon.color)}
                   ${this._renderTextField("Tamano icono", "styles.icon.size", config.styles.icon.size)}
                   ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
                   ${this._renderTextField("Radio notificacion", "styles.item_radius", config.styles.item_radius)}
-                  ${this._renderTextField("Acento", "styles.accent", config.styles.accent)}
+                  ${this._renderColorField("Tintado visual", "styles.accent", config.styles.accent, { fullWidth: true })}
                 </div>
               `
               : ""

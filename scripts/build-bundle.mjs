@@ -96,6 +96,54 @@ const footer = `;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__=${JSO
   pkgVersion: pkg.version,
   contentSha256_12: contentHash,
 })};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v${pkg.version} (${contentHash}) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}`;
-const outPath = path.join(root, "nodalia-cards.js");
-fs.writeFileSync(outPath, `${body}\n${footer}\n`);
-console.log(`Wrote ${path.relative(root, outPath)} (${parts.length} modules + i18n, ${contentHash}).`);
+const bundleFile = "nodalia-cards.bundle.js";
+const manifestFile = "nodalia-cards.manifest.js";
+const loaderFile = "nodalia-cards.js";
+const bundlePath = path.join(root, bundleFile);
+const manifestPath = path.join(root, manifestFile);
+const loaderPath = path.join(root, loaderFile);
+const manifest = {
+  pkgVersion: pkg.version,
+  contentSha256_12: contentHash,
+  file: bundleFile,
+};
+const manifestSource = `export default ${JSON.stringify(manifest, null, 2)};\nexport const pkgVersion = ${JSON.stringify(pkg.version)};\nexport const contentSha256_12 = ${JSON.stringify(contentHash)};\nexport const file = ${JSON.stringify(bundleFile)};\n`;
+const loaderSource = `const FALLBACK_MANIFEST = ${JSON.stringify(manifest, null, 2)};
+
+async function loadNodaliaCardsBundle() {
+  const manifestUrl = new URL("./${manifestFile}", import.meta.url);
+  manifestUrl.searchParams.set("t", String(Date.now()));
+  let manifest = FALLBACK_MANIFEST;
+  try {
+    const module = await import(manifestUrl.href);
+    manifest = module.default || {
+      pkgVersion: module.pkgVersion,
+      contentSha256_12: module.contentSha256_12,
+      file: module.file,
+    };
+  } catch (error) {
+    if (typeof console !== "undefined" && typeof console.warn === "function") {
+      console.warn("nodalia-cards: no se pudo cargar el manifest cache-busting; usando fallback embebido.", error);
+    }
+  }
+
+  const bundleFile = typeof manifest.file === "string" && manifest.file ? manifest.file : FALLBACK_MANIFEST.file;
+  const bundleUrl = new URL(bundleFile, import.meta.url);
+  bundleUrl.searchParams.set("v", manifest.contentSha256_12 || manifest.pkgVersion || String(Date.now()));
+  await import(bundleUrl.href);
+
+  if (typeof window !== "undefined") {
+    window.__NODALIA_LOADER__ = {
+      pkgVersion: manifest.pkgVersion || FALLBACK_MANIFEST.pkgVersion,
+      contentSha256_12: manifest.contentSha256_12 || FALLBACK_MANIFEST.contentSha256_12,
+      bundleUrl: bundleUrl.href,
+    };
+  }
+}
+
+await loadNodaliaCardsBundle();
+`;
+fs.writeFileSync(bundlePath, `${body}\n${footer}\n`);
+fs.writeFileSync(manifestPath, manifestSource);
+fs.writeFileSync(loaderPath, loaderSource);
+console.log(`Wrote ${path.relative(root, loaderPath)} loader -> ${bundleFile} (${parts.length} modules + i18n, ${contentHash}).`);
