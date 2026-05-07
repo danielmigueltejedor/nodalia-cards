@@ -3,7 +3,7 @@
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
 ![Latest stable](https://img.shields.io/badge/latest%20stable-0.6.1-2ea043)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
-![Alpha branch](https://img.shields.io/badge/alpha-1.0.0--alpha.48-orange)
+![Alpha branch](https://img.shields.io/badge/alpha-1.0.0--alpha.50-orange)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![GitHub](https://img.shields.io/badge/hosted%20on-GitHub-black?logo=github)
@@ -194,6 +194,8 @@ In HACS, open **Nodalia Cards** and use **Download** (pick the release or prerel
 
 If something still looks off (e.g. old script cached), use **Redownload** in HACS, or in **Settings → Dashboards → ⋮ → Resources** make sure the entry matches the URL HACS created. HACS may append `?hacstag=…` to the path; that value is **per install and selected version**, not the app semver—replace it with whatever HACS shows after **Redownload** if needed. In the browser console, `__NODALIA_BUNDLE__` confirms which bundle loaded (`pkgVersion` and a short content id).
 
+If Home Assistant reports **“Custom element doesn't exist: nodalia-climate-card”**, the Nodalia bundle has not loaded in that browser session. `custom:nodalia-climate-card` is included in **0.6.1** and later; check that the resource URL points to `/hacsfiles/nodalia-cards/nodalia-cards.js`, then use **Redownload** and a hard browser refresh.
+
 <details>
 <summary>Manual install (no HACS)</summary>
 
@@ -207,7 +209,7 @@ Copy `nodalia-cards.js` into `config/www/` (or a subfolder) and add a resource u
 
 **Stable (`main`) — 0.6.1** includes **es, en, de, fr, it, nl** plus **pt, ru, el, zh** (simplified), and **ro** for the bundled cards and Lovelace visual editors (partial trees merge from English; coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
 
-**Prereleases:** active **`1.0.0-alpha.*`** line is now **`1.0.0-alpha.48`** on **`alpha`**. Recent **`1.0.0-beta.*`** cuts remain in **CHANGELOG**. **`0.6.1`** stays as the recommended stable line on **`main`** while polish continues toward **`1.0.0`** stable.
+**Prereleases:** active **`1.0.0-alpha.*`** line is now **`1.0.0-alpha.50`** on **`alpha`**. Recent **`1.0.0-beta.*`** cuts remain in **CHANGELOG**. **`0.6.1`** stays as the recommended stable line on **`main`** while polish continues toward **`1.0.0`** stable.
 
 ---
 

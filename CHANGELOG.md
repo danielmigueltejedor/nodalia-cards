@@ -10,6 +10,23 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.50] - 2026-05-07
+
+Fiftieth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.50`** (tag **`v1.0.0-alpha.50`** optional).
+
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.50`**.
+
+---
+
+## [1.0.0-alpha.49] - 2026-05-07
+
+Forty-ninth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.49`** (tag **`v1.0.0-alpha.49`** optional).
+
+- **Calendar card — borrado nativo de eventos:** las filas y el detalle de evento muestran una papelera cuando el calendario soporta borrado; usa `calendar/event/delete` con `uid`/`recurrence_id` como la UI nativa de Home Assistant.
+- **Release metadata:** align alpha channel references and bundle version metadata to **`1.0.0-alpha.49`**.
+
+---
+
 ## [1.0.0-alpha.48] - 2026-05-07
 
 Forty-eighth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.48`** (tag **`v1.0.0-alpha.48`** optional).

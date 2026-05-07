@@ -156,6 +156,9 @@ test("calendar native composer supports rich HA event fields and details", () =>
   assert.match(source, /appendNodaliaEventMetadata/);
   assert.match(source, /extractNodaliaEventColor/);
   assert.match(source, /calendar\/event\/create/);
+  assert.match(source, /calendar\/event\/delete/);
+  assert.match(source, /data-action="delete-event"/);
+  assert.match(source, /allow_delete/);
   assert.match(source, /data-action="open-event-detail"/);
   assert.match(source, /calendar-expanded__event-detail/);
   assert.match(example, /description: "\{\{ d\.description \| default\(omit, true\) \}\}"/);
@@ -169,6 +172,18 @@ test("calendar editor signature only scans relevant entity domains", () => {
   assert.match(source, /id\.startsWith\("calendar\."\)/);
   assert.match(source, /id\.startsWith\("input_text\."\)/);
   assert.match(source, /id\.startsWith\("weather\."\)/);
+});
+
+test("climate card is registered and shipped in the HACS bundle", () => {
+  const source = read("nodalia-climate-card.js");
+  const build = read("scripts/build-bundle.mjs");
+  const pkg = read("package.json");
+  const readme = read("README.md");
+  assert.match(source, /const CARD_TAG = "nodalia-climate-card"/);
+  assert.match(source, /customElements\.define\(CARD_TAG, NodaliaClimateCard\)/);
+  assert.match(build, /nodalia-climate-card\.js/);
+  assert.match(pkg, /"nodalia-climate-card\.js"/);
+  assert.match(readme, /custom:nodalia-climate-card/);
 });
 
 test("notifications card is bundled and supports smart dismissible notifications", () => {

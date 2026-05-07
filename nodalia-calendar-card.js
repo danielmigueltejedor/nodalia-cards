@@ -9,7 +9,7 @@ import {
 
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.48";
+const CARD_VERSION = "1.0.0-alpha.50";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 
@@ -25,6 +25,7 @@ const DEFAULT_CONFIG = {
   refresh_interval: 300,
   show_completed: false,
   allow_complete: true,
+  allow_delete: true,
   weather_entity: "",
   shared_completed_events_entity: "",
   shared_completed_events_entity_2: "",
@@ -230,6 +231,8 @@ function normalizeCalendarEntries(calendars) {
 function normalizeConfig(config) {
   const normalized = mergeConfig(DEFAULT_CONFIG, config || {});
   normalized.calendars = normalizeCalendarEntries(normalized.calendars);
+  normalized.allow_complete = normalized.allow_complete !== false;
+  normalized.allow_delete = normalized.allow_delete !== false;
   let timeRange = String(normalized.time_range || "").trim();
   if (!VALID_TIME_RANGES.includes(timeRange)) {
     const legacyDays = Number(normalized.days_to_show);
@@ -328,6 +331,14 @@ function normalizeConfig(config) {
 function calendarExitDurationMs(contentDuration) {
   const base = Math.min(1600, Math.max(120, Number(contentDuration) || DEFAULT_CONFIG.animations.content_duration));
   return Math.min(640, Math.max(320, Math.round(base * 0.62)));
+}
+
+function calendarEventUid(event) {
+  return String(event?.uid ?? event?.eventData?.uid ?? "").trim();
+}
+
+function calendarEventRecurrenceId(event) {
+  return String(event?.recurrence_id ?? event?.eventData?.recurrence_id ?? "").trim();
 }
 
 function timeRangeChipLabel(tr) {
@@ -1197,6 +1208,7 @@ class NodaliaCalendarCard extends HTMLElement {
   _renderExpandedEventDetail(event, config, locale) {
     const start = eventDate(event?.start);
     const end = eventDate(event?.end);
+    const eventKey = completionKey(event);
     const summary = String(event?.summary || event?.message || "Evento sin titulo").trim();
     const subtitle = this._getEventSubtitleForDisplay(event?._entity);
     const timeLabel = eventIsAllDay(event)
@@ -1227,6 +1239,14 @@ class NodaliaCalendarCard extends HTMLElement {
             <ha-icon icon="mdi:chevron-left"></ha-icon>
             <span>Volver</span>
           </button>
+          ${
+            this._canDeleteCalendarEvent(event, config)
+              ? `<button type="button" class="calendar-expanded__event-delete" data-action="delete-event" data-key="${escapeHtml(eventKey)}" aria-label="Eliminar evento">
+                  <ha-icon icon="mdi:trash-can-outline"></ha-icon>
+                  <span>Eliminar</span>
+                </button>`
+              : ""
+          }
         </div>
         <div class="calendar-expanded__event-hero">
           <div class="calendar-expanded__event-title">${escapeHtml(summary)}</div>
@@ -1325,6 +1345,18 @@ class NodaliaCalendarCard extends HTMLElement {
       : "";
     const exiting = this._completeExitKeys.has(doneKey);
     const exitClass = exiting ? " calendar-event--exit" : "";
+    const canDelete = this._canDeleteCalendarEvent(event, config);
+    const doneButton = config.allow_complete
+      ? `<button type="button" class="calendar-event__done" data-action="toggle-complete" data-key="${escapeHtml(doneKey)}">${done ? "Hecho" : "Marcar"}</button>`
+      : "";
+    const deleteButton = canDelete
+      ? `<button type="button" class="calendar-event__delete" data-action="delete-event" data-key="${escapeHtml(doneKey)}" aria-label="Eliminar evento">
+          <ha-icon icon="mdi:trash-can-outline"></ha-icon>
+        </button>`
+      : "";
+    const actionsHtml = doneButton || deleteButton
+      ? `<div class="calendar-event__actions">${doneButton}${deleteButton}</div>`
+      : "";
     return `
       <div class="calendar-event ${done ? "is-completed" : ""}${tintClass}${compactClass}${detailClass}${exitClass}"${detailAttrs}${tintStyle}>
         <div class="calendar-event__time">${escapeHtml(timeLabel)}</div>
@@ -1332,11 +1364,7 @@ class NodaliaCalendarCard extends HTMLElement {
           ${escapeHtml(summary)}
           ${subtitle ? `<small>${escapeHtml(subtitle)}</small>` : ""}
         </div>
-        ${
-          config.allow_complete
-            ? `<button type="button" class="calendar-event__done" data-action="toggle-complete" data-key="${escapeHtml(doneKey)}">${done ? "Hecho" : "Marcar"}</button>`
-            : ""
-        }
+        ${actionsHtml}
       </div>
     `;
   }
@@ -1655,6 +1683,7 @@ class NodaliaCalendarCard extends HTMLElement {
     mix(config.max_visible_events);
     mix(config.show_completed ? 1 : 0);
     mix(config.allow_complete ? 1 : 0);
+    mix(config.allow_delete ? 1 : 0);
     mix(config.weather_entity || "");
     mix(config.shared_completed_events_entity || "");
     mix(config.shared_completed_events_entity_2 || "");
@@ -1691,6 +1720,8 @@ class NodaliaCalendarCard extends HTMLElement {
     visibleEvents.forEach(event => {
       mix(completionKey(event));
       mix(eventDate(event?.start)?.getTime() || 0);
+      mix(calendarEventUid(event));
+      mix(calendarEventRecurrenceId(event));
       mix(event?.description || "");
       mix(event?.location || "");
       mix(event?.rrule || "");
@@ -1824,6 +1855,70 @@ class NodaliaCalendarCard extends HTMLElement {
       this._renderIfChanged(true);
     }, exitMs);
     this._completeExitTimers.set(key, tid);
+  }
+
+  _findEventByCompletionKey(key) {
+    const targetKey = String(key || "");
+    if (!targetKey) {
+      return null;
+    }
+    return this._events.find(event => completionKey(event) === targetKey) || null;
+  }
+
+  _canDeleteCalendarEvent(event, config = this._config) {
+    const entityId = String(event?._entity || "").trim();
+    const uid = calendarEventUid(event);
+    if (!config?.allow_delete || !entityId.startsWith("calendar.") || !uid) {
+      return false;
+    }
+    if (!this._hass || typeof this._hass.callWS !== "function") {
+      return false;
+    }
+    const features = Number(this._hass?.states?.[entityId]?.attributes?.supported_features);
+    if (Number.isFinite(features) && features > 0 && (features & 2) !== 2) {
+      return false;
+    }
+    return true;
+  }
+
+  async _deleteCalendarEvent(key) {
+    const event = this._findEventByCompletionKey(key);
+    if (!this._canDeleteCalendarEvent(event)) {
+      return;
+    }
+    const entityId = String(event._entity || "").trim();
+    const uid = calendarEventUid(event);
+    const recurrenceId = calendarEventRecurrenceId(event);
+    const payload = {
+      type: "calendar/event/delete",
+      entity_id: entityId,
+      uid,
+    };
+    if (recurrenceId) {
+      payload.recurrence_id = recurrenceId;
+      payload.recurrence_range = "";
+    }
+    try {
+      await this._hass.callWS(payload);
+      this._completed.delete(key);
+      const pending = this._completeExitTimers.get(key);
+      if (pending) {
+        window.clearTimeout(pending);
+        this._completeExitTimers.delete(key);
+      }
+      this._completeExitKeys.delete(key);
+      this._events = this._events.filter(item => completionKey(item) !== key);
+      if (this._expandedEventDetailKey === key) {
+        this._expandedEventDetailKey = "";
+      }
+      this._saveCompleted();
+      this._renderIfChanged(true);
+      this._refreshEvents();
+    } catch (err) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn("Nodalia Calendar Card: calendar/event/delete failed", err);
+      }
+    }
   }
 
   _groupEvents(events) {
@@ -2996,7 +3091,7 @@ class NodaliaCalendarCard extends HTMLElement {
           white-space: normal;
           font-size:11px;
         }
-        .calendar-event--compact .calendar-event__done {
+        .calendar-event--compact .calendar-event__actions {
           display:none;
         }
         .calendar-event--detail-link {
@@ -3055,7 +3150,14 @@ class NodaliaCalendarCard extends HTMLElement {
           font-size:11px;
           margin-top:2px;
         }
-        .calendar-event__done {
+        .calendar-event__actions {
+          align-items: center;
+          display: inline-flex;
+          gap: 6px;
+          justify-content: flex-end;
+        }
+        .calendar-event__done,
+        .calendar-event__delete {
           align-items:center;
           appearance:none;
           background:transparent;
@@ -3068,6 +3170,14 @@ class NodaliaCalendarCard extends HTMLElement {
           font-weight:700;
           min-height:28px;
           padding:0 9px;
+        }
+        .calendar-event__delete {
+          color: color-mix(in srgb, var(--error-color, #db4437) 74%, var(--secondary-text-color));
+          min-width: 28px;
+          padding: 0;
+        }
+        .calendar-event__delete ha-icon {
+          --mdc-icon-size: 16px;
         }
         @keyframes calendar-card-fade-up {
           0% {
@@ -3659,9 +3769,11 @@ class NodaliaCalendarCard extends HTMLElement {
         }
         .calendar-expanded__day-detail-toolbar {
           display: flex;
-          justify-content: flex-start;
+          gap: 8px;
+          justify-content: space-between;
         }
-        .calendar-expanded__day-back {
+        .calendar-expanded__day-back,
+        .calendar-expanded__event-delete {
           align-items: center;
           appearance: none;
           background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
@@ -3677,8 +3789,16 @@ class NodaliaCalendarCard extends HTMLElement {
           min-height: 36px;
           padding: 0 12px 0 8px;
         }
-        .calendar-expanded__day-back ha-icon {
+        .calendar-expanded__event-delete {
+          color: color-mix(in srgb, var(--error-color, #db4437) 76%, var(--primary-text-color));
+          margin-left: auto;
+          padding: 0 12px;
+        }
+        .calendar-expanded__day-back ha-icon,
+        .calendar-expanded__event-delete ha-icon {
           --mdc-icon-size: 20px;
+        }
+        .calendar-expanded__day-back ha-icon {
           margin-left: -2px;
         }
         .calendar-expanded__day-detail-heading {
@@ -3976,6 +4096,15 @@ class NodaliaCalendarCard extends HTMLElement {
 
   _onShadowClick(event) {
     const path = event.composedPath();
+    const deleteBtn = path.find(
+      node => node instanceof HTMLElement && node.dataset?.action === "delete-event",
+    );
+    if (deleteBtn instanceof HTMLElement) {
+      event.preventDefault();
+      event.stopPropagation();
+      void this._deleteCalendarEvent(deleteBtn.dataset.key || "");
+      return;
+    }
     const toggleBtn = path.find(
       node => node instanceof HTMLElement && node.dataset?.action === "toggle-complete",
     );
@@ -5165,6 +5294,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
             </div>
             ${this._renderTintAutoToggle(config.tint_auto !== false)}
             ${this._renderCheckboxField("Permitir marcar eventos como completados", "allow_complete", config.allow_complete === true)}
+            ${this._renderCheckboxField("Permitir borrar eventos nativos", "allow_delete", config.allow_delete !== false)}
             ${this._renderCheckboxField("Mostrar eventos completados", "show_completed", config.show_completed === true)}
             <div class="editor-field editor-field--full">
               <span>${escapeHtml(this._editorLabel("Helper input_text (completados compartidos)"))}</span>
