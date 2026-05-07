@@ -3,7 +3,6 @@
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
 ![Latest stable](https://img.shields.io/badge/latest%20stable-0.6.1-2ea043)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
-![Alpha branch](https://img.shields.io/badge/alpha-1.0.0--alpha.1-orange)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![GitHub](https://img.shields.io/badge/hosted%20on-GitHub-black?logo=github)
