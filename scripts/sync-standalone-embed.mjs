@@ -32,6 +32,7 @@ const FILES = [
   "nodalia-insignia-card.js",
   "nodalia-person-card.js",
   "nodalia-weather-card.js",
+  "nodalia-notifications-card.js",
   "nodalia-vacuum-card.js",
 ];
 

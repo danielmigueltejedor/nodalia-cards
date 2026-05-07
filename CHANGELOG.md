@@ -10,6 +10,108 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.50] - 2026-05-07
+
+Fiftieth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.50`** (tag **`v1.0.0-alpha.50`** optional).
+
+- **Notifications card — tintado Entity Card:** el estado sin avisos y las tarjetas activas usan la misma superficie tintada/pseudo-capas que `nodalia-entity-card`, evitando bordes/sombras recortadas en el estado vacío.
+- **Notifications card — editor visual compacto:** las conexiones inteligentes cambian de textarea a selectores nativos de entidad filtrados por dominio, con filas compactas para añadir/quitar entidades.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.50`**.
+
+---
+
+## [1.0.0-alpha.49] - 2026-05-07
+
+Forty-ninth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.49`** (tag **`v1.0.0-alpha.49`** optional).
+
+- **Calendar card — borrado nativo de eventos:** las filas y el detalle de evento muestran una papelera cuando el calendario soporta borrado; usa `calendar/event/delete` con `uid`/`recurrence_id` como la UI nativa de Home Assistant.
+- **Release metadata:** align alpha channel references and bundle version metadata to **`1.0.0-alpha.49`**.
+
+---
+
+## [1.0.0-alpha.48] - 2026-05-07
+
+Forty-eighth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.48`** (tag **`v1.0.0-alpha.48`** optional).
+
+- **Notifications card — escala Entity Card:** reduce iconos, texto y alturas para alinearse con `nodalia-entity-card`, y usa chips/burbujas compactas para fuente, severidad y acciones.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.48`**.
+
+---
+
+## [1.0.0-alpha.47] - 2026-05-07
+
+Forty-seventh **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.47`** (tag **`v1.0.0-alpha.47`** optional).
+
+- **Notifications card:** primera alpha versionada de `custom:nodalia-notifications-card` en el bundle, con centro inteligente de avisos, pila expandible, borrado persistente, recomendaciones y editor visual.
+- **Notifications card — estilo Nodalia compacto:** estado sin avisos como barra verde tintada y notificaciones como tarjetas icono+texto apiladas, con cartas traseras visibles y burbuja de despliegue.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.47`**.
+
+---
+
+## [1.0.0-alpha.46] - 2026-05-07
+
+Forty-sixth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.46`** (tag **`v1.0.0-alpha.46`** optional).
+
+- **Calendar card — forecast HA moderno:** suscripción diaria persistente con `weather/subscribe_forecast`, alineada con Weather Card, para recibir días futuros y `templow` cuando `weather/get_forecasts` o atributos legacy no devuelven datos.
+- **Calendar card — forecast más robusto:** fallback por `weather.get_forecasts` con respuesta y lectura de tipos soportados (`daily`, `twice_daily`, `hourly`) agregados por día; ahora se prioriza el candidato con más días futuros y no se deja que una suscripción parcial de “solo hoy” pise la previsión semanal.
+- **Calendar card — solo eventos nativos:** se elimina el flujo de recordatorios rápidos/locales y el botón de creación pasa a crear siempre eventos reales de Home Assistant, evitando eventos sintéticos que podían interferir con persistencia de completados.
+- **Calendar card — composer nativo ampliado:** creación de eventos HA con descripción, ubicación, recurrencia nativa cerrada (`none`/`yearly`/`monthly`/`weekly`/`daily` vía `calendar/event/create`) y color propio opcional guardado como metadato Nodalia en la descripción.
+- **Calendar card — detalle de evento:** en la vista mensual ampliada, al pulsar un día y luego un evento se abre una ficha grande con descripción, ubicación, calendario, horario y repetición cuando estén disponibles.
+- **Calendar card — composer sin recortes:** el formulario de creación nativa usa altura real de viewport y scroll propio para no cortarse cuando el rango seleccionado no tiene eventos.
+- **Calendar card — webhook evento nativo:** el payload de creación añade `service_data` y `ha_action` saneados para `calendar.create_event`, evitando enviar campos vacíos incompatibles como `start_date_time: ""` en eventos de todo el día y pasando `description`/`location` solo si existen; la recurrencia queda en `calendar_event`/websocket para no romper el servicio HA.
+- **Calendar card — validación de fechas:** crear un evento nativo con fecha anterior a hoy muestra un error integrado en el popup y evita enviar el webhook/servicio.
+- **Calendar card — tiempo en popup ampliado:** la vista grande también muestra el chip de tiempo en columnas/días, celdas del mes y detalle de día cuando hay forecast disponible.
+- **Notifications card:** nueva `custom:nodalia-notifications-card` como centro inteligente con vacio amable, pila expandible, borrado persistente, eventos de calendario de hoy, estados de robot, recomendaciones weather/fan, sensores y notificaciones personalizadas desde editor visual.
+- **Performance:** bundle minificado y editor de Calendar con firma de entidades filtrada a `calendar`, `input_text` y `weather` para reducir parseo/coste en instalaciones grandes.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.46`**.
+
+---
+
+## [1.0.0-alpha.40] - 2026-05-06
+
+Fortieth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.40`** (tag **`v1.0.0-alpha.40`** optional).
+
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.40`**.
+
+---
+
+## [1.0.0-alpha.38] - 2026-05-06
+
+Thirty-eighth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.38`** (tag **`v1.0.0-alpha.38`** optional).
+
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.38`**.
+
+---
+
+## [1.0.0-alpha.37] - 2026-05-06
+
+Thirty-seventh **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.37`** (tag **`v1.0.0-alpha.37`** optional).
+
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.37`**.
+
+---
+
+## [1.0.0-alpha.36] - 2026-05-06
+
+Thirty-sixth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.36`** (tag **`v1.0.0-alpha.36`** optional).
+
+- **Calendar card — weather visible en más casos reales:** emparejado día calendario ↔ forecast reforzado (claves locales/padded y fallback por proximidad de día) para evitar cabeceras sin clima cuando el proveedor devuelve formatos heterogéneos.
+- **Calendar card — popup composer sin recortes en estado vacío:** al abrir “nuevo recordatorio / nuevo evento” desde una vista sin eventos, el panel expandido eleva altura mínima y evita clipping para mostrar el formulario completo.
+- **Calendar card — esquinas/contorno del panel:** ajuste de layout del panel expandido al abrir composer para eliminar artefactos visuales (cortes y esquinas puntiagudas) en overlays.
+
+---
+
+## [1.0.0-alpha.35] - 2026-05-06
+
+Thirty-fifth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.35`** (tag **`v1.0.0-alpha.35`** optional).
+
+- **Calendar card — persistencia `v6` multi-helper (255x4):** nuevo formato compacto `v6:` y soporte para hasta **4** `input_text` (`shared_completed_events_entity` + `_2/_3/_4`) con reparto/reensamblado de payload para ampliar capacidad total.
+- **Calendar card — webhook de creación al vuelo:** nuevos campos `quick_reminder_webhook` y `native_event_webhook` para crear recordatorios/eventos mediante automatizaciones webhook cuando el usuario no tiene permisos directos de servicio.
+- **Calendar card — clima más resiliente:** si no hay forecast diario utilizable, fallback visual con estado/temperatura actual del `weather_entity` para evitar cabeceras vacías.
+- **Calendar card — fix visual composer:** el sub-popup de creación ya no se recorta cuando la vista base tiene poca altura (panel con scroll y sin clipping del contenedor).
+
+---
+
 ## [1.0.0-alpha.34] - 2026-05-06
 
 Thirty-fourth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.34`** (tag **`v1.0.0-alpha.34`** optional).

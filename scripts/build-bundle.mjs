@@ -48,6 +48,7 @@ const parts = [
   "nodalia-person-card.js",
   "nodalia-weather-card.js",
   "nodalia-calendar-card.js",
+  "nodalia-notifications-card.js",
   "nodalia-vacuum-card.js",
 ];
 
@@ -67,6 +68,7 @@ try {
     target: ["es2020"],
     charset: "utf8",
     legalComments: "none",
+    minify: true,
     plugins: [
       {
         name: "strip-standalone-utils-embed",

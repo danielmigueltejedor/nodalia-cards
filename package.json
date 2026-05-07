@@ -1,6 +1,6 @@
 {
   "name": "nodalia-cards",
-  "version": "1.0.0-alpha.34",
+  "version": "1.0.0-alpha.50",
   "private": false,
   "type": "module",
   "description": "Suite de tarjetas personalizadas de Home Assistant para Nodalia.",
@@ -33,6 +33,7 @@
     "nodalia-person-card.js",
     "nodalia-weather-card.js",
     "nodalia-calendar-card.js",
+    "nodalia-notifications-card.js",
     "nodalia-calendar-completion-codec.js",
     "nodalia-vacuum-card.js",
     "README.md",
