@@ -1,7 +1,7 @@
 name: ✨ Feature request
 description: Suggest an idea or improvement
 title: "[Feature]: "
-labels: ["enhancement"]
+labels: ["type: enhancement", "status: needs triage"]
 assignees: []
 
 body:
@@ -10,6 +10,42 @@ body:
       value: |
         Thanks for your idea! 🚀  
         Please describe it as clearly as possible.
+
+  - type: dropdown
+    id: affected_card
+    attributes:
+      label: Related card / area
+      options:
+        - Navigation Bar
+        - Media Player
+        - Light Card
+        - Fan Card
+        - Humidifier Card
+        - Circular Gauge Card
+        - Graph Card
+        - Power Flow Card
+        - Climate Card
+        - Alarm Panel Card
+        - Advance Vacuum Card
+        - Entity Card
+        - Fav Card
+        - Insignia Card
+        - Person Card
+        - Weather Card
+        - Vacuum Card
+        - Calendar Card
+        - Notifications Card
+        - Battery Card
+        - Visual Editor
+        - Translations
+        - Styling / Theme
+        - Mobile
+        - Performance
+        - Security
+        - Shared state / persistence
+        - Other / not sure
+    validations:
+      required: true
 
   - type: textarea
     id: description
