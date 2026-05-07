@@ -204,10 +204,13 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /humidity_entities/);
   assert.match(source, /localStorage\.setItem\(this\._getStorageKey\(\)/);
   assert.match(source, /data-action="toggle-stack"/);
-  assert.match(source, /notifications-surface--empty/);
+  assert.match(source, /notifications-card--empty/);
+  assert.match(source, /notifications-card--list/);
   assert.match(source, /notifications-empty-inline/);
   assert.match(source, /notification-stack-card/);
   assert.match(source, /notification-item__chip/);
+  assert.match(source, /data-list-field/);
+  assert.match(source, /includeDomains/);
   assert.match(source, /fan\.turn_on/);
   assert.match(source, /calendars\/\$\{encodeURIComponent\(entityId\)\}/);
   assert.match(source, /editorFilteredStatesSignature/);

@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-alpha.48";
+const CARD_VERSION = "1.0.0-alpha.50";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1527,35 +1527,56 @@ class NodaliaNotificationsCard extends HTMLElement {
       <style>
         :host {
           display: block;
+          overflow: visible;
         }
         * {
           box-sizing: border-box;
         }
         ha-card {
+          color: var(--primary-text-color);
+          display: block;
+        }
+        .notifications-card--list {
           background: transparent;
           border: 0;
           box-shadow: none;
           color: var(--primary-text-color);
           display: block;
-          overflow: hidden;
+          overflow: visible;
           padding: 0;
         }
-        .notifications-surface {
-          background: ${styles.card.background};
-          border: ${styles.card.border};
+        .notifications-card--empty {
+          --notifications-accent: var(--success-color, #43a047);
+          background:
+            linear-gradient(135deg, color-mix(in srgb, var(--notifications-accent) 18%, ${styles.card.background}) 0%, color-mix(in srgb, var(--notifications-accent) 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%),
+            ${styles.card.background};
+          border: 1px solid color-mix(in srgb, var(--notifications-accent) 32%, var(--divider-color));
           border-radius: ${styles.card.border_radius};
-          box-shadow: ${styles.card.box_shadow};
+          box-shadow:
+            ${styles.card.box_shadow},
+            0 16px 32px color-mix(in srgb, var(--notifications-accent) 18%, rgba(0, 0, 0, 0.18));
+          isolation: isolate;
           overflow: hidden;
           position: relative;
+          transform: translateZ(0);
         }
-        .notifications-surface--empty {
+        .notifications-card--empty::before {
+          background: linear-gradient(180deg, color-mix(in srgb, var(--notifications-accent) 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0));
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+        .notifications-card--empty::after {
           background:
-            linear-gradient(135deg, color-mix(in srgb, var(--success-color, #43a047) 18%, ${styles.card.background}) 0%, color-mix(in srgb, var(--success-color, #43a047) 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%),
-            ${styles.card.background};
-          border: 1px solid color-mix(in srgb, var(--success-color, #43a047) 30%, var(--divider-color));
-          box-shadow:
-            0 10px 24px rgba(67, 160, 71, 0.13),
-            var(--ha-card-box-shadow, 0 2px 8px rgba(0, 0, 0, 0.12));
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, var(--notifications-accent) 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, var(--notifications-accent) 14%, transparent) 0%, transparent 66%);
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
         }
         .notifications-empty-inline {
           align-items: center;
@@ -1564,13 +1585,15 @@ class NodaliaNotificationsCard extends HTMLElement {
           grid-template-columns: auto minmax(0, 1fr);
           min-height: 64px;
           padding: 10px 14px;
+          position: relative;
+          z-index: 1;
         }
         .notifications-empty-inline__icon {
           align-items: center;
-          background: color-mix(in srgb, var(--success-color, #43a047) 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          background: color-mix(in srgb, var(--notifications-accent) 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
-          color: color-mix(in srgb, var(--success-color, #43a047) 78%, var(--primary-text-color));
+          color: color-mix(in srgb, var(--notifications-accent) 78%, var(--primary-text-color));
           display: inline-flex;
           height: 44px;
           justify-content: center;
@@ -1621,21 +1644,42 @@ class NodaliaNotificationsCard extends HTMLElement {
           --notification-accent: ${styles.accent};
           align-items: start;
           background:
-            linear-gradient(90deg, color-mix(in srgb, var(--notification-accent) 18%, rgba(255, 255, 255, 0.18)), rgba(255, 255, 255, 0.02) 72%),
-            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, var(--notification-accent));
-          border: 1px solid color-mix(in srgb, var(--notification-accent) 26%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
+            linear-gradient(135deg, color-mix(in srgb, var(--notification-accent) 18%, ${styles.card.background}) 0%, color-mix(in srgb, var(--notification-accent) 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%),
+            ${styles.card.background};
+          border: 1px solid color-mix(in srgb, var(--notification-accent) 32%, var(--divider-color));
           border-radius: ${styles.item_radius};
           box-shadow:
-            0 10px 24px color-mix(in srgb, var(--notification-accent) 12%, transparent),
-            var(--ha-card-box-shadow, 0 2px 8px rgba(0, 0, 0, 0.12));
+            ${styles.card.box_shadow},
+            0 16px 32px color-mix(in srgb, var(--notification-accent) 18%, rgba(0, 0, 0, 0.18));
           display: grid;
           gap: 10px;
           grid-template-columns: auto minmax(0, 1fr);
+          isolation: isolate;
           min-width: 0;
           min-height: 64px;
+          overflow: hidden;
           padding: 10px 12px;
           position: relative;
+          transform: translateZ(0);
           z-index: 4;
+        }
+        .notification-item::before {
+          background: linear-gradient(180deg, color-mix(in srgb, var(--notification-accent) 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0));
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+        .notification-item::after {
+          background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, var(--notification-accent) 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, var(--notification-accent) 14%, transparent) 0%, transparent 66%);
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
         }
         .notification-item--success {
           --notification-accent: var(--success-color, #43a047);
@@ -1658,7 +1702,9 @@ class NodaliaNotificationsCard extends HTMLElement {
           display: inline-flex;
           height: 44px;
           justify-content: center;
+          position: relative;
           width: 44px;
+          z-index: 1;
         }
         .notification-item__icon ha-icon {
           --mdc-icon-size: 20px;
@@ -1667,6 +1713,8 @@ class NodaliaNotificationsCard extends HTMLElement {
           display: grid;
           gap: 5px;
           min-width: 0;
+          position: relative;
+          z-index: 1;
         }
         .notification-item__title-row {
           align-items: center;
@@ -1773,7 +1821,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           --mdc-icon-size: 16px;
         }
       </style>
-      <ha-card>
+      <ha-card class="notifications-card ${hasNotifications ? "notifications-card--list" : "notifications-card--empty"}">
           ${
             hasNotifications
               ? `
@@ -1804,13 +1852,11 @@ class NodaliaNotificationsCard extends HTMLElement {
                 </div>
               `
               : `
-                <div class="notifications-surface notifications-surface--empty">
-                  <div class="notifications-empty-inline">
-                    <div class="notifications-empty-inline__icon">
-                      <ha-icon icon="mdi:check"></ha-icon>
-                    </div>
-                    <div class="notifications-empty-inline__text">${escapeHtml(emptyText)}</div>
+                <div class="notifications-empty-inline">
+                  <div class="notifications-empty-inline__icon">
+                    <ha-icon icon="mdi:check"></ha-icon>
                   </div>
+                  <div class="notifications-empty-inline__text">${escapeHtml(emptyText)}</div>
                 </div>
               `
           }
@@ -1960,6 +2006,28 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     return input.value;
   }
 
+  _entityDomainsForListField(field) {
+    switch (String(field || "")) {
+      case "calendar_entities":
+        return ["calendar"];
+      case "vacuum_entities":
+        return ["vacuum"];
+      case "fan_entities":
+        return ["fan"];
+      case "weather_entities":
+        return ["weather"];
+      case "motion_entities":
+      case "door_entities":
+      case "window_entities":
+        return ["binary_sensor"];
+      case "temperature_entities":
+      case "humidity_entities":
+        return ["sensor"];
+      default:
+        return [];
+    }
+  }
+
   _setFieldValue(path, value) {
     if (value === "" || value === undefined || value === null || (Array.isArray(value) && !value.length)) {
       deleteByPath(this._config, path);
@@ -1968,12 +2036,62 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     setByPath(this._config, path, value);
   }
 
+  _setEntityListItem(field, index, value) {
+    const key = String(field || "");
+    if (!key) {
+      return;
+    }
+    const current = normalizeEntityList(getByPath(this._config, key));
+    const nextValue = String(value || "").trim();
+    const safeIndex = Math.max(0, Number(index) || 0);
+    if (nextValue) {
+      current[safeIndex] = nextValue;
+    } else {
+      current.splice(safeIndex, 1);
+    }
+    const filtered = normalizeEntityList(current, this._entityDomainsForListField(key));
+    this._setFieldValue(key, filtered);
+  }
+
+  _addEntityListItem(field) {
+    const key = String(field || "");
+    if (!key) {
+      return;
+    }
+    const current = normalizeEntityList(getByPath(this._config, key), this._entityDomainsForListField(key));
+    current.push("");
+    setByPath(this._config, key, current);
+    this._emitConfig();
+  }
+
+  _removeEntityListItem(field, index) {
+    const key = String(field || "");
+    if (!key) {
+      return;
+    }
+    const current = normalizeEntityList(getByPath(this._config, key), this._entityDomainsForListField(key));
+    const safeIndex = Number(index);
+    if (Number.isInteger(safeIndex) && safeIndex >= 0) {
+      current.splice(safeIndex, 1);
+    }
+    this._setFieldValue(key, current);
+    this._emitConfig();
+  }
+
   _onShadowInput(event) {
     const input = event.composedPath().find(node => (
       node instanceof HTMLInputElement ||
       node instanceof HTMLTextAreaElement ||
       node instanceof HTMLSelectElement
     ));
+    if (input?.dataset?.listField) {
+      event.stopPropagation();
+      this._setEntityListItem(input.dataset.listField, Number(input.dataset.index), input.value);
+      if (event.type === "change") {
+        this._emitConfig();
+      }
+      return;
+    }
     if (!input?.dataset?.field) {
       return;
     }
@@ -1993,6 +2111,11 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
     if (typeof control.dataset.value === "string") {
       control.dataset.value = String(nextValue || "");
+    }
+    if (control.dataset.listField) {
+      this._setEntityListItem(control.dataset.listField, Number(control.dataset.index), nextValue);
+      this._emitConfig();
+      return;
     }
     this._setFieldValue(control.dataset.field, nextValue);
     this._emitConfig();
@@ -2022,6 +2145,12 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       this._config.custom_notifications = [];
     }
     switch (button.dataset.editorAction) {
+      case "add-entity-list-item":
+        this._addEntityListItem(button.dataset.field || "");
+        break;
+      case "remove-entity-list-item":
+        this._removeEntityListItem(button.dataset.field || "", index);
+        break;
       case "add-custom":
         this._config.custom_notifications.push({
           title: "Nueva notificacion",
@@ -2135,17 +2264,48 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           data-mounted-control="entity"
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(value || "")}"
+          ${options.domains ? `data-domains="${escapeHtml(options.domains)}"` : ""}
           data-placeholder="${escapeHtml(options.placeholder || "")}"
         ></div>
       </div>
     `;
   }
 
-  _renderEntityListField(label, field, value, placeholder) {
-    return this._renderTextareaField(label, field, normalizeEntityList(value).join(", "), {
-      valueType: "entity-list",
-      placeholder,
-    });
+  _renderEntityListField(label, field, value, options = {}) {
+    const domains = options.domains || this._entityDomainsForListField(field).join(",");
+    const items = normalizeEntityList(value, this._entityDomainsForListField(field));
+    const rows = [...items, ""];
+    return `
+      <div class="editor-field editor-field--full editor-field--entity-list">
+        <span>${escapeHtml(label)}</span>
+        <div class="editor-entity-list">
+          ${rows.map((entityId, index) => {
+            const isNewRow = index >= items.length;
+            return `
+              <div class="editor-entity-list__row">
+                <div
+                  class="editor-control-host"
+                  data-mounted-control="entity"
+                  data-field="${escapeHtml(`${field}.${index}`)}"
+                  data-list-field="${escapeHtml(field)}"
+                  data-index="${index}"
+                  data-value="${escapeHtml(entityId)}"
+                  data-domains="${escapeHtml(domains)}"
+                  data-placeholder="${escapeHtml(options.placeholder || "")}"
+                ></div>
+                ${
+                  isNewRow
+                    ? `<span class="editor-entity-list__spacer" aria-hidden="true"></span>`
+                    : `<button type="button" class="editor-entity-list__remove" data-editor-action="remove-entity-list-item" data-field="${escapeHtml(field)}" data-index="${index}" aria-label="${escapeHtml(`Quitar ${label}`)}">
+                        <ha-icon icon="mdi:close"></ha-icon>
+                      </button>`
+                }
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
   }
 
   _mountEntityPicker(host) {
@@ -2159,6 +2319,28 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         onShadowValueChanged: this._onShadowValueChanged,
         copyDatasetFromHost: true,
       });
+    }
+    const control = host.firstElementChild;
+    if (!(control instanceof HTMLElement)) {
+      return;
+    }
+    const allowedDomains = String(host.dataset.domains || "")
+      .split(",")
+      .map(domain => domain.trim())
+      .filter(Boolean);
+    if (!allowedDomains.length) {
+      return;
+    }
+    if (control.tagName === "HA-ENTITY-PICKER") {
+      control.includeDomains = allowedDomains;
+      control.entityFilter = stateObj =>
+        allowedDomains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+      return;
+    }
+    if (control.tagName === "HA-SELECTOR") {
+      control.selector = {
+        entity: allowedDomains.length === 1 ? { domain: allowedDomains[0] } : { domain: allowedDomains },
+      };
     }
   }
 
@@ -2367,6 +2549,39 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           display: block;
           width: 100%;
         }
+        .editor-entity-list {
+          display: grid;
+          gap: 8px;
+        }
+        .editor-entity-list__row {
+          align-items: center;
+          display: grid;
+          gap: 8px;
+          grid-template-columns: minmax(0, 1fr) auto;
+          min-width: 0;
+        }
+        .editor-entity-list__remove {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 9%, transparent);
+          border-radius: 999px;
+          color: var(--secondary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          height: 34px;
+          justify-content: center;
+          min-width: 34px;
+          padding: 0;
+          width: 34px;
+        }
+        .editor-entity-list__remove ha-icon {
+          --mdc-icon-size: 16px;
+        }
+        .editor-entity-list__spacer {
+          display: block;
+          width: 34px;
+        }
         .editor-section__actions,
         .editor-action__buttons {
           display: flex;
@@ -2431,18 +2646,18 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">Conexiones inteligentes</div>
-            <div class="editor-section__hint">Entidades separadas por coma o por linea. Usa las mismas entidades que ya tienes en Calendar, Weather, Fan o Vacuum.</div>
+            <div class="editor-section__hint">Selecciona las entidades que alimentan avisos y recomendaciones. Cada selector ocupa una fila y se filtra por dominio.</div>
           </div>
           <div class="editor-grid">
-            ${this._renderEntityListField("Calendarios", "calendar_entities", config.calendar_entities, "calendar.casa, calendar.trabajo")}
-            ${this._renderEntityListField("Robots aspirador", "vacuum_entities", config.vacuum_entities, "vacuum.robot")}
-            ${this._renderEntityListField("Ventiladores", "fan_entities", config.fan_entities, "fan.salon")}
-            ${this._renderEntityListField("Weather", "weather_entities", config.weather_entities, "weather.casa")}
-            ${this._renderEntityListField("Movimiento", "motion_entities", config.motion_entities, "binary_sensor.movimiento")}
-            ${this._renderEntityListField("Puertas", "door_entities", config.door_entities, "binary_sensor.puerta")}
-            ${this._renderEntityListField("Ventanas", "window_entities", config.window_entities, "binary_sensor.ventana")}
-            ${this._renderEntityListField("Temperatura", "temperature_entities", config.temperature_entities, "sensor.temperatura")}
-            ${this._renderEntityListField("Humedad", "humidity_entities", config.humidity_entities, "sensor.humedad")}
+            ${this._renderEntityListField("Calendarios", "calendar_entities", config.calendar_entities, { placeholder: "calendar.casa" })}
+            ${this._renderEntityListField("Robots aspirador", "vacuum_entities", config.vacuum_entities, { placeholder: "vacuum.robot" })}
+            ${this._renderEntityListField("Ventiladores", "fan_entities", config.fan_entities, { placeholder: "fan.salon" })}
+            ${this._renderEntityListField("Weather", "weather_entities", config.weather_entities, { placeholder: "weather.casa" })}
+            ${this._renderEntityListField("Movimiento", "motion_entities", config.motion_entities, { placeholder: "binary_sensor.movimiento" })}
+            ${this._renderEntityListField("Puertas", "door_entities", config.door_entities, { placeholder: "binary_sensor.puerta" })}
+            ${this._renderEntityListField("Ventanas", "window_entities", config.window_entities, { placeholder: "binary_sensor.ventana" })}
+            ${this._renderEntityListField("Temperatura", "temperature_entities", config.temperature_entities, { placeholder: "sensor.temperatura" })}
+            ${this._renderEntityListField("Humedad", "humidity_entities", config.humidity_entities, { placeholder: "sensor.humedad" })}
           </div>
         </section>
         <section class="editor-section">

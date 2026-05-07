@@ -14,6 +14,8 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 Fiftieth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.50`** (tag **`v1.0.0-alpha.50`** optional).
 
+- **Notifications card — tintado Entity Card:** el estado sin avisos y las tarjetas activas usan la misma superficie tintada/pseudo-capas que `nodalia-entity-card`, evitando bordes/sombras recortadas en el estado vacío.
+- **Notifications card — editor visual compacto:** las conexiones inteligentes cambian de textarea a selectores nativos de entidad filtrados por dominio, con filas compactas para añadir/quitar entidades.
 - **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.50`**.
 
 ---
