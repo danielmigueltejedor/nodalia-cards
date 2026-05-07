@@ -81,7 +81,7 @@ jobs:
                 "5. Choose the latest `1.0.0-alpha.x` release",
                 "",
                 "If anything still feels off, please let me know."
-              ].join("\\n"));
+              ].join("\n"));
             }
 
             if (label === "release: fixed in beta") {
@@ -93,7 +93,7 @@ jobs:
                 "",
                 "Please test it when possible and let me know if anything feels off.",
                 "If there is no further feedback, I may close this issue after validation."
-              ].join("\\n"));
+              ].join("\n"));
             }
 
             if (label === "release: available in stable") {
@@ -108,5 +108,5 @@ jobs:
                 "Released in the latest stable version ✅",
                 "",
                 "Thanks again for the feedback. I’ll close this issue unless there is anything else to adjust."
-              ].join("\\n"));
+              ].join("\n"));
             }
