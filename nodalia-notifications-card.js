@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-alpha.56";
+const CARD_VERSION = "1.0.0-alpha.58";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -723,8 +723,10 @@ function normalizeCustomNotifications(value) {
       };
     })
     .filter(item => {
+      const hasContent = item.title || item.message || item.entity;
       const placeholderTitle = normalizeMatchText(item.title) === normalizeMatchText("Nueva notificacion");
-      return !(placeholderTitle && !item.message && !item.entity);
+      const isPlaceholder = placeholderTitle && !item.message && !item.entity;
+      return hasContent && !isPlaceholder;
     });
 }
 
@@ -1237,6 +1239,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._lastNotificationIdsSignature = "";
     this._lastNotifications = [];
     this._animateContentOnNextRender = true;
+    this._stackTransition = "";
     this._viewportResizeTimer = 0;
     this._onClick = this._onClick.bind(this);
     this._onViewportResize = this._onViewportResize.bind(this);
@@ -1441,10 +1444,10 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (!entityId || !this._hass || typeof this._hass.callService !== "function") {
       return;
     }
-    const hashes = [...this._dismissed]
+    const hashes = [...new Set([...this._dismissed]
       .map(id => (String(id).includes(":") ? this._dismissKey(id) : String(id)))
-      .filter(Boolean)
-      .slice(-40);
+      .filter(Boolean))]
+      .slice(-30);
     const value = hashes.length ? `v1:${hashes.join("|")}` : "";
     if (value === this._lastDismissedHelperState) {
       return;
@@ -1789,7 +1792,8 @@ class NodaliaNotificationsCard extends HTMLElement {
       .map(item => ({ ...item, fanTarget: this._getFanTargetForSource(item.entityId) }))
       .filter(item => item.fanTarget)
       .sort((left, right) => right.value - left.value);
-    const hottest = hotCandidates[0] || tempSources.sort((left, right) => right.value - left.value)[0];
+    const hottest = hotCandidates[0] || [...tempSources].sort((left, right) => right.value - left.value)[0];
+    const coldest = [...tempSources].sort((left, right) => left.value - right.value)[0];
     if (hottest && hottest.value >= this._config.thresholds.hot_temperature && hottest.fanTarget) {
       const sourceName = friendlyName(this._hass, hottest.entityId);
       const fanName = friendlyName(this._hass, hottest.fanTarget);
@@ -1809,21 +1813,21 @@ class NodaliaNotificationsCard extends HTMLElement {
         createdAt: Date.parse(hottest.state.last_changed || "") || Date.now(),
         action: this._smartAction("hot", { label: this._text("actions.turnOnFan", "Encender ventilador"), type: "service", service: "fan.turn_on", entity: hottest.fanTarget, internal: true }),
       });
-    } else if (hottest && hottest.value <= this._config.thresholds.cold_temperature) {
-      const sourceName = friendlyName(this._hass, hottest.entityId);
+    } else if (coldest && coldest.value <= this._config.thresholds.cold_temperature) {
+      const sourceName = friendlyName(this._hass, coldest.entityId);
       add({
-        id: `comfort:cold:${hottest.entityId}:${Math.floor(hottest.value)}`,
+        id: `comfort:cold:${coldest.entityId}:${Math.floor(coldest.value)}`,
         title: this._smartTitle("cold", "titles.cold", "Temperatura baja"),
         message: this._smartMessage("cold", "messages.sensorValue", "{source} marca {value}.", {
           source: sourceName,
-          value: formatNumber(hottest.value, hottest.unit),
+          value: formatNumber(coldest.value, coldest.unit),
         }),
         icon: "mdi:thermometer-low",
         severity: "info",
         source: sourceName,
-        entity: hottest.entityId,
+        entity: coldest.entityId,
         tintColor: this._smartTint("cold"),
-        createdAt: Date.parse(hottest.state.last_changed || "") || Date.now(),
+        createdAt: Date.parse(coldest.state.last_changed || "") || Date.now(),
         action: this._smartAction("cold", null),
       });
     }
@@ -2029,7 +2033,7 @@ class NodaliaNotificationsCard extends HTMLElement {
   }
 
   _buildCustomNotifications(add) {
-    this._config.custom_notifications.forEach((item, index) => {
+    this._config.custom_notifications.forEach(item => {
       if (!item.title && !item.message && !item.entity) {
         return;
       }
@@ -2038,7 +2042,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       }
       const entityName = item.entity ? friendlyName(this._hass, item.entity) : "";
       add({
-        id: `custom:${index}:${notificationHash(`${item.title}|${item.message}|${item.entity}|${item.condition}|${item.value}|${item.url}`)}`,
+        id: `custom:${notificationHash(`${item.title}|${item.message}|${item.entity}|${item.attribute}|${item.condition}|${item.value}|${item.url}`)}`,
         title: item.title || entityName || this._text("titles.customFallback", "Notificacion"),
         message: item.message || entityName,
         icon: item.icon || "mdi:bell-outline",
@@ -2136,7 +2140,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     }
     for (const item of items) {
       const hash = this._dismissKey(item.id);
-      if (this._mobileSent.has(hash)) {
+      if (this._mobileSent.has(hash) || this._isDismissed(item)) {
         continue;
       }
       const data = {
@@ -2157,6 +2161,7 @@ class NodaliaNotificationsCard extends HTMLElement {
         entity_id: notifyEntities,
         title: data.title,
         message: data.message,
+        data: data.data,
       };
       await Promise.all([
         notifyEntities.length
@@ -2296,6 +2301,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     const action = button.dataset.action;
     if (action === "toggle-stack") {
       this._expanded = !this._expanded;
+      this._stackTransition = this._expanded ? "expand" : "collapse";
       this._triggerHaptic("selection");
       this._renderIfChanged(true);
       return;
@@ -2389,12 +2395,8 @@ class NodaliaNotificationsCard extends HTMLElement {
       return false;
     }
     const [domain] = normalizedService.split(".");
-    const domains = Array.isArray(security.allowed_service_domains)
-      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
-      : [];
-    const services = Array.isArray(security.allowed_services)
-      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
-      : [];
+    const domains = security.allowed_service_domains || [];
+    const services = security.allowed_services || [];
     if (!domains.length && !services.length) {
       return false;
     }
@@ -2459,22 +2461,23 @@ class NodaliaNotificationsCard extends HTMLElement {
     const stateForIcon = this._hass?.states?.[item.entity || action?.entity];
     const darkenIcon = shouldDarkenNotificationIconGlyph(stateForIcon, accent);
     const iconColor = darkenIcon ? `color-mix(in srgb, var(--primary-text-color) 60%, ${accent})` : "var(--notification-accent)";
+    const index = Math.max(0, Number(options.index) || 0);
     return `
-      <article class="notification-item notification-item--${escapeHtml(item.severity)} ${primary ? "notification-item--primary" : ""}" style="${tint ? `--notification-accent:${escapeHtml(tint)};` : ""}--notification-icon-color:${escapeHtml(iconColor)};">
+      <article class="notification-item notification-item--${escapeHtml(item.severity)} ${primary ? "notification-item--primary" : ""}" style="${tint ? `--notification-accent:${escapeHtml(tint)};` : ""}--notification-icon-color:${escapeHtml(iconColor)}; --notification-index:${index};">
         <div class="notification-item__icon">
           <ha-icon icon="${escapeHtml(item.icon)}"></ha-icon>
         </div>
         <div class="notification-item__body">
           <div class="notification-item__title-row">
             <div class="notification-item__title">${escapeHtml(item.title)}</div>
+            ${chips.length ? `<div class="notification-item__chips notification-item__chips--top">
+              ${chips.map(chip => `<span class="notification-item__chip notification-item__chip--${escapeHtml(chip.kind)}">${escapeHtml(chip.label)}</span>`).join("")}
+            </div>` : ""}
             <button type="button" class="notification-item__dismiss" data-action="dismiss" data-id="${escapeHtml(item.id)}" aria-label="${escapeHtml(this._text("aria.dismiss", "Borrar notificacion"))}">
               <ha-icon icon="mdi:close"></ha-icon>
             </button>
           </div>
           ${item.message ? `<div class="notification-item__message">${escapeHtml(item.message)}</div>` : ""}
-          ${chips.length ? `<div class="notification-item__chips">
-            ${chips.map(chip => `<span class="notification-item__chip notification-item__chip--${escapeHtml(chip.kind)}">${escapeHtml(chip.label)}</span>`).join("")}
-          </div>` : ""}
           ${
             action
               ? `
@@ -2537,6 +2540,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     const nextNotificationIdsSignature = notifications.map(item => item.id).join("|");
     const notificationSetChanged = nextNotificationIdsSignature !== this._lastNotificationIdsSignature;
     const animateEntrance = animations.enabled && (this._animateContentOnNextRender || notificationSetChanged);
+    const stackTransition = animations.enabled ? this._stackTransition : "";
     this._lastNotificationIdsSignature = nextNotificationIdsSignature;
 
     this.shadowRoot.innerHTML = `
@@ -2682,6 +2686,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           padding: 10px 12px;
           position: relative;
           transform: translateZ(0);
+          transform-origin: center top;
           z-index: 4;
         }
         .notification-item::before {
@@ -2739,10 +2744,10 @@ class NodaliaNotificationsCard extends HTMLElement {
           z-index: 1;
         }
         .notification-item__title-row {
-          align-items: center;
+          align-items: start;
           display: grid;
           gap: 6px;
-          grid-template-columns: minmax(0, 1fr) auto;
+          grid-template-columns: minmax(0, 1fr) auto auto;
         }
         .notification-item__title {
           font-size: clamp(12px, 1.25vw, 14px);
@@ -2771,6 +2776,17 @@ class NodaliaNotificationsCard extends HTMLElement {
           flex-wrap: wrap;
           gap: 6px;
           min-width: 0;
+        }
+        .notification-item__chips--top {
+          align-self: start;
+          flex-wrap: nowrap;
+          justify-content: flex-end;
+          max-width: min(42vw, 160px);
+          overflow: hidden;
+          padding-top: 1px;
+        }
+        .notification-item__chips--top .notification-item__chip {
+          max-width: 100%;
         }
         .notification-item__chip {
           align-items: center;
@@ -2843,22 +2859,113 @@ class NodaliaNotificationsCard extends HTMLElement {
           --mdc-icon-size: 16px;
         }
         .notifications-card--animated.notifications-card--enter .notifications-empty-inline,
-        .notifications-card--animated.notifications-card--enter .notification-item,
+        .notifications-card--animated.notifications-card--enter .notification-item {
+          animation: notifications-card-fade-up calc(var(--notifications-content-duration, 420ms) * 0.96) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: calc(70ms + (var(--notification-index, 0) * 40ms));
+        }
+        .notifications-card--animated.notifications-card--enter .notification-item__icon {
+          animation: notifications-card-bubble-bloom calc(var(--notifications-content-duration, 420ms) * 0.92) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation-delay: calc(40ms + (var(--notification-index, 0) * 40ms));
+        }
+        .notifications-card--animated.notifications-card--enter .notification-item__title,
+        .notifications-card--animated.notifications-card--enter .notification-item__message,
+        .notifications-card--animated.notifications-card--enter .notification-item__actions {
+          animation: notifications-card-fade-up calc(var(--notifications-content-duration, 420ms) * 0.72) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: calc(92ms + (var(--notification-index, 0) * 40ms));
+        }
+        .notifications-card--animated.notifications-card--enter .notification-item__chip {
+          animation: notifications-card-chip-pop calc(var(--notifications-content-duration, 420ms) * 0.58) cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
+          animation-delay: calc(116ms + (var(--notification-index, 0) * 40ms));
+        }
         .notifications-card--animated.notifications-card--enter .notification-stack-card {
-          animation: notifications-content-enter var(--notifications-content-duration, 420ms) cubic-bezier(0.22, 0.82, 0.28, 1) both;
+          animation: notifications-card-fade-up calc(var(--notifications-content-duration, 420ms) * 0.68) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
         .notifications-card--animated.notifications-card--enter .notification-stack-card {
           animation-delay: calc(var(--stack-index, 1) * 45ms);
+        }
+        .notifications-card--animated.notifications-card--stack-expand .notifications-list,
+        .notifications-card--animated.notifications-card--stack-collapse .notifications-list {
+          animation: notifications-stack-reflow calc(var(--notifications-content-duration, 420ms) * 0.72) cubic-bezier(0.18, 0.9, 0.22, 1.08) both;
+        }
+        .notifications-card--animated.notifications-card--stack-expand .notification-item {
+          animation: notifications-card-item-rise calc(var(--notifications-content-duration, 420ms) * 0.74) cubic-bezier(0.18, 0.9, 0.22, 1.08) both;
+          animation-delay: calc(var(--notification-index, 0) * 34ms);
+        }
+        .notifications-card--animated.notifications-card--stack-collapse .notification-stack-card,
+        .notifications-card--animated.notifications-card--stack-collapse .notifications-stack-toggle {
+          animation: notifications-stack-collapse calc(var(--notifications-content-duration, 420ms) * 0.66) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
         .notifications-card--animated .notifications-stack-toggle.is-pressing,
         .notifications-card--animated .notification-item__dismiss.is-pressing,
         .notifications-card--animated .notification-item__action.is-pressing {
           animation: notifications-button-bounce var(--notifications-button-bounce-duration, 320ms) cubic-bezier(0.2, 0.9, 0.25, 1.35) both;
         }
-        @keyframes notifications-content-enter {
+        @keyframes notifications-card-fade-up {
           0% {
             opacity: 0;
-            transform: translateY(10px) scale(0.985);
+            transform: translateY(12px) scale(0.97);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes notifications-card-item-rise {
+          0% {
+            opacity: 0;
+            transform: translateY(8px) scale(0.94);
+          }
+          62% {
+            opacity: 1;
+            transform: translateY(0) scale(1.018);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes notifications-card-chip-pop {
+          0% {
+            opacity: 0;
+            transform: translateY(-4px) scale(0.86);
+          }
+          70% {
+            opacity: 1;
+            transform: translateY(1px) scale(1.05);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes notifications-card-bubble-bloom {
+          0% {
+            opacity: 0;
+            transform: scale(0.92);
+          }
+          58% {
+            opacity: 1;
+            transform: scale(1.04);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        @keyframes notifications-stack-reflow {
+          0% {
+            opacity: 0.7;
+            transform: translateY(-6px) scaleY(0.985);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+        }
+        @keyframes notifications-stack-collapse {
+          0% {
+            opacity: 0;
+            transform: translateY(8px) scale(0.94);
           }
           100% {
             opacity: 1;
@@ -2878,7 +2985,7 @@ class NodaliaNotificationsCard extends HTMLElement {
         }
       </style>
       <ha-card
-        class="notifications-card ${hasNotifications ? "notifications-card--list" : "notifications-card--empty"} ${animations.enabled ? "notifications-card--animated" : ""} ${animateEntrance ? "notifications-card--enter" : ""}"
+        class="notifications-card ${hasNotifications ? "notifications-card--list" : "notifications-card--empty"} ${animations.enabled ? "notifications-card--animated" : ""} ${animateEntrance ? "notifications-card--enter" : ""} ${stackTransition ? `notifications-card--stack-${stackTransition}` : ""}"
         style="--notifications-content-duration:${animations.enabled ? animations.contentDuration : 0}ms; --notifications-button-bounce-duration:${animations.enabled ? animations.buttonBounceDuration : 0}ms;"
       >
           ${
@@ -2894,7 +3001,7 @@ class NodaliaNotificationsCard extends HTMLElement {
                       : ""
                   }
                   <div class="notifications-list">
-                    ${visible.map((item, index) => this._renderNotification(item, { primary: index === 0 })).join("")}
+                    ${visible.map((item, index) => this._renderNotification(item, { primary: index === 0, index })).join("")}
                   </div>
                   ${
                     shouldStack
@@ -2922,6 +3029,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       </ha-card>
     `;
     this._animateContentOnNextRender = false;
+    this._stackTransition = "";
   }
 }
 

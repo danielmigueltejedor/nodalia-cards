@@ -10,6 +10,27 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.58] - 2026-05-08
+
+Fifty-eighth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.58`** (tag **`v1.0.0-alpha.58`** optional).
+
+- **Notifications card — chips superiores:** las burbujas de fuente/severidad se colocan en la esquina superior derecha, justo antes del botón de cierre, para no cortar el ritmo del contenido.
+- **Notifications card — animaciones:** entrada alineada con `nodalia-calendar-card` y animación visible al expandir/contraer la pila de notificaciones.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.58`**.
+
+---
+
+## [1.0.0-alpha.57] - 2026-05-08
+
+Fifty-seventh **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.57`** (tag **`v1.0.0-alpha.57`** optional).
+
+- **Notifications card — robustez:** los avisos personalizados vacíos se filtran, sus IDs dejan de depender del orden del editor y la sincronización por `input_text` limita hashes para respetar el máximo de 255 caracteres.
+- **Notifications card — notify móvil:** `notify.send_message` vuelve a incluir `data.group`/`data.tag` para agrupación y reemplazo de notificaciones, evitando también enviar avisos que se hayan descartado mientras esperaban en cola.
+- **Notifications card — auditoría:** acciones de servicio más ligeras al reutilizar allowlists normalizadas y corrección del cálculo de temperatura baja para usar el sensor más frío, no el más caliente.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.57`**.
+
+---
+
 ## [1.0.0-alpha.56] - 2026-05-08
 
 Fifty-sixth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.56`** (tag **`v1.0.0-alpha.56`** optional).

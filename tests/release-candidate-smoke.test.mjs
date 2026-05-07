@@ -232,6 +232,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /mobile_notifications/);
   assert.match(source, /mobile_notifications\.entities/);
   assert.match(source, /callService\("notify", "send_message"/);
+  assert.match(source, /data:\s*data\.data/);
   assert.match(source, /data-editor-toggle="connections"/);
   assert.match(source, /type: "calendar-popup"/);
   assert.match(source, /nodalia-calendar-card-open/);
@@ -250,6 +251,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /align-content: start/);
   assert.match(source, /_syncSharedDismissedFromHass/);
   assert.match(source, /_queueMobileNotifications/);
+  assert.match(source, /this\._mobileSent\.has\(hash\) \|\| this\._isDismissed\(item\)/);
   assert.match(source, /notify\./);
   assert.match(source, /item\.severity !== "info"/);
   assert.match(source, /localStorage\.setItem\(this\._getStorageKey\(\)/);
@@ -259,6 +261,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /notifications-empty-inline/);
   assert.match(source, /notification-stack-card/);
   assert.match(source, /notification-item__chip/);
+  assert.match(source, /notification-item__chips--top/);
   assert.match(source, /data-list-field/);
   assert.match(source, /tint_color/);
   assert.match(source, /animations\.enabled/);
@@ -266,6 +269,13 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /editor-section__toggle-button/);
   assert.match(source, /type="color"/);
   assert.match(source, /notifications-card--animated/);
+  assert.match(source, /notifications-card--stack-\$\{stackTransition\}/);
+  assert.match(source, /notifications-card-fade-up/);
+  assert.match(source, /notifications-card-item-rise/);
+  assert.match(source, /notifications-card-chip-pop/);
+  assert.match(source, /notifications-card-bubble-bloom/);
+  assert.match(source, /notifications-stack-reflow/);
+  assert.match(source, /notifications-stack-collapse/);
   assert.match(source, /notificationSetChanged/);
   assert.match(source, /includeDomains/);
   assert.match(source, /id\.startsWith\("input_text\."\)/);
@@ -281,6 +291,15 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(i18n, /viewWeather/);
   assert.match(source, /_callNamedService\(serviceValue, data = \{\}, target = null\)/);
   assert.match(source, /_callInternalService\(serviceValue, data = \{\}, target = null\)/);
+  assert.match(source, /const domains = security\.allowed_service_domains \|\| \[\]/);
+  assert.match(source, /const services = security\.allowed_services \|\| \[\]/);
+  assert.match(source, /\.slice\(-30\)/);
+  assert.doesNotMatch(source, /\.slice\(-40\)/);
+  assert.match(source, /const hasContent = item\.title \|\| item\.message \|\| item\.entity/);
+  assert.match(source, /return hasContent && !isPlaceholder/);
+  assert.match(source, /id:\s*`custom:\$\{notificationHash/);
+  assert.doesNotMatch(source, /id:\s*`custom:\$\{index\}:/);
+  assert.match(source, /const coldest = \[\.\.\.tempSources\]\.sort/);
   assert.match(source, /fan\.turn_on/);
   assert.match(source, /calendars\/\$\{encodeURIComponent\(entityId\)\}/);
   assert.match(source, /editorFilteredStatesSignature/);
