@@ -103,6 +103,20 @@ Feedback and contributions are welcome!
 
 ---
 
+## 🙌 Community contributions
+
+Nodalia Cards is improving thanks to community feedback, ideas and testing.
+
+Special thanks to:
+
+- [@Sppedtech](https://github.com/Sppedtech) — suggested improvements for:
+  - Light Card: option to place the entity state below the entity name
+  - Person Card: option to hide the name and center the avatar
+
+These suggestions were implemented in the `1.0.0-alpha` builds.
+
+---
+
 ## 🧑‍💻 Author
 
 Daniel Miguel Tejedor
