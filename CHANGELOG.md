@@ -10,11 +10,22 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.53] - 2026-05-07
+
+Fifty-third **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.53`** (tag **`v1.0.0-alpha.53`** optional).
+
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.53`**.
+
+---
+
 ## [1.0.0-alpha.52] - 2026-05-07
 
 Fifty-second **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.52`** (tag **`v1.0.0-alpha.52`** optional).
 
 - **Bundle loader:** `nodalia-cards.js` vuelve a ser autocontenido para instalaciones HACS de un solo `filename`; `nodalia-cards.bundle.js` y `nodalia-cards.manifest.js` quedan como artefactos auxiliares, evitando que Home Assistant deje todas las tarjetas sin registrar si esos ficheros no se sirven junto al loader.
+- **Notifications card — avisos más inteligentes:** las recomendaciones de ventilador cruzan sensores y `fan` por área/nombre de estancia antes de proponer acciones, y el forecast horario de `weather/get_forecasts` añade avisos de lluvia próxima.
+- **Notifications card — sincronización y móvil:** nuevo helper opcional `input_text` para compartir descartes entre dispositivos y envío opcional a servicios `notify.*` con severidad mínima configurable.
+- **Notifications card — limpieza visual/editor:** se evita el aviso vacío “Nueva notificacion”, se ocultan chips repetidos/`Info`, se reduce la tipografía del estado sin avisos y se elimina el selector de icono general que no tenía efecto real.
 - **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.52`**.
 
 ---

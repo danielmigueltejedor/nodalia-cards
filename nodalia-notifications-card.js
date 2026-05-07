@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-alpha.52";
+const CARD_VERSION = "1.0.0-alpha.53";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -489,6 +489,7 @@ const DEFAULT_CONFIG = {
   max_visible: 1,
   refresh_interval: 300,
   storage_key: STORAGE_KEY,
+  dismissed_entity: "",
   calendar_entities: [],
   vacuum_entities: [],
   fan_entities: [],
@@ -504,8 +505,15 @@ const DEFAULT_CONFIG = {
     cold_temperature: 17,
     humidity_high: 70,
     humidity_low: 30,
+    rain_probability: 50,
+    rain_lookahead_hours: 6,
   },
   smart_recommendations: true,
+  mobile_notifications: {
+    enabled: false,
+    services: [],
+    min_severity: "warning",
+  },
   security: {
     strict_service_actions: false,
     allowed_services: [],
@@ -646,6 +654,12 @@ function normalizeStringList(value) {
     });
 }
 
+function normalizeNotifyServices(value) {
+  return normalizeStringList(value)
+    .map(item => (item.includes(".") ? item : `notify.${item}`))
+    .filter(item => item.startsWith("notify.") && item.length > "notify.".length);
+}
+
 function normalizeCustomNotifications(value) {
   return (Array.isArray(value) ? value : [])
     .map(item => {
@@ -670,7 +684,10 @@ function normalizeCustomNotifications(value) {
             : "",
       };
     })
-    .filter(item => item.title || item.message || item.entity);
+    .filter(item => {
+      const placeholderTitle = normalizeMatchText(item.title) === normalizeMatchText("Nueva notificacion");
+      return !(placeholderTitle && !item.message && !item.entity);
+    });
 }
 
 function normalizeConfig(rawConfig = {}) {
@@ -688,6 +705,7 @@ function normalizeConfig(rawConfig = {}) {
   config.max_visible = Math.max(1, Math.min(8, Number(config.max_visible) || 1));
   config.refresh_interval = Math.max(30, Math.min(3600, Number(config.refresh_interval) || 300));
   config.storage_key = String(config.storage_key || STORAGE_KEY).trim() || STORAGE_KEY;
+  config.dismissed_entity = entityDomain(config.dismissed_entity) === "input_text" ? String(config.dismissed_entity).trim() : "";
   config.smart_recommendations = config.smart_recommendations !== false;
   config.language = String(config.language || "auto").trim() || "auto";
   config.thresholds = {
@@ -695,7 +713,15 @@ function normalizeConfig(rawConfig = {}) {
     cold_temperature: finiteNumber(config.thresholds?.cold_temperature, DEFAULT_CONFIG.thresholds.cold_temperature),
     humidity_high: finiteNumber(config.thresholds?.humidity_high, DEFAULT_CONFIG.thresholds.humidity_high),
     humidity_low: finiteNumber(config.thresholds?.humidity_low, DEFAULT_CONFIG.thresholds.humidity_low),
+    rain_probability: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.rain_probability, DEFAULT_CONFIG.thresholds.rain_probability))),
+    rain_lookahead_hours: Math.max(1, Math.min(24, finiteNumber(config.thresholds?.rain_lookahead_hours, DEFAULT_CONFIG.thresholds.rain_lookahead_hours))),
   };
+  config.mobile_notifications = mergeDeep(DEFAULT_CONFIG.mobile_notifications, config.mobile_notifications || {});
+  config.mobile_notifications.enabled = config.mobile_notifications.enabled === true;
+  config.mobile_notifications.services = normalizeNotifyServices(config.mobile_notifications.services);
+  config.mobile_notifications.min_severity = ["info", "success", "warning", "critical"].includes(String(config.mobile_notifications.min_severity || "").toLowerCase())
+    ? String(config.mobile_notifications.min_severity).toLowerCase()
+    : DEFAULT_CONFIG.mobile_notifications.min_severity;
   config.security = mergeDeep(DEFAULT_CONFIG.security, config.security || {});
   config.security.strict_service_actions = config.security.strict_service_actions === true;
   config.security.allowed_services = normalizeStringList(config.security.allowed_services);
@@ -716,6 +742,22 @@ function finiteNumber(value, fallback) {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+function normalizeMatchText(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function matchTextIncludes(haystack, needle) {
+  const normalizedHaystack = normalizeMatchText(haystack);
+  const normalizedNeedle = normalizeMatchText(needle);
+  return Boolean(normalizedHaystack && normalizedNeedle && normalizedHaystack.includes(normalizedNeedle));
 }
 
 function escapeHtml(value) {
@@ -904,6 +946,70 @@ function friendlyName(hass, entityId) {
   return String(state?.attributes?.friendly_name || entityId || "").trim();
 }
 
+function areaRecordName(hass, areaId) {
+  const rawId = String(areaId || "").trim();
+  if (!rawId) {
+    return "";
+  }
+  const areas = hass?.areas;
+  if (Array.isArray(areas)) {
+    const area = areas.find(item => String(item?.area_id || item?.id || "") === rawId);
+    return String(area?.name || rawId).trim();
+  }
+  const area = areas?.[rawId];
+  return String(area?.name || rawId).trim();
+}
+
+function entityRegistryEntry(hass, entityId) {
+  return hass?.entities?.[entityId] || hass?.entityRegistry?.[entityId] || hass?.entity_registry?.[entityId] || null;
+}
+
+function deviceRegistryEntry(hass, deviceId) {
+  const rawId = String(deviceId || "").trim();
+  if (!rawId) {
+    return null;
+  }
+  const devices = hass?.devices;
+  if (Array.isArray(devices)) {
+    return devices.find(item => String(item?.id || item?.device_id || "") === rawId) || null;
+  }
+  return devices?.[rawId] || null;
+}
+
+function entityAreaName(hass, entityId) {
+  const state = hass?.states?.[entityId];
+  const entity = entityRegistryEntry(hass, entityId);
+  const device = deviceRegistryEntry(hass, entity?.device_id || state?.attributes?.device_id);
+  const areaId = entity?.area_id || device?.area_id || state?.attributes?.area_id;
+  const areaName = areaRecordName(hass, areaId);
+  if (areaName) {
+    return areaName;
+  }
+  const attrArea = state?.attributes?.area || state?.attributes?.area_name || state?.attributes?.room || state?.attributes?.room_name;
+  if (attrArea) {
+    return String(attrArea).trim();
+  }
+  const searchable = normalizeMatchText(`${entityId} ${friendlyName(hass, entityId)}`);
+  const areas = hass?.areas;
+  const areaList = Array.isArray(areas) ? areas : Object.values(areas || {});
+  const matched = areaList.find(area => {
+    const name = normalizeMatchText(area?.name || area?.area_id || area?.id || "");
+    return name && searchable.includes(name);
+  });
+  return String(matched?.name || matched?.area_id || matched?.id || "").trim();
+}
+
+function entityAreaKey(hass, entityId) {
+  return normalizeMatchText(entityAreaName(hass, entityId));
+}
+
+function entityMatchTokens(hass, entityId) {
+  const stopWords = new Set(["sensor", "temperatura", "temperature", "humidity", "humedad", "fan", "ventilador", "weather", "clima"]);
+  return normalizeMatchText(`${entityId} ${friendlyName(hass, entityId)}`)
+    .split(" ")
+    .filter(token => token.length > 2 && !stopWords.has(token));
+}
+
 function stateValue(stateObj, attribute = "") {
   if (!stateObj) {
     return "";
@@ -986,6 +1092,43 @@ function normalizeCalendarFetchResult(raw) {
   return [];
 }
 
+function normalizeWeatherForecastResult(raw, entityId) {
+  if (Array.isArray(raw)) {
+    return raw;
+  }
+  if (Array.isArray(raw?.forecast)) {
+    return raw.forecast;
+  }
+  if (Array.isArray(raw?.[entityId]?.forecast)) {
+    return raw[entityId].forecast;
+  }
+  return [];
+}
+
+function forecastDate(value) {
+  return calendarEventDate(value?.datetime || value?.dateTime || value?.date || value?.time || value?.start);
+}
+
+function forecastNumber(value, fields) {
+  for (const field of fields) {
+    const raw = value?.[field];
+    const number = Number(raw);
+    if (Number.isFinite(number)) {
+      return number;
+    }
+  }
+  return null;
+}
+
+function forecastLooksRainy(row) {
+  const condition = normalizeMatchText(row?.condition || row?.state || row?.weather || "");
+  if (condition.includes("rain") || condition.includes("lluv") || condition.includes("pouring") || condition.includes("storm")) {
+    return true;
+  }
+  const precipitation = forecastNumber(row, ["precipitation", "rain", "precipitation_amount", "native_precipitation"]);
+  return precipitation !== null && precipitation > 0.2;
+}
+
 function notificationHash(value) {
   const input = String(value || "");
   let hash = 2166136261;
@@ -1025,6 +1168,13 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._calendarRefreshTimer = 0;
     this._calendarRefreshInFlight = false;
     this._lastCalendarRefresh = 0;
+    this._weatherForecasts = {};
+    this._weatherRefreshTimer = 0;
+    this._weatherRefreshInFlight = false;
+    this._lastWeatherRefresh = 0;
+    this._lastDismissedHelperState = "";
+    this._mobileSent = new Set();
+    this._mobileNotifyTimer = 0;
     this._lastRenderSignature = "";
     this._lastNotifications = [];
     this._animateContentOnNextRender = true;
@@ -1034,15 +1184,26 @@ class NodaliaNotificationsCard extends HTMLElement {
 
   connectedCallback() {
     this._loadDismissed();
+    this._loadMobileSent();
+    this._syncSharedDismissedFromHass(true);
     this._animateContentOnNextRender = true;
     this._renderIfChanged(true);
     this._refreshCalendarEventsSoon(0);
+    this._refreshWeatherForecastsSoon(0);
   }
 
   disconnectedCallback() {
     if (this._calendarRefreshTimer) {
       window.clearTimeout(this._calendarRefreshTimer);
       this._calendarRefreshTimer = 0;
+    }
+    if (this._weatherRefreshTimer) {
+      window.clearTimeout(this._weatherRefreshTimer);
+      this._weatherRefreshTimer = 0;
+    }
+    if (this._mobileNotifyTimer) {
+      window.clearTimeout(this._mobileNotifyTimer);
+      this._mobileNotifyTimer = 0;
     }
   }
 
@@ -1051,14 +1212,19 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._expanded = false;
     this._animateContentOnNextRender = true;
     this._loadDismissed();
+    this._loadMobileSent();
+    this._syncSharedDismissedFromHass(true);
     this._lastRenderSignature = "";
     this._renderIfChanged(true);
     this._refreshCalendarEventsSoon(0);
+    this._refreshWeatherForecastsSoon(0);
   }
 
   set hass(hass) {
     this._hass = hass;
+    this._syncSharedDismissedFromHass();
     this._refreshCalendarEventsSoon();
+    this._refreshWeatherForecastsSoon();
     this._renderIfChanged();
   }
 
@@ -1080,6 +1246,34 @@ class NodaliaNotificationsCard extends HTMLElement {
     return this._config.storage_key || STORAGE_KEY;
   }
 
+  _getMobileStorageKey() {
+    return `${this._getStorageKey()}:mobile_sent`;
+  }
+
+  _dismissKey(id) {
+    return notificationHash(id);
+  }
+
+  _parseDismissedTokens(value) {
+    const raw = String(value || "").trim();
+    if (!raw) {
+      return [];
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.map(item => String(item || "").trim()).filter(Boolean);
+      }
+    } catch (_error) {
+      // Not JSON, continue with compact helper formats.
+    }
+    const body = raw.startsWith("v1:") ? raw.slice(3) : raw;
+    return body
+      .split(/[|,\n]/)
+      .map(item => String(item || "").trim())
+      .filter(Boolean);
+  }
+
   _loadDismissed() {
     if (typeof localStorage === "undefined") {
       this._dismissed = new Set();
@@ -1093,8 +1287,22 @@ class NodaliaNotificationsCard extends HTMLElement {
     }
   }
 
+  _loadMobileSent() {
+    if (typeof localStorage === "undefined") {
+      this._mobileSent = new Set();
+      return;
+    }
+    try {
+      const raw = JSON.parse(localStorage.getItem(this._getMobileStorageKey()) || "[]");
+      this._mobileSent = new Set(Array.isArray(raw) ? raw.map(String) : []);
+    } catch (_error) {
+      this._mobileSent = new Set();
+    }
+  }
+
   _saveDismissed() {
     if (typeof localStorage === "undefined") {
+      this._saveSharedDismissed();
       return;
     }
     try {
@@ -1102,10 +1310,76 @@ class NodaliaNotificationsCard extends HTMLElement {
     } catch (_error) {
       // Ignore storage quota/private mode errors.
     }
+    this._saveSharedDismissed();
+  }
+
+  _saveMobileSent() {
+    if (typeof localStorage === "undefined") {
+      return;
+    }
+    try {
+      localStorage.setItem(this._getMobileStorageKey(), JSON.stringify([...this._mobileSent].slice(-180)));
+    } catch (_error) {
+      // Ignore storage quota/private mode errors.
+    }
+  }
+
+  _syncSharedDismissedFromHass(force = false) {
+    const entityId = this._config.dismissed_entity;
+    if (!entityId || !this._hass) {
+      return false;
+    }
+    const rawState = String(this._hass.states?.[entityId]?.state || "").trim();
+    if (!force && rawState === this._lastDismissedHelperState) {
+      return false;
+    }
+    this._lastDismissedHelperState = rawState;
+    const tokens = this._parseDismissedTokens(rawState);
+    if (!tokens.length) {
+      return false;
+    }
+    let changed = false;
+    tokens.forEach(token => {
+      if (!this._dismissed.has(token)) {
+        this._dismissed.add(token);
+        changed = true;
+      }
+    });
+    if (changed && typeof localStorage !== "undefined") {
+      try {
+        localStorage.setItem(this._getStorageKey(), JSON.stringify([...this._dismissed].slice(-250)));
+      } catch (_error) {
+        // Ignore storage quota/private mode errors.
+      }
+    }
+    return changed;
+  }
+
+  _saveSharedDismissed() {
+    const entityId = this._config.dismissed_entity;
+    if (!entityId || !this._hass || typeof this._hass.callService !== "function") {
+      return;
+    }
+    const hashes = [...this._dismissed]
+      .map(id => (String(id).includes(":") ? this._dismissKey(id) : String(id)))
+      .filter(Boolean)
+      .slice(-40);
+    const value = hashes.length ? `v1:${hashes.join("|")}` : "";
+    if (value === this._lastDismissedHelperState) {
+      return;
+    }
+    this._lastDismissedHelperState = value;
+    Promise.resolve(this._hass.callService("input_text", "set_value", {
+      entity_id: entityId,
+      value,
+    })).catch(() => {
+      // Helper sync is best-effort; the local dismiss state still applies.
+    });
   }
 
   _pruneDismissed(currentIds) {
     const keep = new Set(currentIds);
+    currentIds.forEach(id => keep.add(this._dismissKey(id)));
     let changed = false;
     this._dismissed.forEach(id => {
       if (!keep.has(id)) {
@@ -1116,6 +1390,13 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (changed) {
       this._saveDismissed();
     }
+  }
+
+  _isDismissed(item) {
+    if (!item?.id) {
+      return false;
+    }
+    return this._dismissed.has(item.id) || this._dismissed.has(this._dismissKey(item.id));
   }
 
   _refreshCalendarEventsSoon(delay = null) {
@@ -1176,6 +1457,76 @@ class NodaliaNotificationsCard extends HTMLElement {
       this._calendarRefreshInFlight = false;
       this._renderIfChanged(true);
       this._refreshCalendarEventsSoon();
+    }
+  }
+
+  _refreshWeatherForecastsSoon(delay = null) {
+    if (!this.isConnected || !this._hass || !this._config.weather_entities.length) {
+      return;
+    }
+    if (this._weatherRefreshTimer && delay === null) {
+      return;
+    }
+    const intervalMs = Math.max(this._config.refresh_interval * 1000, 10 * 60 * 1000);
+    const elapsed = Date.now() - this._lastWeatherRefresh;
+    const nextDelay = delay === null ? Math.max(0, intervalMs - elapsed) : Math.max(0, delay);
+    if (this._weatherRefreshTimer) {
+      window.clearTimeout(this._weatherRefreshTimer);
+    }
+    this._weatherRefreshTimer = window.setTimeout(() => {
+      this._weatherRefreshTimer = 0;
+      this._refreshWeatherForecasts();
+    }, nextDelay);
+  }
+
+  async _refreshWeatherForecasts() {
+    if (!this._hass || !this._config.weather_entities.length || this._weatherRefreshInFlight) {
+      return;
+    }
+    this._weatherRefreshInFlight = true;
+    const next = {};
+    const legacyForecasts = () => {
+      this._config.weather_entities.forEach(entityId => {
+        const rows = normalizeWeatherForecastResult(this._hass.states?.[entityId]?.attributes?.forecast, entityId);
+        if (rows.length && !next[entityId]?.length) {
+          next[entityId] = rows;
+        }
+      });
+    };
+    try {
+      if (typeof this._hass.callWS === "function") {
+        for (const forecastType of ["hourly", "daily"]) {
+          try {
+            const response = await this._hass.callWS({
+              type: "weather/get_forecasts",
+              entity_ids: this._config.weather_entities,
+              forecast_type: forecastType,
+            });
+            this._config.weather_entities.forEach(entityId => {
+              const rows = normalizeWeatherForecastResult(response, entityId);
+              if (rows.length && !next[entityId]?.length) {
+                next[entityId] = rows;
+              }
+            });
+            if (this._config.weather_entities.every(entityId => next[entityId]?.length)) {
+              break;
+            }
+          } catch (_error) {
+            // Some weather integrations expose daily but not hourly forecasts.
+          }
+        }
+      }
+      legacyForecasts();
+      this._weatherForecasts = next;
+      this._lastWeatherRefresh = Date.now();
+    } catch (_error) {
+      legacyForecasts();
+      this._weatherForecasts = next;
+      this._lastWeatherRefresh = Date.now();
+    } finally {
+      this._weatherRefreshInFlight = false;
+      this._renderIfChanged(true);
+      this._refreshWeatherForecastsSoon();
     }
   }
 
@@ -1317,6 +1668,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     });
 
     this._buildComfortNotifications(add);
+    this._buildWeatherNotifications(add);
     this._buildCustomNotifications(add);
 
     return items.sort((left, right) => {
@@ -1333,7 +1685,6 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (!this._config.smart_recommendations || !this._hass) {
       return;
     }
-    const fanTarget = this._config.fan_entities.find(entityId => stateIsOff(this._hass.states?.[entityId]));
     const tempSources = [
       ...this._config.weather_entities.map(entityId => ({
         entityId,
@@ -1348,12 +1699,17 @@ class NodaliaNotificationsCard extends HTMLElement {
         unit: this._hass.states?.[entityId]?.attributes?.unit_of_measurement || "°",
       })),
     ].filter(item => item.state && item.value !== null);
-    const hottest = tempSources.sort((left, right) => right.value - left.value)[0];
-    if (hottest && hottest.value >= this._config.thresholds.hot_temperature && fanTarget) {
+    const hotCandidates = tempSources
+      .filter(item => item.value >= this._config.thresholds.hot_temperature)
+      .map(item => ({ ...item, fanTarget: this._getFanTargetForSource(item.entityId) }))
+      .filter(item => item.fanTarget)
+      .sort((left, right) => right.value - left.value);
+    const hottest = hotCandidates[0] || tempSources.sort((left, right) => right.value - left.value)[0];
+    if (hottest && hottest.value >= this._config.thresholds.hot_temperature && hottest.fanTarget) {
       const sourceName = friendlyName(this._hass, hottest.entityId);
-      const fanName = friendlyName(this._hass, fanTarget);
+      const fanName = friendlyName(this._hass, hottest.fanTarget);
       add({
-        id: `comfort:hot:${hottest.entityId}:${fanTarget}:${Math.floor(hottest.value)}`,
+        id: `comfort:hot:${hottest.entityId}:${hottest.fanTarget}:${Math.floor(hottest.value)}`,
         title: this._text("titles.hot", "Hace calor"),
         message: this._text("messages.hot", "{source} marca {value}. Puedes encender {fan}.", {
           source: sourceName,
@@ -1364,7 +1720,7 @@ class NodaliaNotificationsCard extends HTMLElement {
         severity: "warning",
         source: sourceName,
         createdAt: Date.parse(hottest.state.last_changed || "") || Date.now(),
-        action: { label: this._text("actions.turnOnFan", "Encender ventilador"), type: "service", service: "fan.turn_on", entity: fanTarget, internal: true },
+        action: { label: this._text("actions.turnOnFan", "Encender ventilador"), type: "service", service: "fan.turn_on", entity: hottest.fanTarget, internal: true },
       });
     } else if (hottest && hottest.value <= this._config.thresholds.cold_temperature) {
       const sourceName = friendlyName(this._hass, hottest.entityId);
@@ -1408,8 +1764,69 @@ class NodaliaNotificationsCard extends HTMLElement {
     });
   }
 
+  _getFanTargetForSource(sourceEntityId) {
+    const offFans = this._config.fan_entities.filter(entityId => stateIsOff(this._hass?.states?.[entityId]));
+    if (!offFans.length) {
+      return null;
+    }
+    const sourceArea = entityAreaKey(this._hass, sourceEntityId);
+    if (sourceArea) {
+      const sameArea = offFans.find(entityId => entityAreaKey(this._hass, entityId) === sourceArea);
+      return sameArea || null;
+    }
+    const sourceTokens = new Set(entityMatchTokens(this._hass, sourceEntityId));
+    const tokenMatch = offFans.find(entityId => entityMatchTokens(this._hass, entityId).some(token => sourceTokens.has(token)));
+    if (tokenMatch) {
+      return tokenMatch;
+    }
+    return offFans.length === 1 ? offFans[0] : null;
+  }
+
+  _buildWeatherNotifications(add) {
+    if (!this._config.smart_recommendations || !this._hass || !this._config.weather_entities.length) {
+      return;
+    }
+    const now = Date.now();
+    const lookaheadMs = this._config.thresholds.rain_lookahead_hours * 60 * 60 * 1000;
+    this._config.weather_entities.forEach(entityId => {
+      const rows = (this._weatherForecasts?.[entityId] || normalizeWeatherForecastResult(this._hass.states?.[entityId]?.attributes?.forecast, entityId))
+        .map(row => ({ row, date: forecastDate(row) }))
+        .filter(item => item.date && item.date.getTime() >= now && item.date.getTime() <= now + lookaheadMs)
+        .sort((left, right) => left.date.getTime() - right.date.getTime());
+      const rainy = rows.find(({ row }) => {
+        const probability = forecastNumber(row, [
+          "precipitation_probability",
+          "precipitationProbability",
+          "probability_of_precipitation",
+          "rain_probability",
+        ]);
+        return forecastLooksRainy(row) || (probability !== null && probability >= this._config.thresholds.rain_probability);
+      });
+      if (!rainy) {
+        return;
+      }
+      const sourceName = friendlyName(this._hass, entityId);
+      add({
+        id: `weather:rain:${entityId}:${rainy.date.toISOString().slice(0, 13)}`,
+        title: this._text("titles.rainSoon", "Lluvia proxima"),
+        message: this._text("messages.rainSoon", "{source} preve lluvia sobre {time}. Si tienes ropa tendida, conviene revisarla.", {
+          source: sourceName,
+          time: formatTime(rainy.date),
+        }),
+        icon: "mdi:weather-pouring",
+        severity: "warning",
+        source: sourceName,
+        createdAt: rainy.date.getTime(),
+        action: { label: this._text("actions.viewWeather", "Ver tiempo"), type: "more-info", entity: entityId },
+      });
+    });
+  }
+
   _buildCustomNotifications(add) {
     this._config.custom_notifications.forEach((item, index) => {
+      if (!item.title && !item.message && !item.entity) {
+        return;
+      }
       if (!this._customNotificationMatches(item)) {
         return;
       }
@@ -1476,11 +1893,65 @@ class NodaliaNotificationsCard extends HTMLElement {
     };
   }
 
-  _getNotifications() {
+  _severityScore(severity) {
+    return { critical: 4, warning: 3, success: 2, info: 1 }[normalizeSeverity(severity)] || 1;
+  }
+
+  _shouldSendMobileNotification(item) {
+    const config = this._config.mobile_notifications;
+    if (!config?.enabled || !config.services.length || !item?.id) {
+      return false;
+    }
+    if (this._severityScore(item.severity) < this._severityScore(config.min_severity)) {
+      return false;
+    }
+    return !this._mobileSent.has(this._dismissKey(item.id));
+  }
+
+  _queueMobileNotifications(items) {
+    const pending = items.filter(item => this._shouldSendMobileNotification(item));
+    if (!pending.length || this._mobileNotifyTimer) {
+      return;
+    }
+    this._mobileNotifyTimer = window.setTimeout(() => {
+      this._mobileNotifyTimer = 0;
+      this._flushMobileNotifications(pending.slice(0, 4));
+    }, 450);
+  }
+
+  async _flushMobileNotifications(items) {
+    if (!this._hass || typeof this._hass.callService !== "function") {
+      return;
+    }
+    for (const item of items) {
+      const hash = this._dismissKey(item.id);
+      if (this._mobileSent.has(hash)) {
+        continue;
+      }
+      const data = {
+        title: item.title,
+        message: item.message || item.source || item.title,
+        data: {
+          group: "nodalia_notifications",
+          tag: hash,
+        },
+      };
+      await Promise.all(this._config.mobile_notifications.services.map(service => (
+        Promise.resolve(this._callNamedService(service, data)).catch(() => false)
+      )));
+      this._mobileSent.add(hash);
+    }
+    this._saveMobileSent();
+  }
+
+  _getNotifications(options = {}) {
     const raw = this._getRawNotifications();
     this._pruneDismissed(raw.map(item => item.id));
-    const visible = raw.filter(item => !this._dismissed.has(item.id));
+    const visible = raw.filter(item => !this._isDismissed(item));
     this._lastNotifications = visible;
+    if (options.notifyMobile === true) {
+      this._queueMobileNotifications(visible);
+    }
     return visible;
   }
 
@@ -1492,6 +1963,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       this._calendarLoading ? "loading" : "",
       this._calendarError,
       this._calendarEvents.map(event => `${event._entity}:${event.summary || event.title}:${JSON.stringify(event.start)}`).join("|"),
+      Object.entries(this._weatherForecasts || {}).map(([entityId, rows]) => `${entityId}:${(rows || []).slice(0, 12).map(row => `${row?.datetime || row?.dateTime || row?.date || ""}:${row?.condition || ""}:${row?.precipitation_probability ?? row?.precipitationProbability ?? ""}`).join(",")}`).join("|"),
     ];
     const tracked = [
       ...this._config.vacuum_entities,
@@ -1697,10 +2169,25 @@ class NodaliaNotificationsCard extends HTMLElement {
     return this._hass.callService(domain, service, data, target || undefined);
   }
 
+  _notificationChips(item) {
+    const chips = [];
+    const source = String(item?.source || "").trim();
+    const title = String(item?.title || "").trim();
+    const message = String(item?.message || "").trim();
+    if (source && normalizeMatchText(source) !== normalizeMatchText(title) && !matchTextIncludes(message, source)) {
+      chips.push({ kind: "value", label: source });
+    }
+    if (item?.severity && item.severity !== "info") {
+      chips.push({ kind: "state", label: this._severityLabel(item.severity) });
+    }
+    return chips;
+  }
+
   _renderNotification(item, options = {}) {
     const action = item.action;
     const primary = options.primary === true;
     const tint = item.tintColor ? sanitizeCssRuntimeValue(item.tintColor, "") : "";
+    const chips = this._notificationChips(item);
     return `
       <article class="notification-item notification-item--${escapeHtml(item.severity)} ${primary ? "notification-item--primary" : ""}"${tint ? ` style="--notification-accent:${escapeHtml(tint)}"` : ""}>
         <div class="notification-item__icon">
@@ -1714,10 +2201,9 @@ class NodaliaNotificationsCard extends HTMLElement {
             </button>
           </div>
           ${item.message ? `<div class="notification-item__message">${escapeHtml(item.message)}</div>` : ""}
-          <div class="notification-item__chips">
-            ${item.source ? `<span class="notification-item__chip notification-item__chip--value">${escapeHtml(item.source)}</span>` : ""}
-            <span class="notification-item__chip notification-item__chip--state">${escapeHtml(this._severityLabel(item.severity))}</span>
-          </div>
+          ${chips.length ? `<div class="notification-item__chips">
+            ${chips.map(chip => `<span class="notification-item__chip notification-item__chip--${escapeHtml(chip.kind)}">${escapeHtml(chip.label)}</span>`).join("")}
+          </div>` : ""}
           ${
             action
               ? `
@@ -1770,7 +2256,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       item_radius: sanitizeCssRuntimeValue(config.styles.item_radius, DEFAULT_CONFIG.styles.item_radius),
       accent: sanitizeCssRuntimeValue(config.styles.accent, DEFAULT_CONFIG.styles.accent),
     };
-    const notifications = this._getNotifications();
+    const notifications = this._getNotifications({ notifyMobile: true });
     const hiddenCount = Math.max(0, notifications.length - config.max_visible);
     const shouldStack = notifications.length > config.max_visible;
     const visible = this._expanded ? notifications : notifications.slice(0, config.max_visible);
@@ -1862,8 +2348,8 @@ class NodaliaNotificationsCard extends HTMLElement {
           --mdc-icon-size: 20px;
         }
         .notifications-empty-inline__text {
-          font-size: clamp(13px, 1.35vw, 15px);
-          font-weight: 700;
+          font-size: clamp(12px, 1.1vw, 14px);
+          font-weight: 650;
           line-height: 1.15;
           overflow-wrap: anywhere;
         }
@@ -2210,6 +2696,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           || id.startsWith("weather.")
           || id.startsWith("binary_sensor.")
           || id.startsWith("sensor.")
+          || id.startsWith("input_text.")
         ))
       : Object.keys(hass?.states || {}).join("|");
   }
@@ -2456,7 +2943,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         break;
       case "add-custom":
         this._config.custom_notifications.push({
-          title: "Nueva notificacion",
+          title: "",
           message: "",
           icon: "mdi:bell-outline",
           severity: "info",
@@ -3011,11 +3498,10 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Titulo, icono y mensaje cuando no hay nada pendiente.</div>
+            <div class="editor-section__hint">Titulo y mensaje cuando no hay nada pendiente.</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Titulo", "title", config.title)}
-            ${this._renderIconPickerField("Icono", "icon", config.icon)}
             ${this._renderTextField("Titulo sin notificaciones", "empty_title", config.empty_title)}
             ${this._renderTextField("Mensaje sin notificaciones", "empty_message", config.empty_message, { fullWidth: true })}
             ${this._renderTextField("Maximo visible plegado", "max_visible", config.max_visible, { type: "number", valueType: "number" })}
@@ -3050,6 +3536,40 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
             ${this._renderTextField("Frio", "thresholds.cold_temperature", config.thresholds.cold_temperature, { type: "number", valueType: "number" })}
             ${this._renderTextField("Humedad alta", "thresholds.humidity_high", config.thresholds.humidity_high, { type: "number", valueType: "number" })}
             ${this._renderTextField("Humedad baja", "thresholds.humidity_low", config.thresholds.humidity_low, { type: "number", valueType: "number" })}
+            ${this._renderTextField("Probabilidad lluvia (%)", "thresholds.rain_probability", config.thresholds.rain_probability, { type: "number", valueType: "number" })}
+            ${this._renderTextField("Horas lluvia", "thresholds.rain_lookahead_hours", config.thresholds.rain_lookahead_hours, { type: "number", valueType: "number" })}
+          </div>
+        </section>
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">Sincronizacion y movil</div>
+            <div class="editor-section__hint">Opcional: sincroniza avisos borrados entre dispositivos y reenvia avisos importantes a servicios notify.</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderEntityPickerField("Helper avisos borrados", "dismissed_entity", config.dismissed_entity, {
+              domains: "input_text",
+              fullWidth: true,
+              placeholder: "input_text.nodalia_notifications_dismissed",
+            })}
+            ${this._renderCheckboxField("Enviar tambien a movil", "mobile_notifications.enabled", config.mobile_notifications?.enabled === true)}
+            ${
+              config.mobile_notifications?.enabled === true
+                ? `
+                  ${this._renderTextField(
+                    "Servicios notify",
+                    "mobile_notifications.services",
+                    Array.isArray(config.mobile_notifications?.services) ? config.mobile_notifications.services.join(", ") : "",
+                    { placeholder: "notify.mobile_app_iphone", valueType: "csv", fullWidth: true },
+                  )}
+                  ${this._renderSelectField("Severidad minima", "mobile_notifications.min_severity", config.mobile_notifications?.min_severity, [
+                    { value: "info", label: "Info" },
+                    { value: "success", label: "OK" },
+                    { value: "warning", label: "Aviso" },
+                    { value: "critical", label: "Critica" },
+                  ])}
+                `
+                : ""
+            }
           </div>
         </section>
         <section class="editor-section">
