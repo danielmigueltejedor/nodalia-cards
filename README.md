@@ -3,7 +3,7 @@
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
 ![Latest stable](https://img.shields.io/badge/latest%20stable-0.6.1-2ea043)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
-![Alpha branch](https://img.shields.io/badge/alpha-1.0.0--alpha.51-orange)
+![Alpha branch](https://img.shields.io/badge/alpha-1.0.0--alpha.52-orange)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![GitHub](https://img.shields.io/badge/hosted%20on-GitHub-black?logo=github)
@@ -190,16 +190,16 @@ automation:
 
 [![Open your Home Assistant instance and open this repository in the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards&category=plugin)
 
-In HACS, open **Nodalia Cards** and use **Download** (pick the release or prerelease you want). HACS adds the Lovelace resource for you—no need to paste YAML for a normal install. Refresh the dashboard; you can then add the custom cards in the UI. The resource remains `/hacsfiles/nodalia-cards/nodalia-cards.js`; that file is a tiny loader which reads `nodalia-cards.manifest.js` and imports the real `nodalia-cards.bundle.js` with a content-hash query so new HACS downloads are less likely to keep running an old browser module.
+In HACS, open **Nodalia Cards** and use **Download** (pick the release or prerelease you want). HACS adds the Lovelace resource for you—no need to paste YAML for a normal install. Refresh the dashboard; you can then add the custom cards in the UI. The resource remains `/hacsfiles/nodalia-cards/nodalia-cards.js`; that file is the full self-contained bundle so HACS installs work even when only the configured `filename` is served.
 
-If something still looks off (e.g. old script cached), use **Redownload** in HACS, or in **Settings → Dashboards → ⋮ → Resources** make sure the entry matches the URL HACS created. HACS may append `?hacstag=…` to the path; that value is **per install and selected version**, not the app semver—replace it with whatever HACS shows after **Redownload** if needed. In the browser console, `__NODALIA_BUNDLE__` confirms which bundle loaded (`pkgVersion` and a short content id), and `__NODALIA_LOADER__` confirms which hashed bundle URL the loader imported.
+If something still looks off (e.g. old script cached), use **Redownload** in HACS, or in **Settings → Dashboards → ⋮ → Resources** make sure the entry matches the URL HACS created. HACS may append `?hacstag=…` to the path; that value is **per install and selected version**, not the app semver—replace it with whatever HACS shows after **Redownload** if needed. In the browser console, `__NODALIA_BUNDLE__` confirms which bundle loaded (`pkgVersion` and a short content id), and `__NODALIA_LOADER__` confirms the entrypoint mode.
 
 If Home Assistant reports **“Custom element doesn't exist: nodalia-climate-card”**, the Nodalia bundle has not loaded in that browser session. `custom:nodalia-climate-card` is included in **0.6.1** and later; check that the resource URL points to `/hacsfiles/nodalia-cards/nodalia-cards.js`, then use **Redownload** and a hard browser refresh.
 
 <details>
 <summary>Manual install (no HACS)</summary>
 
-Copy `nodalia-cards.js`, `nodalia-cards.bundle.js`, and `nodalia-cards.manifest.js` into the same `config/www/` folder (or subfolder) and add a resource under **Settings → Dashboards → Resources** with **type** `JavaScript module` and **URL** `/local/…` pointing at the loader file (for example `/local/nodalia-cards.js` if the three files live at `config/www/`).
+Copy `nodalia-cards.js` into `config/www/` (or a subfolder) and add a resource under **Settings → Dashboards → Resources** with **type** `JavaScript module` and **URL** `/local/…` pointing at that file (for example `/local/nodalia-cards.js` if it lives at `config/www/`). `nodalia-cards.bundle.js` and `nodalia-cards.manifest.js` are build artifacts for diagnostics/releases, but the HACS/manual entrypoint is `nodalia-cards.js`.
 
 </details>
 
@@ -209,7 +209,7 @@ Copy `nodalia-cards.js`, `nodalia-cards.bundle.js`, and `nodalia-cards.manifest.
 
 **Stable (`main`) — 0.6.1** includes **es, en, de, fr, it, nl** plus **pt, ru, el, zh** (simplified), and **ro** for the bundled cards and Lovelace visual editors (partial trees merge from English; coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
 
-**Prereleases:** active **`1.0.0-alpha.*`** line is now **`1.0.0-alpha.51`** on **`alpha`**. Recent **`1.0.0-beta.*`** cuts remain in **CHANGELOG**. **`0.6.1`** stays as the recommended stable line on **`main`** while polish continues toward **`1.0.0`** stable.
+**Prereleases:** active **`1.0.0-alpha.*`** line is now **`1.0.0-alpha.52`** on **`alpha`**. Recent **`1.0.0-beta.*`** cuts remain in **CHANGELOG**. **`0.6.1`** stays as the recommended stable line on **`main`** while polish continues toward **`1.0.0`** stable.
 
 ---
 

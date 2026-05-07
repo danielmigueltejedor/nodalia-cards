@@ -10,6 +10,15 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.52] - 2026-05-07
+
+Fifty-second **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.52`** (tag **`v1.0.0-alpha.52`** optional).
+
+- **Bundle loader:** `nodalia-cards.js` vuelve a ser autocontenido para instalaciones HACS de un solo `filename`; `nodalia-cards.bundle.js` y `nodalia-cards.manifest.js` quedan como artefactos auxiliares, evitando que Home Assistant deje todas las tarjetas sin registrar si esos ficheros no se sirven junto al loader.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.52`**.
+
+---
+
 ## [1.0.0-alpha.51] - 2026-05-07
 
 Fifty-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.51`** (tag **`v1.0.0-alpha.51`** optional).

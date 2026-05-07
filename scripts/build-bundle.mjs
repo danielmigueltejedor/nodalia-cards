@@ -84,7 +84,7 @@ try {
       },
     ],
   });
-  body = result.outputFiles?.[0]?.text || "";
+  body = (result.outputFiles?.[0]?.text || "").replace(/[ \t]+$/gm, "");
 } finally {
   if (fs.existsSync(entryPath)) {
     fs.unlinkSync(entryPath);
@@ -108,42 +108,13 @@ const manifest = {
   file: bundleFile,
 };
 const manifestSource = `export default ${JSON.stringify(manifest, null, 2)};\nexport const pkgVersion = ${JSON.stringify(pkg.version)};\nexport const contentSha256_12 = ${JSON.stringify(contentHash)};\nexport const file = ${JSON.stringify(bundleFile)};\n`;
-const loaderSource = `const FALLBACK_MANIFEST = ${JSON.stringify(manifest, null, 2)};
-
-async function loadNodaliaCardsBundle() {
-  const manifestUrl = new URL("./${manifestFile}", import.meta.url);
-  manifestUrl.searchParams.set("t", String(Date.now()));
-  let manifest = FALLBACK_MANIFEST;
-  try {
-    const module = await import(manifestUrl.href);
-    manifest = module.default || {
-      pkgVersion: module.pkgVersion,
-      contentSha256_12: module.contentSha256_12,
-      file: module.file,
-    };
-  } catch (error) {
-    if (typeof console !== "undefined" && typeof console.warn === "function") {
-      console.warn("nodalia-cards: no se pudo cargar el manifest cache-busting; usando fallback embebido.", error);
-    }
-  }
-
-  const bundleFile = typeof manifest.file === "string" && manifest.file ? manifest.file : FALLBACK_MANIFEST.file;
-  const bundleUrl = new URL(bundleFile, import.meta.url);
-  bundleUrl.searchParams.set("v", manifest.contentSha256_12 || manifest.pkgVersion || String(Date.now()));
-  await import(bundleUrl.href);
-
-  if (typeof window !== "undefined") {
-    window.__NODALIA_LOADER__ = {
-      pkgVersion: manifest.pkgVersion || FALLBACK_MANIFEST.pkgVersion,
-      contentSha256_12: manifest.contentSha256_12 || FALLBACK_MANIFEST.contentSha256_12,
-      bundleUrl: bundleUrl.href,
-    };
-  }
-}
-
-await loadNodaliaCardsBundle();
-`;
+const inlineLoaderFooter = `;if(typeof window!=="undefined"){window.__NODALIA_LOADER__=${JSON.stringify({
+  mode: "inline",
+  pkgVersion: pkg.version,
+  contentSha256_12: contentHash,
+  file: loaderFile,
+})};}`;
 fs.writeFileSync(bundlePath, `${body}\n${footer}\n`);
 fs.writeFileSync(manifestPath, manifestSource);
-fs.writeFileSync(loaderPath, loaderSource);
-console.log(`Wrote ${path.relative(root, loaderPath)} loader -> ${bundleFile} (${parts.length} modules + i18n, ${contentHash}).`);
+fs.writeFileSync(loaderPath, `${body}\n${footer}\n${inlineLoaderFooter}\n`);
+console.log(`Wrote ${path.relative(root, loaderPath)} self-contained bundle + ${bundleFile} artifact (${parts.length} modules + i18n, ${contentHash}).`);

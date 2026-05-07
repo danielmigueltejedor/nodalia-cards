@@ -242,11 +242,12 @@ test("bundle build minifies production output", () => {
   assert.match(source, /minify:\s*true/);
 });
 
-test("bundle loader imports hashed bundle through manifest", () => {
+test("HACS bundle entrypoint is self-contained and still emits diagnostics", () => {
   const source = read("scripts/build-bundle.mjs");
   assert.match(source, /nodalia-cards\.bundle\.js/);
   assert.match(source, /nodalia-cards\.manifest\.js/);
-  assert.match(source, /manifestUrl\.searchParams\.set\("t", String\(Date\.now\(\)\)\)/);
-  assert.match(source, /bundleUrl\.searchParams\.set\("v", manifest\.contentSha256_12/);
+  assert.match(source, /fs\.writeFileSync\(loaderPath, `\$\{body\}\\n\$\{footer\}\\n\$\{inlineLoaderFooter\}\\n`\)/);
+  assert.match(source, /mode: "inline"/);
   assert.match(source, /window\.__NODALIA_LOADER__/);
+  assert.match(source, /window\.__NODALIA_BUNDLE__/);
 });
