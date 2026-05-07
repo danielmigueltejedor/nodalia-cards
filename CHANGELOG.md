@@ -10,6 +10,18 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.55] - 2026-05-08
+
+Fifty-fifth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.55`** (tag **`v1.0.0-alpha.55`** optional).
+
+- **Calendar card — haptics:** la tarjeta añade respuesta háptica configurable en acciones principales y un apartado propio en el editor visual.
+- **Calendar/Notifications card — popup conectado:** las notificaciones de calendario abren el popup grande de `nodalia-calendar-card` mediante evento interno, evitando el more-info genérico de Home Assistant.
+- **Notifications card — notify moderno:** el editor permite seleccionar entidades `notify.*` con selector nativo de HA y usa `notify.send_message`, manteniendo servicios `notify.*` legacy como compatibilidad.
+- **Notifications card — editor y animaciones:** las conexiones inteligentes se pueden plegar, el selector de color queda alineado con `nodalia-entity-card` y la animación de entrada se dispara al cambiar la pila real de avisos.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.55`**.
+
+---
+
 ## [1.0.0-alpha.54] - 2026-05-07
 
 Fifty-fourth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.54`** (tag **`v1.0.0-alpha.54`** optional).

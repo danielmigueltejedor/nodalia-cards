@@ -176,6 +176,17 @@ test("calendar editor signature only scans relevant entity domains", () => {
   assert.match(source, /id\.startsWith\("weather\."\)/);
 });
 
+test("calendar supports haptics and external popup open requests", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /haptics: \{/);
+  assert.match(source, /const HAPTIC_PATTERNS/);
+  assert.match(source, /_triggerHaptic\(styleOverride = null\)/);
+  assert.match(source, /data-editor-toggle="haptics"/);
+  assert.match(source, /window\.addEventListener\("nodalia-calendar-card-open"/);
+  assert.match(source, /_onExternalOpenRequest\(event\)/);
+  assert.match(source, /_openExpandedCalendar\(\{/);
+});
+
 test("climate card is registered and shipped in the HACS bundle", () => {
   const source = read("nodalia-climate-card.js");
   const build = read("scripts/build-bundle.mjs");
@@ -214,6 +225,11 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /ink_low/);
   assert.match(source, /dismissed_entity/);
   assert.match(source, /mobile_notifications/);
+  assert.match(source, /mobile_notifications\.entities/);
+  assert.match(source, /callService\("notify", "send_message"/);
+  assert.match(source, /data-editor-toggle="connections"/);
+  assert.match(source, /type: "calendar-popup"/);
+  assert.match(source, /nodalia-calendar-card-open/);
   assert.match(source, /weather\/get_forecasts/);
   assert.match(source, /rain_probability/);
   assert.match(source, /rain_lookahead_hours/);
@@ -245,8 +261,10 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /editor-section__toggle-button/);
   assert.match(source, /type="color"/);
   assert.match(source, /notifications-card--animated/);
+  assert.match(source, /notificationSetChanged/);
   assert.match(source, /includeDomains/);
   assert.match(source, /id\.startsWith\("input_text\."\)/);
+  assert.match(source, /id\.startsWith\("notify\."\)/);
   assert.match(source, /"dismissed_entity", config\.dismissed_entity/);
   assert.doesNotMatch(source, /_renderIconPickerField\("Icono", "icon"/);
   assert.match(source, /if \(this\._calendarRefreshTimer && delay === null\)/);

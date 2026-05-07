@@ -9,9 +9,18 @@ import {
 
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.54";
+const CARD_VERSION = "1.0.0-alpha.55";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
+const HAPTIC_PATTERNS = {
+  selection: 8,
+  light: 10,
+  medium: 16,
+  heavy: 24,
+  success: [10, 40, 10],
+  warning: [20, 50, 12],
+  failure: [12, 40, 12, 40, 18],
+};
 
 const VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
 
@@ -38,6 +47,11 @@ const DEFAULT_CONFIG = {
     allow_webhooks_for_non_admin: true,
   },
   tint_auto: true,
+  haptics: {
+    enabled: true,
+    style: "medium",
+    fallback_vibrate: false,
+  },
   animations: {
     enabled: true,
     content_duration: 260,
@@ -325,6 +339,12 @@ function normalizeConfig(config) {
   if (iconStyle && iconStyle.color && !iconStyle.on_color) {
     iconStyle.on_color = iconStyle.color;
   }
+  normalized.haptics = mergeConfig(DEFAULT_CONFIG.haptics, normalized.haptics || {});
+  normalized.haptics.enabled = normalized.haptics.enabled === true;
+  normalized.haptics.fallback_vibrate = normalized.haptics.fallback_vibrate === true;
+  normalized.haptics.style = Object.prototype.hasOwnProperty.call(HAPTIC_PATTERNS, normalized.haptics.style)
+    ? normalized.haptics.style
+    : DEFAULT_CONFIG.haptics.style;
   return normalized;
 }
 
@@ -678,6 +698,7 @@ class NodaliaCalendarCard extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowKeydown = this._onShadowKeydown.bind(this);
     this._onDocVisibility = this._onDocVisibility.bind(this);
+    this._onExternalOpenRequest = this._onExternalOpenRequest.bind(this);
     this._lastSubmittedSharedCompletedValue = "";
     /** Evita que un push de hass con estado antiguo pise _completed mientras set_value aún no refleja en el helper. */
     this._pendingSharedCompletedPayload = null;
@@ -704,6 +725,58 @@ class NodaliaCalendarCard extends HTMLElement {
       return;
     }
     this._refreshEvents();
+  }
+
+  _triggerHaptic(styleOverride = null) {
+    const haptics = this._config?.haptics || DEFAULT_CONFIG.haptics;
+    if (haptics.enabled !== true) {
+      return;
+    }
+    const style = styleOverride || haptics.style || DEFAULT_CONFIG.haptics.style;
+    this.dispatchEvent(new CustomEvent("haptic", {
+      bubbles: true,
+      cancelable: false,
+      composed: true,
+      detail: style,
+    }));
+    if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
+      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+    }
+  }
+
+  _calendarMatchesExternalRequest(detail = {}) {
+    const requested = String(detail.entity_id || detail.entity || "").trim();
+    if (!requested) {
+      return true;
+    }
+    return (this._config?.calendars || []).some(calendar => String(calendar?.entity || "").trim() === requested);
+  }
+
+  _openExpandedCalendar({ date = "", eventKey = "" } = {}) {
+    this._expandedMonthDayKey = "";
+    const focusDate = eventDate(date);
+    if ((this._config?.time_range || DEFAULT_CONFIG.time_range) === "1m" && focusDate) {
+      this._expandedMonthDayKey = `${focusDate.getFullYear()}-${focusDate.getMonth()}-${focusDate.getDate()}`;
+    }
+    this._expandedEventDetailKey = String(eventKey || "");
+    this._nativeComposerError = "";
+    this._nativeEventComposerOpen = false;
+    this._expandedOpen = true;
+    this._expandedOverlayEntrancePlayed = false;
+    this._triggerHaptic("selection");
+    this._renderIfChanged(true);
+  }
+
+  _onExternalOpenRequest(event) {
+    const detail = event?.detail || {};
+    if (!this._calendarMatchesExternalRequest(detail)) {
+      return;
+    }
+    event?.preventDefault?.();
+    this._openExpandedCalendar({
+      date: detail.date || detail.start || "",
+      eventKey: detail.event_key || detail.eventKey || "",
+    });
   }
 
   async _fetchCalendarEventsViaRest(entityId, start, end) {
@@ -739,6 +812,9 @@ class NodaliaCalendarCard extends HTMLElement {
     if (typeof document !== "undefined") {
       document.addEventListener("visibilitychange", this._onDocVisibility);
     }
+    if (typeof window !== "undefined") {
+      window.addEventListener("nodalia-calendar-card-open", this._onExternalOpenRequest);
+    }
     this._attachViewVisibilityObserver();
     // Replay entrance animation whenever the card is re-attached to the dashboard view.
     this._calendarEntrancePlayed = false;
@@ -753,6 +829,9 @@ class NodaliaCalendarCard extends HTMLElement {
   disconnectedCallback() {
     if (typeof document !== "undefined") {
       document.removeEventListener("visibilitychange", this._onDocVisibility);
+    }
+    if (typeof window !== "undefined") {
+      window.removeEventListener("nodalia-calendar-card-open", this._onExternalOpenRequest);
     }
     this._detachViewVisibilityObserver();
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
@@ -1694,6 +1773,9 @@ class NodaliaCalendarCard extends HTMLElement {
     mix(config.native_event_webhook || "");
     mix(config.security?.allow_webhooks_for_non_admin ? 1 : 0);
     mix(config.tint_auto ? 1 : 0);
+    mix(config.haptics?.enabled ? 1 : 0);
+    mix(config.haptics?.style || "");
+    mix(config.haptics?.fallback_vibrate ? 1 : 0);
     mix(config.animations?.enabled ? 1 : 0);
     mix(config.animations?.content_duration);
     mix(styles.card?.background);
@@ -4044,6 +4126,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (event.key === "Escape") {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerHaptic("light");
       if (this._nativeEventComposerOpen) {
         this._nativeEventComposerOpen = false;
         this._nativeComposerError = "";
@@ -4087,6 +4170,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (monthDayCell instanceof HTMLElement) {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerHaptic("selection");
       this._expandedMonthDayKey = monthDayCell.dataset.dayKey || "";
       this._expandedEventDetailKey = "";
       this._renderIfChanged(true);
@@ -4098,6 +4182,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (eventDetail instanceof HTMLElement) {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerHaptic("selection");
       this._expandedEventDetailKey = eventDetail.dataset.key || "";
       this._renderIfChanged(true);
     }
@@ -4111,6 +4196,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (deleteBtn instanceof HTMLElement) {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerHaptic("warning");
       void this._deleteCalendarEvent(deleteBtn.dataset.key || "");
       return;
     }
@@ -4120,6 +4206,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (toggleBtn instanceof HTMLElement) {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerHaptic("success");
       this._toggleCompleted(toggleBtn.dataset.key || "");
       return;
     }
@@ -4131,6 +4218,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (closeAction) {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerHaptic("light");
       this._expandedMonthDayKey = "";
       this._nativeEventComposerOpen = false;
       this._nativeComposerError = "";
@@ -4146,6 +4234,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (monthDayBack && this._expandedOpen) {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerHaptic("light");
       this._expandedMonthDayKey = "";
       this._expandedEventDetailKey = "";
       this._renderIfChanged(true);
@@ -4157,6 +4246,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (eventDetailBack && this._expandedOpen) {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerHaptic("light");
       this._expandedEventDetailKey = "";
       this._renderIfChanged(true);
       return;
@@ -4167,6 +4257,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (addNativeEvent && this._expandedOpen) {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerHaptic("selection");
       this._openNativeEventComposer();
       return;
     }
@@ -4176,6 +4267,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (closeNativeComposer && this._expandedOpen) {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerHaptic("light");
       this._closeNativeEventComposer();
       return;
     }
@@ -4185,6 +4277,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (saveNativeComposer && this._expandedOpen) {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerHaptic("success");
       void this._submitNativeEventComposer();
       return;
     }
@@ -4197,6 +4290,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (monthDayOpen instanceof HTMLElement && this._expandedOpen) {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerHaptic("selection");
       this._expandedMonthDayKey = monthDayOpen.dataset.dayKey || "";
       this._expandedEventDetailKey = "";
       this._renderIfChanged(true);
@@ -4208,6 +4302,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (eventDetailOpen instanceof HTMLElement && this._expandedOpen) {
       event.preventDefault();
       event.stopPropagation();
+      this._triggerHaptic("selection");
       this._expandedEventDetailKey = eventDetailOpen.dataset.key || "";
       this._renderIfChanged(true);
       return;
@@ -4224,11 +4319,7 @@ class NodaliaCalendarCard extends HTMLElement {
     }
     event.preventDefault();
     event.stopPropagation();
-    this._expandedMonthDayKey = "";
-    this._expandedEventDetailKey = "";
-    this._nativeComposerError = "";
-    this._expandedOpen = true;
-    this._renderIfChanged(true);
+    this._openExpandedCalendar();
   }
 }
 
@@ -4238,6 +4329,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(DEFAULT_CONFIG);
     this._hass = null;
+    this._showHapticsSection = false;
     this._showAnimationSection = false;
     this._showStyleSection = false;
     this._entityOptionsSignature = "";
@@ -4472,6 +4564,14 @@ class NodaliaCalendarCardEditor extends HTMLElement {
       targetConfig.animations[key] = value;
       return;
     }
+    if (field.startsWith("haptics.")) {
+      const key = field.split(".")[1];
+      if (!isObject(targetConfig.haptics)) {
+        targetConfig.haptics = {};
+      }
+      targetConfig.haptics[key] = value;
+      return;
+    }
     targetConfig[field] = value;
   }
 
@@ -4567,6 +4667,8 @@ class NodaliaCalendarCardEditor extends HTMLElement {
         this._showStyleSection = !this._showStyleSection;
       } else if (toggleButton.dataset.editorToggle === "animations") {
         this._showAnimationSection = !this._showAnimationSection;
+      } else if (toggleButton.dataset.editorToggle === "haptics") {
+        this._showHapticsSection = !this._showHapticsSection;
       }
       const focusState = this._captureFocusState();
       this._render();
@@ -4858,6 +4960,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
       Array.isArray(config.calendars) && config.calendars.length
         ? config.calendars
         : [{ entity: "", label: "", tint: "" }];
+    const hapticStyle = config.haptics?.style || DEFAULT_CONFIG.haptics.style;
     const animations = config.animations || DEFAULT_CONFIG.animations;
 
     this.shadowRoot.innerHTML = `
@@ -5392,6 +5495,46 @@ class NodaliaCalendarCardEditor extends HTMLElement {
               <span>${escapeHtml(this._editorLabel("Anadir calendario"))}</span>
             </button>
           </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta haptica"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Vibracion/feedback tactil en acciones como abrir el calendario, marcar, borrar o crear eventos."))}</div>
+            <div class="editor-section__actions">
+              <button
+                type="button"
+                class="editor-section__toggle-button"
+                data-editor-toggle="haptics"
+                aria-expanded="${this._showHapticsSection ? "true" : "false"}"
+              >
+                <ha-icon icon="${this._showHapticsSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                <span>${escapeHtml(this._showHapticsSection ? this._editorLabel("Ocultar ajustes hapticos") : this._editorLabel("Mostrar ajustes hapticos"))}</span>
+              </button>
+            </div>
+          </div>
+          ${
+            this._showHapticsSection
+              ? `
+                <div class="editor-grid">
+                  ${this._renderCheckboxField("Activar respuesta haptica", "haptics.enabled", config.haptics?.enabled === true)}
+                  ${this._renderCheckboxField("Usar vibracion si no hay haptica", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
+                  ${this._renderSelectField("Intensidad", "haptics.style", hapticStyle, {
+                    fullWidth: true,
+                    options: [
+                      { value: "selection", label: "Seleccion" },
+                      { value: "light", label: "Ligera" },
+                      { value: "medium", label: "Media" },
+                      { value: "heavy", label: "Fuerte" },
+                      { value: "success", label: "Exito" },
+                      { value: "warning", label: "Aviso" },
+                      { value: "failure", label: "Error" },
+                    ],
+                  })}
+                </div>
+              `
+              : ""
+          }
         </section>
 
         <section class="editor-section">
