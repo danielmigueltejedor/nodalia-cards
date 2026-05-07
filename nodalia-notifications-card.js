@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-alpha.58";
+const CARD_VERSION = "1.0.0-alpha.59";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1240,13 +1240,22 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._lastNotifications = [];
     this._animateContentOnNextRender = true;
     this._stackTransition = "";
+    this._stackCollapseTimer = 0;
+    this._collapsingStack = false;
     this._viewportResizeTimer = 0;
+    this._viewVisibilityObserver = null;
+    this._wasInViewport = false;
+    this._onDocVisibility = this._onDocVisibility.bind(this);
     this._onClick = this._onClick.bind(this);
     this._onViewportResize = this._onViewportResize.bind(this);
     this.shadowRoot.addEventListener("click", this._onClick);
   }
 
   connectedCallback() {
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", this._onDocVisibility);
+    }
+    this._attachViewVisibilityObserver();
     this._loadDismissed();
     this._loadMobileSent();
     this._syncSharedDismissedFromHass(true);
@@ -1259,8 +1268,16 @@ class NodaliaNotificationsCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", this._onDocVisibility);
+    }
+    this._detachViewVisibilityObserver();
     window.removeEventListener("resize", this._onViewportResize);
     window.removeEventListener("orientationchange", this._onViewportResize);
+    if (this._stackCollapseTimer) {
+      window.clearTimeout(this._stackCollapseTimer);
+      this._stackCollapseTimer = 0;
+    }
     if (this._viewportResizeTimer) {
       window.clearTimeout(this._viewportResizeTimer);
       this._viewportResizeTimer = 0;
@@ -1277,6 +1294,48 @@ class NodaliaNotificationsCard extends HTMLElement {
       window.clearTimeout(this._mobileNotifyTimer);
       this._mobileNotifyTimer = 0;
     }
+  }
+
+  _replayEntranceAnimation() {
+    this._animateContentOnNextRender = true;
+    this._lastNotificationIdsSignature = "";
+    this._renderIfChanged(true);
+  }
+
+  _onDocVisibility() {
+    if (typeof document === "undefined" || document.visibilityState !== "visible") {
+      return;
+    }
+    this._replayEntranceAnimation();
+  }
+
+  _attachViewVisibilityObserver() {
+    if (this._viewVisibilityObserver || typeof IntersectionObserver !== "function") {
+      return;
+    }
+    this._viewVisibilityObserver = new IntersectionObserver(
+      entries => {
+        const visible = entries.some(entry => entry.isIntersecting && entry.intersectionRatio > 0);
+        if (visible === this._wasInViewport) {
+          return;
+        }
+        this._wasInViewport = visible;
+        if (visible) {
+          this._replayEntranceAnimation();
+        }
+      },
+      { threshold: [0, 0.01] },
+    );
+    this._viewVisibilityObserver.observe(this);
+  }
+
+  _detachViewVisibilityObserver() {
+    if (!this._viewVisibilityObserver) {
+      return;
+    }
+    this._viewVisibilityObserver.disconnect();
+    this._viewVisibilityObserver = null;
+    this._wasInViewport = false;
   }
 
   _onViewportResize() {
@@ -2300,8 +2359,29 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._triggerPressAnimation(button);
     const action = button.dataset.action;
     if (action === "toggle-stack") {
+      if (this._stackCollapseTimer) {
+        window.clearTimeout(this._stackCollapseTimer);
+        this._stackCollapseTimer = 0;
+      }
+      const animations = this._getAnimationSettings();
+      if (this._expanded && animations.enabled) {
+        this._collapsingStack = true;
+        this._stackTransition = "collapse";
+        this._triggerHaptic("selection");
+        this._renderIfChanged(true);
+        const collapseMs = Math.max(140, Math.round(animations.contentDuration * 0.68));
+        this._stackCollapseTimer = window.setTimeout(() => {
+          this._stackCollapseTimer = 0;
+          this._expanded = false;
+          this._collapsingStack = false;
+          this._stackTransition = "collapse-final";
+          this._renderIfChanged(true);
+        }, collapseMs);
+        return;
+      }
+      this._collapsingStack = false;
       this._expanded = !this._expanded;
-      this._stackTransition = this._expanded ? "expand" : "collapse";
+      this._stackTransition = this._expanded ? "expand" : "collapse-final";
       this._triggerHaptic("selection");
       this._renderIfChanged(true);
       return;
@@ -2462,8 +2542,10 @@ class NodaliaNotificationsCard extends HTMLElement {
     const darkenIcon = shouldDarkenNotificationIconGlyph(stateForIcon, accent);
     const iconColor = darkenIcon ? `color-mix(in srgb, var(--primary-text-color) 60%, ${accent})` : "var(--notification-accent)";
     const index = Math.max(0, Number(options.index) || 0);
+    const exiting = options.exiting === true;
+    const exitIndex = Math.max(0, Number(options.exitIndex) || 0);
     return `
-      <article class="notification-item notification-item--${escapeHtml(item.severity)} ${primary ? "notification-item--primary" : ""}" style="${tint ? `--notification-accent:${escapeHtml(tint)};` : ""}--notification-icon-color:${escapeHtml(iconColor)}; --notification-index:${index};">
+      <article class="notification-item notification-item--${escapeHtml(item.severity)} ${primary ? "notification-item--primary" : ""} ${exiting ? "notification-item--collapsing-tail" : ""}" style="${tint ? `--notification-accent:${escapeHtml(tint)};` : ""}--notification-icon-color:${escapeHtml(iconColor)}; --notification-index:${index}; --notification-exit-index:${exitIndex};">
         <div class="notification-item__icon">
           <ha-icon icon="${escapeHtml(item.icon)}"></ha-icon>
         </div>
@@ -2533,7 +2615,8 @@ class NodaliaNotificationsCard extends HTMLElement {
     const notifications = this._getNotifications({ notifyMobile: true });
     const hiddenCount = Math.max(0, notifications.length - config.max_visible);
     const shouldStack = notifications.length > config.max_visible;
-    const visible = this._expanded ? notifications : notifications.slice(0, config.max_visible);
+    const isCollapsingStack = this._collapsingStack && this._expanded;
+    const visible = this._expanded || isCollapsingStack ? notifications : notifications.slice(0, config.max_visible);
     const hasNotifications = notifications.length > 0;
     const emptyText = String(config.empty_message || config.empty_title || DEFAULT_CONFIG.empty_message).trim();
     const animations = this._getAnimationSettings();
@@ -2688,6 +2771,9 @@ class NodaliaNotificationsCard extends HTMLElement {
           transform: translateZ(0);
           transform-origin: center top;
           z-index: 4;
+        }
+        .notification-item--collapsing-tail {
+          pointer-events: none;
         }
         .notification-item::before {
           background: linear-gradient(180deg, color-mix(in srgb, var(--notification-accent) 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0));
@@ -2884,15 +2970,20 @@ class NodaliaNotificationsCard extends HTMLElement {
           animation-delay: calc(var(--stack-index, 1) * 45ms);
         }
         .notifications-card--animated.notifications-card--stack-expand .notifications-list,
-        .notifications-card--animated.notifications-card--stack-collapse .notifications-list {
+        .notifications-card--animated.notifications-card--stack-collapse-final .notifications-list {
           animation: notifications-stack-reflow calc(var(--notifications-content-duration, 420ms) * 0.72) cubic-bezier(0.18, 0.9, 0.22, 1.08) both;
         }
         .notifications-card--animated.notifications-card--stack-expand .notification-item {
           animation: notifications-card-item-rise calc(var(--notifications-content-duration, 420ms) * 0.74) cubic-bezier(0.18, 0.9, 0.22, 1.08) both;
           animation-delay: calc(var(--notification-index, 0) * 34ms);
         }
-        .notifications-card--animated.notifications-card--stack-collapse .notification-stack-card,
-        .notifications-card--animated.notifications-card--stack-collapse .notifications-stack-toggle {
+        .notifications-card--animated.notifications-card--stack-collapse .notification-item--collapsing-tail {
+          animation: notifications-stack-tail-out calc(var(--notifications-content-duration, 420ms) * 0.62) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: calc(var(--notification-exit-index, 0) * 28ms);
+          transform-origin: center top;
+        }
+        .notifications-card--animated.notifications-card--stack-collapse-final .notification-stack-card,
+        .notifications-card--animated.notifications-card--stack-collapse-final .notifications-stack-toggle {
           animation: notifications-stack-collapse calc(var(--notifications-content-duration, 420ms) * 0.66) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
         .notifications-card--animated .notifications-stack-toggle.is-pressing,
@@ -2972,6 +3063,16 @@ class NodaliaNotificationsCard extends HTMLElement {
             transform: translateY(0) scale(1);
           }
         }
+        @keyframes notifications-stack-tail-out {
+          0% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-10px) scale(0.965);
+          }
+        }
         @keyframes notifications-button-bounce {
           0% {
             transform: scale(1);
@@ -3001,7 +3102,12 @@ class NodaliaNotificationsCard extends HTMLElement {
                       : ""
                   }
                   <div class="notifications-list">
-                    ${visible.map((item, index) => this._renderNotification(item, { primary: index === 0, index })).join("")}
+                    ${visible.map((item, index) => this._renderNotification(item, {
+                      primary: index === 0,
+                      index,
+                      exiting: isCollapsingStack && index >= config.max_visible,
+                      exitIndex: Math.max(0, index - config.max_visible),
+                    })).join("")}
                   </div>
                   ${
                     shouldStack

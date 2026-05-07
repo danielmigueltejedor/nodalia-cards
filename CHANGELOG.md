@@ -10,6 +10,16 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.59] - 2026-05-08
+
+Fifty-ninth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.59`** (tag **`v1.0.0-alpha.59`** optional).
+
+- **Notifications card — colapso animado:** contraer la pila anima primero la salida de las notificaciones sobrantes y después muestra la pila compacta.
+- **Notifications card — entrada en pestañas:** la animación de entrada se repite al volver a una vista/pestaña de Home Assistant mediante observer de visibilidad, igual que `nodalia-calendar-card`.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.59`**.
+
+---
+
 ## [1.0.0-alpha.58] - 2026-05-08
 
 Fifty-eighth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.58`** (tag **`v1.0.0-alpha.58`** optional).

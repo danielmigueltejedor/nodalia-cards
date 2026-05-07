@@ -248,6 +248,9 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /_smartAction/);
   assert.match(source, /window\.open\(url, "_blank", "noopener,noreferrer"\)/);
   assert.match(source, /orientationchange/);
+  assert.match(source, /IntersectionObserver/);
+  assert.match(source, /_attachViewVisibilityObserver/);
+  assert.match(source, /_replayEntranceAnimation/);
   assert.match(source, /align-content: start/);
   assert.match(source, /_syncSharedDismissedFromHass/);
   assert.match(source, /_queueMobileNotifications/);
@@ -276,6 +279,9 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /notifications-card-bubble-bloom/);
   assert.match(source, /notifications-stack-reflow/);
   assert.match(source, /notifications-stack-collapse/);
+  assert.match(source, /notifications-stack-tail-out/);
+  assert.match(source, /notification-item--collapsing-tail/);
+  assert.match(source, /collapse-final/);
   assert.match(source, /notificationSetChanged/);
   assert.match(source, /includeDomains/);
   assert.match(source, /id\.startsWith\("input_text\."\)/);
