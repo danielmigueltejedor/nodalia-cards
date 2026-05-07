@@ -10,6 +10,16 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.56] - 2026-05-08
+
+Fifty-sixth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.56`** (tag **`v1.0.0-alpha.56`** optional).
+
+- **Calendar card — selector de color nativo:** el composer de eventos usa el mismo selector visual de color que los editores, con swatch sincronizado y feedback inline si faltan campos obligatorios.
+- **Notifications card — notify HA 2026.5:** el envío a entidades `notify.*` usa payload compatible con `notify.send_message` y las notificaciones de calendario enlazan mejor con el detalle del popup.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.56`**.
+
+---
+
 ## [1.0.0-alpha.55] - 2026-05-08
 
 Fifty-fifth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.55`** (tag **`v1.0.0-alpha.55`** optional).

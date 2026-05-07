@@ -9,7 +9,7 @@ import {
 
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.55";
+const CARD_VERSION = "1.0.0-alpha.56";
 const COMPLETION_STORAGE_KEY = "nodalia_calendar_completed_v1";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
@@ -2663,7 +2663,16 @@ class NodaliaCalendarCard extends HTMLElement {
     const repeatKind = String(
       this.shadowRoot.querySelector('[data-native-field="repeatKind"]')?.value || "none",
     ).trim().toLowerCase();
-    if (!calendarId || !title || !dateRaw || (!allDay && (!startRaw || !endRaw))) {
+    if (!calendarId) {
+      this._setComposerError("native", "Selecciona un calendario.");
+      return;
+    }
+    if (!title) {
+      this._setComposerError("native", "Escribe un titulo.");
+      return;
+    }
+    if (!dateRaw || (!allDay && (!startRaw || !endRaw))) {
+      this._setComposerError("native", allDay ? "Selecciona una fecha." : "Selecciona fecha, inicio y fin.");
       return;
     }
     if (dateInputIsBeforeToday(dateRaw)) {
@@ -2880,7 +2889,17 @@ class NodaliaCalendarCard extends HTMLElement {
             </label>
             <label class="calendar-composer__field calendar-composer__field--color">
               <span>Color</span>
-              <input data-native-field="color" type="color" value="#ff7ab6" />
+              <div class="editor-color-field">
+                <label class="editor-color-picker" title="Color personalizado">
+                  <input
+                    data-native-field="color"
+                    type="color"
+                    value="#ff7ab6"
+                    aria-label="Color"
+                  />
+                  <span class="editor-color-swatch" style="--editor-swatch:#ff7ab6;" aria-hidden="true"></span>
+                </label>
+              </div>
             </label>
           </div>
           <div class="calendar-composer__actions">
@@ -3521,27 +3540,49 @@ class NodaliaCalendarCard extends HTMLElement {
           padding: 8px 10px;
           width: 100%;
         }
-        .calendar-composer__field input[type="color"] {
-          -webkit-appearance: none;
-          appearance: none;
-          background: transparent;
+        .calendar-composer .editor-color-field {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          min-height: 40px;
+        }
+        .calendar-composer .editor-color-picker {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
           height: 40px;
-          min-height: 40px;
-          padding: 0;
+          justify-content: center;
+          position: relative;
           width: 40px;
         }
-        .calendar-composer__field input[type="color"]::-webkit-color-swatch-wrapper {
-          padding: 0;
+        .calendar-composer .editor-color-picker input {
+          cursor: pointer;
+          inset: 0;
+          opacity: 0;
+          position: absolute;
         }
-        .calendar-composer__field input[type="color"]::-webkit-color-swatch {
+        .calendar-composer .editor-color-picker:hover,
+        .calendar-composer .editor-color-picker:focus-within {
+          border-color: color-mix(in srgb, var(--primary-text-color) 22%, transparent);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+        }
+        .calendar-composer .editor-color-swatch {
+          --editor-swatch: #71c0ff;
+          background:
+            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+            conic-gradient(from 90deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 25%, rgba(0, 0, 0, 0.12) 0 50%, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 0 75%, rgba(0, 0, 0, 0.12) 0);
+          background-position: center;
+          background-size: cover, 10px 10px;
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
           border-radius: 999px;
-        }
-        .calendar-composer__field input[type="color"]::-moz-color-swatch {
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
-          border-radius: 999px;
+          display: block;
+          height: 22px;
+          width: 22px;
         }
         .calendar-composer__check {
           align-items: center;
@@ -4074,6 +4115,7 @@ class NodaliaCalendarCard extends HTMLElement {
       </div>
     `;
     this._mountNativeCalendarControl();
+    this._mountNativeColorControl();
   }
 
   _mountNativeCalendarControl() {
@@ -4117,6 +4159,25 @@ class NodaliaCalendarCard extends HTMLElement {
       control.value = nextValue;
     }
     host.replaceChildren(control);
+  }
+
+  _mountNativeColorControl() {
+    if (!this._nativeEventComposerOpen || !this.shadowRoot) {
+      return;
+    }
+    const input = this.shadowRoot.querySelector('[data-native-field="color"]');
+    if (!(input instanceof HTMLInputElement)) {
+      return;
+    }
+    const sync = () => {
+      const swatch = input.closest(".editor-color-picker")?.querySelector(".editor-color-swatch");
+      if (swatch instanceof HTMLElement) {
+        swatch.style.setProperty("--editor-swatch", input.value || "#ff7ab6");
+      }
+    };
+    input.addEventListener("input", sync);
+    input.addEventListener("change", sync);
+    sync();
   }
 
   _onShadowKeydown(event) {

@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-alpha.55";
+const CARD_VERSION = "1.0.0-alpha.56";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1641,6 +1641,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       const allDay = String(event.start?.date || "").length > 0 || (typeof event.start === "string" && event.start.length <= 10);
       const timeText = allDay ? this._text("allDay", "Todo el dia") : formatTime(start);
       const startsSoon = !allDay && start.getTime() - now.getTime() <= 90 * 60 * 1000 && start.getTime() >= now.getTime();
+      const eventKey = `${event._entity || ""}|${event.uid || event.id || ""}|${start.toISOString()}|${summary}`;
       add({
         id: `calendar:${event._entity}:${notificationHash(`${summary}|${start.toISOString()}`)}`,
         title: startsSoon ? this._text("titles.calendarSoon", "Evento pronto") : this._text("titles.calendarToday", "Evento pendiente hoy"),
@@ -1654,7 +1655,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           type: "calendar-popup",
           entity: event._entity,
           date: start.toISOString(),
-          eventKey: `${event._entity}:${notificationHash(`${summary}|${start.toISOString()}`)}`,
+          eventKey,
         },
       });
     });
@@ -2156,7 +2157,6 @@ class NodaliaNotificationsCard extends HTMLElement {
         entity_id: notifyEntities,
         title: data.title,
         message: data.message,
-        data: data.data,
       };
       await Promise.all([
         notifyEntities.length

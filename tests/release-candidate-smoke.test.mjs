@@ -129,6 +129,8 @@ test("calendar composers reject past dates with inline popup errors", () => {
   assert.match(source, /_renderComposerError\("native"\)/);
   assert.match(source, /dateInputIsBeforeToday\(dateRaw\)/);
   assert.match(source, /La fecha no puede ser anterior a hoy\./);
+  assert.match(source, /Selecciona un calendario\./);
+  assert.match(source, /Escribe un titulo\./);
   assert.match(source, /calendar-composer__error/);
 });
 
@@ -149,6 +151,9 @@ test("calendar native composer supports rich HA event fields and details", () =>
   assert.match(source, /data-native-field="description"/);
   assert.match(source, /data-native-field="location"/);
   assert.match(source, /data-native-field="repeatKind"/);
+  assert.match(source, /data-native-field="color"/);
+  assert.match(source, /calendar-composer \.editor-color-picker/);
+  assert.match(source, /_mountNativeColorControl\(\)/);
   assert.match(source, /value="none">No se repite/);
   assert.match(source, /value="yearly">Anualmente/);
   assert.doesNotMatch(source, /data-native-field="repeat"/);
