@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-alpha.47";
+const CARD_VERSION = "1.0.0-alpha.48";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -484,7 +484,7 @@ const DEFAULT_CONFIG = {
   title: "Notificaciones",
   icon: "mdi:bell-badge-outline",
   empty_title: "Todo tranquilo",
-  empty_message: "No tienes notificaciones pendientes.",
+  empty_message: "No tienes ninguna alerta actualmente",
   max_visible: 1,
   refresh_interval: 300,
   storage_key: STORAGE_KEY,
@@ -1444,10 +1444,11 @@ class NodaliaNotificationsCard extends HTMLElement {
     }
   }
 
-  _renderNotification(item, compact = false) {
+  _renderNotification(item, options = {}) {
     const action = item.action;
+    const primary = options.primary === true;
     return `
-      <article class="notification-item notification-item--${escapeHtml(item.severity)} ${compact ? "notification-item--compact" : ""}">
+      <article class="notification-item notification-item--${escapeHtml(item.severity)} ${primary ? "notification-item--primary" : ""}">
         <div class="notification-item__icon">
           <ha-icon icon="${escapeHtml(item.icon)}"></ha-icon>
         </div>
@@ -1519,9 +1520,8 @@ class NodaliaNotificationsCard extends HTMLElement {
     const hiddenCount = Math.max(0, notifications.length - config.max_visible);
     const shouldStack = notifications.length > config.max_visible;
     const visible = this._expanded ? notifications : notifications.slice(0, config.max_visible);
-    const stackPreview = shouldStack && !this._expanded
-      ? notifications.slice(config.max_visible, config.max_visible + 3)
-      : [];
+    const hasNotifications = notifications.length > 0;
+    const emptyText = String(config.empty_message || config.empty_title || DEFAULT_CONFIG.empty_message).trim();
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1532,54 +1532,65 @@ class NodaliaNotificationsCard extends HTMLElement {
           box-sizing: border-box;
         }
         ha-card {
+          background: transparent;
+          border: 0;
+          box-shadow: none;
+          color: var(--primary-text-color);
+          display: block;
+          overflow: hidden;
+          padding: 0;
+        }
+        .notifications-surface {
           background: ${styles.card.background};
           border: ${styles.card.border};
           border-radius: ${styles.card.border_radius};
           box-shadow: ${styles.card.box_shadow};
-          color: var(--primary-text-color);
-          display: block;
           overflow: hidden;
-          padding: ${styles.card.padding};
+          position: relative;
         }
-        .notifications-card {
-          display: grid;
-          gap: ${styles.card.gap};
+        .notifications-surface--empty {
+          background:
+            linear-gradient(90deg, rgba(168, 235, 176, 0.78), rgba(238, 255, 239, 0.96) 58%, rgba(255, 255, 255, 0.98)),
+            color-mix(in srgb, var(--success-color, #43a047) 8%, var(--ha-card-background, #fff));
+          border: 1px solid color-mix(in srgb, var(--success-color, #43a047) 28%, rgba(255, 255, 255, 0.58));
+          box-shadow:
+            0 10px 24px rgba(67, 160, 71, 0.13),
+            var(--ha-card-box-shadow, 0 2px 8px rgba(0, 0, 0, 0.12));
         }
-        .notifications-header {
+        .notifications-empty-inline {
           align-items: center;
           display: grid;
-          gap: 12px;
-          grid-template-columns: auto minmax(0, 1fr) auto;
+          gap: 18px;
+          grid-template-columns: auto minmax(0, 1fr);
+          min-height: 84px;
+          padding: 16px 26px;
         }
-        .notifications-header__icon {
+        .notifications-empty-inline__icon {
           align-items: center;
-          background: ${styles.icon.background};
+          background: color-mix(in srgb, var(--success-color, #43a047) 15%, rgba(255, 255, 255, 0.58));
+          border: 1px solid color-mix(in srgb, var(--success-color, #43a047) 24%, transparent);
           border-radius: 999px;
-          color: ${styles.icon.color};
+          color: color-mix(in srgb, var(--success-color, #43a047) 78%, var(--primary-text-color));
           display: inline-flex;
-          height: ${styles.icon.size};
+          height: 52px;
           justify-content: center;
-          width: ${styles.icon.size};
+          width: 52px;
         }
-        .notifications-header__icon ha-icon {
-          --mdc-icon-size: calc(${styles.icon.size} * 0.45);
+        .notifications-empty-inline__icon ha-icon {
+          --mdc-icon-size: 26px;
         }
-        .notifications-header__text {
-          min-width: 0;
-        }
-        .notifications-title {
-          font-size: ${styles.title_size};
+        .notifications-empty-inline__text {
+          font-size: clamp(17px, 2vw, 22px);
           font-weight: 800;
-          line-height: 1.15;
+          line-height: 1.22;
           overflow-wrap: anywhere;
         }
-        .notifications-count {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          font-weight: 650;
-          margin-top: 2px;
+        .notifications-stack {
+          display: grid;
+          isolation: isolate;
+          padding-bottom: ${shouldStack && !this._expanded ? "22px" : "0"};
+          position: relative;
         }
-        .notifications-clear,
         .notifications-stack-toggle,
         .notification-item__dismiss,
         .notification-item__action {
@@ -1597,28 +1608,31 @@ class NodaliaNotificationsCard extends HTMLElement {
           min-height: 34px;
           padding: 0 12px;
         }
-        .notifications-clear {
-          font-size: 12px;
-          font-weight: 750;
-          white-space: nowrap;
-        }
         .notifications-list {
           display: grid;
-          gap: 10px;
+          gap: 9px;
+          position: relative;
+          z-index: 3;
         }
         .notification-item {
           --notification-accent: ${styles.accent};
           align-items: start;
           background:
-            linear-gradient(135deg, color-mix(in srgb, var(--notification-accent) 16%, transparent), transparent 58%),
-            color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+            linear-gradient(90deg, color-mix(in srgb, var(--notification-accent) 18%, rgba(255, 255, 255, 0.18)), rgba(255, 255, 255, 0.02) 72%),
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, var(--notification-accent));
           border: 1px solid color-mix(in srgb, var(--notification-accent) 26%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
           border-radius: ${styles.item_radius};
+          box-shadow:
+            0 12px 26px color-mix(in srgb, var(--notification-accent) 12%, transparent),
+            var(--ha-card-box-shadow, 0 2px 8px rgba(0, 0, 0, 0.12));
           display: grid;
-          gap: 10px;
+          gap: 14px;
           grid-template-columns: auto minmax(0, 1fr);
           min-width: 0;
-          padding: 12px;
+          min-height: 88px;
+          padding: 16px 18px;
+          position: relative;
+          z-index: 4;
         }
         .notification-item--success {
           --notification-accent: var(--success-color, #43a047);
@@ -1631,30 +1645,31 @@ class NodaliaNotificationsCard extends HTMLElement {
         }
         .notification-item__icon {
           align-items: center;
-          background: color-mix(in srgb, var(--notification-accent) 17%, transparent);
+          background: color-mix(in srgb, var(--notification-accent) 16%, transparent);
+          border: 1px solid color-mix(in srgb, var(--notification-accent) 22%, transparent);
           border-radius: 999px;
           color: var(--notification-accent);
           display: inline-flex;
-          height: 36px;
+          height: 48px;
           justify-content: center;
-          width: 36px;
+          width: 48px;
         }
         .notification-item__icon ha-icon {
-          --mdc-icon-size: 20px;
+          --mdc-icon-size: 24px;
         }
         .notification-item__body {
           display: grid;
-          gap: 5px;
+          gap: 4px;
           min-width: 0;
         }
         .notification-item__title-row {
-          align-items: start;
+          align-items: center;
           display: grid;
           gap: 8px;
           grid-template-columns: minmax(0, 1fr) auto;
         }
         .notification-item__title {
-          font-size: 15px;
+          font-size: clamp(16px, 1.7vw, 20px);
           font-weight: 800;
           line-height: 1.2;
           overflow-wrap: anywhere;
@@ -1696,135 +1711,83 @@ class NodaliaNotificationsCard extends HTMLElement {
           font-size: 12px;
           font-weight: 800;
         }
-        .notification-stack-preview {
-          display: grid;
-          gap: 0;
-          margin-top: -4px;
-          padding: 0 12px;
-        }
-        .notification-stack-preview__row {
-          align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, var(--ha-card-background, #fff));
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 7%, transparent);
-          border-radius: 14px;
-          color: var(--secondary-text-color);
-          display: grid;
-          font-size: 12px;
-          font-weight: 700;
-          grid-template-columns: auto minmax(0, 1fr);
-          min-height: 34px;
-          padding: 0 10px;
-          transform: translateY(calc(var(--stack-index) * -6px));
-        }
-        .notification-stack-preview__row ha-icon {
-          --mdc-icon-size: 16px;
-          margin-right: 8px;
-        }
-        .notification-stack-preview__row span {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
+        .notification-stack-card {
+          background: color-mix(in srgb, var(--ha-card-background, #fff) 88%, var(--primary-text-color));
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 9%, transparent);
+          border-radius: ${styles.item_radius};
+          bottom: calc(var(--stack-index) * 8px);
+          box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+          height: 54px;
+          left: calc(10px + var(--stack-index) * 8px);
+          opacity: calc(0.78 - var(--stack-index) * 0.14);
+          position: absolute;
+          right: calc(10px + var(--stack-index) * 8px);
+          z-index: calc(3 - var(--stack-index));
         }
         .notifications-footer {
           align-items: center;
           display: flex;
           justify-content: center;
+          margin-top: -8px;
+          position: relative;
+          z-index: 8;
         }
         .notifications-stack-toggle {
-          gap: 6px;
+          background: color-mix(in srgb, var(--primary-text-color) 8%, var(--ha-card-background, #fff));
+          border-color: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+          gap: 4px;
           font-size: 12px;
           font-weight: 800;
+          height: 32px;
+          min-height: 32px;
+          padding: 0 10px;
         }
         .notifications-stack-toggle ha-icon {
-          --mdc-icon-size: 16px;
-        }
-        .notifications-empty {
-          align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          border: 1px dashed color-mix(in srgb, var(--primary-text-color) 12%, transparent);
-          border-radius: ${styles.item_radius};
-          display: grid;
-          gap: 8px;
-          justify-items: center;
-          min-height: 126px;
-          padding: 18px;
-          text-align: center;
-        }
-        .notifications-empty ha-icon {
-          --mdc-icon-size: 32px;
-          color: var(--secondary-text-color);
-        }
-        .notifications-empty__title {
-          font-size: 16px;
-          font-weight: 800;
-        }
-        .notifications-empty__message {
-          color: var(--secondary-text-color);
-          font-size: 13px;
-          line-height: 1.35;
+          --mdc-icon-size: 18px;
         }
       </style>
       <ha-card>
-        <div class="notifications-card">
-          <header class="notifications-header">
-            <div class="notifications-header__icon">
-              <ha-icon icon="${escapeHtml(config.icon)}"></ha-icon>
-            </div>
-            <div class="notifications-header__text">
-              <div class="notifications-title">${escapeHtml(config.title)}</div>
-              <div class="notifications-count">
-                ${notifications.length ? `${notifications.length} pendiente${notifications.length === 1 ? "" : "s"}` : "Sin pendientes"}
-                ${this._calendarLoading ? " · actualizando calendario" : ""}
-              </div>
-            </div>
-            ${
-              notifications.length
-                ? `<button type="button" class="notifications-clear" data-action="clear-all">Borrar</button>`
-                : ""
-            }
-          </header>
           ${
-            notifications.length
+            hasNotifications
               ? `
-                <div class="notifications-list">
-                  ${visible.map(item => this._renderNotification(item)).join("")}
+                <div class="notifications-stack">
+                  ${
+                    shouldStack && !this._expanded
+                      ? `
+                        <div class="notification-stack-card" style="--stack-index: 1;" aria-hidden="true"></div>
+                        ${notifications.length > 2 ? `<div class="notification-stack-card" style="--stack-index: 2;" aria-hidden="true"></div>` : ""}
+                      `
+                      : ""
+                  }
+                  <div class="notifications-list">
+                    ${visible.map((item, index) => this._renderNotification(item, { primary: index === 0 })).join("")}
+                  </div>
+                  ${
+                    shouldStack
+                      ? `
+                        <div class="notifications-footer">
+                          <button type="button" class="notifications-stack-toggle" data-action="toggle-stack" aria-expanded="${this._expanded ? "true" : "false"}" aria-label="${this._expanded ? "Mostrar menos" : "Mostrar todas las notificaciones"}">
+                            <ha-icon icon="${this._expanded ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+                            <span>${this._expanded ? "Menos" : hiddenCount}</span>
+                          </button>
+                        </div>
+                      `
+                      : ""
+                  }
                 </div>
-                ${
-                  stackPreview.length
-                    ? `
-                      <div class="notification-stack-preview" aria-hidden="true">
-                        ${stackPreview.map((item, index) => `
-                          <div class="notification-stack-preview__row" style="--stack-index:${index};">
-                            <ha-icon icon="${escapeHtml(item.icon)}"></ha-icon>
-                            <span>${escapeHtml(item.title)}</span>
-                          </div>
-                        `).join("")}
-                      </div>
-                    `
-                    : ""
-                }
-                ${
-                  shouldStack
-                    ? `
-                      <div class="notifications-footer">
-                        <button type="button" class="notifications-stack-toggle" data-action="toggle-stack" aria-expanded="${this._expanded ? "true" : "false"}">
-                          <ha-icon icon="${this._expanded ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                          <span>${this._expanded ? "Mostrar menos" : `Mostrar ${hiddenCount} mas`}</span>
-                        </button>
-                      </div>
-                    `
-                    : ""
-                }
               `
               : `
-                <div class="notifications-empty">
-                  <ha-icon icon="mdi:check-circle-outline"></ha-icon>
-                  <div class="notifications-empty__title">${escapeHtml(config.empty_title)}</div>
-                  <div class="notifications-empty__message">${escapeHtml(config.empty_message)}</div>
+                <div class="notifications-surface notifications-surface--empty">
+                  <div class="notifications-empty-inline">
+                    <div class="notifications-empty-inline__icon">
+                      <ha-icon icon="mdi:check"></ha-icon>
+                    </div>
+                    <div class="notifications-empty-inline__text">${escapeHtml(emptyText)}</div>
+                  </div>
                 </div>
               `
           }
-        </div>
       </ha-card>
     `;
   }

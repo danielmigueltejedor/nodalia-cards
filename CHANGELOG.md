@@ -10,11 +10,20 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.48] - 2026-05-07
+
+Forty-eighth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.48`** (tag **`v1.0.0-alpha.48`** optional).
+
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.48`**.
+
+---
+
 ## [1.0.0-alpha.47] - 2026-05-07
 
 Forty-seventh **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.47`** (tag **`v1.0.0-alpha.47`** optional).
 
 - **Notifications card:** primera alpha versionada de `custom:nodalia-notifications-card` en el bundle, con centro inteligente de avisos, pila expandible, borrado persistente, recomendaciones y editor visual.
+- **Notifications card — estilo Nodalia compacto:** estado sin avisos como barra verde tintada y notificaciones como tarjetas icono+texto apiladas, con cartas traseras visibles y burbuja de despliegue.
 - **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.47`**.
 
 ---
