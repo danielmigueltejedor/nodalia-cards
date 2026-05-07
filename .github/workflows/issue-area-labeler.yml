@@ -1,0 +1,71 @@
+name: Issue area labeler
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+
+permissions:
+  issues: write
+
+jobs:
+  label-area:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Apply area label from issue form
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body || "";
+
+            const mappings = [
+              ["Navigation Bar", "area: navigation"],
+              ["Media Player", "area: media-player"],
+              ["Light Card", "area: light"],
+              ["Fan Card", "area: fan"],
+              ["Humidifier Card", "area: humidifier"],
+              ["Circular Gauge Card", "area: circular-gauge"],
+              ["Graph Card", "area: graph"],
+              ["Power Flow Card", "area: power-flow"],
+              ["Climate Card", "area: climate"],
+              ["Alarm Panel Card", "area: alarm-panel"],
+              ["Advance Vacuum Card", "area: advance-vacuum"],
+              ["Entity Card", "area: entity"],
+              ["Fav Card", "area: fav"],
+              ["Insignia Card", "area: insignia"],
+              ["Person Card", "area: person"],
+              ["Weather Card", "area: weather"],
+              ["Vacuum Card", "area: vacuum"],
+              ["Calendar Card", "area: calendar"],
+              ["Notifications Card", "area: notifications"],
+              ["Battery Card", "area: battery"],
+              ["Visual Editor", "area: visual-editor"],
+              ["Translations", "area: translations"],
+              ["Styling / Theme", "area: styling"],
+              ["Mobile", "area: mobile"],
+              ["Performance", "area: performance"],
+              ["Security", "area: security"],
+              ["Shared state / persistence", "area: persistence"]
+            ];
+
+            const labelsToAdd = new Set();
+
+            for (const [needle, label] of mappings) {
+              if (body.includes(needle)) {
+                labelsToAdd.add(label);
+              }
+            }
+
+            if (labelsToAdd.size === 0) {
+              return;
+            }
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: [...labelsToAdd]
+            });
