@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-alpha.76";
+const CARD_VERSION = "1.0.0-alpha.77";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1455,7 +1455,9 @@ class NodaliaNotificationsCard extends HTMLElement {
 
   getCardSize() {
     const count = this._getNotifications().length;
-    return Math.max(3, Math.min(8, 2 + Math.ceil(Math.min(count, this._expanded ? 5 : 2) * 1.2)));
+    const hiddenCount = Math.max(0, count - (this._config?.max_visible || 1));
+    const collapsedStackDepth = this._expanded ? 0 : Math.min(4, hiddenCount);
+    return Math.max(3, Math.min(10, 2 + Math.ceil(Math.min(count, this._expanded ? 5 : 2) * 1.2) + collapsedStackDepth));
   }
 
   getGridOptions() {
@@ -2917,9 +2919,9 @@ class NodaliaNotificationsCard extends HTMLElement {
       ? sanitizeCssRuntimeValue(item.tintColor, "")
       : this._severityAccent(item?.severity);
     const clampedIndex = Math.min(4, stackIndex);
-    const inset = 5 + (clampedIndex - 1) * 4;
-    const offset = 7 + (clampedIndex - 1) * 7;
-    const opacity = Math.max(0.2, 0.62 - (clampedIndex - 1) * 0.1);
+    const inset = 5 + (clampedIndex - 1) * 5;
+    const offset = 6 + (clampedIndex - 1) * 6;
+    const opacity = Math.max(0.22, 0.56 - (clampedIndex - 1) * 0.08);
     const zIndex = 4 - clampedIndex;
     return [
       `--stack-index:${clampedIndex}`,
@@ -2979,6 +2981,8 @@ class NodaliaNotificationsCard extends HTMLElement {
     const notifications = this._getNotifications({ notifyMobile: true });
     const hiddenCount = Math.max(0, notifications.length - config.max_visible);
     const shouldStack = notifications.length > config.max_visible;
+    const collapsedStackDepth = shouldStack && !this._expanded ? Math.min(4, hiddenCount) : 0;
+    const collapsedStackReserve = collapsedStackDepth ? 18 + collapsedStackDepth * 6 : 0;
     const isCollapsingStack = this._collapsingStack && this._expanded;
     const visible = this._expanded || isCollapsingStack ? notifications : notifications.slice(0, config.max_visible);
     const hasNotifications = notifications.length > 0;
@@ -3089,11 +3093,12 @@ class NodaliaNotificationsCard extends HTMLElement {
           overflow-wrap: anywhere;
         }
         .notifications-stack {
+          --notifications-stack-reserve: ${collapsedStackReserve}px;
           align-content: start;
           align-items: start;
           display: grid;
           isolation: isolate;
-          padding-bottom: ${shouldStack && !this._expanded ? "12px" : "0"};
+          padding-bottom: var(--notifications-stack-reserve, 0px);
           position: relative;
         }
         .notifications-stack-toggle,
@@ -3118,6 +3123,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           align-items: start;
           display: grid;
           gap: 8px;
+          isolation: isolate;
           position: relative;
           z-index: 6;
         }
@@ -3300,7 +3306,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           position: absolute;
           right: var(--stack-inset, 4px);
           top: var(--stack-offset, 7px);
-          z-index: var(--stack-z, 2);
+          z-index: calc(var(--stack-z, 2) - 8);
         }
         .notifications-footer {
           align-items: center;
@@ -3467,12 +3473,12 @@ class NodaliaNotificationsCard extends HTMLElement {
             hasNotifications
               ? `
                 <div class="notifications-stack">
-                  ${
-                    shouldStack && !this._expanded
-                      ? this._renderCollapsedStackCards(notifications, config.max_visible)
-                      : ""
-                  }
                   <div class="notifications-list">
+                    ${
+                      shouldStack && !this._expanded
+                        ? this._renderCollapsedStackCards(notifications, config.max_visible)
+                        : ""
+                    }
                     ${visible.map((item, index) => this._renderNotification(item, {
                       primary: index === 0,
                       index,

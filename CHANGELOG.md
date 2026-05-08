@@ -10,6 +10,16 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.77] - 2026-05-09
+
+Seventy-seventh **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.77`** (tag **`v1.0.0-alpha.77`** optional).
+
+- **Notifications card — stack plegado con altura propia:** las capas traseras se miden contra la lista real de notificaciones y la tarjeta reserva más espacio cuando hay varias apiladas, evitando colisiones con la tarjeta inferior.
+- **Notifications card — preview trasero más discreto:** el offset/opacidad del stack se suaviza para que la segunda notificación no asome más de la cuenta.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.77`**.
+
+---
+
 ## [1.0.0-alpha.76] - 2026-05-09
 
 Seventy-sixth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.76`** (tag **`v1.0.0-alpha.76`** optional).

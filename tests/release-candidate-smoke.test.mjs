@@ -352,11 +352,13 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /const zIndex = 4 - clampedIndex;/);
   assert.match(source, /pointer-events: none;/);
   assert.match(source, /\.slice\(startIndex, startIndex \+ 4\)/);
-  assert.match(source, /const offset = 7 \+ \(clampedIndex - 1\) \* 7/);
+  assert.match(source, /const offset = 6 \+ \(clampedIndex - 1\) \* 6/);
   assert.match(source, /top: var\(--stack-offset, 7px\)/);
   assert.match(source, /height: calc\(100% - 2px\)/);
+  assert.match(source, /const collapsedStackReserve = collapsedStackDepth \? 18 \+ collapsedStackDepth \* 6 : 0/);
+  assert.match(source, /<div class="notifications-list">\s*\$\{\s*shouldStack && !this\._expanded\s*\? this\._renderCollapsedStackCards\(notifications, config\.max_visible\)/);
   assert.doesNotMatch(source, /notifications-card--animated\.notifications-card--enter \.notification-stack-card\s*\{\s*animation: notifications-card-fade-up/);
-  assert.match(source, /padding-bottom: \$\{shouldStack && !this\._expanded \? "12px" : "0"\}/);
+  assert.match(source, /padding-bottom: var\(--notifications-stack-reserve, 0px\)/);
   assert.match(source, /calendar_entities/);
   assert.match(source, /vacuum_entities/);
   assert.match(source, /vacuum_error_entities/);
