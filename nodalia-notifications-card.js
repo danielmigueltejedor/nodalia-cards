@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-alpha.65";
+const CARD_VERSION = "1.0.0-alpha.67";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -531,6 +531,7 @@ const DEFAULT_CONFIG = {
     entities: [],
     services: [],
     min_severity: "warning",
+    critical_alerts: false,
   },
   security: {
     strict_service_actions: false,
@@ -809,6 +810,7 @@ function normalizeConfig(rawConfig = {}) {
   config.mobile_notifications.enabled = config.mobile_notifications.enabled === true;
   config.mobile_notifications.entities = normalizeEntityList(config.mobile_notifications.entities, ["notify"]);
   config.mobile_notifications.services = normalizeNotifyServices(config.mobile_notifications.services);
+  config.mobile_notifications.critical_alerts = config.mobile_notifications.critical_alerts === true;
   config.mobile_notifications.min_severity = ["info", "success", "warning", "critical"].includes(String(config.mobile_notifications.min_severity || "").toLowerCase())
     ? String(config.mobile_notifications.min_severity).toLowerCase()
     : DEFAULT_CONFIG.mobile_notifications.min_severity;
@@ -2329,6 +2331,33 @@ class NodaliaNotificationsCard extends HTMLElement {
     }, 450);
   }
 
+  _buildLegacyMobilePayload(item, hash) {
+    const payload = {
+      title: item.title,
+      message: item.message || item.source || item.title,
+      data: {
+        group: "nodalia_notifications",
+        tag: hash,
+      },
+    };
+    if (this._config.mobile_notifications?.critical_alerts === true && item?.severity === "critical") {
+      payload.data = {
+        ...payload.data,
+        ttl: 0,
+        priority: "high",
+        channel: "alarm_stream",
+        push: {
+          sound: {
+            name: "default",
+            critical: 1,
+            volume: 1,
+          },
+        },
+      };
+    }
+    return payload;
+  }
+
   async _flushMobileNotifications(items) {
     if (!this._hass || typeof this._hass.callService !== "function") {
       return;
@@ -2338,14 +2367,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       if (this._mobileSent.has(hash) || this._isDismissed(item)) {
         continue;
       }
-      const legacyPayload = {
-        title: item.title,
-        message: item.message || item.source || item.title,
-        data: {
-          group: "nodalia_notifications",
-          tag: hash,
-        },
-      };
+      const legacyPayload = this._buildLegacyMobilePayload(item, hash);
       const notifyEntities = Array.isArray(this._config.mobile_notifications.entities)
         ? this._config.mobile_notifications.entities
         : [];
@@ -2642,12 +2664,6 @@ class NodaliaNotificationsCard extends HTMLElement {
 
   _notificationChips(item) {
     const chips = [];
-    const source = String(item?.source || "").trim();
-    const title = String(item?.title || "").trim();
-    const message = String(item?.message || "").trim();
-    if (source && normalizeMatchText(source) !== normalizeMatchText(title) && !matchTextIncludes(message, source)) {
-      chips.push({ kind: "value", label: source });
-    }
     if (item?.severity && item.severity !== "info") {
       chips.push({ kind: "state", label: this._severityLabel(item.severity) });
     }
@@ -2716,18 +2732,28 @@ class NodaliaNotificationsCard extends HTMLElement {
     const accent = item?.tintColor
       ? sanitizeCssRuntimeValue(item.tintColor, "")
       : this._severityAccent(item?.severity);
-    const inset = stackIndex === 1 ? 4 : 10;
-    const offset = stackIndex === 1 ? 8 : 13;
-    const opacity = stackIndex === 1 ? 0.62 : 0.42;
-    const zIndex = stackIndex === 1 ? 2 : 1;
+    const clampedIndex = Math.min(4, stackIndex);
+    const inset = 4 + (clampedIndex - 1) * 5;
+    const offset = 11 + (clampedIndex - 1) * 4;
+    const opacity = Math.max(0.2, 0.64 - (clampedIndex - 1) * 0.13);
+    const zIndex = 5 - clampedIndex;
     return [
-      `--stack-index:${stackIndex}`,
+      `--stack-index:${clampedIndex}`,
       `--stack-accent:${escapeHtml(accent || "var(--primary-color)")}`,
       `--stack-inset:${inset}px`,
       `--stack-offset:${offset}px`,
       `--stack-opacity:${opacity}`,
       `--stack-z:${zIndex}`,
     ].join(";");
+  }
+
+  _renderCollapsedStackCards(notifications, startIndex) {
+    return notifications
+      .slice(startIndex, startIndex + 4)
+      .map((item, index) => (
+        `<div class="notification-stack-card" style="${this._stackCardStyle(item, index + 1)}" aria-hidden="true"></div>`
+      ))
+      .join("");
   }
 
   _severityLabel(severity) {
@@ -2883,7 +2909,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           align-items: start;
           display: grid;
           isolation: isolate;
-          padding-bottom: ${shouldStack && !this._expanded ? "18px" : "0"};
+          padding-bottom: ${shouldStack && !this._expanded ? "14px" : "0"};
           position: relative;
         }
         .notifications-stack-toggle,
@@ -3264,10 +3290,7 @@ class NodaliaNotificationsCard extends HTMLElement {
                 <div class="notifications-stack">
                   ${
                     shouldStack && !this._expanded
-                      ? `
-                        <div class="notification-stack-card" style="${this._stackCardStyle(notifications[config.max_visible], 1)}" aria-hidden="true"></div>
-                        ${notifications.length > config.max_visible + 1 ? `<div class="notification-stack-card" style="${this._stackCardStyle(notifications[config.max_visible + 1], 2)}" aria-hidden="true"></div>` : ""}
-                      `
+                      ? this._renderCollapsedStackCards(notifications, config.max_visible)
                       : ""
                   }
                   <div class="notifications-list">
@@ -4410,6 +4433,11 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                     "mobile_notifications.services",
                     Array.isArray(config.mobile_notifications?.services) ? config.mobile_notifications.services.join(", ") : "",
                     { placeholder: "notify.mobile_app_iphone", valueType: "csv", fullWidth: true },
+                  )}
+                  ${this._renderCheckboxField(
+                    "Alertas criticas en servicios legacy",
+                    "mobile_notifications.critical_alerts",
+                    config.mobile_notifications?.critical_alerts === true,
                   )}
                   ${this._renderSelectField("Severidad minima", "mobile_notifications.min_severity", config.mobile_notifications?.min_severity, [
                     { value: "info", label: "Info" },

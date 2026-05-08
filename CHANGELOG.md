@@ -10,6 +10,26 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.67] - 2026-05-08
+
+Sixty-seventh **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.67`** (tag **`v1.0.0-alpha.67`** optional).
+
+- **Notifications card — stack compacto 4 capas:** el modo plegado muestra hasta cuatro tarjetas traseras, subidas y más discretas, limitando el stack visual a cuatro capas aunque haya más avisos para reducir altura y ruido visual.
+- **Notifications card — alertas críticas legacy:** nueva opción `mobile_notifications.critical_alerts`; cuando se activa y el aviso tiene severidad `critical`, los servicios legacy `notify.mobile_app_*` reciben payload crítico iOS/Android (`push.sound.critical`, `ttl: 0`, `priority: high`, `channel: alarm_stream`). Las entidades modernas `notify.*` siguen usando `notify.send_message` sin `data` por compatibilidad con HA.
+- **Notifications card — auditoría ligera:** se mantiene el comportamiento por defecto y se refuerzan tests para el stack, ausencia de chip `source` automático y payload crítico opt-in.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.67`**.
+
+---
+
+## [1.0.0-alpha.66] - 2026-05-08
+
+Sixty-sixth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.66`** (tag **`v1.0.0-alpha.66`** optional).
+
+- **Notifications card — chips inteligentes:** los avisos ya no añaden automáticamente la entidad/fuente como chip cuando el mensaje personalizado omite `{source}`; el texto configurado se respeta literalmente y solo se mantienen chips de severidad cuando aplican.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.66`**.
+
+---
+
 ## [1.0.0-alpha.65] - 2026-05-08
 
 Sixty-fifth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.65`** (tag **`v1.0.0-alpha.65`** optional).

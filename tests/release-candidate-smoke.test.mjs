@@ -217,8 +217,10 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /_entranceAnimationTimer/);
   assert.match(source, /window\.setTimeout\(\(\) => \{\s*this\._entranceAnimationTimer = 0;\s*this\._animateContentOnNextRender = false;/);
   assert.doesNotMatch(source, /this\._animateContentOnNextRender = false;\s*this\._stackTransition = "";/);
-  assert.match(source, /const offset = stackIndex === 1 \? 8 : 13/);
-  assert.match(source, /padding-bottom: \$\{shouldStack && !this\._expanded \? "18px" : "0"\}/);
+  assert.match(source, /_renderCollapsedStackCards\(notifications, startIndex\)/);
+  assert.match(source, /\.slice\(startIndex, startIndex \+ 4\)/);
+  assert.match(source, /const offset = 11 \+ \(clampedIndex - 1\) \* 4/);
+  assert.match(source, /padding-bottom: \$\{shouldStack && !this\._expanded \? "14px" : "0"\}/);
   assert.match(source, /calendar_entities/);
   assert.match(source, /vacuum_entities/);
   assert.match(source, /weather_entities/);
@@ -238,9 +240,13 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /dismissed_entity/);
   assert.match(source, /mobile_notifications/);
   assert.match(source, /mobile_notifications\.entities/);
+  assert.match(source, /mobile_notifications\.critical_alerts/);
   assert.match(source, /callService\("notify", "send_message"/);
-  assert.match(source, /const legacyPayload = \{/);
+  assert.match(source, /_buildLegacyMobilePayload\(item, hash\)/);
   assert.match(source, /group:\s*"nodalia_notifications"/);
+  assert.match(source, /channel:\s*"alarm_stream"/);
+  assert.match(source, /critical:\s*1/);
+  assert.match(source, /priority:\s*"high"/);
   assert.match(source, /this\._callNamedService\(service, legacyPayload\)/);
   assert.doesNotMatch(source, /data:\s*data\.data/);
   assert.match(source, /data-editor-toggle="connections"/);
@@ -256,6 +262,8 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /shouldDarkenNotificationIconGlyph/);
   assert.match(source, /_smartMessage/);
   assert.match(source, /_smartAction/);
+  assert.match(source, /_notificationChips\(item\)/);
+  assert.doesNotMatch(source, /chips\.push\(\{ kind: "value", label: source \}\)/);
   assert.match(source, /window\.open\(url, "_blank", "noopener,noreferrer"\)/);
   assert.match(source, /orientationchange/);
   assert.match(source, /IntersectionObserver/);

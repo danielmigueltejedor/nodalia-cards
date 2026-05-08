@@ -101,6 +101,8 @@ Smart notification center for Home Assistant dashboards. It shows an empty-state
 
 It can watch the same domains used by other Nodalia cards: `calendar.*` for pending events today, `vacuum.*` for paused/running/error states, `weather.*` + `fan.*` for heat recommendations with an action to turn on a fan, plus motion, door/window, temperature and humidity sensors. The visual editor also supports custom notifications with conditions and optional actions (`more-info`, toggle, or service call).
 
+Mobile delivery can use modern `notify.*` entities through Home Assistant `notify.send_message` for title/message-only compatibility. For critical mobile-app alerts that need extra `data` (sound/priority/alarm stream), use `mobile_notifications.services` with the legacy `notify.mobile_app_*` service and enable `mobile_notifications.critical_alerts`.
+
 ```yaml
 type: custom:nodalia-notifications-card
 calendar_entities:
@@ -185,7 +187,7 @@ Copy `nodalia-cards.js` into `config/www/` (or a subfolder) and add a resource u
 
 **Stable (`main`) — 0.6.1** includes **es, en, de, fr, it, nl** plus **pt, ru, el, zh** (simplified), and **ro** for the bundled cards and Lovelace visual editors (partial trees merge from English; coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
 
-**Prereleases:** active **`1.0.0-alpha.*`** line is now **`1.0.0-alpha.65`** on **`alpha`**. **`1.0.0-beta.1`** remains documented in **CHANGELOG** as the current beta candidate. **`0.6.1`** stays as the recommended stable line on **`main`** while final polish continues toward **`1.0.0`** stable.
+**Prereleases:** active **`1.0.0-alpha.*`** line is now **`1.0.0-alpha.67`** on **`alpha`**. **`1.0.0-beta.1`** remains documented in **CHANGELOG** as the current beta candidate. **`0.6.1`** stays as the recommended stable line on **`main`** while final polish continues toward **`1.0.0`** stable.
 
 ---
 
