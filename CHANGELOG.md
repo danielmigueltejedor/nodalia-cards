@@ -6,16 +6,50 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains the stable baseline on **`main`**: additional polish, performance, security and feature work before the next major stable. Prerelease workflow and tagging: **CONTRIBUTING**.
+Work toward **`1.0.0`** on **`beta`** while **`0.6.1`** remains the stable baseline on **`main`**: final polish, performance, security and compatibility work before the next major stable. Prerelease workflow and tagging: **CONTRIBUTING**.
 
 ---
 
-## [1.0.0-alpha.62] - 2026-05-08
+## [1.0.0-beta.1] - 2026-05-08
 
-Sixty-second **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.62`** (tag **`v1.0.0-alpha.62`** optional).
+First public **`beta`** candidate for **`1.0.0`**, promoted from the full **`1.0.0-alpha.1` → `1.0.0-alpha.62`** cycle. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-beta.1`** (Git tag **`v1.0.0-beta.1`** recommended for HACS/GitHub Releases).
 
-- **Notifications card — notify moderno:** el servicio `notify.send_message` para entidades `notify.*` ya no envía `data`, evitando el error de Home Assistant `extra keys not allowed @ data['data']`; `data.group`/`data.tag` se mantienen solo para servicios legacy.
-- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.62`**.
+### Resumen rápido
+
+| Área | Qué cambia en `1.0.0` |
+|------|------------------------|
+| **Calendario** | Eventos nativos de Home Assistant, popup grande, forecast moderno, composer más completo y persistencia más fiable. |
+| **Notificaciones** | Nueva tarjeta `custom:nodalia-notifications-card` con avisos inteligentes, pila expandible, descartes persistentes, notificaciones móviles y editor visual. |
+| **Vacuum / Advance Vacuum** | Mejor sincronización compartida con `input_text`, paneles de modo/utilidades persistentes y acciones más seguras. |
+| **Editores visuales** | Selectores nativos de HA, color pickers consistentes, secciones plegables y controles más compactos. |
+| **Bundle / HACS** | Entrypoint más robusto, diagnóstico de versión/hash y menos problemas con caché tras redescargar. |
+| **Seguridad / rendimiento** | Allowlist de servicios, URLs saneadas, render signatures más selectivas y bundle minificado. |
+
+### Lo nuevo más importante
+
+- **Calendar card renovada:** crea eventos reales con `calendar/event/create`, soporta descripción, ubicación, recurrencia básica y color propio guardado como metadato Nodalia; también permite borrar eventos nativos cuando HA expone `calendar/event/delete`.
+- **Vista de calendario más rica:** el popup ampliado muestra detalle del evento, calendario, horario, repetición, ubicación, descripción y chips de tiempo/forecast cuando existen datos disponibles.
+- **Forecast compatible con HA moderno:** usa `weather/subscribe_forecast` y fallback por `weather/get_forecasts`, priorizando previsiones con más días futuros para evitar quedarse solo con "hoy".
+- **Notifications card nueva:** centro inteligente de avisos con estado vacío agradable, pila compacta/expandible, capas tintadas, chips de fuente/severidad, acciones rápidas y descartes persistentes.
+- **Recomendaciones inteligentes:** avisos de calendario, robot aspirador, calor/frío, humedad, lluvia próxima, batería baja, depósito de humidificador, tinta y notificaciones personalizadas.
+- **Notificaciones móviles:** envío opcional a entidades `notify.*` modernas mediante `notify.send_message`, compatible con Home Assistant 2026.5; `data.group`/`data.tag` quedan solo para servicios legacy para evitar errores de payload.
+- **Persistencia entre dispositivos:** helper opcional `input_text` para compartir descartes de notificaciones y completados/sesión de calendario/vacuum sin pisar estados locales durante sincronizaciones tardías.
+- **Editores más cómodos:** `ha-entity-picker`, `ha-selector`, icon picker, color picker visual, secciones plegables, conexiones inteligentes compactas y feedback inline en formularios.
+- **Animación y tacto:** entradas alineadas entre tarjetas, pila de notificaciones con expandir/contraer animado y haptics configurables en acciones principales del calendario.
+- **Seguridad reforzada:** acciones de servicio personalizadas con `security.strict_service_actions`, allowlist por dominio/servicio, URLs saneadas y comportamiento fail-closed cuando la allowlist está vacía.
+- **Carga más fiable:** `nodalia-cards.js` vuelve a ser autocontenido para HACS/manual, con artefactos auxiliares `bundle`/`manifest` para diagnóstico; el bundle expone `__NODALIA_BUNDLE__` con versión y hash corto.
+
+### Correcciones destacadas
+
+- Evita renders o consultas infinitas al refrescar eventos de calendario en instalaciones con muchos cambios de estado.
+- Evita que descartes de calendario/notificaciones se poden durante recargas fuertes antes de hidratar eventos o forecast.
+- Corrige cálculos de temperatura baja usando el sensor más frío y mejora la asociación sensor -> ventilador por área/nombre.
+- Reduce cortes visuales en móvil, estados vacíos, botones icon-only, chips y capas compactas.
+- Mejora compatibilidad con servicios `notify.*` modernos y legacy sin enviar campos no aceptados por Home Assistant.
+
+### Metadata
+
+- **Release metadata:** promote prerelease channel references and bundle version metadata to **`1.0.0-beta.1`**.
 
 ---
 
@@ -376,22 +410,6 @@ Twenty-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`
 ## [1.0.0-alpha.20] - 2026-05-06
 
 Twentieth **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.20`** (tag **`v1.0.0-alpha.20`** optional).
-
----
-
-## [1.0.0-beta.2] - 2026-05-06
-
-Second **`beta`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-beta.2`** (tag **`v1.0.0-beta.2`** optional).
-
-- **Advance Vacuum (`0.13.7`):** la sesión compartida en **`input_text`** incluye ahora la «vista» de la tarjeta: **preset del panel de modos** (aspirado/fregado, `pp=` en el helper) y **panel lateral utilidades** abierto (`modes` / `dock`, `xu=`). Cambiar pestañas de modo o abrir/cerrar esos paneles llama a **`set_value`** como el resto de selecciones.
-
----
-
-## [1.0.0-beta.1] - 2026-05-06
-
-First **`beta`** on the **`1.0.0`** line (**branch `beta`**). Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-beta.1`** (Git tag **`v1.0.0-beta.1`** recommended for HACS/GitHub Releases).
-
-- **Nodalia Vacuum Card (`nodalia-vacuum-card`) `0.6.3`:** editor visual alineado con Advance/calendario: **`ha-entity-picker`** primero, **`ha-selector`** como respaldo, **`select`** nativo al final; placeholders en campos de entidad auxiliar.
 
 ---
 
