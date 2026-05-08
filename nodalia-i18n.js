@@ -556,7 +556,7 @@
       },
       notificationsCard: {
         fallbackEvent: "Evento",
-        allDay: "Todo el dia",
+        allDay: "Todo el día",
         titles: {
           calendarSoon: "Evento pronto",
           calendarToday: "Evento pendiente hoy",

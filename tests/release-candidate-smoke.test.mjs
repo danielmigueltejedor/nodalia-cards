@@ -182,10 +182,14 @@ test("calendar native composer supports rich HA event fields and details", () =>
 
 test("calendar all-day labels use shared locale text", () => {
   const source = read("nodalia-calendar-card.js");
+  const i18n = read("nodalia-i18n.js");
   assert.match(source, /_uiText\(path, fallback, values = \{\}\)/);
   assert.match(source, /translateNotificationsUi/);
   assert.match(source, /_uiText\("allDay", "Todo el día"\)/);
   assert.doesNotMatch(source, /Todo el dia/);
+  assert.match(i18n, /allDay: "Ganztägig"/);
+  assert.match(i18n, /allDay: "Toute la journée"/);
+  assert.match(i18n, /allDay: "全天"/);
 });
 
 test("calendar editor signature only scans relevant entity domains", () => {
@@ -210,7 +214,8 @@ test("calendar supports haptics and external popup open requests", () => {
 test("weather forecast dates use the resolved Home Assistant locale", () => {
   const source = read("nodalia-weather-card.js");
   assert.match(source, /function formatForecastDateTime\(value, type, locale\)/);
-  assert.match(source, /toLocaleDateString\(locale \|\| undefined/);
+  assert.match(source, /const localeArg = locale && locale !== "auto" \? locale : undefined/);
+  assert.match(source, /toLocaleDateString\(localeArg/);
   assert.match(source, /const forecastLocale = window\.NodaliaI18n\?\.localeTag\?\.\(langFc\) \|\| langFc/);
   assert.match(source, /_renderForecastChart\(visibleItems, activeType, state, forecastLocale\)/);
   assert.match(source, /formatForecastDateTime\(item\?\.datetime, activeType, forecastLocale\)/);
@@ -218,21 +223,19 @@ test("weather forecast dates use the resolved Home Assistant locale", () => {
 
 test("shared visual editor exact overrides cover all supported editor languages", () => {
   const source = read("nodalia-editor-ui.js");
-  assert.match(source, /const EDITOR_EXACT_OVERRIDES = \{/);
+  assert.match(source, /const EDITOR_LANGS = \["en", "de", "fr", "it", "nl", "pt", "ru", "el", "zh", "ro"\]/);
+  assert.doesNotMatch(source, /const EDITOR_EXACT_OVERRIDES = \{/);
   assert.match(source, /const EDITOR_EXACT_OVERRIDE_ROWS = \[/);
+  assert.match(source, /row\.key \? \[row\.key\] : \[\]/);
   ["es", "en", "de", "fr", "it", "nl", "pt", "ru", "el", "zh", "ro"].forEach(lang => {
     assert.match(source, new RegExp(`${lang}:`), `${lang} translations should be present in exact override rows`);
   });
-  assert.match(source, /"Mode buttons next to slider": "Modustasten neben dem Slider"/);
   assert.match(source, /keys: \["Mode buttons next to slider"\][\s\S]*fr: "Boutons de mode à côté du curseur"/);
   assert.match(source, /keys: \["Use album art as background"\][\s\S]*pt: "Usar capa do álbum como fundo"/);
   assert.match(source, /keys: \["Main entity"\][\s\S]*zh: "主实体"/);
-  assert.match(source, /"Use album art as background": "Albumcover als Hintergrund verwenden"/);
-  assert.match(source, /"Main entity": "Hauptentität"/);
-  assert.match(source, /"Entidad de luz": "Licht-Entität"/);
-  assert.match(source, /"Posicion del estado": "Position des Status"/);
-  assert.match(source, /"Fondo avatar": "Avatar-Hintergrund"/);
-  assert.match(source, /"Icono burbuja fondo": "Hintergrund der Symbolblase"/);
+  assert.match(source, /keys: \["Entidad de luz"\][\s\S]*de: "Licht-Entität"/);
+  assert.match(source, /keys: \["Posicion del estado", "Posición del estado"\][\s\S]*de: "Position des Status"/);
+  assert.match(source, /keys: \["Fondo avatar", "Fondo icono", "Icono burbuja fondo", "Fondo burbuja principal"\][\s\S]*de: "Blasenhintergrund"/);
 });
 
 test("climate card is registered and shipped in the HACS bundle", () => {

@@ -10,6 +10,18 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.69] - 2026-05-08
+
+Sixty-ninth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.69`** (tag **`v1.0.0-alpha.69`** optional).
+
+- **Editor i18n — consolidación:** se elimina el bloque alemán duplicado `EDITOR_EXACT_OVERRIDES`; las traducciones exactas quedan en una única tabla multidioma para reducir bundle y mantenimiento.
+- **Editor i18n — seguridad defensiva:** la expansión de aliases ignora filas sin `keys`/`key` en lugar de crear entradas `undefined`.
+- **Weather card — locale robusta:** `formatForecastDateTime` ya no pasa `auto` a `toLocaleTimeString` / `toLocaleDateString`; usa `undefined` cuando debe delegar en la locale del navegador.
+- **Calendar / Notifications i18n:** se confirma `allDay` en el mapa compartido `translateNotificationsUi` para todos los idiomas soportados y se corrige el fallback español sin tilde.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.69`**.
+
+---
+
 ## [1.0.0-beta.7] - 2026-05-08
 
 Seventh public **`beta`** candidate for **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-beta.7`** (Git tag **`v1.0.0-beta.7`** recommended for HACS/GitHub Releases).

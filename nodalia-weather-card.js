@@ -905,15 +905,16 @@ function formatForecastDateTime(value, type, locale) {
   if (Number.isNaN(date.getTime())) {
     return "";
   }
+  const localeArg = locale && locale !== "auto" ? locale : undefined;
 
   if (type === "hourly") {
-    return date.toLocaleTimeString(locale || undefined, {
+    return date.toLocaleTimeString(localeArg, {
       hour: "2-digit",
       minute: "2-digit",
     });
   }
 
-  return date.toLocaleDateString(locale || undefined, {
+  return date.toLocaleDateString(localeArg, {
     weekday: "short",
     day: "numeric",
   });
