@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.13.10";
+const CARD_VERSION = "0.13.11";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -8325,7 +8325,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
               ${
                 showPrimaryActionButton
                   ? `
-                    <button class="advance-vacuum-card__control is-primary ${animations.enabled && animations.iconAnimation && this._isCleaning(state) ? "advance-vacuum-card__control--active-motion" : ""}" data-control-action="primary" title="${escapeHtml(primaryButtonTitle)}">
+                    <button class="advance-vacuum-card__control is-primary" data-control-action="primary" title="${escapeHtml(primaryButtonTitle)}">
                       <ha-icon icon="${primaryButtonIcon}"></ha-icon>
                     </button>
                   `

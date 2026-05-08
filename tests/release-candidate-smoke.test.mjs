@@ -241,20 +241,42 @@ test("shared visual editor exact overrides cover all supported editor languages"
   assert.match(source, /keys: \["Button bounce \(ms\)", "Rebote botones \(ms\)"\][\s\S]*de: "Button-Bounce \(ms\)"/);
   assert.match(source, /keys: \["Color aspirando"\][\s\S]*fr: "Couleur aspiration"/);
   assert.match(source, /keys: \["Color icono apagada"\][\s\S]*ro: "Culoare pictogramă oprită"/);
+  assert.match(source, /const exactOverrideByEnglish = \{\}/);
+  assert.match(source, /exactOverrideByEnglish\[englishValue\] \|\| exactOverrideByEnglish\[sourceKey\]/);
+  assert.match(source, /keys: \["Brightness presets"\][\s\S]*de: "Helligkeits-Voreinstellungen"/);
+  assert.match(source, /keys: \["Action", "Acción", "Accion"\][\s\S]*de: "Aktion"/);
+  assert.match(source, /keys: \["Warning", "Aviso"\][\s\S]*zh: "警告"/);
+  assert.match(source, /keys: \["Suction select", "Select aspirado"\][\s\S]*fr: "Select aspiration"/);
+  assert.match(source, /keys: \["Select an entity", "Selecciona una entidad"\][\s\S]*de: "Entität auswählen"/);
+  assert.match(source, /keys: \["Tap action", "Acción al pulsar", "Acción al tocar"\][\s\S]*de: "Tap-Aktion"/);
+  assert.match(source, /keys: \["Off color", "Color apagado"\][\s\S]*fr: "Couleur éteinte"/);
+});
+
+test("editor field helpers route visible labels through shared i18n", () => {
+  const light = read("nodalia-light-card.js");
+  const humidifier = read("nodalia-humidifier-card.js");
+  const powerFlow = read("nodalia-power-flow-card.js");
+
+  assert.match(light, /_renderLightEntityField\(label, field, value, options = \{\}\) \{\n\s+const tLabel = this\._editorLabel\(label\)/);
+  assert.match(light, /<span>\$\{escapeHtml\(tLabel\)\}<\/span>[\s\S]*data-mounted-control="light-entity"/);
+  assert.match(humidifier, /_renderHumidifierEntityField\(label, field, value, options = \{\}\) \{\n\s+const tLabel = this\._editorLabel\(label\)/);
+  assert.match(humidifier, /_renderSelectEntityField\(label, field, value, options = \{\}\) \{\n\s+const tLabel = this\._editorLabel\(label\)/);
+  assert.match(powerFlow, /_renderRgbArrayColorField\(label, field, value, options = \{\}\) \{\n\s+const tLabel = this\._editorLabel\(label\)/);
 });
 
 test("active icon animations are configurable across animated device cards", () => {
   const fan = read("nodalia-fan-card.js");
   const humidifier = read("nodalia-humidifier-card.js");
   const weather = read("nodalia-weather-card.js");
-  const vacuum = read("nodalia-advance-vacuum-card.js");
+  const advanceVacuum = read("nodalia-advance-vacuum-card.js");
+  const vacuum = read("nodalia-vacuum-card.js");
   const editor = read("nodalia-editor-ui.js");
 
   [
     [fan, /fan-card__icon--active-motion/, /fan-card-icon-spin/],
     [humidifier, /humidifier-card__icon--active-motion/, /humidifier-card-icon-mist/],
     [weather, /weather-card__icon--rain-motion/, /getConditionIconMotionClass/],
-    [vacuum, /advance-vacuum-card__control--active-motion/, /advance-vacuum-icon-sweep/],
+    [vacuum, /vacuum-card__icon-button--active-motion/, /vacuum-card-icon-sweep/],
   ].forEach(([source, classPattern, keyframePattern]) => {
     assert.match(source, /icon_animation: true/);
     assert.match(source, /iconAnimation: configuredAnimations\.icon_animation !== false/);
@@ -263,14 +285,28 @@ test("active icon animations are configurable across animated device cards", () 
     assert.match(source, /prefers-reduced-motion: reduce/);
     assert.match(source, /"Animar icono/);
   });
+  assert.match(humidifier, /deviceClass === "dehumidifier"[\s\S]*this\._isOn\(state\) \? "mdi:air-humidifier" : "mdi:air-humidifier-off"/);
+  assert.doesNotMatch(advanceVacuum, /class="advance-vacuum-card__control is-primary \$\{animations\.enabled && animations\.iconAnimation && this\._isCleaning\(state\)/);
+  assert.match(vacuum, /error_entity: ""/);
+  assert.match(vacuum, /_guessRelatedErrorEntity/);
+  assert.match(vacuum, /translateVacuumErrorState/);
   assert.match(editor, /keys: \["Animar icono activo"\][\s\S]*en: "Animate active icon"/);
   assert.match(editor, /keys: \["Animar icono según condición"\][\s\S]*en: "Animate icon by condition"/);
 });
 
 test("notifications translate vacuum cleaning state in smart messages", () => {
   const source = read("nodalia-notifications-card.js");
+  const i18n = read("nodalia-i18n.js");
   assert.match(source, /translateAdvanceVacuumReportedState/);
   assert.match(source, /state: stateLabel/);
+  assert.match(i18n, /translateVacuumErrorState/);
+  assert.match(i18n, /main_brush_jammed: "Cepillo principal bloqueado"/);
+  assert.match(source, /vacuum_error_entities/);
+  assert.match(source, /_getVacuumErrorState\(entityId\)/);
+  assert.match(source, /media_player_entities/);
+  assert.match(source, /_buildMediaPlayerPresenceNotifications\(add\)/);
+  assert.match(source, /climate\.set_hvac_mode/);
+  assert.match(source, /humidifier\.turn_on/);
 });
 
 test("climate card is registered and shipped in the HACS bundle", () => {
@@ -293,6 +329,11 @@ test("notifications card is bundled and supports smart dismissible notifications
   const readme = read("README.md");
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaNotificationsCard\)/);
   assert.match(source, /custom_notifications/);
+  assert.match(source, /normalizeCustomNotifications\(value, options = \{\}\)/);
+  assert.match(source, /keepDrafts && item\._draft === true \? true : hasContent && !isPlaceholder/);
+  assert.match(source, /normalizeConfig\(this\._config, \{ keepDrafts: true \}\)/);
+  assert.match(source, /const emitted = normalizeConfig\(next\)/);
+  assert.match(source, /_draft: true/);
   assert.match(source, /smart_entity_overrides/);
   assert.match(source, /normalizeSmartEntityOverrides/);
   assert.match(source, /_renderSmartEntityOverrides\(config\)/);
@@ -311,12 +352,19 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /const zIndex = 4 - clampedIndex;/);
   assert.match(source, /pointer-events: none;/);
   assert.match(source, /\.slice\(startIndex, startIndex \+ 4\)/);
-  assert.match(source, /const offset = 12 \+ \(clampedIndex - 1\) \* 4/);
+  assert.match(source, /const offset = 7 \+ \(clampedIndex - 1\) \* 7/);
+  assert.match(source, /top: var\(--stack-offset, 7px\)/);
+  assert.match(source, /height: calc\(100% - 2px\)/);
+  assert.doesNotMatch(source, /notifications-card--animated\.notifications-card--enter \.notification-stack-card\s*\{\s*animation: notifications-card-fade-up/);
   assert.match(source, /padding-bottom: \$\{shouldStack && !this\._expanded \? "12px" : "0"\}/);
   assert.match(source, /calendar_entities/);
   assert.match(source, /vacuum_entities/);
-  assert.match(source, /weather_entities/);
+  assert.match(source, /vacuum_error_entities/);
   assert.match(source, /fan_entities/);
+  assert.match(source, /climate_entities/);
+  assert.match(source, /humidifier_entities/);
+  assert.match(source, /media_player_entities/);
+  assert.match(source, /weather_entities/);
   assert.match(source, /motion_entities/);
   assert.match(source, /door_entities/);
   assert.match(source, /window_entities/);
@@ -382,7 +430,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /--stack-accent/);
   assert.match(source, /--stack-inset/);
   assert.match(source, /--stack-offset/);
-  assert.match(source, /height: min\(108px, calc\(100% - 8px\)\)/);
+  assert.match(source, /top: var\(--stack-offset, 7px\)/);
   assert.match(source, /notification-item__chip/);
   assert.match(source, /notification-item__chips--top/);
   assert.match(source, /data-list-field/);
@@ -427,7 +475,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /\.slice\(-30\)/);
   assert.doesNotMatch(source, /\.slice\(-40\)/);
   assert.match(source, /const hasContent = item\.title \|\| item\.message \|\| item\.entity/);
-  assert.match(source, /return hasContent && !isPlaceholder/);
+  assert.match(source, /keepDrafts && item\._draft === true \? true : hasContent && !isPlaceholder/);
   assert.match(source, /id:\s*`custom:\$\{notificationHash/);
   assert.doesNotMatch(source, /id:\s*`custom:\$\{index\}:/);
   assert.match(source, /const coldest = \[\.\.\.tempSources\]\.sort/);

@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-alpha.71";
+const CARD_VERSION = "1.0.0-alpha.76";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -492,7 +492,11 @@ const DEFAULT_CONFIG = {
   dismissed_entity: "",
   calendar_entities: [],
   vacuum_entities: [],
+  vacuum_error_entities: [],
   fan_entities: [],
+  climate_entities: [],
+  humidifier_entities: [],
+  media_player_entities: [],
   weather_entities: [],
   motion_entities: [],
   door_entities: [],
@@ -511,6 +515,7 @@ const DEFAULT_CONFIG = {
     humidity_low: 30,
     rain_probability: 50,
     rain_lookahead_hours: 6,
+    media_absence_minutes: 10,
     battery_low: 20,
     humidifier_fill_low: 20,
     ink_low: 15,
@@ -522,6 +527,7 @@ const DEFAULT_CONFIG = {
     humidity_high: { title: "", message: "", tint_color: "", url: "", action_label: "" },
     humidity_low: { title: "", message: "", tint_color: "", url: "", action_label: "" },
     rain: { title: "", message: "", tint_color: "", url: "", action_label: "" },
+    media_left_on: { title: "", message: "", tint_color: "", url: "", action_label: "" },
     battery_low: { title: "", message: "", tint_color: "", url: "", action_label: "" },
     humidifier_fill_low: { title: "", message: "", tint_color: "", url: "", action_label: "" },
     ink_low: { title: "", message: "", tint_color: "", url: "", action_label: "" },
@@ -739,11 +745,12 @@ function normalizeSmartNotifications(value) {
   return out;
 }
 
-function normalizeCustomNotifications(value) {
+function normalizeCustomNotifications(value, options = {}) {
+  const keepDrafts = options.keepDrafts === true;
   return (Array.isArray(value) ? value : [])
     .map(item => {
       const row = isObject(item) ? item : {};
-      return {
+      const normalized = {
         title: String(row.title || "").trim(),
         message: String(row.message || "").trim(),
         icon: String(row.icon || "mdi:bell-outline").trim(),
@@ -763,20 +770,28 @@ function normalizeCustomNotifications(value) {
             : "",
         url: String(row.url || "").trim(),
       };
+      if (keepDrafts && row._draft === true) {
+        normalized._draft = true;
+      }
+      return normalized;
     })
     .filter(item => {
       const hasContent = item.title || item.message || item.entity;
       const placeholderTitle = normalizeMatchText(item.title) === normalizeMatchText("Nueva notificación");
       const isPlaceholder = placeholderTitle && !item.message && !item.entity;
-      return hasContent && !isPlaceholder;
+      return keepDrafts && item._draft === true ? true : hasContent && !isPlaceholder;
     });
 }
 
-function normalizeConfig(rawConfig = {}) {
+function normalizeConfig(rawConfig = {}, options = {}) {
   const config = mergeDeep(DEFAULT_CONFIG, rawConfig);
   config.calendar_entities = normalizeEntityList(config.calendar_entities, ["calendar"]);
   config.vacuum_entities = normalizeEntityList(config.vacuum_entities, ["vacuum"]);
+  config.vacuum_error_entities = normalizeEntityList(config.vacuum_error_entities, ["sensor"]);
   config.fan_entities = normalizeEntityList(config.fan_entities, ["fan"]);
+  config.climate_entities = normalizeEntityList(config.climate_entities, ["climate"]);
+  config.humidifier_entities = normalizeEntityList(config.humidifier_entities, ["humidifier"]);
+  config.media_player_entities = normalizeEntityList(config.media_player_entities, ["media_player"]);
   config.weather_entities = normalizeEntityList(config.weather_entities, ["weather"]);
   config.motion_entities = normalizeEntityList(config.motion_entities, ["binary_sensor"]);
   config.door_entities = normalizeEntityList(config.door_entities, ["binary_sensor"]);
@@ -786,7 +801,9 @@ function normalizeConfig(rawConfig = {}) {
   config.battery_entities = normalizeEntityList(config.battery_entities, ["sensor"]);
   config.humidifier_fill_entities = normalizeEntityList(config.humidifier_fill_entities, ["sensor"]);
   config.ink_entities = normalizeEntityList(config.ink_entities, ["sensor"]);
-  config.custom_notifications = normalizeCustomNotifications(config.custom_notifications);
+  config.custom_notifications = normalizeCustomNotifications(config.custom_notifications, {
+    keepDrafts: options.keepDrafts === true,
+  });
   config.max_visible = Math.max(1, Math.min(8, Number(config.max_visible) || 1));
   config.refresh_interval = Math.max(30, Math.min(3600, Number(config.refresh_interval) || 300));
   config.storage_key = String(config.storage_key || STORAGE_KEY).trim() || STORAGE_KEY;
@@ -800,6 +817,7 @@ function normalizeConfig(rawConfig = {}) {
     humidity_low: finiteNumber(config.thresholds?.humidity_low, DEFAULT_CONFIG.thresholds.humidity_low),
     rain_probability: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.rain_probability, DEFAULT_CONFIG.thresholds.rain_probability))),
     rain_lookahead_hours: Math.max(1, Math.min(24, finiteNumber(config.thresholds?.rain_lookahead_hours, DEFAULT_CONFIG.thresholds.rain_lookahead_hours))),
+    media_absence_minutes: Math.max(1, Math.min(240, finiteNumber(config.thresholds?.media_absence_minutes, DEFAULT_CONFIG.thresholds.media_absence_minutes))),
     battery_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.battery_low, DEFAULT_CONFIG.thresholds.battery_low))),
     humidifier_fill_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.humidifier_fill_low, DEFAULT_CONFIG.thresholds.humidifier_fill_low))),
     ink_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.ink_low, DEFAULT_CONFIG.thresholds.ink_low))),
@@ -1138,6 +1156,21 @@ function stateIsOn(stateObj) {
 function stateIsOff(stateObj) {
   const state = String(stateObj?.state || "").toLowerCase();
   return ["off", "closed", "clear", "idle", "docked"].includes(state);
+}
+
+function stateLooksActive(stateObj) {
+  const state = String(stateObj?.state || "").toLowerCase();
+  return Boolean(state && !["off", "closed", "clear", "idle", "docked", "unavailable", "unknown"].includes(state));
+}
+
+function stateIsVacant(stateObj) {
+  const state = String(stateObj?.state || "").toLowerCase();
+  return ["off", "clear", "not_home", "closed", "0"].includes(state);
+}
+
+function minutesSinceChanged(stateObj) {
+  const changed = Date.parse(stateObj?.last_changed || stateObj?.last_updated || "");
+  return Number.isFinite(changed) ? (Date.now() - changed) / 60000 : 0;
 }
 
 function formatNumber(value, unit = "") {
@@ -1822,11 +1855,15 @@ class NodaliaNotificationsCard extends HTMLElement {
         return;
       }
       const name = friendlyName(hass, entityId);
-      if (["error", "unavailable"].includes(value)) {
+      const errorState = this._getVacuumErrorState(entityId);
+      const errorValue = this._getVacuumErrorValue(errorState);
+      const errorLabel = this._translateVacuumError(errorValue);
+      if (errorLabel || ["error", "unavailable"].includes(value)) {
+        const displayState = errorLabel || this._translateVacuumState(value, state.state);
         add({
-          id: `vacuum:${entityId}:${value}`,
-          title: this._smartTitle("vacuum", "titles.vacuumAttention", "Robot necesita atencion", { source: name, name, state: state.state }, entityId),
-          message: this._smartMessage("vacuum", "messages.vacuumAttention", "{name} esta en estado {state}.", { source: name, name, state: state.state }, entityId),
+          id: `vacuum:${entityId}:${errorValue || value}`,
+          title: this._smartTitle("vacuum", "titles.vacuumAttention", "Robot necesita atención", { source: name, name, state: displayState }, entityId),
+          message: this._smartMessage("vacuum", "messages.vacuumAttention", "{name} está en estado {state}.", { source: name, name, state: displayState }, entityId),
           icon: "mdi:robot-vacuum-alert",
           severity: "critical",
           source: name,
@@ -1837,10 +1874,11 @@ class NodaliaNotificationsCard extends HTMLElement {
           action: this._smartAction("vacuum", { label: this._text("actions.viewRobot", "Ver robot"), type: "more-info", entity: entityId }, "", entityId),
         });
       } else if (["paused", "idle"].includes(value)) {
+        const stateLabel = this._translateVacuumState(value, state.state);
         add({
           id: `vacuum:${entityId}:${value}`,
-          title: this._smartTitle("vacuum", "titles.vacuumPaused", "Robot pausado", { source: name, name, state: state.state }, entityId),
-          message: this._smartMessage("vacuum", "messages.vacuumPaused", "{name} esta pausado o esperando.", { source: name, name, state: state.state }, entityId),
+          title: this._smartTitle("vacuum", "titles.vacuumPaused", "Robot pausado", { source: name, name, state: stateLabel }, entityId),
+          message: this._smartMessage("vacuum", "messages.vacuumPaused", "{name} está pausado o esperando.", { source: name, name, state: stateLabel }, entityId),
           icon: "mdi:pause-circle-outline",
           severity: "warning",
           source: name,
@@ -1851,9 +1889,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           action: this._smartAction("vacuum", { label: this._text("actions.continue", "Continuar"), type: "service", service: "vacuum.start", entity: entityId, internal: true }, "", entityId),
         });
       } else if (["cleaning", "returning"].includes(value)) {
-        const stateLabel = window.NodaliaI18n?.translateAdvanceVacuumReportedState
-          ? window.NodaliaI18n.translateAdvanceVacuumReportedState(this._hass, this._config?.language ?? "auto", value, state.state)
-          : state.state;
+        const stateLabel = this._translateVacuumState(value, state.state);
         add({
           id: `vacuum:${entityId}:${value}`,
           title: value === "cleaning"
@@ -1918,6 +1954,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     });
 
     this._buildComfortNotifications(add);
+    this._buildMediaPlayerPresenceNotifications(add);
     this._buildWeatherNotifications(add);
     this._buildLevelNotifications(add);
     this._buildCustomNotifications(add);
@@ -1956,7 +1993,13 @@ class NodaliaNotificationsCard extends HTMLElement {
       .filter(item => item.fanTarget)
       .sort((left, right) => right.value - left.value);
     const hottest = hotCandidates[0] || [...tempSources].sort((left, right) => right.value - left.value)[0];
+    const coolingClimateTarget = hottest?.value >= this._config.thresholds.hot_temperature
+      ? this._getClimateTargetForSource(hottest.entityId, "cool")
+      : null;
     const coldest = [...tempSources].sort((left, right) => left.value - right.value)[0];
+    const heatingClimateTarget = coldest?.value <= this._config.thresholds.cold_temperature
+      ? this._getClimateTargetForSource(coldest.entityId, "heat")
+      : null;
     if (hottest && hottest.value >= this._config.thresholds.hot_temperature && hottest.fanTarget) {
       const sourceName = friendlyName(this._hass, hottest.entityId);
       const fanName = friendlyName(this._hass, hottest.fanTarget);
@@ -1977,6 +2020,27 @@ class NodaliaNotificationsCard extends HTMLElement {
         createdAt: Date.parse(hottest.state.last_changed || "") || Date.now(),
         action: this._smartAction("hot", { label: this._text("actions.turnOnFan", "Encender ventilador"), type: "service", service: "fan.turn_on", entity: hottest.fanTarget, internal: true }, "", hottest.entityId),
       });
+    } else if (hottest && hottest.value >= this._config.thresholds.hot_temperature && coolingClimateTarget) {
+      const sourceName = friendlyName(this._hass, hottest.entityId);
+      const climateName = friendlyName(this._hass, coolingClimateTarget);
+      add({
+        id: `comfort:hot:climate:${hottest.entityId}:${coolingClimateTarget}:${Math.floor(hottest.value)}`,
+        title: this._smartTitle("hot", "titles.hot", "Hace calor", { source: sourceName, value: formatNumber(hottest.value, hottest.unit), climate: climateName, fan: climateName }, hottest.entityId),
+        message: this._smartMessage("hot", "messages.hotClimate", "{source} marca {value}. Puedes activar frío en {climate}.", {
+          source: sourceName,
+          value: formatNumber(hottest.value, hottest.unit),
+          climate: climateName,
+          fan: climateName,
+        }, hottest.entityId),
+        icon: "mdi:snowflake",
+        severity: "warning",
+        source: sourceName,
+        entity: hottest.entityId,
+        tintColor: this._smartTint("hot", hottest.entityId),
+        mobilePolicy: this._smartMobilePolicy(hottest.entityId),
+        createdAt: Date.parse(hottest.state.last_changed || "") || Date.now(),
+        action: this._smartAction("hot", { label: this._text("actions.turnOnCooling", "Activar frío"), type: "service", service: "climate.set_hvac_mode", entity: coolingClimateTarget, serviceData: { hvac_mode: "cool" }, internal: true }, "", hottest.entityId),
+      });
     } else if (coldest && coldest.value <= this._config.thresholds.cold_temperature) {
       const sourceName = friendlyName(this._hass, coldest.entityId);
       add({
@@ -1993,7 +2057,7 @@ class NodaliaNotificationsCard extends HTMLElement {
         tintColor: this._smartTint("cold", coldest.entityId),
         mobilePolicy: this._smartMobilePolicy(coldest.entityId),
         createdAt: Date.parse(coldest.state.last_changed || "") || Date.now(),
-        action: this._smartAction("cold", null, "", coldest.entityId),
+        action: this._smartAction("cold", heatingClimateTarget ? { label: this._text("actions.turnOnHeat", "Activar calor"), type: "service", service: "climate.set_hvac_mode", entity: heatingClimateTarget, serviceData: { hvac_mode: "heat" }, internal: true } : null, "", coldest.entityId),
       });
     }
 
@@ -2007,6 +2071,7 @@ class NodaliaNotificationsCard extends HTMLElement {
         const high = value >= this._config.thresholds.humidity_high;
         const sourceName = friendlyName(this._hass, entityId);
         const smartKind = high ? "humidity_high" : "humidity_low";
+        const dehumidifierTarget = high ? this._getHumidifierTargetForSource(entityId, "dehumidifier") : null;
         add({
           id: `humidity:${entityId}:${high ? "high" : "low"}:${Math.round(value)}`,
           title: high
@@ -2023,10 +2088,56 @@ class NodaliaNotificationsCard extends HTMLElement {
           tintColor: this._smartTint(smartKind, entityId),
           mobilePolicy: this._smartMobilePolicy(entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: this._smartAction(smartKind, { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId }, "", entityId),
+          action: this._smartAction(
+            smartKind,
+            dehumidifierTarget
+              ? { label: this._text("actions.turnOnDehumidifier", "Encender deshumidificador"), type: "service", service: "humidifier.turn_on", entity: dehumidifierTarget, internal: true }
+              : { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId },
+            "",
+            entityId,
+          ),
         });
       }
     });
+  }
+
+  _translateVacuumState(stateKey, fallback = "") {
+    return window.NodaliaI18n?.translateAdvanceVacuumReportedState
+      ? window.NodaliaI18n.translateAdvanceVacuumReportedState(this._hass, this._config?.language ?? "auto", stateKey, fallback)
+      : fallback;
+  }
+
+  _translateVacuumError(errorValue) {
+    return window.NodaliaI18n?.translateVacuumErrorState
+      ? window.NodaliaI18n.translateVacuumErrorState(this._hass, this._config?.language ?? "auto", errorValue, "")
+      : "";
+  }
+
+  _getVacuumErrorValue(stateObj) {
+    const raw = String(stateObj?.state || "").trim();
+    if (!raw || !window.NodaliaI18n?.isVacuumErrorState?.(raw)) {
+      return "";
+    }
+    return raw;
+  }
+
+  _getVacuumErrorState(vacuumEntityId) {
+    const explicit = this._config.vacuum_error_entities
+      .map(entityId => this._hass?.states?.[entityId])
+      .find(stateObj => this._getVacuumErrorValue(stateObj));
+    if (explicit) {
+      return explicit;
+    }
+    const vacuumObject = String(vacuumEntityId || "").split(".")[1] || "";
+    if (!vacuumObject || !this._hass?.states) {
+      return null;
+    }
+    const candidates = Object.keys(this._hass.states)
+      .filter(entityId => entityId.startsWith("sensor."))
+      .filter(entityId => entityId.includes(vacuumObject) || entityId.includes("roborock"))
+      .filter(entityId => ["error", "fault", "fallo", "erro"].some(token => entityId.includes(token)))
+      .sort((left, right) => left.localeCompare(right, "es"));
+    return candidates.map(entityId => this._hass.states[entityId]).find(stateObj => this._getVacuumErrorValue(stateObj)) || null;
   }
 
   _getFanTargetForSource(sourceEntityId) {
@@ -2045,6 +2156,68 @@ class NodaliaNotificationsCard extends HTMLElement {
       return tokenMatch;
     }
     return offFans.length === 1 ? offFans[0] : null;
+  }
+
+  _sameAreaTarget(sourceEntityId, entities, predicate = () => true) {
+    const candidates = entities.filter(entityId => predicate(entityId, this._hass?.states?.[entityId]));
+    if (!candidates.length) {
+      return null;
+    }
+    const sourceArea = entityAreaKey(this._hass, sourceEntityId);
+    if (sourceArea) {
+      const sameArea = candidates.find(entityId => entityAreaKey(this._hass, entityId) === sourceArea);
+      return sameArea || null;
+    }
+    const sourceTokens = new Set(entityMatchTokens(this._hass, sourceEntityId));
+    const tokenMatch = candidates.find(entityId => entityMatchTokens(this._hass, entityId).some(token => sourceTokens.has(token)));
+    return tokenMatch || (candidates.length === 1 ? candidates[0] : null);
+  }
+
+  _getClimateTargetForSource(sourceEntityId, mode) {
+    return this._sameAreaTarget(sourceEntityId, this._config.climate_entities, (_entityId, stateObj) => {
+      const modes = Array.isArray(stateObj?.attributes?.hvac_modes) ? stateObj.attributes.hvac_modes.map(item => String(item).toLowerCase()) : [];
+      return modes.includes(mode) && ["off", "idle", "unknown", "unavailable"].includes(String(stateObj?.state || "").toLowerCase());
+    });
+  }
+
+  _getHumidifierTargetForSource(sourceEntityId, deviceClass = "dehumidifier") {
+    return this._sameAreaTarget(sourceEntityId, this._config.humidifier_entities, (_entityId, stateObj) => {
+      const klass = normalizeMatchText(stateObj?.attributes?.device_class || "");
+      return klass === deviceClass && stateIsOff(stateObj);
+    });
+  }
+
+  _buildMediaPlayerPresenceNotifications(add) {
+    if (!this._config.smart_recommendations || !this._hass || !this._config.media_player_entities.length || !this._config.motion_entities.length) {
+      return;
+    }
+    const vacantSensors = this._config.motion_entities
+      .map(entityId => ({ entityId, state: this._hass.states?.[entityId] }))
+      .filter(item => stateIsVacant(item.state) && minutesSinceChanged(item.state) >= this._config.thresholds.media_absence_minutes);
+    vacantSensors.forEach(sensor => {
+      const mediaTarget = this._sameAreaTarget(sensor.entityId, this._config.media_player_entities, (_entityId, stateObj) => {
+        const state = String(stateObj?.state || "").toLowerCase();
+        return ["on", "playing", "paused", "idle", "standby"].includes(state);
+      });
+      if (!mediaTarget) {
+        return;
+      }
+      const sourceName = friendlyName(this._hass, sensor.entityId);
+      const mediaName = friendlyName(this._hass, mediaTarget);
+      add({
+        id: `media-left-on:${sensor.entityId}:${mediaTarget}:${String(this._hass.states?.[mediaTarget]?.state || "")}`,
+        title: this._smartTitle("media_left_on", "titles.mediaLeftOn", "Multimedia encendido sin presencia", { source: sourceName, media: mediaName }, mediaTarget),
+        message: this._smartMessage("media_left_on", "messages.mediaLeftOn", "{media} sigue encendido y {source} no detecta presencia.", { source: sourceName, media: mediaName }, mediaTarget),
+        icon: "mdi:television-off",
+        severity: "warning",
+        source: mediaName,
+        entity: mediaTarget,
+        tintColor: this._smartTint("media_left_on", mediaTarget),
+        mobilePolicy: this._smartMobilePolicy(mediaTarget),
+        createdAt: Date.now(),
+        action: this._smartAction("media_left_on", { label: this._text("actions.turnOff", "Apagar"), type: "service", service: "media_player.turn_off", entity: mediaTarget, internal: true }, "", mediaTarget),
+      });
+    });
   }
 
   _formatTemplate(template, values = {}) {
@@ -2418,7 +2591,11 @@ class NodaliaNotificationsCard extends HTMLElement {
     ];
     const tracked = [
       ...this._config.vacuum_entities,
+      ...this._config.vacuum_error_entities,
       ...this._config.fan_entities,
+      ...this._config.climate_entities,
+      ...this._config.humidifier_entities,
+      ...this._config.media_player_entities,
       ...this._config.weather_entities,
       ...this._config.motion_entities,
       ...this._config.door_entities,
@@ -2437,6 +2614,10 @@ class NodaliaNotificationsCard extends HTMLElement {
     tracked.forEach(entityId => {
       const state = hass?.states?.[entityId];
       parts.push(`${entityId}:${state?.state || ""}:${state?.last_changed || ""}:${JSON.stringify(state?.attributes || {})}`);
+    });
+    this._config.vacuum_entities.forEach(entityId => {
+      const errorState = this._getVacuumErrorState(entityId);
+      parts.push(`vacuum-error:${entityId}:${errorState?.entity_id || ""}:${errorState?.state || ""}:${errorState?.last_changed || ""}`);
     });
     return parts.join("||");
   }
@@ -2736,9 +2917,9 @@ class NodaliaNotificationsCard extends HTMLElement {
       ? sanitizeCssRuntimeValue(item.tintColor, "")
       : this._severityAccent(item?.severity);
     const clampedIndex = Math.min(4, stackIndex);
-    const inset = 5 + (clampedIndex - 1) * 5;
-    const offset = 12 + (clampedIndex - 1) * 4;
-    const opacity = Math.max(0.18, 0.58 - (clampedIndex - 1) * 0.12);
+    const inset = 5 + (clampedIndex - 1) * 4;
+    const offset = 7 + (clampedIndex - 1) * 7;
+    const opacity = Math.max(0.2, 0.62 - (clampedIndex - 1) * 0.1);
     const zIndex = 4 - clampedIndex;
     return [
       `--stack-index:${clampedIndex}`,
@@ -3108,17 +3289,17 @@ class NodaliaNotificationsCard extends HTMLElement {
             var(--ha-card-background, #fff);
           border: 1px solid color-mix(in srgb, var(--stack-accent, var(--primary-color)) 20%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
           border-radius: ${styles.item_radius};
-          bottom: var(--stack-offset, 3px);
           box-shadow:
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent),
             0 10px 24px rgba(0, 0, 0, 0.08);
-          height: min(108px, calc(100% - 8px));
+          height: calc(100% - 2px);
           left: var(--stack-inset, 4px);
           opacity: var(--stack-opacity, 0.72);
           overflow: hidden;
           pointer-events: none;
           position: absolute;
           right: var(--stack-inset, 4px);
+          top: var(--stack-offset, 7px);
           z-index: var(--stack-z, 2);
         }
         .notifications-footer {
@@ -3161,12 +3342,6 @@ class NodaliaNotificationsCard extends HTMLElement {
         .notifications-card--animated.notifications-card--enter .notification-item__chip {
           animation: notifications-card-chip-pop calc(var(--notifications-content-duration, 420ms) * 0.58) cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
           animation-delay: calc(116ms + (var(--notification-index, 0) * 40ms));
-        }
-        .notifications-card--animated.notifications-card--enter .notification-stack-card {
-          animation: notifications-card-fade-up calc(var(--notifications-content-duration, 420ms) * 0.68) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-        }
-        .notifications-card--animated.notifications-card--enter .notification-stack-card {
-          animation-delay: calc(var(--stack-index, 1) * 45ms);
         }
         .notifications-card--animated.notifications-card--stack-expand .notifications-list,
         .notifications-card--animated.notifications-card--stack-collapse-final .notifications-list {
@@ -3456,13 +3631,14 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
 
   _emitConfig() {
     const focus = this._captureFocusState();
-    const next = normalizeConfig(this._config);
+    const next = normalizeConfig(this._config, { keepDrafts: true });
+    const emitted = normalizeConfig(next);
     this._config = next;
     this._render();
     this._restoreFocusState(focus);
     const stripped = window.NodaliaUtils?.stripEqualToDefaults
-      ? window.NodaliaUtils.stripEqualToDefaults(next, DEFAULT_CONFIG)
-      : next;
+      ? window.NodaliaUtils.stripEqualToDefaults(emitted, DEFAULT_CONFIG)
+      : emitted;
     fireEvent(this, "config-changed", { config: compactConfig(stripped) || {} });
   }
 
@@ -3499,8 +3675,16 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         return ["calendar"];
       case "vacuum_entities":
         return ["vacuum"];
+      case "vacuum_error_entities":
+        return ["sensor"];
       case "fan_entities":
         return ["fan"];
+      case "climate_entities":
+        return ["climate"];
+      case "humidifier_entities":
+        return ["humidifier"];
+      case "media_player_entities":
+        return ["media_player"];
       case "weather_entities":
         return ["weather"];
       case "motion_entities":
@@ -3674,6 +3858,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         break;
       case "add-custom":
         this._config.custom_notifications.push({
+          _draft: true,
           title: "",
           message: "",
           icon: "mdi:bell-outline",
@@ -3926,12 +4111,16 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     const labels = [
       ["calendar_entities", "Calendario"],
       ["vacuum_entities", "Robot"],
+      ["vacuum_error_entities", "Error robot"],
       ["weather_entities", "Tiempo"],
+      ["media_player_entities", "Multimedia"],
       ["motion_entities", "Movimiento"],
       ["door_entities", "Puerta"],
       ["window_entities", "Ventana"],
       ["temperature_entities", "Temperatura"],
       ["humidity_entities", "Humedad"],
+      ["climate_entities", "Clima"],
+      ["humidifier_entities", "Humidificador"],
       ["battery_entities", "Batería"],
       ["humidifier_fill_entities", "Depósito"],
       ["ink_entities", "Tinta"],
@@ -3977,6 +4166,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       ["humidity_high", "Humedad alta", "Humedad alta", "{source} marca {value}."],
       ["humidity_low", "Humedad baja", "Humedad baja", "{source} marca {value}."],
       ["rain", "Lluvia", "Lluvia próxima", "{source} prevé lluvia sobre {time}."],
+      ["media_left_on", "Multimedia sin presencia", "Multimedia encendido sin presencia", "{media} sigue encendido y {source} no detecta presencia."],
       ["battery_low", "Batería baja", "Batería baja", "{source} queda en {value}."],
       ["humidifier_fill_low", "Depósito bajo", "Depósito bajo", "{source} queda en {value}."],
       ["ink_low", "Tinta baja", "Tinta baja", "{source} queda en {value}."],
@@ -4399,7 +4589,11 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                 <div class="editor-grid">
                   ${this._renderEntityListField("Calendarios", "calendar_entities", config.calendar_entities, { placeholder: "calendar.casa" })}
                   ${this._renderEntityListField("Robots aspirador", "vacuum_entities", config.vacuum_entities, { placeholder: "vacuum.robot" })}
+                  ${this._renderEntityListField("Sensores de error del robot", "vacuum_error_entities", config.vacuum_error_entities, { placeholder: "sensor.robot_error" })}
                   ${this._renderEntityListField("Ventiladores", "fan_entities", config.fan_entities, { placeholder: "fan.salon" })}
+                  ${this._renderEntityListField("Climates", "climate_entities", config.climate_entities, { placeholder: "climate.salon" })}
+                  ${this._renderEntityListField("Humidificadores / deshumidificadores", "humidifier_entities", config.humidifier_entities, { placeholder: "humidifier.deshumidificador" })}
+                  ${this._renderEntityListField("Media players", "media_player_entities", config.media_player_entities, { placeholder: "media_player.tv_salon" })}
                   ${this._renderEntityListField("Weather", "weather_entities", config.weather_entities, { placeholder: "weather.casa" })}
                   ${this._renderEntityListField("Movimiento", "motion_entities", config.motion_entities, { placeholder: "binary_sensor.movimiento" })}
                   ${this._renderEntityListField("Puertas", "door_entities", config.door_entities, { placeholder: "binary_sensor.puerta" })}
@@ -4426,6 +4620,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
             ${this._renderTextField("Humedad baja", "thresholds.humidity_low", config.thresholds.humidity_low, { type: "number", valueType: "number" })}
             ${this._renderTextField("Probabilidad lluvia (%)", "thresholds.rain_probability", config.thresholds.rain_probability, { type: "number", valueType: "number" })}
             ${this._renderTextField("Horas lluvia", "thresholds.rain_lookahead_hours", config.thresholds.rain_lookahead_hours, { type: "number", valueType: "number" })}
+            ${this._renderTextField("Minutos sin presencia para multimedia", "thresholds.media_absence_minutes", config.thresholds.media_absence_minutes, { type: "number", valueType: "number" })}
             ${this._renderTextField("Batería baja (%)", "thresholds.battery_low", config.thresholds.battery_low, { type: "number", valueType: "number" })}
             ${this._renderTextField("Depósito bajo (%)", "thresholds.humidifier_fill_low", config.thresholds.humidifier_fill_low, { type: "number", valueType: "number" })}
             ${this._renderTextField("Tinta baja (%)", "thresholds.ink_low", config.thresholds.ink_low, { type: "number", valueType: "number" })}

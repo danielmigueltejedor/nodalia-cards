@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "0.16.13";
+const CARD_VERSION = "0.16.14";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -4362,6 +4362,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
   }
 
   _renderRgbArrayColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = arrayFromMaybe(options.fallbackValue || DEFAULT_CONFIG.display_zero_lines.grey_color);
     const sourceValue = arrayFromMaybe(value);
     const rgbValue = sourceValue.length >= 3 ? sourceValue : fallbackValue;
@@ -4370,15 +4372,15 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="rgb-array-color"
               value="${escapeHtml(hexValue)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(swatchValue)};"></span>
           </label>

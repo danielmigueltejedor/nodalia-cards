@@ -10,6 +10,61 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.76] - 2026-05-09
+
+Seventy-sixth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.76`** (tag **`v1.0.0-alpha.76`** optional).
+
+- **Notifications editor — alta de notificaciones personalizadas:** el botón **Añadir notificación** vuelve a crear una fila editable inmediatamente; las filas nuevas se mantienen como borrador local y no se guardan como aviso real hasta que tengan título, mensaje o entidad.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.76`**.
+
+---
+
+## [1.0.0-alpha.75] - 2026-05-09
+
+Seventy-fifth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.75`** (tag **`v1.0.0-alpha.75`** optional).
+
+- **Vacuum card — errores Roborock reales:** nueva entidad auxiliar `error_entity` y autodetección de sensores `sensor.*error*`; los códigos como `main_brush_jammed`, `lidar_blocked`, `filter_blocked`, `return_to_dock_fail` o `audio_error` se muestran como estado legible/traducido y tintan la tarjeta como error. **`nodalia-vacuum-card.js`** `0.6.5`.
+- **Notifications card — errores de robot traducidos:** nueva lista `vacuum_error_entities`; si el robot o un sensor auxiliar expone un fallo real, el aviso pasa a crítico con el texto del error en vez de caer en “robot pausado” o estados genéricos.
+- **Notifications card — recomendaciones por área:** se añaden `media_player_entities`, `climate_entities` y `humidifier_entities`; la tarjeta puede recomendar apagar multimedia encendido en una estancia sin presencia, activar frío/calor en un climate compatible y encender un deshumidificador del mismo área cuando la humedad sea alta.
+- **Visual editors / i18n:** nuevos campos y etiquetas para sensores de error, climates, humidificadores/deshumidificadores, media players y minutos sin presencia.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.75`**.
+
+---
+
+## [1.0.0-alpha.74] - 2026-05-09
+
+Seventy-fourth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.74`** (tag **`v1.0.0-alpha.74`** optional).
+
+- **Notifications card — stack tipo baraja:** las capas plegadas se anclan siempre por debajo de la notificación principal, formando una escalera de hasta cuatro tarjetas donde cada aviso oculto asoma solo un poco más que el anterior.
+- **Notifications card — carga estable:** las tarjetas decorativas del stack ya no ejecutan la animación de entrada de contenido, evitando que una capa trasera sobresalga por arriba durante los primeros frames al abrir la pestaña.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.74`**.
+
+---
+
+## [1.0.0-alpha.73] - 2026-05-09
+
+Seventy-third **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.73`** (tag **`v1.0.0-alpha.73`** optional).
+
+- **Humidifier card — icono de deshumidificador:** `device_class: dehumidifier` usa `mdi:air-humidifier-off` solo cuando está apagado; al encender vuelve a `mdi:air-humidifier` y mantiene la animación activa. **`nodalia-humidifier-card.js`** `0.6.6`.
+- **Advance Vacuum card — animación corregida:** se evita animar el botón primario cuando la limpieza está activa, ya que el icono mostrado es `pause` y no representa el robot en movimiento. **`nodalia-advance-vacuum-card.js`** `0.13.11`.
+- **Vacuum card — icono activo animado:** se añade `animations.icon_animation` al editor y al runtime; el icono principal del robot se mueve en arco mientras limpia, respetando `animations.enabled` y `prefers-reduced-motion`. **`nodalia-vacuum-card.js`** `0.6.4`.
+- **Visual editors — i18n polish:** nueva tanda de traducciones exactas para acciones, etiquetas, selectores, condiciones, colores, insignias y textos comunes que aún podían caer a literal/inglés.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.73`**.
+
+---
+
+## [1.0.0-alpha.72] - 2026-05-09
+
+Seventy-second **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.72`** (tag **`v1.0.0-alpha.72`** optional).
+
+- **Visual editors — i18n alias propagation:** los overrides exactos ahora se aplican también a variantes generadas por la tabla base, corrigiendo casos como `Presets de brillo`, `Botones de modo junto al slider`, burbujas/chips/sliders y opciones haptics que antes podían caer a inglés en otros idiomas.
+- **Light / Humidifier / Power Flow editors:** los campos especiales de entidad/color vuelven a pasar sus labels por `editorStr`, evitando etiquetas crudas como `Entidad de luz` en locales no españoles.
+- **Editor i18n — cobertura adicional:** se añaden traducciones multidioma para acciones, niveles haptics, máximos/mínimos, nombres visibles, horas/días visibles, selectores vacuum y controles comunes.
+- **Card versions:** **`nodalia-light-card.js`** `0.7.5`, **`nodalia-humidifier-card.js`** `0.6.5`, **`nodalia-power-flow-card.js`** `0.16.14`.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.72`**.
+
+---
+
 ## [1.0.0-alpha.71] - 2026-05-09
 
 Seventy-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.71`** (tag **`v1.0.0-alpha.71`** optional).

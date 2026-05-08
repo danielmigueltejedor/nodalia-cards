@@ -126,6 +126,127 @@
       .replace(/-/g, "_");
   }
 
+  const VACUUM_CLEAR_ERROR_KEYS = new Set([
+    "",
+    "none",
+    "no_error",
+    "ok",
+    "normal",
+    "unknown",
+    "unavailable",
+  ]);
+
+  const VACUUM_ERROR_LABELS = {
+    es: {
+      lidar_blocked: "LiDAR bloqueado",
+      bumper_stuck: "Parachoques atascado",
+      wheels_suspended: "Ruedas suspendidas",
+      cliff_sensor_error: "Error del sensor de desnivel",
+      main_brush_jammed: "Cepillo principal bloqueado",
+      side_brush_jammed: "Cepillo lateral bloqueado",
+      wheels_jammed: "Ruedas bloqueadas",
+      robot_trapped: "Robot atrapado",
+      no_dustbin: "Depósito de polvo ausente",
+      strainer_error: "Error del filtro",
+      compass_error: "Error de brújula",
+      low_battery: "Batería baja",
+      charging_error: "Error de carga",
+      battery_error: "Error de batería",
+      wall_sensor_dirty: "Sensor de pared sucio",
+      robot_tilted: "Robot inclinado",
+      side_brush_error: "Error del cepillo lateral",
+      fan_error: "Error del ventilador",
+      dock: "Error de la base",
+      optical_flow_sensor_dirt: "Sensor de flujo óptico sucio",
+      vertical_bumper_pressed: "Parachoques vertical presionado",
+      dock_locator_error: "Error localizando la base",
+      return_to_dock_fail: "No pudo volver a la base",
+      nogo_zone_detected: "Zona prohibida detectada",
+      visual_sensor: "Error del sensor visual",
+      light_touch: "Sensor táctil activado",
+      vibrarise_jammed: "VibraRise bloqueado",
+      robot_on_carpet: "Robot sobre alfombra",
+      filter_blocked: "Filtro bloqueado",
+      invisible_wall_detected: "Muro invisible detectado",
+      cannot_cross_carpet: "No puede cruzar la alfombra",
+      internal_error: "Error interno",
+      collect_dust_error_3: "Error al recoger polvo",
+      collect_dust_error_4: "Error al recoger polvo",
+      mopping_roller_1: "Error del rodillo de fregado",
+      mopping_roller_error_2: "Error del rodillo de fregado",
+      clear_water_box_hoare: "Depósito de agua limpia anómalo",
+      dirty_water_box_hoare: "Depósito de agua sucia anómalo",
+      sink_strainer_hoare: "Filtro del fregadero anómalo",
+      clear_water_box_exception: "Error del depósito de agua limpia",
+      clear_brush_exception: "Error del cepillo de limpieza",
+      clear_brush_exception_2: "Error del cepillo de limpieza",
+      filter_screen_exception: "Error de la malla del filtro",
+      mopping_roller_2: "Error del rodillo de fregado",
+      up_water_exception: "Error al subir agua",
+      drain_water_exception: "Error al drenar agua",
+      temperature_protection: "Protección por temperatura",
+      clean_carousel_exception: "Error del carrusel de limpieza",
+      clean_carousel_water_full: "Agua llena en carrusel de limpieza",
+      water_carriage_drop: "Carro de agua caído",
+      check_clean_carouse: "Revisa el carrusel de limpieza",
+      audio_error: "Error de audio",
+    },
+    en: {
+      lidar_blocked: "LiDAR blocked",
+      bumper_stuck: "Bumper stuck",
+      wheels_suspended: "Wheels suspended",
+      cliff_sensor_error: "Cliff sensor error",
+      main_brush_jammed: "Main brush jammed",
+      side_brush_jammed: "Side brush jammed",
+      wheels_jammed: "Wheels jammed",
+      robot_trapped: "Robot trapped",
+      no_dustbin: "Dustbin missing",
+      strainer_error: "Filter error",
+      compass_error: "Compass error",
+      low_battery: "Low battery",
+      charging_error: "Charging error",
+      battery_error: "Battery error",
+      wall_sensor_dirty: "Wall sensor dirty",
+      robot_tilted: "Robot tilted",
+      side_brush_error: "Side brush error",
+      fan_error: "Fan error",
+      dock: "Dock error",
+      optical_flow_sensor_dirt: "Optical flow sensor dirty",
+      vertical_bumper_pressed: "Vertical bumper pressed",
+      dock_locator_error: "Dock locator error",
+      return_to_dock_fail: "Failed to return to dock",
+      nogo_zone_detected: "No-go zone detected",
+      visual_sensor: "Visual sensor error",
+      light_touch: "Light touch sensor triggered",
+      vibrarise_jammed: "VibraRise jammed",
+      robot_on_carpet: "Robot on carpet",
+      filter_blocked: "Filter blocked",
+      invisible_wall_detected: "Invisible wall detected",
+      cannot_cross_carpet: "Cannot cross carpet",
+      internal_error: "Internal error",
+      collect_dust_error_3: "Dust collection error",
+      collect_dust_error_4: "Dust collection error",
+      mopping_roller_1: "Mopping roller error",
+      mopping_roller_error_2: "Mopping roller error",
+      clear_water_box_hoare: "Clean water tank abnormal",
+      dirty_water_box_hoare: "Dirty water tank abnormal",
+      sink_strainer_hoare: "Sink strainer abnormal",
+      clear_water_box_exception: "Clean water tank error",
+      clear_brush_exception: "Cleaning brush error",
+      clear_brush_exception_2: "Cleaning brush error",
+      filter_screen_exception: "Filter screen error",
+      mopping_roller_2: "Mopping roller error",
+      up_water_exception: "Water refill error",
+      drain_water_exception: "Water drain error",
+      temperature_protection: "Temperature protection",
+      clean_carousel_exception: "Cleaning carousel error",
+      clean_carousel_water_full: "Cleaning carousel water full",
+      water_carriage_drop: "Water carriage dropped",
+      check_clean_carouse: "Check cleaning carousel",
+      audio_error: "Audio error",
+    },
+  };
+
   function getEntityDomain(state) {
     const entityId = String(state?.entity_id || "").trim();
     const dot = entityId.indexOf(".");
@@ -5084,6 +5205,7 @@
         vacuumPaused: "Robot pausado",
         cleaningStarted: "Limpieza iniciada",
         returningDock: "Robot volviendo a base",
+        mediaLeftOn: "Multimedia encendido sin presencia",
         motionDetected: "Movimiento detectado",
         doorOpen: "Puerta abierta",
         windowOpen: "Ventana abierta",
@@ -5102,6 +5224,8 @@
         vacuumPaused: "{name} está pausado o esperando.",
         vacuumState: "{name}: {state}.",
         hot: "{source} marca {value}. Puedes encender {fan}.",
+        hotClimate: "{source} marca {value}. Puedes activar frío en {climate}.",
+        mediaLeftOn: "{media} sigue encendido y {source} no detecta presencia.",
         rainSoon: "{source} prevé lluvia sobre {time}. Si tienes ropa tendida, conviene revisarla.",
         lowLevel: "{source} queda en {value}.",
         sensorValue: "{source} marca {value}.",
@@ -5112,6 +5236,10 @@
         continue: "Continuar",
         viewSensor: "Ver sensor",
         turnOnFan: "Encender ventilador",
+        turnOnCooling: "Activar frío",
+        turnOnHeat: "Activar calor",
+        turnOnDehumidifier: "Encender deshumidificador",
+        turnOff: "Apagar",
         viewWeather: "Ver tiempo",
         buyBattery: "Comprar pila",
         buyInk: "Comprar tinta",
@@ -5127,7 +5255,25 @@
         showAll: "Mostrar todas las notificaciones",
       },
     },
-    en: PACK.en.notificationsCard,
+    en: {
+      ...PACK.en.notificationsCard,
+      titles: {
+        ...PACK.en.notificationsCard.titles,
+        mediaLeftOn: "Media player left on without presence",
+      },
+      messages: {
+        ...PACK.en.notificationsCard.messages,
+        hotClimate: "{source} reads {value}. You can turn on cooling on {climate}.",
+        mediaLeftOn: "{media} is still on and {source} detects no presence.",
+      },
+      actions: {
+        ...PACK.en.notificationsCard.actions,
+        turnOnCooling: "Turn on cooling",
+        turnOnHeat: "Turn on heat",
+        turnOnDehumidifier: "Turn on dehumidifier",
+        turnOff: "Turn off",
+      },
+    },
     de: {
       fallbackEvent: "Termin",
       allDay: "Ganztägig",
@@ -5668,7 +5814,11 @@
       .split(".")
       .filter(Boolean)
       .reduce((cursor, key) => cursor?.[key], dict);
-    const template = typeof raw === "string" ? raw : String(fallback || "");
+    const enRaw = String(path || "")
+      .split(".")
+      .filter(Boolean)
+      .reduce((cursor, key) => cursor?.[key], strings("en").notificationsCard || {});
+    const template = typeof raw === "string" ? raw : typeof enRaw === "string" ? enRaw : String(fallback || "");
     return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key) => {
       const value = values?.[key];
       return value === undefined || value === null ? "" : String(value);
@@ -5796,6 +5946,27 @@
       return String(rawFallback);
     }
     return rs.unknown || es.unknown;
+  }
+
+  function isVacuumErrorState(rawValue) {
+    const key = normalizeTextKey(rawValue);
+    return !VACUUM_CLEAR_ERROR_KEYS.has(key);
+  }
+
+  function translateVacuumErrorState(hass, configLang, rawValue, rawFallback) {
+    const raw = String(rawValue ?? rawFallback ?? "").trim();
+    const key = normalizeTextKey(raw);
+    if (!key || VACUUM_CLEAR_ERROR_KEYS.has(key)) {
+      return "";
+    }
+    const lang = resolveLanguage(hass, configLang);
+    const labels = VACUUM_ERROR_LABELS[lang] || {};
+    const english = VACUUM_ERROR_LABELS.en;
+    return labels[key] || english[key] || raw
+      .replace(/[_-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\b\w/g, match => match.toUpperCase());
   }
 
   function translateAdvanceVacuumVacuumMode(hass, configLang, rawValue, kind = "generic") {
@@ -6013,6 +6184,8 @@
     translateMeteoalarmTerm,
     translateAdvanceVacuumReportedState,
     translateAdvanceVacuumVacuumMode,
+    translateVacuumErrorState,
+    isVacuumErrorState,
     translateFavState(langCode, key) {
       const raw = normalizeTextKey(key);
       const fd = strings(langCode).favCard;

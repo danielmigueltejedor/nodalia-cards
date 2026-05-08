@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "0.6.4";
+const CARD_VERSION = "0.6.6";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1257,7 +1257,7 @@ class NodaliaHumidifierCard extends HTMLElement {
 
     const deviceClass = normalizeTextKey(state?.attributes?.device_class);
     if (deviceClass === "dehumidifier") {
-      return "mdi:air-humidifier-off";
+      return this._isOn(state) ? "mdi:air-humidifier" : "mdi:air-humidifier-off";
     }
 
     return String(state?.attributes?.icon || "mdi:air-humidifier");
@@ -3861,10 +3861,11 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
   }
 
   _renderHumidifierEntityField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="humidifier-entity"
@@ -3876,10 +3877,11 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
   }
 
   _renderSelectEntityField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="select-entity"

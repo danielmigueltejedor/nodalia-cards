@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "0.7.4";
+const CARD_VERSION = "0.7.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -4617,10 +4617,11 @@ class NodaliaLightCardEditor extends HTMLElement {
   }
 
   _renderLightEntityField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="light-entity"

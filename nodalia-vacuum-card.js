@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "0.6.3";
+const CARD_VERSION = "0.6.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -556,6 +556,7 @@ const DEFAULT_CONFIG = {
   hidden_suction_modes: [],
   hidden_mop_modes: [],
   state_entity: "",
+  error_entity: "",
   battery_entity: "",
   room_mapping_entity: "",
   suction_select_entity: "",
@@ -567,6 +568,7 @@ const DEFAULT_CONFIG = {
   },
   animations: {
     enabled: true,
+    icon_animation: true,
     panel_duration: 800,
     button_bounce_duration: 320,
   },
@@ -1134,6 +1136,8 @@ class NodaliaVacuumCard extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
+    const errorEntityId = this._config?.error_entity || this._guessRelatedErrorEntity();
+    const errorState = errorEntityId ? hass?.states?.[errorEntityId] || null : null;
     const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
@@ -1145,6 +1149,8 @@ class NodaliaVacuumCard extends HTMLElement {
       fanSpeed: String(attrs.fan_speed || ""),
       waterGrade: String(attrs.water_grade || attrs.water_box_mode || ""),
       currentRoom: String(attrs.current_room || attrs.current_segment || ""),
+      errorEntityId,
+      errorState: String(errorState?.state || ""),
       compact: Boolean(this._isCompactLayout),
       activeModePanel: String(this._activeModePanel || ""),
       roomPanelOpen: Boolean(this._roomPanelOpen),
@@ -1215,6 +1221,7 @@ class NodaliaVacuumCard extends HTMLElement {
     const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
     return {
       enabled: configuredAnimations.enabled !== false,
+      iconAnimation: configuredAnimations.icon_animation !== false,
       panelDuration: clamp(
         Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration,
         120,
@@ -1336,6 +1343,41 @@ class NodaliaVacuumCard extends HTMLElement {
   _getAuxiliaryState() {
     const entityId = this._config?.state_entity || this._guessRelatedStateEntity();
     return entityId ? this._hass?.states?.[entityId] || null : null;
+  }
+
+  _guessRelatedErrorEntity() {
+    if (!this._hass?.states || !this._config?.entity) {
+      return "";
+    }
+    const objectId = String(this._config.entity).split(".")[1] || "";
+    if (!objectId) {
+      return "";
+    }
+    const candidates = Object.keys(this._hass.states)
+      .filter(entityId => entityId.startsWith("sensor."))
+      .filter(entityId => entityId.includes(objectId) || entityId.includes("roborock"))
+      .filter(entityId => ["error", "fault", "fallo", "erro"].some(pattern => entityId.includes(pattern)))
+      .sort((left, right) => left.localeCompare(right, "es"));
+    return candidates[0] || "";
+  }
+
+  _getErrorState() {
+    const entityId = this._config?.error_entity || this._guessRelatedErrorEntity();
+    return entityId ? this._hass?.states?.[entityId] || null : null;
+  }
+
+  _getErrorLabel() {
+    const raw = String(this._getErrorState()?.state || "").trim();
+    if (!raw || !window.NodaliaI18n?.isVacuumErrorState?.(raw)) {
+      return "";
+    }
+    return window.NodaliaI18n?.translateVacuumErrorState
+      ? window.NodaliaI18n.translateVacuumErrorState(this._hass, this._config?.language ?? "auto", raw, raw)
+      : raw;
+  }
+
+  _hasVacuumError() {
+    return Boolean(this._getErrorLabel());
   }
 
   _guessRelatedBatteryEntity() {
@@ -1485,6 +1527,10 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _getReportedStateValue(state) {
+    const error = this._getErrorLabel();
+    if (error) {
+      return error;
+    }
     const auxiliaryState = this._getAuxiliaryState();
     if (auxiliaryState?.state && !["unknown", "unavailable"].includes(String(auxiliaryState.state).toLowerCase())) {
       return String(auxiliaryState.state);
@@ -1514,6 +1560,10 @@ class NodaliaVacuumCard extends HTMLElement {
       return this._config.icon;
     }
 
+    if (this._hasVacuumError()) {
+      return "mdi:alert-circle-outline";
+    }
+
     if (state?.attributes?.icon) {
       return state.attributes.icon;
     }
@@ -1540,6 +1590,11 @@ class NodaliaVacuumCard extends HTMLElement {
         ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, langCfg, stateKey, rawFallback)
         : rawFallback
     );
+
+    const errorLabel = this._getErrorLabel();
+    if (errorLabel) {
+      return errorLabel;
+    }
 
     if (this._isGoingToWashMops(state)) {
       return this._humanizeStateLabel("going_to_wash_mop", hass, langCfg);
@@ -2494,6 +2549,10 @@ class NodaliaVacuumCard extends HTMLElement {
   _shouldTintCard(state) {
     const reportedStateKey = this._getReportedStateKey(state);
 
+    if (this._hasVacuumError()) {
+      return true;
+    }
+
     if (!reportedStateKey || ["unknown", "unavailable"].includes(reportedStateKey)) {
       return false;
     }
@@ -2508,7 +2567,7 @@ class NodaliaVacuumCard extends HTMLElement {
   _getAccentColor(state) {
     const styles = getSafeStyles(this._config?.styles);
 
-    if (state?.state === "error") {
+    if (state?.state === "error" || this._hasVacuumError()) {
       return styles.icon.error_color;
     }
 
@@ -2762,7 +2821,7 @@ class NodaliaVacuumCard extends HTMLElement {
   _shouldUsePausePrimary(state) {
     const reportedStateKey = this._getReportedStateKey(state);
 
-    if (!reportedStateKey || ["unknown", "unavailable", "error"].includes(reportedStateKey)) {
+    if (this._hasVacuumError() || !reportedStateKey || ["unknown", "unavailable", "error"].includes(reportedStateKey)) {
       return false;
     }
 
@@ -2978,6 +3037,7 @@ class NodaliaVacuumCard extends HTMLElement {
     const accentColor = this._getAccentColor(state);
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
+    const shouldAnimateActiveIcon = animations.enabled && animations.iconAnimation && this._isCleaning(state);
     const controls = this._getControls(state);
     const isTintedState = this._shouldTintCard(state);
     const roomMappings = this._getRoomMappings(state);
@@ -3165,6 +3225,11 @@ class NodaliaVacuumCard extends HTMLElement {
           top: 50%;
           transform: translate(-50%, -50%);
           width: calc(${styles.icon.size} * 0.46);
+        }
+
+        .vacuum-card__icon-button--active-motion ha-icon {
+          animation: vacuum-card-icon-sweep 1.45s ease-in-out infinite;
+          transform-origin: 50% 70%;
         }
 
         .vacuum-card__unavailable-badge {
@@ -3438,6 +3503,15 @@ class NodaliaVacuumCard extends HTMLElement {
           100% { transform: scale(1); }
         }
 
+        @keyframes vacuum-card-icon-sweep {
+          0%, 100% {
+            transform: translate(-50%, -50%) rotate(-7deg) translateX(-2px);
+          }
+          50% {
+            transform: translate(-50%, -50%) rotate(7deg) translateX(2px);
+          }
+        }
+
         @keyframes vacuum-card-fade-up {
           0% {
             opacity: 0;
@@ -3503,6 +3577,12 @@ class NodaliaVacuumCard extends HTMLElement {
         }
         `}
 
+        @media (prefers-reduced-motion: reduce) {
+          .vacuum-card__icon-button--active-motion ha-icon {
+            animation: none !important;
+          }
+        }
+
         .vacuum-card--compact .vacuum-card__presets {
           justify-content: center;
         }
@@ -3543,7 +3623,7 @@ class NodaliaVacuumCard extends HTMLElement {
         <div class="vacuum-card ${isCompactLayout ? "vacuum-card--compact" : ""} ${shouldAnimateEntrance ? "vacuum-card--entering" : ""}">
           <div class="vacuum-card__header">
             <button
-              class="vacuum-card__icon-button"
+              class="vacuum-card__icon-button ${shouldAnimateActiveIcon ? "vacuum-card__icon-button--active-motion" : ""}"
               type="button"
               ${canRunCardTapAction ? 'data-vacuum-action="card_tap"' : ""}
               aria-label="${escapeHtml(iconButtonLabel)}"
@@ -4669,6 +4749,10 @@ class NodaliaVacuumCardEditor extends HTMLElement {
               controlType: "sensor-entity",
               placeholder: "sensor.robot_estado",
             })}
+            ${this._renderEntityPickerField("Sensor de error", "error_entity", config.error_entity, {
+              controlType: "sensor-entity",
+              placeholder: "sensor.robot_error",
+            })}
             ${this._renderEntityPickerField("Sensor de batería", "battery_entity", config.battery_entity, {
               controlType: "sensor-entity",
               placeholder: "sensor.robot_bateria",
@@ -4786,6 +4870,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
               ? `
                 <div class="editor-grid">
                   ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderCheckboxField("Animar icono activo", "animations.icon_animation", config.animations.icon_animation !== false)}
                   ${this._renderTextField("Paneles (ms)", "animations.panel_duration", config.animations.panel_duration, {
                     type: "number",
                   })}
