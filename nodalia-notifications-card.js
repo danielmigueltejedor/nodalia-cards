@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-alpha.59";
+const CARD_VERSION = "1.0.0-alpha.62";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1520,11 +1520,39 @@ class NodaliaNotificationsCard extends HTMLElement {
     });
   }
 
+  _calendarDismissalsHydrated() {
+    return !this._config.calendar_entities.length || this._lastCalendarRefresh > 0;
+  }
+
+  _weatherDismissalsHydrated() {
+    return !this._config.weather_entities.length || this._lastWeatherRefresh > 0;
+  }
+
+  _canPruneDismissedToken(id) {
+    const text = String(id || "");
+    if (!text) {
+      return true;
+    }
+    if (!text.includes(":")) {
+      return this._calendarDismissalsHydrated() && this._weatherDismissalsHydrated();
+    }
+    if (text.startsWith("calendar:")) {
+      return this._calendarDismissalsHydrated();
+    }
+    if (text.startsWith("weather:")) {
+      return this._weatherDismissalsHydrated();
+    }
+    return true;
+  }
+
   _pruneDismissed(currentIds) {
     const keep = new Set(currentIds);
     currentIds.forEach(id => keep.add(this._dismissKey(id)));
     let changed = false;
     this._dismissed.forEach(id => {
+      if (!this._canPruneDismissedToken(id)) {
+        return;
+      }
       if (!keep.has(id)) {
         this._dismissed.delete(id);
         changed = true;
@@ -2202,7 +2230,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       if (this._mobileSent.has(hash) || this._isDismissed(item)) {
         continue;
       }
-      const data = {
+      const legacyPayload = {
         title: item.title,
         message: item.message || item.source || item.title,
         data: {
@@ -2218,16 +2246,15 @@ class NodaliaNotificationsCard extends HTMLElement {
         : [];
       const entityPayload = {
         entity_id: notifyEntities,
-        title: data.title,
-        message: data.message,
-        data: data.data,
+        title: legacyPayload.title,
+        message: legacyPayload.message,
       };
       await Promise.all([
         notifyEntities.length
           ? Promise.resolve(this._hass.callService("notify", "send_message", entityPayload)).catch(() => false)
           : Promise.resolve(false),
         ...legacyServices.map(service => (
-          Promise.resolve(this._callNamedService(service, data)).catch(() => false)
+          Promise.resolve(this._callNamedService(service, legacyPayload)).catch(() => false)
         )),
       ]);
       this._mobileSent.add(hash);
@@ -2576,6 +2603,25 @@ class NodaliaNotificationsCard extends HTMLElement {
     `;
   }
 
+  _stackCardStyle(item, index) {
+    const stackIndex = Math.max(1, Number(index) || 1);
+    const accent = item?.tintColor
+      ? sanitizeCssRuntimeValue(item.tintColor, "")
+      : this._severityAccent(item?.severity);
+    const inset = stackIndex === 1 ? 4 : 10;
+    const offset = stackIndex === 1 ? 3 : 10;
+    const opacity = stackIndex === 1 ? 0.74 : 0.54;
+    const zIndex = stackIndex === 1 ? 2 : 1;
+    return [
+      `--stack-index:${stackIndex}`,
+      `--stack-accent:${escapeHtml(accent || "var(--primary-color)")}`,
+      `--stack-inset:${inset}px`,
+      `--stack-offset:${offset}px`,
+      `--stack-opacity:${opacity}`,
+      `--stack-z:${zIndex}`,
+    ].join(";");
+  }
+
   _severityLabel(severity) {
     switch (severity) {
       case "critical":
@@ -2719,7 +2765,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           align-items: start;
           display: grid;
           isolation: isolate;
-          padding-bottom: ${shouldStack && !this._expanded ? "16px" : "0"};
+          padding-bottom: ${shouldStack && !this._expanded ? "24px" : "0"};
           position: relative;
         }
         .notifications-stack-toggle,
@@ -2910,17 +2956,22 @@ class NodaliaNotificationsCard extends HTMLElement {
           font-weight: 700;
         }
         .notification-stack-card {
-          background: color-mix(in srgb, var(--ha-card-background, #fff) 88%, var(--primary-text-color));
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 9%, transparent);
+          background:
+            linear-gradient(135deg, color-mix(in srgb, var(--stack-accent, var(--primary-color)) 12%, var(--ha-card-background, #fff)) 0%, color-mix(in srgb, var(--stack-accent, var(--primary-color)) 6%, var(--ha-card-background, #fff)) 58%, var(--ha-card-background, #fff) 100%),
+            var(--ha-card-background, #fff);
+          border: 1px solid color-mix(in srgb, var(--stack-accent, var(--primary-color)) 20%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
           border-radius: ${styles.item_radius};
-          bottom: calc(var(--stack-index) * 6px);
-          box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
-          height: 40px;
-          left: calc(8px + var(--stack-index) * 7px);
-          opacity: calc(0.78 - var(--stack-index) * 0.14);
+          bottom: var(--stack-offset, 3px);
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.08);
+          height: min(108px, calc(100% - 8px));
+          left: var(--stack-inset, 4px);
+          opacity: var(--stack-opacity, 0.72);
+          overflow: hidden;
           position: absolute;
-          right: calc(8px + var(--stack-index) * 7px);
-          z-index: calc(3 - var(--stack-index));
+          right: var(--stack-inset, 4px);
+          z-index: var(--stack-z, 2);
         }
         .notifications-footer {
           align-items: center;
@@ -3096,8 +3147,8 @@ class NodaliaNotificationsCard extends HTMLElement {
                   ${
                     shouldStack && !this._expanded
                       ? `
-                        <div class="notification-stack-card" style="--stack-index: 1;" aria-hidden="true"></div>
-                        ${notifications.length > 2 ? `<div class="notification-stack-card" style="--stack-index: 2;" aria-hidden="true"></div>` : ""}
+                        <div class="notification-stack-card" style="${this._stackCardStyle(notifications[config.max_visible], 1)}" aria-hidden="true"></div>
+                        ${notifications.length > config.max_visible + 1 ? `<div class="notification-stack-card" style="${this._stackCardStyle(notifications[config.max_visible + 1], 2)}" aria-hidden="true"></div>` : ""}
                       `
                       : ""
                   }

@@ -10,6 +10,33 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.62] - 2026-05-08
+
+Sixty-second **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.62`** (tag **`v1.0.0-alpha.62`** optional).
+
+- **Notifications card — notify moderno:** el servicio `notify.send_message` para entidades `notify.*` ya no envía `data`, evitando el error de Home Assistant `extra keys not allowed @ data['data']`; `data.group`/`data.tag` se mantienen solo para servicios legacy.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.62`**.
+
+---
+
+## [1.0.0-alpha.61] - 2026-05-08
+
+Sixty-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.61`** (tag **`v1.0.0-alpha.61`** optional).
+
+- **Notifications card — pila compacta:** las tarjetas traseras del modo compacto ahora son capas más altas, casi a ancho completo y tintadas según la notificación oculta, para que solo asome el bajo y la curva no aparezca tan pronto.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.61`**.
+
+---
+
+## [1.0.0-alpha.60] - 2026-05-08
+
+Sixtieth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.60`** (tag **`v1.0.0-alpha.60`** optional).
+
+- **Notifications card — persistencia calendario:** los descartes guardados en `input_text`/localStorage ya no se podan durante el render temprano de una recarga fuerte antes de que se hayan hidratado eventos de calendario o previsión.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.60`**.
+
+---
+
 ## [1.0.0-alpha.59] - 2026-05-08
 
 Fifty-ninth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.59`** (tag **`v1.0.0-alpha.59`** optional).

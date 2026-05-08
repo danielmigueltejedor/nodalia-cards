@@ -232,7 +232,10 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /mobile_notifications/);
   assert.match(source, /mobile_notifications\.entities/);
   assert.match(source, /callService\("notify", "send_message"/);
-  assert.match(source, /data:\s*data\.data/);
+  assert.match(source, /const legacyPayload = \{/);
+  assert.match(source, /group:\s*"nodalia_notifications"/);
+  assert.match(source, /this\._callNamedService\(service, legacyPayload\)/);
+  assert.doesNotMatch(source, /data:\s*data\.data/);
   assert.match(source, /data-editor-toggle="connections"/);
   assert.match(source, /type: "calendar-popup"/);
   assert.match(source, /nodalia-calendar-card-open/);
@@ -253,6 +256,11 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /_replayEntranceAnimation/);
   assert.match(source, /align-content: start/);
   assert.match(source, /_syncSharedDismissedFromHass/);
+  assert.match(source, /_calendarDismissalsHydrated/);
+  assert.match(source, /_weatherDismissalsHydrated/);
+  assert.match(source, /_canPruneDismissedToken/);
+  assert.match(source, /!text\.includes\(":"\)/);
+  assert.match(source, /!this\._canPruneDismissedToken\(id\)/);
   assert.match(source, /_queueMobileNotifications/);
   assert.match(source, /this\._mobileSent\.has\(hash\) \|\| this\._isDismissed\(item\)/);
   assert.match(source, /notify\./);
@@ -263,6 +271,11 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /notifications-card--list/);
   assert.match(source, /notifications-empty-inline/);
   assert.match(source, /notification-stack-card/);
+  assert.match(source, /_stackCardStyle/);
+  assert.match(source, /--stack-accent/);
+  assert.match(source, /--stack-inset/);
+  assert.match(source, /--stack-offset/);
+  assert.match(source, /height: min\(108px, calc\(100% - 8px\)\)/);
   assert.match(source, /notification-item__chip/);
   assert.match(source, /notification-item__chips--top/);
   assert.match(source, /data-list-field/);
