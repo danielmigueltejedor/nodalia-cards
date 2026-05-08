@@ -1,0 +1,101 @@
+name: ❓ Question
+description: Ask a question about Nodalia Cards
+title: "[Question]: "
+labels: ["type: question", "status: needs triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your question 🙌  
+        Please provide enough context so I can help you properly.
+
+  - type: dropdown
+    id: related_area
+    attributes:
+      label: Related card / area
+      options:
+        - Navigation Bar
+        - Media Player
+        - Light Card
+        - Fan Card
+        - Humidifier Card
+        - Circular Gauge Card
+        - Graph Card
+        - Power Flow Card
+        - Climate Card
+        - Alarm Panel Card
+        - Advance Vacuum Card
+        - Entity Card
+        - Fav Card
+        - Insignia Card
+        - Person Card
+        - Weather Card
+        - Vacuum Card
+        - Calendar Card
+        - Notifications Card
+        - Battery Card
+        - Visual Editor
+        - Installation / HACS
+        - Configuration / YAML
+        - Translations
+        - Styling / Theme
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What would you like to know?
+      placeholder: Ask your question here...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Add any relevant information about your setup or what you are trying to achieve.
+      placeholder: |
+        Example:
+        - I am using HACS
+        - I am configuring the Graph Card
+        - I want to change...
+    validations:
+      required: false
+
+  - type: textarea
+    id: yaml
+    attributes:
+      label: Related YAML configuration
+      description: Paste your YAML here if the question is about card configuration.
+      render: yaml
+    validations:
+      required: false
+
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant version
+      placeholder: e.g. 2026.4.2
+    validations:
+      required: false
+
+  - type: input
+    id: nodalia_version
+    attributes:
+      label: Nodalia Cards version
+      placeholder: e.g. v0.6.1 / v1.0.0-alpha.x / latest
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Add screenshots if they help explain the question.
+    validations:
+      required: false

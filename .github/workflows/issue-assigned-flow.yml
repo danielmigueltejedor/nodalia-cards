@@ -1,0 +1,56 @@
+name: Issue assigned flow
+
+on:
+  issues:
+    types:
+      - assigned
+
+permissions:
+  issues: write
+
+jobs:
+  assigned-flow:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Mark assigned issue as in progress
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            if (issue.pull_request) return;
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = issue.number;
+
+            async function add(labels) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number,
+                labels
+              });
+            }
+
+            async function remove(labels) {
+              for (const label of labels) {
+                try {
+                  await github.rest.issues.removeLabel({
+                    owner,
+                    repo,
+                    issue_number,
+                    name: label
+                  });
+                } catch (e) {
+                  if (e.status !== 404) throw e;
+                }
+              }
+            }
+
+            await add(["status: in progress"]);
+            await remove([
+              "status: needs triage",
+              "status: needs attention",
+              "status: waiting feedback"
+            ]);
