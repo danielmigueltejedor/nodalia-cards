@@ -10,6 +10,15 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.68] - 2026-05-08
+
+Sixty-eighth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.68`** (tag **`v1.0.0-alpha.68`** optional).
+
+- **Notifications card — stack plegado corregido:** la notificación más reciente vuelve a quedar siempre en primer plano; las tarjetas traseras se renderizan como capas decorativas por debajo, con menor opacidad, sin capturar clics y mostrando algo menos de borde inferior.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.68`**.
+
+---
+
 ## [1.0.0-alpha.67] - 2026-05-08
 
 Sixty-seventh **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.67`** (tag **`v1.0.0-alpha.67`** optional).

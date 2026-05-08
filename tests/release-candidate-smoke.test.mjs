@@ -7,6 +7,21 @@ import { fileURLToPath } from "node:url";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
+test("published package files and bundle manifest stay coherent", () => {
+  const pkg = JSON.parse(read("package.json"));
+  const manifest = read("nodalia-cards.manifest.js");
+
+  assert.ok(manifest.includes(`"pkgVersion": "${pkg.version}"`));
+  assert.ok(manifest.includes(`export const pkgVersion = "${pkg.version}";`));
+  assert.doesNotMatch(manifest, /contentSha256_12": ""/);
+  assert.doesNotMatch(manifest, /export const contentSha256_12 = ""/);
+
+  pkg.files.forEach(file => {
+    assert.ok(fs.existsSync(path.join(root, file)), `${file} should exist`);
+  });
+  assert.ok(!pkg.files.includes("nodalia-calendar-completion-codec.js"));
+});
+
 test("url openings keep noopener,noreferrer hardening", () => {
   const files = [
     "nodalia-insignia-card.js",
@@ -218,9 +233,12 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /window\.setTimeout\(\(\) => \{\s*this\._entranceAnimationTimer = 0;\s*this\._animateContentOnNextRender = false;/);
   assert.doesNotMatch(source, /this\._animateContentOnNextRender = false;\s*this\._stackTransition = "";/);
   assert.match(source, /_renderCollapsedStackCards\(notifications, startIndex\)/);
+  assert.match(source, /z-index: 6;/);
+  assert.match(source, /const zIndex = 4 - clampedIndex;/);
+  assert.match(source, /pointer-events: none;/);
   assert.match(source, /\.slice\(startIndex, startIndex \+ 4\)/);
-  assert.match(source, /const offset = 11 \+ \(clampedIndex - 1\) \* 4/);
-  assert.match(source, /padding-bottom: \$\{shouldStack && !this\._expanded \? "14px" : "0"\}/);
+  assert.match(source, /const offset = 12 \+ \(clampedIndex - 1\) \* 4/);
+  assert.match(source, /padding-bottom: \$\{shouldStack && !this\._expanded \? "12px" : "0"\}/);
   assert.match(source, /calendar_entities/);
   assert.match(source, /vacuum_entities/);
   assert.match(source, /weather_entities/);

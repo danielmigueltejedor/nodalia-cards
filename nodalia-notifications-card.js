@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-alpha.67";
+const CARD_VERSION = "1.0.0-alpha.68";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -2733,10 +2733,10 @@ class NodaliaNotificationsCard extends HTMLElement {
       ? sanitizeCssRuntimeValue(item.tintColor, "")
       : this._severityAccent(item?.severity);
     const clampedIndex = Math.min(4, stackIndex);
-    const inset = 4 + (clampedIndex - 1) * 5;
-    const offset = 11 + (clampedIndex - 1) * 4;
-    const opacity = Math.max(0.2, 0.64 - (clampedIndex - 1) * 0.13);
-    const zIndex = 5 - clampedIndex;
+    const inset = 5 + (clampedIndex - 1) * 5;
+    const offset = 12 + (clampedIndex - 1) * 4;
+    const opacity = Math.max(0.18, 0.58 - (clampedIndex - 1) * 0.12);
+    const zIndex = 4 - clampedIndex;
     return [
       `--stack-index:${clampedIndex}`,
       `--stack-accent:${escapeHtml(accent || "var(--primary-color)")}`,
@@ -2909,7 +2909,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           align-items: start;
           display: grid;
           isolation: isolate;
-          padding-bottom: ${shouldStack && !this._expanded ? "14px" : "0"};
+          padding-bottom: ${shouldStack && !this._expanded ? "12px" : "0"};
           position: relative;
         }
         .notifications-stack-toggle,
@@ -2935,7 +2935,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           display: grid;
           gap: 8px;
           position: relative;
-          z-index: 3;
+          z-index: 6;
         }
         .notification-item {
           --notification-accent: ${styles.accent};
@@ -3113,6 +3113,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           left: var(--stack-inset, 4px);
           opacity: var(--stack-opacity, 0.72);
           overflow: hidden;
+          pointer-events: none;
           position: absolute;
           right: var(--stack-inset, 4px);
           z-index: var(--stack-z, 2);
