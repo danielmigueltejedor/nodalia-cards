@@ -7,6 +7,21 @@ import { fileURLToPath } from "node:url";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
+test("published package files and bundle manifest stay coherent", () => {
+  const pkg = JSON.parse(read("package.json"));
+  const manifest = read("nodalia-cards.manifest.js");
+
+  assert.ok(manifest.includes(`"pkgVersion": "${pkg.version}"`));
+  assert.ok(manifest.includes(`export const pkgVersion = "${pkg.version}";`));
+  assert.doesNotMatch(manifest, /contentSha256_12": ""/);
+  assert.doesNotMatch(manifest, /export const contentSha256_12 = ""/);
+
+  pkg.files.forEach(file => {
+    assert.ok(fs.existsSync(path.join(root, file)), `${file} should exist`);
+  });
+  assert.ok(!pkg.files.includes("nodalia-calendar-completion-codec.js"));
+});
+
 test("url openings keep noopener,noreferrer hardening", () => {
   const files = [
     "nodalia-insignia-card.js",
@@ -130,19 +145,8 @@ test("calendar composers reject past dates with inline popup errors", () => {
   assert.match(source, /dateInputIsBeforeToday\(dateRaw\)/);
   assert.match(source, /La fecha no puede ser anterior a hoy\./);
   assert.match(source, /Selecciona un calendario\./);
-  assert.match(source, /Escribe un titulo\./);
+  assert.match(source, /Escribe un título\./);
   assert.match(source, /calendar-composer__error/);
-});
-
-test("calendar compact completion waits for calendar events before sync", () => {
-  const source = read("nodalia-calendar-card.js");
-  assert.match(source, /function completionPayloadNeedsEvents\(raw\)/);
-  assert.match(source, /value\.startsWith\("v5:"\)/);
-  assert.match(source, /completionPayloadNeedsEvents\(raw\)/);
-  assert.match(source, /this\._syncCompletedAfterEventsLoaded\(\)/);
-  assert.match(source, /expandCompletionPayloadToKeys\(raw, events\)/);
-  assert.doesNotMatch(source, /_buildQuickReminderEvents/);
-  assert.doesNotMatch(source, /_submitQuickReminderComposer/);
 });
 
 test("calendar native composer supports rich HA event fields and details", () => {
@@ -168,6 +172,9 @@ test("calendar native composer supports rich HA event fields and details", () =>
   assert.match(source, /\.calendar-event__delete[\s\S]*width: 28px/);
   assert.match(source, /data-action="open-event-detail"/);
   assert.match(source, /calendar-expanded__event-detail/);
+  assert.doesNotMatch(source, /toggle-complete/);
+  assert.doesNotMatch(source, /shared_completed_events_/);
+  assert.doesNotMatch(source, /localStorage/);
   assert.match(example, /description: "\{\{ d\.description \| default\(omit, true\) \}\}"/);
   assert.match(example, /location: "\{\{ d\.location \| default\(omit, true\) \}\}"/);
   assert.doesNotMatch(example, /rrule:/);
@@ -177,7 +184,7 @@ test("calendar editor signature only scans relevant entity domains", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /editorFilteredStatesSignature/);
   assert.match(source, /id\.startsWith\("calendar\."\)/);
-  assert.match(source, /id\.startsWith\("input_text\."\)/);
+  assert.doesNotMatch(source, /id\.startsWith\("input_text\."\)/);
   assert.match(source, /id\.startsWith\("weather\."\)/);
 });
 
@@ -212,6 +219,26 @@ test("notifications card is bundled and supports smart dismissible notifications
   const readme = read("README.md");
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaNotificationsCard\)/);
   assert.match(source, /custom_notifications/);
+  assert.match(source, /smart_entity_overrides/);
+  assert.match(source, /normalizeSmartEntityOverrides/);
+  assert.match(source, /_renderSmartEntityOverrides\(config\)/);
+  assert.match(source, /smart_entity_overrides\.\$\{index\}\.url/);
+  assert.match(source, /smart_entity_overrides\.\$\{index\}\.mobile/);
+  assert.match(source, /findIndex\(item => item\?\.entity === entity\)/);
+  assert.doesNotMatch(source, /this\._config\.smart_entity_overrides\[index\]\.entity = entity/);
+  assert.match(source, /mobilePolicy/);
+  assert.match(source, /policy === "off"/);
+  assert.match(source, /policy !== "on"/);
+  assert.match(source, /_entranceAnimationTimer/);
+  assert.match(source, /window\.setTimeout\(\(\) => \{\s*this\._entranceAnimationTimer = 0;\s*this\._animateContentOnNextRender = false;/);
+  assert.doesNotMatch(source, /this\._animateContentOnNextRender = false;\s*this\._stackTransition = "";/);
+  assert.match(source, /_renderCollapsedStackCards\(notifications, startIndex\)/);
+  assert.match(source, /z-index: 6;/);
+  assert.match(source, /const zIndex = 4 - clampedIndex;/);
+  assert.match(source, /pointer-events: none;/);
+  assert.match(source, /\.slice\(startIndex, startIndex \+ 4\)/);
+  assert.match(source, /const offset = 12 \+ \(clampedIndex - 1\) \* 4/);
+  assert.match(source, /padding-bottom: \$\{shouldStack && !this\._expanded \? "12px" : "0"\}/);
   assert.match(source, /calendar_entities/);
   assert.match(source, /vacuum_entities/);
   assert.match(source, /weather_entities/);
@@ -231,9 +258,13 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /dismissed_entity/);
   assert.match(source, /mobile_notifications/);
   assert.match(source, /mobile_notifications\.entities/);
+  assert.match(source, /mobile_notifications\.critical_alerts/);
   assert.match(source, /callService\("notify", "send_message"/);
-  assert.match(source, /const legacyPayload = \{/);
+  assert.match(source, /_buildLegacyMobilePayload\(item, hash\)/);
   assert.match(source, /group:\s*"nodalia_notifications"/);
+  assert.match(source, /channel:\s*"alarm_stream"/);
+  assert.match(source, /critical:\s*1/);
+  assert.match(source, /priority:\s*"high"/);
   assert.match(source, /this\._callNamedService\(service, legacyPayload\)/);
   assert.doesNotMatch(source, /data:\s*data\.data/);
   assert.match(source, /data-editor-toggle="connections"/);
@@ -249,6 +280,8 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /shouldDarkenNotificationIconGlyph/);
   assert.match(source, /_smartMessage/);
   assert.match(source, /_smartAction/);
+  assert.match(source, /_notificationChips\(item\)/);
+  assert.doesNotMatch(source, /chips\.push\(\{ kind: "value", label: source \}\)/);
   assert.match(source, /window\.open\(url, "_blank", "noopener,noreferrer"\)/);
   assert.match(source, /orientationchange/);
   assert.match(source, /IntersectionObserver/);
@@ -283,6 +316,11 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /animations\.enabled/);
   assert.match(source, /data-editor-toggle="animations"/);
   assert.match(source, /editor-section__toggle-button/);
+  assert.match(source, /_editorLabel\(s\)/);
+  assert.match(source, /this\._editorLabel\(label\)/);
+  assert.match(source, /Conexiones inteligentes/);
+  assert.match(source, /Sincronización y móvil/);
+  assert.match(source, /Añadir notificación/);
   assert.match(source, /type="color"/);
   assert.match(source, /notifications-card--animated/);
   assert.match(source, /notifications-card--stack-\$\{stackTransition\}/);
@@ -324,6 +362,11 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /editorFilteredStatesSignature/);
   assert.match(source, /sanitizeCssRuntimeValue/);
   assert.match(i18n, /notificationsCard/);
+  assert.match(i18n, /NOTIFICATIONS_CARD_TRANSLATIONS/);
+  assert.match(i18n, /de: \{\s*fallbackEvent: "Termin"/);
+  assert.match(i18n, /fr: \{\s*fallbackEvent: "Événement"/);
+  assert.match(i18n, /zh: \{\s*fallbackEvent: "事件"/);
+  assert.match(i18n, /Borrar notificación/);
   assert.match(i18n, /function translateNotificationsUi/);
   assert.match(build, /nodalia-notifications-card\.js/);
   assert.match(pkg, /"nodalia-notifications-card\.js"/);

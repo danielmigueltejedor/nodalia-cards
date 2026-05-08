@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-beta.1";
+const CARD_VERSION = "1.0.0-beta.2";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -503,6 +503,7 @@ const DEFAULT_CONFIG = {
   humidifier_fill_entities: [],
   ink_entities: [],
   custom_notifications: [],
+  smart_entity_overrides: [],
   thresholds: {
     hot_temperature: 27,
     cold_temperature: 17,
@@ -530,6 +531,7 @@ const DEFAULT_CONFIG = {
     entities: [],
     services: [],
     min_severity: "warning",
+    critical_alerts: false,
   },
   security: {
     strict_service_actions: false,
@@ -688,6 +690,46 @@ function normalizeSmartNotificationOptions(value) {
   };
 }
 
+function normalizeSmartEntityMobile(value) {
+  const normalized = String(value ?? "inherit").trim().toLowerCase();
+  if (["on", "true", "enabled", "yes", "1"].includes(normalized)) {
+    return "on";
+  }
+  if (["off", "false", "disabled", "no", "0"].includes(normalized)) {
+    return "off";
+  }
+  return "inherit";
+}
+
+function normalizeSmartEntityOverrides(value) {
+  const rows = Array.isArray(value)
+    ? value
+    : isObject(value)
+      ? Object.entries(value).map(([entity, row]) => ({ ...(isObject(row) ? row : {}), entity }))
+      : [];
+  const seen = new Set();
+  return rows
+    .map(item => {
+      const row = isObject(item) ? item : {};
+      return {
+        entity: String(row.entity || row.entity_id || "").trim(),
+        title: String(row.title || "").trim(),
+        message: String(row.message || "").trim(),
+        tint_color: String(row.tint_color || "").trim(),
+        url: String(row.url || "").trim(),
+        action_label: String(row.action_label || "").trim(),
+        mobile: normalizeSmartEntityMobile(row.mobile ?? row.mobile_notifications ?? row.mobile_enabled),
+      };
+    })
+    .filter(item => {
+      if (!item.entity || seen.has(item.entity)) {
+        return false;
+      }
+      seen.add(item.entity);
+      return Boolean(item.title || item.message || item.tint_color || item.url || item.action_label || item.mobile !== "inherit");
+    });
+}
+
 function normalizeSmartNotifications(value) {
   const rows = isObject(value) ? value : {};
   const out = {};
@@ -724,7 +766,7 @@ function normalizeCustomNotifications(value) {
     })
     .filter(item => {
       const hasContent = item.title || item.message || item.entity;
-      const placeholderTitle = normalizeMatchText(item.title) === normalizeMatchText("Nueva notificacion");
+      const placeholderTitle = normalizeMatchText(item.title) === normalizeMatchText("Nueva notificación");
       const isPlaceholder = placeholderTitle && !item.message && !item.entity;
       return hasContent && !isPlaceholder;
     });
@@ -763,10 +805,12 @@ function normalizeConfig(rawConfig = {}) {
     ink_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.ink_low, DEFAULT_CONFIG.thresholds.ink_low))),
   };
   config.smart_notifications = normalizeSmartNotifications(config.smart_notifications);
+  config.smart_entity_overrides = normalizeSmartEntityOverrides(config.smart_entity_overrides);
   config.mobile_notifications = mergeDeep(DEFAULT_CONFIG.mobile_notifications, config.mobile_notifications || {});
   config.mobile_notifications.enabled = config.mobile_notifications.enabled === true;
   config.mobile_notifications.entities = normalizeEntityList(config.mobile_notifications.entities, ["notify"]);
   config.mobile_notifications.services = normalizeNotifyServices(config.mobile_notifications.services);
+  config.mobile_notifications.critical_alerts = config.mobile_notifications.critical_alerts === true;
   config.mobile_notifications.min_severity = ["info", "success", "warning", "critical"].includes(String(config.mobile_notifications.min_severity || "").toLowerCase())
     ? String(config.mobile_notifications.min_severity).toLowerCase()
     : DEFAULT_CONFIG.mobile_notifications.min_severity;
@@ -1239,6 +1283,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._lastNotificationIdsSignature = "";
     this._lastNotifications = [];
     this._animateContentOnNextRender = true;
+    this._entranceAnimationTimer = 0;
     this._stackTransition = "";
     this._stackCollapseTimer = 0;
     this._collapsingStack = false;
@@ -1293,6 +1338,10 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (this._mobileNotifyTimer) {
       window.clearTimeout(this._mobileNotifyTimer);
       this._mobileNotifyTimer = 0;
+    }
+    if (this._entranceAnimationTimer) {
+      window.clearTimeout(this._entranceAnimationTimer);
+      this._entranceAnimationTimer = 0;
     }
   }
 
@@ -1734,19 +1783,24 @@ class NodaliaNotificationsCard extends HTMLElement {
       const eventKey = `${event._entity || ""}|${event.uid || event.id || ""}|${start.toISOString()}|${summary}`;
       add({
         id: `calendar:${event._entity}:${notificationHash(`${summary}|${start.toISOString()}`)}`,
-        title: startsSoon ? this._text("titles.calendarSoon", "Evento pronto") : this._text("titles.calendarToday", "Evento pendiente hoy"),
-        message: `${timeText} · ${summary}`,
+        title: startsSoon
+          ? this._smartTitle("calendar", "titles.calendarSoon", "Evento pronto", { source: friendlyName(hass, event._entity), time: timeText, value: summary }, event._entity)
+          : this._smartTitle("calendar", "titles.calendarToday", "Evento pendiente hoy", { source: friendlyName(hass, event._entity), time: timeText, value: summary }, event._entity),
+        message: this._smartMessage("calendar", "", `${timeText} · ${summary}`, { source: friendlyName(hass, event._entity), time: timeText, value: summary }, event._entity),
         icon: "mdi:calendar-clock",
         severity: startsSoon ? "warning" : "info",
         source: friendlyName(hass, event._entity),
+        entity: event._entity,
+        tintColor: this._smartTint("calendar", event._entity),
+        mobilePolicy: this._smartMobilePolicy(event._entity),
         createdAt: start.getTime(),
-        action: {
+        action: this._smartAction("calendar", {
           label: this._text("actions.openCalendar", "Abrir calendario"),
           type: "calendar-popup",
           entity: event._entity,
           date: start.toISOString(),
           eventKey,
-        },
+        }, "", event._entity),
       });
     });
 
@@ -1771,35 +1825,46 @@ class NodaliaNotificationsCard extends HTMLElement {
       if (["error", "unavailable"].includes(value)) {
         add({
           id: `vacuum:${entityId}:${value}`,
-          title: this._text("titles.vacuumAttention", "Robot necesita atencion"),
-          message: this._text("messages.vacuumAttention", "{name} esta en estado {state}.", { name, state: state.state }),
+          title: this._smartTitle("vacuum", "titles.vacuumAttention", "Robot necesita atencion", { source: name, name, state: state.state }, entityId),
+          message: this._smartMessage("vacuum", "messages.vacuumAttention", "{name} esta en estado {state}.", { source: name, name, state: state.state }, entityId),
           icon: "mdi:robot-vacuum-alert",
           severity: "critical",
           source: name,
+          entity: entityId,
+          tintColor: this._smartTint("vacuum", entityId),
+          mobilePolicy: this._smartMobilePolicy(entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: { label: this._text("actions.viewRobot", "Ver robot"), type: "more-info", entity: entityId },
+          action: this._smartAction("vacuum", { label: this._text("actions.viewRobot", "Ver robot"), type: "more-info", entity: entityId }, "", entityId),
         });
       } else if (["paused", "idle"].includes(value)) {
         add({
           id: `vacuum:${entityId}:${value}`,
-          title: this._text("titles.vacuumPaused", "Robot pausado"),
-          message: this._text("messages.vacuumPaused", "{name} esta pausado o esperando.", { name }),
+          title: this._smartTitle("vacuum", "titles.vacuumPaused", "Robot pausado", { source: name, name, state: state.state }, entityId),
+          message: this._smartMessage("vacuum", "messages.vacuumPaused", "{name} esta pausado o esperando.", { source: name, name, state: state.state }, entityId),
           icon: "mdi:pause-circle-outline",
           severity: "warning",
           source: name,
+          entity: entityId,
+          tintColor: this._smartTint("vacuum", entityId),
+          mobilePolicy: this._smartMobilePolicy(entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: { label: this._text("actions.continue", "Continuar"), type: "service", service: "vacuum.start", entity: entityId, internal: true },
+          action: this._smartAction("vacuum", { label: this._text("actions.continue", "Continuar"), type: "service", service: "vacuum.start", entity: entityId, internal: true }, "", entityId),
         });
       } else if (["cleaning", "returning"].includes(value)) {
         add({
           id: `vacuum:${entityId}:${value}`,
-          title: value === "cleaning" ? this._text("titles.cleaningStarted", "Limpieza iniciada") : this._text("titles.returningDock", "Robot volviendo a base"),
-          message: this._text("messages.vacuumState", "{name}: {state}.", { name, state: state.state }),
+          title: value === "cleaning"
+            ? this._smartTitle("vacuum", "titles.cleaningStarted", "Limpieza iniciada", { source: name, name, state: state.state }, entityId)
+            : this._smartTitle("vacuum", "titles.returningDock", "Robot volviendo a base", { source: name, name, state: state.state }, entityId),
+          message: this._smartMessage("vacuum", "messages.vacuumState", "{name}: {state}.", { source: name, name, state: state.state }, entityId),
           icon: value === "cleaning" ? "mdi:robot-vacuum" : "mdi:home-import-outline",
           severity: "info",
           source: name,
+          entity: entityId,
+          tintColor: this._smartTint("vacuum", entityId),
+          mobilePolicy: this._smartMobilePolicy(entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: { label: this._text("actions.viewRobot", "Ver robot"), type: "more-info", entity: entityId },
+          action: this._smartAction("vacuum", { label: this._text("actions.viewRobot", "Ver robot"), type: "more-info", entity: entityId }, "", entityId),
         });
       }
     });
@@ -1807,15 +1872,19 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._config.motion_entities.forEach(entityId => {
       const state = hass?.states?.[entityId];
       if (stateIsOn(state)) {
+        const sourceName = friendlyName(hass, entityId);
         add({
           id: `motion:${entityId}:${state.state}`,
-          title: this._text("titles.motionDetected", "Movimiento detectado"),
-          message: friendlyName(hass, entityId),
+          title: this._smartTitle("motion", "titles.motionDetected", "Movimiento detectado", { source: sourceName }, entityId),
+          message: this._smartMessage("motion", "", sourceName, { source: sourceName }, entityId),
           icon: "mdi:motion-sensor",
           severity: "info",
-          source: friendlyName(hass, entityId),
+          source: sourceName,
+          entity: entityId,
+          tintColor: this._smartTint("motion", entityId),
+          mobilePolicy: this._smartMobilePolicy(entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId },
+          action: this._smartAction("motion", { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId }, "", entityId),
         });
       }
     });
@@ -1827,15 +1896,19 @@ class NodaliaNotificationsCard extends HTMLElement {
       entities.forEach(entityId => {
         const state = hass?.states?.[entityId];
         if (stateIsOn(state)) {
+          const sourceName = friendlyName(hass, entityId);
           add({
             id: `${kind}:${entityId}:${state.state}`,
-            title: this._text(titleKey, fallbackTitle),
-            message: friendlyName(hass, entityId),
+            title: this._smartTitle(kind, titleKey, fallbackTitle, { source: sourceName }, entityId),
+            message: this._smartMessage(kind, "", sourceName, { source: sourceName }, entityId),
             icon,
             severity: "warning",
-            source: friendlyName(hass, entityId),
+            source: sourceName,
+            entity: entityId,
+            tintColor: this._smartTint(kind, entityId),
+            mobilePolicy: this._smartMobilePolicy(entityId),
             createdAt: Date.parse(state.last_changed || "") || Date.now(),
-            action: { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId },
+            action: this._smartAction(kind, { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId }, "", entityId),
           });
         }
       });
@@ -1886,36 +1959,38 @@ class NodaliaNotificationsCard extends HTMLElement {
       const fanName = friendlyName(this._hass, hottest.fanTarget);
       add({
         id: `comfort:hot:${hottest.entityId}:${hottest.fanTarget}:${Math.floor(hottest.value)}`,
-        title: this._smartTitle("hot", "titles.hot", "Hace calor"),
+        title: this._smartTitle("hot", "titles.hot", "Hace calor", { source: sourceName, value: formatNumber(hottest.value, hottest.unit), fan: fanName }, hottest.entityId),
         message: this._smartMessage("hot", "messages.hot", "{source} marca {value}. Puedes encender {fan}.", {
           source: sourceName,
           value: formatNumber(hottest.value, hottest.unit),
           fan: fanName,
-        }),
+        }, hottest.entityId),
         icon: "mdi:fan",
         severity: "warning",
         source: sourceName,
         entity: hottest.entityId,
-        tintColor: this._smartTint("hot"),
+        tintColor: this._smartTint("hot", hottest.entityId),
+        mobilePolicy: this._smartMobilePolicy(hottest.entityId),
         createdAt: Date.parse(hottest.state.last_changed || "") || Date.now(),
-        action: this._smartAction("hot", { label: this._text("actions.turnOnFan", "Encender ventilador"), type: "service", service: "fan.turn_on", entity: hottest.fanTarget, internal: true }),
+        action: this._smartAction("hot", { label: this._text("actions.turnOnFan", "Encender ventilador"), type: "service", service: "fan.turn_on", entity: hottest.fanTarget, internal: true }, "", hottest.entityId),
       });
     } else if (coldest && coldest.value <= this._config.thresholds.cold_temperature) {
       const sourceName = friendlyName(this._hass, coldest.entityId);
       add({
         id: `comfort:cold:${coldest.entityId}:${Math.floor(coldest.value)}`,
-        title: this._smartTitle("cold", "titles.cold", "Temperatura baja"),
+        title: this._smartTitle("cold", "titles.cold", "Temperatura baja", { source: sourceName, value: formatNumber(coldest.value, coldest.unit) }, coldest.entityId),
         message: this._smartMessage("cold", "messages.sensorValue", "{source} marca {value}.", {
           source: sourceName,
           value: formatNumber(coldest.value, coldest.unit),
-        }),
+        }, coldest.entityId),
         icon: "mdi:thermometer-low",
         severity: "info",
         source: sourceName,
         entity: coldest.entityId,
-        tintColor: this._smartTint("cold"),
+        tintColor: this._smartTint("cold", coldest.entityId),
+        mobilePolicy: this._smartMobilePolicy(coldest.entityId),
         createdAt: Date.parse(coldest.state.last_changed || "") || Date.now(),
-        action: this._smartAction("cold", null),
+        action: this._smartAction("cold", null, "", coldest.entityId),
       });
     }
 
@@ -1931,18 +2006,21 @@ class NodaliaNotificationsCard extends HTMLElement {
         const smartKind = high ? "humidity_high" : "humidity_low";
         add({
           id: `humidity:${entityId}:${high ? "high" : "low"}:${Math.round(value)}`,
-          title: high ? this._smartTitle(smartKind, "titles.humidityHigh", "Humedad alta") : this._smartTitle(smartKind, "titles.humidityLow", "Humedad baja"),
+          title: high
+            ? this._smartTitle(smartKind, "titles.humidityHigh", "Humedad alta", { source: sourceName, value: formatNumber(value, state.attributes?.unit_of_measurement || "%") }, entityId)
+            : this._smartTitle(smartKind, "titles.humidityLow", "Humedad baja", { source: sourceName, value: formatNumber(value, state.attributes?.unit_of_measurement || "%") }, entityId),
           message: this._smartMessage(smartKind, "messages.sensorValue", "{source} marca {value}.", {
             source: sourceName,
             value: formatNumber(value, state.attributes?.unit_of_measurement || "%"),
-          }),
+          }, entityId),
           icon: high ? "mdi:water-percent-alert" : "mdi:water-percent",
           severity: high ? "warning" : "info",
           source: sourceName,
           entity: entityId,
-          tintColor: this._smartTint(smartKind),
+          tintColor: this._smartTint(smartKind, entityId),
+          mobilePolicy: this._smartMobilePolicy(entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: this._smartAction(smartKind, { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId }),
+          action: this._smartAction(smartKind, { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId }, "", entityId),
         });
       }
     });
@@ -1973,26 +2051,47 @@ class NodaliaNotificationsCard extends HTMLElement {
     });
   }
 
-  _smartConfig(kind) {
-    return this._config.smart_notifications?.[kind] || {};
+  _smartEntityOverride(entityId) {
+    const target = String(entityId || "").trim();
+    if (!target) {
+      return null;
+    }
+    return (this._config.smart_entity_overrides || []).find(item => item.entity === target) || null;
   }
 
-  _smartTitle(kind, path, fallback, values = {}) {
-    const configured = this._smartConfig(kind).title;
+  _smartConfig(kind, entityId = "") {
+    const base = this._config.smart_notifications?.[kind] || {};
+    const override = this._smartEntityOverride(entityId);
+    if (!override) {
+      return base;
+    }
+    return {
+      ...base,
+      ...Object.fromEntries(
+        ["title", "message", "tint_color", "url", "action_label"]
+          .map(key => [key, override[key]])
+          .filter(([, value]) => String(value || "").trim()),
+      ),
+      mobile: override.mobile || "inherit",
+    };
+  }
+
+  _smartTitle(kind, path, fallback, values = {}, entityId = "") {
+    const configured = this._smartConfig(kind, entityId).title;
     return configured ? this._formatTemplate(configured, values) : this._text(path, fallback, values);
   }
 
-  _smartMessage(kind, path, fallback, values = {}) {
-    const configured = this._smartConfig(kind).message;
+  _smartMessage(kind, path, fallback, values = {}, entityId = "") {
+    const configured = this._smartConfig(kind, entityId).message;
     return configured ? this._formatTemplate(configured, values) : this._text(path, fallback, values);
   }
 
-  _smartTint(kind) {
-    return this._smartConfig(kind).tint_color || "";
+  _smartTint(kind, entityId = "") {
+    return this._smartConfig(kind, entityId).tint_color || "";
   }
 
-  _smartAction(kind, fallbackAction = null, fallbackUrlLabel = "") {
-    const config = this._smartConfig(kind);
+  _smartAction(kind, fallbackAction = null, fallbackUrlLabel = "", entityId = "") {
+    const config = this._smartConfig(kind, entityId);
     const url = window.NodaliaUtils?.sanitizeActionUrl?.(config.url, { allowRelative: true }) || "";
     if (url) {
       return {
@@ -2002,6 +2101,11 @@ class NodaliaNotificationsCard extends HTMLElement {
       };
     }
     return fallbackAction;
+  }
+
+  _smartMobilePolicy(entityId) {
+    const override = this._smartEntityOverride(entityId);
+    return override?.mobile || "inherit";
   }
 
   _buildWeatherNotifications(add) {
@@ -2030,18 +2134,19 @@ class NodaliaNotificationsCard extends HTMLElement {
       const sourceName = friendlyName(this._hass, entityId);
       add({
         id: `weather:rain:${entityId}:${rainy.date.toISOString().slice(0, 13)}`,
-        title: this._smartTitle("rain", "titles.rainSoon", "Lluvia proxima"),
-        message: this._smartMessage("rain", "messages.rainSoon", "{source} preve lluvia sobre {time}. Si tienes ropa tendida, conviene revisarla.", {
+        title: this._smartTitle("rain", "titles.rainSoon", "Lluvia próxima", { source: sourceName, time: formatTime(rainy.date) }, entityId),
+        message: this._smartMessage("rain", "messages.rainSoon", "{source} prevé lluvia sobre {time}. Si tienes ropa tendida, conviene revisarla.", {
           source: sourceName,
           time: formatTime(rainy.date),
-        }),
+        }, entityId),
         icon: "mdi:weather-pouring",
         severity: "warning",
         source: sourceName,
         entity: entityId,
-        tintColor: this._smartTint("rain"),
+        tintColor: this._smartTint("rain", entityId),
+        mobilePolicy: this._smartMobilePolicy(entityId),
         createdAt: rainy.date.getTime(),
-        action: this._smartAction("rain", { label: this._text("actions.viewWeather", "Ver tiempo"), type: "more-info", entity: entityId }),
+        action: this._smartAction("rain", { label: this._text("actions.viewWeather", "Ver tiempo"), type: "more-info", entity: entityId }, "", entityId),
       });
     });
   }
@@ -2056,7 +2161,7 @@ class NodaliaNotificationsCard extends HTMLElement {
         icon: "mdi:battery-alert-variant-outline",
         kind: "battery_low",
         titleKey: "titles.batteryLow",
-        titleFallback: "Bateria baja",
+        titleFallback: "Batería baja",
         messageKey: "messages.lowLevel",
         messageFallback: "{source} queda en {value}.",
         threshold: this._config.thresholds.battery_low,
@@ -2067,7 +2172,7 @@ class NodaliaNotificationsCard extends HTMLElement {
         icon: "mdi:air-humidifier",
         kind: "humidifier_fill_low",
         titleKey: "titles.humidifierFillLow",
-        titleFallback: "Deposito bajo",
+        titleFallback: "Depósito bajo",
         messageKey: "messages.lowLevel",
         messageFallback: "{source} queda en {value}.",
         threshold: this._config.thresholds.humidifier_fill_low,
@@ -2101,19 +2206,20 @@ class NodaliaNotificationsCard extends HTMLElement {
             source: sourceName,
             threshold: formatNumber(group.threshold, unit),
             value: formattedValue,
-          }),
+          }, entityId),
           message: this._smartMessage(group.kind, group.messageKey, group.messageFallback, {
             source: sourceName,
             threshold: formatNumber(group.threshold, unit),
             value: formattedValue,
-          }),
+          }, entityId),
           icon: group.icon,
           severity: "warning",
           source: sourceName,
           entity: entityId,
-          tintColor: this._smartTint(group.kind),
+          tintColor: this._smartTint(group.kind, entityId),
+          mobilePolicy: this._smartMobilePolicy(entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: this._smartAction(group.kind, { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId }, group.urlLabel),
+          action: this._smartAction(group.kind, { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId }, group.urlLabel, entityId),
         });
       });
     });
@@ -2197,11 +2303,15 @@ class NodaliaNotificationsCard extends HTMLElement {
 
   _shouldSendMobileNotification(item) {
     const config = this._config.mobile_notifications;
+    const policy = String(item?.mobilePolicy || "inherit").toLowerCase();
+    if (policy === "off") {
+      return false;
+    }
     const targets = [
       ...(Array.isArray(config?.entities) ? config.entities : []),
       ...(Array.isArray(config?.services) ? config.services : []),
     ];
-    if (!config?.enabled || !targets.length || !item?.id) {
+    if ((!config?.enabled && policy !== "on") || !targets.length || !item?.id) {
       return false;
     }
     if (this._severityScore(item.severity) < this._severityScore(config.min_severity)) {
@@ -2221,6 +2331,33 @@ class NodaliaNotificationsCard extends HTMLElement {
     }, 450);
   }
 
+  _buildLegacyMobilePayload(item, hash) {
+    const payload = {
+      title: item.title,
+      message: item.message || item.source || item.title,
+      data: {
+        group: "nodalia_notifications",
+        tag: hash,
+      },
+    };
+    if (this._config.mobile_notifications?.critical_alerts === true && item?.severity === "critical") {
+      payload.data = {
+        ...payload.data,
+        ttl: 0,
+        priority: "high",
+        channel: "alarm_stream",
+        push: {
+          sound: {
+            name: "default",
+            critical: 1,
+            volume: 1,
+          },
+        },
+      };
+    }
+    return payload;
+  }
+
   async _flushMobileNotifications(items) {
     if (!this._hass || typeof this._hass.callService !== "function") {
       return;
@@ -2230,14 +2367,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       if (this._mobileSent.has(hash) || this._isDismissed(item)) {
         continue;
       }
-      const legacyPayload = {
-        title: item.title,
-        message: item.message || item.source || item.title,
-        data: {
-          group: "nodalia_notifications",
-          tag: hash,
-        },
-      };
+      const legacyPayload = this._buildLegacyMobilePayload(item, hash);
       const notifyEntities = Array.isArray(this._config.mobile_notifications.entities)
         ? this._config.mobile_notifications.entities
         : [];
@@ -2534,12 +2664,6 @@ class NodaliaNotificationsCard extends HTMLElement {
 
   _notificationChips(item) {
     const chips = [];
-    const source = String(item?.source || "").trim();
-    const title = String(item?.title || "").trim();
-    const message = String(item?.message || "").trim();
-    if (source && normalizeMatchText(source) !== normalizeMatchText(title) && !matchTextIncludes(message, source)) {
-      chips.push({ kind: "value", label: source });
-    }
     if (item?.severity && item.severity !== "info") {
       chips.push({ kind: "state", label: this._severityLabel(item.severity) });
     }
@@ -2582,7 +2706,7 @@ class NodaliaNotificationsCard extends HTMLElement {
             ${chips.length ? `<div class="notification-item__chips notification-item__chips--top">
               ${chips.map(chip => `<span class="notification-item__chip notification-item__chip--${escapeHtml(chip.kind)}">${escapeHtml(chip.label)}</span>`).join("")}
             </div>` : ""}
-            <button type="button" class="notification-item__dismiss" data-action="dismiss" data-id="${escapeHtml(item.id)}" aria-label="${escapeHtml(this._text("aria.dismiss", "Borrar notificacion"))}">
+            <button type="button" class="notification-item__dismiss" data-action="dismiss" data-id="${escapeHtml(item.id)}" aria-label="${escapeHtml(this._text("aria.dismiss", "Borrar notificación"))}">
               <ha-icon icon="mdi:close"></ha-icon>
             </button>
           </div>
@@ -2608,12 +2732,13 @@ class NodaliaNotificationsCard extends HTMLElement {
     const accent = item?.tintColor
       ? sanitizeCssRuntimeValue(item.tintColor, "")
       : this._severityAccent(item?.severity);
-    const inset = stackIndex === 1 ? 4 : 10;
-    const offset = stackIndex === 1 ? 3 : 10;
-    const opacity = stackIndex === 1 ? 0.74 : 0.54;
-    const zIndex = stackIndex === 1 ? 2 : 1;
+    const clampedIndex = Math.min(4, stackIndex);
+    const inset = 5 + (clampedIndex - 1) * 5;
+    const offset = 12 + (clampedIndex - 1) * 4;
+    const opacity = Math.max(0.18, 0.58 - (clampedIndex - 1) * 0.12);
+    const zIndex = 4 - clampedIndex;
     return [
-      `--stack-index:${stackIndex}`,
+      `--stack-index:${clampedIndex}`,
       `--stack-accent:${escapeHtml(accent || "var(--primary-color)")}`,
       `--stack-inset:${inset}px`,
       `--stack-offset:${offset}px`,
@@ -2622,10 +2747,19 @@ class NodaliaNotificationsCard extends HTMLElement {
     ].join(";");
   }
 
+  _renderCollapsedStackCards(notifications, startIndex) {
+    return notifications
+      .slice(startIndex, startIndex + 4)
+      .map((item, index) => (
+        `<div class="notification-stack-card" style="${this._stackCardStyle(item, index + 1)}" aria-hidden="true"></div>`
+      ))
+      .join("");
+  }
+
   _severityLabel(severity) {
     switch (severity) {
       case "critical":
-        return this._text("severity.critical", "Critica");
+        return this._text("severity.critical", "Crítica");
       case "warning":
         return this._text("severity.warning", "Aviso");
       case "success":
@@ -2671,6 +2805,16 @@ class NodaliaNotificationsCard extends HTMLElement {
     const animateEntrance = animations.enabled && (this._animateContentOnNextRender || notificationSetChanged);
     const stackTransition = animations.enabled ? this._stackTransition : "";
     this._lastNotificationIdsSignature = nextNotificationIdsSignature;
+    if (animateEntrance) {
+      if (this._entranceAnimationTimer) {
+        window.clearTimeout(this._entranceAnimationTimer);
+      }
+      this._entranceAnimationTimer = window.setTimeout(() => {
+        this._entranceAnimationTimer = 0;
+        this._animateContentOnNextRender = false;
+        this._renderIfChanged(true);
+      }, Math.max(180, animations.contentDuration + 160));
+    }
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -2765,7 +2909,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           align-items: start;
           display: grid;
           isolation: isolate;
-          padding-bottom: ${shouldStack && !this._expanded ? "24px" : "0"};
+          padding-bottom: ${shouldStack && !this._expanded ? "12px" : "0"};
           position: relative;
         }
         .notifications-stack-toggle,
@@ -2791,7 +2935,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           display: grid;
           gap: 8px;
           position: relative;
-          z-index: 3;
+          z-index: 6;
         }
         .notification-item {
           --notification-accent: ${styles.accent};
@@ -2969,6 +3113,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           left: var(--stack-inset, 4px);
           opacity: var(--stack-opacity, 0.72);
           overflow: hidden;
+          pointer-events: none;
           position: absolute;
           right: var(--stack-inset, 4px);
           z-index: var(--stack-z, 2);
@@ -3146,10 +3291,7 @@ class NodaliaNotificationsCard extends HTMLElement {
                 <div class="notifications-stack">
                   ${
                     shouldStack && !this._expanded
-                      ? `
-                        <div class="notification-stack-card" style="${this._stackCardStyle(notifications[config.max_visible], 1)}" aria-hidden="true"></div>
-                        ${notifications.length > config.max_visible + 1 ? `<div class="notification-stack-card" style="${this._stackCardStyle(notifications[config.max_visible + 1], 2)}" aria-hidden="true"></div>` : ""}
-                      `
+                      ? this._renderCollapsedStackCards(notifications, config.max_visible)
                       : ""
                   }
                   <div class="notifications-list">
@@ -3185,7 +3327,6 @@ class NodaliaNotificationsCard extends HTMLElement {
           }
       </ha-card>
     `;
-    this._animateContentOnNextRender = false;
     this._stackTransition = "";
   }
 }
@@ -3322,6 +3463,13 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     fireEvent(this, "config-changed", { config: compactConfig(stripped) || {} });
   }
 
+  _editorLabel(s) {
+    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+      return s;
+    }
+    return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", s);
+  }
+
   _readFieldValue(input) {
     const type = input.dataset.valueType || "string";
     if (type === "boolean") {
@@ -3370,6 +3518,29 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
   }
 
   _setFieldValue(path, value) {
+    const smartEntityMatch = String(path || "").match(/^smart_entity_overrides\.(\d+)\./);
+    if (smartEntityMatch) {
+      const index = Number(smartEntityMatch[1]);
+      const entity = this._smartEntityEditorEntities?.[index] || "";
+      const key = String(path || "").split(".").pop();
+      if (!entity || !key) {
+        return;
+      }
+      if (!Array.isArray(this._config.smart_entity_overrides)) {
+        this._config.smart_entity_overrides = [];
+      }
+      let overrideIndex = this._config.smart_entity_overrides.findIndex(item => item?.entity === entity);
+      if (overrideIndex < 0) {
+        overrideIndex = this._config.smart_entity_overrides.length;
+        this._config.smart_entity_overrides.push({ entity });
+      }
+      if (value === "" || value === undefined || value === null) {
+        delete this._config.smart_entity_overrides[overrideIndex][key];
+      } else {
+        this._config.smart_entity_overrides[overrideIndex][key] = value;
+      }
+      return;
+    }
     if (value === "" || value === undefined || value === null || (Array.isArray(value) && !value.length)) {
       deleteByPath(this._config, path);
       return;
@@ -3535,41 +3706,46 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
   }
 
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tPlaceholder = options.placeholder ? this._editorLabel(options.placeholder) : "";
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(options.type || "text")}"
           data-field="${escapeHtml(field)}"
           data-value-type="${escapeHtml(options.valueType || "string")}"
           value="${escapeHtml(value ?? "")}"
-          ${options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : ""}
+          ${tPlaceholder ? `placeholder="${escapeHtml(tPlaceholder)}"` : ""}
         />
       </label>
     `;
   }
 
   _renderTextareaField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tPlaceholder = options.placeholder ? this._editorLabel(options.placeholder) : "";
     return `
       <label class="editor-field editor-field--full">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <textarea
           data-field="${escapeHtml(field)}"
           data-value-type="${escapeHtml(options.valueType || "string")}"
-          ${options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : ""}
+          ${tPlaceholder ? `placeholder="${escapeHtml(tPlaceholder)}"` : ""}
         >${escapeHtml(value ?? "")}</textarea>
       </label>
     `;
   }
 
   _renderSelectField(label, field, value, options, renderOptions = {}) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options.map(option => `
             <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-              ${escapeHtml(option.label)}
+              ${escapeHtml(this._editorLabel(option.label))}
             </option>
           `).join("")}
         </select>
@@ -3578,20 +3754,22 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
         <input type="checkbox" data-field="${escapeHtml(field)}" data-value-type="boolean" ${checked ? "checked" : ""} />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderIconPickerField(label, field, value, options = {}) {
     const fullWidth = options.fullWidth !== false;
+    const tLabel = this._editorLabel(label);
     return `
       <div class="editor-field ${fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="icon"
@@ -3604,6 +3782,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -3611,16 +3791,16 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     const color = getEditorColorModel(currentValue, fallbackValue);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="${escapeHtml("Color personalizado")}">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="color"
               data-alpha="${escapeHtml(color.alpha)}"
               value="${escapeHtml(color.hex)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};" aria-hidden="true"></span>
           </label>
@@ -3630,28 +3810,32 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
   }
 
   _renderEntityPickerField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tPlaceholder = options.placeholder ? this._editorLabel(options.placeholder) : "";
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity"
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(value || "")}"
           ${options.domains ? `data-domains="${escapeHtml(options.domains)}"` : ""}
-          data-placeholder="${escapeHtml(options.placeholder || "")}"
+          data-placeholder="${escapeHtml(tPlaceholder)}"
         ></div>
       </div>
     `;
   }
 
   _renderEntityListField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tPlaceholder = options.placeholder ? this._editorLabel(options.placeholder) : "";
     const domains = options.domains || this._entityDomainsForListField(field).join(",");
     const items = normalizeEntityList(value, this._entityDomainsForListField(field));
     const rows = [...items, ""];
     return `
       <div class="editor-field editor-field--full editor-field--entity-list">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-entity-list">
           ${rows.map((entityId, index) => {
             const isNewRow = index >= items.length;
@@ -3665,12 +3849,12 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                   data-index="${index}"
                   data-value="${escapeHtml(entityId)}"
                   data-domains="${escapeHtml(domains)}"
-                  data-placeholder="${escapeHtml(options.placeholder || "")}"
+                  data-placeholder="${escapeHtml(tPlaceholder)}"
                 ></div>
                 ${
                   isNewRow
                     ? `<span class="editor-entity-list__spacer" aria-hidden="true"></span>`
-                    : `<button type="button" class="editor-entity-list__remove" data-editor-action="remove-entity-list-item" data-field="${escapeHtml(field)}" data-index="${index}" aria-label="${escapeHtml(`Quitar ${label}`)}">
+                    : `<button type="button" class="editor-entity-list__remove" data-editor-action="remove-entity-list-item" data-field="${escapeHtml(field)}" data-index="${index}" aria-label="${escapeHtml(`${this._editorLabel("Quitar")} ${tLabel}`)}">
                         <ha-icon icon="mdi:close"></ha-icon>
                       </button>`
                 }
@@ -3735,15 +3919,63 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     }
   }
 
+  _smartEntityEditorRows(config) {
+    const labels = [
+      ["calendar_entities", "Calendario"],
+      ["vacuum_entities", "Robot"],
+      ["weather_entities", "Tiempo"],
+      ["motion_entities", "Movimiento"],
+      ["door_entities", "Puerta"],
+      ["window_entities", "Ventana"],
+      ["temperature_entities", "Temperatura"],
+      ["humidity_entities", "Humedad"],
+      ["battery_entities", "Batería"],
+      ["humidifier_fill_entities", "Depósito"],
+      ["ink_entities", "Tinta"],
+    ];
+    const byEntity = new Map((config.smart_entity_overrides || []).map(item => [item.entity, item]));
+    const seen = new Set();
+    const rows = [];
+    labels.forEach(([field, label]) => {
+      (config[field] || []).forEach(entity => {
+        if (!entity || seen.has(entity)) {
+          return;
+        }
+        seen.add(entity);
+        rows.push({
+          entity,
+          label,
+          ...(byEntity.get(entity) || {}),
+        });
+      });
+    });
+    (config.smart_entity_overrides || []).forEach(item => {
+      if (item.entity && !seen.has(item.entity)) {
+        seen.add(item.entity);
+        rows.push({ label: "Manual", ...item });
+      }
+    });
+    return rows.map(item => ({
+      entity: item.entity,
+      label: item.label || "Entidad",
+      title: item.title || "",
+      message: item.message || "",
+      tint_color: item.tint_color || "",
+      url: item.url || "",
+      action_label: item.action_label || "",
+      mobile: normalizeSmartEntityMobile(item.mobile),
+    }));
+  }
+
   _renderSmartNotificationOptions(config) {
     const rows = [
       ["hot", "Calor", "Hace calor", "{source} marca {value}. Puedes encender {fan}."],
-      ["cold", "Frio", "Temperatura baja", "{source} marca {value}."],
+      ["cold", "Frío", "Temperatura baja", "{source} marca {value}."],
       ["humidity_high", "Humedad alta", "Humedad alta", "{source} marca {value}."],
       ["humidity_low", "Humedad baja", "Humedad baja", "{source} marca {value}."],
-      ["rain", "Lluvia", "Lluvia proxima", "{source} preve lluvia sobre {time}."],
-      ["battery_low", "Bateria baja", "Bateria baja", "{source} queda en {value}."],
-      ["humidifier_fill_low", "Deposito bajo", "Deposito bajo", "{source} queda en {value}."],
+      ["rain", "Lluvia", "Lluvia próxima", "{source} prevé lluvia sobre {time}."],
+      ["battery_low", "Batería baja", "Batería baja", "{source} queda en {value}."],
+      ["humidifier_fill_low", "Depósito bajo", "Depósito bajo", "{source} queda en {value}."],
       ["ink_low", "Tinta baja", "Tinta baja", "{source} queda en {value}."],
     ];
     return rows.map(([key, label, titlePlaceholder, messagePlaceholder]) => {
@@ -3751,13 +3983,13 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       return `
         <div class="editor-action">
           <div class="editor-action__header">
-            <div class="editor-action__title">${escapeHtml(label)}</div>
+            <div class="editor-action__title">${escapeHtml(this._editorLabel(label))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("Titulo personalizado", `smart_notifications.${key}.title`, item.title, { placeholder: titlePlaceholder })}
+            ${this._renderTextField("Título personalizado", `smart_notifications.${key}.title`, item.title, { placeholder: titlePlaceholder })}
             ${this._renderColorField("Color tintado", `smart_notifications.${key}.tint_color`, item.tint_color)}
             ${this._renderTextareaField("Mensaje personalizado", `smart_notifications.${key}.message`, item.message, { placeholder: messagePlaceholder })}
-            ${this._renderTextField("URL accion opcional", `smart_notifications.${key}.url`, item.url, { placeholder: "https://...", fullWidth: true })}
+            ${this._renderTextField("URL acción opcional", `smart_notifications.${key}.url`, item.url, { placeholder: "https://...", fullWidth: true })}
             ${this._renderTextField("Etiqueta URL", `smart_notifications.${key}.action_label`, item.action_label, { placeholder: "Comprar / Abrir", fullWidth: true })}
           </div>
         </div>
@@ -3765,29 +3997,59 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     }).join("");
   }
 
+  _renderSmartEntityOverrides(config) {
+    const rows = this._smartEntityEditorRows(config);
+    this._smartEntityEditorEntities = rows.map(item => item.entity);
+    if (!rows.length) {
+      return `<div class="editor-empty">${escapeHtml(this._editorLabel("Añade entidades en Conexiones inteligentes para personalizarlas una a una."))}</div>`;
+    }
+    return rows.map((item, index) => `
+      <div class="editor-action">
+        <div class="editor-action__header">
+          <div>
+            <div class="editor-action__title">${escapeHtml(this._editorLabel(item.label))} · ${escapeHtml(friendlyName(this._hass, item.entity) || item.entity)}</div>
+            <div class="editor-action__subtitle">${escapeHtml(item.entity)}</div>
+          </div>
+        </div>
+        <div class="editor-grid">
+          ${this._renderTextField("Título solo para esta entidad", `smart_entity_overrides.${index}.title`, item.title, { placeholder: "Usar título global" })}
+          ${this._renderColorField("Color solo para esta entidad", `smart_entity_overrides.${index}.tint_color`, item.tint_color)}
+          ${this._renderTextareaField("Mensaje solo para esta entidad", `smart_entity_overrides.${index}.message`, item.message, { placeholder: "Usar mensaje global" })}
+          ${this._renderTextField("URL solo para esta entidad", `smart_entity_overrides.${index}.url`, item.url, { placeholder: "https://...", fullWidth: true })}
+          ${this._renderTextField("Etiqueta URL", `smart_entity_overrides.${index}.action_label`, item.action_label, { placeholder: "Comprar / Abrir" })}
+          ${this._renderSelectField("Movil", `smart_entity_overrides.${index}.mobile`, item.mobile, [
+            { value: "inherit", label: "Heredar" },
+            { value: "on", label: "Enviar siempre" },
+            { value: "off", label: "No enviar" },
+          ])}
+        </div>
+      </div>
+    `).join("");
+  }
+
   _renderCustomNotifications(config) {
     if (!config.custom_notifications.length) {
-      return `<div class="editor-empty">Todavia no hay notificaciones personalizadas.</div>`;
+      return `<div class="editor-empty">${escapeHtml(this._editorLabel("Todavía no hay notificaciones personalizadas."))}</div>`;
     }
     return config.custom_notifications.map((item, index) => `
       <div class="editor-action">
         <div class="editor-action__header">
-          <div class="editor-action__title">Notificacion ${index + 1}</div>
+          <div class="editor-action__title">${escapeHtml(this._editorLabel("Notificación"))} ${index + 1}</div>
           <div class="editor-action__buttons">
-            <button type="button" data-editor-action="move-custom-up" data-index="${index}">Subir</button>
-            <button type="button" data-editor-action="move-custom-down" data-index="${index}">Bajar</button>
-            <button type="button" data-editor-action="remove-custom" data-index="${index}">Eliminar</button>
+            <button type="button" data-editor-action="move-custom-up" data-index="${index}">${escapeHtml(this._editorLabel("Subir"))}</button>
+            <button type="button" data-editor-action="move-custom-down" data-index="${index}">${escapeHtml(this._editorLabel("Bajar"))}</button>
+            <button type="button" data-editor-action="remove-custom" data-index="${index}">${escapeHtml(this._editorLabel("Eliminar"))}</button>
           </div>
         </div>
         <div class="editor-grid">
-          ${this._renderTextField("Titulo", `custom_notifications.${index}.title`, item.title, { placeholder: "Aviso" })}
+          ${this._renderTextField("Título", `custom_notifications.${index}.title`, item.title, { placeholder: "Aviso" })}
           ${this._renderIconPickerField("Icono", `custom_notifications.${index}.icon`, item.icon)}
           ${this._renderTextareaField("Mensaje", `custom_notifications.${index}.message`, item.message, { placeholder: "Texto visible" })}
           ${this._renderSelectField("Severidad", `custom_notifications.${index}.severity`, item.severity, [
             { value: "info", label: "Info" },
             { value: "success", label: "OK" },
             { value: "warning", label: "Aviso" },
-            { value: "critical", label: "Critica" },
+            { value: "critical", label: "Crítica" },
           ])}
           ${this._renderColorField("Color tintado personalizado", `custom_notifications.${index}.tint_color`, item.tint_color, { fullWidth: true })}
           ${this._renderEntityPickerField("Entidad opcional", `custom_notifications.${index}.entity`, item.entity, { fullWidth: true })}
@@ -3805,13 +4067,13 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           ])}
           ${this._renderTextField("Valor condicion", `custom_notifications.${index}.value`, item.value, { placeholder: "27" })}
           ${this._renderSelectField("Accion", `custom_notifications.${index}.action_type`, item.action_type, [
-            { value: "none", label: "Sin accion" },
+            { value: "none", label: "Sin acción" },
             { value: "more-info", label: "Mas informacion" },
             { value: "url", label: "Abrir URL" },
             { value: "toggle", label: "Alternar entidad" },
             { value: "service", label: "Llamar servicio" },
           ])}
-          ${this._renderTextField("Etiqueta accion", `custom_notifications.${index}.action_label`, item.action_label, { placeholder: "Ejecutar" })}
+          ${this._renderTextField("Etiqueta acción", `custom_notifications.${index}.action_label`, item.action_label, { placeholder: "Ejecutar" })}
           ${
             item.action_type === "url"
               ? this._renderTextField("URL", `custom_notifications.${index}.url`, item.url, {
@@ -4086,6 +4348,13 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           font-size: 13px;
           font-weight: 800;
         }
+        .editor-action__subtitle {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          line-height: 1.35;
+          margin-top: 2px;
+          overflow-wrap: anywhere;
+        }
         @media (max-width: 640px) {
           .editor-grid {
             grid-template-columns: 1fr;
@@ -4095,8 +4364,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">General</div>
-            <div class="editor-section__hint">Mensaje cuando no hay nada pendiente y comportamiento basico.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Mensaje cuando no hay nada pendiente y comportamiento básico."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Mensaje sin notificaciones", "empty_message", config.empty_message, { fullWidth: true })}
@@ -4107,8 +4376,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         </section>
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Conexiones inteligentes</div>
-            <div class="editor-section__hint">Selecciona las entidades que alimentan avisos y recomendaciones. Cada selector ocupa una fila y se filtra por dominio.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Conexiones inteligentes"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Selecciona las entidades que alimentan avisos y recomendaciones. Cada selector ocupa una fila y se filtra por dominio."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4117,7 +4386,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                 aria-expanded="${this._showConnectionsSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showConnectionsSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showConnectionsSection ? "Ocultar" : "Mostrar"}</span>
+                <span>${escapeHtml(this._showConnectionsSection ? this._editorLabel("Ocultar") : this._editorLabel("Mostrar"))}</span>
               </button>
             </div>
           </div>
@@ -4134,8 +4403,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                   ${this._renderEntityListField("Ventanas", "window_entities", config.window_entities, { placeholder: "binary_sensor.ventana" })}
                   ${this._renderEntityListField("Temperatura", "temperature_entities", config.temperature_entities, { placeholder: "sensor.temperatura" })}
                   ${this._renderEntityListField("Humedad", "humidity_entities", config.humidity_entities, { placeholder: "sensor.humedad" })}
-                  ${this._renderEntityListField("Bateria", "battery_entities", config.battery_entities, { placeholder: "sensor.pila_mando" })}
-                  ${this._renderEntityListField("Deposito humidificador", "humidifier_fill_entities", config.humidifier_fill_entities, { placeholder: "sensor.humidificador_deposito" })}
+                  ${this._renderEntityListField("Batería", "battery_entities", config.battery_entities, { placeholder: "sensor.pila_mando" })}
+                  ${this._renderEntityListField("Depósito humidificador", "humidifier_fill_entities", config.humidifier_fill_entities, { placeholder: "sensor.humidificador_deposito" })}
                   ${this._renderEntityListField("Tinta", "ink_entities", config.ink_entities, { placeholder: "sensor.impresora_tinta_negra" })}
                 </div>
               `
@@ -4144,8 +4413,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         </section>
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Umbrales</div>
-            <div class="editor-section__hint">Se usan para recomendaciones de clima, ventilador, temperatura y humedad.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Umbrales"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Se usan para recomendaciones de clima, ventilador, temperatura y humedad."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Calor", "thresholds.hot_temperature", config.thresholds.hot_temperature, { type: "number", valueType: "number" })}
@@ -4154,15 +4423,15 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
             ${this._renderTextField("Humedad baja", "thresholds.humidity_low", config.thresholds.humidity_low, { type: "number", valueType: "number" })}
             ${this._renderTextField("Probabilidad lluvia (%)", "thresholds.rain_probability", config.thresholds.rain_probability, { type: "number", valueType: "number" })}
             ${this._renderTextField("Horas lluvia", "thresholds.rain_lookahead_hours", config.thresholds.rain_lookahead_hours, { type: "number", valueType: "number" })}
-            ${this._renderTextField("Bateria baja (%)", "thresholds.battery_low", config.thresholds.battery_low, { type: "number", valueType: "number" })}
-            ${this._renderTextField("Deposito bajo (%)", "thresholds.humidifier_fill_low", config.thresholds.humidifier_fill_low, { type: "number", valueType: "number" })}
+            ${this._renderTextField("Batería baja (%)", "thresholds.battery_low", config.thresholds.battery_low, { type: "number", valueType: "number" })}
+            ${this._renderTextField("Depósito bajo (%)", "thresholds.humidifier_fill_low", config.thresholds.humidifier_fill_low, { type: "number", valueType: "number" })}
             ${this._renderTextField("Tinta baja (%)", "thresholds.ink_low", config.thresholds.ink_low, { type: "number", valueType: "number" })}
           </div>
         </section>
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Sincronizacion y movil</div>
-            <div class="editor-section__hint">Opcional: sincroniza avisos borrados entre dispositivos y reenvia avisos importantes a servicios notify.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Sincronización y móvil"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Opcional: sincroniza avisos borrados entre dispositivos y reenvía avisos importantes a servicios notify."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderEntityPickerField("Helper avisos borrados", "dismissed_entity", config.dismissed_entity, {
@@ -4170,7 +4439,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
               fullWidth: true,
               placeholder: "input_text.nodalia_notifications_dismissed",
             })}
-            ${this._renderCheckboxField("Enviar tambien a movil", "mobile_notifications.enabled", config.mobile_notifications?.enabled === true)}
+            ${this._renderCheckboxField("Enviar también a móvil", "mobile_notifications.enabled", config.mobile_notifications?.enabled === true)}
             ${
               config.mobile_notifications?.enabled === true
                 ? `
@@ -4186,11 +4455,16 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                     Array.isArray(config.mobile_notifications?.services) ? config.mobile_notifications.services.join(", ") : "",
                     { placeholder: "notify.mobile_app_iphone", valueType: "csv", fullWidth: true },
                   )}
+                  ${this._renderCheckboxField(
+                    "Alertas criticas en servicios legacy",
+                    "mobile_notifications.critical_alerts",
+                    config.mobile_notifications?.critical_alerts === true,
+                  )}
                   ${this._renderSelectField("Severidad minima", "mobile_notifications.min_severity", config.mobile_notifications?.min_severity, [
                     { value: "info", label: "Info" },
                     { value: "success", label: "OK" },
                     { value: "warning", label: "Aviso" },
-                    { value: "critical", label: "Critica" },
+                    { value: "critical", label: "Crítica" },
                   ])}
                 `
                 : ""
@@ -4199,8 +4473,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         </section>
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Avisos inteligentes</div>
-            <div class="editor-section__hint">Personaliza texto, color y enlaces de compra/apertura. Variables disponibles: {source}, {value}, {threshold}, {fan}, {time}.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Avisos inteligentes"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Personaliza texto, color y enlaces de compra/apertura. Variables disponibles: {source}, {value}, {threshold}, {fan}, {time}."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4209,18 +4483,30 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                 aria-expanded="${this._showSmartSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showSmartSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showSmartSection ? "Ocultar" : "Mostrar"}</span>
+                <span>${escapeHtml(this._showSmartSection ? this._editorLabel("Ocultar") : this._editorLabel("Mostrar"))}</span>
               </button>
             </div>
           </div>
-          ${this._showSmartSection ? this._renderSmartNotificationOptions(config) : ""}
+          ${
+            this._showSmartSection
+              ? `
+                <div class="editor-section__hint">${escapeHtml(this._editorLabel("Primero van los valores por tipo. Debajo puedes sobrescribirlos por entidad concreta: ideal para varias ventanas, cartuchos de impresora o sensores distintos."))}</div>
+                ${this._renderSmartNotificationOptions(config)}
+                <div class="editor-section__header">
+                  <div class="editor-section__title">${escapeHtml(this._editorLabel("Ajustes por entidad"))}</div>
+                  <div class="editor-section__hint">${escapeHtml(this._editorLabel("Estos campos tienen prioridad sobre el tipo global. En móvil puedes heredar, forzar envío o silenciar solo esa entidad."))}</div>
+                </div>
+                ${this._renderSmartEntityOverrides(config)}
+              `
+              : ""
+          }
         </section>
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Notificaciones personalizadas</div>
-            <div class="editor-section__hint">Crea avisos propios con condiciones por entidad, atributo y accion opcional.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Notificaciones personalizadas"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Crea avisos propios con condiciones por entidad, atributo y acción opcional."))}</div>
             <div class="editor-section__actions">
-              <button type="button" data-editor-action="add-custom">Anadir notificacion</button>
+              <button type="button" data-editor-action="add-custom">${escapeHtml(this._editorLabel("Añadir notificación"))}</button>
               <button
                 type="button"
                 class="editor-section__toggle-button"
@@ -4228,7 +4514,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                 aria-expanded="${this._showCustomSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showCustomSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showCustomSection ? "Ocultar" : "Mostrar"}</span>
+                <span>${escapeHtml(this._showCustomSection ? this._editorLabel("Ocultar") : this._editorLabel("Mostrar"))}</span>
               </button>
             </div>
           </div>
@@ -4236,8 +4522,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         </section>
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Animaciones</div>
-            <div class="editor-section__hint">Controla la entrada de contenido y el rebote de los botones de la tarjeta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla la entrada de contenido y el rebote de los botones de la tarjeta."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4246,7 +4532,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showAnimationSection ? "Ocultar" : "Mostrar"}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar") : this._editorLabel("Mostrar"))}</span>
               </button>
             </div>
           </div>
@@ -4264,8 +4550,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         </section>
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Seguridad</div>
-            <div class="editor-section__hint">Controla si las acciones de servicio personalizadas pasan por una allowlist estricta.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Seguridad"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla si las acciones de servicio personalizadas pasan por una allowlist estricta."))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField(
@@ -4297,8 +4583,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         </section>
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">Estilos</div>
-            <div class="editor-section__hint">Ajusta superficies, tintado visual y radios sin salir del editor visual.</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajusta superficies, tintado visual y radios sin salir del editor visual."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4307,7 +4593,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showStyleSection ? "Ocultar" : "Mostrar"}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar") : this._editorLabel("Mostrar"))}</span>
               </button>
             </div>
           </div>
@@ -4323,9 +4609,9 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                   ${this._renderTextField("Gap", "styles.card.gap", config.styles.card.gap)}
                   ${this._renderColorField("Fondo icono", "styles.icon.background", config.styles.icon.background)}
                   ${this._renderColorField("Color icono", "styles.icon.color", config.styles.icon.color)}
-                  ${this._renderTextField("Tamano icono", "styles.icon.size", config.styles.icon.size)}
-                  ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-                  ${this._renderTextField("Radio notificacion", "styles.item_radius", config.styles.item_radius)}
+                  ${this._renderTextField("Tamaño icono", "styles.icon.size", config.styles.icon.size)}
+                  ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
+                  ${this._renderTextField("Radio notificación", "styles.item_radius", config.styles.item_radius)}
                   ${this._renderColorField("Tintado visual", "styles.accent", config.styles.accent, { fullWidth: true })}
                 </div>
               `
