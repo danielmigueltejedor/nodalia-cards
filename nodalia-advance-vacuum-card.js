@@ -2672,7 +2672,6 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (
       !hasEntityTarget &&
       hasWebhookTarget &&
-      serializedTrim !== "" &&
       serializedTrim === this._lastSubmittedSharedCleaningSessionValue
     ) {
       return;

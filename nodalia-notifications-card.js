@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-beta.1";
+const CARD_VERSION = "1.0.0-alpha.63";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -503,6 +503,7 @@ const DEFAULT_CONFIG = {
   humidifier_fill_entities: [],
   ink_entities: [],
   custom_notifications: [],
+  smart_entity_overrides: [],
   thresholds: {
     hot_temperature: 27,
     cold_temperature: 17,
@@ -688,6 +689,46 @@ function normalizeSmartNotificationOptions(value) {
   };
 }
 
+function normalizeSmartEntityMobile(value) {
+  const normalized = String(value ?? "inherit").trim().toLowerCase();
+  if (["on", "true", "enabled", "yes", "1"].includes(normalized)) {
+    return "on";
+  }
+  if (["off", "false", "disabled", "no", "0"].includes(normalized)) {
+    return "off";
+  }
+  return "inherit";
+}
+
+function normalizeSmartEntityOverrides(value) {
+  const rows = Array.isArray(value)
+    ? value
+    : isObject(value)
+      ? Object.entries(value).map(([entity, row]) => ({ ...(isObject(row) ? row : {}), entity }))
+      : [];
+  const seen = new Set();
+  return rows
+    .map(item => {
+      const row = isObject(item) ? item : {};
+      return {
+        entity: String(row.entity || row.entity_id || "").trim(),
+        title: String(row.title || "").trim(),
+        message: String(row.message || "").trim(),
+        tint_color: String(row.tint_color || "").trim(),
+        url: String(row.url || "").trim(),
+        action_label: String(row.action_label || "").trim(),
+        mobile: normalizeSmartEntityMobile(row.mobile ?? row.mobile_notifications ?? row.mobile_enabled),
+      };
+    })
+    .filter(item => {
+      if (!item.entity || seen.has(item.entity)) {
+        return false;
+      }
+      seen.add(item.entity);
+      return Boolean(item.title || item.message || item.tint_color || item.url || item.action_label || item.mobile !== "inherit");
+    });
+}
+
 function normalizeSmartNotifications(value) {
   const rows = isObject(value) ? value : {};
   const out = {};
@@ -763,6 +804,7 @@ function normalizeConfig(rawConfig = {}) {
     ink_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.ink_low, DEFAULT_CONFIG.thresholds.ink_low))),
   };
   config.smart_notifications = normalizeSmartNotifications(config.smart_notifications);
+  config.smart_entity_overrides = normalizeSmartEntityOverrides(config.smart_entity_overrides);
   config.mobile_notifications = mergeDeep(DEFAULT_CONFIG.mobile_notifications, config.mobile_notifications || {});
   config.mobile_notifications.enabled = config.mobile_notifications.enabled === true;
   config.mobile_notifications.entities = normalizeEntityList(config.mobile_notifications.entities, ["notify"]);
@@ -1734,19 +1776,24 @@ class NodaliaNotificationsCard extends HTMLElement {
       const eventKey = `${event._entity || ""}|${event.uid || event.id || ""}|${start.toISOString()}|${summary}`;
       add({
         id: `calendar:${event._entity}:${notificationHash(`${summary}|${start.toISOString()}`)}`,
-        title: startsSoon ? this._text("titles.calendarSoon", "Evento pronto") : this._text("titles.calendarToday", "Evento pendiente hoy"),
-        message: `${timeText} · ${summary}`,
+        title: startsSoon
+          ? this._smartTitle("calendar", "titles.calendarSoon", "Evento pronto", { source: friendlyName(hass, event._entity), time: timeText, value: summary }, event._entity)
+          : this._smartTitle("calendar", "titles.calendarToday", "Evento pendiente hoy", { source: friendlyName(hass, event._entity), time: timeText, value: summary }, event._entity),
+        message: this._smartMessage("calendar", "", `${timeText} · ${summary}`, { source: friendlyName(hass, event._entity), time: timeText, value: summary }, event._entity),
         icon: "mdi:calendar-clock",
         severity: startsSoon ? "warning" : "info",
         source: friendlyName(hass, event._entity),
+        entity: event._entity,
+        tintColor: this._smartTint("calendar", event._entity),
+        mobilePolicy: this._smartMobilePolicy(event._entity),
         createdAt: start.getTime(),
-        action: {
+        action: this._smartAction("calendar", {
           label: this._text("actions.openCalendar", "Abrir calendario"),
           type: "calendar-popup",
           entity: event._entity,
           date: start.toISOString(),
           eventKey,
-        },
+        }, "", event._entity),
       });
     });
 
@@ -1771,35 +1818,46 @@ class NodaliaNotificationsCard extends HTMLElement {
       if (["error", "unavailable"].includes(value)) {
         add({
           id: `vacuum:${entityId}:${value}`,
-          title: this._text("titles.vacuumAttention", "Robot necesita atencion"),
-          message: this._text("messages.vacuumAttention", "{name} esta en estado {state}.", { name, state: state.state }),
+          title: this._smartTitle("vacuum", "titles.vacuumAttention", "Robot necesita atencion", { source: name, name, state: state.state }, entityId),
+          message: this._smartMessage("vacuum", "messages.vacuumAttention", "{name} esta en estado {state}.", { source: name, name, state: state.state }, entityId),
           icon: "mdi:robot-vacuum-alert",
           severity: "critical",
           source: name,
+          entity: entityId,
+          tintColor: this._smartTint("vacuum", entityId),
+          mobilePolicy: this._smartMobilePolicy(entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: { label: this._text("actions.viewRobot", "Ver robot"), type: "more-info", entity: entityId },
+          action: this._smartAction("vacuum", { label: this._text("actions.viewRobot", "Ver robot"), type: "more-info", entity: entityId }, "", entityId),
         });
       } else if (["paused", "idle"].includes(value)) {
         add({
           id: `vacuum:${entityId}:${value}`,
-          title: this._text("titles.vacuumPaused", "Robot pausado"),
-          message: this._text("messages.vacuumPaused", "{name} esta pausado o esperando.", { name }),
+          title: this._smartTitle("vacuum", "titles.vacuumPaused", "Robot pausado", { source: name, name, state: state.state }, entityId),
+          message: this._smartMessage("vacuum", "messages.vacuumPaused", "{name} esta pausado o esperando.", { source: name, name, state: state.state }, entityId),
           icon: "mdi:pause-circle-outline",
           severity: "warning",
           source: name,
+          entity: entityId,
+          tintColor: this._smartTint("vacuum", entityId),
+          mobilePolicy: this._smartMobilePolicy(entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: { label: this._text("actions.continue", "Continuar"), type: "service", service: "vacuum.start", entity: entityId, internal: true },
+          action: this._smartAction("vacuum", { label: this._text("actions.continue", "Continuar"), type: "service", service: "vacuum.start", entity: entityId, internal: true }, "", entityId),
         });
       } else if (["cleaning", "returning"].includes(value)) {
         add({
           id: `vacuum:${entityId}:${value}`,
-          title: value === "cleaning" ? this._text("titles.cleaningStarted", "Limpieza iniciada") : this._text("titles.returningDock", "Robot volviendo a base"),
-          message: this._text("messages.vacuumState", "{name}: {state}.", { name, state: state.state }),
+          title: value === "cleaning"
+            ? this._smartTitle("vacuum", "titles.cleaningStarted", "Limpieza iniciada", { source: name, name, state: state.state }, entityId)
+            : this._smartTitle("vacuum", "titles.returningDock", "Robot volviendo a base", { source: name, name, state: state.state }, entityId),
+          message: this._smartMessage("vacuum", "messages.vacuumState", "{name}: {state}.", { source: name, name, state: state.state }, entityId),
           icon: value === "cleaning" ? "mdi:robot-vacuum" : "mdi:home-import-outline",
           severity: "info",
           source: name,
+          entity: entityId,
+          tintColor: this._smartTint("vacuum", entityId),
+          mobilePolicy: this._smartMobilePolicy(entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: { label: this._text("actions.viewRobot", "Ver robot"), type: "more-info", entity: entityId },
+          action: this._smartAction("vacuum", { label: this._text("actions.viewRobot", "Ver robot"), type: "more-info", entity: entityId }, "", entityId),
         });
       }
     });
@@ -1807,15 +1865,19 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._config.motion_entities.forEach(entityId => {
       const state = hass?.states?.[entityId];
       if (stateIsOn(state)) {
+        const sourceName = friendlyName(hass, entityId);
         add({
           id: `motion:${entityId}:${state.state}`,
-          title: this._text("titles.motionDetected", "Movimiento detectado"),
-          message: friendlyName(hass, entityId),
+          title: this._smartTitle("motion", "titles.motionDetected", "Movimiento detectado", { source: sourceName }, entityId),
+          message: this._smartMessage("motion", "", sourceName, { source: sourceName }, entityId),
           icon: "mdi:motion-sensor",
           severity: "info",
-          source: friendlyName(hass, entityId),
+          source: sourceName,
+          entity: entityId,
+          tintColor: this._smartTint("motion", entityId),
+          mobilePolicy: this._smartMobilePolicy(entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId },
+          action: this._smartAction("motion", { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId }, "", entityId),
         });
       }
     });
@@ -1827,15 +1889,19 @@ class NodaliaNotificationsCard extends HTMLElement {
       entities.forEach(entityId => {
         const state = hass?.states?.[entityId];
         if (stateIsOn(state)) {
+          const sourceName = friendlyName(hass, entityId);
           add({
             id: `${kind}:${entityId}:${state.state}`,
-            title: this._text(titleKey, fallbackTitle),
-            message: friendlyName(hass, entityId),
+            title: this._smartTitle(kind, titleKey, fallbackTitle, { source: sourceName }, entityId),
+            message: this._smartMessage(kind, "", sourceName, { source: sourceName }, entityId),
             icon,
             severity: "warning",
-            source: friendlyName(hass, entityId),
+            source: sourceName,
+            entity: entityId,
+            tintColor: this._smartTint(kind, entityId),
+            mobilePolicy: this._smartMobilePolicy(entityId),
             createdAt: Date.parse(state.last_changed || "") || Date.now(),
-            action: { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId },
+            action: this._smartAction(kind, { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId }, "", entityId),
           });
         }
       });
@@ -1886,36 +1952,38 @@ class NodaliaNotificationsCard extends HTMLElement {
       const fanName = friendlyName(this._hass, hottest.fanTarget);
       add({
         id: `comfort:hot:${hottest.entityId}:${hottest.fanTarget}:${Math.floor(hottest.value)}`,
-        title: this._smartTitle("hot", "titles.hot", "Hace calor"),
+        title: this._smartTitle("hot", "titles.hot", "Hace calor", { source: sourceName, value: formatNumber(hottest.value, hottest.unit), fan: fanName }, hottest.entityId),
         message: this._smartMessage("hot", "messages.hot", "{source} marca {value}. Puedes encender {fan}.", {
           source: sourceName,
           value: formatNumber(hottest.value, hottest.unit),
           fan: fanName,
-        }),
+        }, hottest.entityId),
         icon: "mdi:fan",
         severity: "warning",
         source: sourceName,
         entity: hottest.entityId,
-        tintColor: this._smartTint("hot"),
+        tintColor: this._smartTint("hot", hottest.entityId),
+        mobilePolicy: this._smartMobilePolicy(hottest.entityId),
         createdAt: Date.parse(hottest.state.last_changed || "") || Date.now(),
-        action: this._smartAction("hot", { label: this._text("actions.turnOnFan", "Encender ventilador"), type: "service", service: "fan.turn_on", entity: hottest.fanTarget, internal: true }),
+        action: this._smartAction("hot", { label: this._text("actions.turnOnFan", "Encender ventilador"), type: "service", service: "fan.turn_on", entity: hottest.fanTarget, internal: true }, "", hottest.entityId),
       });
     } else if (coldest && coldest.value <= this._config.thresholds.cold_temperature) {
       const sourceName = friendlyName(this._hass, coldest.entityId);
       add({
         id: `comfort:cold:${coldest.entityId}:${Math.floor(coldest.value)}`,
-        title: this._smartTitle("cold", "titles.cold", "Temperatura baja"),
+        title: this._smartTitle("cold", "titles.cold", "Temperatura baja", { source: sourceName, value: formatNumber(coldest.value, coldest.unit) }, coldest.entityId),
         message: this._smartMessage("cold", "messages.sensorValue", "{source} marca {value}.", {
           source: sourceName,
           value: formatNumber(coldest.value, coldest.unit),
-        }),
+        }, coldest.entityId),
         icon: "mdi:thermometer-low",
         severity: "info",
         source: sourceName,
         entity: coldest.entityId,
-        tintColor: this._smartTint("cold"),
+        tintColor: this._smartTint("cold", coldest.entityId),
+        mobilePolicy: this._smartMobilePolicy(coldest.entityId),
         createdAt: Date.parse(coldest.state.last_changed || "") || Date.now(),
-        action: this._smartAction("cold", null),
+        action: this._smartAction("cold", null, "", coldest.entityId),
       });
     }
 
@@ -1931,18 +1999,21 @@ class NodaliaNotificationsCard extends HTMLElement {
         const smartKind = high ? "humidity_high" : "humidity_low";
         add({
           id: `humidity:${entityId}:${high ? "high" : "low"}:${Math.round(value)}`,
-          title: high ? this._smartTitle(smartKind, "titles.humidityHigh", "Humedad alta") : this._smartTitle(smartKind, "titles.humidityLow", "Humedad baja"),
+          title: high
+            ? this._smartTitle(smartKind, "titles.humidityHigh", "Humedad alta", { source: sourceName, value: formatNumber(value, state.attributes?.unit_of_measurement || "%") }, entityId)
+            : this._smartTitle(smartKind, "titles.humidityLow", "Humedad baja", { source: sourceName, value: formatNumber(value, state.attributes?.unit_of_measurement || "%") }, entityId),
           message: this._smartMessage(smartKind, "messages.sensorValue", "{source} marca {value}.", {
             source: sourceName,
             value: formatNumber(value, state.attributes?.unit_of_measurement || "%"),
-          }),
+          }, entityId),
           icon: high ? "mdi:water-percent-alert" : "mdi:water-percent",
           severity: high ? "warning" : "info",
           source: sourceName,
           entity: entityId,
-          tintColor: this._smartTint(smartKind),
+          tintColor: this._smartTint(smartKind, entityId),
+          mobilePolicy: this._smartMobilePolicy(entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: this._smartAction(smartKind, { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId }),
+          action: this._smartAction(smartKind, { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId }, "", entityId),
         });
       }
     });
@@ -1973,26 +2044,47 @@ class NodaliaNotificationsCard extends HTMLElement {
     });
   }
 
-  _smartConfig(kind) {
-    return this._config.smart_notifications?.[kind] || {};
+  _smartEntityOverride(entityId) {
+    const target = String(entityId || "").trim();
+    if (!target) {
+      return null;
+    }
+    return (this._config.smart_entity_overrides || []).find(item => item.entity === target) || null;
   }
 
-  _smartTitle(kind, path, fallback, values = {}) {
-    const configured = this._smartConfig(kind).title;
+  _smartConfig(kind, entityId = "") {
+    const base = this._config.smart_notifications?.[kind] || {};
+    const override = this._smartEntityOverride(entityId);
+    if (!override) {
+      return base;
+    }
+    return {
+      ...base,
+      ...Object.fromEntries(
+        ["title", "message", "tint_color", "url", "action_label"]
+          .map(key => [key, override[key]])
+          .filter(([, value]) => String(value || "").trim()),
+      ),
+      mobile: override.mobile || "inherit",
+    };
+  }
+
+  _smartTitle(kind, path, fallback, values = {}, entityId = "") {
+    const configured = this._smartConfig(kind, entityId).title;
     return configured ? this._formatTemplate(configured, values) : this._text(path, fallback, values);
   }
 
-  _smartMessage(kind, path, fallback, values = {}) {
-    const configured = this._smartConfig(kind).message;
+  _smartMessage(kind, path, fallback, values = {}, entityId = "") {
+    const configured = this._smartConfig(kind, entityId).message;
     return configured ? this._formatTemplate(configured, values) : this._text(path, fallback, values);
   }
 
-  _smartTint(kind) {
-    return this._smartConfig(kind).tint_color || "";
+  _smartTint(kind, entityId = "") {
+    return this._smartConfig(kind, entityId).tint_color || "";
   }
 
-  _smartAction(kind, fallbackAction = null, fallbackUrlLabel = "") {
-    const config = this._smartConfig(kind);
+  _smartAction(kind, fallbackAction = null, fallbackUrlLabel = "", entityId = "") {
+    const config = this._smartConfig(kind, entityId);
     const url = window.NodaliaUtils?.sanitizeActionUrl?.(config.url, { allowRelative: true }) || "";
     if (url) {
       return {
@@ -2002,6 +2094,11 @@ class NodaliaNotificationsCard extends HTMLElement {
       };
     }
     return fallbackAction;
+  }
+
+  _smartMobilePolicy(entityId) {
+    const override = this._smartEntityOverride(entityId);
+    return override?.mobile || "inherit";
   }
 
   _buildWeatherNotifications(add) {
@@ -2030,18 +2127,19 @@ class NodaliaNotificationsCard extends HTMLElement {
       const sourceName = friendlyName(this._hass, entityId);
       add({
         id: `weather:rain:${entityId}:${rainy.date.toISOString().slice(0, 13)}`,
-        title: this._smartTitle("rain", "titles.rainSoon", "Lluvia proxima"),
+        title: this._smartTitle("rain", "titles.rainSoon", "Lluvia proxima", { source: sourceName, time: formatTime(rainy.date) }, entityId),
         message: this._smartMessage("rain", "messages.rainSoon", "{source} preve lluvia sobre {time}. Si tienes ropa tendida, conviene revisarla.", {
           source: sourceName,
           time: formatTime(rainy.date),
-        }),
+        }, entityId),
         icon: "mdi:weather-pouring",
         severity: "warning",
         source: sourceName,
         entity: entityId,
-        tintColor: this._smartTint("rain"),
+        tintColor: this._smartTint("rain", entityId),
+        mobilePolicy: this._smartMobilePolicy(entityId),
         createdAt: rainy.date.getTime(),
-        action: this._smartAction("rain", { label: this._text("actions.viewWeather", "Ver tiempo"), type: "more-info", entity: entityId }),
+        action: this._smartAction("rain", { label: this._text("actions.viewWeather", "Ver tiempo"), type: "more-info", entity: entityId }, "", entityId),
       });
     });
   }
@@ -2101,19 +2199,20 @@ class NodaliaNotificationsCard extends HTMLElement {
             source: sourceName,
             threshold: formatNumber(group.threshold, unit),
             value: formattedValue,
-          }),
+          }, entityId),
           message: this._smartMessage(group.kind, group.messageKey, group.messageFallback, {
             source: sourceName,
             threshold: formatNumber(group.threshold, unit),
             value: formattedValue,
-          }),
+          }, entityId),
           icon: group.icon,
           severity: "warning",
           source: sourceName,
           entity: entityId,
-          tintColor: this._smartTint(group.kind),
+          tintColor: this._smartTint(group.kind, entityId),
+          mobilePolicy: this._smartMobilePolicy(entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: this._smartAction(group.kind, { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId }, group.urlLabel),
+          action: this._smartAction(group.kind, { label: this._text("actions.viewSensor", "Ver sensor"), type: "more-info", entity: entityId }, group.urlLabel, entityId),
         });
       });
     });
@@ -2197,11 +2296,15 @@ class NodaliaNotificationsCard extends HTMLElement {
 
   _shouldSendMobileNotification(item) {
     const config = this._config.mobile_notifications;
+    const policy = String(item?.mobilePolicy || "inherit").toLowerCase();
+    if (policy === "off") {
+      return false;
+    }
     const targets = [
       ...(Array.isArray(config?.entities) ? config.entities : []),
       ...(Array.isArray(config?.services) ? config.services : []),
     ];
-    if (!config?.enabled || !targets.length || !item?.id) {
+    if ((!config?.enabled && policy !== "on") || !targets.length || !item?.id) {
       return false;
     }
     if (this._severityScore(item.severity) < this._severityScore(config.min_severity)) {
@@ -2609,8 +2712,8 @@ class NodaliaNotificationsCard extends HTMLElement {
       ? sanitizeCssRuntimeValue(item.tintColor, "")
       : this._severityAccent(item?.severity);
     const inset = stackIndex === 1 ? 4 : 10;
-    const offset = stackIndex === 1 ? 3 : 10;
-    const opacity = stackIndex === 1 ? 0.74 : 0.54;
+    const offset = stackIndex === 1 ? 8 : 13;
+    const opacity = stackIndex === 1 ? 0.62 : 0.42;
     const zIndex = stackIndex === 1 ? 2 : 1;
     return [
       `--stack-index:${stackIndex}`,
@@ -2765,7 +2868,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           align-items: start;
           display: grid;
           isolation: isolate;
-          padding-bottom: ${shouldStack && !this._expanded ? "24px" : "0"};
+          padding-bottom: ${shouldStack && !this._expanded ? "18px" : "0"};
           position: relative;
         }
         .notifications-stack-toggle,
@@ -3370,6 +3473,20 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
   }
 
   _setFieldValue(path, value) {
+    const smartEntityMatch = String(path || "").match(/^smart_entity_overrides\.(\d+)\./);
+    if (smartEntityMatch) {
+      const index = Number(smartEntityMatch[1]);
+      const entity = this._smartEntityEditorEntities?.[index] || "";
+      if (entity) {
+        if (!Array.isArray(this._config.smart_entity_overrides)) {
+          this._config.smart_entity_overrides = [];
+        }
+        if (!isObject(this._config.smart_entity_overrides[index])) {
+          this._config.smart_entity_overrides[index] = {};
+        }
+        this._config.smart_entity_overrides[index].entity = entity;
+      }
+    }
     if (value === "" || value === undefined || value === null || (Array.isArray(value) && !value.length)) {
       deleteByPath(this._config, path);
       return;
@@ -3735,6 +3852,54 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     }
   }
 
+  _smartEntityEditorRows(config) {
+    const labels = [
+      ["calendar_entities", "Calendario"],
+      ["vacuum_entities", "Robot"],
+      ["weather_entities", "Tiempo"],
+      ["motion_entities", "Movimiento"],
+      ["door_entities", "Puerta"],
+      ["window_entities", "Ventana"],
+      ["temperature_entities", "Temperatura"],
+      ["humidity_entities", "Humedad"],
+      ["battery_entities", "Bateria"],
+      ["humidifier_fill_entities", "Deposito"],
+      ["ink_entities", "Tinta"],
+    ];
+    const byEntity = new Map((config.smart_entity_overrides || []).map(item => [item.entity, item]));
+    const seen = new Set();
+    const rows = [];
+    labels.forEach(([field, label]) => {
+      (config[field] || []).forEach(entity => {
+        if (!entity || seen.has(entity)) {
+          return;
+        }
+        seen.add(entity);
+        rows.push({
+          entity,
+          label,
+          ...(byEntity.get(entity) || {}),
+        });
+      });
+    });
+    (config.smart_entity_overrides || []).forEach(item => {
+      if (item.entity && !seen.has(item.entity)) {
+        seen.add(item.entity);
+        rows.push({ label: "Manual", ...item });
+      }
+    });
+    return rows.map(item => ({
+      entity: item.entity,
+      label: item.label || "Entidad",
+      title: item.title || "",
+      message: item.message || "",
+      tint_color: item.tint_color || "",
+      url: item.url || "",
+      action_label: item.action_label || "",
+      mobile: normalizeSmartEntityMobile(item.mobile),
+    }));
+  }
+
   _renderSmartNotificationOptions(config) {
     const rows = [
       ["hot", "Calor", "Hace calor", "{source} marca {value}. Puedes encender {fan}."],
@@ -3763,6 +3928,36 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         </div>
       `;
     }).join("");
+  }
+
+  _renderSmartEntityOverrides(config) {
+    const rows = this._smartEntityEditorRows(config);
+    this._smartEntityEditorEntities = rows.map(item => item.entity);
+    if (!rows.length) {
+      return `<div class="editor-empty">Anade entidades en Conexiones inteligentes para personalizarlas una a una.</div>`;
+    }
+    return rows.map((item, index) => `
+      <div class="editor-action">
+        <div class="editor-action__header">
+          <div>
+            <div class="editor-action__title">${escapeHtml(item.label)} · ${escapeHtml(friendlyName(this._hass, item.entity) || item.entity)}</div>
+            <div class="editor-action__subtitle">${escapeHtml(item.entity)}</div>
+          </div>
+        </div>
+        <div class="editor-grid">
+          ${this._renderTextField("Titulo solo para esta entidad", `smart_entity_overrides.${index}.title`, item.title, { placeholder: "Usar titulo global" })}
+          ${this._renderColorField("Color solo para esta entidad", `smart_entity_overrides.${index}.tint_color`, item.tint_color)}
+          ${this._renderTextareaField("Mensaje solo para esta entidad", `smart_entity_overrides.${index}.message`, item.message, { placeholder: "Usar mensaje global" })}
+          ${this._renderTextField("URL solo para esta entidad", `smart_entity_overrides.${index}.url`, item.url, { placeholder: "https://...", fullWidth: true })}
+          ${this._renderTextField("Etiqueta URL", `smart_entity_overrides.${index}.action_label`, item.action_label, { placeholder: "Comprar / Abrir" })}
+          ${this._renderSelectField("Movil", `smart_entity_overrides.${index}.mobile`, item.mobile, [
+            { value: "inherit", label: "Heredar" },
+            { value: "on", label: "Enviar siempre" },
+            { value: "off", label: "No enviar" },
+          ])}
+        </div>
+      </div>
+    `).join("");
   }
 
   _renderCustomNotifications(config) {
@@ -4086,6 +4281,13 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           font-size: 13px;
           font-weight: 800;
         }
+        .editor-action__subtitle {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          line-height: 1.35;
+          margin-top: 2px;
+          overflow-wrap: anywhere;
+        }
         @media (max-width: 640px) {
           .editor-grid {
             grid-template-columns: 1fr;
@@ -4213,7 +4415,19 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${this._showSmartSection ? this._renderSmartNotificationOptions(config) : ""}
+          ${
+            this._showSmartSection
+              ? `
+                <div class="editor-section__hint">Primero van los valores por tipo. Debajo puedes sobreescribirlos por entidad concreta: ideal para varias ventanas, cartuchos de impresora o sensores distintos.</div>
+                ${this._renderSmartNotificationOptions(config)}
+                <div class="editor-section__header">
+                  <div class="editor-section__title">Ajustes por entidad</div>
+                  <div class="editor-section__hint">Estos campos tienen prioridad sobre el tipo global. En movil puedes heredar, forzar envio o silenciar solo esa entidad.</div>
+                </div>
+                ${this._renderSmartEntityOverrides(config)}
+              `
+              : ""
+          }
         </section>
         <section class="editor-section">
           <div class="editor-section__header">

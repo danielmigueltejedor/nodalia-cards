@@ -6,7 +6,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Work toward **`1.0.0`** on **`beta`** while **`0.6.1`** remains the stable baseline on **`main`**: final polish, performance, security and compatibility work before the next major stable. Prerelease workflow and tagging: **CONTRIBUTING**.
+Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains the stable baseline on **`main`**: final polish, performance, security and compatibility work before the next major stable. Prerelease workflow and tagging: **CONTRIBUTING**.
+
+---
+
+## [1.0.0-alpha.63] - 2026-05-08
+
+Sixty-third **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.63`** (tag **`v1.0.0-alpha.63`** optional).
+
+- **Notifications card — pila compacta:** las tarjetas traseras del modo plegado suben y quedan más discretas bajo la principal, reduciendo el hueco visual inferior.
+- **Notifications card — overrides por entidad:** los avisos inteligentes ahora permiten personalizar por entidad concreta el título, mensaje, color, URL, etiqueta de acción y política móvil (`heredar`, `enviar siempre`, `no enviar`), manteniendo como base la configuración por tipo.
+- **Navigation Bar:** se conservan fallbacks de tema para el toggle de media player si configuración y defaults quedan vacíos.
+- **Advance Vacuum:** la persistencia solo por webhook deduplica también la sesión vacía para evitar POST redundantes.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.63`**.
 
 ---
 
@@ -46,6 +58,10 @@ First public **`beta`** candidate for **`1.0.0`**, promoted from the full **`1.0
 - Corrige cálculos de temperatura baja usando el sensor más frío y mejora la asociación sensor -> ventilador por área/nombre.
 - Reduce cortes visuales en móvil, estados vacíos, botones icon-only, chips y capas compactas.
 - Mejora compatibilidad con servicios `notify.*` modernos y legacy sin enviar campos no aceptados por Home Assistant.
+- Mantiene fallbacks de tema para el toggle de media player en Navigation Bar cuando configuración y defaults quedan vacíos.
+- Deduplica también las sesiones vacías de Advance Vacuum cuando la persistencia usa solo webhook, evitando POST redundantes.
+- Ajusta la pila compacta de Notifications Card para que las tarjetas traseras asomen menos bajo la principal.
+- Añade overrides por entidad en avisos inteligentes: URL, etiqueta, título, mensaje, color y política móvil individual (`heredar`, `enviar siempre`, `no enviar`).
 
 ### Metadata
 

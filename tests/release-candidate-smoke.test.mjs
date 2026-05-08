@@ -212,6 +212,16 @@ test("notifications card is bundled and supports smart dismissible notifications
   const readme = read("README.md");
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaNotificationsCard\)/);
   assert.match(source, /custom_notifications/);
+  assert.match(source, /smart_entity_overrides/);
+  assert.match(source, /normalizeSmartEntityOverrides/);
+  assert.match(source, /_renderSmartEntityOverrides\(config\)/);
+  assert.match(source, /smart_entity_overrides\.\$\{index\}\.url/);
+  assert.match(source, /smart_entity_overrides\.\$\{index\}\.mobile/);
+  assert.match(source, /mobilePolicy/);
+  assert.match(source, /policy === "off"/);
+  assert.match(source, /policy !== "on"/);
+  assert.match(source, /const offset = stackIndex === 1 \? 8 : 13/);
+  assert.match(source, /padding-bottom: \$\{shouldStack && !this\._expanded \? "18px" : "0"\}/);
   assert.match(source, /calendar_entities/);
   assert.match(source, /vacuum_entities/);
   assert.match(source, /weather_entities/);

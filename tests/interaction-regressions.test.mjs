@@ -54,7 +54,7 @@ test("advanced vacuum internal service calls bypass strict external allowlist", 
   assert.match(source, /_callNamedService\(item\.service, serviceData, item\.target \|\| null\)/);
 });
 
-test("advanced vacuum webhook-only persistence does not suppress empty session retransmit", () => {
+test("advanced vacuum webhook-only persistence deduplicates empty sessions", () => {
   const source = read("nodalia-advance-vacuum-card.js");
   assert.match(source, /const hasEntityTarget = Boolean\(entityId\)/);
   assert.match(source, /const hasWebhookTarget = Boolean\(webhookId\)/);
@@ -62,6 +62,15 @@ test("advanced vacuum webhook-only persistence does not suppress empty session r
   assert.match(source, /if \(hasEntityTarget && serializedTrim === this\._lastSubmittedSharedCleaningSessionValue\)/);
   assert.match(
     source,
-    /!hasEntityTarget &&\s*hasWebhookTarget &&\s*serializedTrim !== "" &&\s*serializedTrim === this\._lastSubmittedSharedCleaningSessionValue/,
+    /!hasEntityTarget &&\s*hasWebhookTarget &&\s*serializedTrim === this\._lastSubmittedSharedCleaningSessionValue/,
   );
+  assert.doesNotMatch(source, /serializedTrim !== "" &&\s*serializedTrim === this\._lastSubmittedSharedCleaningSessionValue/);
+});
+
+test("navigation media player toggle keeps theme fallbacks after sanitized values", () => {
+  const source = read("nodalia-navigation-bar.js");
+  assert.match(source, /const mediaToggleBackgroundBase = sanitizeCssRuntimeValue\(config\.styles\.media_player\.background\)[\s\S]*"var\(--ha-card-background, var\(--card-background-color\)\)"/);
+  assert.match(source, /const mediaToggleBorder = sanitizeCssRuntimeValue\(config\.styles\.media_player\.border\)[\s\S]*"1px solid color-mix\(in srgb, var\(--primary-text-color\) 8%, transparent\)"/);
+  assert.match(source, /const mediaToggleBorderRadius = sanitizeCssRuntimeValue\(config\.styles\.media_player\.border_radius\)[\s\S]*"18px"/);
+  assert.match(source, /const mediaToggleBoxShadow = sanitizeCssRuntimeValue\(config\.styles\.media_player\.box_shadow\)[\s\S]*"inset 0 1px 0 color-mix\(in srgb, var\(--primary-text-color\) 4%, transparent\), 0 10px 24px rgba\(0, 0, 0, 0\.16\)"/);
 });
