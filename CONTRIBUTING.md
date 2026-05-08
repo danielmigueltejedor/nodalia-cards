@@ -150,7 +150,7 @@ After **`v0.4.0`** is on **`main`** (and optionally after **`beta`** exists), cr
 ```bash
 git checkout main && git pull
 git checkout -b alpha
-# set package.json to e.g. 1.0.0-alpha.62, changelog section, npm run bundle
+# set package.json to e.g. 1.0.0-alpha.63, changelog section, npm run bundle
 git push -u origin alpha
 ```
 
@@ -162,7 +162,7 @@ Or branch **`alpha`** from **`beta`** if **`beta`** already tracks **`0.5.0-beta
 
 2. **`beta` (first prerelease of the next major)** — merge **`main`** into **`beta`**, bump to **`1.0.0-beta.1`**, **`CHANGELOG`** **`## [1.0.0-beta.1]`**, **`npm run bundle`**, tag **`v1.0.0-beta.1`**.
 
-3. **`alpha` (experimental)** — after shipping **`0.6.1` stable, continue the next major line as `1.0.0-alpha.*` (currently **`1.0.0-alpha.62`**) and promote to **`1.0.0-beta.*`** when ready.
+3. **`alpha` (experimental)** — after shipping **`0.6.1` stable, continue the next major line as `1.0.0-alpha.*` for experimental work and promote polished batches to **`1.0.0-beta.*`**. Current tester candidate: **`1.0.0-beta.1`**.
 
 4. **Stable minor** — when **`beta`** is release-ready, merge **`beta` → `main`**, set the stable version (currently **`0.6.1`**), and tag accordingly.
 
