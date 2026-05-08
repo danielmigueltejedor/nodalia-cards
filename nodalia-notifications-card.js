@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-alpha.63";
+const CARD_VERSION = "1.0.0-alpha.65";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1281,6 +1281,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._lastNotificationIdsSignature = "";
     this._lastNotifications = [];
     this._animateContentOnNextRender = true;
+    this._entranceAnimationTimer = 0;
     this._stackTransition = "";
     this._stackCollapseTimer = 0;
     this._collapsingStack = false;
@@ -1335,6 +1336,10 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (this._mobileNotifyTimer) {
       window.clearTimeout(this._mobileNotifyTimer);
       this._mobileNotifyTimer = 0;
+    }
+    if (this._entranceAnimationTimer) {
+      window.clearTimeout(this._entranceAnimationTimer);
+      this._entranceAnimationTimer = 0;
     }
   }
 
@@ -2774,6 +2779,16 @@ class NodaliaNotificationsCard extends HTMLElement {
     const animateEntrance = animations.enabled && (this._animateContentOnNextRender || notificationSetChanged);
     const stackTransition = animations.enabled ? this._stackTransition : "";
     this._lastNotificationIdsSignature = nextNotificationIdsSignature;
+    if (animateEntrance) {
+      if (this._entranceAnimationTimer) {
+        window.clearTimeout(this._entranceAnimationTimer);
+      }
+      this._entranceAnimationTimer = window.setTimeout(() => {
+        this._entranceAnimationTimer = 0;
+        this._animateContentOnNextRender = false;
+        this._renderIfChanged(true);
+      }, Math.max(180, animations.contentDuration + 160));
+    }
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -3288,7 +3303,6 @@ class NodaliaNotificationsCard extends HTMLElement {
           }
       </ha-card>
     `;
-    this._animateContentOnNextRender = false;
     this._stackTransition = "";
   }
 }
@@ -3477,15 +3491,24 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     if (smartEntityMatch) {
       const index = Number(smartEntityMatch[1]);
       const entity = this._smartEntityEditorEntities?.[index] || "";
-      if (entity) {
-        if (!Array.isArray(this._config.smart_entity_overrides)) {
-          this._config.smart_entity_overrides = [];
-        }
-        if (!isObject(this._config.smart_entity_overrides[index])) {
-          this._config.smart_entity_overrides[index] = {};
-        }
-        this._config.smart_entity_overrides[index].entity = entity;
+      const key = String(path || "").split(".").pop();
+      if (!entity || !key) {
+        return;
       }
+      if (!Array.isArray(this._config.smart_entity_overrides)) {
+        this._config.smart_entity_overrides = [];
+      }
+      let overrideIndex = this._config.smart_entity_overrides.findIndex(item => item?.entity === entity);
+      if (overrideIndex < 0) {
+        overrideIndex = this._config.smart_entity_overrides.length;
+        this._config.smart_entity_overrides.push({ entity });
+      }
+      if (value === "" || value === undefined || value === null) {
+        delete this._config.smart_entity_overrides[overrideIndex][key];
+      } else {
+        this._config.smart_entity_overrides[overrideIndex][key] = value;
+      }
+      return;
     }
     if (value === "" || value === undefined || value === null || (Array.isArray(value) && !value.length)) {
       deleteByPath(this._config, path);

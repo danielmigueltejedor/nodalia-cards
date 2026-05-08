@@ -134,17 +134,6 @@ test("calendar composers reject past dates with inline popup errors", () => {
   assert.match(source, /calendar-composer__error/);
 });
 
-test("calendar compact completion waits for calendar events before sync", () => {
-  const source = read("nodalia-calendar-card.js");
-  assert.match(source, /function completionPayloadNeedsEvents\(raw\)/);
-  assert.match(source, /value\.startsWith\("v5:"\)/);
-  assert.match(source, /completionPayloadNeedsEvents\(raw\)/);
-  assert.match(source, /this\._syncCompletedAfterEventsLoaded\(\)/);
-  assert.match(source, /expandCompletionPayloadToKeys\(raw, events\)/);
-  assert.doesNotMatch(source, /_buildQuickReminderEvents/);
-  assert.doesNotMatch(source, /_submitQuickReminderComposer/);
-});
-
 test("calendar native composer supports rich HA event fields and details", () => {
   const source = read("nodalia-calendar-card.js");
   const example = read("examples/calendar-native-event-webhook.yaml");
@@ -168,6 +157,9 @@ test("calendar native composer supports rich HA event fields and details", () =>
   assert.match(source, /\.calendar-event__delete[\s\S]*width: 28px/);
   assert.match(source, /data-action="open-event-detail"/);
   assert.match(source, /calendar-expanded__event-detail/);
+  assert.doesNotMatch(source, /toggle-complete/);
+  assert.doesNotMatch(source, /shared_completed_events_/);
+  assert.doesNotMatch(source, /localStorage/);
   assert.match(example, /description: "\{\{ d\.description \| default\(omit, true\) \}\}"/);
   assert.match(example, /location: "\{\{ d\.location \| default\(omit, true\) \}\}"/);
   assert.doesNotMatch(example, /rrule:/);
@@ -177,7 +169,7 @@ test("calendar editor signature only scans relevant entity domains", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /editorFilteredStatesSignature/);
   assert.match(source, /id\.startsWith\("calendar\."\)/);
-  assert.match(source, /id\.startsWith\("input_text\."\)/);
+  assert.doesNotMatch(source, /id\.startsWith\("input_text\."\)/);
   assert.match(source, /id\.startsWith\("weather\."\)/);
 });
 
@@ -217,9 +209,14 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /_renderSmartEntityOverrides\(config\)/);
   assert.match(source, /smart_entity_overrides\.\$\{index\}\.url/);
   assert.match(source, /smart_entity_overrides\.\$\{index\}\.mobile/);
+  assert.match(source, /findIndex\(item => item\?\.entity === entity\)/);
+  assert.doesNotMatch(source, /this\._config\.smart_entity_overrides\[index\]\.entity = entity/);
   assert.match(source, /mobilePolicy/);
   assert.match(source, /policy === "off"/);
   assert.match(source, /policy !== "on"/);
+  assert.match(source, /_entranceAnimationTimer/);
+  assert.match(source, /window\.setTimeout\(\(\) => \{\s*this\._entranceAnimationTimer = 0;\s*this\._animateContentOnNextRender = false;/);
+  assert.doesNotMatch(source, /this\._animateContentOnNextRender = false;\s*this\._stackTransition = "";/);
   assert.match(source, /const offset = stackIndex === 1 \? 8 : 13/);
   assert.match(source, /padding-bottom: \$\{shouldStack && !this\._expanded \? "18px" : "0"\}/);
   assert.match(source, /calendar_entities/);

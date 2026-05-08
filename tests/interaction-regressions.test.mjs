@@ -43,6 +43,13 @@ test("service-security controls are exposed in visual editors", () => {
   });
 });
 
+test("insignia icon-only pills keep bottom breathing room in scroll strips", () => {
+  const source = read("nodalia-insignia-card.js");
+  assert.match(source, /--insignia-scroll-strip-padding-block/);
+  assert.match(source, /var\(--insignia-scroll-strip-margin-block, 4px 8px\)/);
+  assert.match(source, /overflow: visible;[\s\S]*width: auto;/);
+});
+
 test("advanced vacuum internal service calls bypass strict external allowlist", () => {
   const source = read("nodalia-advance-vacuum-card.js");
   assert.match(source, /_callInternalService\(service, data = \{\}, target = null\)/);

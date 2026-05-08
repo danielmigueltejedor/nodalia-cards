@@ -10,12 +10,34 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.65] - 2026-05-08
+
+Sixty-fifth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.65`** (tag **`v1.0.0-alpha.65`** optional).
+
+- **Calendar card — solo persistencia nativa:** se elimina por completo el sistema de marcado/completados, `localStorage`, helpers `input_text` y webhook de completados; para quitar eventos se usa únicamente el borrado nativo de Home Assistant (`calendar/event/delete`) cuando el calendario lo soporta.
+- **Calendar card — editor más limpio:** desaparecen las opciones de completados compartidos y el editor solo muestra creación/borrado de eventos nativos, forecast, tintado, haptics y estilo.
+- **Insignia card — scroll sin recorte:** las insignias icon-only ganan aire inferior por defecto en barras con scroll para evitar que el borde/sombra quede cortado.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.65`**.
+
+---
+
+## [1.0.0-alpha.64] - 2026-05-08
+
+Sixty-fourth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.64`** (tag **`v1.0.0-alpha.64`** optional).
+
+- **Notifications card — animación de entrada:** la clase de entrada se mantiene durante la duración real de la animación para que Home Assistant no la elimine en un re-render inmediato antes del primer paint; vuelve a reproducirse al entrar en la vista.
+- **Notifications card — auditoría preestable:** mantiene la corrección del editor por entidad y refuerza cobertura para evitar regresiones en overrides y animaciones.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.64`**.
+
+---
+
 ## [1.0.0-alpha.63] - 2026-05-08
 
 Sixty-third **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.63`** (tag **`v1.0.0-alpha.63`** optional).
 
 - **Notifications card — pila compacta:** las tarjetas traseras del modo plegado suben y quedan más discretas bajo la principal, reduciendo el hueco visual inferior.
 - **Notifications card — overrides por entidad:** los avisos inteligentes ahora permiten personalizar por entidad concreta el título, mensaje, color, URL, etiqueta de acción y política móvil (`heredar`, `enviar siempre`, `no enviar`), manteniendo como base la configuración por tipo.
+- **Notifications card — editor:** cambiar varias veces el color de tintado de un override por entidad actualiza siempre esa misma entidad, sin quedarse bloqueado en el primer color guardado.
 - **Navigation Bar:** se conservan fallbacks de tema para el toggle de media player si configuración y defaults quedan vacíos.
 - **Advance Vacuum:** la persistencia solo por webhook deduplica también la sesión vacía para evitar POST redundantes.
 - **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.63`**.
@@ -30,7 +52,7 @@ First public **`beta`** candidate for **`1.0.0`**, promoted from the full **`1.0
 
 | Área | Qué cambia en `1.0.0` |
 |------|------------------------|
-| **Calendario** | Eventos nativos de Home Assistant, popup grande, forecast moderno, composer más completo y persistencia más fiable. |
+| **Calendario** | Eventos nativos de Home Assistant, popup grande, forecast moderno, composer más completo y borrado nativo persistente. |
 | **Notificaciones** | Nueva tarjeta `custom:nodalia-notifications-card` con avisos inteligentes, pila expandible, descartes persistentes, notificaciones móviles y editor visual. |
 | **Vacuum / Advance Vacuum** | Mejor sincronización compartida con `input_text`, paneles de modo/utilidades persistentes y acciones más seguras. |
 | **Editores visuales** | Selectores nativos de HA, color pickers consistentes, secciones plegables y controles más compactos. |
@@ -45,7 +67,7 @@ First public **`beta`** candidate for **`1.0.0`**, promoted from the full **`1.0
 - **Notifications card nueva:** centro inteligente de avisos con estado vacío agradable, pila compacta/expandible, capas tintadas, chips de fuente/severidad, acciones rápidas y descartes persistentes.
 - **Recomendaciones inteligentes:** avisos de calendario, robot aspirador, calor/frío, humedad, lluvia próxima, batería baja, depósito de humidificador, tinta y notificaciones personalizadas.
 - **Notificaciones móviles:** envío opcional a entidades `notify.*` modernas mediante `notify.send_message`, compatible con Home Assistant 2026.5; `data.group`/`data.tag` quedan solo para servicios legacy para evitar errores de payload.
-- **Persistencia entre dispositivos:** helper opcional `input_text` para compartir descartes de notificaciones y completados/sesión de calendario/vacuum sin pisar estados locales durante sincronizaciones tardías.
+- **Persistencia entre dispositivos:** helper opcional `input_text` para compartir descartes de notificaciones y sesión de vacuum; Calendar queda en persistencia nativa de Home Assistant mediante creación/borrado de eventos reales.
 - **Editores más cómodos:** `ha-entity-picker`, `ha-selector`, icon picker, color picker visual, secciones plegables, conexiones inteligentes compactas y feedback inline en formularios.
 - **Animación y tacto:** entradas alineadas entre tarjetas, pila de notificaciones con expandir/contraer animado y haptics configurables en acciones principales del calendario.
 - **Seguridad reforzada:** acciones de servicio personalizadas con `security.strict_service_actions`, allowlist por dominio/servicio, URLs saneadas y comportamiento fail-closed cuando la allowlist está vacía.

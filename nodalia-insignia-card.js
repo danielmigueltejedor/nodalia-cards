@@ -1433,7 +1433,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           transform: translateY(var(--insignia-icon-only-row-nudge, -2px));
           padding-block: var(
             --insignia-scroll-strip-padding-block,
-            var(--insignia-scroll-strip-margin-block, 4px)
+            var(--insignia-scroll-strip-margin-block, 4px 8px)
           );
         }
 
