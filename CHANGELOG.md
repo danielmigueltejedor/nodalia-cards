@@ -10,12 +10,136 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.62] - 2026-05-08
+
+Sixty-second **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.62`** (tag **`v1.0.0-alpha.62`** optional).
+
+- **Notifications card — notify moderno:** el servicio `notify.send_message` para entidades `notify.*` ya no envía `data`, evitando el error de Home Assistant `extra keys not allowed @ data['data']`; `data.group`/`data.tag` se mantienen solo para servicios legacy.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.62`**.
+
+---
+
+## [1.0.0-alpha.61] - 2026-05-08
+
+Sixty-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.61`** (tag **`v1.0.0-alpha.61`** optional).
+
+- **Notifications card — pila compacta:** las tarjetas traseras del modo compacto ahora son capas más altas, casi a ancho completo y tintadas según la notificación oculta, para que solo asome el bajo y la curva no aparezca tan pronto.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.61`**.
+
+---
+
+## [1.0.0-alpha.60] - 2026-05-08
+
+Sixtieth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.60`** (tag **`v1.0.0-alpha.60`** optional).
+
+- **Notifications card — persistencia calendario:** los descartes guardados en `input_text`/localStorage ya no se podan durante el render temprano de una recarga fuerte antes de que se hayan hidratado eventos de calendario o previsión.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.60`**.
+
+---
+
+## [1.0.0-alpha.59] - 2026-05-08
+
+Fifty-ninth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.59`** (tag **`v1.0.0-alpha.59`** optional).
+
+- **Notifications card — colapso animado:** contraer la pila anima primero la salida de las notificaciones sobrantes y después muestra la pila compacta.
+- **Notifications card — entrada en pestañas:** la animación de entrada se repite al volver a una vista/pestaña de Home Assistant mediante observer de visibilidad, igual que `nodalia-calendar-card`.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.59`**.
+
+---
+
+## [1.0.0-alpha.58] - 2026-05-08
+
+Fifty-eighth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.58`** (tag **`v1.0.0-alpha.58`** optional).
+
+- **Notifications card — chips superiores:** las burbujas de fuente/severidad se colocan en la esquina superior derecha, justo antes del botón de cierre, para no cortar el ritmo del contenido.
+- **Notifications card — animaciones:** entrada alineada con `nodalia-calendar-card` y animación visible al expandir/contraer la pila de notificaciones.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.58`**.
+
+---
+
+## [1.0.0-alpha.57] - 2026-05-08
+
+Fifty-seventh **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.57`** (tag **`v1.0.0-alpha.57`** optional).
+
+- **Notifications card — robustez:** los avisos personalizados vacíos se filtran, sus IDs dejan de depender del orden del editor y la sincronización por `input_text` limita hashes para respetar el máximo de 255 caracteres.
+- **Notifications card — notify móvil:** `notify.send_message` vuelve a incluir `data.group`/`data.tag` para agrupación y reemplazo de notificaciones, evitando también enviar avisos que se hayan descartado mientras esperaban en cola.
+- **Notifications card — auditoría:** acciones de servicio más ligeras al reutilizar allowlists normalizadas y corrección del cálculo de temperatura baja para usar el sensor más frío, no el más caliente.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.57`**.
+
+---
+
+## [1.0.0-alpha.56] - 2026-05-08
+
+Fifty-sixth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.56`** (tag **`v1.0.0-alpha.56`** optional).
+
+- **Calendar card — selector de color nativo:** el composer de eventos usa el mismo selector visual de color que los editores, con swatch sincronizado y feedback inline si faltan campos obligatorios.
+- **Notifications card — notify HA 2026.5:** el envío a entidades `notify.*` usa payload compatible con `notify.send_message` y las notificaciones de calendario enlazan mejor con el detalle del popup.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.56`**.
+
+---
+
+## [1.0.0-alpha.55] - 2026-05-08
+
+Fifty-fifth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.55`** (tag **`v1.0.0-alpha.55`** optional).
+
+- **Calendar card — haptics:** la tarjeta añade respuesta háptica configurable en acciones principales y un apartado propio en el editor visual.
+- **Calendar/Notifications card — popup conectado:** las notificaciones de calendario abren el popup grande de `nodalia-calendar-card` mediante evento interno, evitando el more-info genérico de Home Assistant.
+- **Notifications card — notify moderno:** el editor permite seleccionar entidades `notify.*` con selector nativo de HA y usa `notify.send_message`, manteniendo servicios `notify.*` legacy como compatibilidad.
+- **Notifications card — editor y animaciones:** las conexiones inteligentes se pueden plegar, el selector de color queda alineado con `nodalia-entity-card` y la animación de entrada se dispara al cambiar la pila real de avisos.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.55`**.
+
+---
+
+## [1.0.0-alpha.54] - 2026-05-07
+
+Fifty-fourth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.54`** (tag **`v1.0.0-alpha.54`** optional).
+
+- **Notifications card — editor y legibilidad:** el selector de color vuelve al patrón del resto de tarjetas, se retiran controles de título que no se renderizan y los iconos aplican contraste tipo `NodaliaBubbleContrast` para tintes claros/amarillos.
+- **Notifications card — avisos inteligentes configurables:** mensajes, títulos, colores y URL opcional por tipo de aviso (`calor`, `humedad`, `lluvia`, `bateria`, `deposito`, `tinta`), con nuevas entidades inteligentes para batería, depósito de humidificador y tinta.
+- **Notifications card — móvil:** las tarjetas dejan de estirarse al volver de horizontal a vertical con alineación superior y reflow en `resize/orientationchange`.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.54`**.
+
+---
+
+## [1.0.0-alpha.53] - 2026-05-07
+
+Fifty-third **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.53`** (tag **`v1.0.0-alpha.53`** optional).
+
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.53`**.
+
+---
+
+## [1.0.0-alpha.52] - 2026-05-07
+
+Fifty-second **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.52`** (tag **`v1.0.0-alpha.52`** optional).
+
+- **Bundle loader:** `nodalia-cards.js` vuelve a ser autocontenido para instalaciones HACS de un solo `filename`; `nodalia-cards.bundle.js` y `nodalia-cards.manifest.js` quedan como artefactos auxiliares, evitando que Home Assistant deje todas las tarjetas sin registrar si esos ficheros no se sirven junto al loader.
+- **Notifications card — avisos más inteligentes:** las recomendaciones de ventilador cruzan sensores y `fan` por área/nombre de estancia antes de proponer acciones, y el forecast horario de `weather/get_forecasts` añade avisos de lluvia próxima.
+- **Notifications card — sincronización y móvil:** nuevo helper opcional `input_text` para compartir descartes entre dispositivos y envío opcional a servicios `notify.*` con severidad mínima configurable.
+- **Notifications card — limpieza visual/editor:** se evita el aviso vacío “Nueva notificacion”, se ocultan chips repetidos/`Info`, se reduce la tipografía del estado sin avisos y se elimina el selector de icono general que no tenía efecto real.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.52`**.
+
+---
+
+## [1.0.0-alpha.51] - 2026-05-07
+
+Fifty-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.51`** (tag **`v1.0.0-alpha.51`** optional).
+
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.51`**.
+
+---
+
 ## [1.0.0-alpha.50] - 2026-05-07
 
 Fiftieth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.50`** (tag **`v1.0.0-alpha.50`** optional).
 
 - **Notifications card — tintado Entity Card:** el estado sin avisos y las tarjetas activas usan la misma superficie tintada/pseudo-capas que `nodalia-entity-card`, evitando bordes/sombras recortadas en el estado vacío.
 - **Notifications card — editor visual compacto:** las conexiones inteligentes cambian de textarea a selectores nativos de entidad filtrados por dominio, con filas compactas para añadir/quitar entidades.
+- **Notifications card — editor visual ampliado:** los selectores nativos de icono ocupan fila completa, los desplegables de secciones usan el mismo boton con chevron del resto de tarjetas, se añaden animaciones configurables y selectores de color para tintado global y por notificacion personalizada.
+- **Notifications card — estabilidad de calendario:** el refresco de eventos ya no se reprograma indefinidamente con cada actualización de `hass`, evitando que instalaciones con muchos cambios de estado bloqueen la consulta.
+- **Notifications card — i18n y seguridad:** los avisos inteligentes usan `NodaliaI18n` y las acciones de servicio personalizadas incorporan `security.strict_service_actions` con allowlist de servicios/dominios, manteniendo bypass solo para acciones internas de la tarjeta.
+- **Bundle loader:** `nodalia-cards.js` pasa a ser un loader cache-busting que lee `nodalia-cards.manifest.js` e importa `nodalia-cards.bundle.js?v=<hash>`, reduciendo cargas antiguas tras redescargar desde HACS.
+- **Calendar card — papelera centrada:** el botón icon-only para borrar eventos nativos usa tamaño cuadrado y centrado explícito para evitar que el icono quede desplazado.
 - **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.50`**.
 
 ---

@@ -1,0 +1,112 @@
+name: Issue release labels
+
+on:
+  issues:
+    types:
+      - labeled
+
+permissions:
+  issues: write
+
+jobs:
+  release-labels:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: React to release labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const label = context.payload.label.name;
+
+            if (issue.pull_request) return;
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = issue.number;
+
+            async function add(labels) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number,
+                labels
+              });
+            }
+
+            async function remove(labels) {
+              for (const name of labels) {
+                try {
+                  await github.rest.issues.removeLabel({
+                    owner,
+                    repo,
+                    issue_number,
+                    name
+                  });
+                } catch (e) {
+                  if (e.status !== 404) throw e;
+                }
+              }
+            }
+
+            async function comment(body) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body
+              });
+            }
+
+            const commonRemove = [
+              "status: needs triage",
+              "status: needs attention",
+              "status: in progress"
+            ];
+
+            if (label === "release: fixed in alpha") {
+              await add(["status: implemented", "maturity: alpha-ready"]);
+              await remove(commonRemove);
+
+              await comment([
+                "Implemented/fixed in the latest alpha build ✅",
+                "",
+                "If you want to test it, install the latest alpha release from HACS:",
+                "",
+                "1. Open HACS",
+                "2. Go to Nodalia Cards",
+                "3. Click the menu → Redownload",
+                "4. Select **Need a different version?**",
+                "5. Choose the latest `1.0.0-alpha.x` release",
+                "",
+                "If anything still feels off, please let me know."
+              ].join("\n"));
+            }
+
+            if (label === "release: fixed in beta") {
+              await add(["status: implemented", "maturity: beta-ready"]);
+              await remove(commonRemove);
+
+              await comment([
+                "Available in the latest beta build ✅",
+                "",
+                "Please test it when possible and let me know if anything feels off.",
+                "If there is no further feedback, I may close this issue after validation."
+              ].join("\n"));
+            }
+
+            if (label === "release: available in stable") {
+              await add(["status: fixed", "maturity: stable"]);
+              await remove([
+                ...commonRemove,
+                "status: implemented",
+                "status: waiting feedback"
+              ]);
+
+              await comment([
+                "Released in the latest stable version ✅",
+                "",
+                "Thanks again for the feedback. I’ll close this issue unless there is anything else to adjust."
+              ].join("\n"));
+            }

@@ -1,0 +1,108 @@
+name: Issue feedback flow
+
+on:
+  issues:
+    types:
+      - opened
+      - reopened
+  issue_comment:
+    types:
+      - created
+
+permissions:
+  issues: write
+
+jobs:
+  feedback-flow:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Update labels based on author/commenter
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const maintainer = "danielmigueltejedor";
+
+            async function getLabels(issue_number) {
+              const { data } = await github.rest.issues.get({
+                owner,
+                repo,
+                issue_number
+              });
+              return data.labels.map(l => typeof l === "string" ? l : l.name);
+            }
+
+            async function add(labels, issue_number) {
+              if (!labels.length) return;
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number,
+                labels
+              });
+            }
+
+            async function remove(labels, issue_number) {
+              for (const label of labels) {
+                try {
+                  await github.rest.issues.removeLabel({
+                    owner,
+                    repo,
+                    issue_number,
+                    name: label
+                  });
+                } catch (e) {
+                  if (e.status !== 404) throw e;
+                }
+              }
+            }
+
+            if (context.eventName === "issues") {
+              const issue = context.payload.issue;
+              const issue_number = issue.number;
+
+              await add(["status: needs triage"], issue_number);
+              await remove([
+                "status: waiting feedback",
+                "status: in progress",
+                "status: implemented",
+                "status: fixed"
+              ], issue_number);
+
+              return;
+            }
+
+            if (context.eventName === "issue_comment") {
+              const issue = context.payload.issue;
+              const comment = context.payload.comment;
+              const issue_number = issue.number;
+
+              if (issue.pull_request) return;
+
+              const commenter = comment.user.login;
+              const issueAuthor = issue.user.login;
+
+              if (commenter === maintainer) {
+                // Maintainer replied: waiting for user feedback.
+                await add(["status: waiting feedback"], issue_number);
+                await remove([
+                  "status: needs triage",
+                  "status: needs attention"
+                ], issue_number);
+              } else if (commenter === issueAuthor) {
+                // Original author replied: needs maintainer attention again.
+                await add(["status: needs attention"], issue_number);
+                await remove([
+                  "status: waiting feedback"
+                ], issue_number);
+              } else {
+                // Other community member replied.
+                await add(["status: needs attention"], issue_number);
+                await remove([
+                  "status: waiting feedback"
+                ], issue_number);
+              }
+            }

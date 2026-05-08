@@ -32,6 +32,7 @@ test("service-security controls are exposed in visual editors", () => {
     "nodalia-entity-card.js",
     "nodalia-fav-card.js",
     "nodalia-advance-vacuum-card.js",
+    "nodalia-notifications-card.js",
   ];
 
   files.forEach(file => {
