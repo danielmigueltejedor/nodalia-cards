@@ -10,6 +10,17 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-beta.2] - 2026-05-08
+
+Second public **`beta`** candidate for **`1.0.0`**, promoted from **`1.0.0-alpha.68`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-beta.2`** (Git tag **`v1.0.0-beta.2`** recommended for HACS/GitHub Releases).
+
+- **Notifications card — i18n completo:** los textos runtime de avisos inteligentes se traducen en todos los idiomas soportados (`es`, `en`, `de`, `fr`, `it`, `nl`, `pt`, `ru`, `el`, `zh`, `ro`) y el español recupera tildes/ñ en títulos, mensajes, acciones y etiquetas ARIA.
+- **Calendar / Notifications editors — traducción visual:** se refuerzan las etiquetas del editor visual de las dos tarjetas nuevas, incluyendo conexiones inteligentes, ajustes por entidad, notificaciones personalizadas, móvil, calendarios y mensajes vacíos.
+- **Spanish editor polish:** normalización ampliada para `notificación`, `móvil`, `batería`, `depósito`, `previsión`, `días`, `envío` y textos relacionados.
+- **Release metadata:** bump beta channel references and bundle version metadata to **`1.0.0-beta.2`**.
+
+---
+
 ## [1.0.0-alpha.68] - 2026-05-08
 
 Sixty-eighth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.68`** (tag **`v1.0.0-alpha.68`** optional).

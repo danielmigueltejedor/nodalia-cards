@@ -145,7 +145,7 @@ test("calendar composers reject past dates with inline popup errors", () => {
   assert.match(source, /dateInputIsBeforeToday\(dateRaw\)/);
   assert.match(source, /La fecha no puede ser anterior a hoy\./);
   assert.match(source, /Selecciona un calendario\./);
-  assert.match(source, /Escribe un titulo\./);
+  assert.match(source, /Escribe un título\./);
   assert.match(source, /calendar-composer__error/);
 });
 
@@ -316,6 +316,11 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /animations\.enabled/);
   assert.match(source, /data-editor-toggle="animations"/);
   assert.match(source, /editor-section__toggle-button/);
+  assert.match(source, /_editorLabel\(s\)/);
+  assert.match(source, /this\._editorLabel\(label\)/);
+  assert.match(source, /Conexiones inteligentes/);
+  assert.match(source, /Sincronización y móvil/);
+  assert.match(source, /Añadir notificación/);
   assert.match(source, /type="color"/);
   assert.match(source, /notifications-card--animated/);
   assert.match(source, /notifications-card--stack-\$\{stackTransition\}/);
@@ -357,6 +362,11 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /editorFilteredStatesSignature/);
   assert.match(source, /sanitizeCssRuntimeValue/);
   assert.match(i18n, /notificationsCard/);
+  assert.match(i18n, /NOTIFICATIONS_CARD_TRANSLATIONS/);
+  assert.match(i18n, /de: \{\s*fallbackEvent: "Termin"/);
+  assert.match(i18n, /fr: \{\s*fallbackEvent: "Événement"/);
+  assert.match(i18n, /zh: \{\s*fallbackEvent: "事件"/);
+  assert.match(i18n, /Borrar notificación/);
   assert.match(i18n, /function translateNotificationsUi/);
   assert.match(build, /nodalia-notifications-card\.js/);
   assert.match(pkg, /"nodalia-notifications-card\.js"/);

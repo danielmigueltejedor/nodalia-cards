@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-alpha.68";
+const CARD_VERSION = "1.0.0-beta.2";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -358,7 +358,7 @@ function calendarEventKey(event) {
 
 function timeRangeChipLabel(tr) {
   const labels = {
-    "3d": "3 dias",
+    "3d": "3 días",
     "1w": "1 semana",
     "2w": "2 semanas",
     "1m": "1 mes",
@@ -1038,7 +1038,7 @@ class NodaliaCalendarCard extends HTMLElement {
     const start = eventDate(event?.start);
     const end = eventDate(event?.end);
     const eventKey = calendarEventKey(event);
-    const summary = String(event?.summary || event?.message || "Evento sin titulo").trim();
+    const summary = String(event?.summary || event?.message || "Evento sin título").trim();
     const subtitle = this._getEventSubtitleForDisplay(event?._entity);
     const timeLabel = eventIsAllDay(event)
       ? "Todo el dia"
@@ -1089,7 +1089,7 @@ class NodaliaCalendarCard extends HTMLElement {
           ${
             description
               ? `<section class="calendar-expanded__event-section">
-                  <div class="calendar-expanded__event-section-title">Descripcion</div>
+                  <div class="calendar-expanded__event-section-title">Descripción</div>
                   <div class="calendar-expanded__event-section-body">${escapeHtml(description).replace(/\n/g, "<br>")}</div>
                 </section>`
               : ""
@@ -1097,7 +1097,7 @@ class NodaliaCalendarCard extends HTMLElement {
           ${
             location
               ? `<section class="calendar-expanded__event-section">
-                  <div class="calendar-expanded__event-section-title">Ubicacion</div>
+                  <div class="calendar-expanded__event-section-title">Ubicación</div>
                   <div class="calendar-expanded__event-section-body">${escapeHtml(location)}</div>
                 </section>`
               : ""
@@ -1105,7 +1105,7 @@ class NodaliaCalendarCard extends HTMLElement {
           ${
             rrule
               ? `<section class="calendar-expanded__event-section">
-                  <div class="calendar-expanded__event-section-title">Repeticion</div>
+                  <div class="calendar-expanded__event-section-title">Repetición</div>
                   <div class="calendar-expanded__event-section-body">${escapeHtml(rrule)}</div>
                 </section>`
               : ""
@@ -1161,7 +1161,7 @@ class NodaliaCalendarCard extends HTMLElement {
       : start
         ? formatTimeLabel(start, locale)
         : "--:--";
-    const summary = String(event.summary || event.message || "Evento sin titulo");
+    const summary = String(event.summary || event.message || "Evento sin título");
     const subtitle = this._getEventSubtitleForDisplay(event._entity);
     const tintRaw = this._getEventTint(event);
     const tintClass = tintRaw ? " calendar-event--tinted" : "";
@@ -2218,7 +2218,7 @@ class NodaliaCalendarCard extends HTMLElement {
       return;
     }
     if (!title) {
-      this._setComposerError("native", "Escribe un titulo.");
+      this._setComposerError("native", "Escribe un título.");
       return;
     }
     if (!dateRaw || (!allDay && (!startRaw || !endRaw))) {
@@ -2391,15 +2391,15 @@ class NodaliaCalendarCard extends HTMLElement {
             <div data-native-calendar-host></div>
           </label>
           <label class="calendar-composer__field">
-            <span>Titulo</span>
+            <span>Título</span>
             <input data-native-field="title" type="text" placeholder="Ej. Cita medica" />
           </label>
           <label class="calendar-composer__field">
-            <span>Descripcion</span>
+            <span>Descripción</span>
             <textarea data-native-field="description" rows="3" placeholder="Opcional"></textarea>
           </label>
           <label class="calendar-composer__field">
-            <span>Ubicacion</span>
+            <span>Ubicación</span>
             <input data-native-field="location" type="text" placeholder="Opcional" />
           </label>
           <div class="calendar-composer__row">
@@ -2423,7 +2423,7 @@ class NodaliaCalendarCard extends HTMLElement {
             </label>
           </div>
           <label class="calendar-composer__field">
-            <span>Repeticion</span>
+            <span>Repetición</span>
             <select data-native-field="repeatKind">
               <option value="none">No se repite</option>
               <option value="yearly">Anualmente</option>
@@ -4935,10 +4935,10 @@ class NodaliaCalendarCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Titulo visible, icono, rango temporal, refresco de datos y opciones de eventos nativos."))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Título visible, icono, rango temporal, refresco de datos y opciones de eventos nativos."))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("Titulo", "title", config.title, { fullWidth: true, placeholder: "Calendario" })}
+            ${this._renderTextField("Título", "title", config.title, { fullWidth: true, placeholder: "Calendario" })}
             ${this._renderIconPickerField("Icono", "icon", config.icon || DEFAULT_CONFIG.icon, {
               fullWidth: true,
               placeholder: "mdi:calendar-month",
@@ -4946,7 +4946,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
             ${this._renderSelectField("Rango visible", "time_range", config.time_range || DEFAULT_CONFIG.time_range, {
               fullWidth: true,
               options: [
-                { value: "3d", label: this._editorLabel("3 dias") },
+                { value: "3d", label: this._editorLabel("3 días") },
                 { value: "1w", label: this._editorLabel("1 semana") },
                 { value: "2w", label: this._editorLabel("2 semanas") },
                 { value: "1m", label: this._editorLabel("1 mes") },
@@ -4955,7 +4955,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
             ${this._renderTextField("Eventos visibles antes de scroll", "max_visible_events", config.max_visible_events, { type: "number" })}
             ${this._renderTextField("Refresco (segundos)", "refresh_interval", config.refresh_interval, { type: "number" })}
             <div class="editor-field editor-field--full">
-              <span>${escapeHtml(this._editorLabel("Entidad weather (prevision diaria, opcional)"))}</span>
+              <span>${escapeHtml(this._editorLabel("Entidad weather (previsión diaria, opcional)"))}</span>
               <div
                 class="editor-control-host"
                 data-mounted-control="weather-entity"
@@ -4995,21 +4995,21 @@ class NodaliaCalendarCardEditor extends HTMLElement {
             ${
               calendars.length
                 ? calendars.map((entityId, index) => this._renderCalendarCard(entityId, index, calendars.length)).join("")
-                : `<div class="empty-note">${escapeHtml(this._editorLabel("Todavia no hay calendarios configurados."))}</div>`
+                : `<div class="empty-note">${escapeHtml(this._editorLabel("Todavía no hay calendarios configurados."))}</div>`
             }
           </div>
           <div class="editor-actions">
             <button type="button" class="editor-section__toggle-button" data-editor-action="add-calendar">
               <ha-icon icon="mdi:plus"></ha-icon>
-              <span>${escapeHtml(this._editorLabel("Anadir calendario"))}</span>
+              <span>${escapeHtml(this._editorLabel("Añadir calendario"))}</span>
             </button>
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta haptica"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Vibracion/feedback tactil en acciones como abrir el calendario, marcar, borrar o crear eventos."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta háptica"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Vibración/feedback táctil en acciones como abrir el calendario, borrar o crear eventos."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -5026,8 +5026,8 @@ class NodaliaCalendarCardEditor extends HTMLElement {
             this._showHapticsSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("Activar respuesta haptica", "haptics.enabled", config.haptics?.enabled === true)}
-                  ${this._renderCheckboxField("Usar vibracion si no hay haptica", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
+                  ${this._renderCheckboxField("Activar respuesta háptica", "haptics.enabled", config.haptics?.enabled === true)}
+                  ${this._renderCheckboxField("Usar vibración si no hay háptica", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
                   ${this._renderSelectField("Intensidad", "haptics.style", hapticStyle, {
                     fullWidth: true,
                     options: [
@@ -5105,8 +5105,8 @@ class NodaliaCalendarCardEditor extends HTMLElement {
                   ${this._renderTextField("Sombra tarjeta", "styles.card.box_shadow", config.styles?.card?.box_shadow, { fullWidth: true })}
                   ${this._renderTextField("Padding", "styles.card.padding", config.styles?.card?.padding)}
                   ${this._renderTextField("Separacion", "styles.card.gap", config.styles?.card?.gap)}
-                  ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles?.title_size)}
-                  ${this._renderTextField("Tamano evento", "styles.event_size", config.styles?.event_size)}
+                  ${this._renderTextField("Tamaño título", "styles.title_size", config.styles?.title_size)}
+                  ${this._renderTextField("Tamaño evento", "styles.event_size", config.styles?.event_size)}
                   ${this._renderTextField("Alto chips", "styles.chip_height", config.styles?.chip_height)}
                   ${this._renderTextField("Texto chips", "styles.chip_font_size", config.styles?.chip_font_size)}
                   ${this._renderTextField("Relleno chips", "styles.chip_padding", config.styles?.chip_padding)}
