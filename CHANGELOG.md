@@ -10,6 +10,37 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-beta.7] - 2026-05-08
+
+Seventh public **`beta`** candidate for **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-beta.7`** (Git tag **`v1.0.0-beta.7`** recommended for HACS/GitHub Releases).
+
+- **Visual editors — i18n completo en overrides exactos:** la capa que corrige etiquetas escapadas (`Mode buttons next to slider`, `Use album art as background`, `Main entity`, `Posición del estado`, tamaños, chips, browser/player, etc.) pasa de ser solo alemana a cubrir todos los idiomas soportados (`es`, `en`, `de`, `fr`, `it`, `nl`, `pt`, `ru`, `el`, `zh`, `ro`).
+- **Release metadata:** bump beta channel references and bundle version metadata to **`1.0.0-beta.7`**.
+
+---
+
+## [1.0.0-beta.6] - 2026-05-08
+
+Sixth public **`beta`** candidate for **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-beta.6`** (Git tag **`v1.0.0-beta.6`** recommended for HACS/GitHub Releases).
+
+- **Weather card — días por idioma:** las etiquetas de previsión diaria/horaria usan la locale resuelta de Home Assistant/configuración, evitando que sigan apareciendo `vie.`, `mié.`, etc. cuando el panel está en alemán u otro idioma. **`nodalia-weather-card.js`**: `CARD_VERSION` **0.12.4**.
+- **Calendar card — todo el día traducible:** los eventos de día completo usan el texto i18n compartido en lista, detalle y composer, en lugar de dejar `Todo el día` fijo.
+- **Editores visuales — barrido alemán ampliado:** se añaden overrides exactos para textos que todavía aparecían mezclados en Light, Fan, Advance Vacuum, Media Player, Entity y estilos comunes (`Background`, `Mode buttons next to slider`, `Use album art as background`, `Main entity`, `Posición del estado`, etc.).
+- **Release metadata:** bump beta channel references and bundle version metadata to **`1.0.0-beta.6`**.
+
+---
+
+## [1.0.0-beta.5] - 2026-05-08
+
+Fifth public **`beta`** candidate for **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-beta.5`** (Git tag **`v1.0.0-beta.5`** recommended for HACS/GitHub Releases).
+
+- **Calendar / Notifications editors — i18n ampliado:** se añaden traducciones explícitas para las cadenas pendientes del editor visual en todos los idiomas soportados, incluyendo secciones, hints, botones, listas de entidades, umbrales, sincronización móvil, seguridad, estilos y controles de calendario.
+- **German editor polish:** se corrigen traducciones generadas que aparecían en inglés o mezcladas (`Card border`, `Move up`, `Move down`, `Delete`, `Animations`) y se reemplazan por alemán real dentro del mapa común.
+- **Spanish source polish:** se corrigen textos fuente restantes sin tilde (`Frío`, `Alertas críticas`, `Severidad mínima`, `Mostrar ajustes hápticos`, `tipografía`, etc.).
+- **Release metadata:** bump beta channel references and bundle version metadata to **`1.0.0-beta.5`**.
+
+---
+
 ## [1.0.0-beta.2] - 2026-05-08
 
 Second public **`beta`** candidate for **`1.0.0`**, promoted from **`1.0.0-alpha.68`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-beta.2`** (Git tag **`v1.0.0-beta.2`** recommended for HACS/GitHub Releases).

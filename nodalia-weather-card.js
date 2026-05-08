@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.12.3";
+const CARD_VERSION = "0.12.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -900,20 +900,20 @@ function getSupportedForecastTypes(state) {
   return types.length ? types : ["hourly", "daily"];
 }
 
-function formatForecastDateTime(value, type) {
+function formatForecastDateTime(value, type, locale) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return "";
   }
 
   if (type === "hourly") {
-    return date.toLocaleTimeString([], {
+    return date.toLocaleTimeString(locale || undefined, {
       hour: "2-digit",
       minute: "2-digit",
     });
   }
 
-  return date.toLocaleDateString([], {
+  return date.toLocaleDateString(locale || undefined, {
     weekday: "short",
     day: "numeric",
   });
@@ -1875,7 +1875,7 @@ class NodaliaWeatherCard extends HTMLElement {
     return Array.isArray(legacyForecast) ? legacyForecast : [];
   }
 
-  _renderForecastChart(items, type, state) {
+  _renderForecastChart(items, type, state, forecastLocale = undefined) {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const cfgLang = this._config?.language ?? "auto";
     const wf = key => (window.NodaliaI18n?.translateWeatherForecastUi
@@ -2022,7 +2022,7 @@ class NodaliaWeatherCard extends HTMLElement {
           <button type="button" class="weather-card__forecast-popup-close" data-weather-action="close-forecast-popup" aria-label="${escapeHtml(wf("closeDetail") || "Cerrar detalle")}">
             <ha-icon icon="mdi:close"></ha-icon>
           </button>
-          <div class="weather-card__forecast-popup-time">${escapeHtml(formatForecastDateTime(item?.datetime, type))}</div>
+          <div class="weather-card__forecast-popup-time">${escapeHtml(formatForecastDateTime(item?.datetime, type, forecastLocale))}</div>
           <div class="weather-card__forecast-popup-main">
             <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
             <span>${escapeHtml(translateCondition(item?.condition || "", this._hass, this._config?.language ?? "auto"))}</span>
@@ -2057,7 +2057,7 @@ class NodaliaWeatherCard extends HTMLElement {
           data-weather-action="noop"
         >
           <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
-          <span>${escapeHtml(formatForecastDateTime(item?.datetime, type))}</span>
+          <span>${escapeHtml(formatForecastDateTime(item?.datetime, type, forecastLocale))}</span>
           ${temperatureLabel ? `<strong>${escapeHtml(temperatureLabel)}</strong>` : ""}
         </div>
       `;
@@ -2115,17 +2115,17 @@ class NodaliaWeatherCard extends HTMLElement {
           ${lowPath ? `<path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--low" style="${colorChartEnabled ? `stroke:url(#${lowGradientId});` : ""}" pathLength="1" d="${lowPath}"></path>` : ""}
           <path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--high" style="${colorChartEnabled ? `stroke:url(#${highGradientId});` : ""}" pathLength="1" d="${highPath}"></path>
           ${highCoordinates.map((point, coordinateIndex) => `
-            <g class="weather-card__forecast-chart-hit" data-weather-action="open-forecast-point" data-forecast-type="${escapeHtml(type)}" data-forecast-series="high" data-forecast-index="${point.index}" role="button" tabindex="0" aria-label="${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}: ${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}">
+            <g class="weather-card__forecast-chart-hit" data-weather-action="open-forecast-point" data-forecast-type="${escapeHtml(type)}" data-forecast-series="high" data-forecast-index="${point.index}" role="button" tabindex="0" aria-label="${escapeHtml(formatForecastDateTime(point.item?.datetime, type, forecastLocale))}: ${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}">
               <circle class="weather-card__forecast-chart-touch" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="22"></circle>
               <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--high" style="--forecast-delay:${Math.min(point.index, 8) * 34}ms; ${colorChartEnabled ? `--forecast-point-color:${escapeHtml(getForecastChartPointColor(point, colorChartMode, state?.state))};` : ""}" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="5.7"></circle>
               ${showChartLabels ? `<text class="weather-card__forecast-chart-value" x="${point.x.toFixed(1)}" y="${Math.max(13, point.y - 14).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>` : ""}
               ${showChartLabels && (coordinateIndex === 0 || coordinateIndex === highCoordinates.length - 1)
-                ? `<text class="weather-card__forecast-chart-label" x="${point.x.toFixed(1)}" y="${dateLabelY}">${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}</text>`
+                ? `<text class="weather-card__forecast-chart-label" x="${point.x.toFixed(1)}" y="${dateLabelY}">${escapeHtml(formatForecastDateTime(point.item?.datetime, type, forecastLocale))}</text>`
                 : ""}
             </g>
           `).join("")}
           ${lowCoordinates.map(point => `
-            <g class="weather-card__forecast-chart-hit" data-weather-action="open-forecast-point" data-forecast-type="${escapeHtml(type)}" data-forecast-series="low" data-forecast-index="${point.index}" role="button" tabindex="0" aria-label="${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}: ${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}">
+            <g class="weather-card__forecast-chart-hit" data-weather-action="open-forecast-point" data-forecast-type="${escapeHtml(type)}" data-forecast-series="low" data-forecast-index="${point.index}" role="button" tabindex="0" aria-label="${escapeHtml(formatForecastDateTime(point.item?.datetime, type, forecastLocale))}: ${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}">
               <circle class="weather-card__forecast-chart-touch" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="21"></circle>
               <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--low" style="--forecast-delay:${Math.min(point.index, 8) * 34}ms; ${colorChartEnabled ? `--forecast-point-color:${escapeHtml(getForecastChartPointColor(point, colorChartMode, state?.state))};` : ""}" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="5"></circle>
               ${showChartLabels ? `<text class="weather-card__forecast-chart-value weather-card__forecast-chart-value--low" x="${point.x.toFixed(1)}" y="${Math.min(lowLabelY, point.y + 31).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>` : ""}
@@ -2159,6 +2159,8 @@ class NodaliaWeatherCard extends HTMLElement {
     const wfFc = key => (window.NodaliaI18n?.translateWeatherForecastUi
       ? window.NodaliaI18n.translateWeatherForecastUi(hassFc, cfgLangFc, key)
       : "");
+    const langFc = window.NodaliaI18n?.resolveLanguage?.(hassFc, cfgLangFc) ?? "es";
+    const forecastLocale = window.NodaliaI18n?.localeTag?.(langFc) || langFc;
     const emptyForecastMsg = activeType === "hourly"
       ? (wfFc("emptyHourly") || "Sin previsión por horas disponible.")
       : (wfFc("emptyDaily") || "Sin previsión semanal disponible.");
@@ -2202,7 +2204,7 @@ class NodaliaWeatherCard extends HTMLElement {
             ? `
               ${
                 activeView === "chart"
-                  ? this._renderForecastChart(visibleItems, activeType, state)
+                  ? this._renderForecastChart(visibleItems, activeType, state, forecastLocale)
                   : `
                     <div class="weather-card__forecast-strip">
                       ${
@@ -2211,7 +2213,7 @@ class NodaliaWeatherCard extends HTMLElement {
                             const precipitationLabel = getForecastPrecipitationLabel(item, precipitationUnit);
                             return `
                               <article class="weather-card__forecast-item" style="--forecast-accent:${escapeHtml(getConditionAccent(item?.condition || state?.state))}; --forecast-delay:${Math.min(index, 8) * 28}ms;">
-                                <div class="weather-card__forecast-time">${escapeHtml(formatForecastDateTime(item?.datetime, activeType))}</div>
+                                <div class="weather-card__forecast-time">${escapeHtml(formatForecastDateTime(item?.datetime, activeType, forecastLocale))}</div>
                                 <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
                                 <div class="weather-card__forecast-temp">${escapeHtml(formatForecastTemperature(item, activeType))}</div>
                                 <div class="weather-card__forecast-condition">${escapeHtml(translateCondition(item?.condition || "", this._hass, this._config?.language ?? "auto"))}</div>

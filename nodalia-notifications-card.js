@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-beta.2";
+const CARD_VERSION = "1.0.0-beta.7";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -4418,7 +4418,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Calor", "thresholds.hot_temperature", config.thresholds.hot_temperature, { type: "number", valueType: "number" })}
-            ${this._renderTextField("Frio", "thresholds.cold_temperature", config.thresholds.cold_temperature, { type: "number", valueType: "number" })}
+            ${this._renderTextField("Frío", "thresholds.cold_temperature", config.thresholds.cold_temperature, { type: "number", valueType: "number" })}
             ${this._renderTextField("Humedad alta", "thresholds.humidity_high", config.thresholds.humidity_high, { type: "number", valueType: "number" })}
             ${this._renderTextField("Humedad baja", "thresholds.humidity_low", config.thresholds.humidity_low, { type: "number", valueType: "number" })}
             ${this._renderTextField("Probabilidad lluvia (%)", "thresholds.rain_probability", config.thresholds.rain_probability, { type: "number", valueType: "number" })}
@@ -4456,11 +4456,11 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                     { placeholder: "notify.mobile_app_iphone", valueType: "csv", fullWidth: true },
                   )}
                   ${this._renderCheckboxField(
-                    "Alertas criticas en servicios legacy",
+                    "Alertas críticas en servicios legacy",
                     "mobile_notifications.critical_alerts",
                     config.mobile_notifications?.critical_alerts === true,
                   )}
-                  ${this._renderSelectField("Severidad minima", "mobile_notifications.min_severity", config.mobile_notifications?.min_severity, [
+                  ${this._renderSelectField("Severidad mínima", "mobile_notifications.min_severity", config.mobile_notifications?.min_severity, [
                     { value: "info", label: "Info" },
                     { value: "success", label: "OK" },
                     { value: "warning", label: "Aviso" },
