@@ -180,6 +180,14 @@ test("calendar native composer supports rich HA event fields and details", () =>
   assert.doesNotMatch(example, /rrule:/);
 });
 
+test("calendar all-day labels use shared locale text", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /_uiText\(path, fallback, values = \{\}\)/);
+  assert.match(source, /translateNotificationsUi/);
+  assert.match(source, /_uiText\("allDay", "Todo el día"\)/);
+  assert.doesNotMatch(source, /Todo el dia/);
+});
+
 test("calendar editor signature only scans relevant entity domains", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /editorFilteredStatesSignature/);
@@ -197,6 +205,34 @@ test("calendar supports haptics and external popup open requests", () => {
   assert.match(source, /window\.addEventListener\("nodalia-calendar-card-open"/);
   assert.match(source, /_onExternalOpenRequest\(event\)/);
   assert.match(source, /_openExpandedCalendar\(\{/);
+});
+
+test("weather forecast dates use the resolved Home Assistant locale", () => {
+  const source = read("nodalia-weather-card.js");
+  assert.match(source, /function formatForecastDateTime\(value, type, locale\)/);
+  assert.match(source, /toLocaleDateString\(locale \|\| undefined/);
+  assert.match(source, /const forecastLocale = window\.NodaliaI18n\?\.localeTag\?\.\(langFc\) \|\| langFc/);
+  assert.match(source, /_renderForecastChart\(visibleItems, activeType, state, forecastLocale\)/);
+  assert.match(source, /formatForecastDateTime\(item\?\.datetime, activeType, forecastLocale\)/);
+});
+
+test("shared visual editor exact overrides cover all supported editor languages", () => {
+  const source = read("nodalia-editor-ui.js");
+  assert.match(source, /const EDITOR_EXACT_OVERRIDES = \{/);
+  assert.match(source, /const EDITOR_EXACT_OVERRIDE_ROWS = \[/);
+  ["es", "en", "de", "fr", "it", "nl", "pt", "ru", "el", "zh", "ro"].forEach(lang => {
+    assert.match(source, new RegExp(`${lang}:`), `${lang} translations should be present in exact override rows`);
+  });
+  assert.match(source, /"Mode buttons next to slider": "Modustasten neben dem Slider"/);
+  assert.match(source, /keys: \["Mode buttons next to slider"\][\s\S]*fr: "Boutons de mode à côté du curseur"/);
+  assert.match(source, /keys: \["Use album art as background"\][\s\S]*pt: "Usar capa do álbum como fundo"/);
+  assert.match(source, /keys: \["Main entity"\][\s\S]*zh: "主实体"/);
+  assert.match(source, /"Use album art as background": "Albumcover als Hintergrund verwenden"/);
+  assert.match(source, /"Main entity": "Hauptentität"/);
+  assert.match(source, /"Entidad de luz": "Licht-Entität"/);
+  assert.match(source, /"Posicion del estado": "Position des Status"/);
+  assert.match(source, /"Fondo avatar": "Avatar-Hintergrund"/);
+  assert.match(source, /"Icono burbuja fondo": "Hintergrund der Symbolblase"/);
 });
 
 test("climate card is registered and shipped in the HACS bundle", () => {
@@ -367,6 +403,15 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(i18n, /fr: \{\s*fallbackEvent: "Événement"/);
   assert.match(i18n, /zh: \{\s*fallbackEvent: "事件"/);
   assert.match(i18n, /Borrar notificación/);
+  const editorUi = read("nodalia-editor-ui.js");
+  assert.match(editorUi, /es: "Mensaje cuando no hay nada pendiente y comportamiento básico\."/);
+  assert.match(editorUi, /de: "Nachricht, wenn nichts ansteht, und Grundverhalten\."/);
+  assert.match(editorUi, /es: "Borde tarjeta"/);
+  assert.match(editorUi, /de: "Kartenrand"/);
+  assert.match(editorUi, /es: "Move up"/);
+  assert.match(editorUi, /de: "Nach oben"/);
+  assert.match(editorUi, /es: "Permitir borrar eventos nativos"/);
+  assert.match(editorUi, /de: "Löschen nativer Ereignisse erlauben"/);
   assert.match(i18n, /function translateNotificationsUi/);
   assert.match(build, /nodalia-notifications-card\.js/);
   assert.match(pkg, /"nodalia-notifications-card\.js"/);

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0-beta.2";
+const CARD_VERSION = "1.0.0-beta.7";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -691,6 +691,19 @@ class NodaliaCalendarCard extends HTMLElement {
     this._renderVisibleEventsCache = null;
   }
 
+  _uiText(path, fallback, values = {}) {
+    if (window.NodaliaI18n?.translateNotificationsUi) {
+      return window.NodaliaI18n.translateNotificationsUi(
+        this._hass,
+        this._config?.language ?? "auto",
+        path,
+        fallback,
+        values,
+      );
+    }
+    return fallback;
+  }
+
   _onDocVisibility() {
     if (typeof document === "undefined" || document.visibilityState !== "visible") {
       return;
@@ -1041,7 +1054,7 @@ class NodaliaCalendarCard extends HTMLElement {
     const summary = String(event?.summary || event?.message || "Evento sin título").trim();
     const subtitle = this._getEventSubtitleForDisplay(event?._entity);
     const timeLabel = eventIsAllDay(event)
-      ? "Todo el dia"
+      ? this._uiText("allDay", "Todo el día")
       : start && end
         ? `${formatTimeLabel(start, locale)} - ${formatTimeLabel(end, locale)}`
         : start
@@ -1157,7 +1170,7 @@ class NodaliaCalendarCard extends HTMLElement {
     const eventKey = calendarEventKey(event);
     const start = eventDate(event.start);
     const timeLabel = eventIsAllDay(event)
-      ? "Todo el dia"
+      ? this._uiText("allDay", "Todo el día")
       : start
         ? formatTimeLabel(start, locale)
         : "--:--";
@@ -2409,7 +2422,7 @@ class NodaliaCalendarCard extends HTMLElement {
             </label>
             <label class="calendar-composer__check">
               <input data-native-field="allDay" type="checkbox" />
-              <span>Todo el dia</span>
+              <span>${escapeHtml(this._uiText("allDay", "Todo el día"))}</span>
             </label>
           </div>
           <div class="calendar-composer__row">
@@ -5018,7 +5031,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
                 aria-expanded="${this._showHapticsSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showHapticsSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showHapticsSection ? this._editorLabel("Ocultar ajustes hapticos") : this._editorLabel("Mostrar ajustes hapticos"))}</span>
+                <span>${escapeHtml(this._showHapticsSection ? this._editorLabel("Ocultar ajustes hápticos") : this._editorLabel("Mostrar ajustes hápticos"))}</span>
               </button>
             </div>
           </div>
@@ -5031,11 +5044,11 @@ class NodaliaCalendarCardEditor extends HTMLElement {
                   ${this._renderSelectField("Intensidad", "haptics.style", hapticStyle, {
                     fullWidth: true,
                     options: [
-                      { value: "selection", label: "Seleccion" },
+                      { value: "selection", label: "Selección" },
                       { value: "light", label: "Ligera" },
                       { value: "medium", label: "Media" },
                       { value: "heavy", label: "Fuerte" },
-                      { value: "success", label: "Exito" },
+                      { value: "success", label: "Éxito" },
                       { value: "warning", label: "Aviso" },
                       { value: "failure", label: "Error" },
                     ],
@@ -5058,7 +5071,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animacion") : this._editorLabel("Mostrar ajustes de animacion"))}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
               </button>
             </div>
           </div>
@@ -5079,7 +5092,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales de la tarjeta, tipografia y burbuja de icono."))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales de la tarjeta, tipografía y burbuja de icono."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -5104,7 +5117,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
                   ${this._renderTextField("Radio tarjeta", "styles.card.border_radius", config.styles?.card?.border_radius)}
                   ${this._renderTextField("Sombra tarjeta", "styles.card.box_shadow", config.styles?.card?.box_shadow, { fullWidth: true })}
                   ${this._renderTextField("Padding", "styles.card.padding", config.styles?.card?.padding)}
-                  ${this._renderTextField("Separacion", "styles.card.gap", config.styles?.card?.gap)}
+                  ${this._renderTextField("Separación", "styles.card.gap", config.styles?.card?.gap)}
                   ${this._renderTextField("Tamaño título", "styles.title_size", config.styles?.title_size)}
                   ${this._renderTextField("Tamaño evento", "styles.event_size", config.styles?.event_size)}
                   ${this._renderTextField("Alto chips", "styles.chip_height", config.styles?.chip_height)}
@@ -5122,7 +5135,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
                     fullWidth: true,
                     fallbackValue: DEFAULT_CONFIG.styles.icon.off_color,
                   })}
-                  ${this._renderTextField("Icono burbuja tamano", "styles.icon.size", config.styles?.icon?.size)}
+                  ${this._renderTextField("Icono burbuja tamaño", "styles.icon.size", config.styles?.icon?.size)}
                   ${this._renderColorField("Color de acento (si el tintado automático está desactivado)", "styles.tint.color", config.styles?.tint?.color, {
                     fullWidth: true,
                     fallbackValue: DEFAULT_CONFIG.styles.tint.color,
