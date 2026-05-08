@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "0.6.3";
+const CARD_VERSION = "0.6.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -503,6 +503,7 @@ const DEFAULT_CONFIG = {
   },
   animations: {
     enabled: true,
+    icon_animation: true,
     power_duration: 600,
     controls_duration: 600,
     panel_duration: 800,
@@ -1352,6 +1353,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
     return {
       enabled: configuredAnimations.enabled !== false,
+      iconAnimation: configuredAnimations.icon_animation !== false,
       powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4000),
       controlsDuration: clamp(Number(configuredAnimations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
       panelDuration: clamp(Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration, 120, 2400),
@@ -2588,6 +2590,23 @@ class NodaliaHumidifierCard extends HTMLElement {
           width: calc(${styles.icon.size} * 0.46);
         }
 
+        .humidifier-card__icon--active-motion ha-icon {
+          animation: humidifier-card-icon-breathe 1.8s ease-in-out infinite;
+        }
+
+        .humidifier-card__icon--active-motion::after {
+          animation: humidifier-card-icon-mist 1.65s ease-in-out infinite;
+          background: radial-gradient(circle, currentColor 0 34%, transparent 38%);
+          content: "";
+          height: 5px;
+          left: 50%;
+          opacity: 0.42;
+          position: absolute;
+          top: 26%;
+          transform: translate(-50%, 0);
+          width: 5px;
+        }
+
         .humidifier-card__unavailable-badge {
           align-items: center;
           background: #ff9b4a;
@@ -3161,6 +3180,29 @@ class NodaliaHumidifierCard extends HTMLElement {
           }
         }
 
+        @keyframes humidifier-card-icon-breathe {
+          0%, 100% {
+            transform: translate(-50%, -50%) scale(1);
+          }
+          50% {
+            transform: translate(-50%, -54%) scale(1.08);
+          }
+        }
+
+        @keyframes humidifier-card-icon-mist {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, 8px) scale(0.7);
+          }
+          42% {
+            opacity: 0.5;
+          }
+          100% {
+            opacity: 0;
+            transform: translate(-50%, -14px) scale(1.35);
+          }
+        }
+
         @keyframes humidifier-card-fade-up {
           0% {
             opacity: 0;
@@ -3205,6 +3247,11 @@ class NodaliaHumidifierCard extends HTMLElement {
             animation: none !important;
             transition: none !important;
           }
+
+          .humidifier-card__icon--active-motion ha-icon,
+          .humidifier-card__icon--active-motion::after {
+            animation: none !important;
+          }
         }
 
         @media (max-width: 620px) {
@@ -3247,7 +3294,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           <div class="humidifier-card__hero">
             <button
               type="button"
-              class="humidifier-card__icon"
+              class="humidifier-card__icon ${animations.enabled && animations.iconAnimation && isOn ? "humidifier-card__icon--active-motion" : ""}"
               data-humidifier-action="toggle"
               aria-label="Encender o apagar"
             >
@@ -4400,6 +4447,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
               ? `
                 <div class="editor-grid">
                   ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderCheckboxField("Animar icono activo", "animations.icon_animation", config.animations.icon_animation !== false)}
                   ${this._renderTextField("Encendido y apagado (ms)", "animations.power_duration", config.animations.power_duration, {
                     type: "number",
                     valueType: "number",

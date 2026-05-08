@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.13.9";
+const CARD_VERSION = "0.13.10";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -770,6 +770,7 @@ const DEFAULT_CONFIG = {
   },
   animations: {
     enabled: true,
+    icon_animation: true,
     content_duration: 520,
     panel_duration: 420,
     button_bounce_duration: 320,
@@ -2179,6 +2180,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     return {
       enabled: configuredAnimations.enabled !== false,
+      iconAnimation: configuredAnimations.icon_animation !== false,
       contentDuration: clamp(Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration, 120, 2400),
       panelDuration: clamp(Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration, 120, 2000),
       buttonBounceDuration: clamp(Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1200),
@@ -7426,6 +7428,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           --mdc-icon-size: ${Math.round(controlSize * 0.48)}px;
         }
 
+        .advance-vacuum-card__control--active-motion ha-icon {
+          animation: advance-vacuum-icon-sweep 1.45s ease-in-out infinite;
+          transform-origin: 50% 70%;
+        }
+
         .advance-vacuum-card__modes {
           display: flex;
           justify-content: center;
@@ -8172,6 +8179,20 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           72% { transform: scale(1.035); }
           100% { transform: scale(1); }
         }
+
+        @keyframes advance-vacuum-icon-sweep {
+          0%, 100% { transform: translateX(-3px) rotate(-10deg); }
+          50% { transform: translateX(4px) rotate(12deg); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .advance-vacuum-card,
+          .advance-vacuum-card *,
+          .advance-vacuum-card__control--active-motion ha-icon {
+            animation: none !important;
+            transition: none !important;
+          }
+        }
       </style>
       <ha-card class="advance-vacuum-card ${shouldAnimateEntrance ? "advance-vacuum-card--entering" : ""}">
         <div class="advance-vacuum-card__map">
@@ -8304,7 +8325,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
               ${
                 showPrimaryActionButton
                   ? `
-                    <button class="advance-vacuum-card__control is-primary" data-control-action="primary" title="${escapeHtml(primaryButtonTitle)}">
+                    <button class="advance-vacuum-card__control is-primary ${animations.enabled && animations.iconAnimation && this._isCleaning(state) ? "advance-vacuum-card__control--active-motion" : ""}" data-control-action="primary" title="${escapeHtml(primaryButtonTitle)}">
                       <ha-icon icon="${primaryButtonIcon}"></ha-icon>
                     </button>
                   `
@@ -9287,6 +9308,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
+            ${this._renderCheckboxField("Animar icono activo", "animations.icon_animation", animations.icon_animation !== false)}
             ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", animations.content_duration, {
               type: "number",
               valueType: "number",

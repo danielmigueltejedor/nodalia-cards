@@ -236,6 +236,41 @@ test("shared visual editor exact overrides cover all supported editor languages"
   assert.match(source, /keys: \["Entidad de luz"\][\s\S]*de: "Licht-Entität"/);
   assert.match(source, /keys: \["Posicion del estado", "Posición del estado"\][\s\S]*de: "Position des Status"/);
   assert.match(source, /keys: \["Fondo avatar", "Fondo icono", "Icono burbuja fondo", "Fondo burbuja principal"\][\s\S]*de: "Blasenhintergrund"/);
+  assert.match(source, /keys: \["Maximo visible plegado"\][\s\S]*en: "Max visible when collapsed"/);
+  assert.match(source, /keys: \["Name"\][\s\S]*zh: "名称"/);
+  assert.match(source, /keys: \["Button bounce \(ms\)", "Rebote botones \(ms\)"\][\s\S]*de: "Button-Bounce \(ms\)"/);
+  assert.match(source, /keys: \["Color aspirando"\][\s\S]*fr: "Couleur aspiration"/);
+  assert.match(source, /keys: \["Color icono apagada"\][\s\S]*ro: "Culoare pictogramă oprită"/);
+});
+
+test("active icon animations are configurable across animated device cards", () => {
+  const fan = read("nodalia-fan-card.js");
+  const humidifier = read("nodalia-humidifier-card.js");
+  const weather = read("nodalia-weather-card.js");
+  const vacuum = read("nodalia-advance-vacuum-card.js");
+  const editor = read("nodalia-editor-ui.js");
+
+  [
+    [fan, /fan-card__icon--active-motion/, /fan-card-icon-spin/],
+    [humidifier, /humidifier-card__icon--active-motion/, /humidifier-card-icon-mist/],
+    [weather, /weather-card__icon--rain-motion/, /getConditionIconMotionClass/],
+    [vacuum, /advance-vacuum-card__control--active-motion/, /advance-vacuum-icon-sweep/],
+  ].forEach(([source, classPattern, keyframePattern]) => {
+    assert.match(source, /icon_animation: true/);
+    assert.match(source, /iconAnimation: configuredAnimations\.icon_animation !== false/);
+    assert.match(source, classPattern);
+    assert.match(source, keyframePattern);
+    assert.match(source, /prefers-reduced-motion: reduce/);
+    assert.match(source, /"Animar icono/);
+  });
+  assert.match(editor, /keys: \["Animar icono activo"\][\s\S]*en: "Animate active icon"/);
+  assert.match(editor, /keys: \["Animar icono según condición"\][\s\S]*en: "Animate icon by condition"/);
+});
+
+test("notifications translate vacuum cleaning state in smart messages", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.match(source, /translateAdvanceVacuumReportedState/);
+  assert.match(source, /state: stateLabel/);
 });
 
 test("climate card is registered and shipped in the HACS bundle", () => {

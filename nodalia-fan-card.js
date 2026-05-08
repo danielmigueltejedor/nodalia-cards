@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "0.6.3";
+const CARD_VERSION = "0.6.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -499,6 +499,7 @@ const DEFAULT_CONFIG = {
   },
   animations: {
     enabled: true,
+    icon_animation: true,
     power_duration: 600,
     controls_duration: 600,
     preset_duration: 800,
@@ -1244,6 +1245,7 @@ class NodaliaFanCard extends HTMLElement {
     const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
     return {
       enabled: configuredAnimations.enabled !== false,
+      iconAnimation: configuredAnimations.icon_animation !== false,
       powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4000),
       controlsDuration: clamp(Number(configuredAnimations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
       presetDuration: clamp(Number(configuredAnimations.preset_duration) || DEFAULT_CONFIG.animations.preset_duration, 120, 2400),
@@ -2330,6 +2332,10 @@ class NodaliaFanCard extends HTMLElement {
           width: calc(${styles.icon.size} * 0.46);
         }
 
+        .fan-card__icon--active-motion ha-icon {
+          animation: fan-card-icon-spin 1.35s linear infinite;
+        }
+
         .fan-card__unavailable-badge {
           align-items: center;
           background: #ff9b4a;
@@ -2900,6 +2906,15 @@ class NodaliaFanCard extends HTMLElement {
           }
         }
 
+        @keyframes fan-card-icon-spin {
+          from {
+            transform: translate(-50%, -50%) rotate(0deg);
+          }
+          to {
+            transform: translate(-50%, -50%) rotate(360deg);
+          }
+        }
+
         ${animations.enabled ? "" : `
         .fan-card,
         .fan-card::after,
@@ -2934,6 +2949,10 @@ class NodaliaFanCard extends HTMLElement {
             animation: none !important;
             transition: none !important;
           }
+
+          .fan-card__icon--active-motion ha-icon {
+            animation: none !important;
+          }
         }
 
         @media (max-width: 420px) {
@@ -2966,7 +2985,7 @@ class NodaliaFanCard extends HTMLElement {
           <div class="fan-card__hero">
             <button
               type="button"
-              class="fan-card__icon"
+              class="fan-card__icon ${animations.enabled && animations.iconAnimation && isOn ? "fan-card__icon--active-motion" : ""}"
               data-fan-action="toggle"
               aria-label="Encender o apagar"
             >
@@ -3964,6 +3983,7 @@ class NodaliaFanCardEditor extends HTMLElement {
               ? `
                 <div class="editor-grid">
                   ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderCheckboxField("Animar icono activo", "animations.icon_animation", config.animations.icon_animation !== false)}
                   ${this._renderTextField("Encendido y apagado (ms)", "animations.power_duration", config.animations.power_duration, {
                     type: "number",
                     valueType: "number",

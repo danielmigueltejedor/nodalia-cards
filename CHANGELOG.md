@@ -10,6 +10,28 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.71] - 2026-05-09
+
+Seventy-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.71`** (tag **`v1.0.0-alpha.71`** optional).
+
+- **Visual editors — i18n sweep:** se añaden overrides exactos en todos los idiomas soportados para claves pendientes de Notifications, Advance Vacuum y Light (`Máximo visible plegado`, ajustes por entidad, acciones, sensores auxiliares, haptics, animaciones, modos, colores de estado, chips y controles de estilo).
+- **Editor i18n — regresión cubierta:** se amplían los tests para detectar etiquetas literales como `Name`, `Button bounce (ms)`, colores de vacuum y `Color icono apagada` antes de publicar.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.71`**.
+
+---
+
+## [1.0.0-alpha.70] - 2026-05-09
+
+Seventieth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.70`** (tag **`v1.0.0-alpha.70`** optional).
+
+- **Fan / Humidifier / Weather / Advance Vacuum — iconos vivos:** nuevo toggle visual `animations.icon_animation` para animar iconos activos; el ventilador gira, el humidificador respira con vapor, Weather anima lluvia/nieve/sol/viento/nubes/tormenta según condición y Advance Vacuum mueve el icono principal en arco mientras limpia. Respeta `animations.enabled` y `prefers-reduced-motion`.
+- **Notifications card — estado vacuum traducido:** los avisos del robot ya traducen estados como `cleaning` mediante el i18n compartido de Advance Vacuum antes de renderizar el mensaje.
+- **Editor i18n:** se añaden traducciones para los nuevos toggles de animación de icono en todos los idiomas soportados.
+- **Card versions:** **`nodalia-fan-card.js`** `0.6.4`, **`nodalia-humidifier-card.js`** `0.6.4`, **`nodalia-weather-card.js`** `0.12.5`, **`nodalia-advance-vacuum-card.js`** `0.13.10`.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.70`**.
+
+---
+
 ## [1.0.0-alpha.69] - 2026-05-08
 
 Sixty-ninth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.69`** (tag **`v1.0.0-alpha.69`** optional).

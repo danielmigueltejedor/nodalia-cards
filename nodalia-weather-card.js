@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.12.4";
+const CARD_VERSION = "0.12.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -507,6 +507,7 @@ const DEFAULT_CONFIG = {
   },
   animations: {
     enabled: true,
+    icon_animation: true,
     content_duration: 420,
     button_bounce_duration: 320,
   },
@@ -1152,6 +1153,32 @@ function getConditionIcon(value) {
   }
 }
 
+function getConditionIconMotionClass(value) {
+  switch (normalizeTextKey(value)) {
+    case "rainy":
+    case "pouring":
+    case "lightning_rainy":
+    case "snowy_rainy":
+      return "weather-card__icon--rain-motion";
+    case "snowy":
+    case "hail":
+      return "weather-card__icon--snow-motion";
+    case "sunny":
+      return "weather-card__icon--sun-motion";
+    case "windy":
+    case "windy_variant":
+      return "weather-card__icon--wind-motion";
+    case "cloudy":
+    case "partlycloudy":
+    case "fog":
+      return "weather-card__icon--cloud-motion";
+    case "lightning":
+      return "weather-card__icon--storm-motion";
+    default:
+      return "";
+  }
+}
+
 function getConditionAccent(value) {
   switch (normalizeTextKey(value)) {
     case "sunny":
@@ -1506,6 +1533,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
     return {
       enabled: configuredAnimations.enabled !== false,
+      iconAnimation: configuredAnimations.icon_animation !== false,
       buttonBounceDuration: clamp(
         Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
         120,
@@ -2258,8 +2286,12 @@ class NodaliaWeatherCard extends HTMLElement {
     const styles = config.styles || DEFAULT_CONFIG.styles;
     const title = this._getTitle(state);
     const icon = this._getIcon(state);
-    const accentColor = this._getAccentColor(state);
+    const animations = this._getAnimationSettings();
     const showUnavailableBadge = isUnavailableState(state);
+    const iconMotionClass = animations.enabled && animations.iconAnimation && !showUnavailableBadge
+      ? getConditionIconMotionClass(state?.state)
+      : "";
+    const accentColor = this._getAccentColor(state);
     const conditionLabel = translateCondition(state?.state, this._hass, this._config?.language ?? "auto");
     const temperatureLabel = this._formatTemperature(state);
     const chips = [
@@ -2274,7 +2306,6 @@ class NodaliaWeatherCard extends HTMLElement {
         : "",
     ].filter(Boolean);
     const tapEnabled = String(config.tap_action || "more-info") !== "none";
-    const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const shouldAnimateForecast = animations.enabled && this._animateForecastOnNextRender;
     const configuredBorder = String(styles.card.border || "").trim();
@@ -2404,6 +2435,38 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__icon ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.5);
+        }
+
+        .weather-card__icon--rain-motion::after,
+        .weather-card__icon--snow-motion::after {
+          animation: weather-card-icon-fall 0.95s linear infinite;
+          background:
+            radial-gradient(circle at 22% 18%, currentColor 0 1.3px, transparent 1.8px),
+            radial-gradient(circle at 58% 44%, currentColor 0 1.2px, transparent 1.8px),
+            radial-gradient(circle at 78% 6%, currentColor 0 1.1px, transparent 1.7px);
+          content: "";
+          inset: 18% 18% 12%;
+          opacity: 0.42;
+          pointer-events: none;
+          position: absolute;
+        }
+
+        .weather-card__icon--snow-motion::after {
+          animation-duration: 1.35s;
+          opacity: 0.5;
+        }
+
+        .weather-card__icon--sun-motion ha-icon {
+          animation: weather-card-icon-pulse 2.1s ease-in-out infinite;
+        }
+
+        .weather-card__icon--wind-motion ha-icon,
+        .weather-card__icon--cloud-motion ha-icon {
+          animation: weather-card-icon-drift 2.2s ease-in-out infinite;
+        }
+
+        .weather-card__icon--storm-motion ha-icon {
+          animation: weather-card-icon-flash 1.3s steps(2, end) infinite;
         }
 
         .weather-card__unavailable-badge {
@@ -3422,12 +3485,57 @@ class NodaliaWeatherCard extends HTMLElement {
           }
         }
 
+        @keyframes weather-card-icon-fall {
+          from {
+            transform: translateY(-6px);
+          }
+          to {
+            transform: translateY(10px);
+          }
+        }
+
+        @keyframes weather-card-icon-pulse {
+          0%, 100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.12);
+          }
+        }
+
+        @keyframes weather-card-icon-drift {
+          0%, 100% {
+            transform: translateX(-2px);
+          }
+          50% {
+            transform: translateX(3px);
+          }
+        }
+
+        @keyframes weather-card-icon-flash {
+          0%, 100% {
+            filter: brightness(1);
+          }
+          50% {
+            filter: brightness(1.55);
+          }
+        }
+
         ${animations.enabled ? "" : `
         ha-card,
         .weather-card,
         .weather-card * {
           animation: none !important;
           transition: none !important;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .weather-card__icon,
+          .weather-card__icon::after,
+          .weather-card__icon ha-icon {
+            animation: none !important;
+            transition: none !important;
+          }
         }
         `}
       </style>
@@ -3439,7 +3547,7 @@ class NodaliaWeatherCard extends HTMLElement {
               ${chips.length ? `<div class="weather-card__chips ${shouldAnimateEntrance ? "weather-card__chips--entering" : ""}">${chips.join("")}</div>` : ""}
             </div>
             <div class="weather-card__main">
-              <div class="weather-card__icon ${shouldAnimateEntrance ? "weather-card__icon--entering" : ""}">
+              <div class="weather-card__icon ${shouldAnimateEntrance ? "weather-card__icon--entering" : ""} ${iconMotionClass}">
                 <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
                 ${showUnavailableBadge ? `<span class="weather-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
               </div>
@@ -4321,6 +4429,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
               ? `
                 <div class="editor-grid">
                   ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderCheckboxField("Animar icono según condición", "animations.icon_animation", animations.icon_animation !== false)}
                   ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", animations.content_duration, {
                     type: "number",
                   })}

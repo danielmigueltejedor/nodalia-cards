@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-alpha.69";
+const CARD_VERSION = "1.0.0-alpha.71";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1851,12 +1851,15 @@ class NodaliaNotificationsCard extends HTMLElement {
           action: this._smartAction("vacuum", { label: this._text("actions.continue", "Continuar"), type: "service", service: "vacuum.start", entity: entityId, internal: true }, "", entityId),
         });
       } else if (["cleaning", "returning"].includes(value)) {
+        const stateLabel = window.NodaliaI18n?.translateAdvanceVacuumReportedState
+          ? window.NodaliaI18n.translateAdvanceVacuumReportedState(this._hass, this._config?.language ?? "auto", value, state.state)
+          : state.state;
         add({
           id: `vacuum:${entityId}:${value}`,
           title: value === "cleaning"
             ? this._smartTitle("vacuum", "titles.cleaningStarted", "Limpieza iniciada", { source: name, name, state: state.state }, entityId)
             : this._smartTitle("vacuum", "titles.returningDock", "Robot volviendo a base", { source: name, name, state: state.state }, entityId),
-          message: this._smartMessage("vacuum", "messages.vacuumState", "{name}: {state}.", { source: name, name, state: state.state }, entityId),
+          message: this._smartMessage("vacuum", "messages.vacuumState", "{name}: {state}.", { source: name, name, state: stateLabel }, entityId),
           icon: value === "cleaning" ? "mdi:robot-vacuum" : "mdi:home-import-outline",
           severity: "info",
           source: name,
