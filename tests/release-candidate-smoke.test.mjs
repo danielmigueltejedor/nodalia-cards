@@ -364,7 +364,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /const offset = clampedIndex \* stackPeek \+ firstLayerPeekCorrection/);
   assert.match(source, /top: var\(--stack-offset, 7px\)/);
   assert.match(source, /height: calc\(100% - 2px\)/);
-  assert.match(source, /const collapsedStackReserve = collapsedStackDepth \? 6 \+ collapsedStackDepth \* 9 : 0/);
+  assert.match(source, /const collapsedStackReserve = collapsedStackDepth \? 2 \+ collapsedStackDepth \* 7 : 0/);
   assert.match(source, /<div class="notifications-list">\s*\$\{\s*shouldStack && !this\._expanded\s*\? this\._renderCollapsedStackCards\(notifications, config\.max_visible\)/);
   assert.doesNotMatch(source, /notifications-card--animated\.notifications-card--enter \.notification-stack-card\s*\{\s*animation: notifications-card-fade-up/);
   assert.match(source, /padding-bottom: var\(--notifications-stack-reserve, 0px\)/);
@@ -510,6 +510,18 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(editorUi, /de: "Nach oben"/);
   assert.match(editorUi, /es: "Permitir borrar eventos nativos"/);
   assert.match(editorUi, /de: "Löschen nativer Ereignisse erlauben"/);
+  assert.match(editorUi, /keys: \["Mensaje"\], es: "Mensaje", en: "Message", de: "Nachricht"/);
+  assert.match(editorUi, /keys: \["temperature"\], es: "temperatura", en: "temperature", de: "temperatur"/);
+  assert.match(editorUi, /keys: \["Main action", "Acción principal"\], es: "Acción principal", en: "Main action", de: "Hauptaktion"/);
+  assert.match(editorUi, /keys: \["Fiexed PIN", "Fixed PIN"\], es: "PIN fijo", en: "Fixed PIN", de: "Feste PIN"/);
+  assert.match(editorUi, /keys: \["Bubble size", "Tamaño burbuja"\], es: "Tamaño de burbuja", en: "Bubble size", de: "Blasengröße"/);
+  assert.match(editorUi, /keys: \["Player background", "Fondo del reproductor"\], es: "Fondo del reproductor", en: "Player background", de: "Player-Hintergrund"/);
+  assert.match(editorUi, /keys: \["Modos de aspirado visibles", "Visible vacuum modes"\], es: "Modos de aspirado visibles", en: "Visible vacuum modes", de: "Sichtbare Saugmodi"/);
+  assert.match(editorUi, /keys: \["Modos de mopa visibles", "Visible mop modes"\], es: "Modos de mopa visibles", en: "Visible mop modes", de: "Sichtbare Mopp-Modi"/);
+  assert.match(editorUi, /keys: \["Main visual settings for the card\."\], es: "Ajustes visuales principales de la tarjeta\.", en: "Main visual settings for the card\.", de: "Wichtigste visuelle Einstellungen der Karte\."/);
+  assert.match(editorUi, /keys: \["Automatic \(toggle or info\)", "Auto \(toggle o info\)", "Automática \(info o alternar\)"\], es: "Automático \(alternar o info\)", en: "Automatic \(toggle or info\)", de: "Automatisch \(umschalten oder Info\)"/);
+  assert.match(editorUi, /keys: \["Pin to screen"\], es: "Fijar a pantalla", en: "Pin to screen", de: "Am Bildschirm fixieren"/);
+  assert.match(editorUi, /keys: \["Also show on desktop"\], es: "Mostrar también en escritorio", en: "Also show on desktop", de: "Auch auf dem Desktop anzeigen"/);
   assert.match(i18n, /function translateNotificationsUi/);
   assert.match(build, /nodalia-notifications-card\.js/);
   assert.match(pkg, /"nodalia-notifications-card\.js"/);

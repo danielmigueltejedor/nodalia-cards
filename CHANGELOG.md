@@ -10,18 +10,20 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
-## [1.0.0-alpha.79] - 2026-05-09
+## [1.0.0-alpha.80] - 2026-05-09
 
-Seventy-ninth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.79`** (tag **`v1.0.0-alpha.79`** optional).
+Eightieth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.80`** (tag **`v1.0.0-alpha.80`** optional).
 
 - **Notifications card — stack compacto:** el solape plegado conserva el paso visual de las capas traseras y solo compensa ligeramente la primera capa oculta para que la segunda notificación asome igual que las siguientes.
-- **Notifications card — reserva compacta:** el stack plegado reduce la altura extra reservada para no dejar tanto espacio libre bajo la tarjeta.
+- **Notifications card — reserva compacta:** el stack plegado reduce de nuevo la altura extra reservada para acercar la siguiente tarjeta sin tocar el dibujo visual de las capas.
 - **Notifications card — animación de entrada:** ya no se relanza al hacer scroll dentro del mismo panel; solo se repite cuando la tarjeta vuelve desde un ocultado de layout/vista o al recargar/volver la pestaña.
 - **Calendar card — i18n runtime:** las pantallas visibles del calendario, detalle, vacío y creación de evento usan claves de traducción propias (`calendarCard`) en lugar de literales directos.
 - **Calendar card — formulario multidioma:** el formulario de creación, botones, campos, repetición, estados vacíos y errores ya tienen traducciones completas en todos los idiomas del bundle.
 - **Visual editors — i18n exacta:** se traducen más etiquetas y ayudas que llegaban como literales en inglés, sin tilde o incluso en chino (`Main`, `Offset`, `Button size`, `Media player background`, `最小高度`, etc.) en navegación, media player, badges, energía, climate, alarma, calendario y tarjetas de entidad.
+- **Visual editors — i18n exacta ampliada:** se cubren literales pendientes como `Mensaje`, `Severidad`, `Texto visible`, `temperature`, `Main action`, `Tap service`, `Tap URL`, `Fixed PIN`, `Code helper`, `Chip Padding` y `Bubble size` en todos los idiomas del bundle.
+- **Visual editors — i18n exacta extendida:** se completan más ayudas y opciones (`Player background`, `Modos de aspirado visibles`, `Modos de mopa visibles`, `Main visual settings for the card.`, `Automatic (toggle or info)`, `Pin to screen`, `Also show on desktop`, etc.) con traducción en todos los idiomas del bundle.
 - **Visual editors — consistencia:** la Insignia Card usa el mismo bloque plegable **Estilos** / **Mostrar ajustes de estilo** que el resto de editores, y el normalizador español corrige más tildes heredadas en etiquetas antiguas.
-- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.79`**.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.80`**.
 
 ---
 
