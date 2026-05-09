@@ -24,6 +24,8 @@ Eighty-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`
 - **Visual editors — i18n exacta ampliada:** se cubren literales pendientes como `Mensaje`, `Severidad`, `Texto visible`, `temperature`, `Main action`, `Tap service`, `Tap URL`, `Fixed PIN`, `Code helper`, `Chip Padding` y `Bubble size` en todos los idiomas del bundle.
 - **Visual editors — i18n exacta extendida:** se completan más ayudas y opciones (`Player background`, `Modos de aspirado visibles`, `Modos de mopa visibles`, `Main visual settings for the card.`, `Automatic (toggle or info)`, `Pin to screen`, `Also show on desktop`, etc.) con traducción en todos los idiomas del bundle.
 - **Visual editors — i18n de cobertura:** el normalizador aplica traducciones por valor inglés a entradas heredadas del mapa base, cubriendo más etiquetas antiguas de estilos, paneles, sensores, controles y acciones que aún caían en inglés en idiomas no españoles.
+- **Notifications card — i18n de avisos inteligentes:** se completan títulos, mensajes y acciones de calor, frío, lluvia, multimedia sin presencia, batería, depósito y tinta baja en todos los idiomas oficiales del bundle.
+- **Visual editors — i18n de avisos inteligentes:** los textos editables de notificaciones inteligentes y acciones heredadas (`Navigate`, `Call service`, `Default`, `Service`, etc.) ya pasan por filas exactas multidioma.
 - **Visual editors — consistencia:** la Insignia Card usa el mismo bloque plegable **Estilos** / **Mostrar ajustes de estilo** que el resto de editores, y el normalizador español corrige más tildes heredadas en etiquetas antiguas.
 - **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.81`**.
 

@@ -500,6 +500,8 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(i18n, /de: \{\s*fallbackEvent: "Termin"/);
   assert.match(i18n, /fr: \{\s*fallbackEvent: "Événement"/);
   assert.match(i18n, /zh: \{\s*fallbackEvent: "事件"/);
+  assert.match(i18n, /mediaLeftOn: "Multimedia ohne Anwesenheit eingeschaltet"/);
+  assert.match(i18n, /hotClimate: "\{source\} zeigt \{value\}\. Du kannst Kühlung auf \{climate\} einschalten\."/);
   assert.match(i18n, /Borrar notificación/);
   const editorUi = read("nodalia-editor-ui.js");
   assert.match(editorUi, /es: "Mensaje cuando no hay nada pendiente y comportamiento básico\."/);
@@ -522,6 +524,10 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(editorUi, /keys: \["Automatic \(toggle or info\)", "Auto \(toggle o info\)", "Automática \(info o alternar\)"\], es: "Automático \(alternar o info\)", en: "Automatic \(toggle or info\)", de: "Automatisch \(umschalten oder Info\)"/);
   assert.match(editorUi, /keys: \["Pin to screen"\], es: "Fijar a pantalla", en: "Pin to screen", de: "Am Bildschirm fixieren"/);
   assert.match(editorUi, /keys: \["Also show on desktop"\], es: "Mostrar también en escritorio", en: "Also show on desktop", de: "Auch auf dem Desktop anzeigen"/);
+  assert.match(editorUi, /keys: \["Hace calor"\], es: "Hace calor", en: "It is warm", de: "Es ist warm"/);
+  assert.match(editorUi, /keys: \["\{media\} sigue encendido y \{source\} no detecta presencia\.", "\{media\} sigue encendido y \{source\} no deteceta presencia\."\], es: "\{media\} sigue encendido y \{source\} no detecta presencia\.", en: "\{media\} is still on and \{source\} detects no presence\.", de: "\{media\} ist noch eingeschaltet und \{source\} erkennt keine Anwesenheit\."/);
+  assert.match(editorUi, /keys: \["Default"\], es: "Predeterminado", en: "Default", de: "Standard"/);
+  assert.match(editorUi, /keys: \["Navigate"\], es: "Navegar", en: "Navigate", de: "Navigieren"/);
   assert.match(editorUi, /for \(const \[sourceKey, englishValue\] of Object\.entries\(MAP\.en\)\) \{\s*const exactLocales = EXACT_OVERRIDE_LOCALES_BY_EN\[englishValue\]/);
   assert.match(editorUi, /"Card border": \{ de: "Kartenrand"/);
   assert.match(editorUi, /"Service data JSON": \{ de: "Servicedaten JSON"/);
