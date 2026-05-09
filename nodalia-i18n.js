@@ -5193,6 +5193,158 @@
     },
   };
 
+  const CALENDAR_CARD_TRANSLATIONS = {
+    es: {
+      allDay: "Todo el día",
+      timeRange: {
+        threeDays: "3 días",
+        oneWeek: "1 semana",
+        twoWeeks: "2 semanas",
+        oneMonth: "1 mes",
+      },
+      buttons: {
+        month: "Mes",
+        back: "Volver",
+        delete: "Eliminar",
+        cancel: "Cancelar",
+        create: "Crear",
+      },
+      fields: {
+        calendar: "Calendario",
+        title: "Título",
+        description: "Descripción",
+        location: "Ubicación",
+        date: "Fecha",
+        start: "Inicio",
+        end: "Fin",
+        repeat: "Repetición",
+        customColor: "Color propio",
+        customColorTitle: "Color personalizado",
+        color: "Color",
+      },
+      placeholders: {
+        title: "Ej. Cita médica",
+        optional: "Opcional",
+      },
+      repeat: {
+        none: "No se repite",
+        yearly: "Anualmente",
+        monthly: "Mensualmente",
+        weekly: "Semanalmente",
+        daily: "Diariamente",
+      },
+      composer: {
+        newEvent: "Nuevo evento",
+      },
+      event: {
+        untitled: "Evento sin título",
+      },
+      states: {
+        loading: "Cargando eventos...",
+      },
+      empty: {
+        range: "No hay eventos en este rango.",
+        day: "Sin eventos este día.",
+        eventDetails: "Este evento no tiene descripción ni ubicación.",
+      },
+      errors: {
+        loadEvents: "No se pudieron cargar eventos del calendario.",
+        selectCalendar: "Selecciona un calendario.",
+        enterTitle: "Escribe un título.",
+        selectDate: "Selecciona una fecha.",
+        selectDateTime: "Selecciona fecha, inicio y fin.",
+        pastDate: "La fecha no puede ser anterior a hoy.",
+        createEvent: "No se pudo crear el evento.",
+        createEventWithMessage: "No se pudo crear el evento: {message}",
+      },
+      aria: {
+        newEventDialog: "Nuevo evento de calendario",
+        deleteEvent: "Eliminar evento",
+        createHaEvent: "Crear evento HA",
+        close: "Cerrar",
+      },
+    },
+    en: {
+      allDay: "All day",
+      timeRange: {
+        threeDays: "3 days",
+        oneWeek: "1 week",
+        twoWeeks: "2 weeks",
+        oneMonth: "1 month",
+      },
+      buttons: {
+        month: "Month",
+        back: "Back",
+        delete: "Delete",
+        cancel: "Cancel",
+        create: "Create",
+      },
+      fields: {
+        calendar: "Calendar",
+        title: "Title",
+        description: "Description",
+        location: "Location",
+        date: "Date",
+        start: "Start",
+        end: "End",
+        repeat: "Repeat",
+        customColor: "Custom color",
+        customColorTitle: "Custom color",
+        color: "Color",
+      },
+      placeholders: {
+        title: "E.g. Medical appointment",
+        optional: "Optional",
+      },
+      repeat: {
+        none: "Does not repeat",
+        yearly: "Yearly",
+        monthly: "Monthly",
+        weekly: "Weekly",
+        daily: "Daily",
+      },
+      composer: {
+        newEvent: "New event",
+      },
+      event: {
+        untitled: "Untitled event",
+      },
+      states: {
+        loading: "Loading events...",
+      },
+      empty: {
+        range: "No events in this range.",
+        day: "No events this day.",
+        eventDetails: "This event has no description or location.",
+      },
+      errors: {
+        loadEvents: "Could not load calendar events.",
+        selectCalendar: "Select a calendar.",
+        enterTitle: "Enter a title.",
+        selectDate: "Select a date.",
+        selectDateTime: "Select date, start and end.",
+        pastDate: "The date cannot be earlier than today.",
+        createEvent: "Could not create the event.",
+        createEventWithMessage: "Could not create the event: {message}",
+      },
+      aria: {
+        newEventDialog: "New calendar event",
+        deleteEvent: "Delete event",
+        createHaEvent: "Create HA event",
+        close: "Close",
+      },
+    },
+    de: { allDay: "Ganztägig" },
+    fr: { allDay: "Toute la journée" },
+    it: { allDay: "Tutto il giorno" },
+    nl: { allDay: "Hele dag" },
+    pt: { allDay: "Dia inteiro" },
+    ru: { allDay: "Весь день" },
+    el: { allDay: "Όλη μέρα" },
+    zh: { allDay: "全天" },
+    ro: { allDay: "Toată ziua" },
+  };
+
   const NOTIFICATIONS_CARD_TRANSLATIONS = {
     es: {
       fallbackEvent: "Evento",
@@ -5732,6 +5884,12 @@
     }
   });
 
+  Object.entries(CALENDAR_CARD_TRANSLATIONS).forEach(([lang, calendarCard]) => {
+    if (PACK[lang]) {
+      PACK[lang].calendarCard = calendarCard;
+    }
+  });
+
   /** Merge locale PACK trees so partial locales (pt/ru/…) inherit full card strings from English. */
   function deepMergeLocale(base, override) {
     if (override === undefined || override === null) {
@@ -5818,6 +5976,24 @@
       .split(".")
       .filter(Boolean)
       .reduce((cursor, key) => cursor?.[key], strings("en").notificationsCard || {});
+    const template = typeof raw === "string" ? raw : typeof enRaw === "string" ? enRaw : String(fallback || "");
+    return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key) => {
+      const value = values?.[key];
+      return value === undefined || value === null ? "" : String(value);
+    });
+  }
+
+  function translateCalendarUi(hass, configLang, path, fallback = "", values = {}) {
+    const lang = resolveLanguage(hass, configLang);
+    const dict = strings(lang).calendarCard || strings("en").calendarCard || {};
+    const raw = String(path || "")
+      .split(".")
+      .filter(Boolean)
+      .reduce((cursor, key) => cursor?.[key], dict);
+    const enRaw = String(path || "")
+      .split(".")
+      .filter(Boolean)
+      .reduce((cursor, key) => cursor?.[key], strings("en").calendarCard || {});
     const template = typeof raw === "string" ? raw : typeof enRaw === "string" ? enRaw : String(fallback || "");
     return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key) => {
       const value = values?.[key];
@@ -6180,6 +6356,7 @@
     translateWeatherForecastUi,
     translateGraphEmptyHistory,
     translateNotificationsUi,
+    translateCalendarUi,
     translateHumidifierMode,
     translateMeteoalarmTerm,
     translateAdvanceVacuumReportedState,

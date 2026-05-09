@@ -158,8 +158,8 @@ test("calendar native composer supports rich HA event fields and details", () =>
   assert.match(source, /data-native-field="color"/);
   assert.match(source, /calendar-composer \.editor-color-picker/);
   assert.match(source, /_mountNativeColorControl\(\)/);
-  assert.match(source, /value="none">No se repite/);
-  assert.match(source, /value="yearly">Anualmente/);
+  assert.match(source, /value="none">\$\{escapeHtml\(this\._uiText\("repeat\.none", "No se repite"\)\)\}/);
+  assert.match(source, /value="yearly">\$\{escapeHtml\(this\._uiText\("repeat\.yearly", "Anualmente"\)\)\}/);
   assert.doesNotMatch(source, /data-native-field="repeat"/);
   assert.doesNotMatch(source, /data-native-field="rrule"/);
   assert.match(source, /appendNodaliaEventMetadata/);
@@ -184,9 +184,11 @@ test("calendar all-day labels use shared locale text", () => {
   const source = read("nodalia-calendar-card.js");
   const i18n = read("nodalia-i18n.js");
   assert.match(source, /_uiText\(path, fallback, values = \{\}\)/);
-  assert.match(source, /translateNotificationsUi/);
+  assert.match(source, /translateCalendarUi/);
   assert.match(source, /_uiText\("allDay", "Todo el día"\)/);
   assert.doesNotMatch(source, /Todo el dia/);
+  assert.match(i18n, /function translateCalendarUi/);
+  assert.match(i18n, /calendarCard/);
   assert.match(i18n, /allDay: "Ganztägig"/);
   assert.match(i18n, /allDay: "Toute la journée"/);
   assert.match(i18n, /allDay: "全天"/);
@@ -299,6 +301,7 @@ test("notifications translate vacuum cleaning state in smart messages", () => {
   const i18n = read("nodalia-i18n.js");
   assert.match(source, /translateAdvanceVacuumReportedState/);
   assert.match(source, /state: stateLabel/);
+  assert.doesNotMatch(source, /state: state\.state/);
   assert.match(i18n, /translateVacuumErrorState/);
   assert.match(i18n, /main_brush_jammed: "Cepillo principal bloqueado"/);
   assert.match(source, /vacuum_error_entities/);
@@ -352,10 +355,11 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /const zIndex = 4 - clampedIndex;/);
   assert.match(source, /pointer-events: none;/);
   assert.match(source, /\.slice\(startIndex, startIndex \+ 4\)/);
-  assert.match(source, /const offset = 6 \+ \(clampedIndex - 1\) \* 6/);
+  assert.match(source, /const stackPeek = 9/);
+  assert.match(source, /const offset = clampedIndex \* stackPeek/);
   assert.match(source, /top: var\(--stack-offset, 7px\)/);
   assert.match(source, /height: calc\(100% - 2px\)/);
-  assert.match(source, /const collapsedStackReserve = collapsedStackDepth \? 18 \+ collapsedStackDepth \* 6 : 0/);
+  assert.match(source, /const collapsedStackReserve = collapsedStackDepth \? 18 \+ collapsedStackDepth \* 9 : 0/);
   assert.match(source, /<div class="notifications-list">\s*\$\{\s*shouldStack && !this\._expanded\s*\? this\._renderCollapsedStackCards\(notifications, config\.max_visible\)/);
   assert.doesNotMatch(source, /notifications-card--animated\.notifications-card--enter \.notification-stack-card\s*\{\s*animation: notifications-card-fade-up/);
   assert.match(source, /padding-bottom: var\(--notifications-stack-reserve, 0px\)/);
@@ -411,6 +415,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /IntersectionObserver/);
   assert.match(source, /_attachViewVisibilityObserver/);
   assert.match(source, /_replayEntranceAnimation/);
+  assert.match(source, /_wasHiddenByLayout/);
   assert.match(source, /align-content: start/);
   assert.match(source, /_syncSharedDismissedFromHass/);
   assert.match(source, /_calendarDismissalsHydrated/);

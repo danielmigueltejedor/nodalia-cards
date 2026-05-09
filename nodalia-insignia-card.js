@@ -1884,7 +1884,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
 
-    if (toggleButton.dataset.editorToggle === "insignia-styles") {
+    if (toggleButton.dataset.editorToggle === "styles") {
       this._showStyleSection = !this._showStyleSection;
       this._render();
     }
@@ -2459,17 +2459,17 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Apariencia"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Tamaños, colores del icono y tinte de la burbuja."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales principales de la tarjeta."))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
                 class="editor-section__toggle-button"
-                data-editor-toggle="insignia-styles"
+                data-editor-toggle="styles"
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar detalles de estilo") : this._editorLabel("Mostrar detalles de estilo"))}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
               </button>
             </div>
           </div>

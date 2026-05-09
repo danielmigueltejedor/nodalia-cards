@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-alpha.77";
+const CARD_VERSION = "1.0.0-alpha.78";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1323,6 +1323,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._viewportResizeTimer = 0;
     this._viewVisibilityObserver = null;
     this._wasInViewport = false;
+    this._wasHiddenByLayout = false;
     this._onDocVisibility = this._onDocVisibility.bind(this);
     this._onClick = this._onClick.bind(this);
     this._onViewportResize = this._onViewportResize.bind(this);
@@ -1402,7 +1403,15 @@ class NodaliaNotificationsCard extends HTMLElement {
           return;
         }
         this._wasInViewport = visible;
-        if (visible) {
+        if (!visible) {
+          this._wasHiddenByLayout = entries.some(entry => {
+            const rect = entry.boundingClientRect;
+            return rect && rect.width === 0 && rect.height === 0;
+          });
+          return;
+        }
+        if (this._wasHiddenByLayout) {
+          this._wasHiddenByLayout = false;
           this._replayEntranceAnimation();
         }
       },
@@ -1418,6 +1427,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._viewVisibilityObserver.disconnect();
     this._viewVisibilityObserver = null;
     this._wasInViewport = false;
+    this._wasHiddenByLayout = false;
   }
 
   _onViewportResize() {
@@ -1895,8 +1905,8 @@ class NodaliaNotificationsCard extends HTMLElement {
         add({
           id: `vacuum:${entityId}:${value}`,
           title: value === "cleaning"
-            ? this._smartTitle("vacuum", "titles.cleaningStarted", "Limpieza iniciada", { source: name, name, state: state.state }, entityId)
-            : this._smartTitle("vacuum", "titles.returningDock", "Robot volviendo a base", { source: name, name, state: state.state }, entityId),
+            ? this._smartTitle("vacuum", "titles.cleaningStarted", "Limpieza iniciada", { source: name, name, state: stateLabel }, entityId)
+            : this._smartTitle("vacuum", "titles.returningDock", "Robot volviendo a base", { source: name, name, state: stateLabel }, entityId),
           message: this._smartMessage("vacuum", "messages.vacuumState", "{name}: {state}.", { source: name, name, state: stateLabel }, entityId),
           icon: value === "cleaning" ? "mdi:robot-vacuum" : "mdi:home-import-outline",
           severity: "info",
@@ -2919,8 +2929,9 @@ class NodaliaNotificationsCard extends HTMLElement {
       ? sanitizeCssRuntimeValue(item.tintColor, "")
       : this._severityAccent(item?.severity);
     const clampedIndex = Math.min(4, stackIndex);
+    const stackPeek = 9;
     const inset = 5 + (clampedIndex - 1) * 5;
-    const offset = 6 + (clampedIndex - 1) * 6;
+    const offset = clampedIndex * stackPeek;
     const opacity = Math.max(0.22, 0.56 - (clampedIndex - 1) * 0.08);
     const zIndex = 4 - clampedIndex;
     return [
@@ -2982,7 +2993,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     const hiddenCount = Math.max(0, notifications.length - config.max_visible);
     const shouldStack = notifications.length > config.max_visible;
     const collapsedStackDepth = shouldStack && !this._expanded ? Math.min(4, hiddenCount) : 0;
-    const collapsedStackReserve = collapsedStackDepth ? 18 + collapsedStackDepth * 6 : 0;
+    const collapsedStackReserve = collapsedStackDepth ? 18 + collapsedStackDepth * 9 : 0;
     const isCollapsingStack = this._collapsingStack && this._expanded;
     const visible = this._expanded || isCollapsingStack ? notifications : notifications.slice(0, config.max_visible);
     const hasNotifications = notifications.length > 0;

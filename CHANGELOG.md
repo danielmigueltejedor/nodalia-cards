@@ -10,6 +10,19 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.78] - 2026-05-09
+
+Seventy-eighth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.78`** (tag **`v1.0.0-alpha.78`** optional).
+
+- **Notifications card — stack compacto:** el solape plegado usa un paso uniforme entre capas para que la separación visible entre la primera y la segunda notificación coincida con la de las capas posteriores.
+- **Notifications card — animación de entrada:** ya no se relanza al hacer scroll dentro del mismo panel; solo se repite cuando la tarjeta vuelve desde un ocultado de layout/vista o al recargar/volver la pestaña.
+- **Calendar card — i18n runtime:** las pantallas visibles del calendario, detalle, vacío y creación de evento usan claves de traducción propias (`calendarCard`) en lugar de literales directos.
+- **Visual editors — i18n exacta:** se traducen más etiquetas y ayudas que llegaban como literales en inglés, sin tilde o incluso en chino (`Main`, `Offset`, `Button size`, `Media player background`, `最小高度`, etc.) en navegación, media player, badges, energía, climate, alarma, calendario y tarjetas de entidad.
+- **Visual editors — consistencia:** la Insignia Card usa el mismo bloque plegable **Estilos** / **Mostrar ajustes de estilo** que el resto de editores, y el normalizador español corrige más tildes heredadas en etiquetas antiguas.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.78`**.
+
+---
+
 ## [1.0.0-alpha.77] - 2026-05-09
 
 Seventy-seventh **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.77`** (tag **`v1.0.0-alpha.77`** optional).
