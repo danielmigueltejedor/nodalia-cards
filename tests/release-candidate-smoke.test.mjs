@@ -190,6 +190,10 @@ test("calendar all-day labels use shared locale text", () => {
   assert.match(i18n, /function translateCalendarUi/);
   assert.match(i18n, /calendarCard/);
   assert.match(i18n, /allDay: "Ganztägig"/);
+  assert.match(i18n, /fields: \{ calendar: "Kalender", title: "Titel"/);
+  assert.match(i18n, /buttons: \{ month: "Mois", back: "Retour", delete: "Supprimer", cancel: "Annuler", create: "Créer" \}/);
+  assert.match(i18n, /repeat: \{ none: "不重复", yearly: "每年", monthly: "每月", weekly: "每周", daily: "每天" \}/);
+  assert.match(i18n, /createEventWithMessage: "Nu s-a putut crea evenimentul: \{message\}"/);
   assert.match(i18n, /allDay: "Toute la journée"/);
   assert.match(i18n, /allDay: "全天"/);
 });
@@ -356,10 +360,11 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /pointer-events: none;/);
   assert.match(source, /\.slice\(startIndex, startIndex \+ 4\)/);
   assert.match(source, /const stackPeek = 9/);
-  assert.match(source, /const offset = clampedIndex \* stackPeek/);
+  assert.match(source, /const firstLayerPeekCorrection = clampedIndex === 1 \? 1 : 0/);
+  assert.match(source, /const offset = clampedIndex \* stackPeek \+ firstLayerPeekCorrection/);
   assert.match(source, /top: var\(--stack-offset, 7px\)/);
   assert.match(source, /height: calc\(100% - 2px\)/);
-  assert.match(source, /const collapsedStackReserve = collapsedStackDepth \? 18 \+ collapsedStackDepth \* 9 : 0/);
+  assert.match(source, /const collapsedStackReserve = collapsedStackDepth \? 6 \+ collapsedStackDepth \* 9 : 0/);
   assert.match(source, /<div class="notifications-list">\s*\$\{\s*shouldStack && !this\._expanded\s*\? this\._renderCollapsedStackCards\(notifications, config\.max_visible\)/);
   assert.doesNotMatch(source, /notifications-card--animated\.notifications-card--enter \.notification-stack-card\s*\{\s*animation: notifications-card-fade-up/);
   assert.match(source, /padding-bottom: var\(--notifications-stack-reserve, 0px\)/);

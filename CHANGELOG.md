@@ -10,16 +10,18 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
-## [1.0.0-alpha.78] - 2026-05-09
+## [1.0.0-alpha.79] - 2026-05-09
 
-Seventy-eighth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.78`** (tag **`v1.0.0-alpha.78`** optional).
+Seventy-ninth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.79`** (tag **`v1.0.0-alpha.79`** optional).
 
-- **Notifications card — stack compacto:** el solape plegado usa un paso uniforme entre capas para que la separación visible entre la primera y la segunda notificación coincida con la de las capas posteriores.
+- **Notifications card — stack compacto:** el solape plegado conserva el paso visual de las capas traseras y solo compensa ligeramente la primera capa oculta para que la segunda notificación asome igual que las siguientes.
+- **Notifications card — reserva compacta:** el stack plegado reduce la altura extra reservada para no dejar tanto espacio libre bajo la tarjeta.
 - **Notifications card — animación de entrada:** ya no se relanza al hacer scroll dentro del mismo panel; solo se repite cuando la tarjeta vuelve desde un ocultado de layout/vista o al recargar/volver la pestaña.
 - **Calendar card — i18n runtime:** las pantallas visibles del calendario, detalle, vacío y creación de evento usan claves de traducción propias (`calendarCard`) en lugar de literales directos.
+- **Calendar card — formulario multidioma:** el formulario de creación, botones, campos, repetición, estados vacíos y errores ya tienen traducciones completas en todos los idiomas del bundle.
 - **Visual editors — i18n exacta:** se traducen más etiquetas y ayudas que llegaban como literales en inglés, sin tilde o incluso en chino (`Main`, `Offset`, `Button size`, `Media player background`, `最小高度`, etc.) en navegación, media player, badges, energía, climate, alarma, calendario y tarjetas de entidad.
 - **Visual editors — consistencia:** la Insignia Card usa el mismo bloque plegable **Estilos** / **Mostrar ajustes de estilo** que el resto de editores, y el normalizador español corrige más tildes heredadas en etiquetas antiguas.
-- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.78`**.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.79`**.
 
 ---
 
