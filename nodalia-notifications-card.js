@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-alpha.80";
+const CARD_VERSION = "1.0.0-alpha.81";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -2994,7 +2994,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     const hiddenCount = Math.max(0, notifications.length - config.max_visible);
     const shouldStack = notifications.length > config.max_visible;
     const collapsedStackDepth = shouldStack && !this._expanded ? Math.min(4, hiddenCount) : 0;
-    const collapsedStackReserve = collapsedStackDepth ? 2 + collapsedStackDepth * 7 : 0;
+    const collapsedStackReserve = collapsedStackDepth ? 4 + collapsedStackDepth * 5 : 0;
     const isCollapsingStack = this._collapsingStack && this._expanded;
     const visible = this._expanded || isCollapsingStack ? notifications : notifications.slice(0, config.max_visible);
     const hasNotifications = notifications.length > 0;

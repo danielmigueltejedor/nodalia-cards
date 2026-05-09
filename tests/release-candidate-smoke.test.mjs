@@ -364,7 +364,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /const offset = clampedIndex \* stackPeek \+ firstLayerPeekCorrection/);
   assert.match(source, /top: var\(--stack-offset, 7px\)/);
   assert.match(source, /height: calc\(100% - 2px\)/);
-  assert.match(source, /const collapsedStackReserve = collapsedStackDepth \? 2 \+ collapsedStackDepth \* 7 : 0/);
+  assert.match(source, /const collapsedStackReserve = collapsedStackDepth \? 4 \+ collapsedStackDepth \* 5 : 0/);
   assert.match(source, /<div class="notifications-list">\s*\$\{\s*shouldStack && !this\._expanded\s*\? this\._renderCollapsedStackCards\(notifications, config\.max_visible\)/);
   assert.doesNotMatch(source, /notifications-card--animated\.notifications-card--enter \.notification-stack-card\s*\{\s*animation: notifications-card-fade-up/);
   assert.match(source, /padding-bottom: var\(--notifications-stack-reserve, 0px\)/);
@@ -522,6 +522,10 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(editorUi, /keys: \["Automatic \(toggle or info\)", "Auto \(toggle o info\)", "Automática \(info o alternar\)"\], es: "Automático \(alternar o info\)", en: "Automatic \(toggle or info\)", de: "Automatisch \(umschalten oder Info\)"/);
   assert.match(editorUi, /keys: \["Pin to screen"\], es: "Fijar a pantalla", en: "Pin to screen", de: "Am Bildschirm fixieren"/);
   assert.match(editorUi, /keys: \["Also show on desktop"\], es: "Mostrar también en escritorio", en: "Also show on desktop", de: "Auch auf dem Desktop anzeigen"/);
+  assert.match(editorUi, /for \(const \[sourceKey, englishValue\] of Object\.entries\(MAP\.en\)\) \{\s*const exactLocales = EXACT_OVERRIDE_LOCALES_BY_EN\[englishValue\]/);
+  assert.match(editorUi, /"Card border": \{ de: "Kartenrand"/);
+  assert.match(editorUi, /"Service data JSON": \{ de: "Servicedaten JSON"/);
+  assert.match(editorUi, /"Visible states": \{ de: "Sichtbare Zustände"/);
   assert.match(i18n, /function translateNotificationsUi/);
   assert.match(build, /nodalia-notifications-card\.js/);
   assert.match(pkg, /"nodalia-notifications-card\.js"/);
