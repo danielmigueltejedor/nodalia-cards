@@ -2563,7 +2563,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       if (typeof console !== "undefined" && typeof console.warn === "function") {
         console.warn("Nodalia Advance Vacuum Card shared cleaning session exceeds helper length limit");
       }
-      serialized = "";
+      return;
     }
 
     const currentValue = String(this._getSharedCleaningSessionState()?.state || "");

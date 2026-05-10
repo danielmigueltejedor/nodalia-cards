@@ -53055,7 +53055,7 @@
         if (typeof console !== "undefined" && typeof console.warn === "function") {
           console.warn("Nodalia Advance Vacuum Card shared cleaning session exceeds helper length limit");
         }
-        serialized = "";
+        return;
       }
       const currentValue = String(this._getSharedCleaningSessionState()?.state || "");
       if (serialized === currentValue || serialized === this._lastSubmittedSharedCleaningSessionValue) {
@@ -74414,4 +74414,4 @@
   });
 })();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.6.1","contentSha256_12":"582aeb0816ed"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v0.6.1 (582aeb0816ed) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"0.6.1","contentSha256_12":"81202492ba78"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v0.6.1 (81202492ba78) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
