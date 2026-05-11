@@ -2578,7 +2578,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
   _renderColorField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("Color personalizado");
+    const tColorCustom = this._editorLabel("ed.entity.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -2717,7 +2717,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
   _renderQuickActions(config) {
     if (!Array.isArray(config.quick_actions) || !config.quick_actions.length) {
       return `
-        <div class="editor-empty">${escapeHtml(this._editorLabel("Todavía no hay acciones rápidas."))}</div>
+        <div class="editor-empty">${escapeHtml(this._editorLabel("ed.entity.quick_actions_empty"))}</div>
       `;
     }
 
@@ -2728,41 +2728,41 @@ class NodaliaEntityCardEditor extends HTMLElement {
         return `
           <div class="editor-action">
             <div class="editor-action__header">
-              <div class="editor-action__title">${escapeHtml(this._editorLabel("Acción"))} ${index + 1}</div>
+              <div class="editor-action__title">${escapeHtml(this._editorLabel("ed.entity.action_block_title"))} ${index + 1}</div>
               <div class="editor-action__buttons">
-                <button type="button" data-editor-action="move-action-up" data-index="${index}" aria-label="${escapeHtml(this._editorLabel("Subir"))}">${escapeHtml(this._editorLabel("Subir"))}</button>
-                <button type="button" data-editor-action="move-action-down" data-index="${index}" aria-label="${escapeHtml(this._editorLabel("Bajar"))}">${escapeHtml(this._editorLabel("Bajar"))}</button>
-                <button type="button" data-editor-action="remove-action" data-index="${index}" aria-label="${escapeHtml(this._editorLabel("Eliminar"))}">${escapeHtml(this._editorLabel("Eliminar"))}</button>
+                <button type="button" data-editor-action="move-action-up" data-index="${index}" aria-label="${escapeHtml(this._editorLabel("ed.notifications.move_up"))}">${escapeHtml(this._editorLabel("ed.notifications.move_up"))}</button>
+                <button type="button" data-editor-action="move-action-down" data-index="${index}" aria-label="${escapeHtml(this._editorLabel("ed.notifications.move_down"))}">${escapeHtml(this._editorLabel("ed.notifications.move_down"))}</button>
+                <button type="button" data-editor-action="remove-action" data-index="${index}" aria-label="${escapeHtml(this._editorLabel("ed.notifications.remove"))}">${escapeHtml(this._editorLabel("ed.notifications.remove"))}</button>
               </div>
             </div>
             <div class="editor-grid">
-              ${this._renderIconPickerField("Icono", `quick_actions.${index}.icon`, action.icon, {
+              ${this._renderIconPickerField("ed.entity.icon", `quick_actions.${index}.icon`, action.icon, {
                 placeholder: "mdi:flash",
               })}
-              ${this._renderTextField("Etiqueta", `quick_actions.${index}.label`, action.label, {
-                placeholder: "Acción",
+              ${this._renderTextField("ed.entity.quick_label", `quick_actions.${index}.label`, action.label, {
+                placeholder: this._editorLabel("ed.entity.quick_label_placeholder"),
               })}
               ${this._renderSelectField(
-                "Tipo de acción",
+                "ed.entity.action_type",
                 `quick_actions.${index}.type`,
                 actionType,
                 [
-                  { value: "toggle", label: "Alternar" },
-                  { value: "more-info", label: "Más información" },
-                  { value: "service", label: "Llamar servicio" },
+                  { value: "toggle", label: "ed.entity.action_type_toggle" },
+                  { value: "more-info", label: "ed.entity.action_type_more_info" },
+                  { value: "service", label: "ed.entity.action_type_service" },
                 ],
               )}
-              ${this._renderEntityPickerField("Entidad", `quick_actions.${index}.entity`, action.entity, {
+              ${this._renderEntityPickerField("ed.entity.quick_entity", `quick_actions.${index}.entity`, action.entity, {
                 fullWidth: true,
               })}
               ${
                 actionType === "service"
                   ? `
-                    ${this._renderTextField("Servicio", `quick_actions.${index}.service`, action.service, {
+                    ${this._renderTextField("ed.entity.tap_service_field", `quick_actions.${index}.service`, action.service, {
                       placeholder: "light.turn_on",
                       fullWidth: true,
                     })}
-                    ${this._renderTextareaField("Datos del servicio (JSON)", `quick_actions.${index}.service_data`, action.service_data, {
+                    ${this._renderTextareaField("ed.entity.tap_service_data_json", `quick_actions.${index}.service_data`, action.service_data, {
                       placeholder: '{"brightness_pct": 50}',
                     })}
                   `
@@ -3116,70 +3116,66 @@ class NodaliaEntityCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal, nombre visible e icono base de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.general_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.general_section_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderEntityPickerField("Entidad principal", "entity", config.entity, {
+            ${this._renderEntityPickerField("ed.entity.entity_main", "entity", config.entity, {
               fullWidth: true,
             })}
-            ${this._renderIconPickerField("Icono", "icon", config.icon, {
+            ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
               placeholder: "mdi:tune",
               fullWidth: true,
             })}
-            ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Lámpara",
+            ${this._renderTextField("ed.entity.name", "name", config.name, {
+              placeholder: this._editorLabel("ed.entity.name_placeholder"),
               fullWidth: true,
             })}
-            ${this._renderCheckboxField("Usar el icono de la entidad", "use_entity_icon", config.use_entity_icon === true)}
-            ${this._renderIconPickerField("Icono (estado activo)", "icon_active", config.icon_active, {
+            ${this._renderCheckboxField("ed.entity.use_entity_icon", "use_entity_icon", config.use_entity_icon === true)}
+            ${this._renderIconPickerField("ed.entity.icon_active", "icon_active", config.icon_active, {
               placeholder: "mdi:door-open",
               fullWidth: true,
             })}
-            ${this._renderIconPickerField("Icono (estado inactivo)", "icon_inactive", config.icon_inactive, {
+            ${this._renderIconPickerField("ed.entity.icon_inactive", "icon_inactive", config.icon_inactive, {
               placeholder: "mdi:door-closed",
               fullWidth: true,
             })}
             <div class="editor-section__hint editor-field--full" style="grid-column: 1 / -1; margin-top: -4px;">
-              ${escapeHtml(
-                this._editorLabel(
-                  "Opcional: icono distinto cuando la tarjeta está activa o inactiva (binary_sensor, interruptores, puertas, ventanas, etc.). Si uno queda vacío, se usa el icono general o el de la entidad.",
-                ),
-              )}
+              ${escapeHtml(this._editorLabel("ed.entity.icons_state_hint"))}
             </div>
             ${this._renderSelectField(
-              "Acción al tocar",
+              "ed.entity.tap_action",
               "tap_action",
               tapAction,
               [
-                { value: "auto", label: "Automática (toggle o info)" },
-                { value: "toggle", label: "Alternar" },
-                { value: "more-info", label: "Más información" },
-                { value: "url", label: "Abrir URL" },
-                { value: "service", label: "Llamar servicio" },
-                { value: "none", label: "Sin acción" },
+                { value: "auto", label: "ed.entity.tap_auto" },
+                { value: "toggle", label: "ed.entity.tap_toggle" },
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "url", label: "ed.entity.tap_open_url" },
+                { value: "service", label: "ed.entity.tap_service" },
+                { value: "none", label: "ed.entity.tap_none" },
               ],
               { fullWidth: true },
             )}
             ${
               tapAction === "service"
                 ? `
-                  ${this._renderTextField("Servicio", "tap_service", config.tap_service, {
+                  ${this._renderTextField("ed.entity.tap_service_field", "tap_service", config.tap_service, {
                     placeholder: "light.turn_on",
                     fullWidth: true,
                   })}
-                  ${this._renderTextareaField("Datos del servicio (JSON)", "tap_service_data", config.tap_service_data, {
+                  ${this._renderTextareaField("ed.entity.tap_service_data_json", "tap_service_data", config.tap_service_data, {
                     placeholder: '{"brightness_pct": 70}',
                   })}
                   ${this._renderCheckboxField(
-                    "Seguridad de servicios (modo estricto)",
+                    "ed.entity.security_strict",
                     "security.strict_service_actions",
                     config.security?.strict_service_actions !== false,
                   )}
                   ${
                     config.security?.strict_service_actions !== false
                       ? this._renderTextField(
-                          "Servicios permitidos (separados por comas)",
+                          "ed.entity.allowed_services_csv",
                           "security.allowed_services",
                           Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
                           {
@@ -3196,11 +3192,11 @@ class NodaliaEntityCardEditor extends HTMLElement {
             ${
               tapAction === "url"
                 ? `
-                  ${this._renderTextField("URL", "tap_url", config.tap_url, {
+                  ${this._renderTextField("ed.entity.tap_url_field", "tap_url", config.tap_url, {
                     placeholder: "https://example.com",
                     fullWidth: true,
                   })}
-                  ${this._renderCheckboxField("Abrir en pestaña nueva", "tap_new_tab", config.tap_new_tab === true)}
+                  ${this._renderCheckboxField("ed.entity.tap_new_tab", "tap_new_tab", config.tap_new_tab === true)}
                 `
                 : ""
             }
@@ -3209,53 +3205,53 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Contenido"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Estado visible, chips adicionales, decimales de los valores y comportamiento en modo compacto."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.entity.content_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.content_section_hint"))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
-              "Modo compacto",
+              "ed.entity.compact_mode",
               "compact_layout_mode",
               config.compact_layout_mode || "auto",
               [
-                { value: "auto", label: "Automático (<4 columnas)" },
-                { value: "always", label: "Compacto siempre" },
-                { value: "never", label: "Nunca compacto" },
+                { value: "auto", label: "ed.entity.compact_auto" },
+                { value: "always", label: "ed.entity.compact_always" },
+                { value: "never", label: "ed.entity.compact_never" },
               ],
             )}
-            ${this._renderCheckboxField("Mostrar estado", "show_state", config.show_state !== false)}
+            ${this._renderCheckboxField("ed.entity.show_state", "show_state", config.show_state !== false)}
             ${this._renderSelectField(
-              "Posicion del estado",
+              "ed.entity.state_position",
               "state_position",
               config.state_position || (config.state_chip_on_title_row === true ? "right" : "below"),
               [
-                { value: "below", label: "Debajo del nombre" },
-                { value: "right", label: "A la derecha del nombre" },
+                { value: "below", label: "ed.entity.state_below" },
+                { value: "right", label: "ed.entity.state_right" },
               ],
             )}
-            ${this._renderTextField("Decimales en estado y chips", "number_decimals", config.number_decimals, {
+            ${this._renderTextField("ed.entity.number_decimals", "number_decimals", config.number_decimals, {
               placeholder: "2",
               type: "number",
             })}
-            ${this._renderTextField("Atributo chip principal", "primary_attribute", config.primary_attribute, {
+            ${this._renderTextField("ed.entity.primary_attribute", "primary_attribute", config.primary_attribute, {
               placeholder: "battery_level",
             })}
-            ${this._renderTextField("Atributo chip secundario", "secondary_attribute", config.secondary_attribute, {
+            ${this._renderTextField("ed.entity.secondary_attribute", "secondary_attribute", config.secondary_attribute, {
               placeholder: "temperature",
             })}
-            ${this._renderCheckboxField("Mostrar chip principal", "show_primary_chip", config.show_primary_chip !== false)}
-            ${this._renderCheckboxField("Mostrar chip secundario", "show_secondary_chip", config.show_secondary_chip !== false)}
+            ${this._renderCheckboxField("ed.entity.show_primary_chip", "show_primary_chip", config.show_primary_chip !== false)}
+            ${this._renderCheckboxField("ed.entity.show_secondary_chip", "show_secondary_chip", config.show_secondary_chip !== false)}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Acciones rápidas"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Botones secundarios con icono para alternar, abrir más información o llamar un servicio."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.entity.quick_actions_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.quick_actions_hint"))}</div>
             <div class="editor-section__actions">
               <button type="button" class="editor-section__toggle-button" data-editor-action="add-action">
                 <ha-icon icon="mdi:plus"></ha-icon>
-                <span>${escapeHtml(this._editorLabel("Añadir acción"))}</span>
+                <span>${escapeHtml(this._editorLabel("ed.entity.add_action"))}</span>
               </button>
             </div>
           </div>
@@ -3264,8 +3260,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave del contenido y pequeño rebote al pulsar la tarjeta o sus acciones."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.animations_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.animations_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -3274,7 +3270,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("ed.weather.hide_animation_settings") : this._editorLabel("ed.weather.show_animation_settings"))}</span>
               </button>
             </div>
           </div>
@@ -3282,11 +3278,11 @@ class NodaliaEntityCardEditor extends HTMLElement {
             this._showAnimationSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
-                  ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", animations.content_duration, {
+                  ${this._renderCheckboxField("ed.weather.enable_animations", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderTextField("ed.weather.content_entrance_ms", "animations.content_duration", animations.content_duration, {
                     type: "number",
                   })}
-                  ${this._renderTextField("Rebote pulsación (ms)", "animations.button_bounce_duration", animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.weather.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, {
                     type: "number",
                   })}
                 </div>
@@ -3297,24 +3293,24 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta háptica"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta táctil opcional al usar la tarjeta y sus acciones."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.haptics_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar respuesta háptica", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Usar vibración si no hay háptica", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "Estilo",
+              "ed.weather.haptic_style",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Selección" },
-                { value: "light", label: "Ligero" },
-                { value: "medium", label: "Medio" },
-                { value: "heavy", label: "Intenso" },
-                { value: "success", label: "Éxito" },
-                { value: "warning", label: "Aviso" },
-                { value: "failure", label: "Fallo" },
+                { value: "selection", label: "ed.weather.haptic_selection" },
+                { value: "light", label: "ed.weather.haptic_light" },
+                { value: "medium", label: "ed.weather.haptic_medium" },
+                { value: "heavy", label: "ed.weather.haptic_heavy" },
+                { value: "success", label: "ed.weather.haptic_success" },
+                { value: "warning", label: "ed.weather.haptic_warning" },
+                { value: "failure", label: "ed.weather.haptic_failure" },
               ],
             )}
           </div>
@@ -3322,8 +3318,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales principales de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.styles_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.styles_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -3332,7 +3328,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("ed.weather.hide_style_settings") : this._editorLabel("ed.weather.show_style_settings"))}</span>
               </button>
             </div>
           </div>
@@ -3340,33 +3336,33 @@ class NodaliaEntityCardEditor extends HTMLElement {
             this._showStyleSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderColorField("Fondo de la tarjeta", "styles.card.background", config.styles.card.background)}
-                  ${this._renderTextField("Borde de la tarjeta", "styles.card.border", config.styles.card.border)}
-                  ${this._renderTextField("Radio del borde", "styles.card.border_radius", config.styles.card.border_radius)}
-                  ${this._renderTextField("Sombra", "styles.card.box_shadow", config.styles.card.box_shadow)}
-                  ${this._renderTextField("Relleno interior", "styles.card.padding", config.styles.card.padding)}
-                  ${this._renderTextField("Separación interna", "styles.card.gap", config.styles.card.gap)}
-                  ${this._renderTextField("Tamaño botón principal", "styles.icon.size", config.styles.icon.size)}
-                  ${this._renderColorField("Fondo burbuja principal", "styles.icon.background", config.styles.icon.background, {
+                  ${this._renderColorField("ed.entity.style_card_bg", "styles.card.background", config.styles.card.background)}
+                  ${this._renderTextField("ed.entity.style_card_border", "styles.card.border", config.styles.card.border)}
+                  ${this._renderTextField("ed.entity.style_card_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${this._renderTextField("ed.entity.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
+                  ${this._renderTextField("ed.entity.style_card_padding", "styles.card.padding", config.styles.card.padding)}
+                  ${this._renderTextField("ed.entity.style_card_gap", "styles.card.gap", config.styles.card.gap)}
+                  ${this._renderTextField("ed.entity.style_main_button_size", "styles.icon.size", config.styles.icon.size)}
+                  ${this._renderColorField("ed.entity.style_main_bubble_bg", "styles.icon.background", config.styles.icon.background, {
                     fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
                   })}
-                  ${this._renderColorField("Color icono activo", "styles.icon.on_color", config.styles.icon.on_color, {
+                  ${this._renderColorField("ed.entity.style_icon_on", "styles.icon.on_color", config.styles.icon.on_color, {
                     fallbackValue: "var(--info-color, #71c0ff)",
                   })}
-                  ${this._renderColorField("Color icono inactivo", "styles.icon.off_color", config.styles.icon.off_color, {
+                  ${this._renderColorField("ed.entity.style_icon_off", "styles.icon.off_color", config.styles.icon.off_color, {
                     fallbackValue: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
                   })}
-                  ${this._renderTextField("Tamaño botones auxiliares", "styles.control.size", config.styles.control.size)}
-                  ${this._renderColorField("Fondo de acento", "styles.control.accent_background", config.styles.control.accent_background, {
+                  ${this._renderTextField("ed.entity.style_aux_button_size", "styles.control.size", config.styles.control.size)}
+                  ${this._renderColorField("ed.entity.style_accent_bg", "styles.control.accent_background", config.styles.control.accent_background, {
                     fallbackValue: "rgba(113, 192, 255, 0.18)",
                   })}
-                  ${this._renderColorField("Color de acento", "styles.control.accent_color", config.styles.control.accent_color, {
+                  ${this._renderColorField("ed.entity.style_accent_color", "styles.control.accent_color", config.styles.control.accent_color, {
                     fallbackValue: "var(--primary-text-color)",
                   })}
-                  ${this._renderTextField("Alto chips", "styles.chip_height", config.styles.chip_height)}
-                  ${this._renderTextField("Texto chips", "styles.chip_font_size", config.styles.chip_font_size)}
-                  ${this._renderTextField("Relleno chips", "styles.chip_padding", config.styles.chip_padding)}
-                  ${this._renderTextField("Tamaño del título", "styles.title_size", config.styles.title_size)}
+                  ${this._renderTextField("ed.entity.style_chip_height", "styles.chip_height", config.styles.chip_height)}
+                  ${this._renderTextField("ed.entity.style_chip_font", "styles.chip_font_size", config.styles.chip_font_size)}
+                  ${this._renderTextField("ed.entity.style_chip_padding", "styles.chip_padding", config.styles.chip_padding)}
+                  ${this._renderTextField("ed.entity.style_title_size", "styles.title_size", config.styles.title_size)}
                 </div>
               `
               : ""

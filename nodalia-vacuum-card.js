@@ -4059,7 +4059,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
   _renderColorField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("Color personalizado");
+    const tColorCustom = this._editorLabel("ed.vacuum.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -4334,7 +4334,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
+      emptyOption.textContent = placeholder || this._editorLabel("ed.vacuum.select_entity");
       control.appendChild(emptyOption);
       pickerOptions.getOptions(field).forEach(option => {
         const optionElement = document.createElement("option");
@@ -4396,6 +4396,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
     const hapticStyle = config.haptics?.style || "medium";
     const suctionModeVisibilityOptions = this._getModeVisibilityOptions("suction");
     const mopModeVisibilityOptions = this._getModeVisibilityOptions("mop");
+    const phVacName = this._editorLabel("ed.vacuum.name_placeholder");
+    const phFanPresets = this._editorLabel("ed.vacuum.fan_presets_placeholder");
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -4692,50 +4694,50 @@ class NodaliaVacuumCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal, nombre visible y comportamiento al tocar la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.general_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.vacuum.general_section_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderEntityPickerField("Entidad del robot", "entity", config.entity, {
+            ${this._renderEntityPickerField("ed.vacuum.robot_entity", "entity", config.entity, {
               controlType: "vacuum-entity",
               fullWidth: true,
               placeholder: "vacuum.robot",
             })}
-            ${this._renderIconPickerField("Icono", "icon", config.icon, {
+            ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
               placeholder: "mdi:robot-vacuum",
               fullWidth: true,
             })}
-            ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Robot salón",
+            ${this._renderTextField("ed.entity.name", "name", config.name, {
+              placeholder: phVacName,
               fullWidth: true,
             })}
             ${this._renderSelectField(
-              "Acción al tocar",
+              "ed.entity.tap_action",
               "tap_action",
               config.tap_action || "default",
               [
-                { value: "default", label: "Predeterminada (iniciar o pausar)" },
-                { value: "more-info", label: "Más información" },
-                { value: "navigate", label: "Navegar a una vista" },
-                { value: "none", label: "Sin acción" },
+                { value: "default", label: "ed.vacuum.tap_default" },
+                { value: "more-info", label: "ed.vacuum.tap_more_info" },
+                { value: "navigate", label: "ed.vacuum.tap_navigate" },
+                { value: "none", label: "ed.vacuum.tap_none" },
               ],
               { fullWidth: true },
             )}
             ${
               (config.tap_action || "default") === "navigate"
-                ? this._renderTextField("Ruta de navegación", "tap_navigation_path", config.tap_navigation_path, {
+                ? this._renderTextField("ed.vacuum.navigation_path", "tap_navigation_path", config.tap_navigation_path, {
                     placeholder: "/lovelace/robot",
                     fullWidth: true,
                   })
                 : ""
             }
             ${this._renderTextField(
-              "Modos rápidos de potencia",
+              "ed.vacuum.fan_presets",
               "fan_presets",
               Array.isArray(config.fan_presets) ? config.fan_presets.join(", ") : "",
               {
                 valueType: "csv",
-                placeholder: "Silencioso, Equilibrado, Turbo, Max",
+                placeholder: phFanPresets,
                 fullWidth: true,
               },
             )}
@@ -4744,31 +4746,31 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Entidades auxiliares"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Sensores y selectores opcionales para enriquecer el estado y los controles."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.aux_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.vacuum.aux_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderEntityPickerField("Sensor de estado", "state_entity", config.state_entity, {
+            ${this._renderEntityPickerField("ed.vacuum.state_sensor", "state_entity", config.state_entity, {
               controlType: "sensor-entity",
               placeholder: "sensor.robot_estado",
             })}
-            ${this._renderEntityPickerField("Sensor de error", "error_entity", config.error_entity, {
+            ${this._renderEntityPickerField("ed.vacuum.error_sensor", "error_entity", config.error_entity, {
               controlType: "sensor-entity",
               placeholder: "sensor.robot_error",
             })}
-            ${this._renderEntityPickerField("Sensor de batería", "battery_entity", config.battery_entity, {
+            ${this._renderEntityPickerField("ed.vacuum.battery_sensor", "battery_entity", config.battery_entity, {
               controlType: "sensor-entity",
               placeholder: "sensor.robot_bateria",
             })}
-            ${this._renderEntityPickerField("Sensor de habitaciones", "room_mapping_entity", config.room_mapping_entity, {
+            ${this._renderEntityPickerField("ed.vacuum.room_mapping_sensor", "room_mapping_entity", config.room_mapping_entity, {
               controlType: "sensor-entity",
               placeholder: "sensor.room_mapping",
             })}
-            ${this._renderEntityPickerField("Selector de aspirado", "suction_select_entity", config.suction_select_entity, {
+            ${this._renderEntityPickerField("ed.vacuum.suction_select", "suction_select_entity", config.suction_select_entity, {
               controlType: "select-entity",
               placeholder: "select.robot_fan_speed",
             })}
-            ${this._renderEntityPickerField("Selector de fregado", "mop_select_entity", config.mop_select_entity, {
+            ${this._renderEntityPickerField("ed.vacuum.mop_select", "mop_select_entity", config.mop_select_entity, {
               controlType: "select-entity",
               placeholder: "select.robot_mop_mode",
             })}
@@ -4777,33 +4779,33 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Qué elementos quieres mostrar dentro de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.visibility_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.vacuum.visibility_section_hint"))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
-              "Layout estrecho",
+              "ed.vacuum.layout_narrow",
               "compact_layout_mode",
               config.compact_layout_mode || "auto",
               [
-                { value: "auto", label: "Automático (<4 columnas)" },
-                { value: "always", label: "Centrado siempre" },
-                { value: "never", label: "Nunca centrar" },
+                { value: "auto", label: "ed.vacuum.layout_auto" },
+                { value: "always", label: "ed.vacuum.layout_always" },
+                { value: "never", label: "ed.vacuum.layout_never" },
               ],
             )}
-            ${this._renderCheckboxField("Chip de estado", "show_state_chip", config.show_state_chip !== false)}
-            ${this._renderCheckboxField("Chip de batería", "show_battery_chip", config.show_battery_chip !== false)}
-            ${this._renderCheckboxField("Controles de modo", "show_mode_controls", config.show_mode_controls !== false)}
-            ${this._renderCheckboxField("Modos rápidos de potencia", "show_fan_presets", config.show_fan_presets !== false)}
-            ${this._renderCheckboxField("Botón volver a base", "show_return_to_base", config.show_return_to_base !== false)}
-            ${this._renderCheckboxField("Botón parar", "show_stop", config.show_stop !== false)}
-            ${this._renderCheckboxField("Botón localizar", "show_locate", config.show_locate !== false)}
+            ${this._renderCheckboxField("ed.vacuum.show_state_chip", "show_state_chip", config.show_state_chip !== false)}
+            ${this._renderCheckboxField("ed.vacuum.show_battery_chip", "show_battery_chip", config.show_battery_chip !== false)}
+            ${this._renderCheckboxField("ed.vacuum.show_mode_controls", "show_mode_controls", config.show_mode_controls !== false)}
+            ${this._renderCheckboxField("ed.vacuum.show_fan_presets", "show_fan_presets", config.show_fan_presets !== false)}
+            ${this._renderCheckboxField("ed.vacuum.show_return_base", "show_return_to_base", config.show_return_to_base !== false)}
+            ${this._renderCheckboxField("ed.vacuum.show_stop", "show_stop", config.show_stop !== false)}
+            ${this._renderCheckboxField("ed.vacuum.show_locate", "show_locate", config.show_locate !== false)}
             ${
               suctionModeVisibilityOptions.length
                 ? `
                   <div class="editor-subsection editor-field--full">
-                    <div class="editor-subsection__title">Modos de aspirado visibles</div>
-                    <div class="editor-subsection__hint">Oculta las potencias o modos de aspirado que no quieras mostrar en la tarjeta.</div>
+                    <div class="editor-subsection__title">${escapeHtml(this._editorLabel("ed.vacuum.suction_modes_title"))}</div>
+                    <div class="editor-subsection__hint">${escapeHtml(this._editorLabel("ed.vacuum.suction_modes_hint"))}</div>
                     <div class="editor-grid editor-grid--stacked">
                       ${suctionModeVisibilityOptions.map(mode => this._renderModeVisibilityField("hidden_suction_modes", mode, "suction")).join("")}
                     </div>
@@ -4815,8 +4817,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
               mopModeVisibilityOptions.length
                 ? `
                   <div class="editor-subsection editor-field--full">
-                    <div class="editor-subsection__title">Modos de mopa visibles</div>
-                    <div class="editor-subsection__hint">Oculta los niveles o modos de fregado que no quieras enseñar.</div>
+                    <div class="editor-subsection__title">${escapeHtml(this._editorLabel("ed.vacuum.mop_modes_title"))}</div>
+                    <div class="editor-subsection__hint">${escapeHtml(this._editorLabel("ed.vacuum.mop_modes_hint"))}</div>
                     <div class="editor-grid editor-grid--stacked">
                       ${mopModeVisibilityOptions.map(mode => this._renderModeVisibilityField("hidden_mop_modes", mode, "mop")).join("")}
                     </div>
@@ -4829,24 +4831,24 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta háptica opcional para los controles."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.haptics_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.vacuum.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibración", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "Estilo",
+              "ed.vacuum.haptic_style",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Selección" },
-                { value: "light", label: "Ligero" },
-                { value: "medium", label: "Medio" },
-                { value: "heavy", label: "Intenso" },
-                { value: "success", label: "Éxito" },
-                { value: "warning", label: "Aviso" },
-                { value: "failure", label: "Fallo" },
+                { value: "selection", label: "ed.weather.haptic_selection" },
+                { value: "light", label: "ed.weather.haptic_light" },
+                { value: "medium", label: "ed.weather.haptic_medium" },
+                { value: "heavy", label: "ed.weather.haptic_heavy" },
+                { value: "success", label: "ed.weather.haptic_success" },
+                { value: "warning", label: "ed.weather.haptic_warning" },
+                { value: "failure", label: "ed.weather.haptic_failure" },
               ],
             )}
           </div>
@@ -4854,8 +4856,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Feedback visual para botones y paneles del robot."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.animations_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.vacuum.animations_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4864,7 +4866,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("ed.weather.hide_animation_settings") : this._editorLabel("ed.weather.show_animation_settings"))}</span>
               </button>
             </div>
           </div>
@@ -4872,12 +4874,12 @@ class NodaliaVacuumCardEditor extends HTMLElement {
             this._showAnimationSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
-                  ${this._renderCheckboxField("Animar icono activo", "animations.icon_animation", config.animations.icon_animation !== false)}
-                  ${this._renderTextField("Paneles (ms)", "animations.panel_duration", config.animations.panel_duration, {
+                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", config.animations.icon_animation !== false)}
+                  ${this._renderTextField("ed.vacuum.panel_duration_ms", "animations.panel_duration", config.animations.panel_duration, {
                     type: "number",
                   })}
-                  ${this._renderTextField("Rebote de botones (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
                     type: "number",
                   })}
                 </div>
@@ -4888,8 +4890,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales básicos del look Nodalia."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.styles_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.vacuum.styles_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4898,7 +4900,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("ed.weather.hide_style_settings") : this._editorLabel("ed.weather.show_style_settings"))}</span>
               </button>
             </div>
           </div>
@@ -4906,51 +4908,51 @@ class NodaliaVacuumCardEditor extends HTMLElement {
             this._showStyleSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderColorField("Fondo", "styles.card.background", config.styles.card.background)}
-                  ${this._renderTextField("Borde", "styles.card.border", config.styles.card.border)}
-                  ${this._renderTextField("Radio", "styles.card.border_radius", config.styles.card.border_radius)}
-                  ${this._renderTextField("Sombra", "styles.card.box_shadow", config.styles.card.box_shadow)}
-                  ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-                  ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
-                  ${this._renderTextField("Tamaño burbuja principal", "styles.icon.size", config.styles.icon.size)}
-                  ${this._renderColorField("Fondo burbuja principal", "styles.icon.background", config.styles.icon.background, {
+                  ${this._renderColorField("ed.vacuum.style_bg", "styles.card.background", config.styles.card.background)}
+                  ${this._renderTextField("ed.vacuum.style_border", "styles.card.border", config.styles.card.border)}
+                  ${this._renderTextField("ed.vacuum.style_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${this._renderTextField("ed.vacuum.style_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
+                  ${this._renderTextField("ed.vacuum.style_padding", "styles.card.padding", config.styles.card.padding)}
+                  ${this._renderTextField("ed.vacuum.style_gap", "styles.card.gap", config.styles.card.gap)}
+                  ${this._renderTextField("ed.vacuum.style_main_bubble_size", "styles.icon.size", config.styles.icon.size)}
+                  ${this._renderColorField("ed.vacuum.style_main_bubble_bg", "styles.icon.background", config.styles.icon.background, {
                     fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
                   })}
-                  ${this._renderColorField("Color icono base", "styles.icon.color", config.styles.icon.color, {
+                  ${this._renderColorField("ed.vacuum.style_icon_base", "styles.icon.color", config.styles.icon.color, {
                     fallbackValue: "var(--primary-text-color)",
                   })}
-                  ${this._renderColorField("Color aspirando", "styles.icon.active_color", config.styles.icon.active_color, {
+                  ${this._renderColorField("ed.vacuum.style_icon_cleaning", "styles.icon.active_color", config.styles.icon.active_color, {
                     fallbackValue: "#61c97a",
                   })}
-                  ${this._renderColorField("Color lavado de mopas", "styles.icon.washing_color", config.styles.icon.washing_color, {
+                  ${this._renderColorField("ed.vacuum.style_icon_washing", "styles.icon.washing_color", config.styles.icon.washing_color, {
                     fallbackValue: "#5aa7ff",
                   })}
-                  ${this._renderColorField("Color secado", "styles.icon.drying_color", config.styles.icon.drying_color, {
+                  ${this._renderColorField("ed.vacuum.style_icon_drying", "styles.icon.drying_color", config.styles.icon.drying_color, {
                     fallbackValue: "#f1c24c",
                   })}
-                  ${this._renderColorField("Color autovaciado", "styles.icon.emptying_color", config.styles.icon.emptying_color, {
+                  ${this._renderColorField("ed.vacuum.style_icon_emptying", "styles.icon.emptying_color", config.styles.icon.emptying_color, {
                     fallbackValue: "#9b6b4a",
                   })}
-                  ${this._renderColorField("Color volviendo", "styles.icon.returning_color", config.styles.icon.returning_color, {
+                  ${this._renderColorField("ed.vacuum.style_icon_returning", "styles.icon.returning_color", config.styles.icon.returning_color, {
                     fallbackValue: "#f6b73c",
                   })}
-                  ${this._renderColorField("Color en base", "styles.icon.docked_color", config.styles.icon.docked_color, {
+                  ${this._renderColorField("ed.vacuum.style_icon_docked", "styles.icon.docked_color", config.styles.icon.docked_color, {
                     fallbackValue: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
                   })}
-                  ${this._renderColorField("Color error", "styles.icon.error_color", config.styles.icon.error_color, {
+                  ${this._renderColorField("ed.vacuum.style_icon_error", "styles.icon.error_color", config.styles.icon.error_color, {
                     fallbackValue: "var(--error-color, #ff6b6b)",
                   })}
-                  ${this._renderTextField("Tamaño botones", "styles.control.size", config.styles.control.size)}
-                  ${this._renderColorField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background, {
+                  ${this._renderTextField("ed.vacuum.style_button_size", "styles.control.size", config.styles.control.size)}
+                  ${this._renderColorField("ed.vacuum.style_accent_bg", "styles.control.accent_background", config.styles.control.accent_background, {
                     fallbackValue: "rgba(var(--rgb-primary-color), 0.18)",
                   })}
-                  ${this._renderColorField("Color acento", "styles.control.accent_color", config.styles.control.accent_color, {
+                  ${this._renderColorField("ed.vacuum.style_accent_color", "styles.control.accent_color", config.styles.control.accent_color, {
                     fallbackValue: "var(--primary-text-color)",
                   })}
-                  ${this._renderTextField("Alto chip", "styles.chip_height", config.styles.chip_height)}
-                  ${this._renderTextField("Texto chip", "styles.chip_font_size", config.styles.chip_font_size)}
-                  ${this._renderTextField("Padding chip", "styles.chip_padding", config.styles.chip_padding)}
-                  ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
+                  ${this._renderTextField("ed.vacuum.style_chip_height", "styles.chip_height", config.styles.chip_height)}
+                  ${this._renderTextField("ed.vacuum.style_chip_font", "styles.chip_font_size", config.styles.chip_font_size)}
+                  ${this._renderTextField("ed.vacuum.style_chip_padding", "styles.chip_padding", config.styles.chip_padding)}
+                  ${this._renderTextField("ed.vacuum.style_title_size", "styles.title_size", config.styles.title_size)}
                 </div>
               `
               : ""

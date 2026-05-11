@@ -2038,7 +2038,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
 
   _renderColorField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("Color personalizado");
+    const tColorCustom = this._editorLabel("ed.person.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -2171,7 +2171,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
+      emptyOption.textContent = placeholder || this._editorLabel("ed.person.select_entity");
       control.appendChild(emptyOption);
       this._getDomainEntityOptions(domains, field).forEach(option => {
         const optionElement = document.createElement("option");
@@ -2469,45 +2469,45 @@ class NodaliaPersonCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad persona, foto, icono de zona y comportamiento principal de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.general_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.person.general_section_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderEntityPickerField("Entidad principal", "entity", config.entity, {
+            ${this._renderEntityPickerField("ed.entity.entity_main", "entity", config.entity, {
               domains: ["person", "device_tracker"],
               placeholder: "person.ana",
               fullWidth: true,
             })}
-            ${this._renderIconPickerField("Icono fallback", "icon", config.icon, {
+            ${this._renderIconPickerField("ed.person.fallback_icon", "icon", config.icon, {
               placeholder: "mdi:account",
               fullWidth: true,
             })}
-            ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Ana",
+            ${this._renderTextField("ed.entity.name", "name", config.name, {
+              placeholder: this._editorLabel("ed.person.name_placeholder"),
               fullWidth: true,
             })}
-            ${this._renderCheckboxField("Mostrar nombre", "show_name", config.show_name !== false)}
+            ${this._renderCheckboxField("ed.person.show_name", "show_name", config.show_name !== false)}
             ${this._renderSelectField(
-              "Acción al tocar",
+              "ed.entity.tap_action",
               "tap_action",
               tapAction,
               [
-                { value: "more-info", label: "Mas informacion" },
-                { value: "none", label: "Sin accion" },
+                { value: "more-info", label: "ed.person.tap_more_info" },
+                { value: "none", label: "ed.person.tap_none" },
               ],
               { fullWidth: true },
             )}
-            ${this._renderCheckboxField("Mostrar ubicacion", "show_state", config.show_state !== false)}
-            ${this._renderCheckboxField("Mostrar badge de zona", "show_zone_badge", config.show_zone_badge !== false)}
-            ${this._renderCheckboxField("Usar foto de entidad", "use_entity_picture", config.use_entity_picture !== false)}
-            ${this._renderCheckboxField("Usar icono de zona", "use_zone_icon", config.use_zone_icon !== false)}
+            ${this._renderCheckboxField("ed.person.show_location", "show_state", config.show_state !== false)}
+            ${this._renderCheckboxField("ed.person.show_zone_badge", "show_zone_badge", config.show_zone_badge !== false)}
+            ${this._renderCheckboxField("ed.person.use_entity_picture", "use_entity_picture", config.use_entity_picture !== false)}
+            ${this._renderCheckboxField("ed.person.use_zone_icon", "use_zone_icon", config.use_zone_icon !== false)}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave del contenido y rebote ligero al pulsar la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.animations_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.person.animations_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -2516,7 +2516,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("ed.weather.hide_animation_settings") : this._editorLabel("ed.weather.show_animation_settings"))}</span>
               </button>
             </div>
           </div>
@@ -2524,11 +2524,11 @@ class NodaliaPersonCardEditor extends HTMLElement {
             this._showAnimationSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
-                  ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", animations.content_duration, {
+                  ${this._renderCheckboxField("ed.weather.enable_animations", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderTextField("ed.weather.content_entrance_ms", "animations.content_duration", animations.content_duration, {
                     type: "number",
                   })}
-                  ${this._renderTextField("Rebote pulsacion (ms)", "animations.button_bounce_duration", animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.weather.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, {
                     type: "number",
                   })}
                 </div>
@@ -2539,24 +2539,24 @@ class NodaliaPersonCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta haptica"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional al tocar la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.person.haptics_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.person.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "Estilo haptico",
+              "ed.person.haptic_style",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Selection" },
-                { value: "light", label: "Light" },
-                { value: "medium", label: "Medium" },
-                { value: "heavy", label: "Heavy" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "failure", label: "Failure" },
+                { value: "selection", label: "ed.weather.haptic_selection" },
+                { value: "light", label: "ed.weather.haptic_light" },
+                { value: "medium", label: "ed.weather.haptic_medium" },
+                { value: "heavy", label: "ed.weather.haptic_heavy" },
+                { value: "success", label: "ed.weather.haptic_success" },
+                { value: "warning", label: "ed.weather.haptic_warning" },
+                { value: "failure", label: "ed.weather.haptic_failure" },
               ],
             )}
           </div>
@@ -2564,8 +2564,8 @@ class NodaliaPersonCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.styles_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.weather.styles_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -2574,7 +2574,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("ed.weather.hide_style_settings") : this._editorLabel("ed.weather.show_style_settings"))}</span>
               </button>
             </div>
           </div>
@@ -2582,22 +2582,22 @@ class NodaliaPersonCardEditor extends HTMLElement {
             this._showStyleSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderColorField("Fondo tarjeta", "styles.card.background", config.styles.card.background)}
-                  ${this._renderTextField("Borde tarjeta", "styles.card.border", config.styles.card.border)}
-                  ${this._renderTextField("Radio borde", "styles.card.border_radius", config.styles.card.border_radius)}
-                  ${this._renderTextField("Sombra", "styles.card.box_shadow", config.styles.card.box_shadow)}
-                  ${this._renderTextField("Padding interior", "styles.card.padding", config.styles.card.padding)}
-                  ${this._renderTextField("Separacion interna", "styles.card.gap", config.styles.card.gap)}
-                  ${this._renderTextField("Tamano avatar", "styles.avatar.size", config.styles.avatar.size)}
-                  ${this._renderColorField("Fondo avatar", "styles.avatar.background", config.styles.avatar.background, {
+                  ${this._renderColorField("ed.person.style_card_bg", "styles.card.background", config.styles.card.background)}
+                  ${this._renderTextField("ed.person.style_card_border", "styles.card.border", config.styles.card.border)}
+                  ${this._renderTextField("ed.person.style_card_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${this._renderTextField("ed.person.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
+                  ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles.card.padding)}
+                  ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles.card.gap)}
+                  ${this._renderTextField("ed.person.style_avatar_size", "styles.avatar.size", config.styles.avatar.size)}
+                  ${this._renderColorField("ed.person.style_avatar_bg", "styles.avatar.background", config.styles.avatar.background, {
                     fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
                   })}
-                  ${this._renderColorField("Color avatar", "styles.avatar.color", config.styles.avatar.color, {
+                  ${this._renderColorField("ed.person.style_avatar_color", "styles.avatar.color", config.styles.avatar.color, {
                     fallbackValue: "var(--primary-text-color)",
                   })}
-                  ${this._renderTextField("Tamano badge", "styles.badge.size", config.styles.badge.size)}
-                  ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-                  ${this._renderTextField("Tamano subtitulo", "styles.subtitle_size", config.styles.subtitle_size)}
+                  ${this._renderTextField("ed.person.style_badge_size", "styles.badge.size", config.styles.badge.size)}
+                  ${this._renderTextField("ed.person.style_title_size", "styles.title_size", config.styles.title_size)}
+                  ${this._renderTextField("ed.person.style_subtitle_size", "styles.subtitle_size", config.styles.subtitle_size)}
                 </div>
               `
               : ""

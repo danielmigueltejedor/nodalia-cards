@@ -10,6 +10,16 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.91] - 2026-05-11
+
+Ninety-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.91`** (tag **`v1.0.0-alpha.91`** optional).
+
+- **Visual editor i18n:** Entity, Person, and Vacuum card editors route labels through **`ed.entity.*`**, **`ed.person.*`**, **`ed.vacuum.*`**, and shared **`ed.weather.*`** keys (catalog entries merged into all **`i18n/editor/*.json`** locales).
+- **Tests:** release-candidate smoke accepts **`ed.vacuum.icon_animation_active`** for the vacuum editor’s icon-animation checkbox guard.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.91`**.
+
+---
+
 ## [1.0.0-alpha.90] - 2026-05-11
 
 Ninetieth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.90`** (tag **`v1.0.0-alpha.90`** optional).

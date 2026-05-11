@@ -289,7 +289,10 @@ test("active icon animations are configurable across animated device cards", () 
     assert.match(source, classPattern);
     assert.match(source, keyframePattern);
     assert.match(source, /prefers-reduced-motion: reduce/);
-    assert.match(source, /"Animar icono|ed\.weather\.icon_animation_condition/);
+    assert.match(
+      source,
+      /"(?:Animar icono|ed\.weather\.icon_animation_condition|ed\.vacuum\.icon_animation_active)/,
+    );
   });
   assert.match(humidifier, /deviceClass === "dehumidifier"[\s\S]*this\._isOn\(state\) \? "mdi:air-humidifier" : "mdi:air-humidifier-off"/);
   assert.doesNotMatch(advanceVacuum, /class="advance-vacuum-card__control is-primary \$\{animations\.enabled && animations\.iconAnimation && this\._isCleaning\(state\)/);
