@@ -1325,6 +1325,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._wasInViewport = false;
     this._wasHiddenByLayout = false;
     this._lastEntranceReplayAt = 0;
+    this._lastRouteKey = "";
     this._onDocVisibility = this._onDocVisibility.bind(this);
     this._onClick = this._onClick.bind(this);
     this._onViewportResize = this._onViewportResize.bind(this);
@@ -1339,6 +1340,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._loadDismissed();
     this._loadMobileSent();
     this._syncSharedDismissedFromHass(true);
+    this._lastRouteKey = this._getRouteKey();
     this._replayEntranceAnimation({ force: true });
     this._refreshCalendarEventsSoon(0);
     this._refreshWeatherForecastsSoon(0);
@@ -1389,6 +1391,14 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._animateContentOnNextRender = true;
     this._lastNotificationIdsSignature = "";
     this._renderIfChanged(true);
+  }
+
+  _getRouteKey() {
+    if (typeof window === "undefined" || !window.location) {
+      return "";
+    }
+    const { pathname = "", search = "", hash = "" } = window.location;
+    return `${pathname}${search}${hash}`;
   }
 
   _onDocVisibility() {
@@ -1461,6 +1471,11 @@ class NodaliaNotificationsCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    const nextRouteKey = this._getRouteKey();
+    if (nextRouteKey && nextRouteKey !== this._lastRouteKey) {
+      this._lastRouteKey = nextRouteKey;
+      this._replayEntranceAnimation({ force: true });
+    }
     this._syncSharedDismissedFromHass();
     this._refreshCalendarEventsSoon();
     this._refreshWeatherForecastsSoon();

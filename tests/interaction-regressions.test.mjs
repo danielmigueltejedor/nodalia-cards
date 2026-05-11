@@ -115,4 +115,8 @@ test("notifications entrance animation does not rearm on list refreshes", () => 
   assert.match(source, /const animateEntrance = animations\.enabled && this\._animateContentOnNextRender/);
   assert.doesNotMatch(source, /notificationSetChanged/);
   assert.doesNotMatch(source, /_renderIfChanged\(true\);\s*\n\s*\}, Math\.max\(180, animations\.contentDuration \+ 160\)\);/);
+  assert.match(source, /_lastRouteKey = ""/);
+  assert.match(source, /_getRouteKey\(\)/);
+  assert.match(source, /if \(nextRouteKey && nextRouteKey !== this\._lastRouteKey\) \{/);
+  assert.match(source, /this\._replayEntranceAnimation\(\{ force: true \}\)/);
 });

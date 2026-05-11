@@ -10,6 +10,17 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.87] - 2026-05-11
+
+Eighty-seventh **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.87`** (tag **`v1.0.0-alpha.87`** optional).
+
+- **Editor i18n — exhaustive cleanup pass:** large legacy blocks that still leaked Spanish in non-ES locales are now translated across all supported languages (badge/action/help/style/position/subtitle/navigation animation toggles, and related editor copy).
+- **Editor i18n — stricter consistency:** duplicate legacy variants (`Subtitulo`/`Subtítulo`, `Posicion`/`Posición`, etc.) now resolve to the same localized output to avoid mixed-language drift.
+- **Notifications card — navigation entrance trigger:** route-aware replay keeps entry animation consistent on dashboard navigation/reload while preserving anti-flicker safeguards.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.87`**.
+
+---
+
 ## [1.0.0-alpha.86] - 2026-05-11
 
 Eighty-sixth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.86`** (tag **`v1.0.0-alpha.86`** optional).
