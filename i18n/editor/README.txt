@@ -25,4 +25,6 @@ Adding a new language (e.g. Japanese):
 
 Legacy: strings without the "ed." prefix still use the generated ROWS table (Spanish keys → locales) until migrated card-by-card.
 
-Migrated editors (ed.* + JSON): calendar, weather, notifications.
+Migrated editors (ed.* + JSON): calendar, weather, notifications, entity, person, vacuum, light, fav, media player.
+
+Catalog shards (merged by scripts/merge-editor-catalog-additions.mjs): scripts/data/editor-catalog-*.json

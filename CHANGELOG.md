@@ -10,6 +10,15 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.92] - 2026-05-11
+
+Ninety-second **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.92`** (tag **`v1.0.0-alpha.92`** optional).
+
+- **Visual editor i18n:** Climate (legacy and main) and Alarm panel editors route labels through **`ed.climate.*`**, **`ed.alarm_panel.*`**, and shared catalog keys (**`ed.entity.*`**, **`ed.person.*`**, **`ed.fav.alarm_*`**, **`ed.weather.*`**, etc.); new strings live in **`scripts/data/editor-catalog-climate-alarm.json`** (merged into **`i18n/editor/*.json`**).
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.92`**.
+
+---
+
 ## [1.0.0-alpha.91] - 2026-05-11
 
 Ninety-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.91`** (tag **`v1.0.0-alpha.91`** optional).

@@ -1,5 +1,5 @@
 /**
- * Merges scripts/data/editor-catalog-entity-person-vacuum.json into every i18n/editor/<lang>.json.
+ * Merges scripts/data/editor-catalog-*.json into every i18n/editor/<lang>.json.
  * For langs other than en/es/zh, new keys use the English string (re-run MT pipeline if needed).
  */
 import fs from "fs";
@@ -7,8 +7,16 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const addPath = path.join(root, "scripts", "data", "editor-catalog-entity-person-vacuum.json");
-const add = JSON.parse(fs.readFileSync(addPath, "utf8"));
+const dataDir = path.join(root, "scripts", "data");
+const catalogNames = fs
+  .readdirSync(dataDir)
+  .filter(n => n.startsWith("editor-catalog-") && n.endsWith(".json"))
+  .sort();
+const add = {};
+for (const name of catalogNames) {
+  const shard = JSON.parse(fs.readFileSync(path.join(dataDir, name), "utf8"));
+  Object.assign(add, shard);
+}
 const dir = path.join(root, "i18n", "editor");
 
 function sortKeys(obj) {

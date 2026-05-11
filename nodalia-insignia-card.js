@@ -2007,7 +2007,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
 
   _renderColorField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("Color personalizado");
+    const tColorCustom = this._editorLabel("ed.weather.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -2313,69 +2313,65 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Insignia"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Chip compacto para la barra de insignias: entidad, icono y texto opcionales."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.insignia.section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.insignia.section_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderEntityPickerField("Entidad", "entity", config.entity, {
+            ${this._renderEntityPickerField("ed.entity.entity_main", "entity", config.entity, {
               fullWidth: true,
             })}
-            ${this._renderIconPickerField("Icono", "icon", config.icon, {
+            ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
               placeholder: "mdi:star-four-points-circle",
               fullWidth: true,
             })}
-            ${this._renderIconPickerField("Icono (estado activo)", "icon_active", config.icon_active, {
+            ${this._renderIconPickerField("ed.entity.icon_active", "icon_active", config.icon_active, {
               placeholder: "mdi:door-open",
               fullWidth: true,
             })}
-            ${this._renderIconPickerField("Icono (estado inactivo)", "icon_inactive", config.icon_inactive, {
+            ${this._renderIconPickerField("ed.entity.icon_inactive", "icon_inactive", config.icon_inactive, {
               placeholder: "mdi:door-closed",
               fullWidth: true,
             })}
             <div class="editor-section__hint editor-field--full" style="grid-column: 1 / -1; margin-top: -4px;">
-              ${escapeHtml(
-                this._editorLabel(
-                  "Opcional: icono distinto cuando la insignia está activa o inactiva (interruptores, puertas, ventanas, etc.). Si uno queda vacío, se usa el icono general o el de la entidad.",
-                ),
-              )}
+              ${escapeHtml(this._editorLabel("ed.entity.icons_state_hint"))}
             </div>
-            ${this._renderTextField("Nombre visible", "name", config.name, {
-              placeholder: this._editorLabel("Temperatura"),
+            ${this._renderTextField("ed.entity.name", "name", config.name, {
+              placeholder: this._editorLabel("ed.insignia.name_placeholder"),
               fullWidth: true,
             })}
-            ${this._renderTextField("Atributo para el valor", "state_attribute", config.state_attribute, {
+            ${this._renderTextField("ed.fav.state_attribute_label", "state_attribute", config.state_attribute, {
               placeholder: "battery_level",
               fullWidth: true,
             })}
             <div class="editor-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
-              ${this._renderCheckboxField("Usar icono de la entidad", "use_entity_icon", config.use_entity_icon === true)}
-              ${this._renderCheckboxField("Usar foto de la entidad", "use_entity_picture", config.use_entity_picture === true)}
-              ${this._renderCheckboxField("Mostrar nombre", "show_name", config.show_name !== false)}
-              ${this._renderCheckboxField("Mostrar valor", "show_value", config.show_value !== false)}
+              ${this._renderCheckboxField("ed.entity.use_entity_icon", "use_entity_icon", config.use_entity_icon === true)}
+              ${this._renderCheckboxField("ed.person.use_entity_picture", "use_entity_picture", config.use_entity_picture === true)}
+              ${this._renderCheckboxField("ed.person.show_name", "show_name", config.show_name !== false)}
+              ${this._renderCheckboxField("ed.insignia.show_value", "show_value", config.show_value !== false)}
             </div>
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta háptica"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Vibración al pulsar la insignia (si el dispositivo lo permite)."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.person.haptics_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.insignia.haptics_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderCheckboxField("Activar respuesta háptica", "haptics.enabled", config.haptics?.enabled === true)}
-            ${this._renderCheckboxField("Usar vibración si no hay háptica", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics?.enabled === true)}
+            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "Estilo",
+              "ed.vacuum.haptic_style",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Selección" },
-                { value: "light", label: "Ligero" },
-                { value: "medium", label: "Medio" },
-                { value: "heavy", label: "Intenso" },
-                { value: "success", label: "Éxito" },
-                { value: "warning", label: "Aviso" },
-                { value: "failure", label: "Fallo" },
+                { value: "selection", label: "ed.weather.haptic_selection" },
+                { value: "light", label: "ed.weather.haptic_light" },
+                { value: "medium", label: "ed.weather.haptic_medium" },
+                { value: "heavy", label: "ed.weather.haptic_heavy" },
+                { value: "success", label: "ed.weather.haptic_success" },
+                { value: "warning", label: "ed.weather.haptic_warning" },
+                { value: "failure", label: "ed.weather.haptic_failure" },
               ],
               { fullWidth: true },
             )}
@@ -2384,44 +2380,44 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Acción al pulsar"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Qué ocurre al tocar la insignia."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.insignia.tap_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.insignia.tap_section_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderSelectField(
-              "Tipo de acción",
+              "ed.entity.action_type",
               "tap_action",
               tapAction,
               [
-                { value: "auto", label: "Automática (info o alternar)" },
-                { value: "more-info", label: "Más información" },
-                { value: "toggle", label: "Alternar" },
-                { value: "service", label: "Llamar servicio" },
-                { value: "navigate", label: "Ir a una vista" },
-                { value: "url", label: "Abrir URL" },
-                { value: "none", label: "Sin acción" },
+                { value: "auto", label: "ed.entity.tap_auto" },
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "toggle", label: "ed.entity.tap_toggle" },
+                { value: "service", label: "ed.entity.tap_service" },
+                { value: "navigate", label: "ed.vacuum.tap_navigate" },
+                { value: "url", label: "ed.entity.tap_open_url" },
+                { value: "none", label: "ed.entity.tap_none" },
               ],
               { fullWidth: true },
             )}
             ${
               tapAction === "service"
                 ? `
-                  ${this._renderTextField("Servicio", "tap_service", config.tap_service, {
+                  ${this._renderTextField("ed.entity.tap_service_field", "tap_service", config.tap_service, {
                     placeholder: "light.turn_on",
                     fullWidth: true,
                   })}
-                  ${this._renderTextareaField("Datos del servicio (JSON)", "tap_service_data", config.tap_service_data, {
+                  ${this._renderTextareaField("ed.entity.tap_service_data_json", "tap_service_data", config.tap_service_data, {
                     placeholder: '{"brightness_pct": 50}',
                   })}
                   ${this._renderCheckboxField(
-                    "Seguridad de servicios (modo estricto)",
+                    "ed.entity.security_strict",
                     "security.strict_service_actions",
                     config.security?.strict_service_actions !== false,
                   )}
                   ${
                     config.security?.strict_service_actions !== false
                       ? this._renderTextField(
-                          "Servicios permitidos (separados por comas)",
+                          "ed.entity.allowed_services_csv",
                           "security.allowed_services",
                           Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
                           {
@@ -2437,7 +2433,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
             }
             ${
               tapAction === "navigate"
-                ? this._renderTextField("Ruta del panel", "tap_url", config.tap_url, {
+                ? this._renderTextField("ed.insignia.panel_path", "tap_url", config.tap_url, {
                     placeholder: "/lovelace/0",
                     fullWidth: true,
                   })
@@ -2446,11 +2442,11 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
             ${
               tapAction === "url"
                 ? `
-                  ${this._renderTextField("URL", "tap_url", config.tap_url, {
+                  ${this._renderTextField("ed.entity.tap_url_field", "tap_url", config.tap_url, {
                     placeholder: "https://example.com",
                     fullWidth: true,
                   })}
-                  ${this._renderCheckboxField("Abrir en pestaña nueva", "tap_new_tab", config.tap_new_tab === true)}
+                  ${this._renderCheckboxField("ed.entity.tap_new_tab", "tap_new_tab", config.tap_new_tab === true)}
                 `
                 : ""
             }
@@ -2459,8 +2455,8 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales principales de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.styles_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.styles_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -2469,7 +2465,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("ed.weather.hide_style_settings") : this._editorLabel("ed.weather.show_style_settings"))}</span>
               </button>
             </div>
           </div>
@@ -2477,17 +2473,17 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
             this._showStyleSection
               ? `
             <div class="editor-grid editor-grid--stacked">
-              ${this._renderCheckboxField("Tintado automático por tipo de entidad", "tint_auto", config.tint_auto !== false)}
-              ${this._renderColorField("Color tintado manual", "styles.tint.color", config.styles?.tint?.color || DEFAULT_CONFIG.styles.tint.color, { fullWidth: true })}
-              ${this._renderTextField("Tamaño del icono", "styles.icon.size", config.styles?.icon?.size || DEFAULT_CONFIG.styles.icon.size)}
-              ${this._renderTextField("Tamaño del nombre", "styles.title_size", config.styles?.title_size || DEFAULT_CONFIG.styles.title_size)}
-              ${this._renderTextField("Tamaño del valor", "styles.value_size", config.styles?.value_size || DEFAULT_CONFIG.styles.value_size)}
-              ${this._renderTextField("Padding de la insignia", "styles.card.padding", config.styles?.card?.padding || DEFAULT_CONFIG.styles.card.padding)}
-              ${this._renderTextField("Separación interna", "styles.card.gap", config.styles?.card?.gap || DEFAULT_CONFIG.styles.card.gap)}
-              ${this._renderTextField("Desplaz. icono (solo icono)", "styles.icon.icon_only_offset_y", config.styles?.icon?.icon_only_offset_y || DEFAULT_CONFIG.styles.icon.icon_only_offset_y)}
-              ${this._renderColorField("Fondo burbuja icono", "styles.icon.background", config.styles?.icon?.background || DEFAULT_CONFIG.styles.icon.background, { fullWidth: true })}
-              ${this._renderColorField("Color icono activo", "styles.icon.on_color", config.styles?.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color, { fullWidth: true })}
-              ${this._renderColorField("Color icono inactivo", "styles.icon.off_color", config.styles?.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color, { fullWidth: true })}
+              ${this._renderCheckboxField("ed.insignia.tint_auto", "tint_auto", config.tint_auto !== false)}
+              ${this._renderColorField("ed.insignia.manual_tint_color", "styles.tint.color", config.styles?.tint?.color || DEFAULT_CONFIG.styles.tint.color, { fullWidth: true })}
+              ${this._renderTextField("ed.entity.style_main_button_size", "styles.icon.size", config.styles?.icon?.size || DEFAULT_CONFIG.styles.icon.size)}
+              ${this._renderTextField("ed.person.style_title_size", "styles.title_size", config.styles?.title_size || DEFAULT_CONFIG.styles.title_size)}
+              ${this._renderTextField("ed.circular_gauge.value_size", "styles.value_size", config.styles?.value_size || DEFAULT_CONFIG.styles.value_size)}
+              ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles?.card?.padding || DEFAULT_CONFIG.styles.card.padding)}
+              ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles?.card?.gap || DEFAULT_CONFIG.styles.card.gap)}
+              ${this._renderTextField("ed.insignia.icon_only_offset_y", "styles.icon.icon_only_offset_y", config.styles?.icon?.icon_only_offset_y || DEFAULT_CONFIG.styles.icon.icon_only_offset_y)}
+              ${this._renderColorField("ed.entity.style_main_bubble_bg", "styles.icon.background", config.styles?.icon?.background || DEFAULT_CONFIG.styles.icon.background, { fullWidth: true })}
+              ${this._renderColorField("ed.entity.style_icon_on", "styles.icon.on_color", config.styles?.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color, { fullWidth: true })}
+              ${this._renderColorField("ed.entity.style_icon_off", "styles.icon.off_color", config.styles?.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color, { fullWidth: true })}
             </div>
           `
               : ""

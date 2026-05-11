@@ -3607,17 +3607,17 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal y textos visibles."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.entity.general_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.legacy_general_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("Entidad", "entity", config.entity, {
+            ${this._renderTextField("ed.entity.entity_main", "entity", config.entity, {
               placeholder: "climate.salon",
             })}
-            ${this._renderTextField("Nombre", "name", config.name, {
+            ${this._renderTextField("ed.entity.name", "name", config.name, {
               placeholder: "Salon",
             })}
-            ${this._renderTextField("Icono", "icon", config.icon, {
+            ${this._renderTextField("ed.entity.icon", "icon", config.icon, {
               placeholder: "mdi:thermostat",
             })}
           </div>
@@ -3625,39 +3625,39 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Elige la informacion y los controles visibles."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.visibility_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.visibility_hint_legacy"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Mostrar chip de estado", "show_state_chip", config.show_state_chip !== false)}
-            ${this._renderCheckboxField("Mostrar chip de temperatura actual", "show_current_temperature_chip", config.show_current_temperature_chip !== false)}
-            ${this._renderCheckboxField("Mostrar chip de humedad", "show_humidity_chip", config.show_humidity_chip !== false)}
-            ${this._renderCheckboxField("Mostrar botones de modo", "show_mode_buttons", config.show_mode_buttons !== false)}
-            ${this._renderCheckboxField("Mostrar botones +/-", "show_step_controls", config.show_step_controls !== false)}
-            ${this._renderCheckboxField("Mostrar badge de no disponible", "show_unavailable_badge", config.show_unavailable_badge !== false)}
+            ${this._renderCheckboxField("ed.climate.legacy_show_state_chip", "show_state_chip", config.show_state_chip !== false)}
+            ${this._renderCheckboxField("ed.climate.legacy_show_current_temp_chip", "show_current_temperature_chip", config.show_current_temperature_chip !== false)}
+            ${this._renderCheckboxField("ed.climate.legacy_show_humidity_chip", "show_humidity_chip", config.show_humidity_chip !== false)}
+            ${this._renderCheckboxField("ed.climate.legacy_show_mode_buttons", "show_mode_buttons", config.show_mode_buttons !== false)}
+            ${this._renderCheckboxField("ed.climate.legacy_show_step_controls", "show_step_controls", config.show_step_controls !== false)}
+            ${this._renderCheckboxField("ed.media_player.show_unavailable_badge", "show_unavailable_badge", config.show_unavailable_badge !== false)}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta haptica opcional para dial y controles."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.haptics_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.haptics_hint_legacy"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "Estilo",
+              "ed.entity.haptic_style",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Selection" },
-                { value: "light", label: "Light" },
-                { value: "medium", label: "Medium" },
-                { value: "heavy", label: "Heavy" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "failure", label: "Failure" },
+                { value: "selection", label: "ed.person.haptic_selection" },
+                { value: "light", label: "ed.person.haptic_light" },
+                { value: "medium", label: "ed.person.haptic_medium" },
+                { value: "heavy", label: "ed.person.haptic_heavy" },
+                { value: "success", label: "ed.person.haptic_success" },
+                { value: "warning", label: "ed.person.haptic_warning" },
+                { value: "failure", label: "ed.person.haptic_failure" },
               ],
             )}
           </div>
@@ -3665,34 +3665,34 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales del look Nodalia y el dial circular."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.climate.styles_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.styles_hint_legacy"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
-            ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
-            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
-            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-            ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamano burbuja entidad", "styles.icon.size", config.styles.icon.size)}
-            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-            ${this._renderTextField("Tamano temperatura actual", "styles.current_size", config.styles.current_size)}
-            ${this._renderTextField("Tamano temperatura objetivo", "styles.target_size", config.styles.target_size)}
-            ${this._renderTextField("Tamano dial", "styles.dial.size", config.styles.dial.size)}
-            ${this._renderTextField("Grosor dial", "styles.dial.stroke", config.styles.dial.stroke)}
-            ${this._renderTextField("Tamano thumb dial", "styles.dial.thumb_size", config.styles.dial.thumb_size)}
-            ${this._renderTextField("Color calor", "styles.dial.heat_color", config.styles.dial.heat_color)}
-            ${this._renderTextField("Color frio", "styles.dial.cool_color", config.styles.dial.cool_color)}
-            ${this._renderTextField("Color secado", "styles.dial.dry_color", config.styles.dial.dry_color)}
-            ${this._renderTextField("Color auto", "styles.dial.auto_color", config.styles.dial.auto_color)}
-            ${this._renderTextField("Color ventilador", "styles.dial.fan_color", config.styles.dial.fan_color)}
-            ${this._renderTextField("Track dial", "styles.dial.track_color", config.styles.dial.track_color)}
-            ${this._renderTextField("Tamano chip", "styles.chip_height", config.styles.chip_height)}
-            ${this._renderTextField("Texto chip", "styles.chip_font_size", config.styles.chip_font_size)}
-            ${this._renderTextField("Padding chip", "styles.chip_padding", config.styles.chip_padding)}
-            ${this._renderTextField("Tamano boton modo", "styles.control.size", config.styles.control.size)}
-            ${this._renderTextField("Tamano boton +/-", "styles.step_control.size", config.styles.step_control.size)}
+            ${this._renderTextField("ed.person.style_card_bg", "styles.card.background", config.styles.card.background)}
+            ${this._renderTextField("ed.person.style_card_border", "styles.card.border", config.styles.card.border)}
+            ${this._renderTextField("ed.person.style_card_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+            ${this._renderTextField("ed.person.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
+            ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles.card.padding)}
+            ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles.card.gap)}
+            ${this._renderTextField("ed.circular_gauge.entity_bubble_size", "styles.icon.size", config.styles.icon.size)}
+            ${this._renderTextField("ed.person.style_title_size", "styles.title_size", config.styles.title_size)}
+            ${this._renderTextField("ed.climate.current_temp_size", "styles.current_size", config.styles.current_size)}
+            ${this._renderTextField("ed.climate.target_size", "styles.target_size", config.styles.target_size)}
+            ${this._renderTextField("ed.climate.dial_size", "styles.dial.size", config.styles.dial.size)}
+            ${this._renderTextField("ed.climate.dial_stroke", "styles.dial.stroke", config.styles.dial.stroke)}
+            ${this._renderTextField("ed.climate.thumb_size", "styles.dial.thumb_size", config.styles.dial.thumb_size)}
+            ${this._renderTextField("ed.climate.color_heat", "styles.dial.heat_color", config.styles.dial.heat_color)}
+            ${this._renderTextField("ed.climate.color_cool", "styles.dial.cool_color", config.styles.dial.cool_color)}
+            ${this._renderTextField("ed.climate.color_dry", "styles.dial.dry_color", config.styles.dial.dry_color)}
+            ${this._renderTextField("ed.climate.color_auto", "styles.dial.auto_color", config.styles.dial.auto_color)}
+            ${this._renderTextField("ed.climate.color_fan", "styles.dial.fan_color", config.styles.dial.fan_color)}
+            ${this._renderTextField("ed.climate.track_dial", "styles.dial.track_color", config.styles.dial.track_color)}
+            ${this._renderTextField("ed.climate.chip_height", "styles.chip_height", config.styles.chip_height)}
+            ${this._renderTextField("ed.climate.chip_text", "styles.chip_font_size", config.styles.chip_font_size)}
+            ${this._renderTextField("ed.climate.chip_padding", "styles.chip_padding", config.styles.chip_padding)}
+            ${this._renderTextField("ed.climate.mode_button_size", "styles.control.size", config.styles.control.size)}
+            ${this._renderTextField("ed.climate.step_button_size", "styles.step_control.size", config.styles.step_control.size)}
           </div>
         </section>
         ${this._getEntityOptionsMarkup()}
@@ -4044,7 +4044,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
 
   _renderColorField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("Color personalizado");
+    const tColorCustom = this._editorLabel("ed.entity.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -4170,7 +4170,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
+      emptyOption.textContent = placeholder || this._editorLabel("ed.person.select_entity");
       control.appendChild(emptyOption);
       this._getClimateEntityOptions().forEach(option => {
         const optionElement = document.createElement("option");
@@ -4516,19 +4516,19 @@ class NodaliaClimateCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal, nombre visible e icono de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.entity.general_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.general_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderEntityField("Entidad climate", "entity", config.entity, {
+            ${this._renderEntityField("ed.climate.climate_entity", "entity", config.entity, {
               placeholder: "climate.salon",
               fullWidth: true,
             })}
-            ${this._renderTextField("Nombre", "name", config.name, {
+            ${this._renderTextField("ed.entity.name", "name", config.name, {
               placeholder: "Salon",
               fullWidth: true,
             })}
-            ${this._renderIconPickerField("Icono", "icon", config.icon, {
+            ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
               placeholder: "mdi:thermostat",
               fullWidth: true,
             })}
@@ -4537,15 +4537,15 @@ class NodaliaClimateCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Layout"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ayuda a compactar la climate card según el espacio disponible en la vista."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.climate.layout_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.layout_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("Rows de grid", "grid_options.rows", config.grid_options?.rows, {
+            ${this._renderTextField("ed.circular_gauge.grid_rows", "grid_options.rows", config.grid_options?.rows, {
               type: "number",
               valueType: "number",
             })}
-            ${this._renderTextField("Columnas de grid", "grid_options.columns", config.grid_options?.columns, {
+            ${this._renderTextField("ed.circular_gauge.grid_columns", "grid_options.columns", config.grid_options?.columns, {
               type: "number",
               valueType: "number",
             })}
@@ -4554,39 +4554,39 @@ class NodaliaClimateCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Elige qué chips y controles deben mostrarse."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.visibility_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.visibility_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Chip de estado", "show_state_chip", config.show_state_chip !== false)}
-            ${this._renderCheckboxField("Chip de temperatura actual", "show_current_temperature_chip", config.show_current_temperature_chip !== false)}
-            ${this._renderCheckboxField("Chip de humedad", "show_humidity_chip", config.show_humidity_chip !== false)}
-            ${this._renderCheckboxField("Botones de modo", "show_mode_buttons", config.show_mode_buttons !== false)}
-            ${this._renderCheckboxField("Botones + / -", "show_step_controls", config.show_step_controls !== false)}
-            ${this._renderCheckboxField("Badge de no disponible", "show_unavailable_badge", config.show_unavailable_badge !== false)}
+            ${this._renderCheckboxField("ed.climate.chip_state", "show_state_chip", config.show_state_chip !== false)}
+            ${this._renderCheckboxField("ed.climate.chip_current_temp", "show_current_temperature_chip", config.show_current_temperature_chip !== false)}
+            ${this._renderCheckboxField("ed.climate.chip_humidity", "show_humidity_chip", config.show_humidity_chip !== false)}
+            ${this._renderCheckboxField("ed.climate.mode_buttons", "show_mode_buttons", config.show_mode_buttons !== false)}
+            ${this._renderCheckboxField("ed.climate.step_controls", "show_step_controls", config.show_step_controls !== false)}
+            ${this._renderCheckboxField("ed.media_player.show_unavailable_badge", "show_unavailable_badge", config.show_unavailable_badge !== false)}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta táctil opcional al interactuar con el dial y los botones."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.haptics_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.haptics_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibración", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "Estilo",
+              "ed.entity.haptic_style",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Selección" },
-                { value: "light", label: "Ligero" },
-                { value: "medium", label: "Medio" },
-                { value: "heavy", label: "Intenso" },
-                { value: "success", label: "Éxito" },
-                { value: "warning", label: "Aviso" },
-                { value: "failure", label: "Fallo" },
+                { value: "selection", label: "ed.person.haptic_selection" },
+                { value: "light", label: "ed.person.haptic_light" },
+                { value: "medium", label: "ed.person.haptic_medium" },
+                { value: "heavy", label: "ed.person.haptic_heavy" },
+                { value: "success", label: "ed.person.haptic_success" },
+                { value: "warning", label: "ed.person.haptic_warning" },
+                { value: "failure", label: "ed.person.haptic_failure" },
               ],
             )}
           </div>
@@ -4594,8 +4594,8 @@ class NodaliaClimateCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla la transición del dial, la entrada del contenido y el rebote de los botones."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.climate.animations_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.animations_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4604,7 +4604,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("ed.weather.hide_animation_settings") : this._editorLabel("ed.weather.show_animation_settings"))}</span>
               </button>
             </div>
           </div>
@@ -4612,16 +4612,16 @@ class NodaliaClimateCardEditor extends HTMLElement {
             this._showAnimationSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
-                  ${this._renderTextField("Dial (ms)", "animations.dial_duration", config.animations.dial_duration, {
+                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderTextField("ed.climate.dial_ms", "animations.dial_duration", config.animations.dial_duration, {
                     type: "number",
                     valueType: "number",
                   })}
-                  ${this._renderTextField("Rebote botones (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.climate.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
                     type: "number",
                     valueType: "number",
                   })}
-                  ${this._renderTextField("Entrada del contenido (ms)", "animations.content_duration", config.animations.content_duration, {
+                  ${this._renderTextField("ed.climate.content_entrance_ms", "animations.content_duration", config.animations.content_duration, {
                     type: "number",
                     valueType: "number",
                   })}
@@ -4633,8 +4633,8 @@ class NodaliaClimateCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Personaliza el look Nodalia de la climate card, el dial y los controles."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.climate.styles_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.styles_hint_main"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4643,7 +4643,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("ed.weather.hide_style_settings") : this._editorLabel("ed.weather.show_style_settings"))}</span>
               </button>
             </div>
           </div>
@@ -4651,63 +4651,63 @@ class NodaliaClimateCardEditor extends HTMLElement {
             this._showStyleSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderColorField("Fondo tarjeta", "styles.card.background", config.styles.card.background)}
-                  ${this._renderTextField("Borde", "styles.card.border", config.styles.card.border)}
-                  ${this._renderTextField("Radio", "styles.card.border_radius", config.styles.card.border_radius)}
-                  ${this._renderTextField("Sombra", "styles.card.box_shadow", config.styles.card.box_shadow)}
-                  ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-                  ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
-                  ${this._renderTextField("Tamaño burbuja", "styles.icon.size", config.styles.icon.size)}
-                  ${this._renderColorField("Fondo burbuja", "styles.icon.background", config.styles.icon.background, {
+                  ${this._renderColorField("ed.person.style_card_bg", "styles.card.background", config.styles.card.background)}
+                  ${this._renderTextField("ed.person.style_card_border", "styles.card.border", config.styles.card.border)}
+                  ${this._renderTextField("ed.person.style_card_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${this._renderTextField("ed.person.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
+                  ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles.card.padding)}
+                  ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles.card.gap)}
+                  ${this._renderTextField("ed.climate.bubble_size", "styles.icon.size", config.styles.icon.size)}
+                  ${this._renderColorField("ed.climate.bubble_bg", "styles.icon.background", config.styles.icon.background, {
                     fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
                   })}
-                  ${this._renderColorField("Color icono encendido", "styles.icon.on_color", config.styles.icon.on_color, {
+                  ${this._renderColorField("ed.climate.icon_on", "styles.icon.on_color", config.styles.icon.on_color, {
                     fallbackValue: "var(--primary-text-color)",
                   })}
-                  ${this._renderColorField("Color icono apagado", "styles.icon.off_color", config.styles.icon.off_color, {
+                  ${this._renderColorField("ed.climate.icon_off", "styles.icon.off_color", config.styles.icon.off_color, {
                     fallbackValue: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
                   })}
-                  ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
-                  ${this._renderTextField("Tamaño temperatura actual", "styles.current_size", config.styles.current_size)}
-                  ${this._renderTextField("Tamaño objetivo", "styles.target_size", config.styles.target_size)}
-                  ${this._renderTextField("Alto chip", "styles.chip_height", config.styles.chip_height)}
-                  ${this._renderTextField("Texto chip", "styles.chip_font_size", config.styles.chip_font_size)}
-                  ${this._renderTextField("Padding chip", "styles.chip_padding", config.styles.chip_padding)}
-                  ${this._renderTextField("Tamaño dial", "styles.dial.size", config.styles.dial.size)}
-                  ${this._renderTextField("Grosor dial", "styles.dial.stroke", config.styles.dial.stroke)}
-                  ${this._renderTextField("Tamaño thumb", "styles.dial.thumb_size", config.styles.dial.thumb_size)}
-                  ${this._renderColorField("Fondo dial", "styles.dial.background", config.styles.dial.background, {
+                  ${this._renderTextField("ed.climate.title_size", "styles.title_size", config.styles.title_size)}
+                  ${this._renderTextField("ed.climate.current_temp_size", "styles.current_size", config.styles.current_size)}
+                  ${this._renderTextField("ed.climate.target_size", "styles.target_size", config.styles.target_size)}
+                  ${this._renderTextField("ed.climate.chip_height", "styles.chip_height", config.styles.chip_height)}
+                  ${this._renderTextField("ed.climate.chip_text", "styles.chip_font_size", config.styles.chip_font_size)}
+                  ${this._renderTextField("ed.climate.chip_padding", "styles.chip_padding", config.styles.chip_padding)}
+                  ${this._renderTextField("ed.climate.dial_size", "styles.dial.size", config.styles.dial.size)}
+                  ${this._renderTextField("ed.climate.dial_stroke", "styles.dial.stroke", config.styles.dial.stroke)}
+                  ${this._renderTextField("ed.climate.thumb_size", "styles.dial.thumb_size", config.styles.dial.thumb_size)}
+                  ${this._renderColorField("ed.climate.dial_background", "styles.dial.background", config.styles.dial.background, {
                     fallbackValue: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
                   })}
-                  ${this._renderColorField("Track dial", "styles.dial.track_color", config.styles.dial.track_color, {
+                  ${this._renderColorField("ed.climate.track_dial", "styles.dial.track_color", config.styles.dial.track_color, {
                     fallbackValue: "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))",
                   })}
-                  ${this._renderColorField("Color calor", "styles.dial.heat_color", config.styles.dial.heat_color, {
+                  ${this._renderColorField("ed.climate.color_heat", "styles.dial.heat_color", config.styles.dial.heat_color, {
                     fallbackValue: "#f59f42",
                   })}
-                  ${this._renderColorField("Color frío", "styles.dial.cool_color", config.styles.dial.cool_color, {
+                  ${this._renderColorField("ed.climate.color_cool", "styles.dial.cool_color", config.styles.dial.cool_color, {
                     fallbackValue: "#71c0ff",
                   })}
-                  ${this._renderColorField("Color secado", "styles.dial.dry_color", config.styles.dial.dry_color, {
+                  ${this._renderColorField("ed.climate.color_dry", "styles.dial.dry_color", config.styles.dial.dry_color, {
                     fallbackValue: "#7fd0c8",
                   })}
-                  ${this._renderColorField("Color auto", "styles.dial.auto_color", config.styles.dial.auto_color, {
+                  ${this._renderColorField("ed.climate.color_auto", "styles.dial.auto_color", config.styles.dial.auto_color, {
                     fallbackValue: "#c5a66f",
                   })}
-                  ${this._renderColorField("Color ventilador", "styles.dial.fan_color", config.styles.dial.fan_color, {
+                  ${this._renderColorField("ed.climate.color_fan", "styles.dial.fan_color", config.styles.dial.fan_color, {
                     fallbackValue: "#83d39c",
                   })}
-                  ${this._renderColorField("Color apagado", "styles.dial.off_color", config.styles.dial.off_color, {
+                  ${this._renderColorField("ed.climate.color_off", "styles.dial.off_color", config.styles.dial.off_color, {
                     fallbackValue: "rgba(255, 255, 255, 0.28)",
                   })}
-                  ${this._renderTextField("Tamaño botones modo", "styles.control.size", config.styles.control.size)}
-                  ${this._renderColorField("Fondo acento botones", "styles.control.accent_background", config.styles.control.accent_background, {
+                  ${this._renderTextField("ed.climate.mode_button_size", "styles.control.size", config.styles.control.size)}
+                  ${this._renderColorField("ed.entity.style_accent_bg", "styles.control.accent_background", config.styles.control.accent_background, {
                     fallbackValue: "rgba(113, 192, 255, 0.18)",
                   })}
-                  ${this._renderColorField("Color acento botones", "styles.control.accent_color", config.styles.control.accent_color, {
+                  ${this._renderColorField("ed.entity.style_accent_color", "styles.control.accent_color", config.styles.control.accent_color, {
                     fallbackValue: "var(--primary-text-color)",
                   })}
-                  ${this._renderTextField("Tamaño botones + / -", "styles.step_control.size", config.styles.step_control.size)}
+                  ${this._renderTextField("ed.climate.step_button_size", "styles.step_control.size", config.styles.step_control.size)}
                 </div>
               `
               : ""
