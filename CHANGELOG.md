@@ -10,6 +10,17 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.82] - 2026-05-11
+
+Eighty-second **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.82`** (tag **`v1.0.0-alpha.82`** optional).
+
+- **Calendar card — repetición nativa corregida:** la creación recurrente por `calendar/event/create` usa `dtstart`/`dtend` (en vez de `start`/`end`), corrigiendo el error de Home Assistant al crear eventos con repetición.
+- **Calendar card — nueva opción `Personalizado`:** el selector de repetición añade modo personalizado con frecuencia (`Diariamente`, `Semanalmente`, `Mensualmente`, `Anualmente`) e intervalo numérico (`INTERVAL`) para reglas como “cada 2 semanas”.
+- **Calendar card — validación del composer:** el formulario valida frecuencia e intervalo en repetición personalizada y muestra errores inline antes de enviar.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.82`**.
+
+---
+
 ## [1.0.0-alpha.81] - 2026-05-09
 
 Eighty-first **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.81`** (tag **`v1.0.0-alpha.81`** optional).

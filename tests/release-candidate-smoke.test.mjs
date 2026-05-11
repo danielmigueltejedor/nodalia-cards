@@ -155,6 +155,12 @@ test("calendar native composer supports rich HA event fields and details", () =>
   assert.match(source, /data-native-field="description"/);
   assert.match(source, /data-native-field="location"/);
   assert.match(source, /data-native-field="repeatKind"/);
+  assert.match(source, /data-native-field="repeatCustomUnit"/);
+  assert.match(source, /data-native-field="repeatCustomInterval"/);
+  assert.match(source, /value="custom">\$\{escapeHtml\(this\._uiText\("repeat\.custom", "Personalizado"\)\)\}/);
+  assert.match(source, /INTERVAL=\$\{customInterval\}/);
+  assert.match(source, /dtstart:/);
+  assert.match(source, /dtend:/);
   assert.match(source, /data-native-field="color"/);
   assert.match(source, /calendar-composer \.editor-color-picker/);
   assert.match(source, /_mountNativeColorControl\(\)/);

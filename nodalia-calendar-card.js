@@ -2231,6 +2231,12 @@ class NodaliaCalendarCard extends HTMLElement {
     const repeatKind = String(
       this.shadowRoot.querySelector('[data-native-field="repeatKind"]')?.value || "none",
     ).trim().toLowerCase();
+    const repeatCustomUnit = String(
+      this.shadowRoot.querySelector('[data-native-field="repeatCustomUnit"]')?.value || "weekly",
+    ).trim().toLowerCase();
+    const repeatCustomIntervalRaw = String(
+      this.shadowRoot.querySelector('[data-native-field="repeatCustomInterval"]')?.value || "1",
+    ).trim();
     if (!calendarId) {
       this._setComposerError("native", this._uiText("errors.selectCalendar", "Selecciona un calendario."));
       return;
@@ -2258,7 +2264,30 @@ class NodaliaCalendarCard extends HTMLElement {
       weekly: "FREQ=WEEKLY",
       daily: "FREQ=DAILY",
     };
-    const rrule = rruleByKind[repeatKind] || "";
+    const resolvedRepeatKind = repeatKind === "custom" ? repeatCustomUnit : repeatKind;
+    if (repeatKind === "custom" && !rruleByKind[resolvedRepeatKind]) {
+      this._setComposerError(
+        "native",
+        this._uiText("errors.selectRepeatFrequency", "Selecciona la frecuencia para la repetición personalizada."),
+      );
+      return;
+    }
+    let customInterval = 1;
+    if (repeatKind === "custom") {
+      const parsedInterval = Number.parseInt(repeatCustomIntervalRaw, 10);
+      if (!Number.isFinite(parsedInterval) || parsedInterval < 1) {
+        this._setComposerError(
+          "native",
+          this._uiText("errors.invalidRepeatInterval", "El intervalo debe ser un número mayor o igual que 1."),
+        );
+        return;
+      }
+      customInterval = parsedInterval;
+    }
+    const rruleBase = rruleByKind[resolvedRepeatKind] || "";
+    const rrule = repeatKind === "custom" && rruleBase
+      ? `${rruleBase};INTERVAL=${customInterval}`
+      : rruleBase;
     const colorOverride = colorEnabled ? (sanitizeCalendarTint(colorRaw) || "#ff7ab6") : "";
     const description = appendNodaliaEventMetadata(descriptionRaw, { color: colorOverride });
     const addOptionalEventFields = payload => {
@@ -2310,8 +2339,8 @@ class NodaliaCalendarCard extends HTMLElement {
         addOptionalEventFields(payload);
         const calendarEventPayload = addOptionalWsEventFields({
           summary: title,
-          start: dateRaw,
-          end: endDate,
+          dtstart: dateRaw,
+          dtend: endDate,
         });
         if (rrule) {
           await createCalendarEventViaWs(calendarEventPayload);
@@ -2355,8 +2384,8 @@ class NodaliaCalendarCard extends HTMLElement {
         addOptionalEventFields(payload);
         const calendarEventPayload = addOptionalWsEventFields({
           summary: title,
-          start: payload.start_date_time,
-          end: payload.end_date_time,
+          dtstart: payload.start_date_time,
+          dtend: payload.end_date_time,
         });
         if (rrule) {
           await createCalendarEventViaWs(calendarEventPayload);
@@ -2453,8 +2482,24 @@ class NodaliaCalendarCard extends HTMLElement {
               <option value="monthly">${escapeHtml(this._uiText("repeat.monthly", "Mensualmente"))}</option>
               <option value="weekly">${escapeHtml(this._uiText("repeat.weekly", "Semanalmente"))}</option>
               <option value="daily">${escapeHtml(this._uiText("repeat.daily", "Diariamente"))}</option>
+              <option value="custom">${escapeHtml(this._uiText("repeat.custom", "Personalizado"))}</option>
             </select>
           </label>
+          <div class="calendar-composer__row" data-native-field-group="repeatCustom" hidden>
+            <label class="calendar-composer__field">
+              <span>${escapeHtml(this._uiText("fields.repeatFrequency", "Frecuencia"))}</span>
+              <select data-native-field="repeatCustomUnit">
+                <option value="daily">${escapeHtml(this._uiText("repeat.daily", "Diariamente"))}</option>
+                <option value="weekly" selected>${escapeHtml(this._uiText("repeat.weekly", "Semanalmente"))}</option>
+                <option value="monthly">${escapeHtml(this._uiText("repeat.monthly", "Mensualmente"))}</option>
+                <option value="yearly">${escapeHtml(this._uiText("repeat.yearly", "Anualmente"))}</option>
+              </select>
+            </label>
+            <label class="calendar-composer__field">
+              <span>${escapeHtml(this._uiText("fields.repeatInterval", "Cada cuántas unidades"))}</span>
+              <input data-native-field="repeatCustomInterval" type="number" min="1" step="1" value="1" inputmode="numeric" />
+            </label>
+          </div>
           <div class="calendar-composer__row calendar-composer__row--middle">
             <label class="calendar-composer__check">
               <input data-native-field="colorEnabled" type="checkbox" />
@@ -3657,6 +3702,7 @@ class NodaliaCalendarCard extends HTMLElement {
     `;
     this._mountNativeCalendarControl();
     this._mountNativeColorControl();
+    this._mountNativeRepeatControl();
   }
 
   _mountNativeCalendarControl() {
@@ -3718,6 +3764,24 @@ class NodaliaCalendarCard extends HTMLElement {
     };
     input.addEventListener("input", sync);
     input.addEventListener("change", sync);
+    sync();
+  }
+
+  _mountNativeRepeatControl() {
+    if (!this._nativeEventComposerOpen || !this.shadowRoot) {
+      return;
+    }
+    const repeatSelect = this.shadowRoot.querySelector('[data-native-field="repeatKind"]');
+    if (!(repeatSelect instanceof HTMLSelectElement)) {
+      return;
+    }
+    const sync = () => {
+      const customRow = this.shadowRoot?.querySelector('[data-native-field-group="repeatCustom"]');
+      if (customRow instanceof HTMLElement) {
+        customRow.hidden = repeatSelect.value !== "custom";
+      }
+    };
+    repeatSelect.addEventListener("change", sync);
     sync();
   }
 
