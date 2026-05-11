@@ -6110,12 +6110,19 @@
     return out;
   }
 
+  const localeStringsCache = new Map();
+
   function strings(langCode) {
     const code = PACK[langCode] ? langCode : "es";
     if (code === "es") {
       return PACK.es;
     }
-    return deepMergeLocale(PACK.en, PACK[code]);
+    if (localeStringsCache.has(code)) {
+      return localeStringsCache.get(code);
+    }
+    const merged = deepMergeLocale(PACK.en, PACK[code]);
+    localeStringsCache.set(code, merged);
+    return merged;
   }
 
   function normalizeHumidifierModeKey(value) {

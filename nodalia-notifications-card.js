@@ -1324,6 +1324,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._viewVisibilityObserver = null;
     this._wasInViewport = false;
     this._wasHiddenByLayout = false;
+    this._lastEntranceReplayAt = 0;
     this._onDocVisibility = this._onDocVisibility.bind(this);
     this._onClick = this._onClick.bind(this);
     this._onViewportResize = this._onViewportResize.bind(this);
@@ -1338,8 +1339,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._loadDismissed();
     this._loadMobileSent();
     this._syncSharedDismissedFromHass(true);
-    this._animateContentOnNextRender = true;
-    this._renderIfChanged(true);
+    this._replayEntranceAnimation("connect");
     this._refreshCalendarEventsSoon(0);
     this._refreshWeatherForecastsSoon(0);
     window.addEventListener("resize", this._onViewportResize, { passive: true });
@@ -1380,6 +1380,11 @@ class NodaliaNotificationsCard extends HTMLElement {
   }
 
   _replayEntranceAnimation() {
+    const now = Date.now();
+    if (now - this._lastEntranceReplayAt < 260) {
+      return;
+    }
+    this._lastEntranceReplayAt = now;
     this._animateContentOnNextRender = true;
     this._lastNotificationIdsSignature = "";
     this._renderIfChanged(true);
@@ -1410,10 +1415,8 @@ class NodaliaNotificationsCard extends HTMLElement {
           });
           return;
         }
-        if (this._wasHiddenByLayout) {
-          this._wasHiddenByLayout = false;
-          this._replayEntranceAnimation();
-        }
+        this._wasHiddenByLayout = false;
+        this._replayEntranceAnimation();
       },
       { threshold: [0, 0.01] },
     );
@@ -1688,7 +1691,8 @@ class NodaliaNotificationsCard extends HTMLElement {
       return;
     }
     if (typeof this._hass.callApi !== "function") {
-      this._calendarError = "No se pudieron consultar calendarios.";
+      this._calendarEvents = [];
+      this._calendarError = this._text("messages.calendarQueryFailed", "No se pudieron consultar calendarios.");
       this._renderIfChanged(true);
       return;
     }
@@ -1716,7 +1720,8 @@ class NodaliaNotificationsCard extends HTMLElement {
       this._calendarError = "";
       this._lastCalendarRefresh = Date.now();
     } catch (_error) {
-      this._calendarError = "No se pudieron cargar eventos de hoy.";
+      this._calendarEvents = [];
+      this._calendarError = this._text("messages.calendarTodayLoadFailed", "No se pudieron cargar eventos de hoy.");
     } finally {
       this._calendarLoading = false;
       this._calendarRefreshInFlight = false;
@@ -2569,13 +2574,17 @@ class NodaliaNotificationsCard extends HTMLElement {
       };
       await Promise.all([
         notifyEntities.length
-          ? Promise.resolve(this._hass.callService("notify", "send_message", entityPayload)).catch(() => false)
+          ? Promise.resolve(this._hass.callService("notify", "send_message", entityPayload)).then(() => true, () => false)
           : Promise.resolve(false),
         ...legacyServices.map(service => (
-          Promise.resolve(this._callNamedService(service, legacyPayload)).catch(() => false)
+          Promise.resolve(this._callNamedService(service, legacyPayload)).then(() => true, () => false)
         )),
-      ]);
-      this._mobileSent.add(hash);
+      ]).then(results => {
+        const delivered = results.some(Boolean);
+        if (delivered) {
+          this._mobileSent.add(hash);
+        }
+      });
     }
     this._saveMobileSent();
   }
@@ -2625,7 +2634,27 @@ class NodaliaNotificationsCard extends HTMLElement {
     );
     tracked.forEach(entityId => {
       const state = hass?.states?.[entityId];
-      parts.push(`${entityId}:${state?.state || ""}:${state?.last_changed || ""}:${JSON.stringify(state?.attributes || {})}`);
+      const attrs = state?.attributes || {};
+      const attrSignature = [
+        attrs.friendly_name || "",
+        attrs.icon || "",
+        attrs.device_class || "",
+        attrs.unit_of_measurement || "",
+        attrs.temperature ?? "",
+        attrs.current_temperature ?? "",
+        attrs.humidity ?? "",
+        attrs.current_humidity ?? "",
+        attrs.hvac_action || "",
+        attrs.hvac_mode || "",
+        attrs.fan_mode || "",
+        attrs.preset_mode || "",
+        attrs.percentage ?? "",
+        attrs.battery_level ?? "",
+        attrs.source || "",
+        attrs.media_title || "",
+        attrs.media_artist || "",
+      ].join("~");
+      parts.push(`${entityId}:${state?.state || ""}:${state?.last_changed || ""}:${attrSignature}`);
     });
     this._config.vacuum_entities.forEach(entityId => {
       const errorState = this._getVacuumErrorState(entityId);
@@ -3001,19 +3030,15 @@ class NodaliaNotificationsCard extends HTMLElement {
     const emptyText = String(config.empty_message || config.empty_title || DEFAULT_CONFIG.empty_message).trim();
     const animations = this._getAnimationSettings();
     const nextNotificationIdsSignature = notifications.map(item => item.id).join("|");
-    const notificationSetChanged = nextNotificationIdsSignature !== this._lastNotificationIdsSignature;
-    const animateEntrance = animations.enabled && (this._animateContentOnNextRender || notificationSetChanged);
+    const animateEntrance = animations.enabled && this._animateContentOnNextRender;
     const stackTransition = animations.enabled ? this._stackTransition : "";
     this._lastNotificationIdsSignature = nextNotificationIdsSignature;
     if (animateEntrance) {
+      this._animateContentOnNextRender = false;
       if (this._entranceAnimationTimer) {
         window.clearTimeout(this._entranceAnimationTimer);
-      }
-      this._entranceAnimationTimer = window.setTimeout(() => {
         this._entranceAnimationTimer = 0;
-        this._animateContentOnNextRender = false;
-        this._renderIfChanged(true);
-      }, Math.max(180, animations.contentDuration + 160));
+      }
     }
 
     this.shadowRoot.innerHTML = `

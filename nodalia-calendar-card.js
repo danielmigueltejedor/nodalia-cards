@@ -678,6 +678,7 @@ class NodaliaCalendarCard extends HTMLElement {
     this._weatherForecastSubscriptionKey = "";
     this._refreshInFlight = false;
     this._refreshQueued = false;
+    this._refreshRunId = 0;
     this._renderVisibleEventsCache = null;
   }
 
@@ -1471,6 +1472,7 @@ class NodaliaCalendarCard extends HTMLElement {
     }
     this._refreshInFlight = true;
     this._refreshQueued = false;
+    const refreshRunId = ++this._refreshRunId;
     const calendarIds = (this._config.calendars || []).map(c => c.entity).filter(Boolean);
     try {
       if (!this._hass) {
@@ -1521,11 +1523,21 @@ class NodaliaCalendarCard extends HTMLElement {
           const b = eventDate(right?.start)?.getTime() || 0;
           return a - b;
         });
+        if (refreshRunId !== this._refreshRunId) {
+          return;
+        }
         this._events = all;
         await this._refreshWeatherForecastByDay();
       } catch (_error) {
+        if (refreshRunId !== this._refreshRunId) {
+          return;
+        }
+        this._events = [];
         this._error = this._uiText("errors.loadEvents", "No se pudieron cargar eventos del calendario.");
       } finally {
+        if (refreshRunId !== this._refreshRunId) {
+          return;
+        }
         this._loading = false;
         this._renderIfChanged(true);
         this._scheduleRefresh();
@@ -2379,6 +2391,7 @@ class NodaliaCalendarCard extends HTMLElement {
             this._buildNativeCalendarCreateEventWebhookBody(payload, "all_day", calendarEventPayload),
           );
           if (!ok) {
+            this._setComposerError("native", this._uiText("errors.createEvent", "No se pudo crear el evento."));
             return;
           }
         } else {
@@ -2424,6 +2437,7 @@ class NodaliaCalendarCard extends HTMLElement {
             this._buildNativeCalendarCreateEventWebhookBody(payload, "timed", calendarEventPayload),
           );
           if (!ok) {
+            this._setComposerError("native", this._uiText("errors.createEvent", "No se pudo crear el evento."));
             return;
           }
         } else {

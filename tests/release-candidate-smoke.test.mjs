@@ -365,7 +365,9 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /policy === "off"/);
   assert.match(source, /policy !== "on"/);
   assert.match(source, /_entranceAnimationTimer/);
-  assert.match(source, /window\.setTimeout\(\(\) => \{\s*this\._entranceAnimationTimer = 0;\s*this\._animateContentOnNextRender = false;/);
+  assert.match(source, /const animateEntrance = animations\.enabled && this\._animateContentOnNextRender/);
+  assert.match(source, /if \(animateEntrance\) \{\s*this\._animateContentOnNextRender = false;/);
+  assert.doesNotMatch(source, /window\.setTimeout\(\(\) => \{\s*this\._entranceAnimationTimer = 0;\s*this\._animateContentOnNextRender = false;/);
   assert.doesNotMatch(source, /this\._animateContentOnNextRender = false;\s*this\._stackTransition = "";/);
   assert.match(source, /_renderCollapsedStackCards\(notifications, startIndex\)/);
   assert.match(source, /z-index: 6;/);
@@ -480,7 +482,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /notifications-stack-tail-out/);
   assert.match(source, /notification-item--collapsing-tail/);
   assert.match(source, /collapse-final/);
-  assert.match(source, /notificationSetChanged/);
+  assert.match(source, /_lastNotificationIdsSignature/);
   assert.match(source, /includeDomains/);
   assert.match(source, /id\.startsWith\("input_text\."\)/);
   assert.match(source, /id\.startsWith\("notify\."\)/);

@@ -1058,6 +1058,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._temperatureCommitInFlight = false;
     this._temperatureCommitRetryCount = 0;
     this._activeDialDrag = null;
+    this._dragWindowListenersAttached = false;
     this._dialDragFrame = 0;
     this._pendingDialDragPoint = null;
     this._pendingRenderAfterDrag = false;
@@ -1084,17 +1085,6 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   connectedCallback() {
-    window.addEventListener("pointermove", this._onWindowPointerMove);
-    window.addEventListener("pointerup", this._onWindowPointerUp);
-    window.addEventListener("pointercancel", this._onWindowPointerUp);
-    window.addEventListener("mousemove", this._onWindowMouseMove);
-    window.addEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
-      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
-    }
     this._animateContentOnNextRender = true;
     if (this._hass && this._config) {
       this._lastRenderSignature = "";
@@ -1103,17 +1093,7 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   disconnectedCallback() {
-    window.removeEventListener("pointermove", this._onWindowPointerMove);
-    window.removeEventListener("pointerup", this._onWindowPointerUp);
-    window.removeEventListener("pointercancel", this._onWindowPointerUp);
-    window.removeEventListener("mousemove", this._onWindowMouseMove);
-    window.removeEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
-      window.removeEventListener("touchmove", this._onWindowTouchMove);
-      window.removeEventListener("touchend", this._onWindowTouchEnd);
-      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
-    }
+    this._setDragWindowListeners(false);
 
     if (this._draftResetTimer) {
       window.clearTimeout(this._draftResetTimer);
@@ -1752,6 +1732,42 @@ class NodaliaClimateCard extends HTMLElement {
     dial.classList.toggle("is-dragging", Boolean(isDragging));
   }
 
+  _setDragWindowListeners(enabled) {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const shouldAttach = Boolean(enabled);
+    if (shouldAttach === this._dragWindowListenersAttached) {
+      return;
+    }
+    this._dragWindowListenersAttached = shouldAttach;
+    if (shouldAttach) {
+      window.addEventListener("pointermove", this._onWindowPointerMove);
+      window.addEventListener("pointerup", this._onWindowPointerUp);
+      window.addEventListener("pointercancel", this._onWindowPointerUp);
+      window.addEventListener("mousemove", this._onWindowMouseMove);
+      window.addEventListener("mouseup", this._onWindowMouseUp);
+      if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+        window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
+        window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+        window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+        window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+      }
+      return;
+    }
+    window.removeEventListener("pointermove", this._onWindowPointerMove);
+    window.removeEventListener("pointerup", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    window.removeEventListener("mousemove", this._onWindowMouseMove);
+    window.removeEventListener("mouseup", this._onWindowMouseUp);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
+      window.removeEventListener("touchmove", this._onWindowTouchMove);
+      window.removeEventListener("touchend", this._onWindowTouchEnd);
+      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    }
+  }
+
   _updateDialPreview(value) {
     const state = this._getState();
     const dial = this.shadowRoot?.querySelector(".climate-card__dial");
@@ -1810,6 +1826,7 @@ class NodaliaClimateCard extends HTMLElement {
       pointerId,
       lastValue: null,
     };
+    this._setDragWindowListeners(true);
     this._setDialDraggingState(true, dial);
 
     if (event) {
@@ -1819,6 +1836,9 @@ class NodaliaClimateCard extends HTMLElement {
 
     const state = this._getState();
     if (!state) {
+      this._setDialDraggingState(false, dial);
+      this._activeDialDrag = null;
+      this._setDragWindowListeners(false);
       return;
     }
 
@@ -1907,6 +1927,7 @@ class NodaliaClimateCard extends HTMLElement {
 
     this._setDialDraggingState(false, drag.dial);
     this._activeDialDrag = null;
+    this._setDragWindowListeners(false);
 
     if (this._pendingRenderAfterDrag) {
       this._pendingRenderAfterDrag = false;
@@ -2036,6 +2057,7 @@ class NodaliaClimateCard extends HTMLElement {
 
     this._setDialDraggingState(false, drag.dial);
     this._activeDialDrag = null;
+    this._setDragWindowListeners(false);
 
     if (this._pendingRenderAfterDrag) {
       this._pendingRenderAfterDrag = false;
@@ -2052,6 +2074,7 @@ class NodaliaClimateCard extends HTMLElement {
     if (!touch) {
       this._setDialDraggingState(false, this._activeDialDrag.dial);
       this._activeDialDrag = null;
+      this._setDragWindowListeners(false);
       if (this._pendingRenderAfterDrag) {
         this._pendingRenderAfterDrag = false;
         this._render();

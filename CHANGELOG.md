@@ -10,6 +10,20 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.85] - 2026-05-11
+
+Eighty-fifth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.85`** (tag **`v1.0.0-alpha.85`** optional).
+
+- **Weather card — editor units:** visual editor now includes unit system presets (`European/metric`, `US/imperial`) plus explicit overrides for temperature (`°C/°F`) and wind (`km/h`/`mph`), with runtime conversion applied to main values and forecast views.
+- **Editor i18n coverage:** adds complete multi-language exact overrides (including punctuation/dirty variants) for remaining labels like `Event size`, `Accent color (when automatic tinting is disabled)`, vacuum mode visibility/help, and calendar action haptic feedback texts.
+- **Calendar + Notifications robustness:** webhook native event creation now shows inline errors on failure; calendar refresh paths clear stale event state on load errors to avoid ghost entries.
+- **Notifications mobile delivery:** mobile sent markers are persisted only when at least one delivery channel succeeds.
+- **Global perf/stability pass:** locale string merging is cached in `nodalia-i18n` to reduce allocation churn; notifications render signature avoids full attribute stringify; climate drag window listeners are attached only during active drags.
+- **Notifications entrance animation fluidity:** entrance animation still plays on dashboard navigation/reopen, but anti-replay guards remove intermittent flicker on hard reloads and rapid visibility transitions.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.85`**.
+
+---
+
 ## [1.0.0-alpha.84] - 2026-05-11
 
 Eighty-fourth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.84`** (tag **`v1.0.0-alpha.84`** optional).

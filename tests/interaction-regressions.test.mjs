@@ -89,3 +89,30 @@ test("navigation media player toggle keeps theme fallbacks after sanitized value
   assert.match(source, /const mediaToggleBorderRadius = sanitizeCssRuntimeValue\(config\.styles\.media_player\.border_radius\)[\s\S]*"18px"/);
   assert.match(source, /const mediaToggleBoxShadow = sanitizeCssRuntimeValue\(config\.styles\.media_player\.box_shadow\)[\s\S]*"inset 0 1px 0 color-mix\(in srgb, var\(--primary-text-color\) 4%, transparent\), 0 10px 24px rgba\(0, 0, 0, 0\.16\)"/);
 });
+
+test("notifications mobile sent state only marks successful deliveries", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.match(source, /Promise\.all\(\[[\s\S]*\]\)\.then\(results => \{/);
+  assert.match(source, /const delivered = results\.some\(Boolean\)/);
+  assert.match(source, /if \(delivered\) \{\s*this\._mobileSent\.add\(hash\);/);
+});
+
+test("calendar native webhook failures show composer errors", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /if \(!ok\) \{\s*this\._setComposerError\("native", this\._uiText\("errors\.createEvent"/);
+});
+
+test("climate dial drag attaches window listeners only while dragging", () => {
+  const source = read("nodalia-climate-card.js");
+  assert.match(source, /this\._dragWindowListenersAttached = false/);
+  assert.match(source, /_setDragWindowListeners\(enabled\)/);
+  assert.match(source, /this\._setDragWindowListeners\(true\)/);
+  assert.match(source, /this\._setDragWindowListeners\(false\)/);
+});
+
+test("notifications entrance animation does not rearm on list refreshes", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.match(source, /const animateEntrance = animations\.enabled && this\._animateContentOnNextRender/);
+  assert.doesNotMatch(source, /notificationSetChanged/);
+  assert.doesNotMatch(source, /_renderIfChanged\(true\);\s*\n\s*\}, Math\.max\(180, animations\.contentDuration \+ 160\)\);/);
+});
