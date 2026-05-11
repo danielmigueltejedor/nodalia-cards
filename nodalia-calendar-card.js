@@ -1078,6 +1078,7 @@ class NodaliaCalendarCard extends HTMLElement {
     const description = stripNodaliaEventMetadata(event?.description);
     const location = String(event?.location || "").trim();
     const rrule = String(event?.rrule || "").trim();
+    const repeatLabel = this._formatRruleDisplayLabel(rrule);
     const tint = this._getEventTint(event) || "var(--primary-color)";
     return `
       <div class="calendar-expanded__event-detail" style="--cal-detail-tint:${escapeHtml(tint)}">
@@ -1121,21 +1122,44 @@ class NodaliaCalendarCard extends HTMLElement {
               : ""
           }
           ${
-            rrule
+            repeatLabel
               ? `<section class="calendar-expanded__event-section">
                   <div class="calendar-expanded__event-section-title">${escapeHtml(this._uiText("fields.repeat", "Repetición"))}</div>
-                  <div class="calendar-expanded__event-section-body">${escapeHtml(rrule)}</div>
+                  <div class="calendar-expanded__event-section-body">${escapeHtml(repeatLabel)}</div>
                 </section>`
               : ""
           }
           ${
-            !description && !location && !rrule
+            !description && !location && !repeatLabel
               ? `<div class="calendar-expanded__day-empty">${escapeHtml(this._uiText("empty.eventDetails", "Este evento no tiene descripción ni ubicación."))}</div>`
               : ""
           }
         </div>
       </div>
     `;
+  }
+
+  _formatRruleDisplayLabel(rruleRaw) {
+    const raw = String(rruleRaw || "").trim();
+    if (!raw) {
+      return "";
+    }
+    const upper = raw.toUpperCase();
+    const parts = upper.split(";");
+    const freqPart = parts.find(part => part.startsWith("FREQ=")) || "";
+    const intervalPart = parts.find(part => part.startsWith("INTERVAL=")) || "";
+    const freq = freqPart.replace("FREQ=", "").trim();
+    const interval = Number.parseInt(intervalPart.replace("INTERVAL=", "").trim(), 10);
+    if (Number.isFinite(interval) && interval > 1) {
+      return this._uiText("repeat.custom", "Personalizado");
+    }
+    const labels = {
+      DAILY: this._uiText("repeat.daily", "Diariamente"),
+      WEEKLY: this._uiText("repeat.weekly", "Semanalmente"),
+      MONTHLY: this._uiText("repeat.monthly", "Mensualmente"),
+      YEARLY: this._uiText("repeat.yearly", "Anualmente"),
+    };
+    return labels[freq] || this._uiText("repeat.custom", "Personalizado");
   }
 
   _expandedLayoutKind(timeRange) {
@@ -3081,6 +3105,9 @@ class NodaliaCalendarCard extends HTMLElement {
           display: grid;
           gap: 10px;
           grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .calendar-composer__row[hidden] {
+          display: none !important;
         }
         .calendar-composer__row--middle {
           align-items: center;

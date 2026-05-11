@@ -10,6 +10,17 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.83] - 2026-05-11
+
+Eighty-third **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.83`** (tag **`v1.0.0-alpha.83`** optional).
+
+- **Calendar card — UI de repetición personalizada:** los campos de frecuencia e intervalo numérico quedan ocultos salvo cuando el selector está en `Personalizado`.
+- **Calendar card — detalle legible de repetición:** la ficha de evento ya no muestra `RRULE` cruda (`FREQ=...`); ahora enseña etiqueta normalizada (`Diariamente`, `Semanalmente`, `Mensualmente`, `Anualmente` o `Personalizado`).
+- **Advance Vacuum — persistencia segura en overflow:** si la sesión compartida supera el límite del helper incluso en modo mínimo, se cancela la escritura remota para evitar limpiar accidentalmente `input_text`.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.83`**.
+
+---
+
 ## [1.0.0-alpha.82] - 2026-05-11
 
 Eighty-second **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.82`** (tag **`v1.0.0-alpha.82`** optional).

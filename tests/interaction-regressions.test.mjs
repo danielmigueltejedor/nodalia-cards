@@ -74,6 +74,14 @@ test("advanced vacuum webhook-only persistence deduplicates empty sessions", () 
   assert.doesNotMatch(source, /serializedTrim !== "" &&\s*serializedTrim === this\._lastSubmittedSharedCleaningSessionValue/);
 });
 
+test("advanced vacuum skips remote write when serialized session still overflows", () => {
+  const source = read("nodalia-advance-vacuum-card.js");
+  assert.match(source, /if \(serialized\.length > maxLength\) \{\s*serialized = this\._serializeSharedCleaningSession\(session, \{ minimal: true \}\);\s*\}/);
+  assert.match(source, /console\.warn\("Nodalia Advance Vacuum Card shared cleaning session exceeds helper length limit"\)/);
+  assert.match(source, /if \(serialized\.length > maxLength\) \{[\s\S]*console\.warn\("Nodalia Advance Vacuum Card shared cleaning session exceeds helper length limit"\);[\s\S]*return;\s*\}/);
+  assert.doesNotMatch(source, /if \(serialized\.length > maxLength\) \{[\s\S]*serialized = ""/);
+});
+
 test("navigation media player toggle keeps theme fallbacks after sanitized values", () => {
   const source = read("nodalia-navigation-bar.js");
   assert.match(source, /const mediaToggleBackgroundBase = sanitizeCssRuntimeValue\(config\.styles\.media_player\.background\)[\s\S]*"var\(--ha-card-background, var\(--card-background-color\)\)"/);
