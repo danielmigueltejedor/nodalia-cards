@@ -10,6 +10,17 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.84] - 2026-05-11
+
+Eighty-fourth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.84`** (tag **`v1.0.0-alpha.84`** optional).
+
+- **Visual editors — i18n exacta:** se traducen y normalizan más textos que aún aparecían mezclados (`Allowed services (comma-separated)`, `Chip Padding`, `Intensity`, `Mode panel (ms)`, `Tooltip and hover (ms)`, `Disarmed/Away/Home/Night/Vacation/Custom/Arming/Pending/Triggered tint`, etc.).
+- **Visual editors — robustez en literales importados:** se añaden variantes con puntuación residual (`;`, comas y frases largas) para que el normalizador convierta automáticamente esas cadenas al texto localizado correcto.
+- **Energy / Gauge / Climate / Vacuum editor labels:** se cubren más aliases de campos y ayudas (`Casa`, `Solar`, `Batería`, `Agua`, `Gas`, `Numeric entity`, `Dial (ms)`, `Minimum/Maximum gauge tint`, `Gauge track`, `Climate entity`, `Modos de aspirado/mopa visibles` y descripciones relacionadas).
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.84`**.
+
+---
+
 ## [1.0.0-alpha.83] - 2026-05-11
 
 Eighty-third **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.83`** (tag **`v1.0.0-alpha.83`** optional).

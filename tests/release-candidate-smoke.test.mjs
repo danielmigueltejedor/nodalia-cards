@@ -203,7 +203,9 @@ test("calendar all-day labels use shared locale text", () => {
   assert.match(i18n, /allDay: "Ganztägig"/);
   assert.match(i18n, /fields: \{ calendar: "Kalender", title: "Titel"/);
   assert.match(i18n, /buttons: \{ month: "Mois", back: "Retour", delete: "Supprimer", cancel: "Annuler", create: "Créer" \}/);
-  assert.match(i18n, /repeat: \{ none: "不重复", yearly: "每年", monthly: "每月", weekly: "每周", daily: "每天" \}/);
+  assert.match(i18n, /repeat: \{ none: "不重复", yearly: "每年", monthly: "每月", weekly: "每周", daily: "每天", custom: "自定义" \}/);
+  assert.match(i18n, /repeatFrequency: "Frequency"/);
+  assert.match(i18n, /selectRepeatFrequency: "Select a frequency for custom repeat\."/);
   assert.match(i18n, /createEventWithMessage: "Nu s-a putut crea evenimentul: \{message\}"/);
   assert.match(i18n, /allDay: "Toute la journée"/);
   assert.match(i18n, /allDay: "全天"/);
@@ -234,7 +236,7 @@ test("weather forecast dates use the resolved Home Assistant locale", () => {
   assert.match(source, /const localeArg = locale && locale !== "auto" \? locale : undefined/);
   assert.match(source, /toLocaleDateString\(localeArg/);
   assert.match(source, /const forecastLocale = window\.NodaliaI18n\?\.localeTag\?\.\(langFc\) \|\| langFc/);
-  assert.match(source, /_renderForecastChart\(visibleItems, activeType, state, forecastLocale\)/);
+  assert.match(source, /_renderForecastChart\(visibleItems, activeType, state, forecastLocale(?:, unitPrefs)?\)/);
   assert.match(source, /formatForecastDateTime\(item\?\.datetime, activeType, forecastLocale\)/);
 });
 
