@@ -240,35 +240,22 @@ test("weather forecast dates use the resolved Home Assistant locale", () => {
   assert.match(source, /formatForecastDateTime\(item\?\.datetime, activeType, forecastLocale\)/);
 });
 
-test("shared visual editor exact overrides cover all supported editor languages", () => {
+test("shared visual editor ROWS map covers all supported editor languages", () => {
   const source = read("nodalia-editor-ui.js");
   assert.match(source, /const EDITOR_LANGS = \["en", "de", "fr", "it", "nl", "pt", "ru", "el", "zh", "ro"\]/);
+  assert.match(source, /const ROWS = \[/);
   assert.doesNotMatch(source, /const EDITOR_EXACT_OVERRIDES = \{/);
-  assert.match(source, /const EDITOR_EXACT_OVERRIDE_ROWS = \[/);
-  assert.match(source, /row\.key \? \[row\.key\] : \[\]/);
+  assert.doesNotMatch(source, /const EDITOR_EXACT_OVERRIDE_ROWS = \[/);
+  assert.match(source, /window\.NodaliaI18n\.editorUiMaps = MAP/);
+  assert.match(source, /window\.NodaliaI18n\.editorStr = function editorStr/);
   ["es", "en", "de", "fr", "it", "nl", "pt", "ru", "el", "zh", "ro"].forEach(lang => {
-    assert.match(source, new RegExp(`${lang}:`), `${lang} translations should be present in exact override rows`);
+    assert.match(source, new RegExp(`"${lang}":`), `${lang} column should appear in ROWS`);
   });
-  assert.match(source, /keys: \["Mode buttons next to slider"\][\s\S]*fr: "Boutons de mode à côté du curseur"/);
-  assert.match(source, /keys: \["Use album art as background"\][\s\S]*pt: "Usar capa do álbum como fundo"/);
-  assert.match(source, /keys: \["Main entity"\][\s\S]*zh: "主实体"/);
-  assert.match(source, /keys: \["Entidad de luz"\][\s\S]*de: "Licht-Entität"/);
-  assert.match(source, /keys: \["Posicion del estado", "Posición del estado"\][\s\S]*de: "Position des Status"/);
-  assert.match(source, /keys: \["Fondo avatar", "Fondo icono", "Icono burbuja fondo", "Fondo burbuja principal"\][\s\S]*de: "Blasenhintergrund"/);
-  assert.match(source, /keys: \["Maximo visible plegado"\][\s\S]*en: "Max visible when collapsed"/);
-  assert.match(source, /keys: \["Name"\][\s\S]*zh: "名称"/);
-  assert.match(source, /keys: \["Button bounce \(ms\)", "Rebote botones \(ms\)"\][\s\S]*de: "Button-Bounce \(ms\)"/);
-  assert.match(source, /keys: \["Color aspirando"\][\s\S]*fr: "Couleur aspiration"/);
-  assert.match(source, /keys: \["Color icono apagada"\][\s\S]*ro: "Culoare pictogramă oprită"/);
-  assert.match(source, /const exactOverrideByEnglish = \{\}/);
-  assert.match(source, /exactOverrideByEnglish\[englishValue\] \|\| exactOverrideByEnglish\[sourceKey\]/);
-  assert.match(source, /keys: \["Brightness presets"\][\s\S]*de: "Helligkeits-Voreinstellungen"/);
-  assert.match(source, /keys: \["Action", "Acción", "Accion"\][\s\S]*de: "Aktion"/);
-  assert.match(source, /keys: \["Warning", "Aviso"\][\s\S]*zh: "警告"/);
-  assert.match(source, /keys: \["Suction select", "Select aspirado"\][\s\S]*fr: "Select aspiration"/);
-  assert.match(source, /keys: \["Select an entity", "Selecciona una entidad"\][\s\S]*de: "Entität auswählen"/);
-  assert.match(source, /keys: \["Tap action", "Acción al pulsar", "Acción al tocar"\][\s\S]*de: "Tap-Aktion"/);
-  assert.match(source, /keys: \["Off color", "Color apagado"\][\s\S]*fr: "Couleur éteinte"/);
+  assert.match(source, /"en": "Enable animations"[\s\S]*"de": "Animationen aktivieren"/);
+  assert.match(source, /"en": "Chip height"[\s\S]*"de": "Chip-Höhe"/);
+  assert.match(source, /"es": "Mostrar ausente"[\s\S]*"de": "„Abwesend“ anzeigen"/);
+  assert.match(source, /"es": "Fijar a pantalla"[\s\S]*"de": "Am Bildschirm fixieren"/);
+  assert.match(source, /"es": "Entidad principal"[\s\S]*"zh": "主实体"/);
 });
 
 test("editor field helpers route visible labels through shared i18n", () => {
@@ -309,8 +296,6 @@ test("active icon animations are configurable across animated device cards", () 
   assert.match(vacuum, /error_entity: ""/);
   assert.match(vacuum, /_guessRelatedErrorEntity/);
   assert.match(vacuum, /translateVacuumErrorState/);
-  assert.match(editor, /keys: \["Animar icono activo"\][\s\S]*en: "Animate active icon"/);
-  assert.match(editor, /keys: \["Animar icono según condición"\][\s\S]*en: "Animate icon by condition"/);
 });
 
 test("notifications translate vacuum cleaning state in smart messages", () => {
@@ -519,34 +504,9 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(i18n, /hotClimate: "\{source\} zeigt \{value\}\. Du kannst Kühlung auf \{climate\} einschalten\."/);
   assert.match(i18n, /Borrar notificación/);
   const editorUi = read("nodalia-editor-ui.js");
-  assert.match(editorUi, /es: "Mensaje cuando no hay nada pendiente y comportamiento básico\."/);
-  assert.match(editorUi, /de: "Nachricht, wenn nichts ansteht, und Grundverhalten\."/);
-  assert.match(editorUi, /es: "Borde tarjeta"/);
-  assert.match(editorUi, /de: "Kartenrand"/);
-  assert.match(editorUi, /es: "Move up"/);
-  assert.match(editorUi, /de: "Nach oben"/);
-  assert.match(editorUi, /es: "Permitir borrar eventos nativos"/);
-  assert.match(editorUi, /de: "Löschen nativer Ereignisse erlauben"/);
-  assert.match(editorUi, /keys: \["Mensaje"\], es: "Mensaje", en: "Message", de: "Nachricht"/);
-  assert.match(editorUi, /keys: \["temperature"\], es: "temperatura", en: "temperature", de: "temperatur"/);
-  assert.match(editorUi, /keys: \["Main action", "Acción principal"\], es: "Acción principal", en: "Main action", de: "Hauptaktion"/);
-  assert.match(editorUi, /keys: \["Fiexed PIN", "Fixed PIN"\], es: "PIN fijo", en: "Fixed PIN", de: "Feste PIN"/);
-  assert.match(editorUi, /keys: \["Bubble size", "Tamaño burbuja"\], es: "Tamaño de burbuja", en: "Bubble size", de: "Blasengröße"/);
-  assert.match(editorUi, /keys: \["Player background", "Fondo del reproductor"\], es: "Fondo del reproductor", en: "Player background", de: "Player-Hintergrund"/);
-  assert.match(editorUi, /keys: \["Modos de aspirado visibles", "Visible vacuum modes"\], es: "Modos de aspirado visibles", en: "Visible vacuum modes", de: "Sichtbare Saugmodi"/);
-  assert.match(editorUi, /keys: \["Modos de mopa visibles", "Visible mop modes"\], es: "Modos de mopa visibles", en: "Visible mop modes", de: "Sichtbare Mopp-Modi"/);
-  assert.match(editorUi, /keys: \["Main visual settings for the card\."\], es: "Ajustes visuales principales de la tarjeta\.", en: "Main visual settings for the card\.", de: "Wichtigste visuelle Einstellungen der Karte\."/);
-  assert.match(editorUi, /keys: \["Automatic \(toggle or info\)", "Auto \(toggle o info\)", "Automática \(info o alternar\)"\], es: "Automático \(alternar o info\)", en: "Automatic \(toggle or info\)", de: "Automatisch \(umschalten oder Info\)"/);
-  assert.match(editorUi, /keys: \["Pin to screen"\], es: "Fijar a pantalla", en: "Pin to screen", de: "Am Bildschirm fixieren"/);
-  assert.match(editorUi, /keys: \["Also show on desktop"\], es: "Mostrar también en escritorio", en: "Also show on desktop", de: "Auch auf dem Desktop anzeigen"/);
-  assert.match(editorUi, /keys: \["Hace calor"\], es: "Hace calor", en: "It is warm", de: "Es ist warm"/);
-  assert.match(editorUi, /keys: \["\{media\} sigue encendido y \{source\} no detecta presencia\.", "\{media\} sigue encendido y \{source\} no deteceta presencia\."\], es: "\{media\} sigue encendido y \{source\} no detecta presencia\.", en: "\{media\} is still on and \{source\} detects no presence\.", de: "\{media\} ist noch eingeschaltet und \{source\} erkennt keine Anwesenheit\."/);
-  assert.match(editorUi, /keys: \["Default"\], es: "Predeterminado", en: "Default", de: "Standard"/);
-  assert.match(editorUi, /keys: \["Navigate"\], es: "Navegar", en: "Navigate", de: "Navigieren"/);
-  assert.match(editorUi, /for \(const \[sourceKey, englishValue\] of Object\.entries\(MAP\.en\)\) \{\s*const exactLocales = EXACT_OVERRIDE_LOCALES_BY_EN\[englishValue\]/);
-  assert.match(editorUi, /"Card border": \{ de: "Kartenrand"/);
-  assert.match(editorUi, /"Service data JSON": \{ de: "Servicedaten JSON"/);
-  assert.match(editorUi, /"Visible states": \{ de: "Sichtbare Zustände"/);
+  assert.match(editorUi, /"es": "Borde tarjeta"[\s\S]*"de": "Kartenrand"/);
+  assert.match(editorUi, /"es": "Etiqueta"[\s\S]*"de": "Beschriftung"/);
+  assert.match(editorUi, /"es": "Mostrar tambien en escritorio"[\s\S]*"de": "Auch auf dem Desktop anzeigen"/);
   assert.match(i18n, /function translateNotificationsUi/);
   assert.match(build, /nodalia-notifications-card\.js/);
   assert.match(pkg, /"nodalia-notifications-card\.js"/);

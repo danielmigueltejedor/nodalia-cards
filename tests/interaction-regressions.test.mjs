@@ -119,4 +119,8 @@ test("notifications entrance animation does not rearm on list refreshes", () => 
   assert.match(source, /_getRouteKey\(\)/);
   assert.match(source, /if \(nextRouteKey && nextRouteKey !== this\._lastRouteKey\) \{/);
   assert.match(source, /this\._replayEntranceAnimation\(\{ force: true \}\)/);
+  assert.match(
+    source,
+    /\/\/ Match entity\/weather cards: do not render \(or consume entrance\) before hass/,
+  );
 });

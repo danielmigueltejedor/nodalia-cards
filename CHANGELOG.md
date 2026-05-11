@@ -10,6 +10,17 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.88] - 2026-05-11
+
+Eighty-eighth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.88`** (tag **`v1.0.0-alpha.88`** optional).
+
+- **Editor i18n — generator fixes:** compact `Show` / `Enable` / `Open` shims in `gen-editor-ui.mjs` now apply full-phrase matches before prefix rules (no more `Aktivieren: animations`, `Öffnen: URL in new tab`, etc.); sentences with a period skip those shims so long hints are not mangled.
+- **Editor i18n — layout strings:** `FULL_LOCALE_BY_EN` adds full translations for common geometry/control seeds (chip/slider/chart heights, bubble width, color controls, icon fit, etc.).
+- **Editor i18n — Show… labels:** `generate-extra-locale-by-en.mjs` now emits **de / it / nl / fr** for every former French-only “Show …” row so German/Dutch/Italian editors no longer show `Anzeigen: …` English tails.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.88`**.
+
+---
+
 ## [1.0.0-alpha.87] - 2026-05-11
 
 Eighty-seventh **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.87`** (tag **`v1.0.0-alpha.87`** optional).

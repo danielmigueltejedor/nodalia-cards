@@ -582,144 +582,279 @@
     "nl": "Pas Nodalia-stijl aan voor thermostaat, wijzerplaat en bediening."
   },
   "Show Meteoalarm chip": {
-    "fr": "Afficher la puce Meteoalarm"
+    "fr": "Afficher la puce Meteoalarm",
+    "de": "Meteoalarm-Chip anzeigen",
+    "it": "Mostra chip Meteoalarm",
+    "nl": "Meteoalarm-chip tonen"
   },
   "Show PIN text field": {
-    "fr": "Afficher le champ PIN"
+    "fr": "Afficher le champ PIN",
+    "de": "PIN-Textfeld anzeigen",
+    "it": "Mostra campo PIN",
+    "nl": "PIN-tekstveld tonen"
   },
   "Show animation settings": {
-    "fr": "Afficher les paramètres d’animation"
+    "fr": "Afficher les paramètres d’animation",
+    "de": "Animationseinstellungen anzeigen",
+    "it": "Mostra impostazioni animazioni",
+    "nl": "Animatie-instellingen tonen"
   },
   "Show away": {
-    "fr": "Afficher Absent"
+    "fr": "Afficher Absent",
+    "de": "„Abwesend“ anzeigen",
+    "it": "Mostra assente",
+    "nl": "Afwezig tonen"
   },
   "Show brightness": {
-    "fr": "Afficher la luminosité"
+    "fr": "Afficher la luminosité",
+    "de": "Helligkeit anzeigen",
+    "it": "Mostra luminosità",
+    "nl": "Helderheid tonen"
   },
   "Show chart labels": {
-    "fr": "Afficher les étiquettes du graphique"
+    "fr": "Afficher les étiquettes du graphique",
+    "de": "Diagrammbeschriftungen anzeigen",
+    "it": "Mostra etichette grafico",
+    "nl": "Grafieklabels tonen"
   },
   "Show current temperature chip": {
-    "fr": "Afficher la température actuelle"
+    "fr": "Afficher la température actuelle",
+    "de": "Aktuelle Temperatur anzeigen",
+    "it": "Mostra temperatura attuale",
+    "nl": "Huidige temperatuur tonen"
   },
   "Show custom": {
-    "fr": "Afficher Personnalisé"
+    "fr": "Afficher Personnalisé",
+    "de": "Benutzerdefiniert anzeigen",
+    "it": "Mostra personalizzato",
+    "nl": "Aangepast tonen"
   },
   "Show disarm": {
-    "fr": "Afficher Désarmer"
+    "fr": "Afficher Désarmer",
+    "de": "Entschärfen anzeigen",
+    "it": "Mostra disattiva allarme",
+    "nl": "Ontschakelen tonen"
   },
   "Show energy button": {
-    "fr": "Afficher le bouton énergie"
+    "fr": "Afficher le bouton énergie",
+    "de": "Energie-Taste anzeigen",
+    "it": "Mostra pulsante energia",
+    "nl": "Energieknop tonen"
   },
   "Show extended forecast": {
-    "fr": "Afficher les prévisions étendues"
+    "fr": "Afficher les prévisions étendues",
+    "de": "Erweiterte Vorhersage anzeigen",
+    "it": "Mostra previsioni estese",
+    "nl": "Uitgebreide verwachting tonen"
   },
   "Show fan chip": {
-    "fr": "Afficher la puce ventilateur"
+    "fr": "Afficher la puce ventilateur",
+    "de": "Lüfter-Chip anzeigen",
+    "it": "Mostra chip ventola",
+    "nl": "Ventilatorchip tonen"
   },
   "Show fan mode button": {
-    "fr": "Afficher le bouton mode ventilateur"
+    "fr": "Afficher le bouton mode ventilateur",
+    "de": "Lüftermodus-Taste anzeigen",
+    "it": "Mostra pulsante modalità ventola",
+    "nl": "Ventilatormodus-knop tonen"
   },
   "Show fill": {
-    "fr": "Afficher le remplissage"
+    "fr": "Afficher le remplissage",
+    "de": "Füllung anzeigen",
+    "it": "Mostra riempimento",
+    "nl": "Opvulling tonen"
   },
   "Show header": {
-    "fr": "Afficher l’en-tête"
+    "fr": "Afficher l’en-tête",
+    "de": "Kopfzeile anzeigen",
+    "it": "Mostra intestazione",
+    "nl": "Koptekst tonen"
   },
   "Show home": {
-    "fr": "Afficher Domicile"
+    "fr": "Afficher Domicile",
+    "de": "„Zu Hause“ anzeigen",
+    "it": "Mostra a casa",
+    "nl": "Thuis tonen"
   },
   "Show humidity chip": {
-    "fr": "Afficher la puce humidité"
+    "fr": "Afficher la puce humidité",
+    "de": "Feuchtigkeits-Chip anzeigen",
+    "it": "Mostra chip umidità",
+    "nl": "Vochtigheidschip tonen"
   },
   "Show labels": {
-    "fr": "Afficher les étiquettes"
+    "fr": "Afficher les étiquettes",
+    "de": "Beschriftungen anzeigen",
+    "it": "Mostra etichette",
+    "nl": "Labels tonen"
   },
   "Show large value": {
-    "fr": "Afficher la grande valeur"
+    "fr": "Afficher la grande valeur",
+    "de": "Großen Wert anzeigen",
+    "it": "Mostra valore grande",
+    "nl": "Grote waarde tonen"
   },
   "Show legend": {
-    "fr": "Afficher la légende"
+    "fr": "Afficher la légende",
+    "de": "Legende anzeigen",
+    "it": "Mostra legenda",
+    "nl": "Legenda tonen"
   },
   "Show location": {
-    "fr": "Afficher la position"
+    "fr": "Afficher la position",
+    "de": "Standort anzeigen",
+    "it": "Mostra posizione",
+    "nl": "Locatie tonen"
   },
   "Show min/max range": {
-    "fr": "Afficher la plage min/max"
+    "fr": "Afficher la plage min/max",
+    "de": "Min/Max-Bereich anzeigen",
+    "it": "Mostra intervallo min/max",
+    "nl": "Min/max-bereik tonen"
   },
   "Show mode button": {
-    "fr": "Afficher le bouton de mode"
+    "fr": "Afficher le bouton de mode",
+    "de": "Modus-Taste anzeigen",
+    "it": "Mostra pulsante modalità",
+    "nl": "Modusknop tonen"
   },
   "Show mode buttons": {
-    "fr": "Afficher les boutons de mode"
+    "fr": "Afficher les boutons de mode",
+    "de": "Modus-Tasten anzeigen",
+    "it": "Mostra pulsanti modalità",
+    "nl": "Modusknoppen tonen"
   },
   "Show mode chip": {
-    "fr": "Afficher la puce de mode"
+    "fr": "Afficher la puce de mode",
+    "de": "Modus-Chip anzeigen",
+    "it": "Mostra chip modalità",
+    "nl": "Moduschips tonen"
   },
   "Show mode presets": {
-    "fr": "Afficher les préréglages de mode"
+    "fr": "Afficher les préréglages de mode",
+    "de": "Modus-Voreinstellungen anzeigen",
+    "it": "Mostra preset modalità",
+    "nl": "Modusvoorinstellingen tonen"
   },
   "Show name": {
-    "fr": "Afficher le nom"
+    "fr": "Afficher le nom",
+    "de": "Name anzeigen",
+    "it": "Mostra nome",
+    "nl": "Naam tonen"
   },
   "Show name in chip": {
-    "fr": "Afficher le nom dans la puce"
+    "fr": "Afficher le nom dans la puce",
+    "de": "Namen im Chip anzeigen",
+    "it": "Mostra nome nel chip",
+    "nl": "Naam in chip tonen"
   },
   "Show night": {
-    "fr": "Afficher Nuit"
+    "fr": "Afficher Nuit",
+    "de": "„Nacht“ anzeigen",
+    "it": "Mostra notte",
+    "nl": "Nacht tonen"
   },
   "Show on desktop": {
-    "fr": "Afficher sur bureau"
+    "fr": "Afficher sur bureau",
+    "de": "Auf dem Desktop anzeigen",
+    "it": "Mostra su desktop",
+    "nl": "Op desktop tonen"
   },
   "Show or hide each card block.": {
-    "fr": "Afficher ou masquer chaque bloc de la carte."
+    "fr": "Afficher ou masquer chaque bloc de la carte.",
+    "de": "Jedes Kartenfeld ein- oder ausblenden.",
+    "it": "Mostra o nascondi ogni blocco della scheda.",
+    "nl": "Elk kaartblok tonen of verbergen."
   },
   "Show oscillate button": {
-    "fr": "Afficher le bouton oscillation"
+    "fr": "Afficher le bouton oscillation",
+    "de": "Oszillationstaste anzeigen",
+    "it": "Mostra pulsante oscillazione",
+    "nl": "Oscillatieknop tonen"
   },
   "Show percentage chip": {
-    "fr": "Afficher la puce pourcentage"
+    "fr": "Afficher la puce pourcentage",
+    "de": "Prozent-Chip anzeigen",
+    "it": "Mostra chip percentuale",
+    "nl": "Percentagechip tonen"
   },
   "Show pressure chip": {
-    "fr": "Afficher la puce pression"
+    "fr": "Afficher la puce pression",
+    "de": "Druck-Chip anzeigen",
+    "it": "Mostra chip pressione",
+    "nl": "Drukchip tonen"
   },
   "Show primary chip": {
-    "fr": "Afficher la puce principale"
+    "fr": "Afficher la puce principale",
+    "de": "Haupt-Chip anzeigen",
+    "it": "Mostra chip principale",
+    "nl": "Primaire chip tonen"
   },
   "Show secondary chip": {
-    "fr": "Afficher la puce secondaire"
+    "fr": "Afficher la puce secondaire",
+    "de": "Sekundär-Chip anzeigen",
+    "it": "Mostra chip secondario",
+    "nl": "Secundaire chip tonen"
   },
   "Show slider": {
-    "fr": "Afficher le curseur"
+    "fr": "Afficher le curseur",
+    "de": "Schieberegler anzeigen",
+    "it": "Mostra slider",
+    "nl": "Schuifregelaar tonen"
   },
   "Show speed chip": {
-    "fr": "Afficher la puce vitesse"
-  },
-  "Show state chip": {
-    "fr": "Afficher la puce d’état"
+    "fr": "Afficher la puce vitesse",
+    "de": "Geschwindigkeits-Chip anzeigen",
+    "it": "Mostra chip velocità",
+    "nl": "Snelheidschip tonen"
   },
   "Show style settings": {
-    "fr": "Afficher les paramètres de style"
+    "fr": "Afficher les paramètres de style",
+    "de": "Stileinstellungen anzeigen",
+    "it": "Mostra impostazioni stile",
+    "nl": "Stijl-instellingen tonen"
   },
   "Show target humidity chip": {
-    "fr": "Afficher la puce humidité cible"
+    "fr": "Afficher la puce humidité cible",
+    "de": "Ziel-Feuchtigkeits-Chip anzeigen",
+    "it": "Mostra chip umidità obiettivo",
+    "nl": "Doelvochtigheidschip tonen"
   },
   "Show unavailable badge": {
-    "fr": "Afficher le badge indisponible"
+    "fr": "Afficher le badge indisponible",
+    "de": "Abzeichen „Nicht verfügbar“ anzeigen",
+    "it": "Mostra badge non disponibile",
+    "nl": "Niet-beschikbaar-badge tonen"
   },
   "Show vacation": {
-    "fr": "Afficher Vacances"
+    "fr": "Afficher Vacances",
+    "de": "„Urlaub“ anzeigen",
+    "it": "Mostra vacanza",
+    "nl": "Vakantie tonen"
   },
   "Show value": {
-    "fr": "Afficher la valeur"
+    "fr": "Afficher la valeur",
+    "de": "Wert anzeigen",
+    "it": "Mostra valore",
+    "nl": "Waarde tonen"
   },
   "Show view selector": {
-    "fr": "Afficher le sélecteur de vue"
+    "fr": "Afficher le sélecteur de vue",
+    "de": "Ansichtswahl anzeigen",
+    "it": "Mostra selettore vista",
+    "nl": "Weergaveselector tonen"
   },
   "Show wind chip": {
-    "fr": "Afficher la puce vent"
+    "fr": "Afficher la puce vent",
+    "de": "Wind-Chip anzeigen",
+    "it": "Mostra chip vento",
+    "nl": "Windchip tonen"
   },
   "Show zone badge": {
-    "fr": "Afficher le badge de zone"
+    "fr": "Afficher le badge de zone",
+    "de": "Zonen-Abzeichen anzeigen",
+    "it": "Mostra badge zona",
+    "nl": "Zone-badge tonen"
   }
 }

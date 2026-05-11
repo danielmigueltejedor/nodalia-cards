@@ -1341,7 +1341,14 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._loadMobileSent();
     this._syncSharedDismissedFromHass(true);
     this._lastRouteKey = this._getRouteKey();
-    this._replayEntranceAnimation({ force: true });
+    // Match entity/weather cards: do not render (or consume entrance) before hass — Lovelace
+    // typically attaches the element before the first set(hass), and a pre-hass render would
+    // clear _animateContentOnNextRender so the real first paint never gets --enter.
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
+    if (this._hass) {
+      this._renderIfChanged(true);
+    }
     this._refreshCalendarEventsSoon(0);
     this._refreshWeatherForecastsSoon(0);
     window.addEventListener("resize", this._onViewportResize, { passive: true });
@@ -1390,7 +1397,10 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._lastEntranceReplayAt = now;
     this._animateContentOnNextRender = true;
     this._lastNotificationIdsSignature = "";
-    this._renderIfChanged(true);
+    this._lastRenderSignature = "";
+    if (this._hass) {
+      this._renderIfChanged(true);
+    }
   }
 
   _getRouteKey() {
@@ -1464,7 +1474,9 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._loadMobileSent();
     this._syncSharedDismissedFromHass(true);
     this._lastRenderSignature = "";
-    this._renderIfChanged(true);
+    if (this._hass) {
+      this._renderIfChanged(true);
+    }
     this._refreshCalendarEventsSoon(0);
     this._refreshWeatherForecastsSoon(0);
   }
