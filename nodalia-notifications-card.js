@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.0-alpha.81";
+const CARD_VERSION = "1.0.0-alpha.89";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1388,6 +1388,24 @@ class NodaliaNotificationsCard extends HTMLElement {
     }
   }
 
+  _scheduleEntranceAnimationReset(delay) {
+    if (this._entranceAnimationTimer) {
+      window.clearTimeout(this._entranceAnimationTimer);
+      this._entranceAnimationTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
+    if (!safeDelay || typeof window === "undefined") {
+      this._animateContentOnNextRender = false;
+      return;
+    }
+
+    this._entranceAnimationTimer = window.setTimeout(() => {
+      this._entranceAnimationTimer = 0;
+      this._animateContentOnNextRender = false;
+    }, safeDelay);
+  }
+
   _replayEntranceAnimation(options = {}) {
     const force = options?.force === true;
     const now = Date.now();
@@ -1395,6 +1413,10 @@ class NodaliaNotificationsCard extends HTMLElement {
       return;
     }
     this._lastEntranceReplayAt = now;
+    if (this._entranceAnimationTimer) {
+      window.clearTimeout(this._entranceAnimationTimer);
+      this._entranceAnimationTimer = 0;
+    }
     this._animateContentOnNextRender = true;
     this._lastNotificationIdsSignature = "";
     this._lastRenderSignature = "";
@@ -3061,13 +3083,6 @@ class NodaliaNotificationsCard extends HTMLElement {
     const animateEntrance = animations.enabled && this._animateContentOnNextRender;
     const stackTransition = animations.enabled ? this._stackTransition : "";
     this._lastNotificationIdsSignature = nextNotificationIdsSignature;
-    if (animateEntrance) {
-      this._animateContentOnNextRender = false;
-      if (this._entranceAnimationTimer) {
-        window.clearTimeout(this._entranceAnimationTimer);
-        this._entranceAnimationTimer = 0;
-      }
-    }
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -3576,6 +3591,9 @@ class NodaliaNotificationsCard extends HTMLElement {
           }
       </ha-card>
     `;
+    if (animateEntrance) {
+      this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
+    }
     this._stackTransition = "";
   }
 }
