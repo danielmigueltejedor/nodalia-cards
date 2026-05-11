@@ -10,6 +10,15 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.93] - 2026-05-12
+
+Ninety-third **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.93`** (tag **`v1.0.0-alpha.93`** optional).
+
+- **Insignia card (`0.2.13`):** horizontal **scroll** strips no longer clip pills at the bottom — **`padding-block`** from **`--insignia-scroll-strip-*`** applies to **all** pills (not only icon-only), and the pill surface uses **`overflow: visible`** so **`box-shadow`** is not cut off.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.93`**.
+
+---
+
 ## [1.0.0-alpha.92] - 2026-05-11
 
 Ninety-second **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.92`** (tag **`v1.0.0-alpha.92`** optional).

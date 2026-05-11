@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "0.2.12";
+const CARD_VERSION = "0.2.13";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1417,6 +1417,13 @@ class NodaliaInsigniaCard extends HTMLElement {
           display: inline-flex;
           line-height: 0;
           vertical-align: middle;
+          box-sizing: border-box;
+          /* Scroll strips (header horizontal overflow) need block padding on every pill, not only icon-only,
+             or the strip clips shadows and the bottom of the pill. Parent can set --insignia-scroll-strip-padding-block. */
+          padding-block: var(
+            --insignia-scroll-strip-padding-block,
+            var(--insignia-scroll-strip-margin-block, 0px)
+          );
         }
 
         :host([data-icon-only]) {
@@ -1452,12 +1459,9 @@ class NodaliaInsigniaCard extends HTMLElement {
           min-height: 0;
           isolation: isolate;
           position: relative;
-          overflow: hidden;
-          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
-        }
-
-        .insignia-card.insignia-card--icon-only {
+          /* visible: overflow:hidden clipped card box-shadow and rounded bottom in horizontal scroll headers */
           overflow: visible;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
 
         .insignia-card--icon-only {

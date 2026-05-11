@@ -1,8 +1,8 @@
 export default {
-  "pkgVersion": "1.0.0-alpha.92",
-  "contentSha256_12": "b8a759194379",
+  "pkgVersion": "1.0.0-alpha.93",
+  "contentSha256_12": "b492406b117b",
   "file": "nodalia-cards.bundle.js"
 };
-export const pkgVersion = "1.0.0-alpha.92";
-export const contentSha256_12 = "b8a759194379";
+export const pkgVersion = "1.0.0-alpha.93";
+export const contentSha256_12 = "b492406b117b";
 export const file = "nodalia-cards.bundle.js";
