@@ -10,6 +10,15 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.90] - 2026-05-11
+
+Ninetieth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.90`** (tag **`v1.0.0-alpha.90`** optional).
+
+- **Editor catalog i18n:** full locale files for **`de`**, **`fr`**, **`it`**, **`nl`**, **`pt`**, **`ru`**, **`el`**, and **`ro`** under **`i18n/editor/`**, matching the editor catalog languages embedded in **`nodalia-editor-ui.js`** (same keys as **`en.json`**; machine-translated from English where no hand-maintained file existed).
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.90`**.
+
+---
+
 ## [1.0.0-alpha.89] - 2026-05-11
 
 Eighty-ninth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.89`** (tag **`v1.0.0-alpha.89`** optional).

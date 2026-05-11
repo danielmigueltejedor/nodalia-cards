@@ -289,7 +289,7 @@ test("active icon animations are configurable across animated device cards", () 
     assert.match(source, classPattern);
     assert.match(source, keyframePattern);
     assert.match(source, /prefers-reduced-motion: reduce/);
-    assert.match(source, /"Animar icono/);
+    assert.match(source, /"Animar icono|ed\.weather\.icon_animation_condition/);
   });
   assert.match(humidifier, /deviceClass === "dehumidifier"[\s\S]*this\._isOn\(state\) \? "mdi:air-humidifier" : "mdi:air-humidifier-off"/);
   assert.doesNotMatch(advanceVacuum, /class="advance-vacuum-card__control is-primary \$\{animations\.enabled && animations\.iconAnimation && this\._isCleaning\(state\)/);
@@ -455,9 +455,9 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /editor-section__toggle-button/);
   assert.match(source, /_editorLabel\(s\)/);
   assert.match(source, /this\._editorLabel\(label\)/);
-  assert.match(source, /Conexiones inteligentes/);
-  assert.match(source, /Sincronización y móvil/);
-  assert.match(source, /Añadir notificación/);
+  assert.match(source, /Conexiones inteligentes|ed\.notifications\.connections_section_title/);
+  assert.match(source, /Sincronización y móvil|ed\.notifications\.sync_section_title/);
+  assert.match(source, /Añadir notificación|ed\.notifications\.add_notification/);
   assert.match(source, /type="color"/);
   assert.match(source, /notifications-card--animated/);
   assert.match(source, /notifications-card--stack-\$\{stackTransition\}/);

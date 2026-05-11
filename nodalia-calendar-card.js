@@ -4483,10 +4483,8 @@ class NodaliaCalendarCardEditor extends HTMLElement {
   }
 
   _renderTintAutoToggle(checked) {
-    const tTitle = this._editorLabel("Tintado automatico");
-    const tHint = this._editorLabel(
-      "Usa el color primario del tema en la tarjeta. Desactiva para definir un color de acento en Estilos.",
-    );
+    const tTitle = this._editorLabel("ed.calendar.tint_auto_title");
+    const tHint = this._editorLabel("ed.calendar.tint_auto_hint");
     const aria = escapeHtml(`${tTitle}. ${tHint}`);
     return `
       <div class="editor-tint-block">
@@ -4521,7 +4519,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
             .map(
               o =>
                 `<option value="${escapeHtml(String(o.value))}" ${String(o.value) === current ? "selected" : ""}>${escapeHtml(
-                  String(o.label),
+                  typeof o.label === "string" && o.label ? this._editorLabel(o.label) : String(o.label ?? ""),
                 )}</option>`,
             )
             .join("")}
@@ -4612,7 +4610,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     return `
       <div class="series-editor-card">
         <div class="series-editor-card__header">
-          <div class="series-editor-card__title">${escapeHtml(this._editorLabel("Calendario"))} ${index + 1}</div>
+          <div class="series-editor-card__title">${escapeHtml(this._editorLabel("ed.calendar.row_title"))} ${index + 1}</div>
           <div class="series-editor-card__actions">
             <button type="button" data-editor-action="move-calendar-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>${escapeHtml(this._editorLabel("Subir"))}</button>
             <button type="button" data-editor-action="move-calendar-down" data-index="${index}" ${index === total - 1 ? "disabled" : ""}>${escapeHtml(this._editorLabel("Bajar"))}</button>
@@ -4623,7 +4621,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
           <div class="series-editor-subgroup__title">${escapeHtml(this._editorLabel("Entidad"))}</div>
           <div class="editor-grid editor-grid--stacked">
             <div class="editor-field editor-field--full">
-              <span>${escapeHtml(this._editorLabel("Calendario de Home Assistant"))}</span>
+              <span>${escapeHtml(this._editorLabel("ed.calendar.ha_calendar_entity"))}</span>
               <div
                 class="editor-control-host"
                 data-mounted-control="calendar-entity"
@@ -4633,11 +4631,11 @@ class NodaliaCalendarCardEditor extends HTMLElement {
                 data-placeholder="calendar.cumpleanos"
               ></div>
             </div>
-            ${this._renderTextField("Etiqueta visible", `calendars.${index}.label`, label, {
+            ${this._renderTextField("ed.calendar.visible_label", `calendars.${index}.label`, label, {
               fullWidth: true,
-              placeholder: this._editorLabel("Ej. Familia"),
+              placeholder: this._editorLabel("ed.calendar.label_placeholder"),
             })}
-            ${this._renderColorField("Tintado en la tarjeta", `calendars.${index}.tint`, tint, {
+            ${this._renderColorField("ed.calendar.row_card_tint", `calendars.${index}.tint`, tint, {
               fullWidth: true,
               fallbackValue: "#71c0ff",
             })}
@@ -5063,7 +5061,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Título visible, icono, rango temporal, refresco de datos y opciones de eventos nativos."))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.calendar.general_section_hint"))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Título", "title", config.title, { fullWidth: true, placeholder: "Calendario" })}
@@ -5071,19 +5069,19 @@ class NodaliaCalendarCardEditor extends HTMLElement {
               fullWidth: true,
               placeholder: "mdi:calendar-month",
             })}
-            ${this._renderSelectField("Rango visible", "time_range", config.time_range || DEFAULT_CONFIG.time_range, {
+            ${this._renderSelectField("ed.calendar.visible_range", "time_range", config.time_range || DEFAULT_CONFIG.time_range, {
               fullWidth: true,
               options: [
-                { value: "3d", label: this._editorLabel("3 días") },
-                { value: "1w", label: this._editorLabel("1 semana") },
-                { value: "2w", label: this._editorLabel("2 semanas") },
-                { value: "1m", label: this._editorLabel("1 mes") },
+                { value: "3d", label: this._editorLabel("ed.calendar.period_3d") },
+                { value: "1w", label: this._editorLabel("ed.calendar.period_1w") },
+                { value: "2w", label: this._editorLabel("ed.calendar.period_2w") },
+                { value: "1m", label: this._editorLabel("ed.calendar.period_1m") },
               ],
             })}
-            ${this._renderTextField("Eventos visibles antes de scroll", "max_visible_events", config.max_visible_events, { type: "number" })}
-            ${this._renderTextField("Refresco (segundos)", "refresh_interval", config.refresh_interval, { type: "number" })}
+            ${this._renderTextField("ed.calendar.max_events_before_scroll", "max_visible_events", config.max_visible_events, { type: "number" })}
+            ${this._renderTextField("ed.calendar.refresh_seconds", "refresh_interval", config.refresh_interval, { type: "number" })}
             <div class="editor-field editor-field--full">
-              <span>${escapeHtml(this._editorLabel("Entidad weather (previsión diaria, opcional)"))}</span>
+              <span>${escapeHtml(this._editorLabel("ed.calendar.weather_entity_label"))}</span>
               <div
                 class="editor-control-host"
                 data-mounted-control="weather-entity"
@@ -5092,22 +5090,17 @@ class NodaliaCalendarCardEditor extends HTMLElement {
                 data-domains="weather"
                 data-placeholder="weather.casa"
               ></div>
-              <span class="editor-field__hint">${escapeHtml(
-                this._editorLabel(
-                  "Si se define, en la fila de cada dia se muestra icono + minima/maxima cuando haya forecast para esa fecha.",
-                ),
-              )}</span>
+              <span class="editor-field__hint">${escapeHtml(this._editorLabel("ed.calendar.weather_row_explainer"))}</span>
             </div>
             ${this._renderTintAutoToggle(config.tint_auto !== false)}
-            ${this._renderCheckboxField("Permitir borrar eventos nativos", "allow_delete", config.allow_delete !== false)}
-            ${this._renderTextField("Webhook evento nativo (ID, opcional)", "native_event_webhook", config.native_event_webhook || "", {
+            ${this._renderCheckboxField("ed.calendar.allow_delete_native", "allow_delete", config.allow_delete !== false)}
+            ${this._renderTextField("ed.calendar.native_webhook_id", "native_event_webhook", config.native_event_webhook || "", {
               fullWidth: true,
               placeholder: "nodalia_calendar_create_event",
-              hint:
-                "Si se define, crear evento nativo no recurrente usa webhook en lugar de calendar.create_event directo. En la automatizacion usa trigger.json.service_data o ramas por event_kind; no rellenes campos vacios.",
+              hint: "ed.calendar.native_webhook_hint",
             })}
             ${this._renderCheckboxField(
-              "Permitir webhooks para cualquier usuario",
+              "ed.calendar.allow_webhooks_non_admin",
               "security.allow_webhooks_for_non_admin",
               config.security?.allow_webhooks_for_non_admin !== false,
             )}
@@ -5116,20 +5109,20 @@ class NodaliaCalendarCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Calendarios"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Anade una o varias entidades calendar y reordena el orden en que se combinan los eventos."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.calendar.calendars_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.calendar.calendars_section_hint"))}</div>
           </div>
           <div class="series-editor-list">
             ${
               calendars.length
                 ? calendars.map((entityId, index) => this._renderCalendarCard(entityId, index, calendars.length)).join("")
-                : `<div class="empty-note">${escapeHtml(this._editorLabel("Todavía no hay calendarios configurados."))}</div>`
+                : `<div class="empty-note">${escapeHtml(this._editorLabel("ed.calendar.no_calendars_yet"))}</div>`
             }
           </div>
           <div class="editor-actions">
             <button type="button" class="editor-section__toggle-button" data-editor-action="add-calendar">
               <ha-icon icon="mdi:plus"></ha-icon>
-              <span>${escapeHtml(this._editorLabel("Añadir calendario"))}</span>
+              <span>${escapeHtml(this._editorLabel("ed.calendar.add_calendar"))}</span>
             </button>
           </div>
         </section>
@@ -5137,7 +5130,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta háptica"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Vibración/feedback táctil en acciones como abrir el calendario, borrar o crear eventos."))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.calendar.haptics_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -5146,7 +5139,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
                 aria-expanded="${this._showHapticsSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showHapticsSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showHapticsSection ? this._editorLabel("Ocultar ajustes hápticos") : this._editorLabel("Mostrar ajustes hápticos"))}</span>
+                <span>${escapeHtml(this._showHapticsSection ? this._editorLabel("ed.calendar.hide_haptic_settings") : this._editorLabel("ed.calendar.show_haptic_settings"))}</span>
               </button>
             </div>
           </div>
@@ -5159,13 +5152,13 @@ class NodaliaCalendarCardEditor extends HTMLElement {
                   ${this._renderSelectField("Intensidad", "haptics.style", hapticStyle, {
                     fullWidth: true,
                     options: [
-                      { value: "selection", label: "Selección" },
-                      { value: "light", label: "Ligera" },
-                      { value: "medium", label: "Media" },
-                      { value: "heavy", label: "Fuerte" },
-                      { value: "success", label: "Éxito" },
-                      { value: "warning", label: "Aviso" },
-                      { value: "failure", label: "Error" },
+                      { value: "selection", label: "ed.calendar.haptic_selection" },
+                      { value: "light", label: "ed.calendar.haptic_light" },
+                      { value: "medium", label: "ed.calendar.haptic_medium" },
+                      { value: "heavy", label: "ed.calendar.haptic_heavy" },
+                      { value: "success", label: "ed.calendar.haptic_success" },
+                      { value: "warning", label: "ed.calendar.haptic_warning" },
+                      { value: "failure", label: "ed.calendar.haptic_failure" },
                     ],
                   })}
                 </div>
@@ -5177,7 +5170,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave del contenido de la tarjeta al cargar."))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.calendar.animation_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -5186,7 +5179,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("ed.calendar.hide_animation_settings") : this._editorLabel("ed.calendar.show_animation_settings"))}</span>
               </button>
             </div>
           </div>
@@ -5195,7 +5188,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
               ? `
                 <div class="editor-grid">
                   ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
-                  ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", animations.content_duration, {
+                  ${this._renderTextField("ed.calendar.content_entrance_ms", "animations.content_duration", animations.content_duration, {
                     type: "number",
                   })}
                 </div>
@@ -5207,7 +5200,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales de la tarjeta, tipografía y burbuja de icono."))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.calendar.styles_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -5216,7 +5209,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("ed.calendar.hide_style_settings") : this._editorLabel("ed.calendar.show_style_settings"))}</span>
               </button>
             </div>
           </div>
@@ -5251,7 +5244,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
                     fallbackValue: DEFAULT_CONFIG.styles.icon.off_color,
                   })}
                   ${this._renderTextField("Icono burbuja tamaño", "styles.icon.size", config.styles?.icon?.size)}
-                  ${this._renderColorField("Color de acento (si el tintado automático está desactivado)", "styles.tint.color", config.styles?.tint?.color, {
+                  ${this._renderColorField("ed.calendar.accent_if_tint_off", "styles.tint.color", config.styles?.tint?.color, {
                     fullWidth: true,
                     fallbackValue: DEFAULT_CONFIG.styles.tint.color,
                   })}

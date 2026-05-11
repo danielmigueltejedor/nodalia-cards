@@ -4073,7 +4073,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
   _renderColorField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("Color personalizado");
+    const tColorCustom = this._editorLabel("ed.weather.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -4202,7 +4202,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
+      emptyOption.textContent = placeholder || this._editorLabel("ed.weather.select_entity");
       control.appendChild(emptyOption);
       this._getEntityOptions(field, domains).forEach(option => {
         const optionElement = document.createElement("option");
@@ -4500,109 +4500,109 @@ class NodaliaWeatherCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad meteorologica principal, nombre visible, icono y contenido mostrado."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.general_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.weather.general_section_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderEntityPickerField("Entidad principal", "entity", config.entity, {
+            ${this._renderEntityPickerField("ed.weather.entity_main", "entity", config.entity, {
               placeholder: "weather.casa",
               fullWidth: true,
             })}
-            ${this._renderIconPickerField("Icono", "icon", config.icon, {
+            ${this._renderIconPickerField("ed.weather.icon", "icon", config.icon, {
               placeholder: "mdi:weather-partly-cloudy",
               fullWidth: true,
             })}
-            ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Tiempo",
+            ${this._renderTextField("ed.weather.name", "name", config.name, {
+              placeholder: this._editorLabel("ed.weather.name_placeholder"),
               fullWidth: true,
             })}
             ${this._renderSelectField(
-              "Acción al tocar",
+              "ed.weather.tap_action",
               "tap_action",
               tapAction,
               [
-                { value: "more-info", label: "Mas informacion" },
-                { value: "none", label: "Sin accion" },
+                { value: "more-info", label: "ed.weather.tap_more_info" },
+                { value: "none", label: "ed.weather.tap_none" },
               ],
               { fullWidth: true },
             )}
             ${this._renderSelectField(
-              "Sistema de unidades",
+              "ed.weather.unit_system",
               "unit_system",
               normalizeUnitSystem(config.unit_system),
               [
-                { value: "auto", label: "Automático (Home Assistant)" },
-                { value: "metric", label: "Europeo (métrico)" },
-                { value: "imperial", label: "Estadounidense (imperial)" },
+                { value: "auto", label: "ed.weather.unit_auto_ha" },
+                { value: "metric", label: "ed.weather.unit_metric" },
+                { value: "imperial", label: "ed.weather.unit_imperial" },
               ],
               { fullWidth: true },
             )}
             ${this._renderSelectField(
-              "Unidad de temperatura",
+              "ed.weather.temperature_unit",
               "temperature_unit",
               normalizeTemperatureUnitPreference(config.temperature_unit),
               [
-                { value: "auto", label: "Automática" },
+                { value: "auto", label: "ed.weather.unit_auto_short" },
                 { value: "c", label: "°C" },
                 { value: "f", label: "°F" },
               ],
             )}
             ${this._renderSelectField(
-              "Unidad de viento",
+              "ed.weather.wind_speed_unit",
               "wind_speed_unit",
               normalizeWindUnitPreference(config.wind_speed_unit),
               [
-                { value: "auto", label: "Automática" },
-                { value: "kmh", label: "km/h" },
-                { value: "mph", label: "mph" },
+                { value: "auto", label: "ed.weather.unit_auto_short" },
+                { value: "kmh", label: "ed.weather.wind_kmh" },
+                { value: "mph", label: "ed.weather.wind_mph" },
               ],
             )}
-            ${this._renderCheckboxField("Mostrar condicion", "show_condition", config.show_condition !== false)}
-            ${this._renderCheckboxField("Mostrar chip humedad", "show_humidity_chip", config.show_humidity_chip !== false)}
-            ${this._renderCheckboxField("Mostrar chip viento", "show_wind_chip", config.show_wind_chip !== false)}
-            ${this._renderCheckboxField("Mostrar chip presion", "show_pressure_chip", config.show_pressure_chip === true)}
-            ${this._renderCheckboxField("Mostrar chip Meteoalarm", "show_meteoalarm_chip", config.show_meteoalarm_chip === true)}
-            ${config.show_meteoalarm_chip === true ? this._renderEntityPickerField("Entidad Meteoalarm", "meteoalarm_entity", config.meteoalarm_entity, {
+            ${this._renderCheckboxField("ed.weather.show_condition", "show_condition", config.show_condition !== false)}
+            ${this._renderCheckboxField("ed.weather.show_humidity_chip", "show_humidity_chip", config.show_humidity_chip !== false)}
+            ${this._renderCheckboxField("ed.weather.show_wind_chip", "show_wind_chip", config.show_wind_chip !== false)}
+            ${this._renderCheckboxField("ed.weather.show_pressure_chip", "show_pressure_chip", config.show_pressure_chip === true)}
+            ${this._renderCheckboxField("ed.weather.show_meteoalarm_chip", "show_meteoalarm_chip", config.show_meteoalarm_chip === true)}
+            ${config.show_meteoalarm_chip === true ? this._renderEntityPickerField("ed.weather.meteoalarm_entity", "meteoalarm_entity", config.meteoalarm_entity, {
               domains: ["binary_sensor"],
               placeholder: "binary_sensor.meteoalarm",
               fullWidth: true,
             }) : ""}
-            ${this._renderCheckboxField("Mostrar prediccion ampliada", "show_forecast_details", config.show_forecast_details === true)}
+            ${this._renderCheckboxField("ed.weather.show_forecast_details", "show_forecast_details", config.show_forecast_details === true)}
             ${config.show_forecast_details === true ? `
-              ${this._renderCheckboxField("Mostrar selector de vista", "show_forecast_toggle", config.show_forecast_toggle !== false)}
+              ${this._renderCheckboxField("ed.weather.show_forecast_toggle", "show_forecast_toggle", config.show_forecast_toggle !== false)}
               ${this._renderSelectField(
-                "Vista visual inicial",
+                "ed.weather.forecast_view_visual",
                 "forecast_view",
                 normalizeForecastView(config.forecast_view),
                 [
-                  { value: "cards", label: "Tarjetas" },
-                  { value: "chart", label: "Grafico" },
+                  { value: "cards", label: "ed.weather.forecast_view_cards" },
+                  { value: "chart", label: "ed.weather.forecast_view_chart" },
                 ],
               )}
               ${this._renderSelectField(
-                "Vista inicial",
+                "ed.weather.forecast_type",
                 "forecast_type",
                 normalizeForecastType(config.forecast_type),
                 [
-                  { value: "hourly", label: "Por horas" },
-                  { value: "daily", label: "Semanal" },
+                  { value: "hourly", label: "ed.weather.forecast_hourly" },
+                  { value: "daily", label: "ed.weather.forecast_daily" },
                 ],
               )}
-              ${this._renderCheckboxField("Mostrar etiquetas del grafico", "forecast_chart_labels", config.forecast_chart_labels === true)}
-              ${this._renderCheckboxField("Grafico en color", "forecast_chart_color_enabled", config.forecast_chart_color_enabled === true)}
+              ${this._renderCheckboxField("ed.weather.forecast_chart_labels", "forecast_chart_labels", config.forecast_chart_labels === true)}
+              ${this._renderCheckboxField("ed.weather.forecast_chart_color", "forecast_chart_color_enabled", config.forecast_chart_color_enabled === true)}
               ${config.forecast_chart_color_enabled === true ? this._renderSelectField(
-                "Color del grafico",
+                "ed.weather.forecast_chart_color_mode",
                 "forecast_chart_color_mode",
                 normalizeForecastChartColorMode(config.forecast_chart_color_mode),
                 [
-                  { value: "temperature", label: "Por temperatura" },
-                  { value: "condition", label: "Por condicion" },
+                  { value: "temperature", label: "ed.weather.chart_color_temperature" },
+                  { value: "condition", label: "ed.weather.chart_color_condition" },
                 ],
               ) : ""}
-              ${this._renderTextField("Horas visibles", "forecast_slots_hourly", config.forecast_slots_hourly, {
+              ${this._renderTextField("ed.weather.forecast_slots_hourly", "forecast_slots_hourly", config.forecast_slots_hourly, {
                 type: "number",
               })}
-              ${this._renderTextField("Dias visibles", "forecast_slots_daily", config.forecast_slots_daily, {
+              ${this._renderTextField("ed.weather.forecast_slots_daily", "forecast_slots_daily", config.forecast_slots_daily, {
                 type: "number",
               })}
             ` : ""}
@@ -4611,8 +4611,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave del contenido y pequeno rebote al pulsar la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.animations_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.weather.animations_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4621,7 +4621,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("ed.weather.hide_animation_settings") : this._editorLabel("ed.weather.show_animation_settings"))}</span>
               </button>
             </div>
           </div>
@@ -4629,12 +4629,12 @@ class NodaliaWeatherCardEditor extends HTMLElement {
             this._showAnimationSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
-                  ${this._renderCheckboxField("Animar icono según condición", "animations.icon_animation", animations.icon_animation !== false)}
-                  ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", animations.content_duration, {
+                  ${this._renderCheckboxField("ed.weather.enable_animations", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderCheckboxField("ed.weather.icon_animation_condition", "animations.icon_animation", animations.icon_animation !== false)}
+                  ${this._renderTextField("ed.weather.content_entrance_ms", "animations.content_duration", animations.content_duration, {
                     type: "number",
                   })}
-                  ${this._renderTextField("Rebote pulsacion (ms)", "animations.button_bounce_duration", animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.weather.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, {
                     type: "number",
                   })}
                 </div>
@@ -4645,24 +4645,24 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta haptica"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional al tocar la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.haptics_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.weather.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Usar vibracion de respaldo", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.weather.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.weather.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "Estilo",
+              "ed.weather.haptic_style",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Seleccion" },
-                { value: "light", label: "Ligero" },
-                { value: "medium", label: "Medio" },
-                { value: "heavy", label: "Intenso" },
-                { value: "success", label: "Exito" },
-                { value: "warning", label: "Aviso" },
-                { value: "failure", label: "Fallo" },
+                { value: "selection", label: "ed.weather.haptic_selection" },
+                { value: "light", label: "ed.weather.haptic_light" },
+                { value: "medium", label: "ed.weather.haptic_medium" },
+                { value: "heavy", label: "ed.weather.haptic_heavy" },
+                { value: "success", label: "ed.weather.haptic_success" },
+                { value: "warning", label: "ed.weather.haptic_warning" },
+                { value: "failure", label: "ed.weather.haptic_failure" },
               ],
             )}
           </div>
@@ -4670,8 +4670,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.styles_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.weather.styles_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4680,7 +4680,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("ed.weather.hide_style_settings") : this._editorLabel("ed.weather.show_style_settings"))}</span>
               </button>
             </div>
           </div>
@@ -4688,25 +4688,25 @@ class NodaliaWeatherCardEditor extends HTMLElement {
             this._showStyleSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderColorField("Fondo tarjeta", "styles.card.background", config.styles.card.background)}
-                  ${this._renderTextField("Borde tarjeta", "styles.card.border", config.styles.card.border)}
-                  ${this._renderTextField("Radio borde", "styles.card.border_radius", config.styles.card.border_radius)}
-                  ${this._renderTextField("Sombra", "styles.card.box_shadow", config.styles.card.box_shadow)}
-                  ${this._renderTextField("Padding interior", "styles.card.padding", config.styles.card.padding)}
-                  ${this._renderTextField("Separacion interna", "styles.card.gap", config.styles.card.gap)}
-                  ${this._renderTextField("Tamano icono", "styles.icon.size", config.styles.icon.size)}
-                  ${this._renderColorField("Fondo burbuja icono", "styles.icon.background", config.styles.icon.background, {
+                  ${this._renderColorField("ed.weather.card_background", "styles.card.background", config.styles.card.background)}
+                  ${this._renderTextField("ed.weather.card_border", "styles.card.border", config.styles.card.border)}
+                  ${this._renderTextField("ed.weather.border_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${this._renderTextField("ed.weather.box_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
+                  ${this._renderTextField("ed.weather.padding", "styles.card.padding", config.styles.card.padding)}
+                  ${this._renderTextField("ed.weather.gap", "styles.card.gap", config.styles.card.gap)}
+                  ${this._renderTextField("ed.weather.icon_size", "styles.icon.size", config.styles.icon.size)}
+                  ${this._renderColorField("ed.weather.icon_bubble_background", "styles.icon.background", config.styles.icon.background, {
                     fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
                   })}
-                  ${this._renderColorField("Color icono", "styles.icon.color", config.styles.icon.color, {
+                  ${this._renderColorField("ed.weather.icon_color", "styles.icon.color", config.styles.icon.color, {
                     fallbackValue: "var(--primary-text-color)",
                   })}
-                  ${this._renderTextField("Alto chips", "styles.chip_height", config.styles.chip_height)}
-                  ${this._renderTextField("Texto chips", "styles.chip_font_size", config.styles.chip_font_size)}
-                  ${this._renderTextField("Padding chips", "styles.chip_padding", config.styles.chip_padding)}
-                  ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-                  ${this._renderTextField("Tamano temperatura", "styles.temperature_size", config.styles.temperature_size)}
-                  ${this._renderTextField("Tamano condicion", "styles.condition_size", config.styles.condition_size)}
+                  ${this._renderTextField("ed.weather.chip_height", "styles.chip_height", config.styles.chip_height)}
+                  ${this._renderTextField("ed.weather.chip_font_size", "styles.chip_font_size", config.styles.chip_font_size)}
+                  ${this._renderTextField("ed.weather.chip_padding", "styles.chip_padding", config.styles.chip_padding)}
+                  ${this._renderTextField("ed.weather.title_size", "styles.title_size", config.styles.title_size)}
+                  ${this._renderTextField("ed.weather.temperature_size", "styles.temperature_size", config.styles.temperature_size)}
+                  ${this._renderTextField("ed.weather.condition_size", "styles.condition_size", config.styles.condition_size)}
                 </div>
               `
               : ""

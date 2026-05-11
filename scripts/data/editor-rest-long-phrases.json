@@ -243,5 +243,82 @@
     "el": "Προσαρμόστε την εμφάνιση Nodalia για την κάρτα κλίματος, τον δίσκο και τα στοιχεία ελέγχου.",
     "zh": "自定义气候卡片、旋钮与控件的 Nodalia 外观。",
     "ro": "Personalizați aspectul Nodalia pentru cardul climă, disc și comenzi."
+  },
+  "Uses the theme primary color on the card. Turn off to set an accent color under Styles.": {
+    "de": "Verwendet die Primärfarbe des Themes auf der Karte. Deaktivieren, um unter Stilen eine Akzentfarbe festzulegen.",
+    "fr": "Utilise la couleur primaire du thème sur la carte. Désactivez pour définir une couleur d’accent dans Styles.",
+    "it": "Usa il colore primario del tema sulla scheda. Disattiva per impostare un colore di accento in Stili.",
+    "nl": "Gebruikt de primaire themakleur op de kaart. Uit om een accentkleur in Stijlen in te stellen.",
+    "pt": "Usa a cor primária do tema no cartão. Desative para definir uma cor de destaque em Estilos.",
+    "ru": "Использует основной цвет темы на карточке. Отключите, чтобы задать акцентный цвет в разделе «Стили».",
+    "el": "Χρησιμοποιεί το κύριο χρώμα του θέματος στην κάρτα. Απενεργοποιήστε για να ορίσετε χρώμα τονισμού στα Στυλ.",
+    "zh": "使用主题的强调主色作为卡片色调。关闭后可在「样式」中自定义强调色。",
+    "ro": "Folosește culoarea primară a temei pe card. Dezactivează pentru a seta o culoare de accent la Stiluri."
+  },
+  "Visible title, icon, time range, data refresh and native event options.": {
+    "de": "Sichtbarer Titel, Symbol, Zeitspanne, Datenaktualisierung und Optionen für native Ereignisse.",
+    "fr": "Titre visible, icône, plage temporelle, rafraîchissement des données et options d’événements natifs.",
+    "it": "Titolo visibile, icona, intervallo temporale, aggiornamento dati e opzioni eventi nativi.",
+    "nl": "Zichtbare titel, pictogram, tijdsbereik, gegevensverversing en opties voor native gebeurtenissen.",
+    "pt": "Título visível, ícone, intervalo de tempo, atualização de dados e opções de eventos nativos.",
+    "ru": "Видимый заголовок, значок, диапазон времени, обновление данных и параметры нативных событий.",
+    "el": "Ορατός τίτλος, εικονίδιο, χρονικό εύρος, ανανέωση δεδομένων και επιλογές εγγενών συμβάντων.",
+    "zh": "可见标题、图标、时间范围、数据刷新以及原生事件相关选项。",
+    "ro": "Titlu vizibil, pictogramă, interval temporal, reîmprospătare date și opțiuni pentru evenimente native."
+  },
+  "If set, each day row shows icon + min/max when a forecast exists for that date.": {
+    "de": "Wenn gesetzt, zeigt jede Tageszeile Symbol + Min/Max, sofern eine Vorhersage für dieses Datum existiert.",
+    "fr": "Si défini, chaque ligne de jour affiche l’icône + min/max lorsqu’une prévision existe pour cette date.",
+    "it": "Se impostato, ogni riga del giorno mostra icona + min/max quando esiste una previsione per quella data.",
+    "nl": "Indien ingesteld toont elke dagrij pictogram + min/max wanneer er een verwachting voor die datum is.",
+    "pt": "Se definido, cada linha do dia mostra ícone + mín/máx quando existir previsão para essa data.",
+    "ru": "Если задано, в строке каждого дня показываются значок и мин/макс при наличии прогноза на эту дату.",
+    "el": "Αν οριστεί, κάθε γραμμή ημέρας εμφανίζει εικονίδιο + ελάχ/μέγ όταν υπάρχει πρόγνωση για αυτή την ημερομηνία.",
+    "zh": "若填写，则当某日有预报时，在该日行显示图标以及最低/最高气温。",
+    "ro": "Dacă este setat, fiecare rând de zi arată pictogramă + min/max când există prognoză pentru acea dată."
+  },
+  "If set, creating a non-recurring native event uses the webhook instead of calling calendar.create_event directly. In the automation use trigger.json.service_data or branches by event_kind; do not fill empty fields.": {
+    "de": "Wenn gesetzt, nutzt das Erstellen eines nicht wiederkehrenden nativen Ereignisses den Webhook statt calendar.create_event. In der Automation trigger.json.service_data oder Verzweigungen nach event_kind verwenden; leere Felder nicht ausfüllen.",
+    "fr": "Si défini, la création d’un événement natif non récurrent utilise le webhook plutôt que calendar.create_event. Dans l’automatisation, utilisez trigger.json.service_data ou des branches par event_kind ; ne remplissez pas les champs vides.",
+    "it": "Se impostato, la creazione di un evento nativo non ricorrente usa il webhook invece di calendar.create_event. Nell’automazione usa trigger.json.service_data o rami per event_kind; non compilare campi vuoti.",
+    "nl": "Indien ingesteld gebruikt het aanmaken van een niet-herhalend native gebeurtenis de webhook i.p.v. calendar.create_event. Gebruik in de automatisering trigger.json.service_data of vertakkingen op event_kind; vul geen lege velden in.",
+    "pt": "Se definido, criar evento nativo não recorrente usa webhook em vez de calendar.create_event direto. Na automação use trigger.json.service_data ou ramos por event_kind; não preencha campos vazios.",
+    "ru": "Если задано, создание нативного нерекуррентного события идёт через вебхук, а не напрямую через calendar.create_event. В автоматизации используйте trigger.json.service_data или ветвление по event_kind; не заполняйте пустые поля.",
+    "el": "Αν οριστεί, η δημιουργία μη επαναλαμβανόμενου εγγενούς συμβάντος χρησιμοποιεί webhook αντί για άμεσο calendar.create_event. Στην αυτοματοποίηση χρησιμοποιήστε trigger.json.service_data ή κλαδώσεις ανά event_kind· μην συμπληρώνετε κενά πεδία.",
+    "zh": "若填写，则创建非重复原生事件会走 Webhook，而不是直接调用 calendar.create_event。自动化中请使用 trigger.json.service_data 或按 event_kind 分支；不要填写空字段。",
+    "ro": "Dacă este setat, crearea unui eveniment nativ nerecurent folosește webhook-ul în loc de calendar.create_event direct. În automatizare folosiți trigger.json.service_data sau ramuri după event_kind; nu completați câmpuri goale."
+  },
+  "Add one or more calendar entities and reorder how events are merged.": {
+    "de": "Fügen Sie eine oder mehrere Kalender-Entitäten hinzu und ordnen Sie die Zusammenführung der Ereignisse neu.",
+    "fr": "Ajoutez une ou plusieurs entités calendrier et réordonnez la fusion des événements.",
+    "it": "Aggiungi una o più entità calendario e riordina come vengono uniti gli eventi.",
+    "nl": "Voeg een of meer kalenderentiteiten toe en wijzig de volgorde waarin gebeurtenissen worden samengevoegd.",
+    "pt": "Adicione uma ou mais entidades de calendário e reordene como os eventos são combinados.",
+    "ru": "Добавьте одну или несколько сущностей календаря и измените порядок объединения событий.",
+    "el": "Προσθέστε μία ή περισσότερες οντότητες ημερολογίου και αναδιατάξτε πώς συγχωνεύονται τα συμβάντα.",
+    "zh": "添加一个或多个日历实体，并调整事件合并顺序。",
+    "ro": "Adăugați una sau mai multe entități calendar și reordonați modul în care se îmbină evenimentele."
+  },
+  "Soft entrance of the card content on load.": {
+    "de": "Sanfter Einblendeffekt des Karteninhalts beim Laden.",
+    "fr": "Entrée en douceur du contenu de la carte au chargement.",
+    "it": "Entrata morbida del contenuto della scheda al caricamento.",
+    "nl": "Zachte binnenkomst van de kaartinhoud bij laden.",
+    "pt": "Entrada suave do conteúdo do cartão ao carregar.",
+    "ru": "Плавное появление содержимого карточки при загрузке.",
+    "el": "Απαλή είσοδος περιεχομένου κάρτας κατά τη φόρτωση.",
+    "zh": "加载时卡片内容的柔和入场动画。",
+    "ro": "Intrare lină a conținutului cardului la încărcare."
+  },
+  "Visual settings for the card, typography and icon bubble.": {
+    "de": "Visuelle Einstellungen der Karte, Typografie und Icon-Blase.",
+    "fr": "Réglages visuels de la carte, typographie et bulle d’icône.",
+    "it": "Impostazioni visive della scheda, tipografia e bolla dell’icona.",
+    "nl": "Visuele instellingen van de kaart, typografie en pictogrambel.",
+    "pt": "Definições visuais do cartão, tipografia e bolha do ícone.",
+    "ru": "Визуальные настройки карточки, типографика и «пузырь» значка.",
+    "el": "Οπτικές ρυθμίσεις κάρτας, τυπογραφία και φυσαλίδα εικονιδίου.",
+    "zh": "卡片外观、排版与图标气泡等视觉设置。",
+    "ro": "Setări vizuale pentru card, tipografie și balon pictogramă."
   }
 }

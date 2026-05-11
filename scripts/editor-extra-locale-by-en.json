@@ -856,5 +856,38 @@
     "de": "Zonen-Abzeichen anzeigen",
     "it": "Mostra badge zona",
     "nl": "Zone-badge tonen"
+  },
+  "Move up": {
+    "de": "Nach oben",
+    "fr": "Monter",
+    "it": "Sposta su",
+    "nl": "Omhoog",
+    "pt": "Mover para cima",
+    "ru": "Выше",
+    "el": "Πάνω",
+    "zh": "上移",
+    "ro": "Sus"
+  },
+  "Move down": {
+    "de": "Nach unten",
+    "fr": "Descendre",
+    "it": "Sposta giù",
+    "nl": "Omlaag",
+    "pt": "Mover para baixo",
+    "ru": "Ниже",
+    "el": "Κάτω",
+    "zh": "下移",
+    "ro": "Jos"
+  },
+  "Delete": {
+    "de": "Löschen",
+    "fr": "Supprimer",
+    "it": "Elimina",
+    "nl": "Verwijderen",
+    "pt": "Eliminar",
+    "ru": "Удалить",
+    "el": "Διαγραφή",
+    "zh": "删除",
+    "ro": "Șterge"
   }
 }

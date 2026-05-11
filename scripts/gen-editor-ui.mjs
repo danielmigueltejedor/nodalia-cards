@@ -5,6 +5,29 @@ import { SPANISH_TO_ENGLISH_EXACT } from "./spanish-nav-exact.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
+
+/** Per-locale flat maps for editor keys `ed.<card>.<slug>` (see i18n/editor/en.json). Missing locales fall back to English. */
+const EDITOR_CATALOG_LANGS = ["en", "es", "de", "fr", "it", "nl", "pt", "ru", "el", "zh", "ro"];
+
+function loadEditorCatalog() {
+  const catalogDir = path.join(root, "i18n", "editor");
+  const basePath = path.join(catalogDir, "en.json");
+  const empty = () => Object.fromEntries(EDITOR_CATALOG_LANGS.map(L => [L, {}]));
+  if (!fs.existsSync(basePath)) {
+    return empty();
+  }
+  const baseEn = JSON.parse(fs.readFileSync(basePath, "utf8"));
+  const out = {};
+  for (const L of EDITOR_CATALOG_LANGS) {
+    const p = path.join(catalogDir, `${L}.json`);
+    const overlay = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, "utf8")) : {};
+    out[L] = { ...baseEn, ...overlay };
+  }
+  return out;
+}
+
+const EDITOR_CATALOG = loadEditorCatalog();
+
 let keys = JSON.parse(fs.readFileSync(path.join(__dirname, "editor-source-strings.json"), "utf8"));
 
 const EDITOR_EXTRA_FULL_LOCALE_BY_EN = JSON.parse(
@@ -146,6 +169,14 @@ Acción
 Subir
 Bajar
 Eliminar
+Ocultar ajustes hápticos
+Mostrar ajustes hápticos
+Usar vibración si no hay háptica
+Intensidad
+Ligera
+Media
+Fuerte
+Error
 `
   .trim()
   .split("\n")
@@ -1809,7 +1840,34 @@ const out = `/* eslint-disable max-len */
     MAP.es[r.es] = r.es;
   }
 
+  function foldEditorUiKey(s) {
+    try {
+      return String(s || "")
+        .normalize("NFD")
+        .replace(/\\p{M}/gu, "")
+        .trim()
+        .toLowerCase();
+    } catch (_e) {
+      return String(s || "")
+        .toLowerCase()
+        .trim();
+    }
+  }
+
+  const editorUiFoldToCanonicalEs = new Map();
+  for (const r of ROWS) {
+    const canon = r.es;
+    if (typeof canon !== "string" || !canon) {
+      continue;
+    }
+    const f = foldEditorUiKey(canon);
+    if (!editorUiFoldToCanonicalEs.has(f)) {
+      editorUiFoldToCanonicalEs.set(f, canon);
+    }
+  }
+
   window.NodaliaI18n.editorUiMaps = MAP;
+  window.NodaliaI18n.editorCatalog = ${JSON.stringify(EDITOR_CATALOG)};
 
   function normalizeSpanishEditorLabel(text) {
     let out = String(text || "");
@@ -1908,26 +1966,62 @@ const out = `/* eslint-disable max-len */
     if (spanishText == null || spanishText === "") {
       return "";
     }
+    const rawInput = String(spanishText);
     const lang = window.NodaliaI18n.resolveLanguage(hass, configLang);
-    const maps = window.NodaliaI18n.editorUiMaps;
-    if (maps.es[spanishText] === undefined && maps.en[spanishText] === undefined) {
-      return lang === "es" ? normalizeSpanishEditorLabel(spanishText) : spanishText;
+    if (rawInput.startsWith("ed.")) {
+      const cat = window.NodaliaI18n.editorCatalog;
+      if (cat && typeof cat === "object") {
+        const order = [lang, "en", "es"];
+        const seen = new Set();
+        for (const L of order) {
+          if (!L || seen.has(L)) {
+            continue;
+          }
+          seen.add(L);
+          const pack = cat[L];
+          const v = pack && pack[rawInput];
+          if (typeof v === "string" && v !== "") {
+            return v;
+          }
+        }
+      }
+      return rawInput;
     }
-    const primary = maps[lang]?.[spanishText];
+    const maps = window.NodaliaI18n.editorUiMaps;
+    const resolveEditorUiKey = () => {
+      const candidates = [rawInput, normalizeSpanishEditorLabel(rawInput)];
+      for (const c of candidates) {
+        if (maps.es[c] !== undefined || maps.en[c] !== undefined) {
+          return c;
+        }
+      }
+      for (const c of candidates) {
+        const canon = editorUiFoldToCanonicalEs.get(foldEditorUiKey(c));
+        if (canon && (maps.es[canon] !== undefined || maps.en[canon] !== undefined)) {
+          return canon;
+        }
+      }
+      return rawInput;
+    };
+    const key = resolveEditorUiKey();
+    if (maps.es[key] === undefined && maps.en[key] === undefined) {
+      return lang === "es" ? normalizeSpanishEditorLabel(rawInput) : rawInput;
+    }
+    const primary = maps[lang]?.[key];
     if (primary !== undefined && primary !== "") {
       return lang === "es" ? normalizeSpanishEditorLabel(primary) : primary;
     }
     if (lang !== "es") {
-      const enVal = maps.en?.[spanishText];
+      const enVal = maps.en?.[key];
       if (enVal !== undefined && enVal !== "") {
         return enVal;
       }
     }
-    const esVal = maps.es?.[spanishText];
+    const esVal = maps.es?.[key];
     if (esVal !== undefined && esVal !== "") {
       return normalizeSpanishEditorLabel(esVal);
     }
-    return lang === "es" ? normalizeSpanishEditorLabel(spanishText) : spanishText;
+    return lang === "es" ? normalizeSpanishEditorLabel(rawInput) : rawInput;
   };
 })();
 `;
