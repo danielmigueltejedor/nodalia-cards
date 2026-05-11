@@ -2598,6 +2598,9 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__icon ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.5);
+          backface-visibility: hidden;
+          transform: translateZ(0);
+          will-change: transform, opacity;
         }
 
         .weather-card__icon--rain-motion::after,
@@ -2612,6 +2615,8 @@ class NodaliaWeatherCard extends HTMLElement {
           opacity: 0.42;
           pointer-events: none;
           position: absolute;
+          transform: translateZ(0);
+          will-change: transform, opacity;
         }
 
         .weather-card__icon--snow-motion::after {
@@ -3677,10 +3682,12 @@ class NodaliaWeatherCard extends HTMLElement {
 
         @keyframes weather-card-icon-flash {
           0%, 100% {
-            filter: brightness(1);
+            opacity: 1;
+            transform: translateZ(0) scale(1);
           }
           50% {
-            filter: brightness(1.55);
+            opacity: 0.72;
+            transform: translateZ(0) scale(1.04);
           }
         }
 

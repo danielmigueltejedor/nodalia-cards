@@ -10477,6 +10477,10 @@
     { keys: ["Also show on desktop"], es: "Mostrar también en escritorio", en: "Also show on desktop", de: "Auch auf dem Desktop anzeigen", fr: "Afficher aussi sur ordinateur", it: "Mostra anche su desktop", nl: "Ook op desktop tonen", pt: "Mostrar também no desktop", ru: "Также показывать на рабочем столе", el: "Εμφάνιση και σε desktop", zh: "也在桌面显示", ro: "Afișează și pe desktop" },
     { keys: ["Idioma de la tarjeta", "Card language"], es: "Idioma de la tarjeta", en: "Card language", de: "Kartensprache", fr: "Langue de la carte", it: "Lingua scheda", nl: "Kaarttaal", pt: "Idioma do cartão", ru: "Язык карточки", el: "Γλώσσα κάρτας", zh: "卡片语言", ro: "Limba cardului" },
     { keys: ["Automático (perfil Home Assistant)", "Automatic (Home Assistant profile)"], es: "Automático (perfil Home Assistant)", en: "Automatic (Home Assistant profile)", de: "Automatisch (Home-Assistant-Profil)", fr: "Automatique (profil Home Assistant)", it: "Automatico (profilo Home Assistant)", nl: "Automatisch (Home Assistant-profiel)", pt: "Automático (perfil Home Assistant)", ru: "Автоматически (профиль Home Assistant)", el: "Αυτόματο (προφίλ Home Assistant)", zh: "自动（Home Assistant 配置文件）", ro: "Automat (profil Home Assistant)" },
+    { keys: ["Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado)."], es: "Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado).", en: "If text does not match your profile language, select Automatic in Card language (older configs may still store Spanish).", de: "Wenn der Text nicht zur Profilsprache passt, wähle Automatisch bei Kartensprache (ältere Konfigurationen können noch Spanisch gespeichert haben).", fr: "Si le texte ne correspond pas à la langue du profil, choisissez Automatique dans Langue de la carte (les anciennes configurations peuvent encore stocker l'espagnol).", it: "Se il testo non coincide con la lingua del profilo, scegli Automatico in Lingua della scheda (le vecchie configurazioni possono ancora avere lo spagnolo salvato).", nl: "Als de tekst niet overeenkomt met je profieltaal, kies Automatisch bij Kaarttaal (oudere configuraties kunnen nog Spaans opgeslagen hebben).", pt: "Se o texto não corresponder ao idioma do perfil, selecione Automático em Idioma do cartão (configurações antigas podem ainda guardar espanhol).", ru: "Если текст не совпадает с языком профиля, выберите «Автоматически» в языке карточки (в старых конфигурациях мог сохраниться испанский).", el: "Αν το κείμενο δεν ταιριάζει με τη γλώσσα προφίλ, επίλεξε Αυτόματο στη γλώσσα κάρτας (παλιές ρυθμίσεις μπορεί να έχουν αποθηκευμένα ισπανικά).", zh: "如果文本与个人资料语言不一致，请在卡片语言中选择“自动”（旧配置可能仍保存为西班牙语）。", ro: "Dacă textul nu se potrivește cu limba profilului, selectează Automat la limba cardului (configurațiile vechi pot păstra încă spaniola)." },
+    { keys: ["Acción al pulsar"], es: "Acción al pulsar", en: "Action on tap", de: "Aktion beim Tippen", fr: "Action au toucher", it: "Azione al tocco", nl: "Actie bij tikken", pt: "Ação ao tocar", ru: "Действие при касании", el: "Ενέργεια στο πάτημα", zh: "点击操作", ro: "Acțiune la atingere" },
+    { keys: ["Qué ocurre al tocar la insignia."], es: "Qué ocurre al tocar la insignia.", en: "What happens when tapping the badge.", de: "Was beim Tippen auf das Badge passiert.", fr: "Ce qui se passe en touchant le badge.", it: "Cosa succede toccando il badge.", nl: "Wat er gebeurt bij het tikken op de badge.", pt: "O que acontece ao tocar no emblema.", ru: "Что происходит при нажатии на бейдж.", el: "Τι συμβαίνει όταν πατάς το badge.", zh: "点击徽章时会发生什么。", ro: "Ce se întâmplă când atingi insigna." },
+    { keys: ["Tamaños, Colores del Icon y Tint de la burbuja."], es: "Tamaños, colores del icono y tintado de la burbuja.", en: "Sizes, icon colors and bubble tint.", de: "Größen, Symbolfarben und Blasentönung.", fr: "Tailles, couleurs de l'icône et teinte de la bulle.", it: "Dimensioni, colori dell'icona e tinta della bolla.", nl: "Groottes, pictogramkleuren en bubbeltint.", pt: "Tamanhos, cores do ícone e tonalidade da bolha.", ru: "Размеры, цвета значка и оттенок пузыря.", el: "Μεγέθη, χρώματα εικονιδίου και απόχρωση φυσαλίδας.", zh: "尺寸、图标颜色和气泡着色。", ro: "Dimensiuni, culorile pictogramei și nuanța bulei." },
     { keys: ["Ocultar ajustes de animacion", "Ocultar ajustes de animación", "Hide animation settings"], es: "Ocultar ajustes de animación", en: "Hide animation settings", de: "Animationseinstellungen ausblenden", fr: "Masquer les réglages d'animation", it: "Nascondi impostazioni animazione", nl: "Animatie-instellingen verbergen", pt: "Ocultar definições de animação", ru: "Скрыть настройки анимации", el: "Απόκρυψη ρυθμίσεων κίνησης", zh: "隐藏动画设置", ro: "Ascunde setările de animație" },
     { keys: ["Subtitulo", "Subtítulo", "Subtitle", "SubTitle"], es: "Subtítulo", en: "Subtitle", de: "Untertitel", fr: "Sous-titre", it: "Sottotitolo", nl: "Ondertitel", pt: "Subtítulo", ru: "Подзаголовок", el: "Υπότιτλος", zh: "副标题", ro: "Subtitlu" },
     { keys: ["Posicion", "Posición", "Position"], es: "Posición", en: "Position", de: "Position", fr: "Position", it: "Posizione", nl: "Positie", pt: "Posição", ru: "Положение", el: "Θέση", zh: "位置", ro: "Poziție" },
@@ -10682,11 +10686,37 @@
     }
     const primary = maps[lang]?.[spanishText];
     if (primary !== undefined && primary !== "") {
+      if (lang !== "es") {
+        const esVal = maps.es?.[spanishText];
+        const enVal = maps.en?.[spanishText];
+        const exactLocales = EXACT_OVERRIDE_LOCALES_BY_EN[enVal] || EXACT_OVERRIDE_LOCALES_BY_EN[spanishText];
+        if (exactLocales && exactLocales[lang]) {
+          return exactLocales[lang];
+        }
+        // If locale map still echoes Spanish, try stronger fallbacks before returning.
+        if (esVal && primary === esVal) {
+          const byEnglishKey = enVal ? maps[lang]?.[enVal] : "";
+          if (byEnglishKey && byEnglishKey !== enVal && byEnglishKey !== esVal) {
+            return byEnglishKey;
+          }
+          if (enVal && enVal !== esVal) {
+            return enVal;
+          }
+        }
+      }
       return lang === "es" ? normalizeSpanishEditorLabel(primary) : primary;
     }
     if (lang !== "es") {
       const enVal = maps.en?.[spanishText];
+      const exactLocales = EXACT_OVERRIDE_LOCALES_BY_EN[enVal] || EXACT_OVERRIDE_LOCALES_BY_EN[spanishText];
+      if (exactLocales && exactLocales[lang]) {
+        return exactLocales[lang];
+      }
       if (enVal !== undefined && enVal !== "") {
+        const byEnglishKey = maps[lang]?.[enVal];
+        if (byEnglishKey && byEnglishKey !== enVal) {
+          return byEnglishKey;
+        }
         return enVal;
       }
     }

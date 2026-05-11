@@ -10,6 +10,17 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.86] - 2026-05-11
+
+Eighty-sixth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.86`** (tag **`v1.0.0-alpha.86`** optional).
+
+- **Notifications card — entrance behavior refined:** keeps entrance animation on dashboard navigation (like Entity/Weather) while avoiding intermittent double-trigger flicker during rapid visibility transitions.
+- **Editor i18n — global fallback hardening:** `editorStr` now resolves stronger exact-locale fallbacks when legacy rows still echo Spanish in non-ES languages, reducing mixed-language labels in visual editors.
+- **Icon animation performance pass (Weather/Fan/Humidifier/Vacuum):** icon motion paths are promoted to compositor-friendly transforms (`translate3d/translateZ`, `will-change`, `backface-visibility`) and weather storm effect avoids expensive filter animation, reducing long-session stutter.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.86`**.
+
+---
+
 ## [1.0.0-alpha.85] - 2026-05-11
 
 Eighty-fifth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.85`** (tag **`v1.0.0-alpha.85`** optional).

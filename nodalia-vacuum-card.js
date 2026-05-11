@@ -3223,8 +3223,11 @@ class NodaliaVacuumCard extends HTMLElement {
           left: 50%;
           position: absolute;
           top: 50%;
-          transform: translate(-50%, -50%);
+          backface-visibility: hidden;
+          transform: translate3d(-50%, -50%, 0);
+          transform-origin: 50% 70%;
           width: calc(${styles.icon.size} * 0.46);
+          will-change: transform;
         }
 
         .vacuum-card__icon-button--active-motion ha-icon {

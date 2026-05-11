@@ -2586,12 +2586,16 @@ class NodaliaHumidifierCard extends HTMLElement {
           left: 50%;
           position: absolute;
           top: 50%;
-          transform: translate(-50%, -50%);
+          backface-visibility: hidden;
+          transform: translate3d(-50%, -50%, 0);
+          transform-origin: 50% 50%;
           width: calc(${styles.icon.size} * 0.46);
+          will-change: transform;
         }
 
         .humidifier-card__icon--active-motion ha-icon {
           animation: humidifier-card-icon-breathe 1.8s ease-in-out infinite;
+          transform: translate3d(-50%, -50%, 0);
         }
 
         .humidifier-card__icon--active-motion::after {
@@ -2603,8 +2607,9 @@ class NodaliaHumidifierCard extends HTMLElement {
           opacity: 0.42;
           position: absolute;
           top: 26%;
-          transform: translate(-50%, 0);
+          transform: translate3d(-50%, 0, 0);
           width: 5px;
+          will-change: transform, opacity;
         }
 
         .humidifier-card__unavailable-badge {

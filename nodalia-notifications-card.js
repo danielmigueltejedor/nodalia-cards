@@ -1339,7 +1339,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._loadDismissed();
     this._loadMobileSent();
     this._syncSharedDismissedFromHass(true);
-    this._replayEntranceAnimation("connect");
+    this._replayEntranceAnimation({ force: true });
     this._refreshCalendarEventsSoon(0);
     this._refreshWeatherForecastsSoon(0);
     window.addEventListener("resize", this._onViewportResize, { passive: true });
@@ -1379,9 +1379,10 @@ class NodaliaNotificationsCard extends HTMLElement {
     }
   }
 
-  _replayEntranceAnimation() {
+  _replayEntranceAnimation(options = {}) {
+    const force = options?.force === true;
     const now = Date.now();
-    if (now - this._lastEntranceReplayAt < 260) {
+    if (!force && now - this._lastEntranceReplayAt < 260) {
       return;
     }
     this._lastEntranceReplayAt = now;
