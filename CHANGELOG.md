@@ -21,194 +21,218 @@ Maintenance work continues on the stable `1.0.x` line while the next feature cyc
 - Home Assistant frontend compatibility updates.
 
 ---
-## [1.0.2] - 2026-05-12
+## [1.0.2] - 2026-05-13  — Stability, Climate & UX Refinement
 
-Stable **`1.0.2`**. Installs match **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules (**`1.0.2`**).
+Stable **`1.0.2`**. Installs match **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled module **`CARD_VERSION`** values (**`1.0.2`**).
 
-### Added
+This release focuses heavily on:
+- climate card robustness,
+- dual-range thermostat support,
+- layout stability,
+- i18n consistency,
+- default theme compatibility,
+- and overall UX polish across the bundle.
 
-- **`nodalia-climate-card.js`:** Style **`styles.dial.max_size`** (default **`480px`**) caps the rendered dial in the regular layout; visual editor field **`ed.climate.dial_max_size`**.
-
-### Changed
-
-- **Repository:** **`.pnpm-store/`** is listed in **`.gitignore`** and must not be committed (local pnpm content-addressed cache only).
-- **`nodalia-climate-card.js`:** **`getModeMeta`** / **`getActionMeta`** use **English** fallback labels (e.g. **Cool**, **Off**, **Heat**) instead of Spanish literals, consistent with editor i18n defaults.
-- **`nodalia-climate-card.js`:** **`_isDualSetpointRange`** no longer requires **`low <= high`**; inverted integration values still enable dual-range mode because **`_normalizeLowHighPair`** orders bounds before use.
-
-### Fixed
-
-- **`nodalia-climate-card.js`:** Regular-layout dial maximum raised from a hardcoded **340px** to the configurable **`max_size`** default (**480px**); tight and compact layouts keep smaller caps.
+A large portion of this release was directly driven by community feedback after the `1.0.0` stable launch.
 
 ---
-## [1.0.2-alpha.12] - 2026-05-12
 
-Prerelease **`alpha.12`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.12`** (optional tag **`v1.0.2-alpha.12`**).
+# ✨ Highlights
 
-### Changed
-
-- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.12`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
-
-### Added
-
-- **`nodalia-climate-card.js`:** **`heat_cool`** dual-range dial: **thumb focus** (`low` / `high` / none) for **`+` / `−`** (single bound vs whole-band shift), **tap** thumb to select or deselect, **drag** selects that thumb, **clear** focus when tapping the dial outside the thumbs or when changing HVAC mode / power; selection styling on the active thumb; range changes still call **`climate.set_temperature`** with both **`target_temp_low`** and **`target_temp_high`**.
-
----
-## [1.0.2-alpha.11] - 2026-05-12
-
-Prerelease **`alpha.11`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.11`** (optional tag **`v1.0.2-alpha.11`**).
-
-### Changed
-
-- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.11`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
-
-### Fixed
-
-- **`nodalia-climate-card.js`:** In **`heat_cool`** when **`temperature`** is unset but **`target_temp_low`** / **`target_temp_high`** are set (Ecobee-style), the dial is now a **dual-handle** comfort band: **`current_temperature`** in the center readout, range summary under the divider, warm arc + **heat** thumb for **`target_temp_low`**, cool arc + **cool** thumb for **`target_temp_high`**, **`climate.set_temperature`** always sends **`target_temp_low`** and **`target_temp_high`** (never **`temperature`**), with a minimum gap of **`max(1, target_temp_step)`** between the two bounds and non-crossing clamps.
+- Major Ecobee / `heat_cool` climate compatibility improvements
+- New dual-range climate dial system
+- Better default Home Assistant theme compatibility
+- Improved English fallback handling
+- More robust calendar recurrence deletion UX
+- Better large-layout climate responsiveness
+- Reduced layout instability and dead space
+- Improved accessibility and localization consistency
 
 ---
-## [1.0.2-alpha.10] - 2026-05-12
 
-Prerelease **`alpha.10`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.10`** (optional tag **`v1.0.2-alpha.10`**).
+# 🌡️ Climate Card Overhaul
 
-### Changed
+The Climate Card received the largest set of improvements in this release.
 
-- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.10`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
+## Added
 
-### Fixed
+### Dual-range `heat_cool` climate support
 
-- **`nodalia-calendar-card.js`:** When **`calendar/event/delete`** fails, the recurrence choice dialog stays open, an inline **`role="alert"`** message is shown, and **`_renderIfChanged(true)`** runs so the failure is visible (previously **`_deleteRecurringChoiceKey`** was cleared before the WebSocket call, so the UI could refresh with no dialog and no feedback).
-- **`nodalia-i18n.js`:** **`calendarCard.deleteRecurrence.deleteFailed`** and **`deleteFailedWithMessage`** for **`en`** / **`es`** (optional server message from the caught error).
+The card now properly supports thermostat integrations that expose:
+- `target_temp_low`
+- `target_temp_high`
 
----
-## [1.0.2-alpha.9] - 2026-05-12
+instead of a single `temperature` setpoint.
 
-Prerelease **`alpha.9`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.9`** (optional tag **`v1.0.2-alpha.9`**).
+This dramatically improves compatibility with integrations such as:
+- Ecobee
+- advanced HVAC systems
+- comfort-band thermostats
 
-### Changed
+### New dual-range circular dial
 
-- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.9`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
+When using `heat_cool`:
+- separate warm/cool arcs are rendered
+- independent heat/cool thumbs are displayed
+- current temperature stays centered
+- the comfort band is visually represented
 
-### Fixed
+### Thumb focus system
 
-- **`nodalia-climate-card.js`:** Removed unused **`countClimateDialModeRowsAfterFirstTwo`** (layout uses **`buildClimateDialModeButtonRows`** only).
+Dual-range dials now support:
+- thumb selection
+- per-thumb `+ / −` adjustment
+- whole-range shifting when no thumb is selected
+- non-crossing constraints
+- minimum comfort-band gap enforcement
 
-### Performance / i18n
+### Configurable dial size
 
-- **`nodalia-i18n.js`:** **`strings("es")`** now uses the same **`deepMergeLocale(PACK.en, PACK.es)`** path as other locales (cached), so **`translateEntityState`** can read **`strings(code).entityCard`** without re-merging on every call.
+Added:
+```yaml
+styles:
+  dial:
+    max_size: 480px
+```
 
----
-## [1.0.2-alpha.8] - 2026-05-12
-
-Prerelease **`alpha.8`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.8`** (optional tag **`v1.0.2-alpha.8`**).
-
-### Changed
-
-- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.8`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
-
-### Fixed
-
-- **`nodalia-climate-card.js`:** Render-signature temperatures use **`parseFiniteClimateNumber`** only (no **`-1`** sentinel), so a real **−1 °C** setpoint is not confused with “unknown”, and **`formatTemperature`** uses the same helper so **`null`** / empty values do not render as **`0.0 °C`**.
-- **`nodalia-climate-card.js`:** Dial **power** control **`title`** / **`aria-label`** follow **`translateClimateMode('off')`** instead of hardcoded Spanish.
-- **`nodalia-i18n.js`:** **`translateEntityState`** builds **`entityCard`** with **`deepMergeLocale(PACK.en.entityCard, …)`** for every supported language so nested keys (for example **`binarySensor`**) keep **English** fallbacks when a locale omits them.
-
----
-## [1.0.2-alpha.7] - 2026-05-12
-
-Prerelease **`alpha.7`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.7`** (optional tag **`v1.0.2-alpha.7`**).
-
-### Changed
-
-- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.7`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
-
-### Fixed
-
-- **`nodalia-climate-card.js`:** **`min-height`** no longer adds the **mode-button block** (modes sit **inside** the dial); it only reflects **padding + header + dial + optional step row + gaps**, with a **lower floor**, so auto-height layouts do not keep a large **empty band** under **+ / −**.
-- **`nodalia-climate-card.js`:** with **four** modes, dial **`inset`** top is increased; from **four** modes up the **`°C` / scale** superscript uses a **lower `top`** plus light **`padding-top`** on the target readout so the unit stays **clear of the slider arc**.
+with full visual editor support.
 
 ---
-## [1.0.2-alpha.6] - 2026-05-12
 
-Prerelease **`alpha.6`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.6`** (optional tag **`v1.0.2-alpha.6`**).
+# 🛠️ Climate Fixes & Improvements
 
-### Changed
+## Fixed
 
-- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.6`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
-- **`nodalia-climate-card.js`:** exactly **six** mode controls use a **3 + 3** two-row layout instead of **2 + 2 + 2**; other counts keep the previous **2 + …** chunking.
-- **`nodalia-climate-card.js`:** **`host`**, **`ha-card`**, and **`.climate-card__content`** use **`height: auto`** with **`align-self: start`** on **`host`** so tall dashboard cells no longer stretch the card and leave a large empty band under the **+ / −** buttons.
+- Ecobee-style entities no longer display `0` / `0.0 °C` when `temperature` is `null`
+- Climate cards now correctly respect Home Assistant temperature units (`°F` / `°C`)
+- Null/non-finite climate values are handled safely
+- Dual-range climates no longer rely on invalid `low <= high` assumptions
+- `heat_cool` mode now always uses:
+  - `target_temp_low`
+  - `target_temp_high`
+  instead of incorrectly sending `temperature`
+- Better handling for integrations exposing many HVAC modes
+- Improved dial scaling in larger layouts
+- Fixed large empty vertical areas below climate controls
+- Improved multi-row mode button layouts
+- Better compact handling for 4–6+ HVAC modes
+- Improved superscript/unit positioning inside the dial
+- Improved auto-height dashboard behavior
+- Improved layout stability inside section views
 
----
-## [1.0.2-alpha.5] - 2026-05-12
+## Accessibility & UX
 
-Prerelease **`alpha.5`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.5`** (optional tag **`v1.0.2-alpha.5`**).
-
-### Changed
-
-- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.5`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
-- **`nodalia-climate-card.js`:** mode buttons after the first pair split into **extra centered rows** (for example six controls → **2 + 2 + 2** instead of **2 + 4**); **≥5 / ≥6** modes use **slightly smaller** mode buttons, **tighter** stacked gaps, and **dial-center** inset / grid gap tuned so many modes fit inside the dial.
-- **`nodalia-climate-card.js`:** with **+/-** step controls visible, the dial column no longer **stretches** vertically (`flex` on the dial wrap), **tighter** vertical gaps, and **`min-height`** slack adjusted so **auto-height** sections look **less tall** with less dead space between dial and step buttons.
-
----
-## [1.0.2-alpha.4] - 2026-05-12
-
-Prerelease **`alpha.4`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.4`** (optional tag **`v1.0.2-alpha.4`**).
-
-### Changed
-
-- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.4`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
-- **`nodalia-climate-card.js`:** with **three or more** mode controls (power + modes, or modes only when off), the first **two** stay on the **top row** and the rest sit on a **second row** centered (e.g. 3 → inverted triangle, 4 → 2×2, 5 → two + three).
-
-### Fixed
-
-- **`nodalia-climate-card.js`:** **section auto height** no longer collapses the card to a thin line; **`min-height`** on **`host` / `ha-card`** and dropping height-based **`cqh`** from the dial width avoid a **container-size / percentage-height** cycle with **`container-type: size`**.
+- Better `aria-label` localization
+- English fallback labels for climate states/actions
+- Improved focus behavior for range controls
+- More consistent translation fallback behavior
 
 ---
-## [1.0.2-alpha.3] - 2026-05-12
 
-Prerelease **`alpha.3`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.3`** (optional tag **`v1.0.2-alpha.3`**).
+# 🗓️ Calendar Improvements
 
-### Changed
+## Fixed recurring event deletion UX
 
-- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.3`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
+Recurring event deletion flows were significantly improved.
 
-### Fixed
+### Improvements
 
-- **`nodalia-climate-card.js`:** integrations such as **Ecobee** that omit **`temperature`** when idle no longer surface **`0`** as the target (dial arc and main readout stay coherent); temperature parsing and render signatures treat non-finite values as unknown instead of zero.
-- **`nodalia-climate-card.js`:** temperature labels use Home Assistant’s **unit system** and **locale** (for example **°F** with the correct decimal separator) instead of hardcoded Celsius / a fixed locale.
-- **`nodalia-climate-card.js`:** dial layout uses **`container-type: size`**, slightly larger dial caps in roomy layouts, and optional **`cqw` / `cqh`** scaling when supported so the inner dial does not stay cramped in large grid cells.
-
----
-## [1.0.2-alpha.2] - 2026-05-12
-
-Prerelease **`alpha.2`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.2`** (optional tag **`v1.0.2-alpha.2`**).
-
-### Changed
-
-- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.2`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
-
-### Fixed
-
-- **`nodalia-calendar-card.js`:** deleting a **recurring** event from the **compact** list opened the recurrence choice in **`calendar-expanded`** while that layer still had **`pointer-events: none`** (no **`is-open`**), so nothing appeared to happen; the card now opens the overlay (with event detail) before showing the dialog.
-- **`nodalia-calendar-card.js`:** dismissing the recurrence delete dialog (**Cancel**, backdrop, or **Escape**) after that compact-list path closes the overlay again so you return to the compact card; a successful delete does the same.
+- Recurrence dialogs now reliably appear from compact calendar mode
+- Overlay/dialog synchronization fixed
+- Canceling recurrence deletion cleanly restores the previous view
+- Better inline error feedback when deletion fails
+- Added translated recurrence deletion error messages
 
 ---
-## [1.0.2-alpha.1] - 2026-05-12
 
-First **`alpha`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.1`** (tag **`v1.0.2-alpha.1`** optional).
+# 🌍 i18n & Translation Improvements
 
-### Added
+This release includes a major fallback consistency pass.
 
-- **`nodalia-calendar-card.js`:** deleting a **recurring** instance opens a choice dialog (same **`calendar-composer`** styling as the rest of the expanded calendar): **only this occurrence** or **this and all following**, mapped to Home Assistant **`calendar/event/delete`** with **`recurrence_range`** **`""`** vs **`THISANDFUTURE`** when **`recurrence_id`** is present.
-- **`nodalia-i18n.js`:** **`calendarCard.deleteRecurrence`** strings and **`aria.deleteRecurringDialog`** for **`en`** and **`es`**.
+## Fixed
 
-### Changed
+- English fallback behavior across nested translation maps
+- Mixed-language labels in edge cases
+- Runtime fallback inconsistencies
+- Hardcoded Spanish climate labels
+- Better cached locale merging performance
 
-- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.1`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
-- **`nodalia-i18n.js`:** `translateEntityState` builds the Spanish **`entityCard`** dictionary with **`deepMergeLocale(PACK.en.entityCard, PACK.es.entityCard)`** so nested maps (for example **`boolean`**, **`states`**, **`binarySensor`**) inherit English fallbacks; other locales reuse **`strings(lang).entityCard`** from the cached merged pack (no redundant second merge).
+## Improved
 
-### Fixed
+- Translation consistency between cards
+- Shared locale merging behavior
+- Runtime translation performance
 
-- **`nodalia-humidifier-card.js`:** runtime fallbacks when **`NodaliaI18n`** is unavailable use **English** strings (state labels and **`translateModeLabel`** shim), consistent with other cards’ missing-i18n behaviour.
+---
 
+# 🎨 Layout & Theme Compatibility
+
+## Improved
+
+- Default Home Assistant theme compatibility
+- Better transparency/surface fallbacks
+- Improved contrast handling
+- Better large-grid responsiveness
+- Cleaner auto-height section behavior
+- Reduced dead space in climate layouts
+- More stable dashboard rendering in dense mobile layouts
+
+---
+
+# ⚡ Performance
+
+## Improved
+
+- Cached locale merge usage
+- Reduced unnecessary runtime merges
+- Cleaner climate render signatures
+- Better handling of unknown temperature values
+- Less layout churn in responsive climate layouts
+
+---
+
+# 🧩 Repository / Build
+
+## Changed
+
+- `.pnpm-store/` is now ignored in `.gitignore`
+- Internal bundled versions are fully synchronized across:
+  - `package.json`
+  - `manifest`
+  - `__NODALIA_BUNDLE__`
+  - bundled `CARD_VERSION`s
+
+---
+
+# 🙌 Community-driven Release
+
+A huge part of `1.0.2` came directly from:
+- user bug reports,
+- climate compatibility testing,
+- translation feedback,
+- layout edge cases,
+- and real dashboard usage shared by the community after `1.0.0`.
+
+Thanks to everyone testing, reporting issues, suggesting improvements, and helping shape Nodalia Cards so quickly after launch.
+
+---
+
+# 🏁 Summary
+
+`1.0.2` turns the initial stable launch into a significantly more robust and production-ready experience.
+
+This release especially strengthens:
+- climate interoperability,
+- thermostat UX,
+- layout reliability,
+- i18n consistency,
+- and dashboard scalability.
+
+Smarter climate interactions.  
+Cleaner layouts.  
+Better compatibility.  
+More polished UX.  
+Built for real Home Assistant dashboard
 ---
 ## [1.0.1] - 2026-05-12
 
