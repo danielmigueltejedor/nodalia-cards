@@ -21,6 +21,20 @@ Maintenance work continues on the stable `1.0.x` line while the next feature cyc
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.2-alpha.4] - 2026-05-12
+
+Prerelease **`alpha.4`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.4`** (optional tag **`v1.0.2-alpha.4`**).
+
+### Changed
+
+- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.4`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
+- **`nodalia-climate-card.js`:** with **three or more** mode controls (power + modes, or modes only when off), the first **two** stay on the **top row** and the rest sit on a **second row** centered (e.g. 3 → inverted triangle, 4 → 2×2, 5 → two + three).
+
+### Fixed
+
+- **`nodalia-climate-card.js`:** **section auto height** no longer collapses the card to a thin line; **`min-height`** on **`host` / `ha-card`** and dropping height-based **`cqh`** from the dial width avoid a **container-size / percentage-height** cycle with **`container-type: size`**.
+
+---
 ## [1.0.2-alpha.3] - 2026-05-12
 
 Prerelease **`alpha.3`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.3`** (optional tag **`v1.0.2-alpha.3`**).

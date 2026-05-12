@@ -486,7 +486,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.2-alpha.3";
+const CARD_VERSION = "1.0.2-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2276,6 +2276,7 @@ class NodaliaClimateCard extends HTMLElement {
     const visibleModeOptions = modeOptions.filter(mode => normalizeTextKey(mode) !== normalizedCurrentMode);
     const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
     const isOff = this._isOff(state) || isUnavailableState(state);
+    const modeDialButtonCount = (isOff ? 0 : 1) + visibleModeOptions.length;
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const i18nLang = config.language ?? "auto";
     const tempScale = getClimateTemperatureScaleLetter(hass);
@@ -2334,6 +2335,21 @@ class NodaliaClimateCard extends HTMLElement {
       32,
       Math.min(parseSizeToPixels(styles.control.size, 42) - 4, tightLayout ? 34 : compactLayout ? 36 : 38),
     );
+    const climateCardMinHeightPx = Math.max(
+      300,
+      Math.round(
+        dialSizePx +
+          stepControlSize +
+          effectiveIconSizePx +
+          cardPaddingY * 2 +
+          88 +
+          (modeDialButtonCount <= 0
+            ? 0
+            : modeDialButtonCount >= 3
+              ? modeControlSize * 2 + (tightLayout ? 26 : 28)
+              : modeControlSize + 18),
+      ),
+    );
     const ratio = supportsTargetTemperature
       ? (targetTemperature - temperatureRange.min) / Math.max(temperatureRange.max - temperatureRange.min, temperatureStep)
       : 0;
@@ -2385,6 +2401,48 @@ class NodaliaClimateCard extends HTMLElement {
     const dialTrackColor = `color-mix(in srgb, ${styles.dial.track_color} 68%, var(--primary-text-color) 32%)`;
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
+    const dialControlsStacked = modeDialButtonCount >= 3;
+    const dialModeButtonFragments = [];
+    if (!isOff) {
+      dialModeButtonFragments.push(`
+                  <button
+                    type="button"
+                    class="climate-card__mode-button climate-card__mode-button--power is-active"
+                    data-climate-action="toggle"
+                    title="Apagar"
+                    aria-label="Apagar"
+                  >
+                    <ha-icon icon="mdi:power"></ha-icon>
+                  </button>`);
+    }
+    for (const mode of visibleModeOptions) {
+      const meta = getModeMeta(mode);
+      const modeLabel = translateClimateMode(mode);
+      dialModeButtonFragments.push(`
+                        <button
+                          type="button"
+                          class="climate-card__mode-button"
+                          data-climate-action="mode"
+                          data-mode="${escapeHtml(mode)}"
+                          title="${escapeHtml(modeLabel)}"
+                          aria-label="${escapeHtml(modeLabel)}"
+                        >
+                          <ha-icon icon="${escapeHtml(meta.icon)}"></ha-icon>
+                        </button>`);
+    }
+    const dialControlsMarkup =
+      dialModeButtonFragments.length === 0
+        ? `<div class="climate-card__dial-controls"></div>`
+        : dialControlsStacked
+          ? `
+                <div class="climate-card__dial-controls climate-card__dial-controls--stacked">
+                  <div class="climate-card__dial-controls-row">${dialModeButtonFragments.slice(0, 2).join("")}</div>
+                  <div class="climate-card__dial-controls-row climate-card__dial-controls-row--secondary">${dialModeButtonFragments.slice(2).join("")}</div>
+                </div>`
+          : `
+                <div class="climate-card__dial-controls">
+                  ${dialModeButtonFragments.join("")}
+                </div>`;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -2394,7 +2452,7 @@ class NodaliaClimateCard extends HTMLElement {
           --climate-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
           display: block;
           height: 100%;
-          min-height: 0;
+          min-height: ${climateCardMinHeightPx}px;
         }
 
         * {
@@ -2403,7 +2461,7 @@ class NodaliaClimateCard extends HTMLElement {
 
         ha-card {
           height: 100%;
-          min-height: 0;
+          min-height: ${climateCardMinHeightPx}px;
           overflow: hidden;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
@@ -2643,7 +2701,7 @@ class NodaliaClimateCard extends HTMLElement {
 
         @supports (width: 1cqw) {
           .climate-card__dial {
-            width: min(var(--climate-dial-size), 100%, min(94cqw, 78cqh));
+            width: min(var(--climate-dial-size), 100%, 94cqw);
           }
         }
 
@@ -2909,6 +2967,25 @@ class NodaliaClimateCard extends HTMLElement {
           margin-top: 2px;
           pointer-events: auto;
           width: 100%;
+        }
+
+        .climate-card__dial-controls--stacked {
+          flex-direction: column;
+          flex-wrap: nowrap;
+          gap: ${tightLayout ? "7px" : "9px"};
+        }
+
+        .climate-card__dial-controls-row {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: ${tightLayout ? "8px" : "10px"};
+          justify-content: center;
+          width: 100%;
+        }
+
+        .climate-card__dial-controls-row--secondary {
+          justify-content: center;
         }
 
         .climate-card__mode-button,
@@ -3191,36 +3268,7 @@ class NodaliaClimateCard extends HTMLElement {
                     <ha-icon icon="${escapeHtml(currentActionMeta.icon)}"></ha-icon>
                   </span>
                 </div>
-                <div class="climate-card__dial-controls">
-                  ${isOff ? "" : `
-                  <button
-                    type="button"
-                    class="climate-card__mode-button climate-card__mode-button--power is-active"
-                    data-climate-action="toggle"
-                    title="Apagar"
-                    aria-label="Apagar"
-                  >
-                    <ha-icon icon="mdi:power"></ha-icon>
-                  </button>`}
-                  ${visibleModeOptions
-                    .map(mode => {
-                      const meta = getModeMeta(mode);
-                      const modeLabel = translateClimateMode(mode);
-                      return `
-                        <button
-                          type="button"
-                          class="climate-card__mode-button"
-                          data-climate-action="mode"
-                          data-mode="${escapeHtml(mode)}"
-                          title="${escapeHtml(modeLabel)}"
-                          aria-label="${escapeHtml(modeLabel)}"
-                        >
-                          <ha-icon icon="${escapeHtml(meta.icon)}"></ha-icon>
-                        </button>
-                      `;
-                    })
-                    .join("")}
-                </div>
+                ${dialControlsMarkup}
               </div>
             </div>
           </div>
