@@ -21,6 +21,19 @@ Maintenance work continues on the stable `1.0.x` line while the next feature cyc
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.2-alpha.12] - 2026-05-12
+
+Prerelease **`alpha.11`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.11`** (optional tag **`v1.0.2-alpha.11`**).
+
+### Changed
+
+- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.11`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
+
+### Fixed
+
+- **`nodalia-climate-card.js`:** In **`heat_cool`** when **`temperature`** is unset but **`target_temp_low`** / **`target_temp_high`** are set (Ecobee-style), the dial is now a **dual-handle** comfort band: **`current_temperature`** in the center readout, range summary under the divider, warm arc + **heat** thumb for **`target_temp_low`**, cool arc + **cool** thumb for **`target_temp_high`**, **`climate.set_temperature`** always sends **`target_temp_low`** and **`target_temp_high`** (never **`temperature`**), with a minimum gap of **`max(1, target_temp_step)`** between the two bounds and non-crossing clamps.
+
+---
 ## [1.0.2-alpha.10] - 2026-05-12
 
 Prerelease **`alpha.10`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.10`** (optional tag **`v1.0.2-alpha.10`**).

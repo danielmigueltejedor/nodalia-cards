@@ -486,7 +486,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.2-alpha.10";
+const CARD_VERSION = "1.0.2-alpha.11";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -504,6 +504,8 @@ const DIAL_CIRCLE_RADIUS = 86;
 const DIAL_CIRCUMFERENCE = 2 * Math.PI * DIAL_CIRCLE_RADIUS;
 const DIAL_VISIBLE_LENGTH = DIAL_CIRCUMFERENCE * (DIAL_SWEEP / 360);
 const DIAL_HIDDEN_LENGTH = DIAL_CIRCUMFERENCE - DIAL_VISIBLE_LENGTH;
+/** Pixels of pointer movement before a range-thumb interaction counts as a drag (vs tap-to-select). */
+const RANGE_THUMB_DRAG_THRESHOLD_PX = 8;
 const STEP_BUTTON_COMMIT_DEBOUNCE = 160;
 const DRAFT_CONFIRMATION_TIMEOUT = 4200;
 const DRAFT_CONFIRMATION_RETRY_LIMIT = 1;
@@ -1184,6 +1186,9 @@ class NodaliaClimateCard extends HTMLElement {
     this._dialDragFrame = 0;
     this._pendingDialDragPoint = null;
     this._pendingRenderAfterDrag = false;
+    /** `null` | `"low"` | `"high"` — dual-range (`heat_cool`) thumb focus for step buttons; not persisted. */
+    this._selectedRangeThumb = null;
+    this._lastDualRangeModeKey = null;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
@@ -1259,6 +1264,8 @@ class NodaliaClimateCard extends HTMLElement {
         window.clearTimeout(this._rangeCommitDebounceTimer);
         this._rangeCommitDebounceTimer = 0;
       }
+      this._selectedRangeThumb = null;
+      this._lastDualRangeModeKey = null;
     }
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
@@ -1460,7 +1467,10 @@ class NodaliaClimateCard extends HTMLElement {
     return Number.isFinite(step) && step > 0 ? step : 0.5;
   }
 
-  /** Ecobee-style: no single `temperature`, but `target_temp_low` / `target_temp_high` define the band. */
+  /**
+   * `heat_cool` with both range bounds and no single `temperature` (Ecobee-style): dual-handle dial.
+   * If only one of low/high is finite, falls back to single-setpoint behaviour (`_isDualSetpointRange` false).
+   */
   _isDualSetpointRange(state) {
     if (!state?.attributes) {
       return false;
@@ -1469,9 +1479,46 @@ class NodaliaClimateCard extends HTMLElement {
     if (Number.isFinite(parseFiniteClimateNumber(attrs.temperature))) {
       return false;
     }
+    if (normalizeTextKey(this._getCurrentMode(state)) !== "heat_cool") {
+      return false;
+    }
     const low = parseFiniteClimateNumber(attrs.target_temp_low);
     const high = parseFiniteClimateNumber(attrs.target_temp_high);
     return Number.isFinite(low) && Number.isFinite(high) && low <= high;
+  }
+
+  /** Minimum span between low and high (at least 1° in entity units, never below `target_temp_step`). */
+  _getHeatCoolMinGap(state) {
+    const step = this._getTemperatureStep(state);
+    return Math.max(1, step);
+  }
+
+  _clampRangeLowCandidate(rawValue, high, state) {
+    if (!state || !Number.isFinite(high)) {
+      return null;
+    }
+    const range = this._getTemperatureRange(state);
+    const gap = this._getHeatCoolMinGap(state);
+    const maxLow = high - gap;
+    if (!Number.isFinite(maxLow) || maxLow < range.min) {
+      return null;
+    }
+    const n = this._normalizeTemperatureValue(rawValue, state);
+    return clamp(n, range.min, maxLow);
+  }
+
+  _clampRangeHighCandidate(rawValue, low, state) {
+    if (!state || !Number.isFinite(low)) {
+      return null;
+    }
+    const range = this._getTemperatureRange(state);
+    const gap = this._getHeatCoolMinGap(state);
+    const minHigh = low + gap;
+    if (!Number.isFinite(minHigh) || minHigh > range.max) {
+      return null;
+    }
+    const n = this._normalizeTemperatureValue(rawValue, state);
+    return clamp(n, minHigh, range.max);
   }
 
   _getEffectiveTargetLowHigh(state) {
@@ -1498,9 +1545,14 @@ class NodaliaClimateCard extends HTMLElement {
       [a, b] = [b, a];
     }
     const range = this._getTemperatureRange(state);
-    const step = this._getTemperatureStep(state);
-    if (b - a < step * 0.25 && range.max - range.min >= step) {
-      b = Math.min(range.max, a + step);
+    const gap = this._getHeatCoolMinGap(state);
+    if (b - a < gap) {
+      b = Math.min(range.max, a + gap);
+      b = this._normalizeTemperatureValue(b, state);
+      if (b - a < gap) {
+        a = Math.max(range.min, b - gap);
+        a = this._normalizeTemperatureValue(a, state);
+      }
     }
     return { low: a, high: b };
   }
@@ -2033,20 +2085,40 @@ class NodaliaClimateCard extends HTMLElement {
       if (!Number.isFinite(low) || !Number.isFinite(high)) {
         return;
       }
-      const deltaTemp = Number(delta) * step;
-      let newLow = low + deltaTemp;
-      let newHigh = high + deltaTemp;
       const range = this._getTemperatureRange(state);
-      if (newLow < range.min) {
-        const d = range.min - newLow;
-        newLow = range.min;
-        newHigh = Math.min(range.max, newHigh + d);
-      } else if (newHigh > range.max) {
-        const d = newHigh - range.max;
-        newHigh = range.max;
-        newLow = Math.max(range.min, newLow - d);
+      const deltaTemp = Number(delta) * step;
+      const sel = this._selectedRangeThumb;
+
+      let pair = null;
+      if (sel === "low") {
+        const newLowRaw = low + deltaTemp;
+        const newLow = this._clampRangeLowCandidate(newLowRaw, high, state);
+        if (newLow === null) {
+          return;
+        }
+        pair = this._normalizeLowHighPair(newLow, high, state);
+      } else if (sel === "high") {
+        const newHighRaw = high + deltaTemp;
+        const newHigh = this._clampRangeHighCandidate(newHighRaw, low, state);
+        if (newHigh === null) {
+          return;
+        }
+        pair = this._normalizeLowHighPair(low, newHigh, state);
+      } else {
+        let newLow = low + deltaTemp;
+        let newHigh = high + deltaTemp;
+        if (newLow < range.min) {
+          const d = range.min - newLow;
+          newLow = range.min;
+          newHigh = newHigh + d;
+        } else if (newHigh > range.max) {
+          const d = newHigh - range.max;
+          newHigh = range.max;
+          newLow = newLow - d;
+        }
+        pair = this._normalizeLowHighPair(newLow, newHigh, state);
       }
-      const pair = this._normalizeLowHighPair(newLow, newHigh, state);
+
       if (!pair) {
         return;
       }
@@ -2206,6 +2278,34 @@ class NodaliaClimateCard extends HTMLElement {
     }
   }
 
+  _updateDialRangePreview(low, high) {
+    const dial = this.shadowRoot?.querySelector(".climate-card__dial");
+    const state = this._getState();
+    if (!(dial instanceof HTMLElement) || !state || !this._isDualSetpointRange(state)) {
+      return;
+    }
+    if (!Number.isFinite(low) || !Number.isFinite(high)) {
+      return;
+    }
+    const temperatureRange = this._getTemperatureRange(state);
+    const temperatureStep = this._getTemperatureStep(state);
+    const tempSpan = Math.max(temperatureRange.max - temperatureRange.min, temperatureStep);
+    const ratioL = clamp((low - temperatureRange.min) / tempSpan, 0, 1);
+    const ratioH = clamp((high - temperatureRange.min) / tempSpan, 0, 1);
+    const heatLen = Number((ratioL * DIAL_VISIBLE_LENGTH).toFixed(3));
+    const coolLen = Number(((1 - ratioH) * DIAL_VISIBLE_LENGTH).toFixed(3));
+    const coolOff = Number((-ratioH * DIAL_VISIBLE_LENGTH).toFixed(3));
+    const posH = getDialMarkerPosition(DIAL_START_ANGLE + (ratioH * DIAL_SWEEP));
+    const posL = getDialMarkerPosition(DIAL_START_ANGLE + (ratioL * DIAL_SWEEP));
+    dial.style.setProperty("--climate-heat-progress", String(heatLen));
+    dial.style.setProperty("--climate-cool-progress", String(coolLen));
+    dial.style.setProperty("--climate-cool-dashoffset", `${coolOff}px`);
+    dial.style.setProperty("--climate-thumb-heat-left", `${posL.left}%`);
+    dial.style.setProperty("--climate-thumb-heat-top", `${posL.top}%`);
+    dial.style.setProperty("--climate-thumb-cool-left", `${posH.left}%`);
+    dial.style.setProperty("--climate-thumb-cool-top", `${posH.top}%`);
+  }
+
   _updateDialPreview(value) {
     const state = this._getState();
     if (this._isDualSetpointRange(state)) {
@@ -2262,6 +2362,7 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     this._activeDialDrag = {
+      kind: "single",
       dial,
       geometry: dial.getBoundingClientRect(),
       pointerId,
@@ -2311,6 +2412,11 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
+    if (drag.kind === "range") {
+      this._moveRangeDialDrag(clientX, clientY, event);
+      return;
+    }
+
     if (event) {
       event.preventDefault();
     }
@@ -2352,6 +2458,11 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
+    if (drag.kind === "range") {
+      this._commitRangeDialDrag(clientX, clientY, event, pointerId);
+      return;
+    }
+
     if (event) {
       event.preventDefault();
     }
@@ -2383,10 +2494,231 @@ class NodaliaClimateCard extends HTMLElement {
     }
   }
 
+  _startRangeDialDrag(dial, handle, clientX, clientY, event = null, pointerId = null) {
+    if (!(dial instanceof HTMLElement) || (handle !== "low" && handle !== "high")) {
+      return;
+    }
+    const state = this._getState();
+    if (!state || !this._isDualSetpointRange(state)) {
+      return;
+    }
+
+    this._activeDialDrag = {
+      kind: "range",
+      handle,
+      dial,
+      geometry: dial.getBoundingClientRect(),
+      pointerId,
+      lastLow: NaN,
+      lastHigh: NaN,
+      startClientX: clientX,
+      startClientY: clientY,
+      rangeThumbDragStarted: false,
+    };
+    this._setDragWindowListeners(true);
+    this._setDialDraggingState(true, dial);
+
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    const pair = this._getEffectiveTargetLowHigh(state);
+    if (!Number.isFinite(pair.low) || !Number.isFinite(pair.high)) {
+      this._setDialDraggingState(false, dial);
+      this._activeDialDrag = null;
+      this._setDragWindowListeners(false);
+      return;
+    }
+
+    this._activeDialDrag.lastLow = pair.low;
+    this._activeDialDrag.lastHigh = pair.high;
+
+    const entityId = this._config.entity;
+    if (entityId) {
+      this._draftTempRange.set(entityId, { low: pair.low, high: pair.high });
+    }
+    this._updateDialRangePreview(pair.low, pair.high);
+
+    if (event?.target?.setPointerCapture && pointerId != null && event.target instanceof Element) {
+      try {
+        event.target.setPointerCapture(pointerId);
+      } catch (_e) {
+        /* ignore */
+      }
+    }
+  }
+
+  _moveRangeDialDrag(clientX, clientY, event = null) {
+    const drag = this._activeDialDrag;
+    const state = this._getState();
+    if (!drag || drag.kind !== "range" || !state) {
+      return;
+    }
+    if (event) {
+      event.preventDefault();
+    }
+
+    const dx = clientX - drag.startClientX;
+    const dy = clientY - drag.startClientY;
+    if (!drag.rangeThumbDragStarted) {
+      if (Math.hypot(dx, dy) < RANGE_THUMB_DRAG_THRESHOLD_PX) {
+        return;
+      }
+      drag.rangeThumbDragStarted = true;
+      this._selectedRangeThumb = drag.handle;
+    }
+
+    const range = this._getTemperatureRange(state);
+    const step = this._getTemperatureStep(state);
+    const fallback = drag.handle === "low" ? drag.lastLow : drag.lastHigh;
+    const raw = getDialValueFromPoint(drag.dial, clientX, clientY, range, step, fallback, drag.geometry);
+    let low = drag.lastLow;
+    let high = drag.lastHigh;
+    if (drag.handle === "low") {
+      const v = this._clampRangeLowCandidate(raw, high, state);
+      if (v !== null) {
+        low = v;
+      }
+    } else {
+      const v = this._clampRangeHighCandidate(raw, low, state);
+      if (v !== null) {
+        high = v;
+      }
+    }
+    drag.lastLow = low;
+    drag.lastHigh = high;
+
+    const entityId = this._config.entity;
+    if (entityId) {
+      this._draftTempRange.set(entityId, { low, high });
+    }
+    this._updateDialRangePreview(low, high);
+  }
+
+  _commitRangeDialDrag(clientX, clientY, event = null, _pointerId = null) {
+    const drag = this._activeDialDrag;
+    const state = this._getState();
+    if (!drag || drag.kind !== "range" || !state) {
+      return;
+    }
+    if (event) {
+      event.preventDefault();
+    }
+    if (this._dialDragFrame) {
+      window.cancelAnimationFrame(this._dialDragFrame);
+      this._dialDragFrame = 0;
+    }
+    this._pendingDialDragPoint = null;
+
+    if (!drag.rangeThumbDragStarted) {
+      const h = drag.handle;
+      this._selectedRangeThumb = this._selectedRangeThumb === h ? null : h;
+      this._setDialDraggingState(false, drag.dial);
+      this._activeDialDrag = null;
+      this._setDragWindowListeners(false);
+      const entityId = this._config.entity;
+      const pairEff = this._getEffectiveTargetLowHigh(state);
+      if (entityId && Number.isFinite(pairEff.low) && Number.isFinite(pairEff.high)) {
+        this._draftTempRange.set(entityId, { low: pairEff.low, high: pairEff.high });
+      }
+      if (Number.isFinite(pairEff.low) && Number.isFinite(pairEff.high)) {
+        this._updateDialRangePreview(pairEff.low, pairEff.high);
+      }
+      if (this._pendingRenderAfterDrag) {
+        this._pendingRenderAfterDrag = false;
+      }
+      this._render();
+      return;
+    }
+
+    const range = this._getTemperatureRange(state);
+    const step = this._getTemperatureStep(state);
+    const fallback = drag.handle === "low" ? drag.lastLow : drag.lastHigh;
+    const raw = getDialValueFromPoint(drag.dial, clientX, clientY, range, step, fallback, drag.geometry);
+    let low = drag.lastLow;
+    let high = drag.lastHigh;
+    if (drag.handle === "low") {
+      const v = this._clampRangeLowCandidate(raw, high, state);
+      if (v !== null) {
+        low = v;
+      }
+    } else {
+      const v = this._clampRangeHighCandidate(raw, low, state);
+      if (v !== null) {
+        high = v;
+      }
+    }
+    const normalized = this._normalizeLowHighPair(low, high, state);
+
+    this._setDialDraggingState(false, drag.dial);
+    this._activeDialDrag = null;
+    this._setDragWindowListeners(false);
+
+    this._selectedRangeThumb = drag.handle;
+
+    if (normalized) {
+      this._triggerHaptic("selection");
+      this._queueRangeCommit(normalized, { immediate: true, render: true });
+    }
+
+    if (this._pendingRenderAfterDrag) {
+      this._pendingRenderAfterDrag = false;
+      this._render();
+    }
+  }
+
   _onShadowPointerDown(event) {
     const path = event.composedPath();
     const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
     if (actionButton) {
+      return;
+    }
+
+    const stateEarly = this._getState();
+    if (
+      !this._activeDialDrag &&
+      stateEarly &&
+      this._isDualSetpointRange(stateEarly) &&
+      this._selectedRangeThumb
+    ) {
+      const onRangeThumb = path.some(
+        n =>
+          n instanceof Element &&
+          (n.dataset?.climateControl === "dial-range-low" || n.dataset?.climateControl === "dial-range-high"),
+      );
+      if (!onRangeThumb) {
+        const dialDual = path.find(
+          n =>
+            n instanceof HTMLElement &&
+            n.classList?.contains("climate-card__dial") &&
+            n.classList?.contains("climate-card__dial--dual-range"),
+        );
+        if (dialDual) {
+          this._selectedRangeThumb = null;
+          this._render();
+        }
+      }
+    }
+
+    const rangeLow = path.find(node => node instanceof Element && node.dataset?.climateControl === "dial-range-low");
+    const rangeHigh = path.find(node => node instanceof Element && node.dataset?.climateControl === "dial-range-high");
+    if ((rangeLow || rangeHigh) && this._isDualSetpointRange(this._getState())) {
+      const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"));
+      if (
+        !this._activeDialDrag &&
+        dial &&
+        (typeof event.button !== "number" || event.button === 0)
+      ) {
+        this._startRangeDialDrag(
+          dial,
+          rangeLow ? "low" : "high",
+          event.clientX,
+          event.clientY,
+          event,
+          event.pointerId,
+        );
+      }
       return;
     }
 
@@ -2415,6 +2747,42 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
+    const stateEarly = this._getState();
+    if (
+      !this._activeDialDrag &&
+      stateEarly &&
+      this._isDualSetpointRange(stateEarly) &&
+      this._selectedRangeThumb
+    ) {
+      const onRangeThumb = path.some(
+        n =>
+          n instanceof Element &&
+          (n.dataset?.climateControl === "dial-range-low" || n.dataset?.climateControl === "dial-range-high"),
+      );
+      if (!onRangeThumb) {
+        const dialDual = path.find(
+          n =>
+            n instanceof HTMLElement &&
+            n.classList?.contains("climate-card__dial") &&
+            n.classList?.contains("climate-card__dial--dual-range"),
+        );
+        if (dialDual) {
+          this._selectedRangeThumb = null;
+          this._render();
+        }
+      }
+    }
+
+    const rangeLow = path.find(node => node instanceof Element && node.dataset?.climateControl === "dial-range-low");
+    const rangeHigh = path.find(node => node instanceof Element && node.dataset?.climateControl === "dial-range-high");
+    if ((rangeLow || rangeHigh) && this._isDualSetpointRange(this._getState())) {
+      const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"));
+      if (!this._activeDialDrag && dial && event.button === 0) {
+        this._startRangeDialDrag(dial, rangeLow ? "low" : "high", event.clientX, event.clientY, event, null);
+      }
+      return;
+    }
+
     const dialHandle = path.find(
       node => node instanceof Element && node.dataset?.climateControl === "dial-hit",
     );
@@ -2436,6 +2804,43 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
+    const stateEarly = this._getState();
+    if (
+      !this._activeDialDrag &&
+      stateEarly &&
+      this._isDualSetpointRange(stateEarly) &&
+      this._selectedRangeThumb
+    ) {
+      const onRangeThumb = path.some(
+        n =>
+          n instanceof Element &&
+          (n.dataset?.climateControl === "dial-range-low" || n.dataset?.climateControl === "dial-range-high"),
+      );
+      if (!onRangeThumb) {
+        const dialDual = path.find(
+          n =>
+            n instanceof HTMLElement &&
+            n.classList?.contains("climate-card__dial") &&
+            n.classList?.contains("climate-card__dial--dual-range"),
+        );
+        if (dialDual) {
+          this._selectedRangeThumb = null;
+          this._render();
+        }
+      }
+    }
+
+    const rangeLow = path.find(node => node instanceof Element && node.dataset?.climateControl === "dial-range-low");
+    const rangeHigh = path.find(node => node instanceof Element && node.dataset?.climateControl === "dial-range-high");
+    if ((rangeLow || rangeHigh) && this._isDualSetpointRange(this._getState()) && event.touches?.length) {
+      const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"));
+      if (!this._activeDialDrag && dial) {
+        const t = event.touches[0];
+        this._startRangeDialDrag(dial, rangeLow ? "low" : "high", t.clientX, t.clientY, event, null);
+      }
+      return;
+    }
+
     const dialHandle = path.find(
       node => node instanceof Element && node.dataset?.climateControl === "dial-hit",
     );
@@ -2452,7 +2857,14 @@ class NodaliaClimateCard extends HTMLElement {
 
   _onWindowPointerMove(event) {
     const drag = this._activeDialDrag;
-    if (!drag || drag.pointerId !== event.pointerId) {
+    if (!drag) {
+      return;
+    }
+    if (
+      drag.pointerId != null &&
+      event.pointerId != null &&
+      drag.pointerId !== event.pointerId
+    ) {
       return;
     }
 
@@ -2461,7 +2873,14 @@ class NodaliaClimateCard extends HTMLElement {
 
   _onWindowPointerUp(event) {
     const drag = this._activeDialDrag;
-    if (!drag || drag.pointerId !== event.pointerId) {
+    if (!drag) {
+      return;
+    }
+    if (
+      drag.pointerId != null &&
+      event.pointerId != null &&
+      drag.pointerId !== event.pointerId
+    ) {
       return;
     }
 
@@ -2554,6 +2973,7 @@ class NodaliaClimateCard extends HTMLElement {
 
     switch (actionButton.dataset.climateAction) {
       case "toggle":
+        this._selectedRangeThumb = null;
         this._triggerHaptic();
         this._toggleClimate(state);
         break;
@@ -2565,6 +2985,7 @@ class NodaliaClimateCard extends HTMLElement {
         break;
       case "mode":
         if (actionButton.dataset.mode) {
+          this._selectedRangeThumb = null;
           this._triggerHaptic();
           this._setHvacMode(actionButton.dataset.mode);
         }
@@ -2650,17 +3071,21 @@ class NodaliaClimateCard extends HTMLElement {
     const isOff = this._isOff(state) || isUnavailableState(state);
     const modeDialButtonCount = (isOff ? 0 : 1) + visibleModeOptions.length;
     const isRangeMode = !isOff && this._isDualSetpointRange(state);
+    if (!isRangeMode) {
+      this._selectedRangeThumb = null;
+      this._lastDualRangeModeKey = null;
+    } else {
+      const modeKey = normalizedCurrentMode;
+      if (this._lastDualRangeModeKey != null && this._lastDualRangeModeKey !== modeKey) {
+        this._selectedRangeThumb = null;
+      }
+      this._lastDualRangeModeKey = modeKey;
+    }
     const rangeBand = isRangeMode ? this._getEffectiveTargetLowHigh(state) : { low: NaN, high: NaN };
-    const dialThumbValue = isRangeMode
-      ? (
-        currentTemperature !== null
-          ? currentTemperature
-          : (Number.isFinite(rangeBand.low) && Number.isFinite(rangeBand.high)
-            ? (rangeBand.low + rangeBand.high) / 2
-            : NaN)
-      )
+    const dialThumbValue = isRangeMode ? NaN : targetTemperature;
+    const dialPrimaryReadoutValue = isRangeMode
+      ? (currentTemperature !== null ? currentTemperature : NaN)
       : targetTemperature;
-    const dialPrimaryReadoutValue = isRangeMode ? dialThumbValue : targetTemperature;
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const i18nLang = config.language ?? "auto";
     const tempScale = getClimateTemperatureScaleLetter(hass);
@@ -2776,12 +3201,33 @@ class NodaliaClimateCard extends HTMLElement {
       modeDialButtonCount >= 6 ? (tightLayout ? "6px" : compactLayout ? "6px" : "7px") : (tightLayout ? "7px" : "9px");
     const targetUnitTopEm = modeDialButtonCount >= 3 ? "0.44em" : "0.14em";
     const targetBlockPaddingTop = modeDialButtonCount >= 3 ? "0.12em" : "0";
-    const ratio = supportsTargetTemperature && Number.isFinite(dialThumbValue)
-      ? (dialThumbValue - temperatureRange.min) / Math.max(temperatureRange.max - temperatureRange.min, temperatureStep)
-      : 0;
-    const dialAngle = DIAL_START_ANGLE + (clamp(ratio, 0, 1) * DIAL_SWEEP);
-    const progressLength = Number((DIAL_VISIBLE_LENGTH * clamp(ratio, 0, 1)).toFixed(3));
+    const tempSpan = Math.max(temperatureRange.max - temperatureRange.min, temperatureStep);
     const chips = [];
+    let ratio = 0;
+    let dialAngle = DIAL_START_ANGLE;
+    let progressLength = 0;
+    let thumbPosition = { left: 50, top: 50 };
+    let heatArcLen = 0;
+    let coolArcLen = 0;
+    let coolDashOffsetPx = 0;
+    let thumbHeatPosition = { left: 50, top: 50 };
+    let thumbCoolPosition = { left: 50, top: 50 };
+    if (isRangeMode && Number.isFinite(rangeBand.low) && Number.isFinite(rangeBand.high)) {
+      const ratioL = clamp((rangeBand.low - temperatureRange.min) / tempSpan, 0, 1);
+      const ratioH = clamp((rangeBand.high - temperatureRange.min) / tempSpan, 0, 1);
+      heatArcLen = Number((ratioL * DIAL_VISIBLE_LENGTH).toFixed(3));
+      coolArcLen = Number(((1 - ratioH) * DIAL_VISIBLE_LENGTH).toFixed(3));
+      coolDashOffsetPx = Number((-ratioH * DIAL_VISIBLE_LENGTH).toFixed(3));
+      const angleL = DIAL_START_ANGLE + (ratioL * DIAL_SWEEP);
+      const angleH = DIAL_START_ANGLE + (ratioH * DIAL_SWEEP);
+      thumbHeatPosition = getDialMarkerPosition(angleL);
+      thumbCoolPosition = getDialMarkerPosition(angleH);
+    } else if (supportsTargetTemperature && Number.isFinite(dialThumbValue)) {
+      ratio = (dialThumbValue - temperatureRange.min) / tempSpan;
+      dialAngle = DIAL_START_ANGLE + (clamp(ratio, 0, 1) * DIAL_SWEEP);
+      progressLength = Number((DIAL_VISIBLE_LENGTH * clamp(ratio, 0, 1)).toFixed(3));
+      thumbPosition = getDialMarkerPosition(dialAngle);
+    }
     const currentRatio = currentTemperature !== null
       ? clamp(
         (currentTemperature - temperatureRange.min) / Math.max(temperatureRange.max - temperatureRange.min, temperatureStep),
@@ -2792,9 +3238,58 @@ class NodaliaClimateCard extends HTMLElement {
     const currentAngle = currentRatio === null
       ? null
       : DIAL_START_ANGLE + (currentRatio * DIAL_SWEEP);
-    const thumbPosition = getDialMarkerPosition(dialAngle);
     const currentMarkerPosition = currentAngle === null ? null : getDialMarkerPosition(currentAngle);
     const showDialCurrentMarker = !isRangeMode && currentMarkerPosition !== null;
+    const dialSvgInner = isRangeMode
+      ? `
+                <circle
+                  class="climate-card__dial-track"
+                  cx="${DIAL_VIEWBOX_SIZE / 2}"
+                  cy="${DIAL_VIEWBOX_SIZE / 2}"
+                  r="${DIAL_CIRCLE_RADIUS}"
+                ></circle>
+                <circle
+                  class="climate-card__dial-progress-heat"
+                  cx="${DIAL_VIEWBOX_SIZE / 2}"
+                  cy="${DIAL_VIEWBOX_SIZE / 2}"
+                  r="${DIAL_CIRCLE_RADIUS}"
+                ></circle>
+                <circle
+                  class="climate-card__dial-progress-cool"
+                  cx="${DIAL_VIEWBOX_SIZE / 2}"
+                  cy="${DIAL_VIEWBOX_SIZE / 2}"
+                  r="${DIAL_CIRCLE_RADIUS}"
+                ></circle>`
+      : `
+                <circle
+                  class="climate-card__dial-track"
+                  cx="${DIAL_VIEWBOX_SIZE / 2}"
+                  cy="${DIAL_VIEWBOX_SIZE / 2}"
+                  r="${DIAL_CIRCLE_RADIUS}"
+                ></circle>
+                <circle
+                  class="climate-card__dial-hit"
+                  data-climate-control="dial-hit"
+                  cx="${DIAL_VIEWBOX_SIZE / 2}"
+                  cy="${DIAL_VIEWBOX_SIZE / 2}"
+                  r="${DIAL_CIRCLE_RADIUS}"
+                ></circle>
+                <circle
+                  class="climate-card__dial-progress"
+                  cx="${DIAL_VIEWBOX_SIZE / 2}"
+                  cy="${DIAL_VIEWBOX_SIZE / 2}"
+                  r="${DIAL_CIRCLE_RADIUS}"
+                ></circle>`;
+    const dialThumbsInner = isRangeMode
+      ? `
+              <span class="climate-card__dial-thumb climate-card__dial-thumb--heat${this._selectedRangeThumb === "low" ? " climate-card__dial-thumb--range-selected" : ""}" data-climate-control="dial-range-low" aria-hidden="true"></span>
+              <span class="climate-card__dial-thumb climate-card__dial-thumb--cool${this._selectedRangeThumb === "high" ? " climate-card__dial-thumb--range-selected" : ""}" data-climate-control="dial-range-high" aria-hidden="true"></span>`
+      : `
+              <span class="climate-card__dial-current-marker" aria-hidden="true"></span>
+              <span class="climate-card__dial-thumb" data-climate-control="dial-hit" aria-hidden="true"></span>`;
+    const dialInlineVars = isRangeMode
+      ? `--climate-thumb-heat-left:${thumbHeatPosition.left}%;--climate-thumb-heat-top:${thumbHeatPosition.top}%;--climate-thumb-cool-left:${thumbCoolPosition.left}%;--climate-thumb-cool-top:${thumbCoolPosition.top}%;--climate-heat-progress:${heatArcLen};--climate-cool-progress:${coolArcLen};--climate-cool-dashoffset:${coolDashOffsetPx}px;`
+      : `--climate-thumb-left:${thumbPosition.left}%;--climate-thumb-top:${thumbPosition.top}%;${showDialCurrentMarker ? `--climate-current-left:${currentMarkerPosition.left}%;--climate-current-top:${currentMarkerPosition.top}%;` : ""}`;
 
     if (config.show_state_chip !== false) {
       chips.push(`<div class="climate-card__chip climate-card__chip--state">${escapeHtml(this._getStateLabel(state))}</div>`);
@@ -2809,13 +3304,22 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     const currentActionMeta = climateDialActionMeta(this._getCurrentAction(state), currentMode);
-    const dialPrimaryReadoutHtml = escapeHtml(formatTemperature(dialPrimaryReadoutValue, temperatureStep, false, hass));
+    const dialPrimaryReadoutHtml = isRangeMode
+      ? escapeHtml(
+        currentTemperature !== null
+          ? formatTemperature(currentTemperature, temperatureStep, false, hass)
+          : formatTemperature(null, temperatureStep, false, hass),
+      )
+      : escapeHtml(formatTemperature(dialPrimaryReadoutValue, temperatureStep, false, hass));
     const dialMetaHtml = isRangeMode
       ? `<span class="climate-card__dial-range">${escapeHtml(formatTemperatureRangeSummary(rangeBand.low, rangeBand.high, temperatureStep, hass))}</span>`
       : (currentTemperature !== null
         ? `<span>${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true, hass))}</span>`
         : "");
     const ariaDialValue = Number.isFinite(dialPrimaryReadoutValue) ? dialPrimaryReadoutValue : temperatureRange.min;
+    const ariaRangeText = isRangeMode && Number.isFinite(rangeBand.low) && Number.isFinite(rangeBand.high)
+      ? escapeHtml(formatTemperatureRangeSummary(rangeBand.low, rangeBand.high, temperatureStep, hass))
+      : "";
     const cardBackground = isOff
       ? styles.card.background
       : `
@@ -2833,6 +3337,8 @@ class NodaliaClimateCard extends HTMLElement {
       linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.dial.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.dial.background}) 60%, ${styles.dial.background} 100%)
     `.trim();
     const dialTrackColor = `color-mix(in srgb, ${styles.dial.track_color} 68%, var(--primary-text-color) 32%)`;
+    const dialHeatStroke = String(styles.dial.heat_color || "#f59f42").trim();
+    const dialCoolStroke = String(styles.dial.cool_color || "#71c0ff").trim();
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const dialControlsStacked = modeDialButtonCount >= 3;
@@ -3134,7 +3640,7 @@ class NodaliaClimateCard extends HTMLElement {
           height: auto;
           max-width: 100%;
           position: relative;
-          touch-action: ${isRangeMode ? "manipulation" : "none"};
+          touch-action: none;
           transform: translateZ(0) scale(1);
           transform-origin: center;
           transition:
@@ -3158,21 +3664,81 @@ class NodaliaClimateCard extends HTMLElement {
           cursor: ${supportsTargetTemperature && !isRangeMode ? "grabbing" : "default"};
         }
 
-        .climate-card__dial--range-readout {
+        .climate-card__dial--dual-range {
           cursor: default;
         }
 
-        .climate-card__dial--range-readout .climate-card__dial-hit {
-          pointer-events: none;
+        .climate-card__dial--dual-range .climate-card__dial-thumb--heat,
+        .climate-card__dial--dual-range .climate-card__dial-thumb--cool {
+          cursor: grab;
+          pointer-events: auto;
         }
 
-        .climate-card__dial--range-readout .climate-card__dial-thumb {
-          cursor: default;
-          pointer-events: none;
+        .climate-card__dial--dual-range .climate-card__dial-thumb--heat {
+          left: var(--climate-thumb-heat-left, 50%);
+          top: var(--climate-thumb-heat-top, 50%);
+          z-index: 3;
         }
 
-        .climate-card__dial--range-readout .climate-card__dial-current-marker {
-          opacity: 0;
+        .climate-card__dial--dual-range .climate-card__dial-thumb--cool {
+          left: var(--climate-thumb-cool-left, 50%);
+          top: var(--climate-thumb-cool-top, 50%);
+          z-index: 4;
+        }
+
+        .climate-card__dial--dual-range .climate-card__dial-thumb--cool::after {
+          background: color-mix(in srgb, ${dialCoolStroke} 22%, rgba(255, 255, 255, 0.96));
+        }
+
+        .climate-card__dial--dual-range .climate-card__dial-thumb--heat::after {
+          background: color-mix(in srgb, ${dialHeatStroke} 18%, rgba(255, 255, 255, 0.96));
+        }
+
+        .climate-card__dial--dual-range .climate-card__dial-thumb--range-selected {
+          box-shadow:
+            0 0 0 2px color-mix(in srgb, ${accentColor} 50%, transparent),
+            0 0 0 9px color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 0 26px color-mix(in srgb, ${accentColor} 38%, transparent),
+            0 10px 26px rgba(0, 0, 0, 0.22);
+          transform: translate(-50%, -50%) scale(1.1);
+          z-index: 6;
+        }
+
+        .climate-card__dial--dual-range .climate-card__dial-thumb--heat.climate-card__dial-thumb--range-selected::after {
+          box-shadow: 0 0 0 2px color-mix(in srgb, ${dialHeatStroke} 55%, transparent);
+        }
+
+        .climate-card__dial--dual-range .climate-card__dial-thumb--cool.climate-card__dial-thumb--range-selected::after {
+          box-shadow: 0 0 0 2px color-mix(in srgb, ${dialCoolStroke} 55%, transparent);
+        }
+
+        .climate-card__dial-progress-heat,
+        .climate-card__dial-progress-cool {
+          fill: none;
+          stroke-linecap: round;
+          stroke-width: ${dialStrokePx};
+          transform: rotate(${DIAL_START_ANGLE}deg);
+          transform-origin: ${DIAL_VIEWBOX_SIZE / 2}px ${DIAL_VIEWBOX_SIZE / 2}px;
+        }
+
+        .climate-card__dial-progress-heat {
+          stroke: ${dialHeatStroke};
+          stroke-dasharray: var(--climate-heat-progress, 0) ${DIAL_CIRCUMFERENCE};
+          opacity: 0.94;
+          transition:
+            stroke-dasharray var(--climate-card-dial-duration) ease-out,
+            opacity 180ms ease;
+        }
+
+        .climate-card__dial-progress-cool {
+          stroke: ${dialCoolStroke};
+          stroke-dasharray: var(--climate-cool-progress, 0) ${DIAL_CIRCUMFERENCE};
+          stroke-dashoffset: var(--climate-cool-dashoffset, 0px);
+          opacity: 0.94;
+          transition:
+            stroke-dasharray var(--climate-card-dial-duration) ease-out,
+            stroke-dashoffset var(--climate-card-dial-duration) ease-out,
+            opacity 180ms ease;
         }
 
         .climate-card__dial-svg {
@@ -3287,7 +3853,11 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__dial.is-dragging .climate-card__dial-progress,
+        .climate-card__dial.is-dragging .climate-card__dial-progress-heat,
+        .climate-card__dial.is-dragging .climate-card__dial-progress-cool,
         .climate-card__dial.is-dragging .climate-card__dial-thumb,
+        .climate-card__dial.is-dragging .climate-card__dial-thumb--heat,
+        .climate-card__dial.is-dragging .climate-card__dial-thumb--cool,
         .climate-card__dial.is-dragging .climate-card__dial-current-marker {
           transition: none !important;
         }
@@ -3312,7 +3882,19 @@ class NodaliaClimateCard extends HTMLElement {
           opacity: 1;
         }
 
-        .climate-card__dial.is-dragging .climate-card__dial-thumb {
+        .climate-card__dial.is-dragging .climate-card__dial-progress-heat {
+          filter: drop-shadow(0 0 10px color-mix(in srgb, ${dialHeatStroke} 38%, transparent));
+          opacity: 1;
+        }
+
+        .climate-card__dial.is-dragging .climate-card__dial-progress-cool {
+          filter: drop-shadow(0 0 10px color-mix(in srgb, ${dialCoolStroke} 38%, transparent));
+          opacity: 1;
+        }
+
+        .climate-card__dial.is-dragging .climate-card__dial-thumb,
+        .climate-card__dial.is-dragging .climate-card__dial-thumb--heat,
+        .climate-card__dial.is-dragging .climate-card__dial-thumb--cool {
           animation: climate-card-dial-thumb-pop 260ms cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
           background: transparent;
           box-shadow:
@@ -3700,39 +4282,20 @@ class NodaliaClimateCard extends HTMLElement {
 
           <div class="climate-card__dial-wrap ${shouldAnimateEntrance ? "climate-card__dial-wrap--entering" : ""}">
             <div
-              class="climate-card__dial${isRangeMode ? " climate-card__dial--range-readout" : ""}"
+              class="climate-card__dial${isRangeMode ? " climate-card__dial--dual-range" : ""}"
               data-climate-control="dial"
               role="${isRangeMode ? "group" : "slider"}"
-              aria-label="${isRangeMode ? "Temperatura interior y consigna" : "Temperatura objetivo"}"
+              aria-label="${isRangeMode ? "Comfort range and indoor temperature" : "Temperatura objetivo"}"
               aria-valuemin="${temperatureRange.min}"
               aria-valuemax="${temperatureRange.max}"
               aria-valuenow="${ariaDialValue}"
-              ${isRangeMode ? "aria-readonly=\"true\"" : ""}
-              style="--climate-thumb-left:${thumbPosition.left}%;--climate-thumb-top:${thumbPosition.top}%;${showDialCurrentMarker ? `--climate-current-left:${currentMarkerPosition.left}%;--climate-current-top:${currentMarkerPosition.top}%;` : ""}"
+              ${isRangeMode && ariaRangeText ? `aria-valuetext="${ariaRangeText}"` : ""}
+              style="${dialInlineVars}"
             >
               <svg class="climate-card__dial-svg" viewBox="0 0 ${DIAL_VIEWBOX_SIZE} ${DIAL_VIEWBOX_SIZE}" aria-hidden="true">
-                <circle
-                  class="climate-card__dial-track"
-                  cx="${DIAL_VIEWBOX_SIZE / 2}"
-                  cy="${DIAL_VIEWBOX_SIZE / 2}"
-                  r="${DIAL_CIRCLE_RADIUS}"
-                ></circle>
-                <circle
-                  class="climate-card__dial-hit"
-                  data-climate-control="dial-hit"
-                  cx="${DIAL_VIEWBOX_SIZE / 2}"
-                  cy="${DIAL_VIEWBOX_SIZE / 2}"
-                  r="${DIAL_CIRCLE_RADIUS}"
-                ></circle>
-                <circle
-                  class="climate-card__dial-progress"
-                  cx="${DIAL_VIEWBOX_SIZE / 2}"
-                  cy="${DIAL_VIEWBOX_SIZE / 2}"
-                  r="${DIAL_CIRCLE_RADIUS}"
-                ></circle>
+                ${dialSvgInner}
               </svg>
-              <span class="climate-card__dial-current-marker" aria-hidden="true"></span>
-              <span class="climate-card__dial-thumb" data-climate-control="dial-hit" aria-hidden="true"></span>
+              ${dialThumbsInner}
               <div class="climate-card__dial-center">
                 <div class="climate-card__target">
                   <span class="climate-card__target-value" data-climate-readout="target">${dialPrimaryReadoutHtml}</span>
