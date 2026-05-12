@@ -98,7 +98,7 @@
         }
       }
     }
-    return "es";
+    return "en";
   }
 
   function localeTag(langCode) {
@@ -115,7 +115,7 @@
       zh: "zh",
       ro: "ro",
     };
-    return map[langCode] || "es";
+    return map[langCode] || "en";
   }
 
   function normalizeTextKey(value) {
@@ -492,7 +492,7 @@
         unknown: "Desconocido",
         locationUnknown: "Ubicación desconocida",
         emptyTitle: "Nodalia Person Card",
-        emptyBody: "Configura `entity` para mostrar la tarjeta.",
+        emptyBody: "Configure `entity` to show the card.",
         defaultName: "Persona",
       },
       entityCard: {
@@ -515,6 +515,7 @@
           closing: "Cerrando",
           playing: "Reproduciendo",
           paused: "En pausa",
+          buffering: "Cargando",
           idle: "En espera",
           standby: "Standby",
           home: "En casa",
@@ -670,6 +671,36 @@
           continuous: "Continuo",
           clothes_dry: "Ropa",
           laundry: "Ropa",
+        },
+        deviceStates: {
+          on: "Encendido",
+          off: "Apagado",
+          humidifying: "Humidificando",
+          dehumidifying: "Deshumidificando",
+          drying: "Secando",
+          idle: "En espera",
+          unavailable: "No disponible",
+          unknown: "Desconocido",
+        },
+      },
+      climateCard: {
+        modes: {
+          off: "Apagado",
+          heat: "Calor",
+          cool: "Frío",
+          heat_cool: "Calor / frío",
+          auto: "Automático",
+          dry: "Secado",
+          fan_only: "Ventilador",
+        },
+        actions: {
+          heating: "Calentando",
+          cooling: "Enfriando",
+          drying: "Secando",
+          fan: "Ventilando",
+          fan_only: "Ventilador",
+          idle: "En espera",
+          off: "Apagado",
         },
       },
       graphCard: {
@@ -985,7 +1016,7 @@
         unknown: "Unknown",
         locationUnknown: "Unknown location",
         emptyTitle: "Nodalia Person Card",
-        emptyBody: "Set `entity` to show this card.",
+        emptyBody: "Configure `entity` to show the card.",
         defaultName: "Person",
       },
       entityCard: {
@@ -1008,6 +1039,7 @@
           closing: "Closing",
           playing: "Playing",
           paused: "Paused",
+          buffering: "Buffering",
           idle: "Idle",
           standby: "Standby",
           home: "Home",
@@ -1163,6 +1195,36 @@
           continuous: "Continuous",
           clothes_dry: "Laundry",
           laundry: "Laundry",
+        },
+        deviceStates: {
+          on: "On",
+          off: "Off",
+          humidifying: "Humidifying",
+          dehumidifying: "Dehumidifying",
+          drying: "Drying",
+          idle: "Idle",
+          unavailable: "Unavailable",
+          unknown: "Unknown",
+        },
+      },
+      climateCard: {
+        modes: {
+          off: "Off",
+          heat: "Heat",
+          cool: "Cool",
+          heat_cool: "Heat & cool",
+          auto: "Auto",
+          dry: "Dry",
+          fan_only: "Fan only",
+        },
+        actions: {
+          heating: "Heating",
+          cooling: "Cooling",
+          drying: "Drying",
+          fan: "Fan",
+          fan_only: "Fan only",
+          idle: "Idle",
+          off: "Off",
         },
       },
       graphCard: {
@@ -1501,6 +1563,7 @@
           closing: "Schließt",
           playing: "Wiedergabe",
           paused: "Pause",
+          buffering: "Puffern",
           idle: "Leerlauf",
           standby: "Standby",
           home: "Zuhause",
@@ -1656,6 +1719,36 @@
           continuous: "Dauerbetrieb",
           clothes_dry: "Wäsche",
           laundry: "Wäsche",
+        },
+        deviceStates: {
+          on: "Ein",
+          off: "Aus",
+          humidifying: "Befeuchtet",
+          dehumidifying: "Entfeuchtet",
+          drying: "Trocknet",
+          idle: "Leerlauf",
+          unavailable: "Nicht verfügbar",
+          unknown: "Unbekannt",
+        },
+      },
+      climateCard: {
+        modes: {
+          off: "Aus",
+          heat: "Heizen",
+          cool: "Kühlen",
+          heat_cool: "Heizen & Kühlen",
+          auto: "Auto",
+          dry: "Trocknen",
+          fan_only: "Nur Lüfter",
+        },
+        actions: {
+          heating: "Heizt",
+          cooling: "Kühlt",
+          drying: "Trocknet",
+          fan: "Lüftet",
+          fan_only: "Nur Lüfter",
+          idle: "Leerlauf",
+          off: "Aus",
         },
       },
       graphCard: {
@@ -1935,6 +2028,7 @@
           closing: "Fermeture",
           playing: "Lecture",
           paused: "Pause",
+          buffering: "Mise en mémoire tampon",
           idle: "Inactif",
           standby: "Veille",
           home: "À la maison",
@@ -2090,6 +2184,36 @@
           continuous: "Continu",
           clothes_dry: "Linge",
           laundry: "Linge",
+        },
+        deviceStates: {
+          on: "Allumé",
+          off: "Éteint",
+          humidifying: "Humidification",
+          dehumidifying: "Déshumidification",
+          drying: "Séchage",
+          idle: "Inactif",
+          unavailable: "Indisponible",
+          unknown: "Inconnu",
+        },
+      },
+      climateCard: {
+        modes: {
+          off: "Arrêt",
+          heat: "Chauffage",
+          cool: "Climatisation",
+          heat_cool: "Chaud / froid",
+          auto: "Auto",
+          dry: "Déshumidification",
+          fan_only: "Ventilateur seul",
+        },
+        actions: {
+          heating: "Chauffe",
+          cooling: "Refroidit",
+          drying: "Déshumidifie",
+          fan: "Ventile",
+          fan_only: "Ventilateur",
+          idle: "Inactif",
+          off: "Arrêt",
         },
       },
       graphCard: {
@@ -2369,6 +2493,7 @@
           closing: "Chiusura",
           playing: "In riproduzione",
           paused: "In pausa",
+          buffering: "Buffering",
           idle: "Inattivo",
           standby: "Standby",
           home: "A casa",
@@ -2524,6 +2649,36 @@
           continuous: "Continuo",
           clothes_dry: "Bucato",
           laundry: "Bucato",
+        },
+        deviceStates: {
+          on: "Acceso",
+          off: "Spento",
+          humidifying: "Umidificazione",
+          dehumidifying: "Deumidificazione",
+          drying: "Asciugatura",
+          idle: "Inattivo",
+          unavailable: "Non disponibile",
+          unknown: "Sconosciuto",
+        },
+      },
+      climateCard: {
+        modes: {
+          off: "Spento",
+          heat: "Caldo",
+          cool: "Freddo",
+          heat_cool: "Caldo / freddo",
+          auto: "Auto",
+          dry: "Deumidificazione",
+          fan_only: "Solo ventilatore",
+        },
+        actions: {
+          heating: "Riscalda",
+          cooling: "Raffredda",
+          drying: "Deumidifica",
+          fan: "Ventila",
+          fan_only: "Ventilatore",
+          idle: "Inattivo",
+          off: "Spento",
         },
       },
       graphCard: {
@@ -2803,6 +2958,7 @@
           closing: "Sluiten",
           playing: "Afspelen",
           paused: "Gepauzeerd",
+          buffering: "Bufferen",
           idle: "Inactief",
           standby: "Stand-by",
           home: "Thuis",
@@ -2958,6 +3114,36 @@
           continuous: "Continu",
           clothes_dry: "Wasgoed",
           laundry: "Wasgoed",
+        },
+        deviceStates: {
+          on: "Aan",
+          off: "Uit",
+          humidifying: "Bevochtigen",
+          dehumidifying: "Ontvochtigen",
+          drying: "Drogen",
+          idle: "Inactief",
+          unavailable: "Niet beschikbaar",
+          unknown: "Onbekend",
+        },
+      },
+      climateCard: {
+        modes: {
+          off: "Uit",
+          heat: "Verwarmen",
+          cool: "Koelen",
+          heat_cool: "Verwarmen & koelen",
+          auto: "Auto",
+          dry: "Ontvochtigen",
+          fan_only: "Alleen ventilator",
+        },
+        actions: {
+          heating: "Verwarmt",
+          cooling: "Koelt",
+          drying: "Ontvochtigt",
+          fan: "Ventileert",
+          fan_only: "Ventilator",
+          idle: "Inactief",
+          off: "Uit",
         },
       },
       graphCard: {
@@ -3280,8 +3466,38 @@
           drying: "Secagem",
           continuous: "Contínuo",
           clothes_dry: "Roupa",
-          laundry: "Roupa"
-        }
+          laundry: "Roupa",
+        },
+        deviceStates: {
+          on: "Ligado",
+          off: "Desligado",
+          humidifying: "Humidificação",
+          dehumidifying: "Desumidificação",
+          drying: "Secagem",
+          idle: "Inativo",
+          unavailable: "Indisponível",
+          unknown: "Desconhecido",
+        },
+      },
+      climateCard: {
+        modes: {
+          off: "Desligado",
+          heat: "Aquecer",
+          cool: "Arrefecer",
+          heat_cool: "Aquecer / arrefecer",
+          auto: "Automático",
+          dry: "Secar",
+          fan_only: "Só ventoinha",
+        },
+        actions: {
+          heating: "A aquecer",
+          cooling: "A arrefecer",
+          drying: "A secar",
+          fan: "Ventilação",
+          fan_only: "Ventoinha",
+          idle: "Inativo",
+          off: "Desligado",
+        },
       },
       graphCard: {
         emptyHistory: "Sem histórico disponível"
@@ -3353,6 +3569,7 @@
           closing: "A fechar",
           playing: "A reproduzir",
           paused: "Em pausa",
+          buffering: "Em buffer",
           idle: "Em espera",
           standby: "Standby",
           home: "Em casa",
@@ -3723,8 +3940,38 @@
           drying: "Сушка",
           continuous: "Непрерывно",
           clothes_dry: "Бельё",
-          laundry: "Бельё"
-        }
+          laundry: "Бельё",
+        },
+        deviceStates: {
+          on: "Вкл.",
+          off: "Выкл.",
+          humidifying: "Увлажнение",
+          dehumidifying: "Осушение",
+          drying: "Сушка",
+          idle: "Ожидание",
+          unavailable: "Недоступно",
+          unknown: "Неизвестно",
+        },
+      },
+      climateCard: {
+        modes: {
+          off: "Выкл.",
+          heat: "Обогрев",
+          cool: "Охлаждение",
+          heat_cool: "Обогрев и охлаждение",
+          auto: "Авто",
+          dry: "Осушение",
+          fan_only: "Только вентилятор",
+        },
+        actions: {
+          heating: "Обогрев",
+          cooling: "Охлаждение",
+          drying: "Осушение",
+          fan: "Вентиляция",
+          fan_only: "Вентилятор",
+          idle: "Ожидание",
+          off: "Выкл.",
+        },
       },
       graphCard: {
         emptyHistory: "История недоступна"
@@ -3796,6 +4043,7 @@
           closing: "Закрывается",
           playing: "Воспроизведение",
           paused: "Пауза",
+          buffering: "Буферизация",
           idle: "Ожидание",
           standby: "Ожидание",
           home: "Дома",
@@ -4166,8 +4414,38 @@
           drying: "Στέγνωμα",
           continuous: "Συνεχές",
           clothes_dry: "Ρούχα",
-          laundry: "Ρούχα"
-        }
+          laundry: "Ρούχα",
+        },
+        deviceStates: {
+          on: "Ενεργό",
+          off: "Ανενεργό",
+          humidifying: "Υγρασία",
+          dehumidifying: "Αφυγρανση",
+          drying: "Στέγνωμα",
+          idle: "Αδράνεια",
+          unavailable: "Μη διαθέσιμο",
+          unknown: "Άγνωστο",
+        },
+      },
+      climateCard: {
+        modes: {
+          off: "Ανενεργό",
+          heat: "Θέρμανση",
+          cool: "Ψύξη",
+          heat_cool: "Θέρμανση / ψύξη",
+          auto: "Αυτόματο",
+          dry: "Αφυγρανση",
+          fan_only: "Μόνο ανεμιστήρας",
+        },
+        actions: {
+          heating: "Θερμαίνει",
+          cooling: "Ψύχει",
+          drying: "Αφυγραίνει",
+          fan: "Αερισμός",
+          fan_only: "Ανεμιστήρας",
+          idle: "Αδράνεια",
+          off: "Ανενεργό",
+        },
       },
       graphCard: {
         emptyHistory: "Δεν υπάρχει διαθέσιμο ιστορικό"
@@ -4239,6 +4517,7 @@
           closing: "Κλείνει",
           playing: "Αναπαραγωγή",
           paused: "Παύση",
+          buffering: "Ροή σε ενδιάμεση μνήμη",
           idle: "Αδράνεια",
           standby: "Αναμονή",
           home: "Σπίτι",
@@ -4609,8 +4888,38 @@
           drying: "烘干",
           continuous: "连续",
           clothes_dry: "衣物",
-          laundry: "衣物"
-        }
+          laundry: "衣物",
+        },
+        deviceStates: {
+          on: "开启",
+          off: "关闭",
+          humidifying: "加湿",
+          dehumidifying: "除湿",
+          drying: "烘干",
+          idle: "空闲",
+          unavailable: "不可用",
+          unknown: "未知",
+        },
+      },
+      climateCard: {
+        modes: {
+          off: "关闭",
+          heat: "制热",
+          cool: "制冷",
+          heat_cool: "制热 / 制冷",
+          auto: "自动",
+          dry: "除湿",
+          fan_only: "送风",
+        },
+        actions: {
+          heating: "制热中",
+          cooling: "制冷中",
+          drying: "除湿中",
+          fan: "送风",
+          fan_only: "送风",
+          idle: "空闲",
+          off: "关闭",
+        },
       },
       graphCard: {
         emptyHistory: "暂无历史数据"
@@ -4682,6 +4991,7 @@
           closing: "正在关闭",
           playing: "播放中",
           paused: "暂停",
+          buffering: "缓冲中",
           idle: "空闲",
           standby: "待机",
           home: "在家",
@@ -5052,8 +5362,38 @@
           drying: "Uscare",
           continuous: "Continuu",
           clothes_dry: "Rufe",
-          laundry: "Rufe"
-        }
+          laundry: "Rufe",
+        },
+        deviceStates: {
+          on: "Pornit",
+          off: "Oprit",
+          humidifying: "Umidificare",
+          dehumidifying: "Dezumidificare",
+          drying: "Uscare",
+          idle: "Inactiv",
+          unavailable: "Indisponibil",
+          unknown: "Necunoscut",
+        },
+      },
+      climateCard: {
+        modes: {
+          off: "Oprit",
+          heat: "Încălzire",
+          cool: "Răcire",
+          heat_cool: "Încălzire / răcire",
+          auto: "Auto",
+          dry: "Dezumidificare",
+          fan_only: "Doar ventilator",
+        },
+        actions: {
+          heating: "Încălzește",
+          cooling: "Răcește",
+          drying: "Dezumidifică",
+          fan: "Ventilație",
+          fan_only: "Ventilator",
+          idle: "Inactiv",
+          off: "Oprit",
+        },
       },
       graphCard: {
         emptyHistory: "Nu există istoric disponibil"
@@ -5125,6 +5465,7 @@
           closing: "Se închide",
           playing: "Redare",
           paused: "Pauză",
+          buffering: "În buffer",
           idle: "Inactiv",
           standby: "Standby",
           home: "Acasă",
@@ -6113,7 +6454,7 @@
   const localeStringsCache = new Map();
 
   function strings(langCode) {
-    const code = PACK[langCode] ? langCode : "es";
+    const code = PACK[langCode] ? langCode : "en";
     if (code === "es") {
       return PACK.es;
     }
@@ -6206,6 +6547,87 @@
       return modes[key];
     }
     return String(value ?? "").trim();
+  }
+
+  function translateEntityStateChip(hass, configLang, rawKey) {
+    const lang = resolveLanguage(hass, configLang);
+    const k = normalizeTextKey(rawKey);
+    if (!k) {
+      return null;
+    }
+    const en = strings("en").entityCard?.states || {};
+    const loc = strings(lang).entityCard?.states;
+    const label = loc?.[k] ?? en[k];
+    return label ?? null;
+  }
+
+  function translateMediaPlayerState(hass, configLang, stateValue) {
+    const lang = resolveLanguage(hass, configLang);
+    const k = normalizeTextKey(stateValue);
+    const en = strings("en").entityCard?.states || {};
+    const loc = strings(lang).entityCard?.states;
+    if (k) {
+      const label = loc?.[k] ?? en[k];
+      if (label) {
+        return label;
+      }
+    }
+    const raw = String(stateValue ?? "").trim();
+    return raw || en.unknown || "Unknown";
+  }
+
+  function translateClimateHvacLabel(hass, configLang, rawValue, fromAction) {
+    const lang = resolveLanguage(hass, configLang);
+    const k = normalizeTextKey(rawValue);
+    const ccLoc = strings(lang).climateCard;
+    const ccEn = strings("en").climateCard || {};
+    const modes = { ...(ccEn.modes || {}), ...(ccLoc?.modes || {}) };
+    const actions = { ...(ccEn.actions || {}), ...(ccLoc?.actions || {}) };
+    const modeAlias = { heating: "heat", cooling: "cool", drying: "dry" };
+    const humanize = val => String(val ?? "")
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, ch => ch.toUpperCase());
+    if (!k) {
+      return "";
+    }
+    if (fromAction) {
+      if (actions[k]) {
+        return actions[k];
+      }
+      if (modes[k]) {
+        return modes[k];
+      }
+      const mapped = modeAlias[k];
+      if (mapped && modes[mapped]) {
+        return modes[mapped];
+      }
+      return humanize(rawValue);
+    }
+    if (modes[k]) {
+      return modes[k];
+    }
+    const mapped = modeAlias[k];
+    if (mapped && modes[mapped]) {
+      return modes[mapped];
+    }
+    if (actions[k]) {
+      return actions[k];
+    }
+    return humanize(rawValue);
+  }
+
+  function translateHumidifierDeviceState(hass, configLang, rawValue) {
+    const lang = resolveLanguage(hass, configLang);
+    const k = normalizeTextKey(rawValue);
+    const dict = strings(lang).humidifierCard?.deviceStates || strings("en").humidifierCard?.deviceStates || {};
+    const en = strings("en").humidifierCard?.deviceStates || {};
+    if (k && dict[k]) {
+      return dict[k];
+    }
+    if (k && en[k]) {
+      return en[k];
+    }
+    return String(rawValue ?? "").trim();
   }
 
   /** Same normalization as `nodalia-weather-card.js` for CAP / Meteoalarm attribute strings. */
@@ -6436,6 +6858,8 @@
         return st.playing;
       case "paused":
         return st.paused;
+      case "buffering":
+        return st.buffering;
       case "idle":
         return st.idle;
       case "standby":
@@ -6555,6 +6979,10 @@
     translateNotificationsUi,
     translateCalendarUi,
     translateHumidifierMode,
+    translateEntityStateChip,
+    translateMediaPlayerState,
+    translateClimateHvacLabel,
+    translateHumidifierDeviceState,
     translateMeteoalarmTerm,
     translateAdvanceVacuumReportedState,
     translateAdvanceVacuumVacuumMode,
@@ -6562,8 +6990,11 @@
     isVacuumErrorState,
     translateFavState(langCode, key) {
       const raw = normalizeTextKey(key);
-      const fd = strings(langCode).favCard;
-      const ed = strings(langCode).entityCard.states;
+      const fd = strings(langCode).favCard || strings("en").favCard || {};
+      const ed = {
+        ...(strings("en").entityCard?.states || {}),
+        ...(strings(langCode).entityCard?.states || {}),
+      };
       switch (raw) {
         case "on":
           return ed.on;
@@ -6577,6 +7008,8 @@
           return ed.playing;
         case "paused":
           return ed.paused;
+        case "buffering":
+          return ed.buffering;
         case "idle":
           return ed.idle;
         case "standby":

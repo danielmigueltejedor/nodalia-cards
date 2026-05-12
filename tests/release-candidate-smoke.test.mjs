@@ -143,9 +143,9 @@ test("calendar composers reject past dates with inline popup errors", () => {
   assert.match(source, /_setComposerError\(kind, message\)/);
   assert.match(source, /_renderComposerError\("native"\)/);
   assert.match(source, /dateInputIsBeforeToday\(dateRaw\)/);
-  assert.match(source, /La fecha no puede ser anterior a hoy\./);
-  assert.match(source, /Selecciona un calendario\./);
-  assert.match(source, /Escribe un título\./);
+  assert.match(source, /The date cannot be before today\./);
+  assert.match(source, /Select a calendar\./);
+  assert.match(source, /Enter a title\./);
   assert.match(source, /calendar-composer__error/);
 });
 
@@ -159,7 +159,7 @@ test("calendar native composer supports rich HA event fields and details", () =>
   assert.match(source, /data-native-field="repeatCustomInterval"/);
   assert.match(source, /data-native-field-group="repeatCustom" hidden/);
   assert.match(source, /\.calendar-composer__row\[hidden\][\s\S]*display: none !important/);
-  assert.match(source, /value="custom">\$\{escapeHtml\(this\._uiText\("repeat\.custom", "Personalizado"\)\)\}/);
+  assert.match(source, /value="custom">\$\{escapeHtml\(this\._uiText\("repeat\.custom", "Custom"\)\)\}/);
   assert.match(source, /INTERVAL=\$\{customInterval\}/);
   assert.match(source, /dtstart:/);
   assert.match(source, /dtend:/);
@@ -169,8 +169,8 @@ test("calendar native composer supports rich HA event fields and details", () =>
   assert.match(source, /data-native-field="color"/);
   assert.match(source, /calendar-composer \.editor-color-picker/);
   assert.match(source, /_mountNativeColorControl\(\)/);
-  assert.match(source, /value="none">\$\{escapeHtml\(this\._uiText\("repeat\.none", "No se repite"\)\)\}/);
-  assert.match(source, /value="yearly">\$\{escapeHtml\(this\._uiText\("repeat\.yearly", "Anualmente"\)\)\}/);
+  assert.match(source, /value="none">\$\{escapeHtml\(this\._uiText\("repeat\.none", "Does not repeat"\)\)\}/);
+  assert.match(source, /value="yearly">\$\{escapeHtml\(this\._uiText\("repeat\.yearly", "Yearly"\)\)\}/);
   assert.doesNotMatch(source, /data-native-field="repeat"/);
   assert.doesNotMatch(source, /data-native-field="rrule"/);
   assert.match(source, /appendNodaliaEventMetadata/);
@@ -196,7 +196,7 @@ test("calendar all-day labels use shared locale text", () => {
   const i18n = read("nodalia-i18n.js");
   assert.match(source, /_uiText\(path, fallback, values = \{\}\)/);
   assert.match(source, /translateCalendarUi/);
-  assert.match(source, /_uiText\("allDay", "Todo el día"\)/);
+  assert.match(source, /_uiText\("allDay", "All day"\)/);
   assert.doesNotMatch(source, /Todo el dia/);
   assert.match(i18n, /function translateCalendarUi/);
   assert.match(i18n, /calendarCard/);

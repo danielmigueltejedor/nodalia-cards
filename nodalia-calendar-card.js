@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.0";
+const CARD_VERSION = "1.0.1";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -15,7 +15,7 @@ const HAPTIC_PATTERNS = {
 const VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
 
 const DEFAULT_CONFIG = {
-  title: "Calendario",
+  title: "Calendar",
   icon: "mdi:calendar-month",
   calendars: [],
   time_range: "1w",
@@ -40,7 +40,7 @@ const DEFAULT_CONFIG = {
   },
   styles: {
     card: {
-      background: "var(--ha-card-background, var(--card-background-color))",
+      background: "var(--ha-card-background, var(--card-background-color, rgba(32, 34, 42, 0.94)))",
       border: "1px solid var(--divider-color)",
       border_radius: "28px",
       box_shadow: "var(--ha-card-box-shadow)",
@@ -698,15 +698,15 @@ class NodaliaCalendarCard extends HTMLElement {
   _timeRangeChipLabel(timeRange) {
     switch (timeRange || DEFAULT_CONFIG.time_range) {
       case "3d":
-        return this._uiText("timeRange.threeDays", "3 días");
+        return this._uiText("timeRange.threeDays", "3 days");
       case "1w":
-        return this._uiText("timeRange.oneWeek", "1 semana");
+        return this._uiText("timeRange.oneWeek", "1 week");
       case "2w":
-        return this._uiText("timeRange.twoWeeks", "2 semanas");
+        return this._uiText("timeRange.twoWeeks", "2 weeks");
       case "1m":
-        return this._uiText("timeRange.oneMonth", "1 mes");
+        return this._uiText("timeRange.oneMonth", "1 month");
       default:
-        return this._uiText("timeRange.oneWeek", "1 semana");
+        return this._uiText("timeRange.oneWeek", "1 week");
     }
   }
 
@@ -1022,14 +1022,14 @@ class NodaliaCalendarCard extends HTMLElement {
           <div class="calendar-expanded__day-detail-toolbar">
             <button type="button" class="calendar-expanded__day-back" data-action="month-day-back">
               <ha-icon icon="mdi:chevron-left"></ha-icon>
-              <span>${escapeHtml(this._uiText("buttons.month", "Mes"))}</span>
+              <span>${escapeHtml(this._uiText("buttons.month", "Month"))}</span>
             </button>
           </div>
           <div class="calendar-expanded__day-detail-heading">
             <div class="calendar-expanded__day-detail-title">${escapeHtml(longTitle)}</div>
             ${this._renderWeatherBadge(focusDate, weatherByDay, "calendar-expanded__weather")}
           </div>
-          <div class="calendar-expanded__day-empty">${escapeHtml(this._uiText("empty.day", "Sin eventos este día."))}</div>
+          <div class="calendar-expanded__day-empty">${escapeHtml(this._uiText("empty.day", "No events this day."))}</div>
         </div>
       `;
     }
@@ -1041,7 +1041,7 @@ class NodaliaCalendarCard extends HTMLElement {
         <div class="calendar-expanded__day-detail-toolbar">
           <button type="button" class="calendar-expanded__day-back" data-action="month-day-back">
             <ha-icon icon="mdi:chevron-left"></ha-icon>
-            <span>${escapeHtml(this._uiText("buttons.month", "Mes"))}</span>
+            <span>${escapeHtml(this._uiText("buttons.month", "Month"))}</span>
           </button>
         </div>
         <div class="calendar-expanded__day-detail-heading">
@@ -1057,10 +1057,10 @@ class NodaliaCalendarCard extends HTMLElement {
     const start = eventDate(event?.start);
     const end = eventDate(event?.end);
     const eventKey = calendarEventKey(event);
-    const summary = String(event?.summary || event?.message || this._uiText("event.untitled", "Evento sin título")).trim();
+    const summary = String(event?.summary || event?.message || this._uiText("event.untitled", "Untitled event")).trim();
     const subtitle = this._getEventSubtitleForDisplay(event?._entity);
     const timeLabel = eventIsAllDay(event)
-      ? this._uiText("allDay", "Todo el día")
+      ? this._uiText("allDay", "All day")
       : start && end
         ? `${formatTimeLabel(start, locale)} - ${formatTimeLabel(end, locale)}`
         : start
@@ -1086,13 +1086,13 @@ class NodaliaCalendarCard extends HTMLElement {
         <div class="calendar-expanded__day-detail-toolbar">
           <button type="button" class="calendar-expanded__day-back" data-action="event-detail-back">
             <ha-icon icon="mdi:chevron-left"></ha-icon>
-            <span>${escapeHtml(this._uiText("buttons.back", "Volver"))}</span>
+            <span>${escapeHtml(this._uiText("buttons.back", "Back"))}</span>
           </button>
           ${
             this._canDeleteCalendarEvent(event, config)
-              ? `<button type="button" class="calendar-expanded__event-delete" data-action="delete-event" data-key="${escapeHtml(eventKey)}" aria-label="${escapeHtml(this._uiText("aria.deleteEvent", "Eliminar evento"))}">
+              ? `<button type="button" class="calendar-expanded__event-delete" data-action="delete-event" data-key="${escapeHtml(eventKey)}" aria-label="${escapeHtml(this._uiText("aria.deleteEvent", "Delete event"))}">
                   <ha-icon icon="mdi:trash-can-outline"></ha-icon>
-                  <span>${escapeHtml(this._uiText("buttons.delete", "Eliminar"))}</span>
+                  <span>${escapeHtml(this._uiText("buttons.delete", "Delete"))}</span>
                 </button>`
               : ""
           }
@@ -1109,7 +1109,7 @@ class NodaliaCalendarCard extends HTMLElement {
           ${
             description
               ? `<section class="calendar-expanded__event-section">
-                  <div class="calendar-expanded__event-section-title">${escapeHtml(this._uiText("fields.description", "Descripción"))}</div>
+                  <div class="calendar-expanded__event-section-title">${escapeHtml(this._uiText("fields.description", "Description"))}</div>
                   <div class="calendar-expanded__event-section-body">${escapeHtml(description).replace(/\n/g, "<br>")}</div>
                 </section>`
               : ""
@@ -1117,7 +1117,7 @@ class NodaliaCalendarCard extends HTMLElement {
           ${
             location
               ? `<section class="calendar-expanded__event-section">
-                  <div class="calendar-expanded__event-section-title">${escapeHtml(this._uiText("fields.location", "Ubicación"))}</div>
+                  <div class="calendar-expanded__event-section-title">${escapeHtml(this._uiText("fields.location", "Location"))}</div>
                   <div class="calendar-expanded__event-section-body">${escapeHtml(location)}</div>
                 </section>`
               : ""
@@ -1125,14 +1125,14 @@ class NodaliaCalendarCard extends HTMLElement {
           ${
             repeatLabel
               ? `<section class="calendar-expanded__event-section">
-                  <div class="calendar-expanded__event-section-title">${escapeHtml(this._uiText("fields.repeat", "Repetición"))}</div>
+                  <div class="calendar-expanded__event-section-title">${escapeHtml(this._uiText("fields.repeat", "Repeat"))}</div>
                   <div class="calendar-expanded__event-section-body">${escapeHtml(repeatLabel)}</div>
                 </section>`
               : ""
           }
           ${
             !description && !location && !repeatLabel
-              ? `<div class="calendar-expanded__day-empty">${escapeHtml(this._uiText("empty.eventDetails", "Este evento no tiene descripción ni ubicación."))}</div>`
+              ? `<div class="calendar-expanded__day-empty">${escapeHtml(this._uiText("empty.eventDetails", "This event has no description or location."))}</div>`
               : ""
           }
         </div>
@@ -1152,15 +1152,15 @@ class NodaliaCalendarCard extends HTMLElement {
     const freq = freqPart.replace("FREQ=", "").trim();
     const interval = Number.parseInt(intervalPart.replace("INTERVAL=", "").trim(), 10);
     if (Number.isFinite(interval) && interval > 1) {
-      return this._uiText("repeat.custom", "Personalizado");
+      return this._uiText("repeat.custom", "Custom");
     }
     const labels = {
-      DAILY: this._uiText("repeat.daily", "Diariamente"),
-      WEEKLY: this._uiText("repeat.weekly", "Semanalmente"),
-      MONTHLY: this._uiText("repeat.monthly", "Mensualmente"),
-      YEARLY: this._uiText("repeat.yearly", "Anualmente"),
+      DAILY: this._uiText("repeat.daily", "Daily"),
+      WEEKLY: this._uiText("repeat.weekly", "Weekly"),
+      MONTHLY: this._uiText("repeat.monthly", "Monthly"),
+      YEARLY: this._uiText("repeat.yearly", "Yearly"),
     };
-    return labels[freq] || this._uiText("repeat.custom", "Personalizado");
+    return labels[freq] || this._uiText("repeat.custom", "Custom");
   }
 
   _expandedLayoutKind(timeRange) {
@@ -1200,11 +1200,11 @@ class NodaliaCalendarCard extends HTMLElement {
     const eventKey = calendarEventKey(event);
     const start = eventDate(event.start);
     const timeLabel = eventIsAllDay(event)
-      ? this._uiText("allDay", "Todo el día")
+      ? this._uiText("allDay", "All day")
       : start
         ? formatTimeLabel(start, locale)
         : "--:--";
-    const summary = String(event.summary || event.message || this._uiText("event.untitled", "Evento sin título"));
+    const summary = String(event.summary || event.message || this._uiText("event.untitled", "Untitled event"));
     const subtitle = this._getEventSubtitleForDisplay(event._entity);
     const tintRaw = this._getEventTint(event);
     const tintClass = tintRaw ? " calendar-event--tinted" : "";
@@ -1216,7 +1216,7 @@ class NodaliaCalendarCard extends HTMLElement {
       : "";
     const canDelete = this._canDeleteCalendarEvent(event, config);
     const deleteButton = canDelete
-      ? `<button type="button" class="calendar-event__delete" data-action="delete-event" data-key="${escapeHtml(eventKey)}" aria-label="${escapeHtml(this._uiText("aria.deleteEvent", "Eliminar evento"))}">
+      ? `<button type="button" class="calendar-event__delete" data-action="delete-event" data-key="${escapeHtml(eventKey)}" aria-label="${escapeHtml(this._uiText("aria.deleteEvent", "Delete event"))}">
           <ha-icon icon="mdi:trash-can-outline"></ha-icon>
         </button>`
       : "";
@@ -1533,7 +1533,7 @@ class NodaliaCalendarCard extends HTMLElement {
           return;
         }
         this._events = [];
-        this._error = this._uiText("errors.loadEvents", "No se pudieron cargar eventos del calendario.");
+        this._error = this._uiText("errors.loadEvents", "Could not load calendar events.");
       } finally {
         if (refreshRunId !== this._refreshRunId) {
           return;
@@ -2274,24 +2274,24 @@ class NodaliaCalendarCard extends HTMLElement {
       this.shadowRoot.querySelector('[data-native-field="repeatCustomInterval"]')?.value || "1",
     ).trim();
     if (!calendarId) {
-      this._setComposerError("native", this._uiText("errors.selectCalendar", "Selecciona un calendario."));
+      this._setComposerError("native", this._uiText("errors.selectCalendar", "Select a calendar."));
       return;
     }
     if (!title) {
-      this._setComposerError("native", this._uiText("errors.enterTitle", "Escribe un título."));
+      this._setComposerError("native", this._uiText("errors.enterTitle", "Enter a title."));
       return;
     }
     if (!dateRaw || (!allDay && (!startRaw || !endRaw))) {
       this._setComposerError(
         "native",
         allDay
-          ? this._uiText("errors.selectDate", "Selecciona una fecha.")
-          : this._uiText("errors.selectDateTime", "Selecciona fecha, inicio y fin."),
+          ? this._uiText("errors.selectDate", "Select a date.")
+          : this._uiText("errors.selectDateTime", "Select date, start and end."),
       );
       return;
     }
     if (dateInputIsBeforeToday(dateRaw)) {
-      this._setComposerError("native", this._uiText("errors.pastDate", "La fecha no puede ser anterior a hoy."));
+      this._setComposerError("native", this._uiText("errors.pastDate", "The date cannot be before today."));
       return;
     }
     const rruleByKind = {
@@ -2304,7 +2304,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (repeatKind === "custom" && !rruleByKind[resolvedRepeatKind]) {
       this._setComposerError(
         "native",
-        this._uiText("errors.selectRepeatFrequency", "Selecciona la frecuencia para la repetición personalizada."),
+        this._uiText("errors.selectRepeatFrequency", "Select the frequency for custom repeat."),
       );
       return;
     }
@@ -2314,7 +2314,7 @@ class NodaliaCalendarCard extends HTMLElement {
       if (!Number.isFinite(parsedInterval) || parsedInterval < 1) {
         this._setComposerError(
           "native",
-          this._uiText("errors.invalidRepeatInterval", "El intervalo debe ser un número mayor o igual que 1."),
+          this._uiText("errors.invalidRepeatInterval", "The interval must be a number greater than or equal to 1."),
         );
         return;
       }
@@ -2391,7 +2391,7 @@ class NodaliaCalendarCard extends HTMLElement {
             this._buildNativeCalendarCreateEventWebhookBody(payload, "all_day", calendarEventPayload),
           );
           if (!ok) {
-            this._setComposerError("native", this._uiText("errors.createEvent", "No se pudo crear el evento."));
+            this._setComposerError("native", this._uiText("errors.createEvent", "Could not create the event."));
             return;
           }
         } else {
@@ -2437,7 +2437,7 @@ class NodaliaCalendarCard extends HTMLElement {
             this._buildNativeCalendarCreateEventWebhookBody(payload, "timed", calendarEventPayload),
           );
           if (!ok) {
-            this._setComposerError("native", this._uiText("errors.createEvent", "No se pudo crear el evento."));
+            this._setComposerError("native", this._uiText("errors.createEvent", "Could not create the event."));
             return;
           }
         } else {
@@ -2452,8 +2452,8 @@ class NodaliaCalendarCard extends HTMLElement {
       this._setComposerError(
         "native",
         message && message !== "calendar/event/create unavailable"
-          ? this._uiText("errors.createEventWithMessage", "No se pudo crear el evento: {message}", { message })
-          : this._uiText("errors.createEvent", "No se pudo crear el evento."),
+          ? this._uiText("errors.createEventWithMessage", "Could not create the event: {message}", { message })
+          : this._uiText("errors.createEvent", "Could not create the event."),
       );
     }
   }
@@ -2474,79 +2474,79 @@ class NodaliaCalendarCard extends HTMLElement {
     return `
       <div class="calendar-composer ${this._nativeEventComposerOpen ? "is-open" : ""}">
         <div class="calendar-composer__backdrop" data-action="close-native-composer"></div>
-        <div class="calendar-composer__panel" role="dialog" aria-modal="true" aria-label="${escapeHtml(this._uiText("aria.newEventDialog", "Nuevo evento de calendario"))}">
-          <div class="calendar-composer__title">${escapeHtml(this._uiText("composer.newEvent", "Nuevo evento"))}</div>
+        <div class="calendar-composer__panel" role="dialog" aria-modal="true" aria-label="${escapeHtml(this._uiText("aria.newEventDialog", "New calendar event"))}">
+          <div class="calendar-composer__title">${escapeHtml(this._uiText("composer.newEvent", "New event"))}</div>
           <label class="calendar-composer__field">
-            <span>${escapeHtml(this._uiText("fields.calendar", "Calendario"))}</span>
+            <span>${escapeHtml(this._uiText("fields.calendar", "Calendar"))}</span>
             <div data-native-calendar-host></div>
           </label>
           <label class="calendar-composer__field">
-            <span>${escapeHtml(this._uiText("fields.title", "Título"))}</span>
-            <input data-native-field="title" type="text" placeholder="${escapeHtml(this._uiText("placeholders.title", "Ej. Cita médica"))}" />
+            <span>${escapeHtml(this._uiText("fields.title", "Title"))}</span>
+            <input data-native-field="title" type="text" placeholder="${escapeHtml(this._uiText("placeholders.title", "e.g. Doctor appointment"))}" />
           </label>
           <label class="calendar-composer__field">
-            <span>${escapeHtml(this._uiText("fields.description", "Descripción"))}</span>
-            <textarea data-native-field="description" rows="3" placeholder="${escapeHtml(this._uiText("placeholders.optional", "Opcional"))}"></textarea>
+            <span>${escapeHtml(this._uiText("fields.description", "Description"))}</span>
+            <textarea data-native-field="description" rows="3" placeholder="${escapeHtml(this._uiText("placeholders.optional", "Optional"))}"></textarea>
           </label>
           <label class="calendar-composer__field">
-            <span>${escapeHtml(this._uiText("fields.location", "Ubicación"))}</span>
-            <input data-native-field="location" type="text" placeholder="${escapeHtml(this._uiText("placeholders.optional", "Opcional"))}" />
+            <span>${escapeHtml(this._uiText("fields.location", "Location"))}</span>
+            <input data-native-field="location" type="text" placeholder="${escapeHtml(this._uiText("placeholders.optional", "Optional"))}" />
           </label>
           <div class="calendar-composer__row">
             <label class="calendar-composer__field">
-              <span>${escapeHtml(this._uiText("fields.date", "Fecha"))}</span>
+              <span>${escapeHtml(this._uiText("fields.date", "Date"))}</span>
               <input data-native-field="date" type="date" value="${escapeHtml(defaultDate)}" />
             </label>
             <label class="calendar-composer__check">
               <input data-native-field="allDay" type="checkbox" />
-              <span>${escapeHtml(this._uiText("allDay", "Todo el día"))}</span>
+              <span>${escapeHtml(this._uiText("allDay", "All day"))}</span>
             </label>
           </div>
           <div class="calendar-composer__row">
             <label class="calendar-composer__field">
-              <span>${escapeHtml(this._uiText("fields.start", "Inicio"))}</span>
+              <span>${escapeHtml(this._uiText("fields.start", "Start"))}</span>
               <input data-native-field="start" type="time" value="${escapeHtml(defaultStart)}" />
             </label>
             <label class="calendar-composer__field">
-              <span>${escapeHtml(this._uiText("fields.end", "Fin"))}</span>
+              <span>${escapeHtml(this._uiText("fields.end", "End"))}</span>
               <input data-native-field="end" type="time" value="${escapeHtml(defaultEnd)}" />
             </label>
           </div>
           <label class="calendar-composer__field">
-            <span>${escapeHtml(this._uiText("fields.repeat", "Repetición"))}</span>
+            <span>${escapeHtml(this._uiText("fields.repeat", "Repeat"))}</span>
             <select data-native-field="repeatKind">
-              <option value="none">${escapeHtml(this._uiText("repeat.none", "No se repite"))}</option>
-              <option value="yearly">${escapeHtml(this._uiText("repeat.yearly", "Anualmente"))}</option>
-              <option value="monthly">${escapeHtml(this._uiText("repeat.monthly", "Mensualmente"))}</option>
-              <option value="weekly">${escapeHtml(this._uiText("repeat.weekly", "Semanalmente"))}</option>
-              <option value="daily">${escapeHtml(this._uiText("repeat.daily", "Diariamente"))}</option>
-              <option value="custom">${escapeHtml(this._uiText("repeat.custom", "Personalizado"))}</option>
+              <option value="none">${escapeHtml(this._uiText("repeat.none", "Does not repeat"))}</option>
+              <option value="yearly">${escapeHtml(this._uiText("repeat.yearly", "Yearly"))}</option>
+              <option value="monthly">${escapeHtml(this._uiText("repeat.monthly", "Monthly"))}</option>
+              <option value="weekly">${escapeHtml(this._uiText("repeat.weekly", "Weekly"))}</option>
+              <option value="daily">${escapeHtml(this._uiText("repeat.daily", "Daily"))}</option>
+              <option value="custom">${escapeHtml(this._uiText("repeat.custom", "Custom"))}</option>
             </select>
           </label>
           <div class="calendar-composer__row" data-native-field-group="repeatCustom" hidden>
             <label class="calendar-composer__field">
-              <span>${escapeHtml(this._uiText("fields.repeatFrequency", "Frecuencia"))}</span>
+              <span>${escapeHtml(this._uiText("fields.repeatFrequency", "Frequency"))}</span>
               <select data-native-field="repeatCustomUnit">
-                <option value="daily">${escapeHtml(this._uiText("repeat.daily", "Diariamente"))}</option>
-                <option value="weekly" selected>${escapeHtml(this._uiText("repeat.weekly", "Semanalmente"))}</option>
-                <option value="monthly">${escapeHtml(this._uiText("repeat.monthly", "Mensualmente"))}</option>
-                <option value="yearly">${escapeHtml(this._uiText("repeat.yearly", "Anualmente"))}</option>
+                <option value="daily">${escapeHtml(this._uiText("repeat.daily", "Daily"))}</option>
+                <option value="weekly" selected>${escapeHtml(this._uiText("repeat.weekly", "Weekly"))}</option>
+                <option value="monthly">${escapeHtml(this._uiText("repeat.monthly", "Monthly"))}</option>
+                <option value="yearly">${escapeHtml(this._uiText("repeat.yearly", "Yearly"))}</option>
               </select>
             </label>
             <label class="calendar-composer__field">
-              <span>${escapeHtml(this._uiText("fields.repeatInterval", "Cada cuántas unidades"))}</span>
+              <span>${escapeHtml(this._uiText("fields.repeatInterval", "Every how many units"))}</span>
               <input data-native-field="repeatCustomInterval" type="number" min="1" step="1" value="1" inputmode="numeric" />
             </label>
           </div>
           <div class="calendar-composer__row calendar-composer__row--middle">
             <label class="calendar-composer__check">
               <input data-native-field="colorEnabled" type="checkbox" />
-              <span>${escapeHtml(this._uiText("fields.customColor", "Color propio"))}</span>
+              <span>${escapeHtml(this._uiText("fields.customColor", "Custom color"))}</span>
             </label>
             <label class="calendar-composer__field calendar-composer__field--color">
               <span>${escapeHtml(this._uiText("fields.color", "Color"))}</span>
               <div class="editor-color-field">
-                <label class="editor-color-picker" title="${escapeHtml(this._uiText("fields.customColorTitle", "Color personalizado"))}">
+                <label class="editor-color-picker" title="${escapeHtml(this._uiText("fields.customColorTitle", "Custom color"))}">
                   <input
                     data-native-field="color"
                     type="color"
@@ -2559,8 +2559,8 @@ class NodaliaCalendarCard extends HTMLElement {
             </label>
           </div>
           <div class="calendar-composer__actions">
-            <button type="button" class="calendar-composer__btn" data-action="close-native-composer">${escapeHtml(this._uiText("buttons.cancel", "Cancelar"))}</button>
-            <button type="button" class="calendar-composer__btn calendar-composer__btn--primary" data-action="save-native-composer">${escapeHtml(this._uiText("buttons.create", "Crear"))}</button>
+            <button type="button" class="calendar-composer__btn" data-action="close-native-composer">${escapeHtml(this._uiText("buttons.cancel", "Cancel"))}</button>
+            <button type="button" class="calendar-composer__btn calendar-composer__btn--primary" data-action="save-native-composer">${escapeHtml(this._uiText("buttons.create", "Create"))}</button>
           </div>
           ${this._renderComposerError("native")}
         </div>
@@ -3351,20 +3351,24 @@ class NodaliaCalendarCard extends HTMLElement {
           background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
+          box-sizing: border-box;
           color: var(--secondary-text-color);
           display: inline-flex;
-          flex: 0 0 auto;
-          font-size: 10px;
+          flex: 0 1 auto;
+          font-size: clamp(8px, 2.1vw, 10px);
           font-weight: 700;
-          gap: 4px;
+          gap: clamp(2px, 0.6vw, 4px);
+          max-width: 100%;
           min-height: 22px;
-          padding: 0 8px;
+          min-width: 0;
+          padding: 0 clamp(5px, 1.4vw, 8px);
           white-space: nowrap;
         }
         .calendar-expanded__weather ha-icon,
         .calendar-expanded__month-weather ha-icon {
           --mdc-icon-size: 14px;
           color: var(--primary-color);
+          flex-shrink: 0;
         }
         .calendar-expanded__col-events {
           display: grid;
@@ -3454,14 +3458,15 @@ class NodaliaCalendarCard extends HTMLElement {
           line-height: 1.2;
         }
         .calendar-expanded__month-weather {
-          font-size: 9px;
-          gap: 2px;
+          font-size: clamp(7.5px, 1.85vw, 9px);
+          gap: clamp(1px, 0.45vw, 2px);
           min-height: 18px;
           overflow: hidden;
-          padding: 0 5px;
+          padding: 0 clamp(3px, 1vw, 5px);
         }
         .calendar-expanded__month-weather ha-icon {
-          --mdc-icon-size: 12px;
+          --mdc-icon-size: clamp(10px, 2.4vw, 12px);
+          flex-shrink: 0;
         }
         .calendar-expanded__month-events {
           display: flex;
@@ -3475,7 +3480,10 @@ class NodaliaCalendarCard extends HTMLElement {
           justify-content: flex-start;
         }
         .calendar-expanded__month-events > .calendar-event {
+          box-sizing: border-box;
           flex-shrink: 0;
+          max-width: 100%;
+          min-width: 0;
         }
         .calendar-expanded__month-cell-dots {
           display: flex;
@@ -3499,8 +3507,15 @@ class NodaliaCalendarCard extends HTMLElement {
           min-height: unset;
         }
         .calendar-expanded__month-events .calendar-event--compact .calendar-event__summary {
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+          display: -webkit-box;
           line-height: 1.25;
+          max-width: 100%;
+          min-width: 0;
+          overflow: hidden;
           overflow-wrap: anywhere;
+          white-space: normal;
           word-break: break-word;
         }
         .calendar-expanded__month-events .calendar-event--compact .calendar-event__summary small {
@@ -3508,6 +3523,9 @@ class NodaliaCalendarCard extends HTMLElement {
           line-height: 1.2;
           margin-top: 2px;
           opacity: 0.85;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
         .calendar-expanded__month-cell--day {
           -webkit-tap-highlight-color: transparent;
@@ -3691,11 +3709,11 @@ class NodaliaCalendarCard extends HTMLElement {
           </div>
           ${
             this._loading
-              ? `<div class="calendar-loading">${escapeHtml(this._uiText("states.loading", "Cargando eventos..."))}</div>`
+              ? `<div class="calendar-loading">${escapeHtml(this._uiText("states.loading", "Loading events..."))}</div>`
               : this._error
                 ? `<div class="calendar-error">${escapeHtml(this._error)}</div>`
                 : !hasEvents
-                  ? `<div class="calendar-empty">${escapeHtml(this._uiText("empty.range", "No hay eventos en este rango."))}</div>`
+                  ? `<div class="calendar-empty">${escapeHtml(this._uiText("empty.range", "No events in this range."))}</div>`
                   : `<div class="calendar-events-scroll ${playEntrance ? "calendar-events-scroll--entering" : ""}">
                       ${groups.map((group, groupIndex) => `
                         <div class="calendar-day" style="--calendar-day-index:${groupIndex};">
@@ -3718,10 +3736,10 @@ class NodaliaCalendarCard extends HTMLElement {
           <div class="calendar-expanded__toolbar">
             <div class="calendar-expanded__toolbar-title">${escapeHtml(config.title)}</div>
             <div class="calendar-expanded__toolbar-actions">
-              <button type="button" class="calendar-expanded__close" data-action="add-native-event" aria-label="${escapeHtml(this._uiText("aria.createHaEvent", "Crear evento HA"))}">
+              <button type="button" class="calendar-expanded__close" data-action="add-native-event" aria-label="${escapeHtml(this._uiText("aria.createHaEvent", "Create HA event"))}">
                 <ha-icon icon="mdi:calendar-plus"></ha-icon>
               </button>
-              <button type="button" class="calendar-expanded__close" data-action="close-expanded" aria-label="${escapeHtml(this._uiText("aria.close", "Cerrar"))}">
+              <button type="button" class="calendar-expanded__close" data-action="close-expanded" aria-label="${escapeHtml(this._uiText("aria.close", "Close"))}">
                 <ha-icon icon="mdi:close"></ha-icon>
               </button>
             </div>
@@ -3729,11 +3747,11 @@ class NodaliaCalendarCard extends HTMLElement {
           <div class="calendar-expanded__body">
             ${
               this._loading
-                ? `<div class="calendar-loading">${escapeHtml(this._uiText("states.loading", "Cargando eventos..."))}</div>`
+                ? `<div class="calendar-loading">${escapeHtml(this._uiText("states.loading", "Loading events..."))}</div>`
                 : this._error
                   ? `<div class="calendar-error">${escapeHtml(this._error)}</div>`
                   : !hasEvents
-                    ? `<div class="calendar-empty">${escapeHtml(this._uiText("empty.range", "No hay eventos en este rango."))}</div>`
+                    ? `<div class="calendar-empty">${escapeHtml(this._uiText("empty.range", "No events in this range."))}</div>`
                     : this._renderExpandedBody(groups, config, locale, weatherByDay)
             }
           </div>
@@ -5064,7 +5082,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.calendar.general_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("Título", "title", config.title, { fullWidth: true, placeholder: "Calendario" })}
+            ${this._renderTextField("Title", "title", config.title, { fullWidth: true, placeholder: "Calendar" })}
             ${this._renderIconPickerField("Icono", "icon", config.icon || DEFAULT_CONFIG.icon, {
               fullWidth: true,
               placeholder: "mdi:calendar-month",

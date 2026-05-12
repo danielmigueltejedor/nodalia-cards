@@ -21,6 +21,19 @@ Maintenance work continues on the stable `1.0.x` line while the next feature cyc
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.1] - 2026-05-12
+
+### Changed
+
+- **`CARD_VERSION`** on all bundled card modules is **`1.0.1`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
+- Person card and alarm panel use English fallbacks when **`NodaliaI18n`** is missing (`emptyBody`, default alarm title / editor placeholder).
+- English **`person.emptyBody`** in **`nodalia-i18n.js`** uses the same “Configure `entity`…” wording as the card fallback.
+
+### Fixed
+
+- **`translateMediaPlayerState`** always returns a string for unknown media states (`en.unknown` with final **`"Unknown"`** fallback).
+
+---
 
 ## [1.0.0] - 2026-05-12
 

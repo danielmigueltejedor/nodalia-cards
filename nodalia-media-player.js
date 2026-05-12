@@ -486,7 +486,7 @@
 
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "0.6.2";
+const CARD_VERSION = "1.0.1";
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1975,6 +1975,11 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _getPlayerStateLabel(stateValue) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    if (window.NodaliaI18n?.translateMediaPlayerState) {
+      return window.NodaliaI18n.translateMediaPlayerState(hass, langCfg, stateValue);
+    }
     switch (stateValue) {
       case "on":
         return "Encendido";

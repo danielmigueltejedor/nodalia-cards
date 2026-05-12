@@ -486,7 +486,7 @@
 
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "0.7.5";
+const CARD_VERSION = "1.0.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1975,7 +1975,7 @@ class NodaliaLightCard extends HTMLElement {
 
   _getStateLabel(state) {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
     const entityStates = window.NodaliaI18n?.strings?.(lang)?.entityCard?.states;
 
     if (state?.attributes?._nodalia_optimistic_off === true) {

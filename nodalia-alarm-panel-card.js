@@ -486,7 +486,7 @@
 
 const CARD_TAG = "nodalia-alarm-panel-card";
 const EDITOR_TAG = "nodalia-alarm-panel-card-editor";
-const CARD_VERSION = "0.7.0";
+const CARD_VERSION = "1.0.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -573,7 +573,7 @@ const DEFAULT_CONFIG = {
 
 const STUB_CONFIG = {
   entity: "alarm_control_panel.casa",
-  name: "Alarma",
+  name: "Alarm",
 };
 
 function isObject(value) {
@@ -1097,8 +1097,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       return this._config.entity;
     }
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
-    return window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.defaultTitle || "Alarma";
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    return window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.defaultTitle || "Alarm";
   }
 
   _getIcon() {
@@ -1108,43 +1108,16 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   _translateState(state) {
     const key = normalizeTextKey(state?.state);
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const langCfg = this._config?.language ?? "auto";
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "en";
     const alarmStrings = window.NodaliaI18n?.strings?.(lang)?.alarmPanel;
-    const translated = alarmStrings?.states?.[key];
+    const enAlarm = window.NodaliaI18n?.strings?.("en")?.alarmPanel;
+    const translated = alarmStrings?.states?.[key] || enAlarm?.states?.[key];
     if (translated) {
       return translated;
     }
 
-    switch (key) {
-      case "disarmed":
-        return "Desarmada";
-      case "armed_home":
-        return "En casa";
-      case "armed_away":
-        return "Ausente";
-      case "armed_night":
-        return "Noche";
-      case "armed_vacation":
-        return "Vacaciones";
-      case "armed_custom_bypass":
-        return "Personalizada";
-      case "armed":
-        return "Armada";
-      case "arming":
-        return "Armando";
-      case "disarming":
-        return "Desarmando";
-      case "pending":
-        return "Pendiente";
-      case "triggered":
-        return "Disparada";
-      case "unavailable":
-        return "No disponible";
-      case "unknown":
-        return "Desconocida";
-      default:
-        return state?.state ? String(state.state) : (alarmStrings?.noState || "Sin estado");
-    }
+    return state?.state ? String(state.state) : (alarmStrings?.noState || enAlarm?.noState || "No state");
   }
 
   _getCountdownSecondsRemaining(state) {
@@ -1273,7 +1246,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
   _getModeDefinitions(state) {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
     const actionLabels = window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.actions || {};
     const modes = [
       {
@@ -2926,7 +2899,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
               fullWidth: true,
             })}
             ${this._renderTextField("ed.entity.name", "name", config.name, {
-              placeholder: "Alarma",
+              placeholder: "Alarm",
               fullWidth: true,
             })}
             ${this._renderTextField("ed.fav.alarm_pin", "code", config.code, {
