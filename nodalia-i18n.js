@@ -98,7 +98,7 @@
         }
       }
     }
-    return "es";
+    return "en";
   }
 
   function localeTag(langCode) {
@@ -115,7 +115,7 @@
       zh: "zh",
       ro: "ro",
     };
-    return map[langCode] || "es";
+    return map[langCode] || "en";
   }
 
   function normalizeTextKey(value) {
@@ -6113,7 +6113,7 @@
   const localeStringsCache = new Map();
 
   function strings(langCode) {
-    const code = PACK[langCode] ? langCode : "es";
+    const code = PACK[langCode] ? langCode : "en";
     if (code === "es") {
       return PACK.es;
     }

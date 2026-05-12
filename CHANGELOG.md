@@ -6,7 +6,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Work on **`1.0.x`** patches and the next feature line while **`1.0.0`** remains the stable baseline on **`main`**: fixes, performance, security, and compatibility. Prerelease workflow for future lines: **CONTRIBUTING**.
+Work toward **`1.0.1`** patch stable on **`main`** while **`1.0.0`** remains the last widely recommended stable tag; **`1.0.1-alpha.*`** validates on **`alpha`** before **`v1.0.1`**. Prerelease workflow: **CONTRIBUTING**.
+
+---
+
+## [1.0.1-alpha.1] - 2026-05-12
+
+First **`alpha`** on the **`1.0.1`** patch line. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.1-alpha.1`** (Git tag **`v1.0.1-alpha.1`** optional on **`alpha`** / HACS pre-release).
+
+Same fixes as stable **[1.0.1]** (section below); this build is for validation before promoting **`v1.0.1`** on **`main`**.
+
+---
+
+## [1.0.1] - 2026-05-12
+
+### Fixed
+
+- Fixed transparent surfaces when using the default Home Assistant theme instead of Graphite.
+- Fixed Navigation Bar Card background fallback and layered glass surface.
+- Fixed Notifications Card surface opacity and stacked notification readability.
+- Fixed Calendar month event cards being clipped with long event titles.
+- Improved Calendar month weather chips when min/max temperatures use two digits.
+- Improved default theme compatibility across glass surfaces (`--nodalia-*` tokens on Navigation Bar and Notifications cards).
+- Improved English fallback handling for mixed-language labels (unknown HA language and last-resort UI strings default to English; Spanish remains when HA language is **`es`**).
 
 ---
 

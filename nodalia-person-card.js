@@ -1296,7 +1296,7 @@ class NodaliaPersonCard extends HTMLElement {
       return {
         emptyTitle: "Nodalia Person Card",
         emptyBody: "Configura `entity` para mostrar la tarjeta.",
-        defaultName: "Persona",
+        defaultName: "Person",
       };
     }
     const lang = NI.resolveLanguage(this._hass, this._config?.language);
@@ -1304,7 +1304,7 @@ class NodaliaPersonCard extends HTMLElement {
     return {
       emptyTitle: person.emptyTitle || "Nodalia Person Card",
       emptyBody: person.emptyBody || "Configura `entity` para mostrar la tarjeta.",
-      defaultName: person.defaultName || "Persona",
+      defaultName: person.defaultName || "Person",
     };
   }
 

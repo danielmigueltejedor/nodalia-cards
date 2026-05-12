@@ -486,7 +486,7 @@
 
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "0.6.5";
+const CARD_VERSION = "1.0.1-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -669,7 +669,7 @@ const DEFAULT_CONFIG = {
   },
   styles: {
     bar: {
-      background: "var(--ha-card-background)",
+      background: "var(--ha-card-background, var(--card-background-color, rgba(32, 34, 42, 0.94)))",
       border: "1px solid var(--divider-color)",
       border_radius: "28px",
       box_shadow: "var(--ha-card-box-shadow)",
@@ -3537,7 +3537,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
             .join("")
         : `
           <div class="empty-state">
-            No hay rutas visibles. Revisa los IDs de usuario o anade elementos a "routes".
+            No visible routes. Check user IDs or add entries to "routes".
           </div>
         `;
 
@@ -3545,6 +3545,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
       <style>
         :host {
           --navbar-dock-entrance-ms: ${animations.dockEntranceDuration};
+          --nodalia-surface: var(--card-background-color, rgba(32, 34, 42, 0.92));
+          --nodalia-surface-soft: var(--ha-card-background, var(--card-background-color, rgba(32, 34, 42, 0.88)));
+          --nodalia-border: var(--divider-color, rgba(255, 255, 255, 0.12));
+          --nodalia-text: var(--primary-text-color, #f4f4f7);
+          --nodalia-muted: var(--secondary-text-color, rgba(244, 244, 247, 0.62));
+          --nodalia-overlay: rgba(10, 12, 18, 0.72);
+          --nodalia-user-bar-bg: ${config.styles.bar.background};
           display: block;
           width: 100%;
         }
@@ -3606,7 +3613,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
         }
 
         ha-card.navbar-card {
-          background: ${config.styles.bar.background};
+          background:
+            linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+            var(--nodalia-user-bar-bg, var(--nodalia-surface-soft));
           border: ${config.styles.bar.border};
           border-radius: ${navbarCardBorderRadius};
           box-shadow: ${config.styles.bar.box_shadow};
