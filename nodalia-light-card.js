@@ -486,7 +486,7 @@
 
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.0.2";
+const CARD_VERSION = "1.0.3-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -551,7 +551,7 @@ const DEFAULT_CONFIG = {
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       on_color: "var(--warning-color, #f6b73c)",
-      off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
+      off_color: "var(--primary-text-color)",
     },
     control: {
       size: "36px",
@@ -830,7 +830,7 @@ function getEditorColorFallbackValue(field) {
   const normalizedField = String(field ?? "");
 
   if (normalizedField.endsWith("off_color")) {
-    return "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))";
+    return "var(--primary-text-color)";
   }
 
   if (normalizedField.endsWith("accent_background")) {
@@ -988,6 +988,7 @@ class NodaliaLightCard extends HTMLElement {
     this._dragWindowListenersAttached = false;
     this._lastRenderSignature = "";
     this._lastRenderedIsOn = null;
+    this._lastRenderedShowDetailedControls = null;
     this._lastControlsMarkup = "";
     this._optimisticTurnOn = null;
     this._optimisticTurnOnTimer = 0;
@@ -1101,6 +1102,7 @@ class NodaliaLightCard extends HTMLElement {
       this._clearOptimisticTurnOnState();
       this._clearOptimisticTurnOffState();
       this._controlsPanelUserOpen = false;
+      this._lastRenderedShowDetailedControls = null;
     }
     this._config = normalizeConfig(config || {});
     this._isCompactLayout = this._shouldUseCompactLayout(
@@ -2052,7 +2054,7 @@ class NodaliaLightCard extends HTMLElement {
       return "#ffd166";
     }
 
-    return this._config?.styles?.icon?.off_color || "var(--state-inactive-color, rgba(255, 255, 255, 0.45))";
+    return this._config?.styles?.icon?.off_color || "var(--primary-text-color)";
   }
 
   _getAnimationSettings() {
@@ -2935,6 +2937,25 @@ class NodaliaLightCard extends HTMLElement {
         this._controlsTransition = null;
       }
     }
+
+    const controlsTransitionStillActive = Boolean(this._controlsTransition?.endsAt > now);
+    if (
+      animations.enabled
+      && !isMiniLayout
+      && isOn
+      && this._lastRenderedShowDetailedControls === true
+      && !showDetailedControls
+      && String(this._lastControlsMarkup || "").trim() !== ""
+      && !controlsTransitionStillActive
+    ) {
+      controlsAnimationState = "leaving";
+      this._controlsTransition = {
+        endsAt: now + animations.controlsDuration,
+        startedAt: now,
+        state: "leaving",
+      };
+    }
+
     const modeTransition = this._modeTransition
       && isOn
       && useSliderModeButtons
@@ -3204,7 +3225,7 @@ class NodaliaLightCard extends HTMLElement {
       temperatureControlsMarkup,
       colorControlsMarkup,
     ].filter(Boolean).join("");
-    const controlsContentMarkup = isOn
+    const controlsContentMarkup = showDetailedControls && currentControlsMarkup
       ? currentControlsMarkup
       : controlsAnimationState === "leaving"
         ? this._lastControlsMarkup
@@ -3240,7 +3261,7 @@ class NodaliaLightCard extends HTMLElement {
 
     if (isOn && showDetailedControls && currentControlsMarkup) {
       this._lastControlsMarkup = currentControlsMarkup;
-    } else if (isOn && !showDetailedControls) {
+    } else if (isOn && !showDetailedControls && controlsAnimationState !== "leaving") {
       this._lastControlsMarkup = "";
     } else if (!isOn && controlsAnimationState !== "leaving") {
       this._lastControlsMarkup = "";
@@ -4284,6 +4305,7 @@ class NodaliaLightCard extends HTMLElement {
     `;
 
     this._lastRenderedIsOn = isOn;
+    this._lastRenderedShowDetailedControls = showDetailedControls;
     this._lastRenderSignature = this._getRenderSignature(state);
 
     if (shouldCleanupAfterAnimation) {

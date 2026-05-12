@@ -10,7 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
-Maintenance work continues on the stable `1.0.x` line while the next feature cycle is prepared.
+Maintenance work continues on the **`1.0.3`** prerelease line (visual polish, translations, small fixes) toward the next stable **`1.0.x`** cut.
 
 ### Planned / In progress
 
@@ -19,6 +19,21 @@ Maintenance work continues on the stable `1.0.x` line while the next feature cyc
 - Security and service-action hardening.
 - Editor/i18n refinements.
 - Home Assistant frontend compatibility updates.
+
+---
+## [1.0.3-alpha.1] - 2026-05-13
+
+First **`alpha`** on **`1.0.3`**: iteration focused on **visual fixes**, **translations**, and minor **bugs** on the stable **`1.0.x`** line. Installs match **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules (**`1.0.3-alpha.1`**) (optional tag **`v1.0.3-alpha.1`**).
+
+### Changed
+
+- **Release metadata:** bump prerelease channel and bundle diagnostics to **`1.0.3-alpha.1`**.
+
+### Fixed
+
+- **`nodalia-calendar-card.js`:** header bubble icon uses **`NodaliaBubbleContrast`** (same idea as entity / notifications) so the glyph stays legible on cool-tinted accents.
+- **`nodalia-light-card.js`**, **`nodalia-fan-card.js`**, **`nodalia-humidifier-card.js`**, **`nodalia-entity-card.js`:** default **`styles.icon.off_color`** is **`var(--primary-text-color)`**, aligned with vacuum / media player idle icons and readable in both light and dark themes.
+- **`nodalia-light-card.js`:** manual collapse of detailed controls plays the **leaving** animation again when animations are enabled.
 
 ---
 ## [1.0.2] - 2026-05-12

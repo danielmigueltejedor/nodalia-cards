@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.2";
+const CARD_VERSION = "1.0.3-alpha.1";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -70,6 +70,18 @@ const DEFAULT_CONFIG = {
     chip_size: "11px",
   },
 };
+
+function shouldDarkenCalendarBubbleIconGlyph(state, accentColor) {
+  const contrast = typeof window !== "undefined" ? window.NodaliaBubbleContrast : null;
+  if (contrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor)) {
+    return true;
+  }
+  const hue = contrast?.parseCssColorHue?.(accentColor);
+  if (hue === null || hue === undefined || Number.isNaN(hue)) {
+    return false;
+  }
+  return (hue >= 35 && hue <= 165) || (hue >= 300 || hue <= 20);
+}
 
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -2729,7 +2741,16 @@ class NodaliaCalendarCard extends HTMLElement {
     const cardBorder = `1px solid ${onCardBorder}`;
     const cardShadow = `${styles.card.box_shadow}, ${onCardShadow}`;
     const iconBubbleBg = `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`;
-    const iconBubbleGlyph = String(styles.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color);
+    const calendarsForIcon = Array.isArray(config.calendars) ? config.calendars : [];
+    const firstCalendarEntityId = calendarsForIcon.map(c => String(c?.entity || "").trim()).find(Boolean);
+    const stateForBubbleIcon = firstCalendarEntityId && this._hass?.states?.[firstCalendarEntityId]
+      ? this._hass.states[firstCalendarEntityId]
+      : undefined;
+    const darkenBubbleIconGlyph = shouldDarkenCalendarBubbleIconGlyph(stateForBubbleIcon, accentColor);
+    const baseIconBubbleGlyph = String(styles.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color);
+    const iconBubbleGlyph = darkenBubbleIconGlyph
+      ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accentColor})`
+      : baseIconBubbleGlyph;
     const iconSize = styles.icon?.size || DEFAULT_CONFIG.styles.icon.size;
     const chipHeight = styles.chip_height || DEFAULT_CONFIG.styles.chip_height;
     const chipFontSize = styles.chip_font_size || styles.chip_size || DEFAULT_CONFIG.styles.chip_font_size;
