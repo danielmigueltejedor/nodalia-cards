@@ -21,6 +21,15 @@ Maintenance work continues on the **`1.0.3`** prerelease line (visual polish, tr
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.3-alpha.4] - 2026-05-12
+
+Fourth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.4`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`**.
+
+### Changed
+
+- **Release metadata:** bump prerelease channel and bundle diagnostics to **`1.0.3-alpha.4`**.
+
+---
 ## [1.0.3-alpha.3] - 2026-05-12
 
 Third **`1.0.3`** **`alpha`**: climate **`auto`** mode uses the same thermostat auto glyph as **`heat_cool`**; release channel **`1.0.3-alpha.3`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`**.
