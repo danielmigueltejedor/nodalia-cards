@@ -1283,6 +1283,10 @@
           success: "OK",
           info: "Info",
         },
+        empty: {
+          title: "All quiet",
+          message: "You have no current alerts",
+        },
         aria: {
           dismiss: "Dismiss notification",
           showLess: "Show less",
@@ -5887,6 +5891,10 @@
         dismiss: "Borrar notificación",
         showLess: "Mostrar menos",
         showAll: "Mostrar todas las notificaciones",
+      },
+      empty: {
+        title: "Todo en calma",
+        message: "No tienes alertas pendientes",
       },
     },
     en: {

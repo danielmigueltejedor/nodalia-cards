@@ -21,6 +21,20 @@ Maintenance work continues on the stable `1.0.x` line while the next feature cyc
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.2-alpha.2] - 2026-05-12
+
+Prerelease **`alpha.2`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.2`** (optional tag **`v1.0.2-alpha.2`**).
+
+### Changed
+
+- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.2`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
+
+### Fixed
+
+- **`nodalia-calendar-card.js`:** deleting a **recurring** event from the **compact** list opened the recurrence choice in **`calendar-expanded`** while that layer still had **`pointer-events: none`** (no **`is-open`**), so nothing appeared to happen; the card now opens the overlay (with event detail) before showing the dialog.
+- **`nodalia-calendar-card.js`:** dismissing the recurrence delete dialog (**Cancel**, backdrop, or **Escape**) after that compact-list path closes the overlay again so you return to the compact card; a successful delete does the same.
+
+---
 ## [1.0.2-alpha.1] - 2026-05-12
 
 First **`alpha`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.1`** (tag **`v1.0.2-alpha.1`** optional).
