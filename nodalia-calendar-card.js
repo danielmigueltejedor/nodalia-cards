@@ -1708,10 +1708,7 @@ class NodaliaCalendarCard extends HTMLElement {
       this._renderIfChanged(true);
       this._refreshEvents();
     } catch (err) {
-      const fromWs =
-        err && typeof err === "object" && typeof err.message === "string" && err.message.trim()
-          ? err.message.trim()
-          : "";
+      const fromWs = String(err?.message || "").trim();
       this._deleteRecurrenceError = fromWs
         ? this._uiText("deleteRecurrence.deleteFailedWithMessage", "Could not delete the event: {message}").replace(
           "{message}",
