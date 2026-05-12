@@ -1,153 +1,377 @@
 # 🛣️ Nodalia Cards Roadmap
 
-This roadmap is flexible and may change depending on feedback, testing and real usage.
+This roadmap is flexible and evolves based on real-world usage, testing, community feedback and the long-term vision for the Nodalia ecosystem.
 
 ---
 
-## Current status
+# 📍 Current status
 
-**Stable `0.4.0`** ships from **`main`** (tag **`v0.4.0`**). Follow-up work uses **`alpha`** / **`beta`** ahead of **`main`** when needed—see **CONTRIBUTING** (*Releases: main, beta, and alpha*). Focus: Power Flow polish, translations, Graph Card line work, stronger default styles.
+## Stable release
 
-The project is still being refined before a real **`1.0.0`** release.
+Current stable release:
 
----
+```text
+1.0.0
+```
 
-## Phase 1 — Beta foundation
+The `1.0.0` cycle transformed Nodalia Cards from a growing collection of custom cards into a much more complete and cohesive frontend ecosystem for Home Assistant.
 
-Goal: prepare the project for faster iteration without breaking the stable version.
+The project now includes:
 
-### Focus
-- Keep stable branch untouched unless critical fixes are needed
-- Use beta releases for active development
-- Collect real user feedback
-- Improve documentation and project structure
-
----
-
-## Phase 2 — Translations and visual editor
-
-Goal: improve accessibility and make configuration easier.
-
-### Planned work
-- Add proper translation structure
-- Improve Spanish support
-- Add English as the main secondary language
-- Prepare the project for community translations
-- Fix visual editor layout issues
-- Improve editor consistency between cards
-- Make editor options clearer and easier to understand
+- Unified design language
+- Shared visual systems
+- Smart contextual cards
+- Advanced visual editors
+- Extensive i18n support
+- Mobile-first interactions
+- Native-feeling animations
+- Advanced vacuum and calendar systems
+- Smart notification center
+- Shared internal infrastructure
 
 ---
 
-## Phase 3 — Visual polish
+# 🎯 Current focus (post-1.0.0)
 
-Goal: make all cards feel part of the same UI system.
+The next stage focuses on:
 
-### Planned work
-- Reduce and standardize drop shadows
-- Refine spacing and border radius consistency
-- Improve card active/inactive states
-- Polish animations and transitions where needed
-- Improve light/dark theme behavior
+- Stability
+- Refinement
+- Performance
+- UI consistency
+- Ecosystem expansion
+- Long-term maintainability
 
----
+The goal is no longer “making cards exist”.
 
-## Phase 4 — Card redesigns
-
-Goal: improve the cards that still feel less mature than the rest.
-
-### Graph card
-- Redesign based on the cleaner weather card graph style
-- Improve readability
-- Improve multi-entity display
-- Refine tooltips, labels and visual hierarchy
-
-### Energy flow card
-- Fix visual issues with complex setups
-- Improve support for:
-  - Grid
-  - Solar
-  - Battery
-  - Water
-  - Gas
-  - Multiple consumption sources
-- Add a more adaptive layout
-
-### Navigation card
-- Redesign to better match the rest of the system
-- Decide between full-width app-style bar or card-style container
-- Improve visual consistency
-
-### Advanced vacuum card
-- Polish selected areas/rooms behavior
-- Improve visual details
-- Refine controls and edge cases
-- Improve Roborock-specific experience
+The goal is making the entire system feel:
+- coherent
+- fluid
+- reliable
+- scalable
+- premium
 
 ---
 
-## Phase 5 — Stability before 1.0.0
+# ⚡ Phase 1 — 1.0.x stabilization
 
-Goal: prepare the first truly polished stable release.
+Goal: strengthen the new architecture introduced in `1.0.0`.
 
-### Before 1.0.0
-- Fix obvious bugs
-- Improve documentation
-- Add more examples
-- Validate all main cards
-- Ensure visual consistency
-- Improve install/update experience
-- Finalize stable/beta workflow
+## Focus areas
+
+### Stability
+- Fix edge-case bugs
+- Improve HA compatibility
+- Improve mobile behavior
+- Reduce rendering edge cases
+- Improve persistence resilience
+
+### Performance
+- Reduce unnecessary renders
+- Improve animation efficiency
+- Reduce layout thrashing
+- Improve large-dashboard performance
+- Improve editor responsiveness
+
+### UX polish
+- Better transitions
+- More consistent popup behavior
+- Better compact layouts
+- Better tablet responsiveness
+- More coherent interaction language
+
+### Visual consistency
+- Continue unifying:
+  - spacing
+  - shadows
+  - chips
+  - tint systems
+  - buttons
+  - panels
+  - popups
+  - hover states
+  - animations
 
 ---
 
-## Target for 1.0.0
+# 🌍 Phase 2 — i18n and editor maturity
 
-Nodalia Cards `1.0.0` should feel:
+Goal: make Nodalia feel truly international and easier to configure.
+
+## Planned work
+
+### Translation improvements
+- Continue refining existing locales
+- Improve machine-translated strings
+- Add missing editor translations
+- Improve runtime translation consistency
+- Expand translation coverage across all cards
+
+### Editor improvements
+- More native Home Assistant selectors
+- Better grouped sections
+- Cleaner advanced settings
+- Better mobile editing experience
+- Better validation feedback
+- More discoverable options
+
+### Documentation
+- More examples
+- Better screenshots
+- Per-card documentation
+- Migration guides
+- Troubleshooting documentation
+
+---
+
+# 🎨 Phase 3 — Visual system refinement
+
+Goal: continue evolving Nodalia into a truly cohesive UI framework.
+
+## Planned work
+
+### Shared design system
+- Shared surface tokens
+- Shared motion system
+- Shared popup framework
+- Shared chip system
+- Shared button styles
+- Shared utility components
+
+### Theme integration
+- Better light theme behavior
+- Better dark theme behavior
+- Better dynamic tinting
+- Improved accessibility contrast
+- Improved typography scaling
+
+### Motion and interactions
+- More natural animations
+- Better reduced-motion handling
+- More tactile interactions
+- Better layered transitions
+- More fluid mobile interactions
+
+---
+
+# 📊 Phase 4 — Major card redesigns
+
+Goal: evolve older cards to the new 1.0 design quality level.
+
+---
+
+## 📈 Graph Card redesign
+
+### Goals
+- Cleaner visual hierarchy
+- Better readability
+- Better tooltip system
+- Better multi-series rendering
+- More modern chart aesthetics
+
+### Planned improvements
+- Better interpolation
+- Better legends
+- Better mobile scaling
+- Better hover behavior
+- Better animation handling
+- Weather-card-inspired rendering style
+
+---
+
+## ⚡ Power Flow Card redesign
+
+### Goals
+- Better handling of complex setups
+- More adaptive layouts
+- Cleaner energy visualization
+
+### Planned improvements
+Support improvements for:
+- Grid
+- Solar
+- Battery
+- Water
+- Gas
+- EV charging
+- Multiple consumption sources
+
+Additional goals:
+- Better node positioning
+- Better flow animations
+- Cleaner compact mode
+- Better responsive layouts
+
+---
+
+## 🧭 Navigation Bar redesign
+
+### Goals
+- Feel more app-like
+- Improve visual integration
+- Improve mobile ergonomics
+
+### Planned improvements
+- Better blur/background handling
+- Better floating behavior
+- Better active indicators
+- Improved animations
+- Better responsive scaling
+
+---
+
+## 🤖 Advanced Vacuum evolution
+
+### Goals
+Push the vacuum experience closer to a native Roborock-like experience directly inside Home Assistant.
+
+### Planned improvements
+- Better map interactions
+- Better room editing
+- Better zone workflows
+- Better goto handling
+- More advanced routines
+- Better multi-floor support
+- More resilient persistence
+- Better map rendering performance
+- Better mobile ergonomics
+
+---
+
+# 🔔 Notifications ecosystem expansion
+
+The Notifications Card is expected to become one of the central systems in Nodalia.
+
+## Planned improvements
+
+### Smart recommendations
+- Better contextual logic
+- Presence-aware recommendations
+- Multi-device awareness
+- Climate intelligence
+- Energy-aware recommendations
+
+### Mobile integrations
+- Better actionable notifications
+- Better grouping
+- Better synchronization
+- Better persistent notification handling
+
+### Visual improvements
+- More compact modes
+- Better stack animations
+- Better filtering/grouping
+- More notification layouts
+
+---
+
+# 🗓️ Calendar ecosystem expansion
+
+The Calendar Card introduced in 1.0.0 will continue evolving.
+
+## Planned improvements
+
+### Native calendar workflows
+- Better recurrence support
+- Better event editing
+- Better drag/drop interactions
+- Better month layouts
+
+### Smart integrations
+- Weather-aware events
+- Presence-aware reminders
+- Smart notification integration
+- Better timeline experiences
+
+### UI improvements
+- Better tablet layouts
+- Better compact modes
+- Better animation consistency
+- More customizable views
+
+---
+
+# 🧩 New cards planned
+
+The ecosystem will continue growing slowly and carefully.
+
+Priority is quality and consistency over quantity.
+
+---
+
+## 🪧 Section / Header Card
+
+A polished replacement for Home Assistant heading cards.
+
+### Possible features
+- Subtitle support
+- Action buttons
+- Better spacing control
+- Better visual hierarchy
+- Nodalia design consistency
+
+---
+
+## 📦 More ecosystem cards
+
+Potential future additions:
+- Timeline card
+- Dashboard overview card
+- Statistics card
+- Device health card
+- Smart recommendation panels
+- Automation status cards
+
+---
+
+# 🛡️ Long-term goals
+
+## Nodalia Cards should become:
 
 - Stable
-- Coherent
-- Polished
+- Fast
+- Cohesive
+- Beautiful
 - Easy to configure
-- Visually consistent
-- Ready for daily use
+- Pleasant to use daily
+- Consistent across all cards
+- Reliable for real homes
 
-## After 1.0.0 — New cards and ecosystem expansion
+The long-term vision is not just a set of custom cards.
 
-Once the first stable 1.0.0 release is polished and reliable, the goal will be to slowly expand the Nodalia ecosystem with new cards while keeping the same design language and quality standards.
+It is building a complete frontend experience layer for Home Assistant.
 
-### Planned cards
+---
 
-#### Calendar Card
-A modern calendar card for Home Assistant.
+# 🚀 Release workflow
 
-Possible features:
-- Upcoming events
-- Daily / weekly view
-- Clean mobile-first layout
-- Event color support
-- Compact and expanded modes
+## Stable (`main`)
+Production-ready releases.
 
-#### Notifications Card
-A dynamic notification card for important home states.
+## Beta (`beta`)
+Feature-preview releases for advanced users.
 
-Possible features:
-- Show messages when a sensor is below or above a value
-- Show messages when a binary sensor changes state
-- Support for priority levels
-- Custom icons and colors
-- Empty state text when there are no active notifications
+## Alpha (`alpha`)
+Experimental builds with rapid iteration.
 
-Example empty state:
-No active notifications
+Future experimental work will continue through:
+- `1.0.x`
+- `1.1.x-alpha`
+- future major cycles
 
-#### Section / Header Card
-A custom alternative to the default Home Assistant heading / section card.
+depending on the scale of the changes.
 
-Possible features:
-- Cleaner visual style
-- Optional subtitle
-- Icon support
-- Action button support
-- Better spacing control
-- Nodalia-style consistency
+---
+
+# 🤝 Community feedback
+
+Community feedback remains one of the most important parts of the project.
+
+Real-world dashboard usage continues shaping:
+- layouts
+- animations
+- interactions
+- mobile ergonomics
+- editor UX
+- smart systems
+- overall polish
