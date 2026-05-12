@@ -21,6 +21,21 @@ Maintenance work continues on the stable `1.0.x` line while the next feature cyc
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.2-alpha.8] - 2026-05-12
+
+Prerelease **`alpha.8`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.8`** (optional tag **`v1.0.2-alpha.8`**).
+
+### Changed
+
+- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.8`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
+
+### Fixed
+
+- **`nodalia-climate-card.js`:** Render-signature temperatures use **`parseFiniteClimateNumber`** only (no **`-1`** sentinel), so a real **−1 °C** setpoint is not confused with “unknown”, and **`formatTemperature`** uses the same helper so **`null`** / empty values do not render as **`0.0 °C`**.
+- **`nodalia-climate-card.js`:** Dial **power** control **`title`** / **`aria-label`** follow **`translateClimateMode('off')`** instead of hardcoded Spanish.
+- **`nodalia-i18n.js`:** **`translateEntityState`** builds **`entityCard`** with **`deepMergeLocale(PACK.en.entityCard, …)`** for every supported language so nested keys (for example **`binarySensor`**) keep **English** fallbacks when a locale omits them.
+
+---
 ## [1.0.2-alpha.7] - 2026-05-12
 
 Prerelease **`alpha.7`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.7`** (optional tag **`v1.0.2-alpha.7`**).

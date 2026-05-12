@@ -486,7 +486,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.2-alpha.7";
+const CARD_VERSION = "1.0.2-alpha.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1040,7 +1040,7 @@ function getClimateTemperatureScaleLetter(hass) {
 }
 
 function formatTemperature(value, step = 0.5, withUnit = true, hass = null) {
-  const n = Number(value);
+  const n = parseFiniteClimateNumber(value);
   if (!Number.isFinite(n)) {
     const u = getClimateTemperatureUnit(hass);
     return withUnit ? `-- ${u}` : "--";
@@ -1274,22 +1274,10 @@ class NodaliaClimateCard extends HTMLElement {
       state: String(state?.state || ""),
       friendlyName: String(attrs.friendly_name || ""),
       icon: String(attrs.icon || ""),
-      temperature: (() => {
-        const v = parseFiniteClimateNumber(attrs.temperature);
-        return Number.isFinite(v) ? v : -1;
-      })(),
-      currentTemperature: (() => {
-        const v = parseFiniteClimateNumber(attrs.current_temperature);
-        return Number.isFinite(v) ? v : -1;
-      })(),
-      targetTempHigh: (() => {
-        const v = parseFiniteClimateNumber(attrs.target_temp_high);
-        return Number.isFinite(v) ? v : -1;
-      })(),
-      targetTempLow: (() => {
-        const v = parseFiniteClimateNumber(attrs.target_temp_low);
-        return Number.isFinite(v) ? v : -1;
-      })(),
+      temperature: parseFiniteClimateNumber(attrs.temperature),
+      currentTemperature: parseFiniteClimateNumber(attrs.current_temperature),
+      targetTempHigh: parseFiniteClimateNumber(attrs.target_temp_high),
+      targetTempLow: parseFiniteClimateNumber(attrs.target_temp_low),
       humidity: Number(attrs.humidity ?? -1),
       currentHumidity: Number(attrs.current_humidity ?? -1),
       hvacMode: String(attrs.hvac_mode || ""),
@@ -2346,6 +2334,7 @@ class NodaliaClimateCard extends HTMLElement {
         ? window.NodaliaI18n.translateClimateHvacLabel(hass, i18nLang, mode, false)
         : getModeMeta(mode).label
     );
+    const climateOffModeLabel = escapeHtml(translateClimateMode("off"));
     const cardPaddingY = tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
     const cardPaddingX = tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
     const effectiveCardPadding = `${cardPaddingY}px ${cardPaddingX}px`;
@@ -2499,8 +2488,8 @@ class NodaliaClimateCard extends HTMLElement {
                     type="button"
                     class="climate-card__mode-button climate-card__mode-button--power is-active"
                     data-climate-action="toggle"
-                    title="Apagar"
-                    aria-label="Apagar"
+                    title="${climateOffModeLabel}"
+                    aria-label="${climateOffModeLabel}"
                   >
                     <ha-icon icon="mdi:power"></ha-icon>
                   </button>`);

@@ -6812,9 +6812,7 @@
   function translateEntityState(langCode, state, numberDecimals, formatNumericValueWithUnit, formatNumericValue, parseNumericValue) {
     const code = PACK[langCode] ? langCode : "en";
     const ecEn = PACK.en.entityCard || {};
-    const dict = code === "es"
-      ? deepMergeLocale(ecEn, PACK.es.entityCard || {})
-      : (strings(code).entityCard || ecEn);
+    const dict = deepMergeLocale(ecEn, (PACK[code]?.entityCard) || {});
     if (!state) {
       return null;
     }
