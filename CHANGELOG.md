@@ -10,6 +10,15 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.96] - 2026-05-12
+
+Ninety-sixth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.96`** (tag **`v1.0.0-alpha.96`** optional).
+
+- **Nodalia Advance Vacuum card (`0.13.13`):** **Zone** mode no longer shows the extra **zone-count** selection chip in the modes panel (less vertical clutter). **Map raster URL** cache busting uses only the **map entity** **`last_updated` / `last_changed`** (not vacuum position / room id), so the image URL stays stable while the robot state updates and the **background no longer reloads every tick** during cleaning. When the map **does** update, **`stripMapCacheBuster`** reuses the same **`<img>`** if the logical URL matches, and crossfades use **`is-pending` from first paint** plus explicit **`z-index`** so the previous frame stays visible under the new layer until the fade completes.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.96`**.
+
+---
+
 ## [1.0.0-alpha.95] - 2026-05-12
 
 Ninety-fifth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.95`** (tag **`v1.0.0-alpha.95`** optional).

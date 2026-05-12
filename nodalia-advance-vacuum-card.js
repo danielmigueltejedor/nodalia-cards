@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.13.12";
+const CARD_VERSION = "0.13.13";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1154,6 +1154,23 @@ function appendQueryParam(url, key, value) {
   }
 
   return `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}`;
+}
+
+/** Map image URL identity without cache-buster (for reuse / crossfade decisions). */
+function stripMapCacheBuster(raw) {
+  const s = String(raw || "").trim();
+  if (!s) {
+    return "";
+  }
+  try {
+    const origin = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "http://localhost";
+    const u = new URL(s, origin);
+    u.searchParams.delete("nodalia_ts");
+    const q = u.searchParams.toString();
+    return `${u.pathname}${q ? `?${q}` : ""}${u.hash}`;
+  } catch {
+    return s;
+  }
 }
 
 function parseRectangleLike(value) {
@@ -3457,13 +3474,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return "";
     }
 
-    const refreshToken = [
-      String(mapState?.last_updated || mapState?.last_changed || ""),
-      this._isCleaning(state) || this._isPaused(state) || this._isReturning(state)
-        ? String(state?.last_updated || state?.last_changed || "")
-        : "",
-      String(this._getCurrentVacuumRoomId(state) || ""),
-    ].filter(Boolean).join("|");
+    const refreshToken = String(mapState?.last_updated || mapState?.last_changed || "");
 
     const fromPicture = mapState.attributes?.entity_picture;
     if (fromPicture) {
@@ -7012,11 +7023,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
             </button>
           </div>
         `,
-      this._activeMode === "zone"
-        ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._manualZones.length + this._selectedPredefinedZoneIds.length}</strong><span>${escapeHtml(u?.zonesWord ?? "zonas")}</span></div>`
-        : this._activeMode === "goto"
-          ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._gotoPoint ? "1" : "0"}</strong><span>${escapeHtml(u?.pointWord ?? "punto")}</span></div>`
-          : "",
+      this._activeMode === "goto"
+        ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._gotoPoint ? "1" : "0"}</strong><span>${escapeHtml(u?.pointWord ?? "punto")}</span></div>`
+        : "",
     ].filter(Boolean).join("");
     if (!PANEL_MODE_PRESETS.length && !descriptors.length && this._activeMode === "all") {
       return "";
@@ -7247,6 +7256,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const chipPadding = styles.chip_padding || "0 10px";
       const chipFontSize = Math.max(11, parseSizeToPixels(styles.chip_font_size, 11));
       const mapImageUrl = this._getMapImageUrl(state);
+      const previousMapNorm = stripMapCacheBuster(previousImageSrc);
+      const nextMapNorm = stripMapCacheBuster(mapImageUrl || "");
+      const mapImageStartsPending =
+        Boolean(mapImageUrl) &&
+        previousImage?.tagName === "IMG" &&
+        Boolean(previousMapNorm) &&
+        Boolean(nextMapNorm) &&
+        previousMapNorm !== nextMapNorm;
       const unavailable = isUnavailableState(state) || !mapImageUrl;
       this._syncRememberedModeSelections(state);
       this._sanitizeSelectedManualZoneIndex();
@@ -7691,8 +7708,16 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           opacity: 1;
           position: absolute;
           transition: opacity 220ms ease-out;
-          will-change: opacity;
           width: 100%;
+          z-index: 0;
+        }
+
+        .advance-vacuum-card__map-image[data-map-image-previous="true"] {
+          z-index: 0;
+        }
+
+        .advance-vacuum-card__map-image[data-map-image] {
+          z-index: 1;
         }
 
         .advance-vacuum-card__map-image.is-pending,
@@ -8314,7 +8339,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
               <div class="advance-vacuum-card__map-canvas" style="${mapTransformStyle}">
                 ${
                   mapImageUrl
-                    ? `<img class="advance-vacuum-card__map-image" data-map-image src="${escapeHtml(mapImageUrl)}" alt="Mapa del robot" />`
+                    ? `<img class="advance-vacuum-card__map-image${mapImageStartsPending ? " is-pending" : ""}" data-map-image src="${escapeHtml(mapImageUrl)}" alt="Mapa del robot" />`
                     : `<div class="advance-vacuum-card__map-image" style="display:flex;align-items:center;justify-content:center;color:var(--secondary-text-color);">Mapa no disponible</div>`
                 }
                 ${showRoomSelectionDim ? `<div class="advance-vacuum-card__map-room-dim"></div>` : ""}
@@ -8471,20 +8496,23 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     `;
 
       let image = this.shadowRoot.querySelector("[data-map-image]");
-      const imageSrc = image?.getAttribute("src") || "";
       const canvas = this.shadowRoot.querySelector(".advance-vacuum-card__map-canvas");
-      if (previousImage && image && previousImageSrc && previousImageSrc === imageSrc) {
+      if (previousImage && image && previousMapNorm && nextMapNorm && previousMapNorm === nextMapNorm) {
         image.replaceWith(previousImage);
         image = previousImage;
+        image.removeAttribute("data-map-image-previous");
+        image.setAttribute("data-map-image", "");
+        if (mapImageUrl && image.getAttribute("src") !== mapImageUrl) {
+          image.setAttribute("src", mapImageUrl);
+        }
         image.classList.remove("is-pending", "is-fading-out");
         image.classList.add("is-loaded");
-      } else if (previousImage && image && previousImageSrc && imageSrc && canvas) {
+      } else if (previousImage && image && canvas && previousMapNorm && nextMapNorm && previousMapNorm !== nextMapNorm) {
         previousImage.removeEventListener("load", this._onMapImageLoad);
         previousImage.removeAttribute("data-map-image");
         previousImage.setAttribute("data-map-image-previous", "true");
         previousImage.classList.remove("is-pending", "is-fading-out");
         previousImage.classList.add("is-loaded");
-        image.classList.add("is-pending");
         canvas.insertBefore(previousImage, image);
       } else if (image) {
         image.classList.remove("is-pending", "is-fading-out");
