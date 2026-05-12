@@ -18,6 +18,7 @@
     "mountIconPickerHost",
     "postHomeAssistantWebhook",
     "warnStrictServiceDenied",
+    "renderEditorChipBorderRadiusHtml",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -392,6 +393,52 @@
   }
 
   /**
+   * Visual editor: preset radios for `styles.chip_border_radius` (capsule / soft / rounded / square).
+   * Callers pass translated labels and their `escapeHtml` (card-local).
+   */
+  function renderEditorChipBorderRadiusHtml(options) {
+    const esc = options?.escapeHtml;
+    if (typeof esc !== "function") {
+      return "";
+    }
+    const fieldRaw = String(options?.field ?? "styles.chip_border_radius").trim();
+    const field = fieldRaw || "styles.chip_border_radius";
+    const current = String(options?.value ?? "").trim() || "999px";
+    const tHeading = esc(String(options?.tHeading ?? "Chip corner radius"));
+    const labels = options?.labels ?? {};
+    const tPill = esc(String(labels.pill ?? "Capsule"));
+    const tSoft = esc(String(labels.soft ?? "Soft"));
+    const tRound = esc(String(labels.round ?? "Rounded"));
+    const tSquare = esc(String(labels.square ?? "Square"));
+    const STANDARD = [
+      { v: "999px", l: tPill },
+      { v: "12px", l: tSoft },
+      { v: "8px", l: tRound },
+      { v: "4px", l: tSquare },
+    ];
+    const inStandard = STANDARD.some(p => p.v === current);
+    const presets = inStandard ? STANDARD : [{ v: current, l: esc(current) }, ...STANDARD];
+    const group = `nodalia-cbr-${Math.random().toString(36).slice(2, 11)}`;
+    const optionsHtml = presets
+      .map(p => {
+        const checked = current === p.v ? " checked" : "";
+        return `
+      <label class="editor-chip-radius__option">
+        <input type="radio" name="${esc(group)}" data-field="${esc(field)}" data-value-type="string" value="${esc(p.v)}"${checked} />
+        <span>${p.l}</span>
+      </label>`;
+      })
+      .join("");
+    return `
+    <div class="editor-field editor-field--full editor-chip-radius">
+      <span>${tHeading}</span>
+      <div class="editor-chip-radius__options" role="radiogroup" aria-label="${tHeading}">
+        ${optionsHtml}
+      </div>
+    </div>`;
+  }
+
+  /**
    * Mount or update ha-icon-picker / text input without recreating each render.
    */
   function mountIconPickerHost(host, options) {
@@ -475,6 +522,7 @@
     mountIconPickerHost,
     postHomeAssistantWebhook,
     warnStrictServiceDenied,
+    renderEditorChipBorderRadiusHtml,
   };
 
   if (typeof window !== "undefined") {
@@ -486,7 +534,7 @@
 
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "1.0.3-alpha.1";
+const CARD_VERSION = "1.0.3-alpha.2";
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
   selection: 8,

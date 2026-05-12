@@ -21,6 +21,20 @@ Maintenance work continues on the **`1.0.3`** prerelease line (visual polish, tr
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.3-alpha.2] - 2026-05-12
+
+Second **`1.0.3`** **`alpha`**: configurable **chip corner radius** (`styles.chip_border_radius`, default **`999px`** capsule) across bubble-style cards, with **preset radios** in the visual editor (Capsule / Soft / Rounded / Square). Shared helper **`NodaliaUtils.renderEditorChipBorderRadiusHtml`**. Installs match **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** (**`1.0.3-alpha.2`**).
+
+### Added
+
+- **`styles.chip_border_radius`** and editor **chip radius** presets on entity, light, fan, humidifier, climate, weather, vacuum, alarm panel, circular gauge, fav, person, power flow, graph (legend chips), and calendar cards.
+- **i18n:** `ed.entity.style_chip_radius` and `ed.entity.chip_radius_*` keys in all editor locale files.
+
+### Changed
+
+- **Release metadata:** bump prerelease channel and bundle diagnostics to **`1.0.3-alpha.2`**.
+
+---
 ## [1.0.3-alpha.1] - 2026-05-13
 
 First **`alpha`** on **`1.0.3`**: iteration focused on **visual fixes**, **translations**, and minor **bugs** on the stable **`1.0.x`** line. Installs match **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules (**`1.0.3-alpha.1`**) (optional tag **`v1.0.3-alpha.1`**).
@@ -32,8 +46,9 @@ First **`alpha`** on **`1.0.3`**: iteration focused on **visual fixes**, **trans
 ### Fixed
 
 - **`nodalia-calendar-card.js`:** header bubble icon uses **`NodaliaBubbleContrast`** (same idea as entity / notifications) so the glyph stays legible on cool-tinted accents.
-- **`nodalia-light-card.js`**, **`nodalia-fan-card.js`**, **`nodalia-humidifier-card.js`**, **`nodalia-entity-card.js`:** default **`styles.icon.off_color`** is **`var(--primary-text-color)`**, aligned with vacuum / media player idle icons and readable in both light and dark themes.
+- **`nodalia-light-card.js`**, **`nodalia-fan-card.js`**, **`nodalia-humidifier-card.js`**, **`nodalia-entity-card.js`:** default **`styles.icon.off_color`** is **`var(--primary-text-color)`**, aligned with vacuum / media player idle icons and readable in both light and dark themes. **`normalizeConfig`** migrates legacy YAML that still stores the old **`--state-inactive-color`** default so dashboards do not keep the washed-out icon.
 - **`nodalia-light-card.js`:** manual collapse of detailed controls plays the **leaving** animation again when animations are enabled.
+- **`nodalia-climate-card.js`:** with **`hvac_mode: off`**, the dial meta icon shows **`mdi:power`** (not **`idle`** / pause) and uses the dial **off** accent so the glyph is visible on light surfaces; legacy **`styles.dial.off_color`** / **`styles.icon.off_color`** values are migrated at load.
 
 ---
 ## [1.0.2] - 2026-05-12

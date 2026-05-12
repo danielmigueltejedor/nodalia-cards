@@ -18,6 +18,7 @@
     "mountIconPickerHost",
     "postHomeAssistantWebhook",
     "warnStrictServiceDenied",
+    "renderEditorChipBorderRadiusHtml",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -392,6 +393,52 @@
   }
 
   /**
+   * Visual editor: preset radios for `styles.chip_border_radius` (capsule / soft / rounded / square).
+   * Callers pass translated labels and their `escapeHtml` (card-local).
+   */
+  function renderEditorChipBorderRadiusHtml(options) {
+    const esc = options?.escapeHtml;
+    if (typeof esc !== "function") {
+      return "";
+    }
+    const fieldRaw = String(options?.field ?? "styles.chip_border_radius").trim();
+    const field = fieldRaw || "styles.chip_border_radius";
+    const current = String(options?.value ?? "").trim() || "999px";
+    const tHeading = esc(String(options?.tHeading ?? "Chip corner radius"));
+    const labels = options?.labels ?? {};
+    const tPill = esc(String(labels.pill ?? "Capsule"));
+    const tSoft = esc(String(labels.soft ?? "Soft"));
+    const tRound = esc(String(labels.round ?? "Rounded"));
+    const tSquare = esc(String(labels.square ?? "Square"));
+    const STANDARD = [
+      { v: "999px", l: tPill },
+      { v: "12px", l: tSoft },
+      { v: "8px", l: tRound },
+      { v: "4px", l: tSquare },
+    ];
+    const inStandard = STANDARD.some(p => p.v === current);
+    const presets = inStandard ? STANDARD : [{ v: current, l: esc(current) }, ...STANDARD];
+    const group = `nodalia-cbr-${Math.random().toString(36).slice(2, 11)}`;
+    const optionsHtml = presets
+      .map(p => {
+        const checked = current === p.v ? " checked" : "";
+        return `
+      <label class="editor-chip-radius__option">
+        <input type="radio" name="${esc(group)}" data-field="${esc(field)}" data-value-type="string" value="${esc(p.v)}"${checked} />
+        <span>${p.l}</span>
+      </label>`;
+      })
+      .join("");
+    return `
+    <div class="editor-field editor-field--full editor-chip-radius">
+      <span>${tHeading}</span>
+      <div class="editor-chip-radius__options" role="radiogroup" aria-label="${tHeading}">
+        ${optionsHtml}
+      </div>
+    </div>`;
+  }
+
+  /**
    * Mount or update ha-icon-picker / text input without recreating each render.
    */
   function mountIconPickerHost(host, options) {
@@ -475,6 +522,7 @@
     mountIconPickerHost,
     postHomeAssistantWebhook,
     warnStrictServiceDenied,
+    renderEditorChipBorderRadiusHtml,
   };
 
   if (typeof window !== "undefined") {
@@ -486,7 +534,7 @@
 
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "1.0.3-alpha.1";
+const CARD_VERSION = "1.0.3-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -551,6 +599,7 @@ const DEFAULT_CONFIG = {
     value_size: "40px",
     unit_size: "17px",
     legend_size: "11px",
+    chip_border_radius: "999px",
     chart_height: "178px",
     line_width: "1px",
   },
@@ -2474,6 +2523,7 @@ class NodaliaGraphCard extends HTMLElement {
     const unitSize = `${Math.max(12, Math.min(parseSizeToPixels(styles.unit_size, 18), compactLayout ? 14 : 16))}px`;
     const titleSize = `${Math.max(11, Math.min(parseSizeToPixels(styles.title_size, 14), compactLayout ? 11.5 : 12.5))}px`;
     const legendSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.legend_size, 12), compactLayout ? 10 : 11))}px`;
+    const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
     const lineWidth = `${Math.max(1.6, Math.min(parseSizeToPixels(styles.line_width, 2.2), compactLayout ? 1.9 : 2.2))}`;
     const padEdges = parsePaddingEdges(styles.card.padding, 16);
     const cardPaddingPx = Math.max(12, Math.round((padEdges.left + padEdges.right) / 2));
@@ -2722,7 +2772,7 @@ class NodaliaGraphCard extends HTMLElement {
           align-items: center;
           background: linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, color-mix(in srgb, var(--primary-text-color) 3%, transparent) 100%);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
+          border-radius: ${chipBorderRadius};
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
@@ -3667,6 +3717,36 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
           grid-column: 1 / -1;
         }
 
+        .editor-chip-radius__options {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .editor-chip-radius__option {
+          align-items: center;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 12px;
+          cursor: pointer;
+          display: inline-flex;
+          gap: 8px;
+          padding: 8px 12px;
+        }
+
+        .editor-chip-radius__option:has(input:checked) {
+          background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+          border-color: var(--primary-color);
+        }
+
+        .editor-chip-radius__option input[type="radio"] {
+          accent-color: var(--primary-color);
+          appearance: auto;
+          margin: 0;
+          min-height: auto;
+          padding: 0;
+          width: auto;
+        }
+
 
         .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
@@ -3899,6 +3979,18 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
             ${this._renderTextField("Tamano valor", "styles.value_size", config.styles.value_size)}
             ${this._renderTextField("Tamano unidad", "styles.unit_size", config.styles.unit_size)}
             ${this._renderTextField("Tamano leyenda", "styles.legend_size", config.styles.legend_size)}
+            ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
+              escapeHtml,
+              field: "styles.chip_border_radius",
+              value: config.styles?.chip_border_radius,
+              tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+              labels: {
+                pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                round: this._editorLabel("ed.entity.chip_radius_round"),
+                square: this._editorLabel("ed.entity.chip_radius_square"),
+              },
+            })}
             ${this._renderTextField("Alto grafico", "styles.chart_height", config.styles.chart_height)}
             ${this._renderTextField("Grosor linea", "styles.line_width", config.styles.line_width)}
           </div>
@@ -4669,6 +4761,36 @@ class NodaliaGraphCardEditor extends HTMLElement {
           grid-column: 1 / -1;
         }
 
+        .editor-chip-radius__options {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .editor-chip-radius__option {
+          align-items: center;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 12px;
+          cursor: pointer;
+          display: inline-flex;
+          gap: 8px;
+          padding: 8px 12px;
+        }
+
+        .editor-chip-radius__option:has(input:checked) {
+          background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+          border-color: var(--primary-color);
+        }
+
+        .editor-chip-radius__option input[type="radio"] {
+          accent-color: var(--primary-color);
+          appearance: auto;
+          margin: 0;
+          min-height: auto;
+          padding: 0;
+          width: auto;
+        }
+
 
         .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
@@ -5104,6 +5226,18 @@ class NodaliaGraphCardEditor extends HTMLElement {
                   ${this._renderTextField("Tamano valor", "styles.value_size", config.styles.value_size)}
                   ${this._renderTextField("Tamano unidad", "styles.unit_size", config.styles.unit_size)}
                   ${this._renderTextField("Tamano leyenda", "styles.legend_size", config.styles.legend_size)}
+            ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
+              escapeHtml,
+              field: "styles.chip_border_radius",
+              value: config.styles?.chip_border_radius,
+              tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+              labels: {
+                pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                round: this._editorLabel("ed.entity.chip_radius_round"),
+                square: this._editorLabel("ed.entity.chip_radius_square"),
+              },
+            })}
                   ${this._renderTextField("Alto grafica", "styles.chart_height", config.styles.chart_height)}
                   ${this._renderTextField("Grosor linea", "styles.line_width", config.styles.line_width)}
                 </div>

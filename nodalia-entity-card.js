@@ -18,6 +18,7 @@
     "mountIconPickerHost",
     "postHomeAssistantWebhook",
     "warnStrictServiceDenied",
+    "renderEditorChipBorderRadiusHtml",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -392,6 +393,52 @@
   }
 
   /**
+   * Visual editor: preset radios for `styles.chip_border_radius` (capsule / soft / rounded / square).
+   * Callers pass translated labels and their `escapeHtml` (card-local).
+   */
+  function renderEditorChipBorderRadiusHtml(options) {
+    const esc = options?.escapeHtml;
+    if (typeof esc !== "function") {
+      return "";
+    }
+    const fieldRaw = String(options?.field ?? "styles.chip_border_radius").trim();
+    const field = fieldRaw || "styles.chip_border_radius";
+    const current = String(options?.value ?? "").trim() || "999px";
+    const tHeading = esc(String(options?.tHeading ?? "Chip corner radius"));
+    const labels = options?.labels ?? {};
+    const tPill = esc(String(labels.pill ?? "Capsule"));
+    const tSoft = esc(String(labels.soft ?? "Soft"));
+    const tRound = esc(String(labels.round ?? "Rounded"));
+    const tSquare = esc(String(labels.square ?? "Square"));
+    const STANDARD = [
+      { v: "999px", l: tPill },
+      { v: "12px", l: tSoft },
+      { v: "8px", l: tRound },
+      { v: "4px", l: tSquare },
+    ];
+    const inStandard = STANDARD.some(p => p.v === current);
+    const presets = inStandard ? STANDARD : [{ v: current, l: esc(current) }, ...STANDARD];
+    const group = `nodalia-cbr-${Math.random().toString(36).slice(2, 11)}`;
+    const optionsHtml = presets
+      .map(p => {
+        const checked = current === p.v ? " checked" : "";
+        return `
+      <label class="editor-chip-radius__option">
+        <input type="radio" name="${esc(group)}" data-field="${esc(field)}" data-value-type="string" value="${esc(p.v)}"${checked} />
+        <span>${p.l}</span>
+      </label>`;
+      })
+      .join("");
+    return `
+    <div class="editor-field editor-field--full editor-chip-radius">
+      <span>${tHeading}</span>
+      <div class="editor-chip-radius__options" role="radiogroup" aria-label="${tHeading}">
+        ${optionsHtml}
+      </div>
+    </div>`;
+  }
+
+  /**
    * Mount or update ha-icon-picker / text input without recreating each render.
    */
   function mountIconPickerHost(host, options) {
@@ -475,6 +522,7 @@
     mountIconPickerHost,
     postHomeAssistantWebhook,
     warnStrictServiceDenied,
+    renderEditorChipBorderRadiusHtml,
   };
 
   if (typeof window !== "undefined") {
@@ -486,7 +534,7 @@
 
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.0.3-alpha.1";
+const CARD_VERSION = "1.0.3-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -554,6 +602,7 @@ const DEFAULT_CONFIG = {
     chip_height: "24px",
     chip_font_size: "11px",
     chip_padding: "0 9px",
+    chip_border_radius: "999px",
     title_size: "12px",
   },
 };
@@ -579,6 +628,29 @@ const STUB_CONFIG = {
     },
   ],
 };
+
+/** Older defaults / editor-saved YAML used `--state-inactive-color`, which stays merged over new defaults. */
+const LEGACY_ICON_OFF_COLOR_VALUES = [
+  "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
+  "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
+];
+
+function migrateLegacyIconOffColor(iconStyles, canonicalOffColor) {
+  if (!iconStyles) {
+    return;
+  }
+  const raw = String(iconStyles.off_color ?? "").trim();
+  if (!raw) {
+    return;
+  }
+  if (LEGACY_ICON_OFF_COLOR_VALUES.includes(raw)) {
+    iconStyles.off_color = canonicalOffColor;
+    return;
+  }
+  if (/^var\(\s*--state-inactive-color/i.test(raw)) {
+    iconStyles.off_color = canonicalOffColor;
+  }
+}
 
 function isObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -1028,6 +1100,8 @@ function normalizeConfig(rawConfig) {
         service_data: action.service_data || "",
       }))
     : [];
+
+  migrateLegacyIconOffColor(config.styles?.icon, DEFAULT_CONFIG.styles.icon.off_color);
 
   return config;
 }
@@ -1665,6 +1739,7 @@ class NodaliaEntityCard extends HTMLElement {
     const effectiveChipHeight = `${Math.max(15, Math.min(parseSizeToPixels(styles.chip_height, 24), singleRowLayout ? 16 : compactMetrics ? 22 : 24))}px`;
     const effectiveChipFontSize = `${Math.max(8, Math.min(parseSizeToPixels(styles.chip_font_size, 11), singleRowLayout ? 8.5 : compactMetrics ? 10 : 11))}px`;
     const effectiveChipPadding = singleRowLayout ? "0 6px" : compactMetrics ? "0 8px" : styles.chip_padding;
+    const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
     const effectiveCardHeightPx = singleRowLayout ? Math.max(54, effectiveIconSizePx + (singleRowPaddingY * 2)) : 0;
     const effectiveCardMinHeight = singleRowLayout ? `${effectiveCardHeightPx}px` : "0px";
     const effectiveContentMinHeight = singleRowLayout ? `${Math.max(effectiveIconSizePx, effectiveCardHeightPx - (singleRowPaddingY * 2))}px` : "0px";
@@ -1957,7 +2032,7 @@ class NodaliaEntityCard extends HTMLElement {
           align-items: center;
           background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border-radius: 999px;
+          border-radius: ${chipBorderRadius};
           color: var(--secondary-text-color);
           display: inline-flex;
           flex: 0 0 auto;
@@ -2866,6 +2941,36 @@ class NodaliaEntityCardEditor extends HTMLElement {
           grid-column: 1 / -1;
         }
 
+        .editor-chip-radius__options {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .editor-chip-radius__option {
+          align-items: center;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 12px;
+          cursor: pointer;
+          display: inline-flex;
+          gap: 8px;
+          padding: 8px 12px;
+        }
+
+        .editor-chip-radius__option:has(input:checked) {
+          background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+          border-color: var(--primary-color);
+        }
+
+        .editor-chip-radius__option input[type="radio"] {
+          accent-color: var(--primary-color);
+          appearance: auto;
+          margin: 0;
+          min-height: auto;
+          padding: 0;
+          width: auto;
+        }
+
 
         .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
@@ -3381,6 +3486,18 @@ class NodaliaEntityCardEditor extends HTMLElement {
                   ${this._renderTextField("ed.entity.style_chip_height", "styles.chip_height", config.styles.chip_height)}
                   ${this._renderTextField("ed.entity.style_chip_font", "styles.chip_font_size", config.styles.chip_font_size)}
                   ${this._renderTextField("ed.entity.style_chip_padding", "styles.chip_padding", config.styles.chip_padding)}
+                  ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
+                    escapeHtml,
+                    field: "styles.chip_border_radius",
+                    value: config.styles?.chip_border_radius,
+                    tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+                    labels: {
+                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                      round: this._editorLabel("ed.entity.chip_radius_round"),
+                      square: this._editorLabel("ed.entity.chip_radius_square"),
+                    },
+                  })}
                   ${this._renderTextField("ed.entity.style_title_size", "styles.title_size", config.styles.title_size)}
                 </div>
               `

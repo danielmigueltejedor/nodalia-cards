@@ -18,6 +18,7 @@
     "mountIconPickerHost",
     "postHomeAssistantWebhook",
     "warnStrictServiceDenied",
+    "renderEditorChipBorderRadiusHtml",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -392,6 +393,52 @@
   }
 
   /**
+   * Visual editor: preset radios for `styles.chip_border_radius` (capsule / soft / rounded / square).
+   * Callers pass translated labels and their `escapeHtml` (card-local).
+   */
+  function renderEditorChipBorderRadiusHtml(options) {
+    const esc = options?.escapeHtml;
+    if (typeof esc !== "function") {
+      return "";
+    }
+    const fieldRaw = String(options?.field ?? "styles.chip_border_radius").trim();
+    const field = fieldRaw || "styles.chip_border_radius";
+    const current = String(options?.value ?? "").trim() || "999px";
+    const tHeading = esc(String(options?.tHeading ?? "Chip corner radius"));
+    const labels = options?.labels ?? {};
+    const tPill = esc(String(labels.pill ?? "Capsule"));
+    const tSoft = esc(String(labels.soft ?? "Soft"));
+    const tRound = esc(String(labels.round ?? "Rounded"));
+    const tSquare = esc(String(labels.square ?? "Square"));
+    const STANDARD = [
+      { v: "999px", l: tPill },
+      { v: "12px", l: tSoft },
+      { v: "8px", l: tRound },
+      { v: "4px", l: tSquare },
+    ];
+    const inStandard = STANDARD.some(p => p.v === current);
+    const presets = inStandard ? STANDARD : [{ v: current, l: esc(current) }, ...STANDARD];
+    const group = `nodalia-cbr-${Math.random().toString(36).slice(2, 11)}`;
+    const optionsHtml = presets
+      .map(p => {
+        const checked = current === p.v ? " checked" : "";
+        return `
+      <label class="editor-chip-radius__option">
+        <input type="radio" name="${esc(group)}" data-field="${esc(field)}" data-value-type="string" value="${esc(p.v)}"${checked} />
+        <span>${p.l}</span>
+      </label>`;
+      })
+      .join("");
+    return `
+    <div class="editor-field editor-field--full editor-chip-radius">
+      <span>${tHeading}</span>
+      <div class="editor-chip-radius__options" role="radiogroup" aria-label="${tHeading}">
+        ${optionsHtml}
+      </div>
+    </div>`;
+  }
+
+  /**
    * Mount or update ha-icon-picker / text input without recreating each render.
    */
   function mountIconPickerHost(host, options) {
@@ -475,6 +522,7 @@
     mountIconPickerHost,
     postHomeAssistantWebhook,
     warnStrictServiceDenied,
+    renderEditorChipBorderRadiusHtml,
   };
 
   if (typeof window !== "undefined") {
@@ -486,7 +534,7 @@
 
 const CARD_TAG = "nodalia-circular-gauge-card";
 const EDITOR_TAG = "nodalia-circular-gauge-card-editor";
-const CARD_VERSION = "1.0.3-alpha.1";
+const CARD_VERSION = "1.0.3-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -556,6 +604,7 @@ const DEFAULT_CONFIG = {
     chip_height: "24px",
     chip_font_size: "11px",
     chip_padding: "0 10px",
+    chip_border_radius: "999px",
     title_size: "16px",
     value_size: "52px",
     range_size: "14px",
@@ -780,6 +829,7 @@ function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
     chip_height: sanitizeCssValue(styles?.chip_height, defaults.chip_height),
     chip_font_size: sanitizeCssValue(styles?.chip_font_size, defaults.chip_font_size),
     chip_padding: sanitizeCssValue(styles?.chip_padding, defaults.chip_padding),
+    chip_border_radius: sanitizeCssValue(styles?.chip_border_radius, defaults.chip_border_radius),
     title_size: sanitizeCssValue(styles?.title_size, defaults.title_size),
     value_size: sanitizeCssValue(styles?.value_size, defaults.value_size),
     range_size: sanitizeCssValue(styles?.range_size, defaults.range_size),
@@ -1631,6 +1681,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const effectiveChipHeight = `${Math.max(22, Math.min(parseSizeToPixels(styles.chip_height, 24), compactLayout ? 23 : 24))}px`;
     const effectiveChipFontSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.chip_font_size, 11), compactLayout ? 10.5 : 11))}px`;
     const effectiveChipPadding = compactLayout ? "0 9px" : styles.chip_padding;
+    const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
     const effectiveNameChipMaxWidth = `${Math.max(120, Math.min(parseSizeToPixels(styles.name_chip_max_width, 170), compactLayout ? 148 : 170))}px`;
     const cardBackground = value === null
       ? styles.card.background
@@ -1845,7 +1896,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           backdrop-filter: blur(18px);
           background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
+          border-radius: ${chipBorderRadius};
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           color: var(--primary-text-color);
           display: inline-flex;
@@ -2991,6 +3042,36 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
           grid-column: 1 / -1;
         }
 
+        .editor-chip-radius__options {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .editor-chip-radius__option {
+          align-items: center;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 12px;
+          cursor: pointer;
+          display: inline-flex;
+          gap: 8px;
+          padding: 8px 12px;
+        }
+
+        .editor-chip-radius__option:has(input:checked) {
+          background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+          border-color: var(--primary-color);
+        }
+
+        .editor-chip-radius__option input[type="radio"] {
+          accent-color: var(--primary-color);
+          appearance: auto;
+          margin: 0;
+          min-height: auto;
+          padding: 0;
+          width: auto;
+        }
+
 
         .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
@@ -3376,6 +3457,18 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
                   ${this._renderTextField("ed.person.style_chip_height", "styles.chip_height", config.styles.chip_height)}
                   ${this._renderTextField("ed.person.style_chip_font", "styles.chip_font_size", config.styles.chip_font_size)}
                   ${this._renderTextField("ed.entity.style_chip_padding", "styles.chip_padding", config.styles.chip_padding)}
+                  ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
+                    escapeHtml,
+                    field: "styles.chip_border_radius",
+                    value: config.styles?.chip_border_radius,
+                    tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+                    labels: {
+                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                      round: this._editorLabel("ed.entity.chip_radius_round"),
+                      square: this._editorLabel("ed.entity.chip_radius_square"),
+                    },
+                  })}
                 </div>
               `
               : ""

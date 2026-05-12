@@ -18,6 +18,7 @@
     "mountIconPickerHost",
     "postHomeAssistantWebhook",
     "warnStrictServiceDenied",
+    "renderEditorChipBorderRadiusHtml",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -392,6 +393,52 @@
   }
 
   /**
+   * Visual editor: preset radios for `styles.chip_border_radius` (capsule / soft / rounded / square).
+   * Callers pass translated labels and their `escapeHtml` (card-local).
+   */
+  function renderEditorChipBorderRadiusHtml(options) {
+    const esc = options?.escapeHtml;
+    if (typeof esc !== "function") {
+      return "";
+    }
+    const fieldRaw = String(options?.field ?? "styles.chip_border_radius").trim();
+    const field = fieldRaw || "styles.chip_border_radius";
+    const current = String(options?.value ?? "").trim() || "999px";
+    const tHeading = esc(String(options?.tHeading ?? "Chip corner radius"));
+    const labels = options?.labels ?? {};
+    const tPill = esc(String(labels.pill ?? "Capsule"));
+    const tSoft = esc(String(labels.soft ?? "Soft"));
+    const tRound = esc(String(labels.round ?? "Rounded"));
+    const tSquare = esc(String(labels.square ?? "Square"));
+    const STANDARD = [
+      { v: "999px", l: tPill },
+      { v: "12px", l: tSoft },
+      { v: "8px", l: tRound },
+      { v: "4px", l: tSquare },
+    ];
+    const inStandard = STANDARD.some(p => p.v === current);
+    const presets = inStandard ? STANDARD : [{ v: current, l: esc(current) }, ...STANDARD];
+    const group = `nodalia-cbr-${Math.random().toString(36).slice(2, 11)}`;
+    const optionsHtml = presets
+      .map(p => {
+        const checked = current === p.v ? " checked" : "";
+        return `
+      <label class="editor-chip-radius__option">
+        <input type="radio" name="${esc(group)}" data-field="${esc(field)}" data-value-type="string" value="${esc(p.v)}"${checked} />
+        <span>${p.l}</span>
+      </label>`;
+      })
+      .join("");
+    return `
+    <div class="editor-field editor-field--full editor-chip-radius">
+      <span>${tHeading}</span>
+      <div class="editor-chip-radius__options" role="radiogroup" aria-label="${tHeading}">
+        ${optionsHtml}
+      </div>
+    </div>`;
+  }
+
+  /**
    * Mount or update ha-icon-picker / text input without recreating each render.
    */
   function mountIconPickerHost(host, options) {
@@ -475,6 +522,7 @@
     mountIconPickerHost,
     postHomeAssistantWebhook,
     warnStrictServiceDenied,
+    renderEditorChipBorderRadiusHtml,
   };
 
   if (typeof window !== "undefined") {
@@ -486,7 +534,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.3-alpha.1";
+const CARD_VERSION = "1.0.3-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -545,11 +593,12 @@ const DEFAULT_CONFIG = {
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       on_color: "var(--primary-text-color)",
-      off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
+      off_color: "var(--primary-text-color)",
     },
     chip_height: "24px",
     chip_font_size: "11px",
     chip_padding: "0 10px",
+    chip_border_radius: "999px",
     title_size: "16px",
     current_size: "16px",
     target_size: "50px",
@@ -565,7 +614,7 @@ const DEFAULT_CONFIG = {
       dry_color: "#7fd0c8",
       auto_color: "#c5a66f",
       fan_color: "#83d39c",
-      off_color: "rgba(255, 255, 255, 0.28)",
+      off_color: "var(--primary-text-color)",
     },
     control: {
       size: "42px",
@@ -827,7 +876,7 @@ function getEditorColorFallbackValue(field) {
   }
 
   if (normalizedField.endsWith("off_color")) {
-    return "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))";
+    return "var(--primary-text-color)";
   }
 
   if (normalizedField.endsWith("background")) {
@@ -1093,16 +1142,22 @@ function getActionMeta(action) {
   }
 }
 
-/** Dial icon/label: prefer `hvac_action`; never pass a bogus icon when action is empty (fan_mode / preset_mode may be null). */
+/** Dial icon/label: prefer `hvac_action` unless HVAC is off (`hvac_action` is often `idle` while mode is `off`). */
 function climateDialActionMeta(actionRaw, modeRaw) {
+  const modeKey = normalizeTextKey(String(modeRaw || "").trim());
+  if (modeKey === "off") {
+    const m = getModeMeta("off");
+    return { icon: m.icon, label: m.label, accent: m.accent };
+  }
   const action = String(actionRaw || "").trim();
   if (action) {
     const m = getActionMeta(action);
-    return { icon: m.icon || "mdi:thermostat", label: m.label };
+    const accent = m.accent != null ? m.accent : getModeMeta(action).accent;
+    return { icon: m.icon || "mdi:thermostat", label: m.label, accent };
   }
   const mode = String(modeRaw || "").trim();
   const m = getModeMeta(mode);
-  return { icon: m.icon || "mdi:thermostat", label: m.label };
+  return { icon: m.icon || "mdi:thermostat", label: m.label, accent: m.accent };
 }
 
 /**
@@ -1135,8 +1190,32 @@ function getClimateDialCenterInsetCss(modeDialButtonCount, tightLayout, compactL
   return pick("22% 14% 16% 14%", "22% 15.5% 17% 15.5%", "21% 15% 18% 15%");
 }
 
+const LEGACY_CLIMATE_ICON_OFF_COLORS = [
+  "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
+  "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
+];
+const LEGACY_CLIMATE_DIAL_OFF_COLOR = "rgba(255, 255, 255, 0.28)";
+
+function migrateLegacyClimateOffColors(styles) {
+  if (!styles?.icon) {
+    return;
+  }
+  const iconOff = String(styles.icon.off_color ?? "").trim();
+  if (iconOff && (LEGACY_CLIMATE_ICON_OFF_COLORS.includes(iconOff) || /^var\(\s*--state-inactive-color/i.test(iconOff))) {
+    styles.icon.off_color = DEFAULT_CONFIG.styles.icon.off_color;
+  }
+  if (styles.dial) {
+    const dialOff = String(styles.dial.off_color ?? "").trim();
+    if (dialOff === LEGACY_CLIMATE_DIAL_OFF_COLOR) {
+      styles.dial.off_color = DEFAULT_CONFIG.styles.dial.off_color;
+    }
+  }
+}
+
 function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  migrateLegacyClimateOffColors(config.styles);
+  return config;
 }
 
 function getDialValueFromPoint(dial, clientX, clientY, range, step, fallbackValue = null, geometry = null) {
@@ -1734,11 +1813,9 @@ class NodaliaClimateCard extends HTMLElement {
   _getAccentColor(state) {
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
     const dialStyles = styles.dial || DEFAULT_CONFIG.styles.dial;
-    const action = this._getCurrentAction(state);
-    const mode = action || this._getCurrentMode(state);
-    const accentKey = getModeMeta(mode).accent;
+    const { accent } = climateDialActionMeta(this._getCurrentAction(state), this._getCurrentMode(state));
 
-    switch (accentKey) {
+    switch (accent) {
       case "heat":
         return dialStyles.heat_color;
       case "cool":
@@ -3161,6 +3238,7 @@ class NodaliaClimateCard extends HTMLElement {
       Math.min(parseSizeToPixels(styles.chip_font_size, 11), tightLayout ? 10 : compactLayout ? 10.5 : 11),
     )}px`;
     const effectiveChipPadding = tightLayout ? "0 9px" : compactLayout ? "0 10px" : styles.chip_padding;
+    const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
     const dialMaxCapPx = Math.max(
       220,
       parseSizeToPixels(styles.dial?.max_size ?? DEFAULT_CONFIG.styles.dial.max_size, 480),
@@ -3625,7 +3703,7 @@ class NodaliaClimateCard extends HTMLElement {
           backdrop-filter: blur(18px);
           background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
+          border-radius: ${chipBorderRadius};
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           color: var(--primary-text-color);
           display: inline-flex;
@@ -4692,6 +4770,36 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
           grid-column: 1 / -1;
         }
 
+        .editor-chip-radius__options {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .editor-chip-radius__option {
+          align-items: center;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 12px;
+          cursor: pointer;
+          display: inline-flex;
+          gap: 8px;
+          padding: 8px 12px;
+        }
+
+        .editor-chip-radius__option:has(input:checked) {
+          background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+          border-color: var(--primary-color);
+        }
+
+        .editor-chip-radius__option input[type="radio"] {
+          accent-color: var(--primary-color);
+          appearance: auto;
+          margin: 0;
+          min-height: auto;
+          padding: 0;
+          width: auto;
+        }
+
 
         .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
@@ -4903,6 +5011,18 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
             ${this._renderTextField("ed.climate.chip_height", "styles.chip_height", config.styles.chip_height)}
             ${this._renderTextField("ed.climate.chip_text", "styles.chip_font_size", config.styles.chip_font_size)}
             ${this._renderTextField("ed.climate.chip_padding", "styles.chip_padding", config.styles.chip_padding)}
+            ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
+              escapeHtml,
+              field: "styles.chip_border_radius",
+              value: config.styles?.chip_border_radius,
+              tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+              labels: {
+                pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                round: this._editorLabel("ed.entity.chip_radius_round"),
+                square: this._editorLabel("ed.entity.chip_radius_square"),
+              },
+            })}
             ${this._renderTextField("ed.climate.mode_button_size", "styles.control.size", config.styles.control.size)}
             ${this._renderTextField("ed.climate.step_button_size", "styles.step_control.size", config.styles.step_control.size)}
           </div>
@@ -5552,6 +5672,36 @@ class NodaliaClimateCardEditor extends HTMLElement {
           grid-column: 1 / -1;
         }
 
+        .editor-chip-radius__options {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .editor-chip-radius__option {
+          align-items: center;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 12px;
+          cursor: pointer;
+          display: inline-flex;
+          gap: 8px;
+          padding: 8px 12px;
+        }
+
+        .editor-chip-radius__option:has(input:checked) {
+          background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+          border-color: var(--primary-color);
+        }
+
+        .editor-chip-radius__option input[type="radio"] {
+          accent-color: var(--primary-color);
+          appearance: auto;
+          margin: 0;
+          min-height: auto;
+          padding: 0;
+          width: auto;
+        }
+
 
         .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
@@ -5885,6 +6035,18 @@ class NodaliaClimateCardEditor extends HTMLElement {
                   ${this._renderTextField("ed.climate.chip_height", "styles.chip_height", config.styles.chip_height)}
                   ${this._renderTextField("ed.climate.chip_text", "styles.chip_font_size", config.styles.chip_font_size)}
                   ${this._renderTextField("ed.climate.chip_padding", "styles.chip_padding", config.styles.chip_padding)}
+                  ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
+                    escapeHtml,
+                    field: "styles.chip_border_radius",
+                    value: config.styles?.chip_border_radius,
+                    tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+                    labels: {
+                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                      round: this._editorLabel("ed.entity.chip_radius_round"),
+                      square: this._editorLabel("ed.entity.chip_radius_square"),
+                    },
+                  })}
                   ${this._renderTextField("ed.climate.dial_size", "styles.dial.size", config.styles.dial.size)}
                   ${this._renderTextField("ed.climate.dial_max_size", "styles.dial.max_size", config.styles.dial.max_size)}
                   ${this._renderTextField("ed.climate.dial_stroke", "styles.dial.stroke", config.styles.dial.stroke)}
