@@ -172,7 +172,7 @@ In HACS, open **Nodalia Cards** and use **Download** (pick the release or prerel
 
 If something still looks off (e.g. old script cached), use **Redownload** in HACS, or in **Settings → Dashboards → ⋮ → Resources** make sure the entry matches the URL HACS created. HACS may append `?hacstag=…` to the path; that value is **per install and selected version**, not the app semver—replace it with whatever HACS shows after **Redownload** if needed. In the browser console, `__NODALIA_BUNDLE__` confirms which bundle loaded (`pkgVersion` and a short content id), and `__NODALIA_LOADER__` confirms the entrypoint mode.
 
-If Home Assistant reports **“Custom element doesn't exist: nodalia-climate-card”**, the Nodalia bundle has not loaded in that browser session. `custom:nodalia-climate-card` is included in **0.6.1** and later; check that the resource URL points to `/hacsfiles/nodalia-cards/nodalia-cards.js`, then use **Redownload** and a hard browser refresh.
+If Home Assistant reports **“Custom element doesn't exist: nodalia-climate-card”**, the Nodalia bundle has not loaded in that browser session. `custom:nodalia-climate-card` is included from **0.6.1** onward and in **1.0.0**; check that the resource URL points to `/hacsfiles/nodalia-cards/nodalia-cards.js`, then use **Redownload** and a hard browser refresh.
 
 <details>
 <summary>Manual install (no HACS)</summary>
@@ -185,9 +185,11 @@ Copy `nodalia-cards.js` into `config/www/` (or a subfolder) and add a resource u
 
 ## 🌍 Translations
 
-**Stable (`main`) — 0.6.1** includes **es, en, de, fr, it, nl** plus **pt, ru, el, zh** (simplified), and **ro** for the bundled cards and Lovelace visual editors (partial trees merge from English; coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
+**Stable — `1.0.0` (recommended)** includes **es, en, de, fr, it, nl** plus **pt, ru, el, zh** (simplified), and **ro** for the bundled cards and Lovelace visual editors (partial trees merge from English; coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
 
-**Prereleases:** active **`1.0.0-alpha.*`** line is now **`1.0.0-alpha.96`** on **`alpha`**. **`1.0.0-beta.7`** remains the latest beta validation build. **`0.6.1`** stays as the recommended stable line on **`main`** while final polish continues toward **`1.0.0`** stable.
+**Previous stable — `0.6.1`** remains valid for dashboards that have not migrated yet.
+
+**Prereleases:** the **`1.0.0-alpha.*`** line shipped up to **`1.0.0-alpha.96`**; **`1.0.0-beta.7`** was the last beta candidate before **`1.0.0`**. Further experimental builds may use a new prerelease line (for example **`1.0.1-alpha.*`**) per **CONTRIBUTING**.
 
 ---
 
@@ -198,7 +200,7 @@ Copy `nodalia-cards.js` into `config/www/` (or a subfolder) and add a resource u
 - Redesign graph card  
 - Improve energy flow card  
 - Refine navigation bar  
-- Prepare and polish the **1.0.0** line (new cards + quality hardening)
+- Prepare and ship follow-up **`1.0.x`** patches and the next feature line
 
 ---
 

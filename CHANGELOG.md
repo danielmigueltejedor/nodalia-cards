@@ -6,7 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains the stable baseline on **`main`**: final polish, performance, security and compatibility work before the next major stable. Prerelease workflow and tagging: **CONTRIBUTING**.
+Work on **`1.0.x`** patches and the next feature line while **`1.0.0`** remains the stable baseline on **`main`**: fixes, performance, security, and compatibility. Prerelease workflow for future lines: **CONTRIBUTING**.
+
+---
+
+## [1.0.0] - 2026-05-12
+
+First **stable** **`1.0.0`** on **`main`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0`** (Git tag **`v1.0.0`** recommended for HACS / GitHub Releases).
+
+This release promotes the **`1.0.0-alpha.*`** / **`1.0.0-beta.*`** line to stable semver (last prerelease: **`1.0.0-alpha.96`**). Highlights from the final stretch include **Nodalia Advance Vacuum** polish (footer controls, shared **`--av-*`** surface tokens, map URL stability / crossfade, zone-mode UI trim, editor **`ed.advance_vacuum.*`** i18n, English persistence logs), **fan / humidifier** icon **`translate3d`** keyframes, **Insignia** scroll-strip padding, and ongoing editor-catalog / bundle hardening.
+
+- **Release metadata:** stable **`1.0.0`**; **`nodalia-notifications-card`**, **`nodalia-calendar-card`**, and **`nodalia-advance-vacuum-card`** **`CARD_VERSION`** values align with **`1.0.0`** for this milestone.
 
 ---
 

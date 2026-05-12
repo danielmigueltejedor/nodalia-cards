@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.13.13";
+const CARD_VERSION = "1.0.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
