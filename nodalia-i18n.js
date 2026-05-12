@@ -5603,9 +5603,16 @@
         createEvent: "No se pudo crear el evento.",
         createEventWithMessage: "No se pudo crear el evento: {message}",
       },
+      deleteRecurrence: {
+        title: "Eliminar evento recurrente",
+        message: "Este evento forma parte de una serie. ¿Qué deseas eliminar?",
+        thisOnly: "Solo este evento",
+        thisAndFuture: "Este y todos los posteriores",
+      },
       aria: {
         newEventDialog: "Nuevo evento de calendario",
         deleteEvent: "Eliminar evento",
+        deleteRecurringDialog: "Elegir cómo eliminar el evento recurrente",
         createHaEvent: "Crear evento HA",
         close: "Cerrar",
       },
@@ -5678,9 +5685,16 @@
         createEvent: "Could not create the event.",
         createEventWithMessage: "Could not create the event: {message}",
       },
+      deleteRecurrence: {
+        title: "Delete recurring event",
+        message: "This event is part of a series. What would you like to delete?",
+        thisOnly: "This occurrence only",
+        thisAndFuture: "This and all following occurrences",
+      },
       aria: {
         newEventDialog: "New calendar event",
         deleteEvent: "Delete event",
+        deleteRecurringDialog: "Choose how to delete the recurring event",
         createHaEvent: "Create HA event",
         close: "Close",
       },
@@ -6788,14 +6802,11 @@
   }
 
   function translateEntityState(langCode, state, numberDecimals, formatNumericValueWithUnit, formatNumericValue, parseNumericValue) {
-    const ecEn = strings("en").entityCard || {};
-    const ecLoc = strings(langCode).entityCard || {};
-    const dict = {
-      ...ecEn,
-      ...ecLoc,
-      states: { ...(ecEn.states || {}), ...(ecLoc.states || {}) },
-      binarySensor: { ...(ecEn.binarySensor || {}), ...(ecLoc.binarySensor || {}) },
-    };
+    const code = PACK[langCode] ? langCode : "en";
+    const ecEn = PACK.en.entityCard || {};
+    const dict = code === "es"
+      ? deepMergeLocale(ecEn, PACK.es.entityCard || {})
+      : (strings(code).entityCard || ecEn);
     if (!state) {
       return null;
     }

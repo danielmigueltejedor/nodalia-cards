@@ -21,6 +21,25 @@ Maintenance work continues on the stable `1.0.x` line while the next feature cyc
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.2-alpha.1] - 2026-05-12
+
+First **`alpha`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.1`** (tag **`v1.0.2-alpha.1`** optional).
+
+### Added
+
+- **`nodalia-calendar-card.js`:** deleting a **recurring** instance opens a choice dialog (same **`calendar-composer`** styling as the rest of the expanded calendar): **only this occurrence** or **this and all following**, mapped to Home Assistant **`calendar/event/delete`** with **`recurrence_range`** **`""`** vs **`THISANDFUTURE`** when **`recurrence_id`** is present.
+- **`nodalia-i18n.js`:** **`calendarCard.deleteRecurrence`** strings and **`aria.deleteRecurringDialog`** for **`en`** and **`es`**.
+
+### Changed
+
+- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.1`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
+- **`nodalia-i18n.js`:** `translateEntityState` builds the Spanish **`entityCard`** dictionary with **`deepMergeLocale(PACK.en.entityCard, PACK.es.entityCard)`** so nested maps (for example **`boolean`**, **`states`**, **`binarySensor`**) inherit English fallbacks; other locales reuse **`strings(lang).entityCard`** from the cached merged pack (no redundant second merge).
+
+### Fixed
+
+- **`nodalia-humidifier-card.js`:** runtime fallbacks when **`NodaliaI18n`** is unavailable use **English** strings (state labels and **`translateModeLabel`** shim), consistent with other cards’ missing-i18n behaviour.
+
+---
 ## [1.0.1] - 2026-05-12
 
 ### Changed

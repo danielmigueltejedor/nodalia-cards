@@ -2,7 +2,7 @@
 
 This file archives per-build notes for **`1.0.0-alpha.*`** and **`1.0.0-beta.*`**, copied from the main [`CHANGELOG.md`](./CHANGELOG.md) before that document was trimmed for stable releases.
 
-For the consolidated **stable** story, see **`[1.0.0]`** and **`[1.0.1]`** in [`CHANGELOG.md`](./CHANGELOG.md).
+For **stable** releases see **`[1.0.0]`** and **`[1.0.1]`**; for **`1.0.2`** prereleases (for example **`[1.0.2-alpha.1]`**) see [`CHANGELOG.md`](./CHANGELOG.md). This file only archives the historical **`1.0.0-alpha.*`** / **`1.0.0-beta.*`** line.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
