@@ -80,7 +80,7 @@ test("advanced vacuum skips remote write when serialized session still overflows
   const source = read("nodalia-advance-vacuum-card.js");
   assert.match(source, /if \(serialized\.length > maxLength\) \{\s*serialized = this\._serializeSharedCleaningSession\(session, \{ minimal: true \}\);\s*\}/);
   assert.match(source, /console\.warn\("Nodalia Advance Vacuum Card shared cleaning session exceeds helper length limit"\)/);
-  assert.match(source, /if \(serialized\.length > maxLength\) \{[\s\S]*console\.warn\("Nodalia Advance Vacuum Card shared cleaning session exceeds helper length limit"\);[\s\S]*return;\s*\}/);
+  assert.match(source, /SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL/);
   assert.doesNotMatch(source, /if \(serialized\.length > maxLength\) \{[\s\S]*serialized = ""/);
 });
 

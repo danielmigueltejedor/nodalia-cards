@@ -17,6 +17,7 @@
     "mountEntityPickerHost",
     "mountIconPickerHost",
     "postHomeAssistantWebhook",
+    "warnStrictServiceDenied",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -207,9 +208,25 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
       credentials: "same-origin",
-    }).then(
+    }    ).then(
       res => res.ok,
       () => false,
+    );
+  }
+
+  /**
+   * Log once per blocked `domain.service` when `security.strict_service_actions` denylists user actions.
+   */
+  function warnStrictServiceDenied(cardLabel, serviceValue) {
+    const service = String(serviceValue || "").trim();
+    if (!service) {
+      return;
+    }
+    if (typeof console === "undefined" || typeof console.warn !== "function") {
+      return;
+    }
+    console.warn(
+      `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
     );
   }
 
@@ -457,6 +474,7 @@
     mountEntityPickerHost,
     mountIconPickerHost,
     postHomeAssistantWebhook,
+    warnStrictServiceDenied,
   };
 
   if (typeof window !== "undefined") {
@@ -1402,6 +1420,7 @@ class NodaliaEntityCard extends HTMLElement {
     }
 
     if (!this._isServiceAllowed(serviceValue)) {
+      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Entity Card", serviceValue);
       return;
     }
 

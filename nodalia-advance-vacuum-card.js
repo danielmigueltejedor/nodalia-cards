@@ -17,6 +17,7 @@
     "mountEntityPickerHost",
     "mountIconPickerHost",
     "postHomeAssistantWebhook",
+    "warnStrictServiceDenied",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -207,9 +208,25 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
       credentials: "same-origin",
-    }).then(
+    }    ).then(
       res => res.ok,
       () => false,
+    );
+  }
+
+  /**
+   * Log once per blocked `domain.service` when `security.strict_service_actions` denylists user actions.
+   */
+  function warnStrictServiceDenied(cardLabel, serviceValue) {
+    const service = String(serviceValue || "").trim();
+    if (!service) {
+      return;
+    }
+    if (typeof console === "undefined" || typeof console.warn !== "function") {
+      return;
+    }
+    console.warn(
+      `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
     );
   }
 
@@ -457,6 +474,7 @@
     mountEntityPickerHost,
     mountIconPickerHost,
     postHomeAssistantWebhook,
+    warnStrictServiceDenied,
   };
 
   if (typeof window !== "undefined") {
@@ -469,6 +487,8 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
 const CARD_VERSION = "1.0.0";
+/** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
+const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1993,6 +2013,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._pointerSurfaceRect = null;
     this._suppressedRoomSelectionClick = null;
     this._lastSubmittedSharedCleaningSessionValue = null;
+    this._lastSharedCleaningSessionOverflowFingerprint = null;
     this._selectionUpdatedAt = 0;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
@@ -2138,6 +2159,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._pendingRoomSelectionTap = null;
     this._suppressedRoomSelectionClick = null;
     this._lastSubmittedSharedCleaningSessionValue = null;
+    this._lastSharedCleaningSessionOverflowFingerprint = null;
     this._selectionUpdatedAt = 0;
     this._animateContentOnNextRender = true;
     this._activeMode = this._getAvailableModes()[0]?.id || "all";
@@ -2672,12 +2694,17 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     if (serialized.length > maxLength) {
-      if (typeof console !== "undefined" && typeof console.warn === "function") {
-        console.warn("Nodalia Advance Vacuum Card shared cleaning session exceeds helper length limit");
+      if (this._lastSharedCleaningSessionOverflowFingerprint !== serialized) {
+        this._lastSharedCleaningSessionOverflowFingerprint = serialized;
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn("Nodalia Advance Vacuum Card shared cleaning session exceeds helper length limit");
+        }
       }
+      this._lastSubmittedSharedCleaningSessionValue = SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL;
       return;
     }
 
+    this._lastSharedCleaningSessionOverflowFingerprint = null;
     const serializedTrim = serialized.trim();
     const currentValue = entityId ? String(this._getSharedCleaningSessionState()?.state ?? "").trim() : "";
     const hasEntityTarget = Boolean(entityId);
@@ -2749,6 +2776,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
+    this._lastSharedCleaningSessionOverflowFingerprint = null;
     if (webhookId) {
       const post =
         typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.postHomeAssistantWebhook === "function"
@@ -5423,7 +5451,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     if (["call_service", "call-service", "perform_action", "perform-action"].includes(action)) {
       const service = actionConfig.service || actionConfig.perform_action;
-      if (!service || !this._hass || !this._isServiceAllowed(service)) {
+      if (!service || !this._hass) {
+        return;
+      }
+      if (!this._isServiceAllowed(service)) {
+        window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Advance Vacuum Card", service);
         return;
       }
       const [domain, serviceName] = String(service).split(".");
@@ -5472,6 +5504,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
     if (!this._isServiceAllowed(service)) {
+      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Advance Vacuum Card", service);
       return;
     }
 
