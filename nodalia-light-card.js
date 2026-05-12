@@ -486,7 +486,7 @@
 
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.0.1";
+const CARD_VERSION = "1.0.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -517,6 +517,7 @@ const DEFAULT_CONFIG = {
   show_state: false,
   state_position: "right",
   compact_layout_mode: "auto",
+  auto_expand: true,
   show_brightness: true,
   show_slider_mode_buttons: true,
   show_quick_brightness: true,
@@ -914,6 +915,10 @@ function kelvinToMired(value) {
 
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  if (config.keep_collapsed === true) {
+    config.auto_expand = false;
+  }
+  delete config.keep_collapsed;
   const normalizedStatePosition = String(config.state_position || "").toLowerCase();
   config.state_position = normalizedStatePosition === "below" ? "below" : "right";
 
@@ -997,6 +1002,7 @@ class NodaliaLightCard extends HTMLElement {
     this._modeSwitchTimer = 0;
     this._modeSwitchPressTimer = 0;
     this._modeTransition = null;
+    this._controlsPanelUserOpen = false;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -1094,6 +1100,7 @@ class NodaliaLightCard extends HTMLElement {
       this._clearDraftValues(previousEntityId);
       this._clearOptimisticTurnOnState();
       this._clearOptimisticTurnOffState();
+      this._controlsPanelUserOpen = false;
     }
     this._config = normalizeConfig(config || {});
     this._isCompactLayout = this._shouldUseCompactLayout(
@@ -1178,7 +1185,17 @@ class NodaliaLightCard extends HTMLElement {
       `cm:${String(this._activeControlMode || "")}`,
       `ss:${this._config?.show_state === true ? 1 : 0}`,
       `sp:${String(this._config?.state_position || "right")}`,
+      `ae:${this._config?.auto_expand === false ? 0 : 1}`,
+      `co:${this._controlsPanelUserOpen ? 1 : 0}`,
     ].join("|");
+  }
+
+  _controlsEditorStr(key) {
+    const hass = this._hass;
+    if (typeof key !== "string" || !window.NodaliaI18n?.editorStr) {
+      return key;
+    }
+    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", key);
   }
 
   _getConfiguredGridColumns() {
@@ -2749,6 +2766,13 @@ class NodaliaLightCard extends HTMLElement {
         this._commitTemperaturePreset(Number(actionButton.dataset.kelvin));
         this._render();
         break;
+      case "toggle-controls-expand":
+        if (this._config?.auto_expand === false) {
+          this._controlsPanelUserOpen = !this._controlsPanelUserOpen;
+          this._lastRenderSignature = "";
+          this._render();
+        }
+        break;
       default:
         break;
     }
@@ -2818,6 +2842,9 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     const isOn = state.state === "on";
+    if (!isOn) {
+      this._controlsPanelUserOpen = false;
+    }
     const supportsBrightness = this._supportsBrightness(state);
     const supportsColor = this._supportsColor(state);
     const supportsColorTemperature = this._supportsColorTemperature(state);
@@ -2833,6 +2860,9 @@ class NodaliaLightCard extends HTMLElement {
     const quickBrightness = Array.isArray(config.quick_brightness) ? config.quick_brightness : [];
     const temperaturePresets = this._getTemperaturePresets(state);
     const availableControlModes = isOn ? this._getAvailableControlModes(state) : [];
+    const autoExpandControls = config.auto_expand !== false;
+    const canShowDetailedControls = isOn && !isMiniLayout && availableControlModes.length > 0;
+    const showDetailedControls = canShowDetailedControls && (autoExpandControls || this._controlsPanelUserOpen);
     const useSliderModeButtons = config.show_slider_mode_buttons !== false && availableControlModes.length > 1;
     const activeControlMode = isOn ? this._getActiveControlMode(state) : "brightness";
     const currentHue = this._getCurrentHue(state);
@@ -2866,12 +2896,29 @@ class NodaliaLightCard extends HTMLElement {
       };
 
       if (!isMiniLayout) {
-        controlsAnimationState = isOn ? "entering" : "leaving";
-        this._controlsTransition = {
-          endsAt: now + animations.controlsDuration,
-          startedAt: now,
-          state: controlsAnimationState,
-        };
+        if (isOn) {
+          const willShowDetailedOnEnter = availableControlModes.length > 0
+            && (autoExpandControls || this._controlsPanelUserOpen);
+          if (willShowDetailedOnEnter) {
+            controlsAnimationState = "entering";
+            this._controlsTransition = {
+              endsAt: now + animations.controlsDuration,
+              startedAt: now,
+              state: controlsAnimationState,
+            };
+          } else {
+            this._controlsTransition = null;
+          }
+        } else if (this._lastControlsMarkup) {
+          controlsAnimationState = "leaving";
+          this._controlsTransition = {
+            endsAt: now + animations.controlsDuration,
+            startedAt: now,
+            state: controlsAnimationState,
+          };
+        } else {
+          this._controlsTransition = null;
+        }
       } else {
         this._controlsTransition = null;
       }
@@ -2906,6 +2953,7 @@ class NodaliaLightCard extends HTMLElement {
     const shouldAnimateBrightnessFill = animations.enabled &&
       powerAnimationState === "powering-up" &&
       isOn &&
+      showDetailedControls &&
       supportsBrightness &&
       !isMiniLayout;
     const brightnessFillDuration = shouldAnimateBrightnessFill
@@ -2920,7 +2968,27 @@ class NodaliaLightCard extends HTMLElement {
     const stateChipHeaderMarkup = statePosition === "right" ? stateChipMarkup : "";
     const stateChipBelowMarkup = statePosition === "below" ? stateChipMarkup : "";
 
-    if (isOn && !isMiniLayout) {
+    const showControlsExpandToggle = canShowDetailedControls && !autoExpandControls;
+    const controlsPanelToggleLabel = showControlsExpandToggle
+      ? escapeHtml(this._controlsEditorStr(
+        showDetailedControls ? "ed.light.collapse_controls_panel" : "ed.light.expand_controls_panel",
+      ))
+      : "";
+    const controlsPanelToggleMarkup = showControlsExpandToggle
+      ? `
+          <button
+            type="button"
+            class="light-card__mode-button"
+            data-light-action="toggle-controls-expand"
+            aria-label="${controlsPanelToggleLabel}"
+            title="${controlsPanelToggleLabel}"
+          >
+            <ha-icon icon="${showDetailedControls ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+          </button>
+        `
+      : "";
+
+    if (showDetailedControls) {
       let activeValueChip = null;
 
       if (displayedControlMode === "temperature" && config.show_temperature_controls !== false && supportsColorTemperature) {
@@ -2944,10 +3012,10 @@ class NodaliaLightCard extends HTMLElement {
 
     const activeValueChipHeaderMarkup = statePosition === "right" ? activeValueChipMarkup : "";
     const activeValueChipBelowMarkup = statePosition === "below" ? activeValueChipMarkup : "";
-    const hasHeaderChips = Boolean(stateChipHeaderMarkup || activeValueChipHeaderMarkup);
+    const hasHeaderChips = Boolean(stateChipHeaderMarkup || activeValueChipHeaderMarkup || controlsPanelToggleMarkup);
     const hasBelowChips = Boolean(stateChipBelowMarkup || activeValueChipBelowMarkup);
     const showCopyBlock = !isMiniLayout && (!isCompactLayout || hasHeaderChips || hasBelowChips);
-    const sliderInnerMarkup = isOn && !isMiniLayout && availableControlModes.length > 0
+    const sliderInnerMarkup = showDetailedControls && availableControlModes.length > 0
       ? `
         ${
           displayedControlMode === "temperature"
@@ -3053,8 +3121,7 @@ class NodaliaLightCard extends HTMLElement {
         </div>
       `
       : "";
-    const brightnessPresetsMarkup = isOn &&
-      !isMiniLayout &&
+    const brightnessPresetsMarkup = showDetailedControls &&
       displayedControlMode === "brightness" &&
       config.show_quick_brightness !== false &&
       supportsBrightness &&
@@ -3076,8 +3143,7 @@ class NodaliaLightCard extends HTMLElement {
         </div>
       `
       : "";
-    const temperatureControlsMarkup = isOn &&
-      !isMiniLayout &&
+    const temperatureControlsMarkup = showDetailedControls &&
       !useSliderModeButtons &&
       config.show_temperature_controls !== false &&
       supportsColorTemperature
@@ -3104,8 +3170,7 @@ class NodaliaLightCard extends HTMLElement {
         </div>
       `
       : "";
-    const colorControlsMarkup = isOn &&
-      !isMiniLayout &&
+    const colorControlsMarkup = showDetailedControls &&
       !useSliderModeButtons &&
       config.show_color_controls !== false &&
       supportsColor
@@ -3173,8 +3238,12 @@ class NodaliaLightCard extends HTMLElement {
       ? Math.max(powerAnimationRemaining, controlsAnimationRemaining, brightnessFillAnimationRemaining) + 40
       : 0;
 
-    if (isOn && currentControlsMarkup) {
+    if (isOn && showDetailedControls && currentControlsMarkup) {
       this._lastControlsMarkup = currentControlsMarkup;
+    } else if (isOn && !showDetailedControls) {
+      this._lastControlsMarkup = "";
+    } else if (!isOn && controlsAnimationState !== "leaving") {
+      this._lastControlsMarkup = "";
     }
 
     this.shadowRoot.innerHTML = `
@@ -4202,7 +4271,7 @@ class NodaliaLightCard extends HTMLElement {
                 <div class="light-card__copy">
                   <div class="light-card__copy-header">
                     ${isCompactLayout ? "" : `<div class="light-card__title">${escapeHtml(title)}</div>`}
-                    ${hasHeaderChips ? `<div class="light-card__chips">${stateChipHeaderMarkup}${activeValueChipHeaderMarkup}</div>` : ""}
+                    ${hasHeaderChips ? `<div class="light-card__chips">${stateChipHeaderMarkup}${activeValueChipHeaderMarkup}${controlsPanelToggleMarkup}</div>` : ""}
                   </div>
                   ${hasBelowChips ? `<div class="light-card__chips light-card__chips--below">${stateChipBelowMarkup}${activeValueChipBelowMarkup}</div>` : ""}
                 </div>
@@ -5083,6 +5152,7 @@ class NodaliaLightCardEditor extends HTMLElement {
             ${this._renderCheckboxField("ed.light.show_quick_brightness", "show_quick_brightness", config.show_quick_brightness !== false)}
             ${this._renderCheckboxField("ed.light.show_color_controls", "show_color_controls", config.show_color_controls !== false)}
             ${this._renderCheckboxField("ed.light.show_temperature_controls", "show_temperature_controls", config.show_temperature_controls !== false)}
+            ${this._renderCheckboxField("ed.light.auto_expand_controls", "auto_expand", config.auto_expand !== false)}
           </div>
         </section>
 

@@ -486,7 +486,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.0.1";
+const CARD_VERSION = "1.0.2";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -3099,7 +3099,12 @@ class NodaliaNotificationsCard extends HTMLElement {
     const isCollapsingStack = this._collapsingStack && this._expanded;
     const visible = this._expanded || isCollapsingStack ? notifications : notifications.slice(0, config.max_visible);
     const hasNotifications = notifications.length > 0;
-    const emptyText = String(config.empty_message || config.empty_title || DEFAULT_CONFIG.empty_message).trim();
+    const customEmptyMessage = String(config.empty_message ?? "").trim();
+    const customEmptyTitle = String(config.empty_title ?? "").trim();
+    const emptyText =
+      customEmptyMessage ||
+      customEmptyTitle ||
+      this._text("empty.message", DEFAULT_CONFIG.empty_message);
     const animations = this._getAnimationSettings();
     const nextNotificationIdsSignature = notifications.map(item => item.id).join("|");
     const animateEntrance = animations.enabled && this._animateContentOnNextRender;

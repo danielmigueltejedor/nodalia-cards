@@ -519,6 +519,19 @@
     "el": "Μέγεθος κλίμακας",
     "ro": "Dimensiune cadran"
   },
+  "ed.climate.dial_max_size": {
+    "en": "Max dial size (regular layout)",
+    "es": "Tamaño máximo del dial (diseño normal)",
+    "zh": "表盘最大尺寸（常规布局）",
+    "de": "Max. Reglergröße (normales Layout)",
+    "fr": "Taille max. du cadran (mise en page normale)",
+    "it": "Dimensione massima dial (layout normale)",
+    "nl": "Max. wijzerplaatgrootte (normale lay-out)",
+    "pt": "Tamanho máximo do mostrador (layout normal)",
+    "ru": "Макс. размер циферблата (обычная вёрстка)",
+    "el": "Μέγιστο μέγεθος κλίμακας (κανονική διάταξη)",
+    "ro": "Dimensiune max. cadran (aspect normal)"
+  },
   "ed.climate.dial_stroke": {
     "en": "Dial stroke",
     "es": "Grosor dial",

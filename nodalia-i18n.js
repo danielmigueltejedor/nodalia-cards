@@ -702,6 +702,10 @@
           idle: "En espera",
           off: "Apagado",
         },
+        aria: {
+          dialRangeGroup: "Temperatura interior y consigna",
+          dialTargetSlider: "Temperatura objetivo",
+        },
       },
       graphCard: {
         emptyHistory: "Sin historial disponible",
@@ -1226,6 +1230,10 @@
           idle: "Idle",
           off: "Off",
         },
+        aria: {
+          dialRangeGroup: "Comfort range and indoor temperature",
+          dialTargetSlider: "Target temperature",
+        },
       },
       graphCard: {
         emptyHistory: "No history available",
@@ -1282,6 +1290,10 @@
           warning: "Warning",
           success: "OK",
           info: "Info",
+        },
+        empty: {
+          title: "All quiet",
+          message: "You have no current alerts",
         },
         aria: {
           dismiss: "Dismiss notification",
@@ -1750,6 +1762,10 @@
           idle: "Leerlauf",
           off: "Aus",
         },
+        aria: {
+          dialRangeGroup: "Komfortbereich und Raumtemperatur",
+          dialTargetSlider: "Solltemperatur",
+        },
       },
       graphCard: {
         emptyHistory: "Kein Verlauf verfügbar",
@@ -2214,6 +2230,10 @@
           fan_only: "Ventilateur",
           idle: "Inactif",
           off: "Arrêt",
+        },
+        aria: {
+          dialRangeGroup: "Plage de confort et température intérieure",
+          dialTargetSlider: "Température cible",
         },
       },
       graphCard: {
@@ -2680,6 +2700,10 @@
           idle: "Inattivo",
           off: "Spento",
         },
+        aria: {
+          dialRangeGroup: "Fascia di comfort e temperatura interna",
+          dialTargetSlider: "Temperatura target",
+        },
       },
       graphCard: {
         emptyHistory: "Nessuno storico disponibile",
@@ -3145,6 +3169,10 @@
           idle: "Inactief",
           off: "Uit",
         },
+        aria: {
+          dialRangeGroup: "Comfortbereik en binnentemperatuur",
+          dialTargetSlider: "Doeltemperatuur",
+        },
       },
       graphCard: {
         emptyHistory: "Geen geschiedenis beschikbaar",
@@ -3497,6 +3525,10 @@
           fan_only: "Ventoinha",
           idle: "Inativo",
           off: "Desligado",
+        },
+        aria: {
+          dialRangeGroup: "Faixa de conforto e temperatura interior",
+          dialTargetSlider: "Temperatura alvo",
         },
       },
       graphCard: {
@@ -3972,6 +4004,10 @@
           idle: "Ожидание",
           off: "Выкл.",
         },
+        aria: {
+          dialRangeGroup: "Диапазон комфорта и температура в помещении",
+          dialTargetSlider: "Заданная температура",
+        },
       },
       graphCard: {
         emptyHistory: "История недоступна"
@@ -4445,6 +4481,10 @@
           fan_only: "Ανεμιστήρας",
           idle: "Αδράνεια",
           off: "Ανενεργό",
+        },
+        aria: {
+          dialRangeGroup: "Εύρος άνεσης και εσωτερική θερμοκρασία",
+          dialTargetSlider: "Θερμοκρασία στόχος",
         },
       },
       graphCard: {
@@ -4920,6 +4960,10 @@
           idle: "空闲",
           off: "关闭",
         },
+        aria: {
+          dialRangeGroup: "舒适区间与室内温度",
+          dialTargetSlider: "目标温度",
+        },
       },
       graphCard: {
         emptyHistory: "暂无历史数据"
@@ -5394,6 +5438,10 @@
           idle: "Inactiv",
           off: "Oprit",
         },
+        aria: {
+          dialRangeGroup: "Interval de confort și temperatura interioară",
+          dialTargetSlider: "Temperatura țintă",
+        },
       },
       graphCard: {
         emptyHistory: "Nu există istoric disponibil"
@@ -5603,9 +5651,18 @@
         createEvent: "No se pudo crear el evento.",
         createEventWithMessage: "No se pudo crear el evento: {message}",
       },
+      deleteRecurrence: {
+        title: "Eliminar evento recurrente",
+        message: "Este evento forma parte de una serie. ¿Qué deseas eliminar?",
+        thisOnly: "Solo este evento",
+        thisAndFuture: "Este y todos los posteriores",
+        deleteFailed: "No se pudo eliminar el evento. Inténtalo de nuevo.",
+        deleteFailedWithMessage: "No se pudo eliminar el evento: {message}",
+      },
       aria: {
         newEventDialog: "Nuevo evento de calendario",
         deleteEvent: "Eliminar evento",
+        deleteRecurringDialog: "Elegir cómo eliminar el evento recurrente",
         createHaEvent: "Crear evento HA",
         close: "Cerrar",
       },
@@ -5678,9 +5735,18 @@
         createEvent: "Could not create the event.",
         createEventWithMessage: "Could not create the event: {message}",
       },
+      deleteRecurrence: {
+        title: "Delete recurring event",
+        message: "This event is part of a series. What would you like to delete?",
+        thisOnly: "This occurrence only",
+        thisAndFuture: "This and all following occurrences",
+        deleteFailed: "Could not delete the event. Please try again.",
+        deleteFailedWithMessage: "Could not delete the event: {message}",
+      },
       aria: {
         newEventDialog: "New calendar event",
         deleteEvent: "Delete event",
+        deleteRecurringDialog: "Choose how to delete the recurring event",
         createHaEvent: "Create HA event",
         close: "Close",
       },
@@ -5873,6 +5939,10 @@
         dismiss: "Borrar notificación",
         showLess: "Mostrar menos",
         showAll: "Mostrar todas las notificaciones",
+      },
+      empty: {
+        title: "Todo en calma",
+        message: "No tienes alertas pendientes",
       },
     },
     en: {
@@ -6455,8 +6525,8 @@
 
   function strings(langCode) {
     const code = PACK[langCode] ? langCode : "en";
-    if (code === "es") {
-      return PACK.es;
+    if (code === "en") {
+      return PACK.en;
     }
     if (localeStringsCache.has(code)) {
       return localeStringsCache.get(code);
@@ -6614,6 +6684,14 @@
       return actions[k];
     }
     return humanize(rawValue);
+  }
+
+  function translateClimateDialAria(hass, configLang, variant) {
+    const lang = resolveLanguage(hass, configLang);
+    const key = variant === "rangeGroup" ? "dialRangeGroup" : "dialTargetSlider";
+    const ccLoc = strings(lang).climateCard?.aria || {};
+    const ccEn = strings("en").climateCard?.aria || {};
+    return ccLoc[key] ?? ccEn[key] ?? (variant === "rangeGroup" ? "Comfort range and indoor temperature" : "Target temperature");
   }
 
   function translateHumidifierDeviceState(hass, configLang, rawValue) {
@@ -6788,14 +6866,8 @@
   }
 
   function translateEntityState(langCode, state, numberDecimals, formatNumericValueWithUnit, formatNumericValue, parseNumericValue) {
-    const ecEn = strings("en").entityCard || {};
-    const ecLoc = strings(langCode).entityCard || {};
-    const dict = {
-      ...ecEn,
-      ...ecLoc,
-      states: { ...(ecEn.states || {}), ...(ecLoc.states || {}) },
-      binarySensor: { ...(ecEn.binarySensor || {}), ...(ecLoc.binarySensor || {}) },
-    };
+    const code = PACK[langCode] ? langCode : "en";
+    const dict = strings(code).entityCard || strings("en").entityCard || {};
     if (!state) {
       return null;
     }
@@ -6988,6 +7060,7 @@
     translateEntityStateChip,
     translateMediaPlayerState,
     translateClimateHvacLabel,
+    translateClimateDialAria,
     translateHumidifierDeviceState,
     translateMeteoalarmTerm,
     translateAdvanceVacuumReportedState,
