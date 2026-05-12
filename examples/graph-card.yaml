@@ -1,12 +1,12 @@
 type: custom:nodalia-graph-card
-name: Temperatura
+name: Temperature
 icon: mdi:thermometer
 entities:
-  - entity: sensor.termostato_dormitorios_temperatura
-    name: Dormitorio de Rocío
+  - entity: sensor.bedroom_temperature
+    name: Bedroom
     color: "#ffaa00"
-  - entity: sensor.termostato_habitaciones_comunes_temperatura
-    name: Pasillo
+  - entity: sensor.hallway_temperature
+    name: Hallway
     color: "#ffc677"
 min: 15
 max: 25
