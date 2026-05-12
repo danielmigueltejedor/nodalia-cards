@@ -1,6 +1,6 @@
 type: custom:nodalia-circular-gauge-card
-entity: sensor.enchufe_inteligente_potencia
-name: Potencia
+entity: sensor.smart_plug_power
+name: Power
 min: 0
 max: 2500
 show_header: false
