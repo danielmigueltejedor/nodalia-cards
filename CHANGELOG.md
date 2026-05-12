@@ -21,6 +21,23 @@ Maintenance work continues on the stable `1.0.x` line while the next feature cyc
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.2-alpha.9] - 2026-05-12
+
+Prerelease **`alpha.9`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.9`** (optional tag **`v1.0.2-alpha.9`**).
+
+### Changed
+
+- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.9`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
+
+### Fixed
+
+- **`nodalia-climate-card.js`:** Removed unused **`countClimateDialModeRowsAfterFirstTwo`** (layout uses **`buildClimateDialModeButtonRows`** only).
+
+### Performance / i18n
+
+- **`nodalia-i18n.js`:** **`strings("es")`** now uses the same **`deepMergeLocale(PACK.en, PACK.es)`** path as other locales (cached), so **`translateEntityState`** can read **`strings(code).entityCard`** without re-merging on every call.
+
+---
 ## [1.0.2-alpha.8] - 2026-05-12
 
 Prerelease **`alpha.8`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.8`** (optional tag **`v1.0.2-alpha.8`**).

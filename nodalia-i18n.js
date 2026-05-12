@@ -6477,8 +6477,8 @@
 
   function strings(langCode) {
     const code = PACK[langCode] ? langCode : "en";
-    if (code === "es") {
-      return PACK.es;
+    if (code === "en") {
+      return PACK.en;
     }
     if (localeStringsCache.has(code)) {
       return localeStringsCache.get(code);
@@ -6811,8 +6811,7 @@
 
   function translateEntityState(langCode, state, numberDecimals, formatNumericValueWithUnit, formatNumericValue, parseNumericValue) {
     const code = PACK[langCode] ? langCode : "en";
-    const ecEn = PACK.en.entityCard || {};
-    const dict = deepMergeLocale(ecEn, (PACK[code]?.entityCard) || {});
+    const dict = strings(code).entityCard || strings("en").entityCard || {};
     if (!state) {
       return null;
     }

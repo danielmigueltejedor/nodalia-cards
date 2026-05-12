@@ -486,7 +486,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.2-alpha.8";
+const CARD_VERSION = "1.0.2-alpha.9";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -926,31 +926,6 @@ function normalizeTextKey(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
-}
-
-/** Rows needed for mode buttons after the first row of two (rest count = total − 2). */
-function countClimateDialModeRowsAfterFirstTwo(restButtonCount) {
-  if (restButtonCount <= 0) {
-    return 0;
-  }
-
-  let rows = 0;
-  let i = 0;
-  while (i < restButtonCount) {
-    const left = restButtonCount - i;
-    if (left === 4) {
-      rows += 2;
-      i += 4;
-    } else if (left <= 3) {
-      rows += 1;
-      i = restButtonCount;
-    } else {
-      rows += 1;
-      i += 2;
-    }
-  }
-
-  return rows;
 }
 
 /** Row slices for stacked mode buttons (first row may be 2 or 3 when exactly six controls). */
@@ -2411,7 +2386,7 @@ class NodaliaClimateCard extends HTMLElement {
     const dialCenterGridGap =
       modeDialButtonCount >= 6
         ? (tightLayout ? "6px" : compactLayout ? "7px" : "8px")
-        : modeDialButtonCount >= 4
+        : modeDialButtonCount >= 3
           ? (tightLayout ? "8px" : compactLayout ? "9px" : "11px")
           : (tightLayout ? "10px" : compactLayout ? "12px" : "15px");
     const dialCenterInsetCss =
@@ -2423,12 +2398,14 @@ class NodaliaClimateCard extends HTMLElement {
             ? (tightLayout ? "23% 13% 14% 13%" : compactLayout ? "24% 14.5% 15.5% 14.5%" : "25% 14.5% 16% 14.5%")
             : modeDialButtonCount === 4
               ? (tightLayout ? "24% 13.5% 15.5% 13.5%" : compactLayout ? "25% 15% 16.5% 15%" : "26% 14.5% 17% 14.5%")
-              : (tightLayout ? "22% 14% 16% 14%" : compactLayout ? "22% 15.5% 17% 15.5%" : "21% 15% 18% 15%");
-    const dialCenterAlignContent = modeDialButtonCount >= 4 ? "start" : "center";
+              : modeDialButtonCount === 3
+                ? (tightLayout ? "24% 14% 16% 14%" : compactLayout ? "25% 15% 17% 15%" : "26% 15% 17.5% 15%")
+                : (tightLayout ? "22% 14% 16% 14%" : compactLayout ? "22% 15.5% 17% 15.5%" : "21% 15% 18% 15%");
+    const dialCenterAlignContent = modeDialButtonCount >= 3 ? "start" : "center";
     const stackedModeControlsGap =
       modeDialButtonCount >= 6 ? (tightLayout ? "6px" : compactLayout ? "6px" : "7px") : (tightLayout ? "7px" : "9px");
-    const targetUnitTopEm = modeDialButtonCount >= 4 ? "0.44em" : "0.14em";
-    const targetBlockPaddingTop = modeDialButtonCount >= 4 ? "0.12em" : "0";
+    const targetUnitTopEm = modeDialButtonCount >= 3 ? "0.44em" : "0.14em";
+    const targetBlockPaddingTop = modeDialButtonCount >= 3 ? "0.12em" : "0";
     const ratio = supportsTargetTemperature
       ? (targetTemperature - temperatureRange.min) / Math.max(temperatureRange.max - temperatureRange.min, temperatureStep)
       : 0;
