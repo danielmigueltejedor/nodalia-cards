@@ -486,7 +486,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.2-alpha.2";
+const CARD_VERSION = "1.0.2-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -536,7 +536,7 @@ const DEFAULT_CONFIG = {
       border_radius: "30px",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "16px",
-      gap: "14px",
+      gap: "16px",
     },
     icon: {
       size: "58px",
@@ -941,18 +941,57 @@ function getStepPrecision(step) {
   return text.split(".")[1].length;
 }
 
-function formatTemperature(value, step = 0.5, withUnit = true) {
-  if (!Number.isFinite(Number(value))) {
-    return withUnit ? "-- °C" : "--";
+/** Avoids `Number(null) === 0` / `Number("") === 0` which mis-renders many climate entities (e.g. ecobee off). */
+function parseFiniteClimateNumber(value) {
+  if (value === null || value === undefined) {
+    return NaN;
+  }
+  if (typeof value === "string" && value.trim() === "") {
+    return NaN;
+  }
+  const n = Number(value);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function getHassLocale(hass) {
+  const raw =
+    hass?.locale?.language
+    || hass?.selectedLanguage
+    || hass?.language
+    || (typeof navigator !== "undefined" ? navigator.language : "");
+  const s = String(raw || "").trim();
+  return s || "en";
+}
+
+function getClimateTemperatureUnit(hass) {
+  const raw = String(hass?.config?.unit_system?.temperature ?? "").trim();
+  if (raw.toUpperCase().includes("F")) {
+    return "°F";
+  }
+  if (raw.toUpperCase().includes("C")) {
+    return "°C";
+  }
+  return "°C";
+}
+
+function getClimateTemperatureScaleLetter(hass) {
+  return getClimateTemperatureUnit(hass).toUpperCase().includes("F") ? "F" : "C";
+}
+
+function formatTemperature(value, step = 0.5, withUnit = true, hass = null) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) {
+    const u = getClimateTemperatureUnit(hass);
+    return withUnit ? `-- ${u}` : "--";
   }
 
   const precision = Math.max(0, Math.min(getStepPrecision(step), 2));
-  const formatted = Number(value).toLocaleString("es-ES", {
+  const formatted = n.toLocaleString(getHassLocale(hass), {
     minimumFractionDigits: precision,
     maximumFractionDigits: precision,
   });
-
-  return withUnit ? `${formatted} °C` : formatted;
+  const u = getClimateTemperatureUnit(hass);
+  return withUnit ? `${formatted} ${u}` : formatted;
 }
 
 function getModeMeta(mode) {
@@ -1174,10 +1213,22 @@ class NodaliaClimateCard extends HTMLElement {
       state: String(state?.state || ""),
       friendlyName: String(attrs.friendly_name || ""),
       icon: String(attrs.icon || ""),
-      temperature: Number(attrs.temperature ?? -1),
-      currentTemperature: Number(attrs.current_temperature ?? -1),
-      targetTempHigh: Number(attrs.target_temp_high ?? -1),
-      targetTempLow: Number(attrs.target_temp_low ?? -1),
+      temperature: (() => {
+        const v = parseFiniteClimateNumber(attrs.temperature);
+        return Number.isFinite(v) ? v : -1;
+      })(),
+      currentTemperature: (() => {
+        const v = parseFiniteClimateNumber(attrs.current_temperature);
+        return Number.isFinite(v) ? v : -1;
+      })(),
+      targetTempHigh: (() => {
+        const v = parseFiniteClimateNumber(attrs.target_temp_high);
+        return Number.isFinite(v) ? v : -1;
+      })(),
+      targetTempLow: (() => {
+        const v = parseFiniteClimateNumber(attrs.target_temp_low);
+        return Number.isFinite(v) ? v : -1;
+      })(),
       humidity: Number(attrs.humidity ?? -1),
       currentHumidity: Number(attrs.current_humidity ?? -1),
       hvacMode: String(attrs.hvac_mode || ""),
@@ -1239,7 +1290,7 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    const actualTemperature = Number(state.attributes?.temperature);
+    const actualTemperature = parseFiniteClimateNumber(state.attributes?.temperature);
     const draftTemperature = Number(this._draftTemperature.get(entityId));
     const tolerance = this._getTemperatureSyncTolerance(state);
 
@@ -1281,8 +1332,8 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   _getTemperatureRange(state) {
-    const min = Number(state?.attributes?.min_temp);
-    const max = Number(state?.attributes?.max_temp);
+    const min = parseFiniteClimateNumber(state?.attributes?.min_temp);
+    const max = parseFiniteClimateNumber(state?.attributes?.max_temp);
 
     if (Number.isFinite(min) && Number.isFinite(max) && min < max) {
       return {
@@ -1320,11 +1371,12 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   _supportsTargetTemperature(state) {
+    const attrs = state?.attributes || {};
     return (
-      Number.isFinite(Number(state?.attributes?.temperature)) ||
+      Number.isFinite(parseFiniteClimateNumber(attrs.temperature)) ||
       (
-        Number.isFinite(Number(state?.attributes?.min_temp)) &&
-        Number.isFinite(Number(state?.attributes?.max_temp))
+        Number.isFinite(parseFiniteClimateNumber(attrs.min_temp)) &&
+        Number.isFinite(parseFiniteClimateNumber(attrs.max_temp))
       )
     );
   }
@@ -1335,13 +1387,14 @@ class NodaliaClimateCard extends HTMLElement {
       return Number(this._draftTemperature.get(entityId));
     }
 
-    const direct = Number(state?.attributes?.temperature);
+    const attrs = state?.attributes || {};
+    const direct = parseFiniteClimateNumber(attrs.temperature);
     if (Number.isFinite(direct)) {
       return direct;
     }
 
-    const high = Number(state?.attributes?.target_temp_high);
-    const low = Number(state?.attributes?.target_temp_low);
+    const high = parseFiniteClimateNumber(attrs.target_temp_high);
+    const low = parseFiniteClimateNumber(attrs.target_temp_low);
     if (Number.isFinite(high) && Number.isFinite(low)) {
       return Number(((high + low) / 2).toFixed(1));
     }
@@ -1351,7 +1404,7 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   _getCurrentTemperature(state) {
-    const current = Number(state?.attributes?.current_temperature);
+    const current = parseFiniteClimateNumber(state?.attributes?.current_temperature);
     return Number.isFinite(current) ? current : null;
   }
 
@@ -1614,7 +1667,7 @@ class NodaliaClimateCard extends HTMLElement {
         return;
       }
 
-      const actualTemperature = Number(state.attributes?.temperature);
+      const actualTemperature = parseFiniteClimateNumber(state.attributes?.temperature);
       const draftTemperature = Number(this._draftTemperature.get(entityId));
       const tolerance = this._getTemperatureSyncTolerance(state);
 
@@ -1815,7 +1868,7 @@ class NodaliaClimateCard extends HTMLElement {
     dial.setAttribute("aria-valuenow", String(Number(nextValue)));
 
     if (targetValue instanceof HTMLElement) {
-      targetValue.textContent = formatTemperature(nextValue, step, false);
+      targetValue.textContent = formatTemperature(nextValue, step, false, this._hass);
     }
   }
 
@@ -2225,6 +2278,7 @@ class NodaliaClimateCard extends HTMLElement {
     const isOff = this._isOff(state) || isUnavailableState(state);
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const i18nLang = config.language ?? "auto";
+    const tempScale = getClimateTemperatureScaleLetter(hass);
     const translateClimateMode = mode => (
       window.NodaliaI18n?.translateClimateHvacLabel
         ? window.NodaliaI18n.translateClimateHvacLabel(hass, i18nLang, mode, false)
@@ -2262,7 +2316,7 @@ class NodaliaClimateCard extends HTMLElement {
     const effectiveChipPadding = tightLayout ? "0 9px" : compactLayout ? "0 10px" : styles.chip_padding;
     const dialSizePx = Math.max(
       220,
-      Math.min(parseSizeToPixels(styles.dial.size, 280), tightLayout ? 236 : compactLayout ? 252 : 280),
+      Math.min(parseSizeToPixels(styles.dial.size, 280), tightLayout ? 236 : compactLayout ? 252 : 340),
     );
     const dialStrokePx = Math.max(
       15,
@@ -2304,7 +2358,7 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     if (config.show_current_temperature_chip !== false && currentTemperature !== null) {
-      chips.push(`<div class="climate-card__chip">${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true))}</div>`);
+      chips.push(`<div class="climate-card__chip">${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true, hass))}</div>`);
     }
 
     if (config.show_humidity_chip !== false && currentHumidity !== null) {
@@ -2364,6 +2418,8 @@ class NodaliaClimateCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
+          container-name: nodalia-climate;
+          container-type: size;
           isolation: isolate;
           overflow: hidden;
           position: relative;
@@ -2585,6 +2641,12 @@ class NodaliaClimateCard extends HTMLElement {
           width: min(var(--climate-dial-size), 100%);
         }
 
+        @supports (width: 1cqw) {
+          .climate-card__dial {
+            width: min(var(--climate-dial-size), 100%, min(94cqw, 78cqh));
+          }
+        }
+
         .climate-card__dial:active {
           cursor: ${supportsTargetTemperature ? "grabbing" : "default"};
         }
@@ -2740,8 +2802,8 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__dial-center {
           align-content: center;
           display: grid;
-          gap: ${tightLayout ? "10px" : compactLayout ? "11px" : "12px"};
-          inset: ${tightLayout ? "23% 15% 17% 15%" : compactLayout ? "23% 15.5% 17.5% 15.5%" : "23% 16% 18% 16%"};
+          gap: ${tightLayout ? "10px" : compactLayout ? "12px" : "15px"};
+          inset: ${tightLayout ? "22% 14% 16% 14%" : compactLayout ? "22% 15.5% 17% 15.5%" : "21% 15% 18% 15%"};
           justify-items: center;
           pointer-events: auto;
           position: absolute;
@@ -3119,12 +3181,12 @@ class NodaliaClimateCard extends HTMLElement {
               <span class="climate-card__dial-thumb" data-climate-control="dial-hit" aria-hidden="true"></span>
               <div class="climate-card__dial-center">
                 <div class="climate-card__target">
-                  <span class="climate-card__target-value" data-climate-readout="target">${escapeHtml(formatTemperature(targetTemperature, temperatureStep, false))}</span>
-                  <span class="climate-card__target-unit"><span class="climate-card__target-degree">°</span><span class="climate-card__target-scale">C</span></span>
+                  <span class="climate-card__target-value" data-climate-readout="target">${escapeHtml(formatTemperature(targetTemperature, temperatureStep, false, hass))}</span>
+                  <span class="climate-card__target-unit"><span class="climate-card__target-degree">°</span><span class="climate-card__target-scale">${escapeHtml(tempScale)}</span></span>
                 </div>
                 <div class="climate-card__divider"></div>
                 <div class="climate-card__dial-meta">
-                  ${currentTemperature !== null ? `<span>${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true))}</span>` : ""}
+                  ${currentTemperature !== null ? `<span>${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true, hass))}</span>` : ""}
                   <span class="climate-card__dial-action">
                     <ha-icon icon="${escapeHtml(currentActionMeta.icon)}"></ha-icon>
                   </span>

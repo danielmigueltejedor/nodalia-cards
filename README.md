@@ -49,7 +49,7 @@ Animations and interactions in action:
 
 # 🚀 What’s new in 1.0.x
 
-**This branch installs `1.0.2-alpha.2`** — match **`package.json`** and **`window.__NODALIA_BUNDLE__.pkgVersion`**. Latest **stable** on **`main`** is **`1.0.1`**. The sections below summarize the **`1.0.0`** milestone; release notes for **`1.0.2-alpha.2`**, **`1.0.2-alpha.1`**, **`1.0.1`**, and earlier are in [`CHANGELOG.md`](./CHANGELOG.md).
+**This branch installs `1.0.2-alpha.3`** — match **`package.json`** and **`window.__NODALIA_BUNDLE__.pkgVersion`**. Latest **stable** on **`main`** is **`1.0.1`**. The sections below summarize the **`1.0.0`** milestone; release notes for **`1.0.2-alpha.3`**, **`1.0.2-alpha.2`**, **`1.0.2-alpha.1`**, **`1.0.1`**, and earlier are in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## 🧠 Notifications Card
 

@@ -21,6 +21,21 @@ Maintenance work continues on the stable `1.0.x` line while the next feature cyc
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.2-alpha.3] - 2026-05-12
+
+Prerelease **`alpha.3`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.3`** (optional tag **`v1.0.2-alpha.3`**).
+
+### Changed
+
+- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.3`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
+
+### Fixed
+
+- **`nodalia-climate-card.js`:** integrations such as **Ecobee** that omit **`temperature`** when idle no longer surface **`0`** as the target (dial arc and main readout stay coherent); temperature parsing and render signatures treat non-finite values as unknown instead of zero.
+- **`nodalia-climate-card.js`:** temperature labels use Home Assistant’s **unit system** and **locale** (for example **°F** with the correct decimal separator) instead of hardcoded Celsius / a fixed locale.
+- **`nodalia-climate-card.js`:** dial layout uses **`container-type: size`**, slightly larger dial caps in roomy layouts, and optional **`cqw` / `cqh`** scaling when supported so the inner dial does not stay cramped in large grid cells.
+
+---
 ## [1.0.2-alpha.2] - 2026-05-12
 
 Prerelease **`alpha.2`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.2`** (optional tag **`v1.0.2-alpha.2`**).
