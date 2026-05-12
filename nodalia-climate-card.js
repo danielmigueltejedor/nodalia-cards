@@ -486,7 +486,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.2-alpha.4";
+const CARD_VERSION = "1.0.2-alpha.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -926,6 +926,31 @@ function normalizeTextKey(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
+}
+
+/** Rows needed for mode buttons after the first row of two (rest count = total − 2). */
+function countClimateDialModeRowsAfterFirstTwo(restButtonCount) {
+  if (restButtonCount <= 0) {
+    return 0;
+  }
+
+  let rows = 0;
+  let i = 0;
+  while (i < restButtonCount) {
+    const left = restButtonCount - i;
+    if (left === 4) {
+      rows += 2;
+      i += 4;
+    } else if (left <= 3) {
+      rows += 1;
+      i = restButtonCount;
+    } else {
+      rows += 1;
+      i += 2;
+    }
+  }
+
+  return rows;
 }
 
 function isUnavailableState(state) {
@@ -2289,6 +2314,10 @@ class NodaliaClimateCard extends HTMLElement {
     const cardPaddingX = tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
     const effectiveCardPadding = `${cardPaddingY}px ${cardPaddingX}px`;
     const effectiveCardGap = tightLayout ? "10px" : compactLayout ? "12px" : styles.card.gap;
+    const showStepControls = config.show_step_controls !== false && supportsTargetTemperature;
+    const contentColumnGap = showStepControls
+      ? (tightLayout ? "8px" : compactLayout ? "9px" : "10px")
+      : effectiveCardGap;
     const effectiveIconSizePx = Math.max(
       48,
       Math.min(parseSizeToPixels(styles.icon.size, 58), tightLayout ? 50 : compactLayout ? 54 : 58),
@@ -2335,6 +2364,27 @@ class NodaliaClimateCard extends HTMLElement {
       32,
       Math.min(parseSizeToPixels(styles.control.size, 42) - 4, tightLayout ? 34 : compactLayout ? 36 : 38),
     );
+    const modeControlRenderPx =
+      modeDialButtonCount >= 6
+        ? Math.max(28, Math.round(modeControlSize - 6))
+        : modeDialButtonCount >= 5
+          ? Math.max(30, Math.round(modeControlSize - 3))
+          : modeControlSize;
+    const stackedModeRowGapPx = tightLayout ? 7 : 9;
+    const modeBlockMinPx =
+      modeDialButtonCount <= 0
+        ? 0
+        : modeDialButtonCount <= 2
+          ? modeControlRenderPx + 18
+          : (() => {
+              const extraRows = countClimateDialModeRowsAfterFirstTwo(modeDialButtonCount - 2);
+              const totalModeRows = 1 + extraRows;
+              return (
+                totalModeRows * modeControlRenderPx +
+                (totalModeRows - 1) * stackedModeRowGapPx +
+                10
+              );
+            })();
     const climateCardMinHeightPx = Math.max(
       300,
       Math.round(
@@ -2342,14 +2392,24 @@ class NodaliaClimateCard extends HTMLElement {
           stepControlSize +
           effectiveIconSizePx +
           cardPaddingY * 2 +
-          88 +
-          (modeDialButtonCount <= 0
-            ? 0
-            : modeDialButtonCount >= 3
-              ? modeControlSize * 2 + (tightLayout ? 26 : 28)
-              : modeControlSize + 18),
+          64 +
+          modeBlockMinPx,
       ),
     );
+    const dialCenterGridGap =
+      modeDialButtonCount >= 6
+        ? (tightLayout ? "6px" : compactLayout ? "7px" : "8px")
+        : modeDialButtonCount >= 4
+          ? (tightLayout ? "8px" : compactLayout ? "9px" : "11px")
+          : (tightLayout ? "10px" : compactLayout ? "12px" : "15px");
+    const dialCenterInsetCss =
+      modeDialButtonCount >= 6
+        ? (tightLayout ? "19% 12% 12% 12%" : compactLayout ? "20% 13.5% 13% 13.5%" : "19% 14% 13.5% 14%")
+        : modeDialButtonCount >= 4
+          ? (tightLayout ? "21% 13.5% 15.5% 13.5%" : compactLayout ? "21.5% 15% 16.5% 15%" : "20.5% 14.5% 17% 14.5%")
+          : (tightLayout ? "22% 14% 16% 14%" : compactLayout ? "22% 15.5% 17% 15.5%" : "21% 15% 18% 15%");
+    const stackedModeControlsGap =
+      modeDialButtonCount >= 6 ? (tightLayout ? "6px" : compactLayout ? "6px" : "7px") : (tightLayout ? "7px" : "9px");
     const ratio = supportsTargetTemperature
       ? (targetTemperature - temperatureRange.min) / Math.max(temperatureRange.max - temperatureRange.min, temperatureStep)
       : 0;
@@ -2434,11 +2494,36 @@ class NodaliaClimateCard extends HTMLElement {
       dialModeButtonFragments.length === 0
         ? `<div class="climate-card__dial-controls"></div>`
         : dialControlsStacked
-          ? `
+          ? (() => {
+              const row0 = dialModeButtonFragments.slice(0, 2);
+              const rest = dialModeButtonFragments.slice(2);
+              const restRows = [];
+              let i = 0;
+              while (i < rest.length) {
+                const left = rest.length - i;
+                if (left === 4) {
+                  restRows.push(rest.slice(i, i + 2));
+                  restRows.push(rest.slice(i + 2, i + 4));
+                  i += 4;
+                } else if (left <= 3) {
+                  restRows.push(rest.slice(i));
+                  i = rest.length;
+                } else {
+                  restRows.push(rest.slice(i, i + 2));
+                  i += 2;
+                }
+              }
+
+              const secondaryRowsHtml = restRows
+                .map(frags => `<div class="climate-card__dial-controls-row climate-card__dial-controls-row--secondary">${frags.join("")}</div>`)
+                .join("");
+
+              return `
                 <div class="climate-card__dial-controls climate-card__dial-controls--stacked">
-                  <div class="climate-card__dial-controls-row">${dialModeButtonFragments.slice(0, 2).join("")}</div>
-                  <div class="climate-card__dial-controls-row climate-card__dial-controls-row--secondary">${dialModeButtonFragments.slice(2).join("")}</div>
-                </div>`
+                  <div class="climate-card__dial-controls-row">${row0.join("")}</div>
+                  ${secondaryRowsHtml}
+                </div>`;
+            })()
           : `
                 <div class="climate-card__dial-controls">
                   ${dialModeButtonFragments.join("")}
@@ -2510,8 +2595,9 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__content {
           display: flex;
           flex-direction: column;
-          gap: ${effectiveCardGap};
+          gap: ${contentColumnGap};
           height: 100%;
+          justify-content: flex-start;
           min-height: 0;
           padding: ${effectiveCardPadding};
           position: relative;
@@ -2521,6 +2607,7 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__hero {
           align-items: center;
           display: grid;
+          flex: 0 0 auto;
           gap: ${effectiveCardGap};
           grid-template-columns: ${effectiveIconSize} minmax(0, 1fr);
           min-height: 0;
@@ -2658,10 +2745,10 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__dial-wrap {
           align-items: center;
           display: flex;
-          flex: 1 1 auto;
+          flex: 0 0 auto;
           justify-content: center;
           min-height: 0;
-          padding-top: ${tightLayout ? "0" : "2px"};
+          padding-top: ${showStepControls ? "0" : (tightLayout ? "0" : "2px")};
         }
 
         .climate-card__dial {
@@ -2860,8 +2947,8 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__dial-center {
           align-content: center;
           display: grid;
-          gap: ${tightLayout ? "10px" : compactLayout ? "12px" : "15px"};
-          inset: ${tightLayout ? "22% 14% 16% 14%" : compactLayout ? "22% 15.5% 17% 15.5%" : "21% 15% 18% 15%"};
+          gap: ${dialCenterGridGap};
+          inset: ${dialCenterInsetCss};
           justify-items: center;
           pointer-events: auto;
           position: absolute;
@@ -2972,7 +3059,7 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__dial-controls--stacked {
           flex-direction: column;
           flex-wrap: nowrap;
-          gap: ${tightLayout ? "7px" : "9px"};
+          gap: ${stackedModeControlsGap};
         }
 
         .climate-card__dial-controls-row {
@@ -3024,8 +3111,8 @@ class NodaliaClimateCard extends HTMLElement {
           background:
             radial-gradient(circle at top left, color-mix(in srgb, var(--primary-text-color) 6%, transparent), transparent 60%),
             color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          height: ${modeControlSize}px;
-          width: ${modeControlSize}px;
+          height: ${modeControlRenderPx}px;
+          width: ${modeControlRenderPx}px;
         }
 
         .climate-card__mode-button:hover,
@@ -3049,14 +3136,15 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__mode-button ha-icon {
-          --mdc-icon-size: calc(${modeControlSize}px * 0.46);
+          --mdc-icon-size: calc(${modeControlRenderPx}px * 0.46);
           display: inline-flex;
-          height: calc(${modeControlSize}px * 0.46);
-          width: calc(${modeControlSize}px * 0.46);
+          height: calc(${modeControlRenderPx}px * 0.46);
+          width: calc(${modeControlRenderPx}px * 0.46);
         }
 
         .climate-card__steps {
           display: flex;
+          flex: 0 0 auto;
           gap: ${tightLayout ? "10px" : compactLayout ? "12px" : "14px"};
           justify-content: center;
         }

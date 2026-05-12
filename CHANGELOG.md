@@ -21,6 +21,17 @@ Maintenance work continues on the stable `1.0.x` line while the next feature cyc
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.2-alpha.5] - 2026-05-12
+
+Prerelease **`alpha.5`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.5`** (optional tag **`v1.0.2-alpha.5`**).
+
+### Changed
+
+- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.5`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
+- **`nodalia-climate-card.js`:** mode buttons after the first pair split into **extra centered rows** (for example six controls → **2 + 2 + 2** instead of **2 + 4**); **≥5 / ≥6** modes use **slightly smaller** mode buttons, **tighter** stacked gaps, and **dial-center** inset / grid gap tuned so many modes fit inside the dial.
+- **`nodalia-climate-card.js`:** with **+/-** step controls visible, the dial column no longer **stretches** vertically (`flex` on the dial wrap), **tighter** vertical gaps, and **`min-height`** slack adjusted so **auto-height** sections look **less tall** with less dead space between dial and step buttons.
+
+---
 ## [1.0.2-alpha.4] - 2026-05-12
 
 Prerelease **`alpha.4`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.4`** (optional tag **`v1.0.2-alpha.4`**).
