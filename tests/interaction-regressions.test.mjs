@@ -47,6 +47,8 @@ test("insignia icon-only pills keep bottom breathing room in scroll strips", () 
   const source = read("nodalia-insignia-card.js");
   assert.match(source, /--insignia-scroll-strip-padding-block/);
   assert.match(source, /var\(--insignia-scroll-strip-margin-block, 4px 8px\)/);
+  assert.match(source, /var\(--insignia-scroll-strip-margin-block, 4px 6px\)/);
+  assert.match(source, /align-self: center;/);
   assert.match(source, /overflow: visible;[\s\S]*width: auto;/);
 });
 

@@ -2912,10 +2912,10 @@ class NodaliaFanCard extends HTMLElement {
 
         @keyframes fan-card-icon-spin {
           from {
-            transform: translate(-50%, -50%) rotate(0deg);
+            transform: translate3d(-50%, -50%, 0) rotate(0deg);
           }
           to {
-            transform: translate(-50%, -50%) rotate(360deg);
+            transform: translate3d(-50%, -50%, 0) rotate(360deg);
           }
         }
 

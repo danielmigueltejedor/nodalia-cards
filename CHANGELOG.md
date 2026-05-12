@@ -10,6 +10,15 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.94] - 2026-05-12
+
+Ninety-fourth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.94`** (tag **`v1.0.0-alpha.94`** optional).
+
+- **Insignia card (`0.2.14`):** header **scroll** rows that do **not** set **`--insignia-scroll-strip-*`** still get safe vertical space — **`:host`** now defaults to **`padding-block: 4px 6px`** and **`align-self: center`** so pills and shadows are not clipped at the bottom.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.94`**.
+
+---
+
 ## [1.0.0-alpha.93] - 2026-05-12
 
 Ninety-third **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.93`** (tag **`v1.0.0-alpha.93`** optional).

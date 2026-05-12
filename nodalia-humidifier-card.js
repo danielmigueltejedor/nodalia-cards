@@ -3187,10 +3187,10 @@ class NodaliaHumidifierCard extends HTMLElement {
 
         @keyframes humidifier-card-icon-breathe {
           0%, 100% {
-            transform: translate(-50%, -50%) scale(1);
+            transform: translate3d(-50%, -50%, 0) scale(1);
           }
           50% {
-            transform: translate(-50%, -54%) scale(1.08);
+            transform: translate3d(-50%, -54%, 0) scale(1.08);
           }
         }
 

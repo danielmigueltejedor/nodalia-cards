@@ -2690,7 +2690,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._lastSubmittedSharedCleaningSessionValue = null;
         if (typeof console !== "undefined" && typeof console.warn === "function") {
           console.warn(
-            "Nodalia Advance Vacuum Card: falta NodaliaUtils.postHomeAssistantWebhook (actualiza nodalia-cards / nodalia-utils).",
+            "Nodalia Advance Vacuum Card: Missing NodaliaUtils.postHomeAssistantWebhook (update nodalia-cards / nodalia-utils).",
           );
         }
         return;
@@ -2700,7 +2700,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           this._lastSubmittedSharedCleaningSessionValue = null;
           if (typeof console !== "undefined" && typeof console.warn === "function") {
             console.warn(
-              "Nodalia Advance Vacuum Card: webhook de persistencia rechazado o fallido; revisa el webhook_id y la automatización en HA.",
+              "Nodalia Advance Vacuum Card: Persistence webhook rejected or failed; check webhook_id and your Home Assistant automation.",
             );
           }
         }
@@ -2718,7 +2718,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         if (typeof console !== "undefined" && typeof console.warn === "function") {
           console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
           console.warn(
-            "Nodalia Advance Vacuum Card: usuarios no administradores necesitan permiso de control sobre el input_text del helper (shared_cleaning_session_entity) o configuran shared_cleaning_session_webhook.",
+            "Nodalia Advance Vacuum Card: Non-admin users need control permission on the shared cleaning session input_text helper, or set shared_cleaning_session_webhook.",
           );
         }
       });
@@ -2741,12 +2741,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._lastSubmittedSharedCleaningSessionValue = "";
         void post(webhookId, { value: "" }, this._hass).then(ok => {
           if (!ok && typeof console !== "undefined" && typeof console.warn === "function") {
-            console.warn("Nodalia Advance Vacuum Card: webhook clear (sesión compartida) falló.");
+            console.warn("Nodalia Advance Vacuum Card: Webhook clear for shared cleaning session failed.");
           }
         });
       } else if (typeof console !== "undefined" && typeof console.warn === "function") {
         console.warn(
-          "Nodalia Advance Vacuum Card: falta NodaliaUtils.postHomeAssistantWebhook (actualiza nodalia-cards / nodalia-utils).",
+          "Nodalia Advance Vacuum Card: Missing NodaliaUtils.postHomeAssistantWebhook (update nodalia-cards / nodalia-utils).",
         );
       }
       return;
@@ -8801,7 +8801,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
+      emptyOption.textContent = placeholder || this._editorLabel("ed.vacuum.select_entity");
       control.appendChild(emptyOption);
       this._getEntityOptions(field, domains).forEach(option => {
         const optionElement = document.createElement("option");
@@ -9142,12 +9142,12 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-          <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad del robot y fuente principal del mapa."))} ${escapeHtml(this._editorLabel("Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado)."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.entity.general_section_title"))}</div>
+          <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.advance_vacuum.general_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderSelectField("Idioma de la tarjeta", "language", config.language ?? "auto", [
-              { value: "auto", labelKey: "Automático (perfil Home Assistant)" },
+            ${this._renderSelectField("ed.advance_vacuum.card_language", "language", config.language ?? "auto", [
+              { value: "auto", labelKey: "ed.advance_vacuum.lang_auto_ha_profile" },
               { value: "es", label: "Español" },
               { value: "en", label: "English" },
               { value: "de", label: "Deutsch" },
@@ -9155,17 +9155,17 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
               { value: "it", label: "Italiano" },
               { value: "nl", label: "Nederlands" },
             ], { fullWidth: true })}
-            ${this._renderEntityPickerField("Entidad vacuum", "entity", config.entity, { domains: ["vacuum"] })}
-            ${this._renderTextField("Nombre", "name", config.name, { placeholder: "Roborock Qrevo S" })}
-            ${this._renderIconPickerField("Icono", "icon", config.icon, { placeholder: "mdi:robot-vacuum" })}
-            ${this._renderEntityPickerField("Entidad mapa (camera/image)", "map_source.camera", config.map_source?.camera, { domains: ["camera", "image"] })}
-            ${this._renderSelectField("Plataforma", "vacuum_platform", config.vacuum_platform || "Roborock", [
+            ${this._renderEntityPickerField("ed.vacuum.robot_entity", "entity", config.entity, { domains: ["vacuum"] })}
+            ${this._renderTextField("ed.entity.name", "name", config.name, { placeholder: "Roborock Qrevo S" })}
+            ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, { placeholder: "mdi:robot-vacuum" })}
+            ${this._renderEntityPickerField("ed.advance_vacuum.map_source_entity", "map_source.camera", config.map_source?.camera, { domains: ["camera", "image"] })}
+            ${this._renderSelectField("ed.advance_vacuum.platform", "vacuum_platform", config.vacuum_platform || "Roborock", [
               { value: "Roborock", label: "Roborock" },
               { value: "send_command", label: "Send command" },
             ])}
-            ${this._renderEntityPickerField("Entidad calibracion", "calibration_source.entity", config.calibration_source?.entity, { domains: ["camera", "image", "sensor"] })}
+            ${this._renderEntityPickerField("ed.advance_vacuum.calibration_entity", "calibration_source.entity", config.calibration_source?.entity, { domains: ["camera", "image", "sensor"] })}
             <div class="editor-field editor-field--full">
-              <span>${escapeHtml(this._editorLabel("Helper input_text (sesión compartida)"))}</span>
+              <span>${escapeHtml(this._editorLabel("ed.advance_vacuum.shared_session_helper_label"))}</span>
               <div
                 class="editor-control-host"
                 data-mounted-control="entity"
@@ -9176,60 +9176,59 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
               ></div>
               <span class="editor-field__hint">${escapeHtml(
                 this._editorLabel(
-                  "Opcional: guarda selección de habitaciones, modo y repeticiones en este helper para recuperarlas entre dispositivos. Crea un input_text en YAML y elígelo aquí.",
+                  "ed.advance_vacuum.shared_session_helper_hint",
                 ),
               )}</span>
             </div>
-            ${this._renderTextField("Webhook persistencia (ID, opcional)", "shared_cleaning_session_webhook", config.shared_cleaning_session_webhook || "", {
+            ${this._renderTextField("ed.advance_vacuum.shared_session_webhook", "shared_cleaning_session_webhook", config.shared_cleaning_session_webhook || "", {
               fullWidth: true,
               placeholder: "nodalia_advance_vacuum_session",
-              hint:
-                "Si los usuarios no pueden llamar a input_text.set_value, usa el webhook_id de una automatización que escriba el mismo helper. POST /api/webhook/<id> con JSON {\"value\": \"...\"}.",
+              hint: "ed.advance_vacuum.shared_session_webhook_hint",
             })}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Mapa"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("La tarjeta reutiliza automaticamente tu config legacy de \\`map_modes\\` e \\`icons\\` si la pegas en YAML."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.advance_vacuum.map_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.advance_vacuum.map_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Calibracion desde camera", "calibration_source.camera", config.calibration_source?.camera !== false)}
-            ${this._renderCheckboxField("Mapa bloqueado", "map_locked", config.map_locked !== false)}
-            ${this._renderCheckboxField("Mostrar etiquetas habitaciones", "show_room_labels", config.show_room_labels !== false)}
-            ${this._renderCheckboxField("Mostrar marcadores habitaciones", "show_room_markers", config.show_room_markers !== false)}
-            ${this._renderCheckboxField("Modo habitaciones", "allow_segment_mode", config.allow_segment_mode !== false)}
-            ${this._renderCheckboxField("Modo zona", "allow_zone_mode", config.allow_zone_mode !== false)}
-            ${this._renderCheckboxField("Modo ir a punto", "allow_goto_mode", config.allow_goto_mode !== false)}
-            ${this._renderTextField("Max zonas", "max_zone_selections", config.max_zone_selections, { type: "number", valueType: "number", placeholder: "5" })}
-            ${this._renderTextField("Max repeticiones", "max_repeats", config.max_repeats, { type: "number", valueType: "number", placeholder: "3" })}
+            ${this._renderCheckboxField("ed.advance_vacuum.calibration_from_camera", "calibration_source.camera", config.calibration_source?.camera !== false)}
+            ${this._renderCheckboxField("ed.advance_vacuum.map_locked", "map_locked", config.map_locked !== false)}
+            ${this._renderCheckboxField("ed.advance_vacuum.show_room_labels", "show_room_labels", config.show_room_labels !== false)}
+            ${this._renderCheckboxField("ed.advance_vacuum.show_room_markers", "show_room_markers", config.show_room_markers !== false)}
+            ${this._renderCheckboxField("ed.advance_vacuum.segment_mode", "allow_segment_mode", config.allow_segment_mode !== false)}
+            ${this._renderCheckboxField("ed.advance_vacuum.zone_mode", "allow_zone_mode", config.allow_zone_mode !== false)}
+            ${this._renderCheckboxField("ed.advance_vacuum.goto_mode", "allow_goto_mode", config.allow_goto_mode !== false)}
+            ${this._renderTextField("ed.advance_vacuum.max_zones", "max_zone_selections", config.max_zone_selections, { type: "number", valueType: "number", placeholder: "5" })}
+            ${this._renderTextField("ed.advance_vacuum.max_repeats", "max_repeats", config.max_repeats, { type: "number", valueType: "number", placeholder: "3" })}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Controles avanzados"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Selector de aspirado/fregado, menu derecho y rutinas configurables. En rutinas puedes usar \\`entity\\`, \\`label\\`, \\`icon\\`, \\`service\\`, \\`service_data\\` o \\`tap_action\\`."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.advance_vacuum.advanced_controls_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.advance_vacuum.advanced_controls_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Modo todo", "show_all_mode", config.show_all_mode !== false)}
-            ${this._renderEntityPickerField("Select aspirado", "suction_select_entity", config.suction_select_entity, { domains: ["select"] })}
-            ${this._renderEntityPickerField("Select fregado", "mop_select_entity", config.mop_select_entity, { domains: ["select"] })}
-            ${this._renderEntityPickerField("Select modo mopa", "mop_mode_select_entity", config.mop_mode_select_entity, { domains: ["select"] })}
-            ${this._renderTextField("Etiqueta menu derecho", "custom_menu.label", config.custom_menu?.label, {
+            ${this._renderCheckboxField("ed.advance_vacuum.show_all_mode", "show_all_mode", config.show_all_mode !== false)}
+            ${this._renderEntityPickerField("ed.vacuum.suction_select", "suction_select_entity", config.suction_select_entity, { domains: ["select"] })}
+            ${this._renderEntityPickerField("ed.vacuum.mop_select", "mop_select_entity", config.mop_select_entity, { domains: ["select"] })}
+            ${this._renderEntityPickerField("ed.advance_vacuum.mop_mode_select", "mop_mode_select_entity", config.mop_mode_select_entity, { domains: ["select"] })}
+            ${this._renderTextField("ed.advance_vacuum.custom_menu_label", "custom_menu.label", config.custom_menu?.label, {
               placeholder: "Base",
             })}
-            ${this._renderIconPickerField("Icono menu derecho", "custom_menu.icon", config.custom_menu?.icon, {
+            ${this._renderIconPickerField("ed.advance_vacuum.custom_menu_icon", "custom_menu.icon", config.custom_menu?.icon, {
               placeholder: "mdi:home-import-outline",
             })}
-            ${this._renderTextareaField("Items del menu derecho (JSON)", "custom_menu.items", JSON.stringify(config.custom_menu?.items || [], null, 2), {
+            ${this._renderTextareaField("ed.advance_vacuum.custom_menu_items_json", "custom_menu.items", JSON.stringify(config.custom_menu?.items || [], null, 2), {
               fullWidth: true,
               rows: 10,
               valueType: "json",
               placeholder: '[\n  {\n    "label": "Vaciar deposito",\n    "icon": "mdi:delete-empty",\n    "visible_when": "docked",\n    "tap_action": {\n      "action": "perform-action",\n      "perform_action": "vacuum.send_command",\n      "service_data": {\n        "entity_id": "vacuum.roborock_qrevo_s",\n        "command": "app_start_emptying"\n      }\n    }\n  },\n  {\n    "label": "Volver a base",\n    "icon": "mdi:home-import-outline",\n    "visible_when": "active",\n    "builtin_action": "return_to_base"\n  }\n]',
             })}
-            ${this._renderTextareaField("Rutinas (JSON)", "routines", JSON.stringify(config.routines || [], null, 2), {
+            ${this._renderTextareaField("ed.advance_vacuum.routines_json", "routines", JSON.stringify(config.routines || [], null, 2), {
               fullWidth: true,
               rows: 12,
               valueType: "json",
@@ -9240,28 +9239,28 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Que elementos quieres mantener siempre visibles."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.visibility_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.advance_vacuum.visibility_always_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Chip de estado", "show_state_chip", config.show_state_chip !== false)}
-            ${this._renderCheckboxField("Chip de bateria", "show_battery_chip", config.show_battery_chip !== false)}
-            ${this._renderCheckboxField("Iconos cabecera", "show_header_icons", config.show_header_icons !== false)}
-            ${this._renderCheckboxField("Boton volver a base", "show_return_to_base", config.show_return_to_base !== false)}
-            ${this._renderCheckboxField("Boton parar", "show_stop", config.show_stop !== false)}
-            ${this._renderCheckboxField("Boton localizar", "show_locate", config.show_locate !== false)}
+            ${this._renderCheckboxField("ed.vacuum.show_state_chip", "show_state_chip", config.show_state_chip !== false)}
+            ${this._renderCheckboxField("ed.vacuum.show_battery_chip", "show_battery_chip", config.show_battery_chip !== false)}
+            ${this._renderCheckboxField("ed.advance_vacuum.show_header_icons", "show_header_icons", config.show_header_icons !== false)}
+            ${this._renderCheckboxField("ed.vacuum.show_return_base", "show_return_to_base", config.show_return_to_base !== false)}
+            ${this._renderCheckboxField("ed.vacuum.show_stop", "show_stop", config.show_stop !== false)}
+            ${this._renderCheckboxField("ed.vacuum.show_locate", "show_locate", config.show_locate !== false)}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta haptica opcional para clicks y selecciones."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.entity.haptics_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics?.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
-            ${this._renderSelectField("Estilo", "haptics.style", hapticStyle, [
+            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", config.haptics?.enabled === true)}
+            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
+            ${this._renderSelectField("ed.entity.haptic_style", "haptics.style", hapticStyle, [
               { value: "selection", label: "Selection" },
               { value: "light", label: "Light" },
               { value: "medium", label: "Medium" },
@@ -9275,19 +9274,19 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Seguridad"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla si las acciones de servicio externas (routines/menu) usan allowlist estricta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.advance_vacuum.security_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.advance_vacuum.security_section_hint"))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField(
-              "Seguridad de servicios (modo estricto)",
+              "ed.entity.security_strict",
               "security.strict_service_actions",
               config.security?.strict_service_actions !== false,
             )}
             ${
               config.security?.strict_service_actions !== false
                 ? this._renderTextField(
-                    "Servicios permitidos (separados por comas)",
+                    "ed.entity.allowed_services_csv",
                     "security.allowed_services",
                     Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
                     {
@@ -9303,21 +9302,21 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave de la tarjeta, paneles y respuesta visual al pulsar controles."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.advance_vacuum.animations_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.advance_vacuum.animations_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
-            ${this._renderCheckboxField("Animar icono activo", "animations.icon_animation", animations.icon_animation !== false)}
-            ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", animations.content_duration, {
+            ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", animations.enabled !== false)}
+            ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", animations.icon_animation !== false)}
+            ${this._renderTextField("ed.advance_vacuum.content_duration_ms", "animations.content_duration", animations.content_duration, {
               type: "number",
               valueType: "number",
             })}
-            ${this._renderTextField("Paneles (ms)", "animations.panel_duration", animations.panel_duration, {
+            ${this._renderTextField("ed.vacuum.panel_duration_ms", "animations.panel_duration", animations.panel_duration, {
               type: "number",
               valueType: "number",
             })}
-            ${this._renderTextField("Rebote botones (ms)", "animations.button_bounce_duration", animations.button_bounce_duration, {
+            ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, {
               type: "number",
               valueType: "number",
             })}
@@ -9326,8 +9325,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilo"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base del mapa y las burbujas."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.advance_vacuum.style_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.advance_vacuum.style_section_hint_map"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -9335,26 +9334,26 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
                 data-editor-toggle="styles"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showStyleSection ? "Ocultar" : "Mostrar"}</span>
+                <span>${escapeHtml(this._editorLabel(this._showStyleSection ? "ed.weather.hide_style_settings" : "ed.weather.show_style_settings"))}</span>
               </button>
             </div>
           </div>
           ${this._showStyleSection ? `
             <div class="editor-grid">
-              ${this._renderTextField("Background", "styles.card.background", config.styles?.card?.background)}
-              ${this._renderTextField("Border", "styles.card.border", config.styles?.card?.border)}
-              ${this._renderTextField("Radius", "styles.card.border_radius", config.styles?.card?.border_radius)}
-              ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles?.card?.box_shadow)}
-              ${this._renderTextField("Padding", "styles.card.padding", config.styles?.card?.padding)}
-              ${this._renderTextField("Separacion", "styles.card.gap", config.styles?.card?.gap)}
-              ${this._renderTextField("Tamano burbuja entidad", "styles.icon.size", config.styles?.icon?.size)}
-              ${this._renderTextField("Tamano chips", "styles.chip_height", config.styles?.chip_height)}
-              ${this._renderTextField("Texto chips", "styles.chip_font_size", config.styles?.chip_font_size)}
-              ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles?.title_size)}
-              ${this._renderTextField("Tamano botones", "styles.control.size", config.styles?.control?.size)}
-              ${this._renderTextField("Radius mapa", "styles.map.radius", config.styles?.map?.radius)}
-              ${this._renderTextField("Tamano marcadores", "styles.map.marker_size", config.styles?.map?.marker_size)}
-              ${this._renderTextField("Texto marcadores", "styles.map.label_size", config.styles?.map?.label_size)}
+              ${this._renderTextField("ed.entity.style_card_bg", "styles.card.background", config.styles?.card?.background)}
+              ${this._renderTextField("ed.entity.style_card_border", "styles.card.border", config.styles?.card?.border)}
+              ${this._renderTextField("ed.entity.style_card_radius", "styles.card.border_radius", config.styles?.card?.border_radius)}
+              ${this._renderTextField("ed.entity.style_card_shadow", "styles.card.box_shadow", config.styles?.card?.box_shadow)}
+              ${this._renderTextField("ed.entity.style_card_padding", "styles.card.padding", config.styles?.card?.padding)}
+              ${this._renderTextField("ed.entity.style_card_gap", "styles.card.gap", config.styles?.card?.gap)}
+              ${this._renderTextField("ed.vacuum.style_main_bubble_size", "styles.icon.size", config.styles?.icon?.size)}
+              ${this._renderTextField("ed.vacuum.style_chip_height", "styles.chip_height", config.styles?.chip_height)}
+              ${this._renderTextField("ed.vacuum.style_chip_font", "styles.chip_font_size", config.styles?.chip_font_size)}
+              ${this._renderTextField("ed.vacuum.style_title_size", "styles.title_size", config.styles?.title_size)}
+              ${this._renderTextField("ed.vacuum.style_button_size", "styles.control.size", config.styles?.control?.size)}
+              ${this._renderTextField("ed.advance_vacuum.map_radius", "styles.map.radius", config.styles?.map?.radius)}
+              ${this._renderTextField("ed.advance_vacuum.map_marker_size", "styles.map.marker_size", config.styles?.map?.marker_size)}
+              ${this._renderTextField("ed.advance_vacuum.map_label_size", "styles.map.label_size", config.styles?.map?.label_size)}
             </div>
           ` : ""}
         </section>
@@ -9394,6 +9393,6 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: CARD_TAG,
   name: "Nodalia Advance Vacuum Card",
-  description: "Tarjeta de mapa avanzada para robots con estilo Nodalia y seleccion de habitaciones, zonas y puntos.",
+  description: "Advanced map card for vacuum robots in Nodalia style with room, zone, and point selection.",
   preview: true,
 });
