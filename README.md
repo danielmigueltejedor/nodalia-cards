@@ -1,33 +1,42 @@
 # 🎨 Nodalia Cards
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
-![Latest stable](https://img.shields.io/badge/latest%20stable-0.6.1-2ea043)
+![Latest stable](https://img.shields.io/badge/latest%20stable-1.0.0-2ea043)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![GitHub](https://img.shields.io/badge/hosted%20on-GitHub-black?logo=github)
 
-**Nodalia Cards** is a custom card bundle for Home Assistant focused on creating a cleaner, more polished and more app-like dashboard experience.
+**Nodalia Cards** is a premium-style custom card bundle for Home Assistant focused on delivering a more polished, fluid and app-like dashboard experience.
 
-The goal is not only to provide beautiful cards, but to build a consistent UI system for Home Assistant with smooth interactions, readable layouts and a mobile-first experience.
+The goal is not only to create beautiful cards, but to build a **cohesive frontend system** for Home Assistant:
+consistent interactions, modern animations, mobile-first layouts, shared visual language, integrated editors and smart contextual UI.
 
-**Release channels:** **`main`** (stable, recommended) · **`beta`** (test builds for early adopters) · **`alpha`** (experimental; may break). See **`CONTRIBUTING.md`** → **Releases: main, beta, and alpha**.
+**Release channels:**  
+- **`main`** → stable, recommended  
+- **`beta`** → preview builds for advanced users  
+- **`alpha`** → experimental / may break  
 
----
-
-## ✨ Highlights
-
-- Modern and consistent visual style
-- Mobile-first dashboard experience
-- Smooth animations and state transitions
-- Tactile feedback support
-- Friendly visual editors
-- Clean gradients and readable layouts
-- Designed for real daily use
+See **`CONTRIBUTING.md`** → **Releases: main, beta, and alpha**.
 
 ---
 
-## 📸 Preview
+# ✨ What makes Nodalia different?
+
+- Unified visual system across all cards
+- Mobile-first layouts and interactions
+- Smooth transitions and tactile feeling UI
+- Shared design tokens and animations
+- Smart contextual cards
+- Native-feeling visual editors
+- Advanced Home Assistant integrations
+- Designed for real daily dashboards
+- Consistent UX instead of isolated cards
+
+---
+
+# 📸 Preview
+
 Animations and interactions in action:
 
 <p align="center">
@@ -37,194 +46,318 @@ Animations and interactions in action:
 
 ---
 
-## 🧩 Cards included
+# 🚀 New in 1.0.0
 
-- custom:nodalia-navigation-bar  
-- custom:nodalia-media-player  
-- custom:nodalia-light-card  
-- custom:nodalia-fan-card  
-- custom:nodalia-humidifier-card  
-- custom:nodalia-circular-gauge-card  
-- custom:nodalia-graph-card  
-- custom:nodalia-power-flow-card  
-- custom:nodalia-climate-card  
-- custom:nodalia-alarm-panel-card  
-- custom:nodalia-advance-vacuum-card  
-- custom:nodalia-entity-card  
-- custom:nodalia-fav-card  
-- custom:nodalia-insignia-card  
-- custom:nodalia-person-card  
-- custom:nodalia-weather-card  
-- custom:nodalia-calendar-card  
-- custom:nodalia-notifications-card  
-- custom:nodalia-vacuum-card  
+## 🧠 Notifications Card
+
+A completely new smart notification center for Home Assistant dashboards.
+
+Features include:
+
+- Expandable stacked notification UI
+- Persistent dismiss system
+- Smart contextual recommendations
+- Mobile notification delivery
+- Calendar integrations
+- Vacuum / weather / humidity intelligence
+- Entity-specific overrides
+- Critical mobile alerts
+- Visual editor support
+- Animated transitions and compact mode
 
 ---
 
-## 📋 YAML configuration
+## 🗓️ Calendar Card
 
-The **visual editors** in this bundle emit **lean YAML**: any option that still matches the card’s **built-in defaults** is omitted (using the same `stripEqualToDefaults` helper as other Nodalia cards, e.g. **Entity**). You only see keys you actually changed—handy for manual YAML and reviews.
+The new calendar experience for Home Assistant.
 
-**Always set** `type` to the correct `custom:nodalia-…` value. Most cards also need an **`entity`** (or equivalent) to be useful.
+Features include:
 
-### All cards (overview)
+- Native Home Assistant event creation
+- Native event deletion
+- Multiple calendar support
+- Expanded popup views
+- Daily / weekly / monthly layouts
+- Weather forecast integration
+- Recurring event support
+- Shared persistence
+- Compact mobile-friendly agenda UI
+- Visual composer popup
+- Calendar tinting and labels
 
-| Card | `type` | What it’s for |
-|------|--------|----------------|
-| Navigation bar | `custom:nodalia-navigation-bar` | Pill navigation between dashboard views |
-| Media player | `custom:nodalia-media-player` | Rich player UI with popup transport |
-| Light | `custom:nodalia-light-card` | Lights with sliders / presets |
-| Fan | `custom:nodalia-fan-card` | Fans with speed/preset controls |
-| Humidifier | `custom:nodalia-humidifier-card` | Humidifiers with mode/humidity |
-| Circular gauge | `custom:nodalia-circular-gauge-card` | Compact radial gauges |
-| Graph | `custom:nodalia-graph-card` | Multi-series history charts |
-| Power flow | `custom:nodalia-power-flow-card` | Energy / solar flow diagram |
-| Climate | `custom:nodalia-climate-card` | Thermostat-style climate UI |
-| Alarm panel | `custom:nodalia-alarm-panel-card` | Alarm / keypad style controls |
-| Advance vacuum | `custom:nodalia-advance-vacuum-card` | Vacuum + map focused layout |
-| Entity | `custom:nodalia-entity-card` | General-purpose entity row / chips |
-| Fav | `custom:nodalia-fav-card` | Favourite entity shortcuts |
-| Insignia | `custom:nodalia-insignia-card` | Compact insignia / toolbar pills |
-| Person | `custom:nodalia-person-card` | Presence / person-centric card |
-| Weather | `custom:nodalia-weather-card` | Weather + forecast / charts |
-| **Calendar** | `custom:nodalia-calendar-card` | Multi-calendar agenda + native events |
-| Notifications | `custom:nodalia-notifications-card` | Smart notification center + actions |
-| Vacuum | `custom:nodalia-vacuum-card` | Vacuum controls without advance map |
+---
 
-Use each card’s **visual editor** to discover fields; the YAML will stay minimal when options stay at defaults.
+## 🤖 Advanced Vacuum Experience
 
-**Advance Vacuum** shared session persistence supports **`shared_cleaning_session_webhook`** (`POST` to `/api/webhook/<id>` with `{"value":"..."}`); pair it with a webhook automation that writes your **`shared_cleaning_session_entity`** helper.
+The vacuum ecosystem became significantly more powerful.
 
-### Notifications card (`custom:nodalia-notifications-card`)
+Highlights:
 
-Smart notification center for Home Assistant dashboards. It shows an empty-state greeting when there are no pending notifications, the newest notification first when there is one, and a stacked list with a chevron expander when several are active. Notifications can be dismissed; dismissed ids are stored in browser `localStorage` until the underlying state changes.
+- Advanced map interaction
+- Rooms / zones / goto / routines
+- Shared session persistence
+- Better Roborock integrations
+- Real error detection
+- Optimized map rendering
+- Reduced map reloads
+- Smoother transitions
+- Cleaner control layout
+- Improved mobile UX
 
-It can watch the same domains used by other Nodalia cards: `calendar.*` for pending events today, `vacuum.*` for paused/running/error states, `weather.*` + `fan.*` for heat recommendations with an action to turn on a fan, plus motion, door/window, temperature and humidity sensors. The visual editor also supports custom notifications with conditions and optional actions (`more-info`, toggle, or service call).
+---
 
-Mobile delivery can use modern `notify.*` entities through Home Assistant `notify.send_message` for title/message-only compatibility. For critical mobile-app alerts that need extra `data` (sound/priority/alarm stream), use `mobile_notifications.services` with the legacy `notify.mobile_app_*` service and enable `mobile_notifications.critical_alerts`.
+## 🌍 Massive i18n Expansion
+
+Nodalia 1.0.0 ships with extensive localization support:
+
+- 🇪🇸 Spanish
+- 🇬🇧 English
+- 🇩🇪 German
+- 🇫🇷 French
+- 🇮🇹 Italian
+- 🇳🇱 Dutch
+- 🇵🇹 Portuguese
+- 🇷🇺 Russian
+- 🇬🇷 Greek
+- 🇨🇳 Chinese
+- 🇷🇴 Romanian
+
+Including:
+- Runtime card translations
+- Shared i18n systems
+- Visual editor localization
+- Exact override normalization
+- Cross-card translation consistency
+
+---
+
+## 🎨 Unified Visual System
+
+1.0.0 introduces a much stronger design system:
+
+- Shared visual tokens
+- Unified shadows and surfaces
+- Consistent chip styling
+- Shared hover/selected states
+- Shared animations
+- Better tinting
+- Improved gradients
+- Consistent card spacing
+- Better icon motion performance
+- Shared popup language
+
+---
+
+## ⚡ Performance & Stability
+
+Major internal improvements:
+
+- Reduced unnecessary renders
+- Better render signatures
+- Shared i18n caching
+- Safer persistence logic
+- Smarter deduplication
+- Optimized animation transforms
+- Better mobile resize handling
+- More resilient HA websocket handling
+- Reduced visual flicker
+- Improved cache-busting system
+
+---
+
+# 🧩 Included cards
+
+- `custom:nodalia-navigation-bar`
+- `custom:nodalia-media-player`
+- `custom:nodalia-light-card`
+- `custom:nodalia-fan-card`
+- `custom:nodalia-humidifier-card`
+- `custom:nodalia-circular-gauge-card`
+- `custom:nodalia-graph-card`
+- `custom:nodalia-power-flow-card`
+- `custom:nodalia-climate-card`
+- `custom:nodalia-alarm-panel-card`
+- `custom:nodalia-advance-vacuum-card`
+- `custom:nodalia-entity-card`
+- `custom:nodalia-fav-card`
+- `custom:nodalia-insignia-card`
+- `custom:nodalia-person-card`
+- `custom:nodalia-weather-card`
+- `custom:nodalia-calendar-card`
+- `custom:nodalia-notifications-card`
+- `custom:nodalia-vacuum-card`
+
+---
+
+# 🛠️ Visual editors
+
+All Nodalia cards include integrated visual editors designed to feel native inside Home Assistant.
+
+Features include:
+
+- Native Home Assistant selectors
+- Minimal YAML generation
+- Shared editor architecture
+- Compact collapsible sections
+- Integrated color pickers
+- Entity pickers
+- Shared translations
+- Mobile-friendly editing
+- Automatic default cleanup
+
+Generated YAML stays intentionally minimal:
+only values different from defaults are emitted.
+
+---
+
+# 📋 Example YAML
+
+## Notifications Card
 
 ```yaml
 type: custom:nodalia-notifications-card
 calendar_entities:
-  - calendar.casa
+  - calendar.home
 weather_entities:
-  - weather.casa
+  - weather.home
 fan_entities:
-  - fan.salon
+  - fan.living_room
 vacuum_entities:
   - vacuum.robot
 ```
 
-### Calendar card (`custom:nodalia-calendar-card`)
+---
 
-Shows merged events from one or more `calendar.*` entities, optional per-calendar **label** and **tint**, **time range** presets, native Home Assistant event creation, and native event deletion when the calendar exposes `calendar/event/delete`. Tap the card to open the **expanded** view (layout depends on the selected range). With **1 month** range, tap a **day** to focus that date, then tap an event to see its full description/location detail.
-
-**Minimal YAML example**
+## Calendar Card
 
 ```yaml
 type: custom:nodalia-calendar-card
 calendars:
-  - entity: calendar.casa
+  - entity: calendar.home
 ```
-
-**Main options**
-
-| Key | Type | Default (bundle) | What it does |
-|-----|------|------------------|--------------|
-| `title` | string | `Calendario` | Card title |
-| `icon` | string | `mdi:calendar-month` | Header icon |
-| `calendars` | list | `[]` | Each item: `entity` (required for that row), optional `label` (subtitle under the event), optional `tint` (row accent color, safe CSS) |
-| `time_range` | string | `1w` | `3d`, `1w`, `2w`, or `1m` — how far ahead to load |
-| `days_to_show` | number | derived | Usually **omit**; set by `time_range` (legacy YAML may still set a number) |
-| `max_visible_events` | number | `2` | Events before the list scrolls |
-| `refresh_interval` | number | `300` | Seconds between API refreshes |
-| `allow_delete` | bool | `true` | Show delete actions for native calendar events when Home Assistant supports deletion |
-| `native_event_webhook` | string | *(empty)* | Optional Home Assistant **`webhook_id`** for creating native non-recurring events through an admin automation. Payload includes sanitized `service_data` for `calendar.create_event` and `calendar_event` metadata for advanced handlers. |
-| `tint_auto` | bool | `true` | Tint the card with the theme primary; set `false` and use `styles.tint.color` for a **manual** accent |
-| `animations` | object | see below | Entrance / motion tuning |
-| `animations.enabled` | bool | `true` | Card animations |
-| `animations.content_duration` | number | `260` | Base duration (ms) for entrance animation timing |
-| `styles` | object | — | Visual overrides (card, icon, chips, text); matches other Nodalia cards |
-
-**`styles` (common keys)**
-
-| Key | Purpose |
-|-----|---------|
-| `styles.card.*` | `background`, `border`, `border_radius`, `box_shadow`, `padding`, `gap` |
-| `styles.icon.*` | `background`, `on_color`, `off_color`, `size` (bubble / glyph) |
-| `styles.tint.color` | Manual accent when `tint_auto` is `false` |
-| `styles.title_size` | Title font size |
-| `styles.event_size` | Event text size |
-| `styles.chip_height` / `chip_font_size` / `chip_padding` | Header range chip |
-| `styles.chip_size` | Legacy alias mapped to `chip_font_size` if present |
-
-**Native event creation:** the expanded popup creates real Home Assistant calendar entries. The composer supports title, all-day/timed dates, optional description/location, native-style recurrence (`none`, `yearly`, `monthly`, `weekly`, or `daily`), and an optional Nodalia color override. Recurring events use Home Assistant’s native `calendar/event/create` websocket API because the public `calendar.create_event` service accepts description/location but not `rrule`. The color override is stored as hidden Nodalia metadata in the event description so the card can keep showing that event with the chosen color after reloads.
 
 ---
 
-## 🚀 Installation
+## Advance Vacuum Card
 
-### HACS
+```yaml
+type: custom:nodalia-advance-vacuum-card
+entity: vacuum.roborock
+map_entity: camera.xiaomi_cloud_map_extractor
+```
+
+---
+
+# 🚀 Installation
+
+## HACS (recommended)
 
 [![Open your Home Assistant instance and open this repository in the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards&category=plugin)
 
-In HACS, open **Nodalia Cards** and use **Download** (pick the release or prerelease you want). HACS adds the Lovelace resource for you—no need to paste YAML for a normal install. Refresh the dashboard; you can then add the custom cards in the UI. The resource remains `/hacsfiles/nodalia-cards/nodalia-cards.js`; that file is the full self-contained bundle so HACS installs work even when only the configured `filename` is served.
+Open HACS → Frontend → search for **Nodalia Cards** → Download.
 
-If something still looks off (e.g. old script cached), use **Redownload** in HACS, or in **Settings → Dashboards → ⋮ → Resources** make sure the entry matches the URL HACS created. HACS may append `?hacstag=…` to the path; that value is **per install and selected version**, not the app semver—replace it with whatever HACS shows after **Redownload** if needed. In the browser console, `__NODALIA_BUNDLE__` confirms which bundle loaded (`pkgVersion` and a short content id), and `__NODALIA_LOADER__` confirms the entrypoint mode.
+HACS automatically adds the Lovelace resource.
 
-If Home Assistant reports **“Custom element doesn't exist: nodalia-climate-card”**, the Nodalia bundle has not loaded in that browser session. `custom:nodalia-climate-card` is included from **0.6.1** onward and in **1.0.0**; check that the resource URL points to `/hacsfiles/nodalia-cards/nodalia-cards.js`, then use **Redownload** and a hard browser refresh.
+The main entrypoint is:
 
-<details>
-<summary>Manual install (no HACS)</summary>
+```text
+/hacsfiles/nodalia-cards/nodalia-cards.js
+```
 
-Copy `nodalia-cards.js` into `config/www/` (or a subfolder) and add a resource under **Settings → Dashboards → Resources** with **type** `JavaScript module` and **URL** `/local/…` pointing at that file (for example `/local/nodalia-cards.js` if it lives at `config/www/`). `nodalia-cards.bundle.js` and `nodalia-cards.manifest.js` are build artifacts for diagnostics/releases, but the HACS/manual entrypoint is `nodalia-cards.js`.
-
-</details>
-
----
-
-## 🌍 Translations
-
-**Stable — `1.0.0` (recommended)** includes **es, en, de, fr, it, nl** plus **pt, ru, el, zh** (simplified), and **ro** for the bundled cards and Lovelace visual editors (partial trees merge from English; coverage is still improving). Spot a wrong or awkward string? Open an issue with the **Translation correction** template — see **CONTRIBUTING**.
-
-**Previous stable — `0.6.1`** remains valid for dashboards that have not migrated yet.
-
-**Prereleases:** the **`1.0.0-alpha.*`** line shipped up to **`1.0.0-alpha.96`**; **`1.0.0-beta.7`** was the last beta candidate before **`1.0.0`**. Further experimental builds may use a new prerelease line (for example **`1.0.1-alpha.*`**) per **CONTRIBUTING**.
+No manual resource setup is normally required.
 
 ---
 
-## 🛣️ Roadmap
+## Manual install
 
-- Fix remaining bugs  
-- Improve consistency  
-- Redesign graph card  
-- Improve energy flow card  
-- Refine navigation bar  
-- Prepare and ship follow-up **`1.0.x`** patches and the next feature line
+Copy:
+
+```text
+nodalia-cards.js
+```
+
+into:
+
+```text
+/config/www/
+```
+
+Then add a Lovelace resource:
+
+```text
+/local/nodalia-cards.js
+```
+
+Type:
+
+```text
+JavaScript module
+```
 
 ---
 
-## 🤝 Feedback
+# 🌍 Translations
 
-Feedback and contributions are welcome!
+Nodalia 1.0.0 includes multi-language runtime and visual editor support.
+
+Supported languages:
+
+- Spanish
+- English
+- German
+- French
+- Italian
+- Dutch
+- Portuguese
+- Russian
+- Greek
+- Chinese
+- Romanian
+
+Translation improvements are ongoing.
 
 ---
 
-## 🙌 Community contributions
+# 🛣️ Roadmap
 
-Nodalia Cards is improving thanks to community feedback, ideas and testing.
+Future work planned after 1.0.0:
+
+- Graph Card redesign
+- Power Flow improvements
+- More smart contextual systems
+- Better tablet layouts
+- More advanced popup systems
+- Further animation polish
+- Additional smart recommendations
+- More editor consistency
+- Long-term stability and optimization
+
+---
+
+# 🤝 Feedback & Contributions
+
+Feedback, ideas, bug reports and contributions are always welcome.
+
+If you find bugs or translation issues, please open an issue using the provided templates.
+
+---
+
+# 🙌 Community contributions
+
+Special thanks to the community members helping improve Nodalia Cards through testing, ideas and feedback.
 
 Special thanks to:
 
-- [@Sppedtech](https://github.com/Sppedtech) — suggested improvements for:
-  - Light Card: option to place the entity state below the entity name
-  - Person Card: option to hide the name and center the avatar
+- [@Sppedtech](https://github.com/Sppedtech)
 
-These suggestions were implemented in the `1.0.0-alpha` builds.
+For contributing ideas and improvements to:
+- Person Card
+- Light Card
+- UI consistency
 
 ---
 
-## 🧑‍💻 Author
+# 🧑‍💻 Author
 
 Daniel Miguel Tejedor
 

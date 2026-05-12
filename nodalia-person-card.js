@@ -486,7 +486,7 @@
 
 const CARD_TAG = "nodalia-person-card";
 const EDITOR_TAG = "nodalia-person-card-editor";
-const CARD_VERSION = "0.9.1";
+const CARD_VERSION = "1.0.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1295,7 +1295,7 @@ class NodaliaPersonCard extends HTMLElement {
     if (!NI?.strings || !NI.resolveLanguage) {
       return {
         emptyTitle: "Nodalia Person Card",
-        emptyBody: "Configura `entity` para mostrar la tarjeta.",
+        emptyBody: "Configure `entity` to show the card.",
         defaultName: "Person",
       };
     }
@@ -1303,7 +1303,7 @@ class NodaliaPersonCard extends HTMLElement {
     const person = NI.strings(lang).person || {};
     return {
       emptyTitle: person.emptyTitle || "Nodalia Person Card",
-      emptyBody: person.emptyBody || "Configura `entity` para mostrar la tarjeta.",
+      emptyBody: person.emptyBody || "Configure `entity` to show the card.",
       defaultName: person.defaultName || "Person",
     };
   }

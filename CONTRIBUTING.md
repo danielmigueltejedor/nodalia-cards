@@ -2,189 +2,534 @@
 
 First of all, thanks for your interest in contributing 🙌
 
-Nodalia Cards is still evolving and feedback, ideas and improvements are very welcome.
+Nodalia Cards has grown from a small collection of custom cards into a much larger frontend ecosystem for Home Assistant, and community feedback continues shaping the project every day.
+
+Ideas, bug reports, testing and improvements are always welcome.
 
 ---
 
-## 📄 Documentation parity (`main` / `beta` / `alpha`)
+# 🧠 Project philosophy
 
-**`README.md`**, **`CHANGELOG.md`**, **`CONTRIBUTING.md`**, **`ROADMAP.md`**, and **`.github/*.md`** should stay aligned between **`main`** and **`beta`** whenever you publish or merge (same guidance as before: branch-specific content lives mainly in **`package.json`** and tags).
+The goal of Nodalia Cards is not simply to create beautiful cards.
 
-**`alpha`** moves faster and may carry temporary **`CHANGELOG`** bullets or **`package.json`** bumps ahead of **`beta`**—merge docs back when promoting work to **`beta`**, or accept a short drift until the next **`beta`** sync.
+The goal is building a **cohesive, polished and app-like frontend system for Home Assistant**.
 
-Tip after syncing **`main` ↔ `beta`**:  
-`git diff main beta -- README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md .github` — ideally **empty** (except during active prerelease work).
+When contributing, keep these principles in mind:
 
----
-
-## 🧠 Project philosophy
-
-The goal of Nodalia Cards is to create a **clean, consistent and app-like UI system for Home Assistant**.
-
-When contributing, keep in mind:
-
-- Consistency is more important than adding new features
-- Simplicity and clarity over complexity
+- Consistency is more important than adding features
+- UX quality is more important than feature quantity
 - Mobile-first experience
-- Smooth interactions and polished UI
+- Smooth interactions
+- Visual coherence
 - Real usability over visual overload
+- Long-term maintainability
+- Shared systems over isolated solutions
 
 ---
 
-## 🐛 Reporting bugs
+# 📄 Documentation parity (`main` / `beta` / `alpha`)
+
+The following files should remain aligned whenever possible:
+
+- `README.md`
+- `CHANGELOG.md`
+- `CONTRIBUTING.md`
+- `ROADMAP.md`
+- `.github/*.md`
+
+between:
+
+- `main`
+- `beta`
+
+unless a branch intentionally documents prerelease-only behavior.
+
+---
+
+## Alpha branch behavior
+
+`alpha` moves much faster and may temporarily drift from:
+
+- README
+- changelog
+- roadmap
+- release examples
+
+during active development cycles.
+
+This is expected.
+
+When work is promoted:
+- `alpha` → `beta`
+- or `beta` → `main`
+
+documentation should be synchronized again.
+
+---
+
+## Useful parity check
+
+After syncing branches:
+
+```bash
+git diff main beta -- README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md .github
+```
+
+Ideally the result should be empty except during active prerelease work.
+
+---
+
+# 🐛 Reporting bugs
 
 If you find a bug:
 
 1. Make sure you're using the latest version
-2. Check if the issue was already reported
-3. Open a new issue using the bug template
+2. Check whether the issue already exists
+3. Open a new GitHub issue using the provided template
 
 Please include:
 
-- A clear description of the problem
+- Clear description
 - Steps to reproduce
-- Your card configuration (YAML)
-- Screenshots or videos if possible
+- Card YAML
+- Screenshots or videos
 - Home Assistant version
-- Device / browser
+- Browser / device
+- Console errors if relevant
+
+The more reproducible the issue is, the easier it is to fix.
 
 ---
 
-## ✨ Suggesting features
+# ✨ Suggesting features
 
-Feature ideas are welcome!
+Feature ideas are welcome.
 
-Before opening a request:
+Before opening a feature request:
 
-- Think about how it fits into the overall system
-- Avoid adding features that break visual consistency
-- Try to explain the real use case
+- Think about how it fits the overall system
+- Avoid ideas that break visual consistency
+- Explain the actual use case
+- Prefer improvements that help real dashboards
 
-Good feature requests usually include:
+Good feature requests usually explain:
 
-- What problem it solves
-- How it would work
-- Why it improves the experience
+- What problem exists
+- Why the current solution is insufficient
+- How the feature would improve usability
+- How it fits the Nodalia design philosophy
 
 ---
 
-## 🛠️ Contributing code
+# 🛠️ Contributing code
 
 If you want to contribute code:
 
-1. Fork the repository
-2. Create a new branch:
-   git checkout -b feature/my-feature
-
-3. Make your changes
-4. Keep the style and structure consistent
-5. Test your changes in Home Assistant
-6. Open a Pull Request
-
----
-
-## 🎨 Design guidelines
-
-Nodalia Cards has a defined visual style:
-
-- Soft shadows (not too strong)
-- Rounded corners
-- Clean spacing
-- Minimal but meaningful color usage
-- Smooth animations and transitions
-
-Avoid:
-
-- Overcomplicated layouts
-- Inconsistent spacing or sizing
-- Breaking the visual language
-
----
-
-## 🌍 Translations
-
-Currently the project is mainly optimized for Spanish and evolving towards English.
-
-If you want to help with translations:
-
-- Keep wording natural (not literal translations)
-- Focus on clarity and usability
-- **Wrong string on screen?** Open an issue using the **Translation correction** template (`.github/ISSUE_TEMPLATE/translation.yml`).
-- Alternatively, open a PR that updates the relevant locale data if you are comfortable editing the repo.
-
-Community help is especially useful for languages other than Spanish and English.
-
-### Runtime vs editor (**pt** / **ru** / **el** / **zh** / **ro**)
-
-- **`nodalia-i18n.js`**: each locale object is **deep-merged** over **`PACK.en`**, so partially translated packs still expose **every card namespace** (fan, alarm, weather, …). Override strings inside **`PACK.<code>`** as translations are completed.
-- **Visual editors**: **`scripts/gen-editor-ui.mjs`** builds **`nodalia-editor-ui.js`**. Add **`pt` / `ru` / `el` / `zh` / `ro`** next to **`de`** / **`fr`** in **`FULL_LOCALE_BY_EN`** (and **`editor-extra-locale-by-en.json`** when used) for full phrases; compact UI strings use the **`enTo*`** helpers. Then run **`node scripts/gen-editor-ui.mjs`** and **`npm run bundle`**.
-
-### Bundle vs standalone scripts
-
-- **`npm run bundle`** runs **`scripts/sync-standalone-embed.mjs`** then **`scripts/build-bundle.mjs`** and writes **`nodalia-cards.js`**. Module order in **`parts`** matters: **`nodalia-i18n.js`** → **`nodalia-editor-ui.js`** → **`nodalia-utils.js`** → **`nodalia-bubble-contrast.js`** → card files. After changing **`parts`**, or any bundled source, run **`npm run bundle`** again.
-- **`nodalia-utils.js`** attaches **`window.NodaliaUtils`** (shared config stripping, lightweight editor **`hass` signatures**, entity/icon picker mount helpers). It expects **`NodaliaI18n`** from **`nodalia-i18n.js`** for locale-aware signatures.
-- **Normal setup:** one Lovelace resource pointing at **`nodalia-cards.js`** (documented in **`README.md`**).
-- **Standalone single-card JS:** each shipped **`nodalia-*-card.js`** / **`nodalia-navigation-bar.js`** / **`nodalia-media-player.js`** begins with an **inlined copy** of **`nodalia-utils.js`** between **`// <nodalia-standalone-utils>`** and **`// </nodalia-standalone-utils>`**, so **`window.NodaliaUtils`** exists when only that script is loaded. **`build-bundle.mjs`** **strips** that block so **`nodalia-cards.js`** does not duplicate utilities (they come from the **`nodalia-utils.js`** module in **`parts`**). After editing **`nodalia-utils.js`**, run **`npm run bundle`** (or **`node scripts/sync-standalone-embed.mjs`**) so standalone files stay in sync.
-- **Advanced / debugging:** you may still load **`nodalia-utils.js`** once before cards (after **`nodalia-i18n.js`** / **`nodalia-editor-ui.js`**); the utils **`init`** guard skips re-installing when the API is already complete.
-
----
-
-## 🏷️ Releases: `main`, `beta`, and `alpha`
-
-Three channels keep risk and expectations clear:
-
-| Branch | Who it’s for | Version examples | Expectations |
-|--------|----------------|------------------|--------------|
-| **`main`** | Everyone | **`v0.6.1`**, **`v1.0.0`**, **`v1.0.1`**, … (semver **only** stable minors/patches) | **Recommended** for normal dashboards. Only merged when the maintainer is happy to endorse the build widely. |
-| **`beta`** | Testers, early adopters | **`1.0.0-beta.1`**, **`1.0.0-beta.2`**, … (tags **`v1.0.0-beta.1`**, …) | **Pretty usable**; features are exercised but not guaranteed frozen. Promoted from **`alpha`** when a slice of work is **polished enough** (merge or cherry-pick). |
-| **`alpha`** | Developers / brave testers | **`1.0.0-alpha.1`**, **`1.0.0-alpha.2`**, … (tags **`v1.0.0-alpha.1`**, … optional) | **High churn**. Frequent commits; **dashboards may break**. Breaking YAML or behaviour is allowed here. |
-
-**Promotion flow (typical):** experimental work lands on **`alpha`** → when a feature (or batch) is stable enough, it moves to **`beta`** → when the major is ready, **`beta`** merges to **`main`** as **`v1.0.0`**. Avoid merging **`alpha` → `main`** directly if you want **`beta`** to stay the gate for “probably OK for testers”.
-
-**Semver notes:** use **`package.json`** `version` identical to the Git tag (without **`v`**) so **`__NODALIA_BUNDLE__.pkgVersion`** and HACS match. Prerelease identifiers **`alpha.N`** and **`beta.N`** sort correctly on GitHub if **`N`** increments monotonically (**`1`**, **`2`**, … or zero-padded **`01`**, **`02`** if you prefer—pick one style per line and stick to it).
-
-### Creating the **`alpha`** branch
-
-After **`v0.4.0`** is on **`main`** (and optionally after **`beta`** exists), create **`alpha`** from the branch where **`0.5.x`** work should start—for example:
-
 ```bash
-git checkout main && git pull
-git checkout -b alpha
-# set package.json to e.g. 1.0.0-alpha.78, changelog section, npm run bundle
-git push -u origin alpha
+git fork
+git checkout -b feature/my-feature
 ```
 
-Or branch **`alpha`** from **`beta`** if **`beta`** already tracks **`0.5.0-beta.*`** and you want **`alpha`** as an extra-experimental line—document which convention you follow in the first **`alpha`** tag message.
+Then:
 
-### Stable **`main`**, then **`beta`**, then ongoing **`alpha` → beta`**
-
-1. **`main` (stable)** — **`package.json`** e.g. **`0.5.0`**, **`CHANGELOG`** **`[0.5.0]`**, **`npm run bundle`**, tag **`v0.5.0`**, GitHub **Release**.
-
-2. **`beta` (first prerelease of the next major)** — merge **`main`** into **`beta`**, bump to **`1.0.0-beta.1`**, **`CHANGELOG`** **`## [1.0.0-beta.1]`**, **`npm run bundle`**, tag **`v1.0.0-beta.1`**.
-
-3. **`alpha` / `beta` (experimental)** — **`1.0.0` stable** is on **`main`** (see **`CHANGELOG`** **`[1.0.0]`**). Further risky work may continue on **`alpha`** / **`beta`** under a new prerelease line (for example **`1.0.1-alpha.*`**) per maintainer workflow. The last train before **`1.0.0`** included **`1.0.0-alpha.96`** and **`1.0.0-beta.7`**.
-
-4. **Stable major** — merge **`beta` → `main`** (or the agreed promotion path), set **`package.json`** to **`1.0.0`**, **`CHANGELOG`** **`## [1.0.0]`**, **`npm run bundle`**, tag **`v1.0.0`**, GitHub **Release**.
+1. Make your changes
+2. Keep style and structure consistent
+3. Test inside Home Assistant
+4. Ensure the bundle builds correctly
+5. Open a Pull Request
 
 ---
 
-## 💬 Communication
+# 🧩 Architecture overview
 
-- Be respectful and constructive
-- Explain ideas clearly
-- Keep discussions focused on improving the project
+Nodalia Cards is now composed of multiple shared systems:
+
+- Shared visual tokens
+- Shared utility helpers
+- Shared i18n systems
+- Shared editor systems
+- Shared popup patterns
+- Shared animation logic
+- Shared persistence helpers
+
+Contributions should prefer extending shared systems instead of duplicating logic inside individual cards.
 
 ---
 
-## 🚀 Final note
+# 🎨 Design guidelines
 
-Even small contributions help:
+Nodalia Cards follows a defined visual language.
 
-- Reporting bugs
-- Suggesting improvements
-- Sharing ideas
-- Testing features
+## Core principles
 
-Everything helps keep Nodalia Cards polished after **1.0.0**.
+- Soft shadows
+- Rounded corners
+- Consistent spacing
+- Subtle gradients
+- Minimal but meaningful color
+- Smooth animations
+- Readable layouts
+- Compact mobile ergonomics
 
-Thanks again for your support! 🙌
+---
+
+## Avoid
+
+- Overcomplicated layouts
+- Excessive color usage
+- Inconsistent spacing
+- Very strong shadows
+- Large visual noise
+- Breaking animation language
+- Isolated design patterns
+
+---
+
+# ⚡ Performance guidelines
+
+Performance matters a lot in large Home Assistant dashboards.
+
+Please avoid:
+
+- Unnecessary full rerenders
+- Large repeated DOM rebuilds
+- Heavy synchronous loops
+- Repeated expensive calculations
+- Layout thrashing
+- Constant animation replays
+
+Prefer:
+
+- Render signatures
+- Shared caches
+- Compositor-friendly transforms
+- Incremental updates
+- Reusable helpers
+
+---
+
+# 🌍 Translations
+
+Nodalia includes both:
+
+- Runtime translations
+- Visual editor translations
+
+Current supported languages:
+
+- Spanish
+- English
+- German
+- French
+- Italian
+- Dutch
+- Portuguese
+- Russian
+- Greek
+- Chinese
+- Romanian
+
+---
+
+## Translation guidelines
+
+If helping with translations:
+
+- Prefer natural wording
+- Avoid literal machine-style translations
+- Keep UI text compact
+- Preserve consistency between cards
+- Match Home Assistant terminology when possible
+
+---
+
+## Translation corrections
+
+Wrong or awkward string?
+
+Open an issue using:
+
+```text
+Translation correction
+```
+
+template under:
+
+```text
+.github/ISSUE_TEMPLATE/translation.yml
+```
+
+---
+
+# 🧱 Runtime vs editor translations
+
+## Runtime
+
+`nodalia-i18n.js`
+
+- Locale packs are deep-merged over English
+- Partial translations still work safely
+- Runtime cards use shared namespaces
+
+---
+
+## Visual editors
+
+Generated through:
+
+```bash
+node scripts/gen-editor-ui.mjs
+```
+
+and bundled into:
+
+```text
+nodalia-editor-ui.js
+```
+
+When adding new locales:
+
+- Extend `FULL_LOCALE_BY_EN`
+- Update `editor-extra-locale-by-en.json` if needed
+- Rebuild the bundle afterwards
+
+---
+
+# 📦 Bundle architecture
+
+Main build command:
+
+```bash
+npm run bundle
+```
+
+This runs:
+
+```bash
+scripts/sync-standalone-embed.mjs
+scripts/build-bundle.mjs
+```
+
+and generates:
+
+```text
+nodalia-cards.js
+```
+
+---
+
+## Bundle order matters
+
+The bundle currently loads in this order:
+
+```text
+nodalia-i18n.js
+nodalia-editor-ui.js
+nodalia-utils.js
+nodalia-bubble-contrast.js
+card files...
+```
+
+If changing dependencies or adding modules, preserve correct initialization order.
+
+---
+
+# 🧰 Standalone card scripts
+
+Each standalone card file includes embedded utility helpers between:
+
+```js
+// <nodalia-standalone-utils>
+// </nodalia-standalone-utils>
+```
+
+The main bundle strips those blocks automatically to avoid duplication.
+
+After editing:
+
+```text
+nodalia-utils.js
+```
+
+run:
+
+```bash
+npm run bundle
+```
+
+or:
+
+```bash
+node scripts/sync-standalone-embed.mjs
+```
+
+to keep standalone files synchronized.
+
+---
+
+# 🏷️ Release channels
+
+Nodalia Cards uses three release channels.
+
+| Branch | Audience | Stability |
+|---|---|---|
+| `main` | Normal users | Stable |
+| `beta` | Early adopters | Mostly stable |
+| `alpha` | Developers / testers | Experimental |
+
+---
+
+# 🚀 Stable (`main`)
+
+Production-ready releases.
+
+Examples:
+
+```text
+1.0.0
+1.0.1
+1.1.0
+```
+
+These releases should be:
+- polished
+- documented
+- safe for daily dashboards
+
+---
+
+# 🧪 Beta (`beta`)
+
+Feature-preview releases.
+
+Examples:
+
+```text
+1.1.0-beta.1
+1.1.0-beta.2
+```
+
+Beta releases are expected to be usable but may still evolve before stable.
+
+---
+
+# ⚠️ Alpha (`alpha`)
+
+Fast experimental development.
+
+Examples:
+
+```text
+1.1.0-alpha.1
+1.1.0-alpha.2
+```
+
+Alpha builds may:
+- break dashboards
+- change YAML behavior
+- contain unfinished systems
+- introduce regressions
+
+This is expected.
+
+---
+
+# 🔄 Typical release flow
+
+```text
+alpha → beta → main
+```
+
+Typical progression:
+
+1. Experimental work lands in `alpha`
+2. Stable feature batches move into `beta`
+3. Final polished releases merge into `main`
+
+---
+
+# 🏷️ Versioning
+
+`package.json` version should always match the Git tag (without `v`).
+
+Examples:
+
+```text
+package.json → 1.0.0-beta.3
+git tag     → v1.0.0-beta.3
+```
+
+This keeps:
+
+- HACS
+- `__NODALIA_BUNDLE__`
+- releases
+- changelog
+
+fully aligned.
+
+---
+
+# 🧪 Build & testing expectations
+
+Before opening a PR:
+
+## Build the bundle
+
+```bash
+npm run bundle
+```
+
+---
+
+## Test inside Home Assistant
+
+At minimum:
+- load the dashboard
+- verify the card renders
+- verify editor behavior
+- verify no console errors
+
+---
+
+## Check for regressions
+
+Especially around:
+- animations
+- mobile layouts
+- editor rendering
+- translations
+- persistence systems
+- popup behavior
+
+---
+
+# 💬 Communication
+
+Please keep discussions:
+
+- respectful
+- constructive
+- focused
+- collaborative
+
+The project grows faster when feedback stays clear and solution-oriented.
+
+---
+
+# 🙌 Final note
+
+Even small contributions help a lot.
+
+That includes:
+
+- Bug reports
+- Translation fixes
+- Testing alpha builds
+- UI suggestions
+- Performance feedback
+- Documentation improvements
+
+Nodalia Cards became what it is through constant iteration and real-world feedback.
+
+Thanks again for supporting the project 🙌

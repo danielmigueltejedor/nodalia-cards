@@ -492,7 +492,7 @@
         unknown: "Desconocido",
         locationUnknown: "Ubicación desconocida",
         emptyTitle: "Nodalia Person Card",
-        emptyBody: "Configura `entity` para mostrar la tarjeta.",
+        emptyBody: "Configure `entity` to show the card.",
         defaultName: "Persona",
       },
       entityCard: {
@@ -1016,7 +1016,7 @@
         unknown: "Unknown",
         locationUnknown: "Unknown location",
         emptyTitle: "Nodalia Person Card",
-        emptyBody: "Set `entity` to show this card.",
+        emptyBody: "Configure `entity` to show the card.",
         defaultName: "Person",
       },
       entityCard: {
@@ -6555,27 +6555,25 @@
     if (!k) {
       return null;
     }
-    const st = strings(lang).entityCard?.states;
-    if (st?.[k]) {
-      return st[k];
-    }
-    const en = strings("en").entityCard?.states;
-    return en?.[k] || null;
+    const en = strings("en").entityCard?.states || {};
+    const loc = strings(lang).entityCard?.states;
+    const label = loc?.[k] ?? en[k];
+    return label ?? null;
   }
 
   function translateMediaPlayerState(hass, configLang, stateValue) {
     const lang = resolveLanguage(hass, configLang);
     const k = normalizeTextKey(stateValue);
-    const st = strings(lang).entityCard?.states || strings("en").entityCard.states;
-    const en = strings("en").entityCard.states;
-    if (k && st[k]) {
-      return st[k];
-    }
-    if (k && en[k]) {
-      return en[k];
+    const en = strings("en").entityCard?.states || {};
+    const loc = strings(lang).entityCard?.states;
+    if (k) {
+      const label = loc?.[k] ?? en[k];
+      if (label) {
+        return label;
+      }
     }
     const raw = String(stateValue ?? "").trim();
-    return raw || en.unknown;
+    return raw || en.unknown || "Unknown";
   }
 
   function translateClimateHvacLabel(hass, configLang, rawValue, fromAction) {
@@ -6992,8 +6990,11 @@
     isVacuumErrorState,
     translateFavState(langCode, key) {
       const raw = normalizeTextKey(key);
-      const fd = strings(langCode).favCard;
-      const ed = strings(langCode).entityCard.states;
+      const fd = strings(langCode).favCard || strings("en").favCard || {};
+      const ed = {
+        ...(strings("en").entityCard?.states || {}),
+        ...(strings(langCode).entityCard?.states || {}),
+      };
       switch (raw) {
         case "on":
           return ed.on;

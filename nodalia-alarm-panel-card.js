@@ -486,7 +486,7 @@
 
 const CARD_TAG = "nodalia-alarm-panel-card";
 const EDITOR_TAG = "nodalia-alarm-panel-card-editor";
-const CARD_VERSION = "0.7.0";
+const CARD_VERSION = "1.0.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -573,7 +573,7 @@ const DEFAULT_CONFIG = {
 
 const STUB_CONFIG = {
   entity: "alarm_control_panel.casa",
-  name: "Alarma",
+  name: "Alarm",
 };
 
 function isObject(value) {
@@ -1098,7 +1098,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     }
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-    return window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.defaultTitle || "Alarma";
+    return window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.defaultTitle || "Alarm";
   }
 
   _getIcon() {
@@ -2899,7 +2899,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
               fullWidth: true,
             })}
             ${this._renderTextField("ed.entity.name", "name", config.name, {
-              placeholder: "Alarma",
+              placeholder: "Alarm",
               fullWidth: true,
             })}
             ${this._renderTextField("ed.fav.alarm_pin", "code", config.code, {
