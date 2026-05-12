@@ -21,6 +21,18 @@ Maintenance work continues on the stable `1.0.x` line while the next feature cyc
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.2-alpha.6] - 2026-05-12
+
+Prerelease **`alpha.6`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.6`** (optional tag **`v1.0.2-alpha.6`**).
+
+### Changed
+
+- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.6`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
+- **`nodalia-climate-card.js`:** exactly **six** mode controls use a **3 + 3** two-row layout instead of **2 + 2 + 2**; other counts keep the previous **2 + …** chunking.
+- **`nodalia-climate-card.js`:** **`host`**, **`ha-card`**, and **`.climate-card__content`** use **`height: auto`** with **`align-self: start`** on **`host`** so tall dashboard cells no longer stretch the card and leave a large empty band under the **+ / −** buttons.
+- **`nodalia-climate-card.js`:** dial readout uses **larger top `inset`**, tiered by mode count (**5 / 6 / 7+**), **`align-content: start`** on the dial center from **four** modes up, and a slightly lower **`min-height`** slack so the main temperature sits **clear of the arc** with many mode rows.
+
+---
 ## [1.0.2-alpha.5] - 2026-05-12
 
 Prerelease **`alpha.5`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.5`** (optional tag **`v1.0.2-alpha.5`**).
