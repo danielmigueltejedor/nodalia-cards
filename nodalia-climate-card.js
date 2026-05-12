@@ -1032,7 +1032,7 @@ function formatTemperature(value, step = 0.5, withUnit = true, hass = null) {
   return withUnit ? `${formatted} ${u}` : formatted;
 }
 
-/** Human-readable band for dual-setpoint (Ecobee-style) climate; omits duplicate degree sign from `formatTemperature(..., false)`. */
+/** Human-readable band for dual-setpoint (Ecobee-style) climate: numbers without degree, unit once at end (e.g. `20 – 22 °C`). */
 function formatTemperatureRangeSummary(low, high, step, hass) {
   if (!Number.isFinite(low) || !Number.isFinite(high)) {
     const u = getClimateTemperatureUnit(hass);
@@ -1041,7 +1041,7 @@ function formatTemperatureRangeSummary(low, high, step, hass) {
   const a = formatTemperature(low, step, false, hass);
   const b = formatTemperature(high, step, false, hass);
   const u = getClimateTemperatureUnit(hass);
-  return `${a}° – ${b}° ${u}`;
+  return `${a} – ${b} ${u}`;
 }
 
 function getModeMeta(mode) {
@@ -3317,9 +3317,12 @@ class NodaliaClimateCard extends HTMLElement {
         ? `<span>${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true, hass))}</span>`
         : "");
     const ariaDialValue = Number.isFinite(dialPrimaryReadoutValue) ? dialPrimaryReadoutValue : temperatureRange.min;
-    const ariaRangeText = isRangeMode && Number.isFinite(rangeBand.low) && Number.isFinite(rangeBand.high)
-      ? escapeHtml(formatTemperatureRangeSummary(rangeBand.low, rangeBand.high, temperatureStep, hass))
-      : "";
+    const dialAriaLabel =
+      window.NodaliaI18n?.translateClimateDialAria != null
+        ? window.NodaliaI18n.translateClimateDialAria(hass, i18nLang, isRangeMode ? "rangeGroup" : "targetSlider")
+        : isRangeMode
+          ? "Comfort range and indoor temperature"
+          : "Target temperature";
     const cardBackground = isOff
       ? styles.card.background
       : `
@@ -4285,11 +4288,10 @@ class NodaliaClimateCard extends HTMLElement {
               class="climate-card__dial${isRangeMode ? " climate-card__dial--dual-range" : ""}"
               data-climate-control="dial"
               role="${isRangeMode ? "group" : "slider"}"
-              aria-label="${isRangeMode ? "Comfort range and indoor temperature" : "Temperatura objetivo"}"
-              aria-valuemin="${temperatureRange.min}"
-              aria-valuemax="${temperatureRange.max}"
-              aria-valuenow="${ariaDialValue}"
-              ${isRangeMode && ariaRangeText ? `aria-valuetext="${ariaRangeText}"` : ""}
+              aria-label="${escapeHtml(dialAriaLabel)}"
+              ${!isRangeMode ? `aria-valuemin="${temperatureRange.min}"` : ""}
+              ${!isRangeMode ? `aria-valuemax="${temperatureRange.max}"` : ""}
+              ${!isRangeMode ? `aria-valuenow="${ariaDialValue}"` : ""}
               style="${dialInlineVars}"
             >
               <svg class="climate-card__dial-svg" viewBox="0 0 ${DIAL_VIEWBOX_SIZE} ${DIAL_VIEWBOX_SIZE}" aria-hidden="true">

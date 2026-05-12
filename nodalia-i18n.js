@@ -702,6 +702,10 @@
           idle: "En espera",
           off: "Apagado",
         },
+        aria: {
+          dialRangeGroup: "Temperatura interior y consigna",
+          dialTargetSlider: "Temperatura objetivo",
+        },
       },
       graphCard: {
         emptyHistory: "Sin historial disponible",
@@ -1225,6 +1229,10 @@
           fan_only: "Fan only",
           idle: "Idle",
           off: "Off",
+        },
+        aria: {
+          dialRangeGroup: "Comfort range and indoor temperature",
+          dialTargetSlider: "Target temperature",
         },
       },
       graphCard: {
@@ -1754,6 +1762,10 @@
           idle: "Leerlauf",
           off: "Aus",
         },
+        aria: {
+          dialRangeGroup: "Komfortbereich und Raumtemperatur",
+          dialTargetSlider: "Solltemperatur",
+        },
       },
       graphCard: {
         emptyHistory: "Kein Verlauf verfügbar",
@@ -2218,6 +2230,10 @@
           fan_only: "Ventilateur",
           idle: "Inactif",
           off: "Arrêt",
+        },
+        aria: {
+          dialRangeGroup: "Plage de confort et température intérieure",
+          dialTargetSlider: "Température cible",
         },
       },
       graphCard: {
@@ -2684,6 +2700,10 @@
           idle: "Inattivo",
           off: "Spento",
         },
+        aria: {
+          dialRangeGroup: "Fascia di comfort e temperatura interna",
+          dialTargetSlider: "Temperatura target",
+        },
       },
       graphCard: {
         emptyHistory: "Nessuno storico disponibile",
@@ -3149,6 +3169,10 @@
           idle: "Inactief",
           off: "Uit",
         },
+        aria: {
+          dialRangeGroup: "Comfortbereik en binnentemperatuur",
+          dialTargetSlider: "Doeltemperatuur",
+        },
       },
       graphCard: {
         emptyHistory: "Geen geschiedenis beschikbaar",
@@ -3501,6 +3525,10 @@
           fan_only: "Ventoinha",
           idle: "Inativo",
           off: "Desligado",
+        },
+        aria: {
+          dialRangeGroup: "Faixa de conforto e temperatura interior",
+          dialTargetSlider: "Temperatura alvo",
         },
       },
       graphCard: {
@@ -3976,6 +4004,10 @@
           idle: "Ожидание",
           off: "Выкл.",
         },
+        aria: {
+          dialRangeGroup: "Диапазон комфорта и температура в помещении",
+          dialTargetSlider: "Заданная температура",
+        },
       },
       graphCard: {
         emptyHistory: "История недоступна"
@@ -4449,6 +4481,10 @@
           fan_only: "Ανεμιστήρας",
           idle: "Αδράνεια",
           off: "Ανενεργό",
+        },
+        aria: {
+          dialRangeGroup: "Εύρος άνεσης και εσωτερική θερμοκρασία",
+          dialTargetSlider: "Θερμοκρασία στόχος",
         },
       },
       graphCard: {
@@ -4924,6 +4960,10 @@
           idle: "空闲",
           off: "关闭",
         },
+        aria: {
+          dialRangeGroup: "舒适区间与室内温度",
+          dialTargetSlider: "目标温度",
+        },
       },
       graphCard: {
         emptyHistory: "暂无历史数据"
@@ -5397,6 +5437,10 @@
           fan_only: "Ventilator",
           idle: "Inactiv",
           off: "Oprit",
+        },
+        aria: {
+          dialRangeGroup: "Interval de confort și temperatura interioară",
+          dialTargetSlider: "Temperatura țintă",
         },
       },
       graphCard: {
@@ -6642,6 +6686,14 @@
     return humanize(rawValue);
   }
 
+  function translateClimateDialAria(hass, configLang, variant) {
+    const lang = resolveLanguage(hass, configLang);
+    const key = variant === "rangeGroup" ? "dialRangeGroup" : "dialTargetSlider";
+    const ccLoc = strings(lang).climateCard?.aria || {};
+    const ccEn = strings("en").climateCard?.aria || {};
+    return ccLoc[key] ?? ccEn[key] ?? (variant === "rangeGroup" ? "Comfort range and indoor temperature" : "Target temperature");
+  }
+
   function translateHumidifierDeviceState(hass, configLang, rawValue) {
     const lang = resolveLanguage(hass, configLang);
     const k = normalizeTextKey(rawValue);
@@ -7008,6 +7060,7 @@
     translateEntityStateChip,
     translateMediaPlayerState,
     translateClimateHvacLabel,
+    translateClimateDialAria,
     translateHumidifierDeviceState,
     translateMeteoalarmTerm,
     translateAdvanceVacuumReportedState,
