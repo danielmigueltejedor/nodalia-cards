@@ -15,6 +15,8 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 Ninety-fourth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.94`** (tag **`v1.0.0-alpha.94`** optional).
 
 - **Insignia card (`0.2.14`):** header **scroll** rows that do **not** set **`--insignia-scroll-strip-*`** still get safe vertical space — **`:host`** now defaults to **`padding-block: 4px 6px`** and **`align-self: center`** so pills and shadows are not clipped at the bottom.
+- **Nodalia Advance Vacuum card:** persistence **`console.warn`** messages are **English** (internal logs); the **visual editor** routes labels through **`ed.advance_vacuum.*`** plus shared **`ed.entity.*`**, **`ed.vacuum.*`**, and **`ed.weather.*`** keys (**`scripts/data/editor-catalog-advance-vacuum.json`**, merged into **`i18n/editor/*.json`**); **`window.customCards`** description is **English**.
+- **Fan / Humidifier cards:** active-icon keyframes (**`fan-card-icon-spin`**, **`humidifier-card-icon-breathe`**) use **`translate3d`** so transforms stay consistent with the base **`ha-icon`** style and compositor promotion during animation.
 - **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.94`**.
 
 ---
