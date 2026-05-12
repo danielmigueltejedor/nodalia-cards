@@ -295,12 +295,25 @@ When adding new locales:
 
 ---
 
+# 🧩 Local toolchain
+
+Install [pnpm](https://pnpm.io/installation) (Node **22+** matches CI). The repo sets **`packageManager`** in `package.json`; with [Corepack](https://nodejs.org/api/corepack.html) enabled, that pnpm version is selected automatically:
+
+```bash
+corepack enable
+pnpm install
+```
+
+Use **`pnpm test`** and **`pnpm run bundle`** before opening a PR (same as GitHub Actions). If you add a dependency that runs install scripts, approve it once with **`pnpm approve-builds`** (updates **`pnpm-workspace.yaml`** under **`allowBuilds`**, required by pnpm 11’s default security policy).
+
+---
+
 # 📦 Bundle architecture
 
 Main build command:
 
 ```bash
-npm run bundle
+pnpm run bundle
 ```
 
 This runs:
@@ -354,7 +367,7 @@ nodalia-utils.js
 run:
 
 ```bash
-npm run bundle
+pnpm run bundle
 ```
 
 or:
@@ -477,7 +490,7 @@ Before opening a PR:
 ## Build the bundle
 
 ```bash
-npm run bundle
+pnpm run bundle
 ```
 
 ---

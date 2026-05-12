@@ -5612,6 +5612,8 @@
         message: "Este evento forma parte de una serie. ¿Qué deseas eliminar?",
         thisOnly: "Solo este evento",
         thisAndFuture: "Este y todos los posteriores",
+        deleteFailed: "No se pudo eliminar el evento. Inténtalo de nuevo.",
+        deleteFailedWithMessage: "No se pudo eliminar el evento: {message}",
       },
       aria: {
         newEventDialog: "Nuevo evento de calendario",
@@ -5694,6 +5696,8 @@
         message: "This event is part of a series. What would you like to delete?",
         thisOnly: "This occurrence only",
         thisAndFuture: "This and all following occurrences",
+        deleteFailed: "Could not delete the event. Please try again.",
+        deleteFailedWithMessage: "Could not delete the event: {message}",
       },
       aria: {
         newEventDialog: "New calendar event",

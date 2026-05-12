@@ -16,7 +16,7 @@ In card editors, use the same helper as before:
 Build pipeline:
   1) node scripts/validate-editor-i18n.mjs   — all locale files must list the same keys as en.json
   2) node scripts/gen-editor-ui.mjs          — embeds window.NodaliaI18n.editorCatalog + legacy ROWS map
-  3) npm run bundle
+  3) pnpm run bundle
 
 Adding a new language (e.g. Japanese):
   - Add "ja" to EDITOR_CATALOG_LANGS in scripts/gen-editor-ui.mjs and ensure nodalia-i18n PACK supports "ja" for resolveLanguage.

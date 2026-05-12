@@ -53,7 +53,7 @@ Release target for `0.6.0` stable:
 ## 5) CI and quality gate
 
 Required checks on PR:
-- `npm test`
-- `npm run bundle`
+- `pnpm test`
+- `pnpm run bundle`
 
 Do not cut stable release unless all checks pass and manual smoke tests above are green.

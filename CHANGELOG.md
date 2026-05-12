@@ -21,6 +21,20 @@ Maintenance work continues on the stable `1.0.x` line while the next feature cyc
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.2-alpha.10] - 2026-05-12
+
+Prerelease **`alpha.10`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.10`** (optional tag **`v1.0.2-alpha.10`**).
+
+### Changed
+
+- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.10`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
+
+### Fixed
+
+- **`nodalia-calendar-card.js`:** When **`calendar/event/delete`** fails, the recurrence choice dialog stays open, an inline **`role="alert"`** message is shown, and **`_renderIfChanged(true)`** runs so the failure is visible (previously **`_deleteRecurringChoiceKey`** was cleared before the WebSocket call, so the UI could refresh with no dialog and no feedback).
+- **`nodalia-i18n.js`:** **`calendarCard.deleteRecurrence.deleteFailed`** and **`deleteFailedWithMessage`** for **`en`** / **`es`** (optional server message from the caught error).
+
+---
 ## [1.0.2-alpha.9] - 2026-05-12
 
 Prerelease **`alpha.9`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.9`** (optional tag **`v1.0.2-alpha.9`**).

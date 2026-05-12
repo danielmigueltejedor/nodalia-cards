@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.2-alpha.9";
+const CARD_VERSION = "1.0.2-alpha.10";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -672,6 +672,8 @@ class NodaliaCalendarCard extends HTMLElement {
     this._expandedEventDetailKey = "";
     /** Event `calendarEventKey` while choosing how to delete a recurring instance. */
     this._deleteRecurringChoiceKey = "";
+    /** Shown inside the recurrence-delete dialog after `calendar/event/delete` fails. */
+    this._deleteRecurrenceError = "";
     /** True when expanded was auto-opened from compact list for the recurrence-delete dialog only. */
     this._expandedOpenedForDeleteRecurrenceOnly = false;
     this._onShadowClick = this._onShadowClick.bind(this);
@@ -763,6 +765,7 @@ class NodaliaCalendarCard extends HTMLElement {
     this._nativeComposerError = "";
     this._nativeEventComposerOpen = false;
     this._deleteRecurringChoiceKey = "";
+    this._deleteRecurrenceError = "";
     this._expandedOpenedForDeleteRecurrenceOnly = false;
     this._expandedOpen = true;
     this._expandedOverlayEntrancePlayed = false;
@@ -1463,6 +1466,7 @@ class NodaliaCalendarCard extends HTMLElement {
     mix(this._expandedMonthDayKey || "");
     mix(this._expandedEventDetailKey || "");
     mix(this._deleteRecurringChoiceKey || "");
+    mix(this._deleteRecurrenceError || "");
     mix(this._expandedOpenedForDeleteRecurrenceOnly ? 1 : 0);
     mix(this._nativeComposerError || "");
     return `r:${hash.toString(36)}`;
@@ -1608,11 +1612,16 @@ class NodaliaCalendarCard extends HTMLElement {
     );
     const cancel = this._uiText("buttons.cancel", "Cancel");
     const ariaDialog = this._uiText("aria.deleteRecurringDialog", "Choose how to delete the recurring event");
+    const err = String(this._deleteRecurrenceError || "").trim();
+    const errBlock = err
+      ? `<p class="calendar-delete-recurrence__error" role="alert">${escapeHtml(err)}</p>`
+      : "";
     return `
       <div class="calendar-composer calendar-delete-recurrence is-open">
         <div class="calendar-composer__backdrop" data-action="delete-recurrence-dismiss"></div>
         <div class="calendar-composer__panel" role="dialog" aria-modal="true" aria-label="${escapeHtml(ariaDialog)}">
           <div class="calendar-composer__title">${escapeHtml(title)}</div>
+          ${errBlock}
           <p class="calendar-delete-recurrence__text">${escapeHtml(message)}</p>
           <div class="calendar-delete-recurrence__choices">
             <button type="button" class="calendar-composer__btn calendar-composer__btn--primary" data-action="delete-recurrence-this" data-key="${escapeHtml(key)}">
@@ -1640,6 +1649,7 @@ class NodaliaCalendarCard extends HTMLElement {
       if (!this._expandedOpen) {
         this._expandedOpen = true;
         this._nativeComposerError = "";
+        this._deleteRecurrenceError = "";
         this._nativeEventComposerOpen = false;
         this._expandedEventDetailKey = keyTrim;
         const focusDate = eventDate(event.start);
@@ -1653,6 +1663,7 @@ class NodaliaCalendarCard extends HTMLElement {
         this._expandedOpenedForDeleteRecurrenceOnly = true;
       }
       this._deleteRecurringChoiceKey = keyTrim;
+      this._deleteRecurrenceError = "";
       this._triggerHaptic("selection");
       this._renderIfChanged(true);
       return;
@@ -1661,11 +1672,15 @@ class NodaliaCalendarCard extends HTMLElement {
   }
 
   async _deleteCalendarEvent(key, recurrenceRange = undefined) {
-    this._deleteRecurringChoiceKey = "";
-    const event = this._findEventByKey(key);
+    const keyTrim = String(key || "").trim();
+    const event = this._findEventByKey(keyTrim);
     if (!this._canDeleteCalendarEvent(event)) {
+      this._deleteRecurringChoiceKey = "";
+      this._deleteRecurrenceError = "";
+      this._renderIfChanged(true);
       return;
     }
+    this._deleteRecurrenceError = "";
     const entityId = String(event._entity || "").trim();
     const uid = calendarEventUid(event);
     const recurrenceId = calendarEventRecurrenceId(event);
@@ -1683,18 +1698,33 @@ class NodaliaCalendarCard extends HTMLElement {
     }
     try {
       await this._hass.callWS(payload);
-      this._events = this._events.filter(item => calendarEventKey(item) !== key);
-      if (this._expandedEventDetailKey === key) {
+      this._deleteRecurringChoiceKey = "";
+      this._deleteRecurrenceError = "";
+      this._events = this._events.filter(item => calendarEventKey(item) !== keyTrim);
+      if (this._expandedEventDetailKey === keyTrim) {
         this._expandedEventDetailKey = "";
       }
       this._collapseExpandedIfOpenedOnlyForRecurrenceDelete();
       this._renderIfChanged(true);
       this._refreshEvents();
     } catch (err) {
-      this._expandedOpenedForDeleteRecurrenceOnly = false;
+      const fromWs =
+        err && typeof err === "object" && typeof err.message === "string" && err.message.trim()
+          ? err.message.trim()
+          : "";
+      this._deleteRecurrenceError = fromWs
+        ? this._uiText("deleteRecurrence.deleteFailedWithMessage", "Could not delete the event: {message}").replace(
+          "{message}",
+          fromWs,
+        )
+        : this._uiText(
+          "deleteRecurrence.deleteFailed",
+          "Could not delete the event. Please try again.",
+        );
       if (typeof console !== "undefined" && typeof console.warn === "function") {
         console.warn("Nodalia Calendar Card: calendar/event/delete failed", err);
       }
+      this._renderIfChanged(true);
     }
   }
 
@@ -1716,6 +1746,7 @@ class NodaliaCalendarCard extends HTMLElement {
       return;
     }
     this._deleteRecurringChoiceKey = "";
+    this._deleteRecurrenceError = "";
     this._collapseExpandedIfOpenedOnlyForRecurrenceDelete();
     this._triggerHaptic("light");
     this._renderIfChanged(true);
@@ -3217,6 +3248,16 @@ class NodaliaCalendarCard extends HTMLElement {
           justify-self: stretch;
           width: 100%;
         }
+        .calendar-delete-recurrence__error {
+          background: color-mix(in srgb, var(--error-color, #db4437) 12%, transparent);
+          border: 1px solid color-mix(in srgb, var(--error-color, #db4437) 35%, transparent);
+          border-radius: 10px;
+          color: var(--error-color, #db4437);
+          font-size: 13px;
+          line-height: 1.4;
+          margin: 0;
+          padding: 8px 10px;
+        }
         .calendar-composer__backdrop {
           -webkit-backdrop-filter: blur(8px);
           backdrop-filter: blur(8px);
@@ -3991,6 +4032,7 @@ class NodaliaCalendarCard extends HTMLElement {
       if (this._nativeEventComposerOpen) {
         this._nativeEventComposerOpen = false;
         this._nativeComposerError = "";
+        this._deleteRecurrenceError = "";
         this._renderIfChanged(true);
         return;
       }
@@ -4006,6 +4048,7 @@ class NodaliaCalendarCard extends HTMLElement {
       }
       this._expandedOpenedForDeleteRecurrenceOnly = false;
       this._deleteRecurringChoiceKey = "";
+      this._deleteRecurrenceError = "";
       this._expandedOpen = false;
       this._expandedOverlayEntrancePlayed = false;
       this._renderIfChanged(true);
@@ -4105,6 +4148,7 @@ class NodaliaCalendarCard extends HTMLElement {
       this._nativeEventComposerOpen = false;
       this._nativeComposerError = "";
       this._deleteRecurringChoiceKey = "";
+      this._deleteRecurrenceError = "";
       this._expandedOpenedForDeleteRecurrenceOnly = false;
       this._expandedEventDetailKey = "";
       this._expandedOpen = false;
@@ -4122,6 +4166,7 @@ class NodaliaCalendarCard extends HTMLElement {
       this._expandedMonthDayKey = "";
       this._expandedEventDetailKey = "";
       this._deleteRecurringChoiceKey = "";
+      this._deleteRecurrenceError = "";
       this._renderIfChanged(true);
       return;
     }
@@ -4134,6 +4179,7 @@ class NodaliaCalendarCard extends HTMLElement {
       this._triggerHaptic("light");
       this._expandedEventDetailKey = "";
       this._deleteRecurringChoiceKey = "";
+      this._deleteRecurrenceError = "";
       this._renderIfChanged(true);
       return;
     }
@@ -4180,6 +4226,7 @@ class NodaliaCalendarCard extends HTMLElement {
       this._expandedMonthDayKey = monthDayOpen.dataset.dayKey || "";
       this._expandedEventDetailKey = "";
       this._deleteRecurringChoiceKey = "";
+      this._deleteRecurrenceError = "";
       this._renderIfChanged(true);
       return;
     }
@@ -4192,6 +4239,7 @@ class NodaliaCalendarCard extends HTMLElement {
       this._triggerHaptic("selection");
       this._expandedEventDetailKey = eventDetailOpen.dataset.key || "";
       this._deleteRecurringChoiceKey = "";
+      this._deleteRecurrenceError = "";
       this._renderIfChanged(true);
       return;
     }

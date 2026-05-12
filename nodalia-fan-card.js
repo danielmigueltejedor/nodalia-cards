@@ -486,7 +486,7 @@
 
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.0.2-alpha.9";
+const CARD_VERSION = "1.0.2-alpha.10";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
