@@ -1,7 +1,7 @@
 # 🎨 Nodalia Cards
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
-![Latest stable](https://img.shields.io/badge/latest%20stable-1.0.0-2ea043)
+![Latest stable](https://img.shields.io/badge/latest%20stable-1.0.1-2ea043)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -46,7 +46,9 @@ Animations and interactions in action:
 
 ---
 
-# 🚀 New in 1.0.0
+# 🚀 What’s new in 1.0.x
+
+**Latest stable: `1.0.1`** — installs match **`package.json`** and **`window.__NODALIA_BUNDLE__.pkgVersion`**. The sections below summarize the **`1.0.0`** milestone (first stable on this line); patch notes for **`1.0.1`** are in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## 🧠 Notifications Card
 
@@ -108,7 +110,7 @@ Highlights:
 
 ## 🌍 Massive i18n Expansion
 
-Nodalia 1.0.0 ships with extensive localization support:
+The **1.0.x** line ships with extensive localization support:
 
 - 🇪🇸 Spanish
 - 🇬🇧 English
@@ -133,7 +135,7 @@ Including:
 
 ## 🎨 Unified Visual System
 
-1.0.0 introduces a much stronger design system:
+The **1.0.0** milestone introduced a much stronger design system:
 
 - Shared visual tokens
 - Unified shadows and surfaces
@@ -298,7 +300,7 @@ JavaScript module
 
 # 🌍 Translations
 
-Nodalia 1.0.0 includes multi-language runtime and visual editor support.
+**1.0.x** includes multi-language runtime and visual editor support.
 
 Supported languages:
 
@@ -320,7 +322,7 @@ Translation improvements are ongoing.
 
 # 🛣️ Roadmap
 
-Future work planned after 1.0.0:
+Future work planned on top of **1.0.x** (after the **1.0.0** milestone):
 
 - Graph Card redesign
 - Power Flow improvements
